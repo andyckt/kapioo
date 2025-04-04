@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getAvailableMeals } from "@/lib/utils"
 
 export function MealPlanner() {
   const [currentWeek, setCurrentWeek] = useState(0)
@@ -49,79 +50,12 @@ export function MealPlanner() {
     sunday: [],
   })
 
-  // Sample available meals
-  const availableMeals = [
-    {
-      id: "am1",
-      name: "Grilled Salmon with Vegetables",
-      type: "dinner",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["High Protein", "Low Carb"],
-    },
-    {
-      id: "am2",
-      name: "Chicken Alfredo Pasta",
-      type: "dinner",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["High Protein", "Italian"],
-    },
-    {
-      id: "am3",
-      name: "Vegetable Curry with Naan",
-      type: "dinner",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["Vegetarian", "Spicy"],
-    },
-    {
-      id: "am4",
-      name: "Beef Stir Fry with Rice",
-      type: "dinner",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["High Protein", "Asian"],
-    },
-    {
-      id: "am5",
-      name: "Mediterranean Bowl",
-      type: "lunch",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["Vegetarian", "Mediterranean"],
-    },
-    {
-      id: "am6",
-      name: "Teriyaki Salmon",
-      type: "dinner",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["High Protein", "Asian"],
-    },
-    {
-      id: "am7",
-      name: "Protein Power Bowl",
-      type: "lunch",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["High Protein", "Low Carb"],
-    },
-    {
-      id: "am8",
-      name: "Avocado Toast with Eggs",
-      type: "breakfast",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["Vegetarian", "Breakfast"],
-    },
-    {
-      id: "am9",
-      name: "Greek Yogurt Parfait",
-      type: "breakfast",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["Vegetarian", "Breakfast"],
-    },
-    {
-      id: "am10",
-      name: "Protein Smoothie",
-      type: "breakfast",
-      image: "/placeholder.svg?height=60&width=60",
-      tags: ["Vegetarian", "Breakfast"],
-    },
-  ]
+  // Available meals from our utility function
+  const availableMeals = getAvailableMeals().map((meal, index) => ({
+    ...meal,
+    id: `am${index + 1}`,
+    type: meal.tags && meal.tags.includes("Breakfast") ? "breakfast" : "dinner",
+  }))
 
   const filteredMeals = availableMeals.filter(
     (meal) =>
