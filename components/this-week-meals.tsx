@@ -133,7 +133,7 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
             className="grid md:grid-cols-2 gap-6"
           >
             <motion.div
-              className="relative overflow-hidden rounded-xl aspect-square md:aspect-auto"
+              className="relative overflow-hidden rounded-xl aspect-square w-full h-[350px] md:h-[450px] md:w-[450px] mx-auto"
               whileHover={{ scale: 1.03 }}
               transition={{ duration: 0.2 }}
             >
@@ -212,7 +212,7 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
             {days.map((day, index) => (
               <motion.div
                 key={day}
-                className={`w-8 h-8 rounded-full border-2 border-background ${
+                className={`w-10 h-10 rounded-full border-2 border-background ${
                   activeDay === day ? "ring-2 ring-primary" : ""
                 } overflow-hidden cursor-pointer`}
                 whileHover={{ scale: 1.1, zIndex: 10 }}
