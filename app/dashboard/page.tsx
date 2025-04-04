@@ -878,11 +878,12 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
   }
 
   const selectedCount = Object.values(selectedMeals).filter(Boolean).length
-  const canCheckout = selectedCount > 0 && selectedCount <= credits
+  const totalCost = selectedCount * 20
+  const canCheckout = selectedCount > 0 && totalCost <= credits
 
   const handleCheckout = () => {
     if (canCheckout) {
-      setCredits(credits - selectedCount)
+      setCredits(credits - totalCost)
       toast({
         title: "Order placed successfully!",
         description: `You have ordered ${selectedCount} meals for the week.`,
@@ -915,7 +916,7 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
           <Card>
             <CardHeader>
               <CardTitle>This Week's Menu</CardTitle>
-              <CardDescription>Select the days you want meals delivered. Each meal costs 1 credit.</CardDescription>
+              <CardDescription>Select the days you want meals delivered. Each meal costs 20 credits.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -928,7 +929,7 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
             </CardContent>
             <CardFooter className="flex justify-between">
               <div>
-                <p className="text-sm font-medium">Selected: {selectedCount} meals</p>
+                <p className="text-sm font-medium">Selected: {selectedCount} meals ({selectedCount * 20} credits)</p>
               </div>
               <Button disabled={!canCheckout} onClick={() => setCheckoutOpen(true)}>
                 Proceed to Checkout
@@ -967,7 +968,7 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
                   </ul>
                   <div className="mt-4 pt-4 border-t flex justify-between font-medium">
                     <span>Total</span>
-                    <span>{selectedCount} Credits</span>
+                    <span>{selectedCount * 20} Credits</span>
                   </div>
                 </div>
               </div>
