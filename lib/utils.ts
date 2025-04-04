@@ -24,7 +24,7 @@ export function getWeeklyMeals(): WeeklyMeals {
   return {
     monday: {
       name: "Grilled Salmon with Vegetables123",
-      image: "/placeholder.svg?height=200&width=200",
+      image: "/foodjpg/eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
       description:
         "Fresh Atlantic salmon grilled to perfection. " + 
         "Served with seasonal roasted vegetables. " + 
@@ -39,7 +39,7 @@ export function getWeeklyMeals(): WeeklyMeals {
     },
     tuesday: {
       name: "Beef Stir Fry with Rice",
-      image: "/placeholder.svg?height=200&width=200",
+      image: "/foodjpg/omkar-jadhav-o5XB6XwTb1I-unsplash.jpg",
       description:
         "Tender strips of beef stir-fried with colorful bell peppers, broccoli, and carrots. " + 
         "Coated in our signature savory sauce. " + 
@@ -50,7 +50,7 @@ export function getWeeklyMeals(): WeeklyMeals {
     },
     wednesday: {
       name: "Chicken Alfredo Pasta",
-      image: "/placeholder.svg?height=200&width=200",
+      image: "/foodjpg/anh-nguyen-kcA-c3f_3FE-unsplash.jpg",
       description:
         "Creamy Alfredo sauce made with fresh garlic and butter. " + 
         "Perfectly grilled chicken breast sliced and placed on top. " + 
@@ -65,7 +65,7 @@ export function getWeeklyMeals(): WeeklyMeals {
     },
     thursday: {
       name: "Vegetable Curry with Naan",
-      image: "/placeholder.svg?height=200&width=200",
+      image: "/foodjpg/max-griss-otLqpb9LK70-unsplash.jpg",
       description:
         "A flavorful blend of seasonal vegetables in a rich curry sauce. " + 
         "Infused with authentic Indian spices and coconut milk. " + 
@@ -79,7 +79,7 @@ export function getWeeklyMeals(): WeeklyMeals {
     },
     friday: {
       name: "Grilled Chicken with Quinoa",
-      image: "/placeholder.svg?height=200&width=200",
+      image: "/foodjpg/charlesdeluvio-wrfO9SWykdE-unsplash.jpg",
       description:
         "Herb-marinated grilled chicken breast cooked to juicy perfection. " + 
         "Served with fluffy protein-rich quinoa. " + 
@@ -94,7 +94,7 @@ export function getWeeklyMeals(): WeeklyMeals {
     },
     saturday: {
       name: "Shrimp Tacos with Avocado",
-      image: "/placeholder.svg?height=200&width=200",
+      image: "/foodjpg/kenny-eliason-SDprf7W3NUc-unsplash.jpg",
       description:
         "Seasoned shrimp cooked to perfection. " + 
         "Served in soft corn tortillas. " + 
@@ -109,7 +109,7 @@ export function getWeeklyMeals(): WeeklyMeals {
     },
     sunday: {
       name: "Mushroom Risotto",
-      image: "/placeholder.svg?height=200&width=200",
+      image: "/foodjpg/haryo-setyadi-yvzzemH8-J0-unsplash.jpg",
       description:
         "Creamy Arborio rice slowly cooked to perfection. " + 
         "Made with a medley of wild and cultivated mushrooms. " + 
@@ -129,7 +129,7 @@ export function getAvailableMeals(): Meal[] {
   return [
     {
       name: "Grilled Salmon with Vegetables",
-      image: "/placeholder.svg?height=60&width=60",
+      image: "/foodjpg/eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
       description: 
         "Fresh Atlantic salmon grilled to perfection. " + 
         "Served with seasonal roasted vegetables. " + 
@@ -140,7 +140,7 @@ export function getAvailableMeals(): Meal[] {
     },
     {
       name: "Chicken Alfredo Pasta",
-      image: "/placeholder.svg?height=60&width=60",
+      image: "/foodjpg/anh-nguyen-kcA-c3f_3FE-unsplash.jpg",
       description: 
         "Creamy Alfredo sauce made with fresh garlic and butter. " + 
         "Perfectly grilled chicken breast. " + 
@@ -152,7 +152,7 @@ export function getAvailableMeals(): Meal[] {
     },
     {
       name: "Vegetable Curry with Naan",
-      image: "/placeholder.svg?height=60&width=60",
+      image: "/foodjpg/max-griss-otLqpb9LK70-unsplash.jpg",
       description: 
         "A flavorful blend of seasonal vegetables in a rich curry sauce. " + 
         "Infused with authentic Indian spices. " + 
@@ -164,7 +164,7 @@ export function getAvailableMeals(): Meal[] {
     },
     {
       name: "Beef Stir Fry with Rice",
-      image: "/placeholder.svg?height=60&width=60",
+      image: "/foodjpg/omkar-jadhav-o5XB6XwTb1I-unsplash.jpg",
       description: 
         "Tender strips of beef stir-fried with colorful vegetables. " + 
         "Tossed in our signature Asian-inspired sauce. " + 
@@ -173,7 +173,7 @@ export function getAvailableMeals(): Meal[] {
     },
     {
       name: "Mediterranean Bowl",
-      image: "/placeholder.svg?height=60&width=60",
+      image: "/foodjpg/charlesdeluvio-wrfO9SWykdE-unsplash.jpg",
       description: 
         "A delicious bowl with house-made falafel. " + 
         "Topped with creamy hummus and fresh tabbouleh. " + 
@@ -185,7 +185,7 @@ export function getAvailableMeals(): Meal[] {
     },
     {
       name: "Teriyaki Salmon",
-      image: "/placeholder.svg?height=60&width=60",
+      image: "/foodjpg/eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
       description: 
         "Salmon fillet glazed with our homemade teriyaki sauce. " + 
         "Caramelized to perfection for a sweet and savory flavor. " + 
@@ -197,7 +197,7 @@ export function getAvailableMeals(): Meal[] {
     },
     {
       name: "Protein Power Bowl",
-      image: "/placeholder.svg?height=60&width=60",
+      image: "/foodjpg/kenny-eliason-SDprf7W3NUc-unsplash.jpg",
       description: 
         "Nutrient-dense bowl with protein-rich quinoa as the base. " + 
         "Topped with tender grilled chicken and creamy avocado. " + 
