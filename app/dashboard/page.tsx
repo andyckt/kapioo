@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
-import { getWeeklyMeals } from "@/lib/utils"
+import { getWeeklyMeals, type WeeklyMeals } from "@/lib/utils"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -242,7 +242,7 @@ export default function DashboardPage() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <ThisWeekMeals
                     meals={meals}
-                    onSelectMeal={(day) => {
+                    onSelectMeal={(day: string) => {
                       setActiveTab("select-meals")
                     }}
                   />
@@ -846,7 +846,7 @@ export default function DashboardPage() {
 }
 
 // Update the WeeklyMealSelector function to use our new MealDetail component
-function WeeklyMealSelector({ credits, setCredits }) {
+function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredits: (credits: number) => void }) {
   const [selectedMeals, setSelectedMeals] = useState({
     monday: false,
     tuesday: false,
@@ -868,10 +868,10 @@ function WeeklyMealSelector({ credits, setCredits }) {
 
   const meals = getWeeklyMeals()
 
-  const toggleMeal = (day) => {
+  const toggleMeal = (day: string) => {
     setSelectedMeals({
       ...selectedMeals,
-      [day]: !selectedMeals[day],
+      [day]: !selectedMeals[day as keyof typeof selectedMeals],
     })
   }
 
@@ -898,7 +898,7 @@ function WeeklyMealSelector({ credits, setCredits }) {
     }
   }
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
     setFormData({
       ...formData,
@@ -919,29 +919,7 @@ function WeeklyMealSelector({ credits, setCredits }) {
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Object.entries(meals).map(([day, meal]) => (
                   <div key={day} className="relative">
-                    <MealDetail meal={meal} day={day} onSelect={toggleMeal} isSelected={selectedMeals[day]} />
-                    {/* {selectedMeals[day] && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="absolute top-2 left-2 z-10"
-                            onClick={() =>
-                              setCustomizeMeal({
-                                name: meal.name,
-                                day: day,
-                              })
-                            }
-                          >
-                            Customize
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <MealCustomization meal={customizeMeal} onClose={() => setCustomizeMeal(null)} />
-                        </DialogContent>
-                      </Dialog>
-                    )} */}
+                    <MealDetail meal={meal} day={day} onSelect={toggleMeal} isSelected={selectedMeals[day as keyof typeof selectedMeals]} />
                   </div>
                 ))}
               </div>
@@ -980,7 +958,7 @@ function WeeklyMealSelector({ credits, setCredits }) {
                         selected && (
                           <li key={day} className="flex justify-between">
                             <span className="capitalize">{day}</span>
-                            <span className="text-muted-foreground">{meals[day].name}</span>
+                            <span className="text-muted-foreground">{meals[day as keyof typeof meals].name}</span>
                           </li>
                         ),
                     )}

@@ -21,15 +21,27 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAvailableMeals } from "@/lib/utils"
 
+// Add types for meal interface
+interface MealPlanItem {
+  id: string;
+  name: string;
+  type: string;
+  image: string;
+}
+
+type MealPlanType = {
+  [key: string]: MealPlanItem[];
+}
+
 export function MealPlanner() {
   const [currentWeek, setCurrentWeek] = useState(0)
-  const [selectedDay, setSelectedDay] = useState(null)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [showMealSelector, setShowMealSelector] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const { toast } = useToast()
 
   // Sample meal plan data
-  const [mealPlan, setMealPlan] = useState({
+  const [mealPlan, setMealPlan] = useState<MealPlanType>({
     monday: [
       {
         id: "m1",
@@ -60,7 +72,7 @@ export function MealPlanner() {
   const filteredMeals = availableMeals.filter(
     (meal) =>
       meal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      meal.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())),
+      (meal.tags && meal.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))),
   )
 
   const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -95,14 +107,14 @@ export function MealPlanner() {
 
   const weekDates = getWeekDates()
 
-  const handleAddMeal = (meal) => {
+  const handleAddMeal = (meal: any) => {
     if (!selectedDay) return
 
     const newMeal = { ...meal, id: `${meal.id}-${Date.now()}` } // Create a new ID to avoid conflicts
 
     setMealPlan({
       ...mealPlan,
-      [selectedDay]: [...(mealPlan[selectedDay] || []), newMeal],
+      [selectedDay]: [...(mealPlan[selectedDay as keyof typeof mealPlan] || []), newMeal],
     })
 
     toast({
@@ -113,10 +125,10 @@ export function MealPlanner() {
     setShowMealSelector(false)
   }
 
-  const handleRemoveMeal = (day, mealId) => {
+  const handleRemoveMeal = (day: string, mealId: string) => {
     setMealPlan({
       ...mealPlan,
-      [day]: mealPlan[day].filter((meal) => meal.id !== mealId),
+      [day]: mealPlan[day as keyof typeof mealPlan].filter((meal) => meal.id !== mealId),
     })
 
     toast({
@@ -125,7 +137,7 @@ export function MealPlanner() {
     })
   }
 
-  const handleDragEnd = (result) => {
+  const handleDragEnd = (result: any) => {
     if (!result.destination) return
 
     const { source, destination } = result
@@ -133,7 +145,7 @@ export function MealPlanner() {
     // If dropped in the same list
     if (source.droppableId === destination.droppableId) {
       const day = source.droppableId
-      const items = Array.from(mealPlan[day])
+      const items = Array.from(mealPlan[day as keyof typeof mealPlan])
       const [reorderedItem] = items.splice(source.index, 1)
       items.splice(destination.index, 0, reorderedItem)
 
@@ -145,8 +157,8 @@ export function MealPlanner() {
       // If dropped in a different list
       const sourceDay = source.droppableId
       const destDay = destination.droppableId
-      const sourceItems = Array.from(mealPlan[sourceDay])
-      const destItems = Array.from(mealPlan[destDay] || [])
+      const sourceItems = Array.from(mealPlan[sourceDay as keyof typeof mealPlan])
+      const destItems = Array.from(mealPlan[destDay as keyof typeof mealPlan] || [])
       const [movedItem] = sourceItems.splice(source.index, 1)
       destItems.splice(destination.index, 0, movedItem)
 
@@ -165,7 +177,7 @@ export function MealPlanner() {
     })
   }
 
-  const handleClearDay = (day) => {
+  const handleClearDay = (day: string) => {
     setMealPlan({
       ...mealPlan,
       [day]: [],
@@ -214,7 +226,7 @@ export function MealPlanner() {
                 </div>
 
                 <Droppable droppableId={dateInfo.day}>
-                  {(provided, snapshot) => (
+                  {(provided: any, snapshot: any) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
@@ -222,9 +234,9 @@ export function MealPlanner() {
                         snapshot.isDraggingOver ? "bg-primary/5" : "bg-background"
                       }`}
                     >
-                      {mealPlan[dateInfo.day]?.map((meal, index) => (
+                      {mealPlan[dateInfo.day as keyof typeof mealPlan]?.map((meal, index) => (
                         <Draggable key={meal.id} draggableId={meal.id} index={index}>
-                          {(provided) => (
+                          {(provided: any) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
@@ -273,7 +285,7 @@ export function MealPlanner() {
                         </Button>
                       </div>
 
-                      {mealPlan[dateInfo.day]?.length > 0 && (
+                      {mealPlan[dateInfo.day as keyof typeof mealPlan]?.length > 0 && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -338,7 +350,7 @@ export function MealPlanner() {
                             <Badge variant="outline" className="text-[10px] capitalize">
                               {meal.type}
                             </Badge>
-                            {meal.tags.slice(0, 1).map((tag) => (
+                            {meal.tags && meal.tags.slice(0, 1).map((tag) => (
                               <Badge key={tag} variant="secondary" className="text-[10px]">
                                 {tag}
                               </Badge>
@@ -371,7 +383,7 @@ export function MealPlanner() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{meal.name}</p>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {meal.tags.slice(0, 2).map((tag) => (
+                                {meal.tags && meal.tags.slice(0, 2).map((tag) => (
                                   <Badge key={tag} variant="secondary" className="text-[10px]">
                                     {tag}
                                   </Badge>
