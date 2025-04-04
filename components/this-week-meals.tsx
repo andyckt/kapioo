@@ -143,13 +143,7 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
                 className="w-full h-full object-cover rounded-xl"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
-                <div className="flex items-center gap-2">
-                  {activeMeal.tags?.slice(0, 2).map((tag: string) => (
-                    <Badge key={tag} variant="secondary" className="bg-white/20 text-white backdrop-blur-sm">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
+                {/* Tags removed from here */}
               </div>
               <div className="absolute top-4 right-4">
                 <Badge variant="secondary" className="bg-primary/90 text-white backdrop-blur-sm">
