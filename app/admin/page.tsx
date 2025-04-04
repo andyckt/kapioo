@@ -24,7 +24,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { getWeeklyMeals, updateDayMeal, saveWeeklyMeals, initializeMealsStorage, type WeeklyMeals } from "@/lib/utils"
+import {
+  getWeeklyMeals,
+  getAvailableMeals,
+  updateMeal,
+  assignMealToDay,
+  type WeeklyMeals,
+  type Meal
+} from "@/lib/utils"
 
 // Add interface for user object
 interface User {
@@ -733,30 +740,53 @@ export default function AdminDashboardPage() {
   )
 }
 
+// Update the MealManagement component to use the MongoDB API
 function MealManagement() {
   const { toast } = useToast();
   const [weeklyMeals, setWeeklyMeals] = useState<WeeklyMeals>({});
+  const [availableMeals, setAvailableMeals] = useState<Meal[]>([]);
   const [editedMeals, setEditedMeals] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMealId, setSelectedMealId] = useState<Record<string, string>>({});
 
-  // Initialize meals on component mount
+  // Load meals on component mount
   useEffect(() => {
-    // Initialize storage with defaults if needed
-    initializeMealsStorage();
+    async function loadData() {
+      try {
+        // Get current weekly meals
+        const mealsResult = await getWeeklyMeals();
+        setWeeklyMeals(mealsResult);
+        
+        // Get all available meals
+        const allMeals = await getAvailableMeals();
+        setAvailableMeals(allMeals);
+        
+        // Initialize edited meals with current names
+        const initialEditState: Record<string, string> = {};
+        const initialMealIdState: Record<string, string> = {};
+        
+        Object.entries(mealsResult).forEach(([day, meal]) => {
+          initialEditState[day] = meal.name;
+          initialMealIdState[day] = meal._id || '';
+        });
+        
+        setEditedMeals(initialEditState);
+        setSelectedMealId(initialMealIdState);
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading meals:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load meals. Please try again.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+      }
+    }
     
-    // Get current meals
-    const meals = getWeeklyMeals();
-    setWeeklyMeals(meals);
-    
-    // Initialize edited meals with current names
-    const initialEditState: Record<string, string> = {};
-    Object.entries(meals).forEach(([day, meal]) => {
-      initialEditState[day] = meal.name;
-    });
-    setEditedMeals(initialEditState);
-    
-    setIsLoading(false);
-  }, []);
+    loadData();
+  }, [toast]);
 
   // Handle input change
   const handleMealNameChange = (day: string, name: string) => {
@@ -766,61 +796,118 @@ function MealManagement() {
     });
   };
 
+  // Handle meal selection change
+  const handleMealSelect = (day: string, mealId: string) => {
+    // Find the selected meal
+    const selectedMeal = availableMeals.find(meal => meal._id === mealId);
+    if (selectedMeal) {
+      setSelectedMealId({
+        ...selectedMealId,
+        [day]: mealId
+      });
+      
+      // Update the meal name in edited meals
+      setEditedMeals({
+        ...editedMeals,
+        [day]: selectedMeal.name
+      });
+    }
+  };
+
   // Update a single meal
-  const updateMeal = (day: string) => {
-    if (!editedMeals[day]) return;
+  const updateDayMeal = async (day: string) => {
+    if (!editedMeals[day] || !selectedMealId[day]) return;
     
-    updateDayMeal(day, { name: editedMeals[day] });
-    
-    // Update local state
-    setWeeklyMeals({
-      ...weeklyMeals,
-      [day]: {
-        ...weeklyMeals[day],
-        name: editedMeals[day]
+    try {
+      setIsLoading(true);
+      
+      // Assign the selected meal to the day
+      const success = await assignMealToDay(day, selectedMealId[day]);
+      
+      if (success) {
+        // Update local state
+        const selectedMeal = availableMeals.find(meal => meal._id === selectedMealId[day]);
+        if (selectedMeal) {
+          setWeeklyMeals({
+            ...weeklyMeals,
+            [day]: selectedMeal
+          });
+        }
+        
+        toast({
+          title: "Meal updated",
+          description: `Updated ${day}'s meal successfully`
+        });
+      } else {
+        toast({
+          title: "Update failed",
+          description: "Failed to update meal. Please try again.",
+          variant: "destructive"
+        });
       }
-    });
-    
-    toast({
-      title: "Meal updated",
-      description: `Updated ${day}'s meal to ${editedMeals[day]} successfully`
-    });
+    } catch (error) {
+      console.error(`Error updating ${day} meal:`, error);
+      toast({
+        title: "Error",
+        description: "An error occurred while updating the meal",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Save all changes
-  const saveAllChanges = () => {
-    const updatedMeals = { ...weeklyMeals };
-    
-    // Update all meals with edited names
-    Object.entries(editedMeals).forEach(([day, name]) => {
-      updatedMeals[day] = {
-        ...updatedMeals[day],
-        name
-      };
-    });
-    
-    // Save to localStorage
-    saveWeeklyMeals(updatedMeals);
-    
-    // Update local state
-    setWeeklyMeals(updatedMeals);
-    
-    toast({
-      title: "All meals updated",
-      description: "The weekly menu has been updated successfully"
-    });
-  };
-
-  // Handle image upload (placeholder for now)
-  const handleImageUpload = (day: string) => {
-    toast({
-      title: "Image upload",
-      description: "This feature will be implemented soon"
-    });
+  const saveAllChanges = async () => {
+    try {
+      setIsLoading(true);
+      
+      const days = Object.keys(selectedMealId);
+      let successCount = 0;
+      
+      // Update each day one by one
+      for (const day of days) {
+        if (selectedMealId[day]) {
+          const success = await assignMealToDay(day, selectedMealId[day]);
+          if (success) {
+            successCount++;
+          }
+        }
+      }
+      
+      if (successCount === days.length) {
+        toast({
+          title: "All meals updated",
+          description: "The weekly menu has been updated successfully"
+        });
+        
+        // Refresh the data
+        const updatedMeals = await getWeeklyMeals();
+        setWeeklyMeals(updatedMeals);
+      } else {
+        toast({
+          title: "Partial update",
+          description: `Updated ${successCount} out of ${days.length} meals`,
+        });
+      }
+    } catch (error) {
+      console.error('Error saving all changes:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while saving changes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {
-    return <div>Loading meals...</div>;
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
@@ -837,11 +924,19 @@ function MealManagement() {
                 <span className="font-medium capitalize">{day}</span>
               </div>
               <div className="flex items-center">
-                <Input 
-                  id={`meal-${day}`} 
-                  value={editedMeals[day] || ''} 
-                  onChange={(e) => handleMealNameChange(day, e.target.value)}
-                />
+                <select 
+                  id={`meal-select-${day}`}
+                  value={selectedMealId[day] || ''}
+                  onChange={(e) => handleMealSelect(day, e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="" disabled>Select a meal</option>
+                  {availableMeals.map((availableMeal) => (
+                    <option key={availableMeal._id} value={availableMeal._id}>
+                      {availableMeal.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex items-center">
                 <div className="flex items-center gap-2">
@@ -850,16 +945,14 @@ function MealManagement() {
                     alt={meal.name}
                     className="h-10 w-10 rounded-md object-cover"
                   />
-                  <Button variant="outline" size="sm" onClick={() => handleImageUpload(day)}>
-                    Upload
-                  </Button>
                 </div>
               </div>
               <div className="flex items-center">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => updateMeal(day)}
+                  onClick={() => updateDayMeal(day)}
+                  disabled={isLoading}
                 >
                   Update
                 </Button>
@@ -869,8 +962,8 @@ function MealManagement() {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={saveAllChanges}>
-          Save All Changes
+        <Button onClick={saveAllChanges} disabled={isLoading}>
+          {isLoading ? 'Saving...' : 'Save All Changes'}
         </Button>
       </CardFooter>
     </Card>

@@ -6,6 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export interface Meal {
+  _id?: string;
   name: string;
   image: string;
   description: string;
@@ -14,13 +15,14 @@ export interface Meal {
   tags?: string[];
   ingredients?: string[];
   allergens?: string[];
+  day?: string;
 }
 
 export type WeeklyMeals = {
   [key: string]: Meal
 }
 
-// Default weekly meals data
+// Default weekly meals data for fallback
 const DEFAULT_WEEKLY_MEALS: WeeklyMeals = {
   monday: {
     name: "Grilled Salmon with Vegetables",
@@ -124,159 +126,144 @@ const DEFAULT_WEEKLY_MEALS: WeeklyMeals = {
   },
 };
 
-// Default available meals
-const DEFAULT_AVAILABLE_MEALS: Meal[] = [
-  {
-    name: "Grilled Salmon with Vegetables",
-    image: "/foodjpg/eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
-    description: 
-      "Fresh Atlantic salmon grilled to perfection. " + 
-      "Served with seasonal roasted vegetables. " + 
-      "Topped with a zesty lemon herb sauce.",
-    tags: ["High Protein", "Low Carb"],
-    ingredients: ["Fresh Atlantic salmon", "Seasonal vegetables", "Olive oil", "Lemon herb sauce", "Fresh herbs"],
-    allergens: ["Fish"],
-  },
-  {
-    name: "Chicken Alfredo Pasta",
-    image: "/foodjpg/anh-nguyen-kcA-c3f_3FE-unsplash.jpg",
-    description: 
-      "Creamy Alfredo sauce made with fresh garlic and butter. " + 
-      "Perfectly grilled chicken breast. " + 
-      "Served over al dente fettuccine pasta. " + 
-      "Topped with freshly grated Parmesan cheese.",
-    tags: ["High Protein", "Italian"],
-    ingredients: ["Grilled chicken breast", "Fettuccine pasta", "Cream", "Parmesan cheese", "Garlic", "Butter"],
-    allergens: ["Dairy", "Gluten"],
-  },
-  {
-    name: "Vegetable Curry with Naan",
-    image: "/foodjpg/max-griss-otLqpb9LK70-unsplash.jpg",
-    description: 
-      "A flavorful blend of seasonal vegetables in a rich curry sauce. " + 
-      "Infused with authentic Indian spices. " + 
-      "Served with warm naan bread. " + 
-      "Comes with a side of basmati rice.",
-    tags: ["Vegetarian", "Spicy"],
-    ingredients: ["Mixed vegetables", "Curry sauce", "Coconut milk", "Basmati rice", "Naan bread", "Indian spices"],
-    allergens: ["Gluten"],
-  },
-  {
-    name: "Beef Stir Fry with Rice",
-    image: "/foodjpg/omkar-jadhav-o5XB6XwTb1I-unsplash.jpg",
-    description: 
-      "Tender strips of beef stir-fried with colorful vegetables. " + 
-      "Tossed in our signature Asian-inspired sauce. " + 
-      "Served with perfectly steamed jasmine rice.",
-    tags: ["High Protein", "Asian"],
-  },
-  {
-    name: "Mediterranean Bowl",
-    image: "/foodjpg/charlesdeluvio-wrfO9SWykdE-unsplash.jpg",
-    description: 
-      "A delicious bowl with house-made falafel. " + 
-      "Topped with creamy hummus and fresh tabbouleh. " + 
-      "Includes a variety of colorful vegetables. " + 
-      "Drizzled with tahini sauce.",
-    tags: ["Vegetarian", "Mediterranean"],
-    ingredients: ["Falafel", "Hummus", "Tabbouleh", "Fresh vegetables", "Tahini sauce", "Pita bread"],
-    allergens: ["Sesame", "Gluten"],
-  },
-  {
-    name: "Teriyaki Salmon",
-    image: "/foodjpg/eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
-    description: 
-      "Salmon fillet glazed with our homemade teriyaki sauce. " + 
-      "Caramelized to perfection for a sweet and savory flavor. " + 
-      "Served with steamed white rice. " + 
-      "Accompanied by stir-fried seasonal vegetables.",
-    tags: ["High Protein", "Asian"],
-    ingredients: ["Salmon fillet", "Teriyaki sauce", "Steamed rice", "Mixed vegetables", "Green onions", "Sesame seeds"],
-    allergens: ["Fish", "Soy", "Sesame"],
-  },
-  {
-    name: "Protein Power Bowl",
-    image: "/foodjpg/kenny-eliason-SDprf7W3NUc-unsplash.jpg",
-    description: 
-      "Nutrient-dense bowl with protein-rich quinoa as the base. " + 
-      "Topped with tender grilled chicken and creamy avocado. " + 
-      "Features a colorful array of roasted vegetables. " + 
-      "Finished with a drizzle of homemade tahini dressing. " + 
-      "Garnished with crunchy toasted almonds.",
-    tags: ["High Protein", "Low Carb"],
-    ingredients: ["Quinoa", "Grilled chicken", "Avocado", "Roasted vegetables", "Tahini dressing", "Toasted almonds"],
-    allergens: ["Nuts", "Sesame"],
-  }
-];
-
-// Storage keys
-const WEEKLY_MEALS_STORAGE_KEY = 'kapioo_weekly_meals';
-const AVAILABLE_MEALS_STORAGE_KEY = 'kapioo_available_meals';
-
-// Helper function to safely parse JSON from localStorage
-function safeParseJSON<T>(jsonString: string | null, defaultValue: T): T {
-  if (!jsonString) return defaultValue;
+// Get weekly meals from the API
+export async function getWeeklyMeals(): Promise<WeeklyMeals> {
   try {
-    return JSON.parse(jsonString) as T;
-  } catch (e) {
-    console.error('Failed to parse JSON:', e);
-    return defaultValue;
-  }
-}
-
-// Get weekly meals from localStorage or use defaults
-export function getWeeklyMeals(): WeeklyMeals {
-  if (typeof window === 'undefined') {
+    const response = await fetch('/api/weekly-meals');
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as WeeklyMeals;
+    }
+    
+    console.error('Failed to fetch weekly meals from API');
+    // Fall back to default meals
+    return DEFAULT_WEEKLY_MEALS;
+  } catch (error) {
+    console.error('Error fetching weekly meals:', error);
+    // Fall back to default meals on error
     return DEFAULT_WEEKLY_MEALS;
   }
-  
-  const storedMeals = localStorage.getItem(WEEKLY_MEALS_STORAGE_KEY);
-  return safeParseJSON<WeeklyMeals>(storedMeals, DEFAULT_WEEKLY_MEALS);
 }
 
-// Get available meals from localStorage or use defaults
-export function getAvailableMeals(): Meal[] {
-  if (typeof window === 'undefined') {
-    return DEFAULT_AVAILABLE_MEALS;
+// Get all available meals from the API
+export async function getAvailableMeals(): Promise<Meal[]> {
+  try {
+    const response = await fetch('/api/meals');
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as Meal[];
+    }
+    
+    console.error('Failed to fetch available meals from API');
+    return []; // Return empty array if API fails
+  } catch (error) {
+    console.error('Error fetching available meals:', error);
+    return []; // Return empty array on error
   }
-  
-  const storedMeals = localStorage.getItem(AVAILABLE_MEALS_STORAGE_KEY);
-  return safeParseJSON<Meal[]>(storedMeals, DEFAULT_AVAILABLE_MEALS);
 }
 
-// Save weekly meals to localStorage
-export function saveWeeklyMeals(meals: WeeklyMeals): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(WEEKLY_MEALS_STORAGE_KEY, JSON.stringify(meals));
-}
-
-// Save available meals to localStorage
-export function saveAvailableMeals(meals: Meal[]): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(AVAILABLE_MEALS_STORAGE_KEY, JSON.stringify(meals));
-}
-
-// Update a specific day's meal
-export function updateDayMeal(day: string, meal: Partial<Meal>): void {
-  const currentMeals = getWeeklyMeals();
-  
-  currentMeals[day] = {
-    ...currentMeals[day],
-    ...meal
-  };
-  
-  saveWeeklyMeals(currentMeals);
-}
-
-// Initialize meals storage with defaults if not present
-export function initializeMealsStorage(): void {
-  if (typeof window === 'undefined') return;
-  
-  if (!localStorage.getItem(WEEKLY_MEALS_STORAGE_KEY)) {
-    saveWeeklyMeals(DEFAULT_WEEKLY_MEALS);
+// Get a specific meal by ID
+export async function getMealById(id: string): Promise<Meal | null> {
+  try {
+    const response = await fetch(`/api/meals/${id}`);
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as Meal;
+    }
+    
+    console.error('Failed to fetch meal by ID');
+    return null;
+  } catch (error) {
+    console.error(`Error fetching meal ${id}:`, error);
+    return null;
   }
-  
-  if (!localStorage.getItem(AVAILABLE_MEALS_STORAGE_KEY)) {
-    saveAvailableMeals(DEFAULT_AVAILABLE_MEALS);
+}
+
+// Create a new meal
+export async function createMeal(mealData: Omit<Meal, '_id'>): Promise<Meal | null> {
+  try {
+    const response = await fetch('/api/meals', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(mealData),
+    });
+    
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as Meal;
+    }
+    
+    console.error('Failed to create meal:', result.error);
+    return null;
+  } catch (error) {
+    console.error('Error creating meal:', error);
+    return null;
+  }
+}
+
+// Update an existing meal
+export async function updateMeal(id: string, mealData: Partial<Meal>): Promise<Meal | null> {
+  try {
+    const response = await fetch(`/api/meals/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(mealData),
+    });
+    
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as Meal;
+    }
+    
+    console.error('Failed to update meal:', result.error);
+    return null;
+  } catch (error) {
+    console.error(`Error updating meal ${id}:`, error);
+    return null;
+  }
+}
+
+// Delete a meal
+export async function deleteMeal(id: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/meals/${id}`, {
+      method: 'DELETE',
+    });
+    
+    const result = await response.json();
+    
+    return result.success;
+  } catch (error) {
+    console.error(`Error deleting meal ${id}:`, error);
+    return false;
+  }
+}
+
+// Assign a meal to a day of the week
+export async function assignMealToDay(day: string, mealId: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/weekly-meals', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ day, mealId }),
+    });
+    
+    const result = await response.json();
+    
+    return result.success;
+  } catch (error) {
+    console.error(`Error assigning meal to ${day}:`, error);
+    return false;
   }
 }
