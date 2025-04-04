@@ -342,7 +342,7 @@ export default function DashboardPage() {
                           <p className="text-sm font-medium leading-none">Monday</p>
                           <p className="text-sm text-muted-foreground">Grilled Salmon with Vegetables</p>
                         </div>
-                        <Dialog>
+                        {/* <Dialog>
                           <DialogTrigger asChild>
                             <Button
                               variant="outline"
@@ -360,7 +360,7 @@ export default function DashboardPage() {
                           <DialogContent>
                             <MealCustomization meal={customizeMeal} onClose={() => setCustomizeMeal(null)} />
                           </DialogContent>
-                        </Dialog>
+                        </Dialog> */}
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
@@ -370,7 +370,7 @@ export default function DashboardPage() {
                           <p className="text-sm font-medium leading-none">Wednesday</p>
                           <p className="text-sm text-muted-foreground">Chicken Alfredo Pasta</p>
                         </div>
-                        <Dialog>
+                        {/* <Dialog>
                           <DialogTrigger asChild>
                             <Button
                               variant="outline"
@@ -388,7 +388,7 @@ export default function DashboardPage() {
                           <DialogContent>
                             <MealCustomization meal={customizeMeal} onClose={() => setCustomizeMeal(null)} />
                           </DialogContent>
-                        </Dialog>
+                        </Dialog> */}
                       </div>
                     </div>
                   </CardContent>
@@ -1026,7 +1026,7 @@ function WeeklyMealSelector({ credits, setCredits }) {
                 {Object.entries(meals).map(([day, meal]) => (
                   <div key={day} className="relative">
                     <MealDetail meal={meal} day={day} onSelect={toggleMeal} isSelected={selectedMeals[day]} />
-                    {selectedMeals[day] && (
+                    {/* {selectedMeals[day] && (
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
@@ -1047,7 +1047,7 @@ function WeeklyMealSelector({ credits, setCredits }) {
                           <MealCustomization meal={customizeMeal} onClose={() => setCustomizeMeal(null)} />
                         </DialogContent>
                       </Dialog>
-                    )}
+                    )} */}
                   </div>
                 ))}
               </div>
