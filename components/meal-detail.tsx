@@ -100,6 +100,8 @@ interface MealDetailProps {
     name: string;
     image?: string;
     description?: string;
+    ingredients?: string[];
+    allergens?: string[];
   };
   day: string;
   onSelect: (day: string) => void;
@@ -165,17 +167,33 @@ export function MealDetail({ meal, day, onSelect, isSelected }: MealDetailProps)
               </p>
             </TabsContent>
             <TabsContent value="ingredients" className="space-y-2">
-              <ul className="text-sm list-disc pl-5 space-y-1">
-                <li>Fresh vegetables</li>
-                <li>Premium protein</li>
-                <li>Whole grains</li>
-                <li>Herbs and spices</li>
-                <li>Healthy oils</li>
-              </ul>
-              <div className="flex items-center gap-2 text-amber-600 text-sm mt-2">
-                <AlertCircle className="h-4 w-4" />
-                <span>Contains: Gluten, Dairy</span>
-              </div>
+              {meal.ingredients && meal.ingredients.length > 0 ? (
+                <ul className="text-sm list-disc pl-5 space-y-1">
+                  {meal.ingredients.map((ingredient, index) => (
+                    <li key={index}>{ingredient}</li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="text-sm list-disc pl-5 space-y-1">
+                  <li>Fresh vegetables</li>
+                  <li>Premium protein</li>
+                  <li>Whole grains</li>
+                  <li>Herbs and spices</li>
+                  <li>Healthy oils</li>
+                </ul>
+              )}
+              
+              {meal.allergens && meal.allergens.length > 0 ? (
+                <div className="flex items-center gap-2 text-amber-600 text-sm mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Contains: {meal.allergens.join(', ')}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-600 text-sm mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Contains: Gluten, Dairy</span>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
