@@ -1,12 +1,8 @@
-// Load environment variables first
-import dotenv from 'dotenv';
-// Load .env.local file
-dotenv.config({ path: '.env.local' });
+// Direct script to seed MongoDB Atlas database
+const mongoose = require('mongoose');
 
-import mongoose from 'mongoose';
-import connectToDatabase from '../lib/db';
-import Meal from '../models/Meal';
-import WeeklyMeal from '../models/WeeklyMeal';
+// Use the Atlas connection string directly
+const MONGODB_URI = "mongodb+srv://kamtocheung1104:N7H0LQ9L2bq5qQbo@kapiofood.otsn8px.mongodb.net/kapioo?retryWrites=true&w=majority&appName=kapiofood";
 
 // Initial seed data for meals
 const initialMeals = [
@@ -116,43 +112,6 @@ const initialMeals = [
     ingredients: ["Arborio rice", "Mixed mushrooms", "Shallots", "White wine", "Parmesan cheese", "Truffle oil"],
     allergens: ["Dairy", "Alcohol"],
     day: "sunday"
-  },
-  {
-    name: "Mediterranean Bowl",
-    image: "/foodjpg/charlesdeluvio-wrfO9SWykdE-unsplash.jpg",
-    description: 
-      "A delicious bowl with house-made falafel. " + 
-      "Topped with creamy hummus and fresh tabbouleh. " + 
-      "Includes a variety of colorful vegetables. " + 
-      "Drizzled with tahini sauce.",
-    tags: ["Vegetarian", "Mediterranean"],
-    ingredients: ["Falafel", "Hummus", "Tabbouleh", "Fresh vegetables", "Tahini sauce", "Pita bread"],
-    allergens: ["Sesame", "Gluten"],
-  },
-  {
-    name: "Teriyaki Salmon",
-    image: "/foodjpg/eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
-    description: 
-      "Salmon fillet glazed with our homemade teriyaki sauce. " + 
-      "Caramelized to perfection for a sweet and savory flavor. " + 
-      "Served with steamed white rice. " + 
-      "Accompanied by stir-fried seasonal vegetables.",
-    tags: ["High Protein", "Asian"],
-    ingredients: ["Salmon fillet", "Teriyaki sauce", "Steamed rice", "Mixed vegetables", "Green onions", "Sesame seeds"],
-    allergens: ["Fish", "Soy", "Sesame"],
-  },
-  {
-    name: "Protein Power Bowl",
-    image: "/foodjpg/kenny-eliason-SDprf7W3NUc-unsplash.jpg",
-    description: 
-      "Nutrient-dense bowl with protein-rich quinoa as the base. " + 
-      "Topped with tender grilled chicken and creamy avocado. " + 
-      "Features a colorful array of roasted vegetables. " + 
-      "Finished with a drizzle of homemade tahini dressing. " + 
-      "Garnished with crunchy toasted almonds.",
-    tags: ["High Protein", "Low Carb"],
-    ingredients: ["Quinoa", "Grilled chicken", "Avocado", "Roasted vegetables", "Tahini dressing", "Toasted almonds"],
-    allergens: ["Nuts", "Sesame"],
   }
 ];
 
@@ -166,10 +125,47 @@ function getCurrentWeekYear() {
   return { week, year: now.getFullYear() };
 }
 
+// Define Mongoose schemas directly in this file
+const mealSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  image: { type: String, required: true },
+  description: { type: String, required: true },
+  calories: { type: Number },
+  time: { type: String },
+  tags: [{ type: String }],
+  ingredients: [{ type: String }],
+  allergens: [{ type: String }],
+  day: { type: String }
+}, { timestamps: true });
+
+const weeklyMealSchema = new mongoose.Schema({
+  day: { 
+    type: String, 
+    required: true,
+    enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+  },
+  meal: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Meal', 
+    required: true 
+  },
+  active: { 
+    type: Boolean, 
+    default: true 
+  },
+  week: { type: Number, required: true },
+  year: { type: Number, required: true },
+}, { timestamps: true });
+
+// Create models
+const Meal = mongoose.model('Meal', mealSchema);
+const WeeklyMeal = mongoose.model('WeeklyMeal', weeklyMealSchema);
+
 async function seedDatabase() {
   try {
-    console.log('Connecting to database...');
-    await connectToDatabase();
+    console.log('Connecting to MongoDB Atlas...');
+    await mongoose.connect(MONGODB_URI);
+    console.log('Connected to MongoDB Atlas successfully!');
     
     // Check if meals already exist
     const existingMealsCount = await Meal.countDocuments();

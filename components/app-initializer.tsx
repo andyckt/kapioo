@@ -1,12 +1,12 @@
 "use client"
 
 import { useEffect } from "react"
-import { initializeMealsStorage } from "@/lib/utils"
 
 export default function AppInitializer() {
   useEffect(() => {
-    // Initialize meals storage with default data if not already present
-    initializeMealsStorage();
+    // We no longer need to initialize localStorage since we're using MongoDB
+    // The database was already seeded with our initial data
+    console.log("Application initialized with MongoDB Atlas database");
   }, []);
 
   return null;

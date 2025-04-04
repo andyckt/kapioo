@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: Params) {
 // PUT handler - update a specific meal by ID
 export async function PUT(request: Request, { params }: Params) {
   try {
-    const { id } = params;
+    const id = params.id;
     const data = await request.json();
     
     await connectToDatabase();

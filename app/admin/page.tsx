@@ -748,6 +748,8 @@ function MealManagement() {
   const [editedMeals, setEditedMeals] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMealId, setSelectedMealId] = useState<Record<string, string>>({});
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [currentEditMeal, setCurrentEditMeal] = useState<Meal | null>(null);
 
   // Load meals on component mount
   useEffect(() => {
@@ -816,34 +818,45 @@ function MealManagement() {
 
   // Update a single meal
   const updateDayMeal = async (day: string) => {
-    if (!editedMeals[day] || !selectedMealId[day]) return;
+    if (!editedMeals[day]) return;
     
     try {
       setIsLoading(true);
       
-      // Assign the selected meal to the day
-      const success = await assignMealToDay(day, selectedMealId[day]);
+      // Update the meal name
+      const updatedMeal = {
+        ...weeklyMeals[day],
+        name: editedMeals[day]
+      };
       
-      if (success) {
-        // Update local state
-        const selectedMeal = availableMeals.find(meal => meal._id === selectedMealId[day]);
-        if (selectedMeal) {
+      // Find or use the existing meal ID
+      const mealId = weeklyMeals[day]._id || '';
+      
+      if (mealId) {
+        // Update the existing meal
+        const result = await updateMeal(mealId, updatedMeal);
+        
+        if (result) {
+          // Update local state
           setWeeklyMeals({
             ...weeklyMeals,
-            [day]: selectedMeal
+            [day]: {
+              ...weeklyMeals[day],
+              name: editedMeals[day]
+            }
+          });
+          
+          toast({
+            title: "Meal updated",
+            description: `Updated ${day}'s meal successfully`
+          });
+        } else {
+          toast({
+            title: "Update failed",
+            description: "Failed to update meal. Please try again.",
+            variant: "destructive"
           });
         }
-        
-        toast({
-          title: "Meal updated",
-          description: `Updated ${day}'s meal successfully`
-        });
-      } else {
-        toast({
-          title: "Update failed",
-          description: "Failed to update meal. Please try again.",
-          variant: "destructive"
-        });
       }
     } catch (error) {
       console.error(`Error updating ${day} meal:`, error);
@@ -862,44 +875,101 @@ function MealManagement() {
     try {
       setIsLoading(true);
       
-      const days = Object.keys(selectedMealId);
-      let successCount = 0;
+      // Refresh the weekly meals data
+      const updatedMeals = await getWeeklyMeals();
+      setWeeklyMeals(updatedMeals);
       
-      // Update each day one by one
-      for (const day of days) {
-        if (selectedMealId[day]) {
-          const success = await assignMealToDay(day, selectedMealId[day]);
-          if (success) {
-            successCount++;
-          }
-        }
-      }
+      toast({
+        title: "Menu refreshed",
+        description: "The weekly menu has been refreshed successfully"
+      });
       
-      if (successCount === days.length) {
-        toast({
-          title: "All meals updated",
-          description: "The weekly menu has been updated successfully"
-        });
-        
-        // Refresh the data
-        const updatedMeals = await getWeeklyMeals();
-        setWeeklyMeals(updatedMeals);
-      } else {
-        toast({
-          title: "Partial update",
-          description: `Updated ${successCount} out of ${days.length} meals`,
-        });
-      }
     } catch (error) {
-      console.error('Error saving all changes:', error);
+      console.error('Error refreshing menu:', error);
       toast({
         title: "Error",
-        description: "An error occurred while saving changes",
+        description: "An error occurred while refreshing the menu",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Open edit modal for a specific meal
+  const openEditMeal = (day: string) => {
+    if (weeklyMeals[day]) {
+      setCurrentEditMeal({...weeklyMeals[day]});
+      setEditModalOpen(true);
+    }
+  };
+
+  // Handle saving edited meal details
+  const saveEditedMeal = async () => {
+    if (!currentEditMeal || !currentEditMeal._id) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Save the updated meal details
+      const result = await updateMeal(currentEditMeal._id, currentEditMeal);
+      
+      if (result) {
+        // Find which day this meal belongs to
+        let updatedDay = '';
+        Object.entries(weeklyMeals).forEach(([day, meal]) => {
+          if (meal._id === currentEditMeal._id) {
+            updatedDay = day;
+          }
+        });
+        
+        if (updatedDay) {
+          // Update the local state
+          setWeeklyMeals({
+            ...weeklyMeals,
+            [updatedDay]: currentEditMeal
+          });
+          
+          // Also update edited meals
+          setEditedMeals({
+            ...editedMeals,
+            [updatedDay]: currentEditMeal.name
+          });
+        }
+        
+        toast({
+          title: "Meal details updated",
+          description: "The meal details have been updated successfully"
+        });
+        
+        setEditModalOpen(false);
+      } else {
+        toast({
+          title: "Update failed",
+          description: "Failed to update meal details. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating meal details:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while updating the meal details",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle input change for the current edit meal
+  const handleEditMealChange = (field: keyof Meal, value: any) => {
+    if (!currentEditMeal) return;
+    
+    setCurrentEditMeal({
+      ...currentEditMeal,
+      [field]: value
+    });
   };
 
   if (isLoading) {
@@ -911,62 +981,278 @@ function MealManagement() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Weekly Menu</CardTitle>
-        <CardDescription>Update the meals for each day of the week</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {Object.entries(weeklyMeals).map(([day, meal]) => (
-            <div key={day} className="grid gap-4 md:grid-cols-[1fr_2fr_1fr_1fr]">
-              <div className="flex items-center">
-                <span className="font-medium capitalize">{day}</span>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly Menu</CardTitle>
+          <CardDescription>Update the meals for each day of the week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+              weeklyMeals[day] && (
+                <div key={day} className="grid gap-4 md:grid-cols-[1fr_2fr_1fr_1fr]">
+                  <div className="flex items-center">
+                    <span className="font-medium capitalize">{day}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-full px-3 py-2 rounded-md border border-input bg-muted text-sm truncate font-medium">
+                      {editedMeals[day] || ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={weeklyMeals[day]?.image || "/placeholder.svg"}
+                        alt={weeklyMeals[day]?.name || ""}
+                        className="h-10 w-10 rounded-md object-cover"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => openEditMeal(day)}
+                      disabled={isLoading}
+                    >
+                      Edit Details
+                    </Button>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={saveAllChanges} disabled={isLoading}>
+            {isLoading ? 'Loading...' : 'Save All Changes'}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* Edit Meal Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Meal Details</DialogTitle>
+            <DialogDescription>Update the detailed information for this meal.</DialogDescription>
+          </DialogHeader>
+          
+          {currentEditMeal && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="edit-name"
+                  value={currentEditMeal.name}
+                  onChange={(e) => handleEditMealChange('name', e.target.value)}
+                  className="col-span-3"
+                />
               </div>
-              <div className="flex items-center">
-                <select 
-                  id={`meal-select-${day}`}
-                  value={selectedMealId[day] || ''}
-                  onChange={(e) => handleMealSelect(day, e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="" disabled>Select a meal</option>
-                  {availableMeals.map((availableMeal) => (
-                    <option key={availableMeal._id} value={availableMeal._id}>
-                      {availableMeal.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={meal.image || "/placeholder.svg"}
-                    alt={meal.name}
-                    className="h-10 w-10 rounded-md object-cover"
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-image" className="text-right">
+                  Image URL
+                </Label>
+                <div className="col-span-3 flex space-x-2">
+                  <Input
+                    id="edit-image"
+                    value={currentEditMeal.image}
+                    onChange={(e) => handleEditMealChange('image', e.target.value)}
+                    className="flex-1"
                   />
+                  <input
+                    type="file"
+                    id="image-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        
+                        // Create a FormData object
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        try {
+                          setIsLoading(true);
+                          
+                          console.log('Uploading image:', file.name);
+                          
+                          // Upload the image
+                          const response = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData,
+                          });
+                          
+                          console.log('Upload response status:', response.status);
+                          
+                          const result = await response.json();
+                          console.log('Upload result:', result);
+                          
+                          if (result.success) {
+                            // Update the image URL
+                            const newImageUrl = result.data.url;
+                            console.log('New image URL:', newImageUrl);
+                            
+                            handleEditMealChange('image', newImageUrl);
+                            
+                            // Force UI refresh
+                            setCurrentEditMeal(prev => {
+                              if (!prev) return prev;
+                              return {
+                                ...prev,
+                                image: newImageUrl
+                              };
+                            });
+                            
+                            toast({
+                              title: "Image uploaded",
+                              description: result.data.fallback 
+                                ? "Used fallback image due to S3 issue" 
+                                : "The image was uploaded successfully",
+                            });
+                          } else {
+                            console.error('Upload failed:', result.error);
+                            toast({
+                              title: "Upload failed",
+                              description: result.error || "Failed to upload image",
+                              variant: "destructive"
+                            });
+                          }
+                        } catch (error) {
+                          console.error('Error uploading image:', error);
+                          toast({
+                            title: "Error",
+                            description: "An error occurred while uploading the image",
+                            variant: "destructive"
+                          });
+                        } finally {
+                          setIsLoading(false);
+                          
+                          // Reset the input to allow uploading the same file again
+                          e.target.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('image-upload')?.click()}
+                  >
+                    Upload
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => updateDayMeal(day)}
-                  disabled={isLoading}
-                >
-                  Update
-                </Button>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">
+                  Preview
+                </Label>
+                <div className="col-span-3">
+                  <div className="w-32 h-32 overflow-hidden rounded-md border">
+                    <img
+                      src={currentEditMeal.image || "/placeholder.svg"}
+                      alt={currentEditMeal.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-description" className="text-right">
+                  Description
+                </Label>
+                <textarea
+                  id="edit-description"
+                  value={currentEditMeal.description}
+                  onChange={(e) => handleEditMealChange('description', e.target.value)}
+                  className="col-span-3 min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-calories" className="text-right">
+                  Calories
+                </Label>
+                <Input
+                  id="edit-calories"
+                  type="number"
+                  value={currentEditMeal.calories || ''}
+                  onChange={(e) => handleEditMealChange('calories', parseInt(e.target.value) || 0)}
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-time" className="text-right">
+                  Time
+                </Label>
+                <Input
+                  id="edit-time"
+                  value={currentEditMeal.time || ''}
+                  onChange={(e) => handleEditMealChange('time', e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-tags" className="text-right">
+                  Tags
+                </Label>
+                <Input
+                  id="edit-tags"
+                  value={(currentEditMeal.tags || []).join(', ')}
+                  onChange={(e) => handleEditMealChange('tags', e.target.value.split(',').map(tag => tag.trim()))}
+                  placeholder="Comma-separated tags"
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-ingredients" className="text-right">
+                  Ingredients
+                </Label>
+                <Input
+                  id="edit-ingredients"
+                  value={(currentEditMeal.ingredients || []).join(', ')}
+                  onChange={(e) => handleEditMealChange('ingredients', e.target.value.split(',').map(item => item.trim()))}
+                  placeholder="Comma-separated ingredients"
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-allergens" className="text-right">
+                  Allergens
+                </Label>
+                <Input
+                  id="edit-allergens"
+                  value={(currentEditMeal.allergens || []).join(', ')}
+                  onChange={(e) => handleEditMealChange('allergens', e.target.value.split(',').map(item => item.trim()))}
+                  placeholder="Comma-separated allergens"
+                  className="col-span-3"
+                />
               </div>
             </div>
-          ))}
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button onClick={saveAllChanges} disabled={isLoading}>
-          {isLoading ? 'Saving...' : 'Save All Changes'}
-        </Button>
-      </CardFooter>
-    </Card>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveEditedMeal} disabled={isLoading}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

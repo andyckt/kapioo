@@ -14,9 +14,10 @@ import { type WeeklyMeals } from "@/lib/utils"
 interface ThisWeekMealsProps {
   meals: WeeklyMeals;
   onSelectMeal: () => void;
+  isLoading?: boolean;
 }
 
-export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
+export function ThisWeekMeals({ meals, onSelectMeal, isLoading = false }: ThisWeekMealsProps) {
   const [activeDay, setActiveDay] = useState("monday")
   const [isAutoplay, setIsAutoplay] = useState(true)
   const [selectedMeals, setSelectedMeals] = useState<Record<string, boolean>>({})
@@ -36,13 +37,32 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
 
   // Preload all meal images to prevent loading delay when switching tabs
   useEffect(() => {
-    let loadedCount = 0;
-    const totalImagesToLoad = days.length;
+    // Check if meals object is populated first
+    if (!meals || Object.keys(meals).length === 0) {
+      setImagesLoaded(false);
+      return;
+    }
     
-    days.forEach(day => {
+    let loadedCount = 0;
+    const totalImagesToLoad = Object.keys(meals).length;
+    
+    // If no meals, set images as loaded
+    if (totalImagesToLoad === 0) {
+      setImagesLoaded(true);
+      return;
+    }
+    
+    Object.keys(meals).forEach(day => {
       if (meals[day]?.image) {
         const img = new Image();
         img.onload = () => {
+          loadedCount++;
+          if (loadedCount === totalImagesToLoad) {
+            setImagesLoaded(true);
+          }
+        };
+        img.onerror = () => {
+          // Count failed loads too
           loadedCount++;
           if (loadedCount === totalImagesToLoad) {
             setImagesLoaded(true);
@@ -56,7 +76,18 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
         }
       }
     });
-  }, [days, meals]);
+  }, [meals]);
+
+  // Only set active day if meals exist
+  useEffect(() => {
+    if (meals && Object.keys(meals).length > 0) {
+      // Find first available day that has meal data
+      const availableDays = days.filter(day => meals[day]);
+      if (availableDays.length > 0 && !meals[activeDay]) {
+        setActiveDay(availableDays[0]);
+      }
+    }
+  }, [meals, days, activeDay]);
 
   // Auto-rotate through days
   useEffect(() => {
@@ -157,94 +188,105 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
             transition={{ duration: 0.15, ease: "easeInOut" }}
             className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6"
           >
-            <motion.div
-              className="relative overflow-hidden rounded-xl aspect-square w-full h-[280px] sm:h-[320px] md:h-[450px] md:w-[450px] mx-auto"
-              whileHover={{ scale: 1.03 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              layoutId="meal-image-container"
-            >
-              <img
-                src={activeMeal.image || "/placeholder.svg"}
-                alt={activeMeal.name}
-                className="w-full h-full object-cover rounded-xl"
-                loading="eager"
-                style={{ 
-                  willChange: "transform, opacity"
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
-                {/* Tags removed from here */}
-              </div>
-            </motion.div>
-
-            <motion.div 
-              className="flex flex-col justify-between mt-2 md:mt-0"
-              transition={{ duration: 0.2, staggerChildren: 0.05 }}
-            >
-              <div className="space-y-3 md:space-y-4">
+            {!isLoading && activeMeal ? (
+              <>
                 <motion.div
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
+                  className="relative overflow-hidden rounded-xl aspect-square w-full h-[280px] sm:h-[320px] md:h-[450px] md:w-[450px] mx-auto"
+                  whileHover={{ scale: 1.03 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  layoutId="meal-image-container"
                 >
-                  <h2 className="text-xl md:text-2xl font-bold">{activeMeal.name}</h2>
+                  <img
+                    src={activeMeal.image || "/placeholder.svg"}
+                    alt={activeMeal.name}
+                    className="w-full h-full object-cover rounded-xl"
+                    loading="eager"
+                    style={{ 
+                      willChange: "transform, opacity"
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
+                    {/* Tags removed from here */}
+                  </div>
                 </motion.div>
 
                 <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className="flex flex-col justify-between mt-2 md:mt-0"
+                  transition={{ duration: 0.2, staggerChildren: 0.05 }}
                 >
-                  {activeMeal.description.split('. ')
-                    .filter(Boolean)
-                    .map((sentence, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-                        <p className="text-muted-foreground text-sm">{sentence.replace(/\.$/, '').trim()}</p>
-                      </div>
-                    ))}
-                </motion.div>
+                  <div className="space-y-3 md:space-y-4">
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <h2 className="text-xl md:text-2xl font-bold">{activeMeal.name}</h2>
+                    </motion.div>
 
-                <motion.div 
-                  className="flex flex-wrap gap-1"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                >
-                  {activeMeal.tags?.map((tag: string) => (
-                    <Badge key={tag} variant="outline" className="bg-muted/50">
-                      {tag}
-                    </Badge>
-                  ))}
-                </motion.div>
-              </div>
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
+                    >
+                      {activeMeal.description.split('. ')
+                        .filter(Boolean)
+                        .map((sentence, index) => (
+                          <div key={index} className="flex items-start gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                            <p className="text-muted-foreground text-sm">{sentence.replace(/\.$/, '').trim()}</p>
+                          </div>
+                        ))}
+                    </motion.div>
 
-              <div className="flex items-center gap-2 md:gap-3 mt-4 md:mt-6">
-                <Button
-                  className="flex-1 px-2 md:px-4"
-                  onClick={() => handleSelectMeal(activeDay)}
-                  variant={selectedMeals[activeDay] ? "outline" : "default"}
-                  size="sm"
-                  md-size="default"
-                >
-                  {selectedMeals[activeDay] ? (
-                    <>
-                      <Check className="mr-1 md:mr-2 h-4 w-4" />
-                      Selected
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-1 md:mr-2 h-4 w-4" />
-                      Select This Meal
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" onClick={handleViewAll} size="sm" md-size="default" className="px-2 md:px-4">
-                  View All Meals
-                </Button>
+                    <motion.div 
+                      className="flex flex-wrap gap-1"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                    >
+                      {activeMeal.tags?.map((tag: string) => (
+                        <Badge key={tag} variant="outline" className="bg-muted/50">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </motion.div>
+                  </div>
+
+                  <div className="flex items-center gap-2 md:gap-3 mt-4 md:mt-6">
+                    <Button
+                      className="flex-1 px-2 md:px-4"
+                      onClick={() => handleSelectMeal(activeDay)}
+                      variant={selectedMeals[activeDay] ? "outline" : "default"}
+                      size="sm"
+                      md-size="default"
+                    >
+                      {selectedMeals[activeDay] ? (
+                        <>
+                          <Check className="mr-1 md:mr-2 h-4 w-4" />
+                          Selected
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="mr-1 md:mr-2 h-4 w-4" />
+                          Select This Meal
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="outline" onClick={handleViewAll} size="sm" md-size="default" className="px-2 md:px-4">
+                      View All Meals
+                    </Button>
+                  </div>
+                </motion.div>
+              </>
+            ) : (
+              <div className="col-span-2 flex justify-center items-center h-[400px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p>Loading meal information...</p>
+                </div>
               </div>
-            </motion.div>
+            )}
           </motion.div>
         </AnimatePresence>
       </CardContent>
@@ -253,22 +295,24 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
         <div className="flex items-center justify-between w-full">
           <div className="flex -space-x-2">
             {days.map((day, index) => (
-              <motion.div
-                key={day}
-                className={`w-10 h-10 rounded-full border-2 border-background ${
-                  activeDay === day ? "ring-2 ring-primary" : ""
-                } overflow-hidden cursor-pointer`}
-                whileHover={{ scale: 1.1, zIndex: 10 }}
-                onClick={() => handleDayChange(day)}
-                style={{ zIndex: days.length - index }}
-              >
-                <img 
-                  src={meals[day].image || "/placeholder.svg"} 
-                  alt={day} 
-                  className="w-full h-full object-cover" 
-                  loading="eager"
-                />
-              </motion.div>
+              meals[day] && (
+                <motion.div
+                  key={day}
+                  className={`w-10 h-10 rounded-full border-2 border-background ${
+                    activeDay === day ? "ring-2 ring-primary" : ""
+                  } overflow-hidden cursor-pointer`}
+                  whileHover={{ scale: 1.1, zIndex: 10 }}
+                  onClick={() => handleDayChange(day)}
+                  style={{ zIndex: days.length - index }}
+                >
+                  <img 
+                    src={meals[day]?.image || "/placeholder.svg"} 
+                    alt={day} 
+                    className="w-full h-full object-cover" 
+                    loading="eager"
+                  />
+                </motion.div>
+              )
             ))}
           </div>
           <div className="text-sm text-muted-foreground">

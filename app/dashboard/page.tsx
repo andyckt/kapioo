@@ -33,8 +33,29 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [customizeMeal, setCustomizeMeal] = useState(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [meals, setMeals] = useState<WeeklyMeals>({})
+  const [isLoading, setIsLoading] = useState(true)
 
-  const meals = getWeeklyMeals()
+  useEffect(() => {
+    async function loadMeals() {
+      try {
+        setIsLoading(true)
+        const weeklyMeals = await getWeeklyMeals()
+        setMeals(weeklyMeals)
+      } catch (error) {
+        console.error('Error loading meals:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load this week's meals",
+          variant: "destructive"
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadMeals()
+  }, [toast])
 
   useEffect(() => {
     // Check if user is logged in - in a real app, this would verify the session
@@ -247,6 +268,7 @@ export default function DashboardPage() {
                     onSelectMeal={() => {
                       setActiveTab("select-meals")
                     }}
+                    isLoading={isLoading}
                   />
                 </div>
               </motion.div>
@@ -864,11 +886,35 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
     address: "123 Main St",
     phone: "(123) 456-7890",
   })
+  const [meals, setMeals] = useState<WeeklyMeals>({})
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
   const [customizeMeal, setCustomizeMeal] = useState(null)
 
-  const meals = getWeeklyMeals()
+  // Define the proper order of days
+  const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+  useEffect(() => {
+    async function loadMeals() {
+      try {
+        setIsLoading(true)
+        const weeklyMeals = await getWeeklyMeals()
+        setMeals(weeklyMeals)
+      } catch (error) {
+        console.error('Error loading meals:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load this week's meals",
+          variant: "destructive"
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadMeals()
+  }, [toast])
 
   const toggleMeal = (day: string) => {
     setSelectedMeals({
@@ -920,11 +966,30 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Object.entries(meals).map(([day, meal]) => (
-                  <div key={day} className="relative">
-                    <MealDetail meal={meal} day={day} onSelect={toggleMeal} isSelected={selectedMeals[day as keyof typeof selectedMeals]} />
+                {isLoading ? (
+                  <div className="col-span-full flex justify-center items-center h-[300px]">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p>Loading meal information...</p>
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  // Sort the entries by the day order before rendering
+                  Object.entries(meals)
+                    .sort(([dayA], [dayB]) => {
+                      return dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
+                    })
+                    .map(([day, meal]) => (
+                      <div key={day} className="relative">
+                        <MealDetail 
+                          meal={meal} 
+                          day={day} 
+                          onSelect={toggleMeal} 
+                          isSelected={selectedMeals[day as keyof typeof selectedMeals]} 
+                        />
+                      </div>
+                    ))
+                )}
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
@@ -956,15 +1021,19 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
                 <h3 className="font-medium">Selected Meals</h3>
                 <div className="rounded-md border p-4">
                   <ul className="space-y-2">
-                    {Object.entries(selectedMeals).map(
-                      ([day, selected]) =>
-                        selected && (
-                          <li key={day} className="flex justify-between">
-                            <span className="capitalize">{day}</span>
-                            <span className="text-muted-foreground">{meals[day as keyof typeof meals].name}</span>
-                          </li>
-                        ),
-                    )}
+                    {Object.entries(selectedMeals)
+                      .sort(([dayA], [dayB]) => {
+                        return dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
+                      })
+                      .map(
+                        ([day, selected]) =>
+                          selected && meals[day as keyof typeof meals] && (
+                            <li key={day} className="flex justify-between">
+                              <span className="capitalize">{day}</span>
+                              <span className="text-muted-foreground">{meals[day as keyof typeof meals]?.name}</span>
+                            </li>
+                          ),
+                      )}
                   </ul>
                   <div className="mt-4 pt-4 border-t flex justify-between font-medium">
                     <span>Total</span>

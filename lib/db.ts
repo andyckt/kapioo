@@ -2,6 +2,9 @@ import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kapioo';
 
+// Debug log to see what connection string is being used
+console.log('Using MongoDB connection string:', MONGODB_URI);
+
 // Define connection cache type
 interface ConnectionCache {
   conn: typeof mongoose | null;
