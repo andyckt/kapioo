@@ -166,12 +166,14 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
                 </div>
 
                 <div className="space-y-2">
-                  {activeMeal.description.split('. ').filter(Boolean).map((sentence, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-                      <p className="text-muted-foreground text-sm">{sentence.trim()}.</p>
-                    </div>
-                  ))}
+                  {activeMeal.description.split('. ')
+                    .filter(Boolean)
+                    .map((sentence, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                        <p className="text-muted-foreground text-sm">{sentence.replace(/\.$/, '').trim()}</p>
+                      </div>
+                    ))}
                 </div>
 
                 <div className="flex flex-wrap gap-1">

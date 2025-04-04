@@ -165,26 +165,28 @@ export function MealDetail({ meal, day, onSelect, isSelected }: MealDetailProps)
             <TabsContent value="description" className="space-y-2">
               {meal.description ? (
                 <div className="space-y-2">
-                  {meal.description.split('. ').filter(Boolean).map((sentence, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-muted-foreground">{sentence.trim()}.</p>
-                    </div>
-                  ))}
+                  {meal.description.split('. ')
+                    .filter(Boolean)
+                    .map((sentence, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-muted-foreground">{sentence.replace(/\.$/, '').trim()}</p>
+                      </div>
+                    ))}
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">Our delicious {meal.name} is prepared with fresh ingredients.</p>
+                    <p className="text-sm text-muted-foreground">Our delicious {meal.name} is prepared with fresh ingredients</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">Delivered to your door in eco-friendly packaging.</p>
+                    <p className="text-sm text-muted-foreground">Delivered to your door in eco-friendly packaging</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">Perfect for a healthy and satisfying meal without the hassle of cooking.</p>
+                    <p className="text-sm text-muted-foreground">Perfect for a healthy and satisfying meal without the hassle of cooking</p>
                   </div>
                 </div>
               )}
