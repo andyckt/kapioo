@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, ChevronRight, Check, Plus, CheckCircle2 } from "lucide-react"
 
@@ -20,10 +20,11 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
   const [activeDay, setActiveDay] = useState("monday")
   const [isAutoplay, setIsAutoplay] = useState(true)
   const [selectedMeals, setSelectedMeals] = useState<Record<string, boolean>>({})
+  const [imagesLoaded, setImagesLoaded] = useState(false)
   const { toast } = useToast()
 
-  const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-  const dayLabels: Record<string, string> = {
+  const days = useMemo(() => ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], [])
+  const dayLabels = useMemo((): Record<string, string> => ({
     monday: "Monday",
     tuesday: "Tuesday",
     wednesday: "Wednesday",
@@ -31,7 +32,31 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
     friday: "Friday",
     saturday: "Saturday",
     sunday: "Sunday",
-  }
+  }), [])
+
+  // Preload all meal images to prevent loading delay when switching tabs
+  useEffect(() => {
+    let loadedCount = 0;
+    const totalImagesToLoad = days.length;
+    
+    days.forEach(day => {
+      if (meals[day]?.image) {
+        const img = new Image();
+        img.onload = () => {
+          loadedCount++;
+          if (loadedCount === totalImagesToLoad) {
+            setImagesLoaded(true);
+          }
+        };
+        img.src = meals[day].image as string;
+      } else {
+        loadedCount++;
+        if (loadedCount === totalImagesToLoad) {
+          setImagesLoaded(true);
+        }
+      }
+    });
+  }, [days, meals]);
 
   // Auto-rotate through days
   useEffect(() => {
@@ -86,34 +111,34 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
     }
   }
 
-  const activeMeal = meals[activeDay]
+  const activeMeal = useMemo(() => meals[activeDay], [meals, activeDay]);
 
   return (
     <Card className="col-span-2 overflow-hidden">
-      <CardHeader className="pb-0">
+      <CardHeader className="pb-0 px-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-2xl font-bold">Kapioo's Weekly Menu</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl font-bold">Kapioo's Weekly Menu</CardTitle>
             <CardDescription>Explore our capybara-approved meals for the week</CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={handlePrevDay}>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="outline" size="icon" onClick={handlePrevDay} className="h-8 w-8 sm:h-9 sm:w-9">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" onClick={handleNextDay}>
+            <Button variant="outline" size="icon" onClick={handleNextDay} className="h-8 w-8 sm:h-9 sm:w-9">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </CardHeader>
 
-      <div className="relative mt-4 px-6">
+      <div className="relative mt-2 sm:mt-4 px-3 sm:px-6">
         <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-hide">
           {days.map((day) => (
             <Button
               key={day}
               variant={activeDay === day ? "default" : "ghost"}
-              className={`flex-shrink-0 rounded-full px-4 ${activeDay === day ? "" : "opacity-70"}`}
+              className={`flex-shrink-0 rounded-full text-xs sm:text-sm px-2 sm:px-3 h-8 ${activeDay === day ? "" : "opacity-70"}`}
               onClick={() => handleDayChange(day)}
             >
               {dayLabels[day].substring(0, 3)}
@@ -122,44 +147,55 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
         </div>
       </div>
 
-      <CardContent className="p-6 pt-4">
-        <AnimatePresence mode="wait">
+      <CardContent className="p-4 sm:p-6 pt-4">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeDay}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="grid md:grid-cols-2 gap-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeInOut" }}
+            className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6"
           >
             <motion.div
-              className="relative overflow-hidden rounded-xl aspect-square w-full h-[350px] md:h-[450px] md:w-[450px] mx-auto"
+              className="relative overflow-hidden rounded-xl aspect-square w-full h-[280px] sm:h-[320px] md:h-[450px] md:w-[450px] mx-auto"
               whileHover={{ scale: 1.03 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              layoutId="meal-image-container"
             >
               <img
                 src={activeMeal.image || "/placeholder.svg"}
                 alt={activeMeal.name}
                 className="w-full h-full object-cover rounded-xl"
+                loading="eager"
+                style={{ 
+                  willChange: "transform, opacity"
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
                 {/* Tags removed from here */}
               </div>
-              <div className="absolute top-4 right-4">
-                <Badge variant="secondary" className="bg-primary/90 text-white backdrop-blur-sm">
-                  <CapybaraLogo size="small" animated={false} />
-                  <span className="ml-1">Approved</span>
-                </Badge>
-              </div>
             </motion.div>
 
-            <div className="flex flex-col justify-between">
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-2xl font-bold">{activeMeal.name}</h2>
-                </div>
+            <motion.div 
+              className="flex flex-col justify-between mt-2 md:mt-0"
+              transition={{ duration: 0.2, staggerChildren: 0.05 }}
+            >
+              <div className="space-y-3 md:space-y-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <h2 className="text-xl md:text-2xl font-bold">{activeMeal.name}</h2>
+                </motion.div>
 
-                <div className="space-y-2">
+                <motion.div 
+                  className="space-y-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                >
                   {activeMeal.description.split('. ')
                     .filter(Boolean)
                     .map((sentence, index) => (
@@ -168,45 +204,52 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
                         <p className="text-muted-foreground text-sm">{sentence.replace(/\.$/, '').trim()}</p>
                       </div>
                     ))}
-                </div>
+                </motion.div>
 
-                <div className="flex flex-wrap gap-1">
+                <motion.div 
+                  className="flex flex-wrap gap-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                >
                   {activeMeal.tags?.map((tag: string) => (
                     <Badge key={tag} variant="outline" className="bg-muted/50">
                       {tag}
                     </Badge>
                   ))}
-                </div>
+                </motion.div>
               </div>
 
-              <div className="flex items-center gap-3 mt-6">
+              <div className="flex items-center gap-2 md:gap-3 mt-4 md:mt-6">
                 <Button
-                  className="flex-1"
+                  className="flex-1 px-2 md:px-4"
                   onClick={() => handleSelectMeal(activeDay)}
                   variant={selectedMeals[activeDay] ? "outline" : "default"}
+                  size="sm"
+                  md-size="default"
                 >
                   {selectedMeals[activeDay] ? (
                     <>
-                      <Check className="mr-2 h-4 w-4" />
+                      <Check className="mr-1 md:mr-2 h-4 w-4" />
                       Selected
                     </>
                   ) : (
                     <>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="mr-1 md:mr-2 h-4 w-4" />
                       Select This Meal
                     </>
                   )}
                 </Button>
-                <Button variant="outline" onClick={handleViewAll}>
+                <Button variant="outline" onClick={handleViewAll} size="sm" md-size="default" className="px-2 md:px-4">
                   View All Meals
                 </Button>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </AnimatePresence>
       </CardContent>
 
-      <CardFooter className="bg-muted/30 px-6 py-4">
+      <CardFooter className="bg-muted/30 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between w-full">
           <div className="flex -space-x-2">
             {days.map((day, index) => (
@@ -219,7 +262,12 @@ export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
                 onClick={() => handleDayChange(day)}
                 style={{ zIndex: days.length - index }}
               >
-                <img src={meals[day].image || "/placeholder.svg"} alt={day} className="w-full h-full object-cover" />
+                <img 
+                  src={meals[day].image || "/placeholder.svg"} 
+                  alt={day} 
+                  className="w-full h-full object-cover" 
+                  loading="eager"
+                />
               </motion.div>
             ))}
           </div>
