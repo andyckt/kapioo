@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import connectToDatabase from '../lib/db';
 import Meal from '../models/Meal';
 import WeeklyMeal from '../models/WeeklyMeal';
+import User from '../models/User';
 
 // Initial seed data for meals
 const initialMeals = [
@@ -156,6 +157,114 @@ const initialMeals = [
   }
 ];
 
+// Initial seed data for users
+const initialUsers = [
+  {
+    userID: "user123",
+    name: "John Doe",
+    email: "john@example.com",
+    password: "123456", // Will be hashed during seeding
+    credits: 50,
+    joined: new Date("2023-01-15"),
+    status: "Active",
+    address: {
+      unitNumber: "101",
+      streetAddress: "123 Main St",
+      city: "New York",
+      postalCode: "10001",
+      province: "NY",
+      country: "USA",
+    },
+    phone: "+1 (555) 123-4567",
+  },
+  {
+    userID: "user456",
+    name: "Jane Smith",
+    email: "jane@example.com",
+    password: "123456", // Will be hashed during seeding
+    credits: 25,
+    joined: new Date("2023-02-20"),
+    status: "Active",
+    address: {
+      streetAddress: "456 Oak Ave",
+      city: "San Francisco",
+      postalCode: "94107",
+      province: "CA",
+      country: "USA",
+    },
+    phone: "+1 (555) 987-6543",
+  },
+  {
+    userID: "user789",
+    name: "Bob Johnson",
+    email: "bob@example.com",
+    password: "123456", // Will be hashed during seeding
+    credits: 10,
+    joined: new Date("2023-03-10"),
+    status: "Inactive",
+    address: {
+      streetAddress: "789 Pine Rd",
+      city: "Chicago",
+      postalCode: "60601",
+      province: "IL",
+      country: "USA",
+    },
+    phone: "+1 (555) 456-7890",
+  },
+  {
+    userID: "user101",
+    name: "Alice Brown",
+    email: "alice@example.com",
+    password: "123456", // Will be hashed during seeding
+    credits: 35,
+    joined: new Date("2023-04-05"),
+    status: "Active",
+    address: {
+      unitNumber: "202",
+      streetAddress: "101 Maple Dr",
+      city: "Austin",
+      postalCode: "78701",
+      province: "TX",
+      country: "USA",
+    },
+    phone: "+1 (555) 234-5678",
+  },
+  {
+    userID: "user202",
+    name: "Charlie Davis",
+    email: "charlie@example.com",
+    password: "123456", // Will be hashed during seeding
+    credits: 15,
+    joined: new Date("2023-05-12"),
+    status: "Active",
+    address: {
+      streetAddress: "202 Cedar Ln",
+      city: "Seattle",
+      postalCode: "98101",
+      province: "WA",
+      country: "USA",
+    },
+    phone: "+1 (555) 876-5432",
+  },
+  {
+    userID: "admin",
+    name: "Admin User",
+    email: "admin@kapioo.com",
+    password: "123456", // Will be hashed during seeding
+    credits: 999,
+    joined: new Date("2023-01-01"),
+    status: "Active",
+    address: {
+      streetAddress: "Admin HQ",
+      city: "San Francisco",
+      postalCode: "94107",
+      province: "CA",
+      country: "USA",
+    },
+    phone: "+1 (555) 111-0000",
+  }
+];
+
 // Helper function to get current week and year
 function getCurrentWeekYear() {
   const now = new Date();
@@ -166,10 +275,50 @@ function getCurrentWeekYear() {
   return { week, year: now.getFullYear() };
 }
 
+async function seedUsers() {
+  try {
+    // Check if users already exist
+    const existingUsersCount = await User.countDocuments();
+    if (existingUsersCount > 0) {
+      console.log(`Database already has ${existingUsersCount} users. Skipping user seeding.`);
+      return;
+    }
+    
+    console.log('Seeding users...');
+    
+    // Create users with properly hashed passwords
+    const userPromises = initialUsers.map(async (userData) => {
+      const user = new User({
+        userID: userData.userID,
+        email: userData.email,
+        joined: userData.joined,
+        status: userData.status,
+        credits: userData.credits,
+        phone: userData.phone,
+        address: userData.address
+      });
+      
+      // Set hashed password
+      await user.setPassword(userData.password);
+      
+      return user.save();
+    });
+    
+    const createdUsers = await Promise.all(userPromises);
+    console.log(`Created ${createdUsers.length} users`);
+  } catch (error) {
+    console.error('Error seeding users:', error);
+    throw error;
+  }
+}
+
 async function seedDatabase() {
   try {
     console.log('Connecting to database...');
     await connectToDatabase();
+    
+    // Seed users
+    await seedUsers();
     
     // Check if meals already exist
     const existingMealsCount = await Meal.countDocuments();
@@ -204,15 +353,15 @@ async function seedDatabase() {
       }
     }
     
-    console.log('Database seeding completed successfully!');
-  } catch (error) {
-    console.error('Error seeding database:', error);
+    console.log('Seed completed successfully');
+  } catch (err) {
+    console.error('Error during seeding:', err);
   } finally {
-    // Close the database connection
+    // Close MongoDB connection
     await mongoose.disconnect();
-    console.log('Database connection closed');
+    console.log('Disconnected from MongoDB');
   }
 }
 
-// Run the seed function
+// Execute the seed function
 seedDatabase(); 

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
-  const [userId, setUserId] = useState("")
+  const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -21,31 +21,52 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate login - in a real app, this would be an API call
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      // Call the login API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ login, password }),
+      });
 
-      // For demo purposes, we'll use a simple validation
-      if (userId === "user123" && password === "123456") {
+      const result = await response.json();
+
+      if (result.success) {
+        // Store user data in localStorage or a state management solution
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+        
+        // Show success toast
         toast({
           title: "Login successful",
-          description: "Welcome back to Kapioo!",
-        })
-        router.push("/dashboard")
-      } else if (userId === "admin" && password === "123456") {
-        toast({
-          title: "Admin login successful",
-          description: "Welcome to the admin dashboard",
-        })
-        router.push("/admin")
+          description: `Welcome back, ${result.data.user.userID}!`,
+        });
+        
+        // Redirect based on user ID (admin or regular user)
+        if (result.data.user.userID === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
+        // Show error toast
         toast({
           title: "Login failed",
-          description: "Invalid user ID or password",
+          description: result.error || "Invalid credentials",
           variant: "destructive",
-        })
+        });
       }
-    }, 1500)
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login failed",
+        description: "An error occurred during login",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -59,18 +80,18 @@ export default function LoginPage() {
         >
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">Welcome to Kapioo</h1>
-            <p className="text-sm text-muted-foreground">Enter your user ID and password to access your account</p>
+            <p className="text-sm text-muted-foreground">Enter your user ID/email and password to access your account</p>
           </div>
           <div className="grid gap-6">
             <form onSubmit={handleLogin}>
               <div className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="userId">User ID</Label>
+                  <Label htmlFor="login">User ID or Email</Label>
                   <Input
-                    id="userId"
-                    placeholder="user123"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
+                    id="login"
+                    placeholder="user123 or email@example.com"
+                    value={login}
+                    onChange={(e) => setLogin(e.target.value)}
                     required
                   />
                 </div>

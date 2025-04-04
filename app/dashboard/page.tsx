@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
-import { getWeeklyMeals, type WeeklyMeals } from "@/lib/utils"
+import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -35,6 +35,26 @@ export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [meals, setMeals] = useState<WeeklyMeals>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [userData, setUserData] = useState<UserType | null>(null)
+  const [userLoading, setUserLoading] = useState(true)
+
+  // Add form state for user settings
+  const [personalInfo, setPersonalInfo] = useState({
+    name: '',
+    nickname: '',
+    email: '',
+    phone: ''
+  });
+
+  const [addressInfo, setAddressInfo] = useState({
+    unitNumber: '',
+    streetAddress: '',
+    city: '',
+    province: '', // State in UI
+    postalCode: '', // ZIP code in UI
+    country: '',
+    buzzCode: ''
+  });
 
   useEffect(() => {
     async function loadMeals() {
@@ -58,12 +78,66 @@ export default function DashboardPage() {
   }, [toast])
 
   useEffect(() => {
-    // Check if user is logged in - in a real app, this would verify the session
-    const isLoggedIn = true // Simulated for demo
-    if (!isLoggedIn) {
-      router.push("/login")
+    // Check if user is logged in - get user from localStorage
+    const userDataStr = localStorage.getItem('user');
+    if (!userDataStr) {
+      router.push("/login");
+      return;
     }
-  }, [router])
+
+    // Load user data
+    async function loadUserData() {
+      try {
+        setUserLoading(true);
+        const userData = JSON.parse(userDataStr!);
+        
+        // Use the getUserById function to get full user data
+        const user = await getUserById(userData._id);
+        
+        if (user) {
+          // If there's no createdAt but there is joined, use joined for createdAt
+          if (!user.createdAt && user.joined) {
+            user.createdAt = user.joined;
+          }
+          
+          setUserData(user);
+          setCredits(user.credits || 0);
+          
+          // Set form data
+          setPersonalInfo({
+            name: user.name || '',
+            nickname: user.nickname || '',
+            email: user.email || '',
+            phone: user.phone || ''
+          });
+          
+          // Set address data if available
+          if (user.address) {
+            setAddressInfo({
+              unitNumber: user.address.unitNumber || '',
+              streetAddress: user.address.streetAddress || '',
+              city: user.address.city || '',
+              province: user.address.province || '', // State in UI
+              postalCode: user.address.postalCode || '', // ZIP code in UI
+              country: user.address.country || '',
+              buzzCode: user.address.buzzCode || ''
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load user data",
+          variant: "destructive"
+        });
+      } finally {
+        setUserLoading(false);
+      }
+    }
+    
+    loadUserData();
+  }, [router, toast]);
 
   const menuItems = [
     { id: "overview", label: "Overview", icon: <User className="h-4 w-4" /> },
@@ -85,6 +159,124 @@ export default function DashboardPage() {
     */
     { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
   ]
+
+  // Handle personal info form changes
+  const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setPersonalInfo((prev) => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  // Handle address form changes
+  const handleAddressInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setAddressInfo((prev) => ({
+      ...prev,
+      [id === 'state' ? 'province' : id === 'zip' ? 'postalCode' : id]: value
+    }));
+  };
+
+  // Handle saving personal information
+  const handleSavePersonalInfo = async () => {
+    if (!userData?._id) return;
+    
+    try {
+      const response = await fetch(`/api/users/${userData._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: personalInfo.name,
+          nickname: personalInfo.nickname,
+          email: personalInfo.email,
+          phone: personalInfo.phone
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update local state with new data
+        setUserData((prev: UserType | null) => prev ? { ...prev, ...personalInfo } : null);
+        
+        toast({
+          title: "Settings updated",
+          description: "Your account information has been updated",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update settings",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating personal info:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle saving address information
+  const handleSaveAddressInfo = async () => {
+    if (!userData?._id) return;
+    
+    try {
+      const response = await fetch(`/api/users/${userData._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: {
+            unitNumber: addressInfo.unitNumber,
+            streetAddress: addressInfo.streetAddress,
+            city: addressInfo.city,
+            province: addressInfo.province,
+            postalCode: addressInfo.postalCode,
+            country: addressInfo.country,
+            buzzCode: addressInfo.buzzCode
+          }
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update local state with new data
+        setUserData((prev: UserType | null) => prev ? { 
+          ...prev, 
+          address: {
+            ...addressInfo
+          } 
+        } : null);
+        
+        toast({
+          title: "Address updated",
+          description: "Your delivery address has been updated",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update address",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating address:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -723,36 +915,42 @@ export default function DashboardPage() {
                         <CardDescription>Update your account details</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                        <div className="flex justify-between items-center mb-4 p-3 bg-muted rounded-md">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">Account Status</span>
+                            <span className="text-xs text-muted-foreground">User since {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString() : userData?.joined ? new Date(userData.joined).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`h-3 w-3 rounded-full ${userData?.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <span className="text-sm font-medium">{userData?.status || 'Unknown'}</span>
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
+                            <Label htmlFor="userId">User ID</Label>
+                            <Input id="userId" value={userData?.userID || ''} readOnly className="bg-muted" />
+                          </div>
+                          <div className="space-y-2">
                             <Label htmlFor="name">Name</Label>
-                            <Input id="name" defaultValue="John Doe" />
+                            <Input id="name" value={personalInfo.name} onChange={handlePersonalInfoChange} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="nickname">Nickname</Label>
-                            <Input id="nickname" defaultValue="Johnny" />
+                            <Input id="nickname" value={personalInfo.nickname} onChange={handlePersonalInfoChange} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" defaultValue="john@example.com" />
+                            <Input id="email" type="email" value={personalInfo.email} onChange={handlePersonalInfoChange} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="phone">Phone</Label>
-                            <Input id="phone" defaultValue="(123) 456-7890" />
+                            <Input id="phone" value={personalInfo.phone} onChange={handlePersonalInfoChange} />
                           </div>
                         </div>
                       </CardContent>
                       <CardFooter>
-                        <Button
-                          onClick={() => {
-                            toast({
-                              title: "Settings updated",
-                              description: "Your account information has been updated",
-                            })
-                          }}
-                        >
-                          Save Changes
-                        </Button>
+                        <Button onClick={handleSavePersonalInfo}>Save Changes</Button>
                       </CardFooter>
                     </Card>
 
@@ -763,39 +961,38 @@ export default function DashboardPage() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="unitNumber">Unit/Apt Number</Label>
+                            <Input id="unitNumber" value={addressInfo.unitNumber} onChange={handleAddressInfoChange} />
+                          </div>
                           <div className="space-y-2 sm:col-span-2">
-                            <Label htmlFor="address">Street Address</Label>
-                            <Input id="address" defaultValue="123 Main St" />
+                            <Label htmlFor="streetAddress">Street Address</Label>
+                            <Input id="streetAddress" value={addressInfo.streetAddress} onChange={handleAddressInfoChange} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="city">City</Label>
-                            <Input id="city" defaultValue="Anytown" />
+                            <Input id="city" value={addressInfo.city} onChange={handleAddressInfoChange} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="state">State</Label>
-                            <Input id="state" defaultValue="CA" />
+                            <Input id="state" value={addressInfo.province} onChange={handleAddressInfoChange} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="zip">ZIP Code</Label>
-                            <Input id="zip" defaultValue="12345" />
+                            <Input id="zip" value={addressInfo.postalCode} onChange={handleAddressInfoChange} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="country">Country</Label>
-                            <Input id="country" defaultValue="United States" />
+                            <Input id="country" value={addressInfo.country} onChange={handleAddressInfoChange} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="buzzCode">Buzz Code / Entry Code</Label>
+                            <Input id="buzzCode" value={addressInfo.buzzCode} onChange={handleAddressInfoChange} />
                           </div>
                         </div>
                       </CardContent>
                       <CardFooter>
-                        <Button
-                          onClick={() => {
-                            toast({
-                              title: "Address updated",
-                              description: "Your delivery address has been updated",
-                            })
-                          }}
-                        >
-                          Save Changes
-                        </Button>
+                        <Button onClick={handleSaveAddressInfo}>Save Changes</Button>
                       </CardFooter>
                     </Card>
                   </TabsContent>

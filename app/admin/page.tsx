@@ -30,20 +30,11 @@ import {
   updateMeal,
   assignMealToDay,
   type WeeklyMeals,
-  type Meal
+  type Meal,
+  getUsers,
+  updateUser,
+  type User
 } from "@/lib/utils"
-
-// Add interface for user object
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  credits: number;
-  joined: string;
-  status: string;
-  address: string;
-  phone: string;
-}
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -53,14 +44,72 @@ export default function AdminDashboardPage() {
   const [viewUserOpen, setViewUserOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [creditAmount, setCreditAmount] = useState(10)
+  const [users, setUsers] = useState<User[]>([])
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [usersPagination, setUsersPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    pages: 1
+  })
+  const [usersError, setUsersError] = useState<string | null>(null)
 
   useEffect(() => {
     // Check if admin is logged in - in a real app, this would verify the session
-    const isAdminLoggedIn = true // Simulated for demo
-    if (!isAdminLoggedIn) {
+    const user = localStorage.getItem('user')
+    if (!user) {
       router.push("/login")
+      return
     }
-  }, [router])
+    
+    const userData = JSON.parse(user)
+    if (userData.userID !== 'admin') {
+      toast({
+        title: "Access denied",
+        description: "You must be an admin to view this page",
+        variant: "destructive",
+      })
+      router.push("/dashboard")
+    }
+  }, [router, toast])
+
+  // Fetch users when the tab is switched to 'users'
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchUsers(usersPagination.page, usersPagination.limit)
+    }
+  }, [activeTab, usersPagination.page, usersPagination.limit])
+
+  const fetchUsers = async (page = 1, limit = 10) => {
+    try {
+      setUsersLoading(true)
+      setUsersError(null)
+      
+      const result = await getUsers(page, limit)
+      
+      if (result.users) {
+        setUsers(result.users)
+        setUsersPagination(result.pagination)
+      } else {
+        setUsersError('Failed to fetch users')
+        toast({
+          title: "Error",
+          description: 'Failed to fetch users',
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      setUsersError('An unexpected error occurred')
+      toast({
+        title: "Error",
+        description: 'An unexpected error occurred while fetching users',
+        variant: "destructive",
+      })
+    } finally {
+      setUsersLoading(false)
+    }
+  }
 
   const handleAddCredits = (user: User) => {
     setSelectedUser(user)
@@ -73,14 +122,44 @@ export default function AdminDashboardPage() {
     setViewUserOpen(true)
   }
 
-  const confirmAddCredits = () => {
-    if (!selectedUser) return;
+  const confirmAddCredits = async () => {
+    if (!selectedUser) return
     
-    toast({
-      title: "Credits updated",
-      description: `Added ${creditAmount} credits to ${selectedUser.name}'s account`,
-    })
-    setAddCreditsOpen(false)
+    try {
+      // Update user credits via utility function
+      const updatedUser = await updateUser(selectedUser._id, {
+        credits: selectedUser.credits + creditAmount
+      })
+      
+      if (updatedUser) {
+        // Update local state
+        setUsers(users.map(user => 
+          user._id === selectedUser._id 
+            ? { ...user, credits: updatedUser.credits } 
+            : user
+        ))
+        
+        toast({
+          title: "Credits updated",
+          description: `Added ${creditAmount} credits to ${selectedUser.userID}'s account`,
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: 'Failed to update credits',
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error updating credits:', error)
+      toast({
+        title: "Error",
+        description: 'An unexpected error occurred while updating credits',
+        variant: "destructive",
+      })
+    } finally {
+      setAddCreditsOpen(false)
+    }
   }
 
   return (
@@ -212,60 +291,9 @@ export default function AdminDashboardPage() {
                           <div>Credits</div>
                           <div>Actions</div>
                         </div>
-                        {[
-                          {
-                            id: "user123",
-                            name: "John Doe",
-                            email: "john@example.com",
-                            credits: 50,
-                            joined: "2023-01-15",
-                            status: "Active",
-                            address: "123 Main St, New York, NY",
-                            phone: "+1 (555) 123-4567",
-                          },
-                          {
-                            id: "user456",
-                            name: "Jane Smith",
-                            email: "jane@example.com",
-                            credits: 25,
-                            joined: "2023-02-20",
-                            status: "Active",
-                            address: "456 Oak Ave, San Francisco, CA",
-                            phone: "+1 (555) 987-6543",
-                          },
-                          {
-                            id: "user789",
-                            name: "Bob Johnson",
-                            email: "bob@example.com",
-                            credits: 10,
-                            joined: "2023-03-10",
-                            status: "Inactive",
-                            address: "789 Pine Rd, Chicago, IL",
-                            phone: "+1 (555) 456-7890",
-                          },
-                          {
-                            id: "user101",
-                            name: "Alice Brown",
-                            email: "alice@example.com",
-                            credits: 35,
-                            joined: "2023-04-05",
-                            status: "Active",
-                            address: "101 Maple Dr, Austin, TX",
-                            phone: "+1 (555) 234-5678",
-                          },
-                          {
-                            id: "user202",
-                            name: "Charlie Davis",
-                            email: "charlie@example.com",
-                            credits: 15,
-                            joined: "2023-05-12",
-                            status: "Active",
-                            address: "202 Cedar Ln, Seattle, WA",
-                            phone: "+1 (555) 876-5432",
-                          },
-                        ].map((user) => (
-                          <div key={user.id} className="grid grid-cols-5 gap-4 p-4 border-b items-center">
-                            <div>{user.id}</div>
+                        {users.map((user) => (
+                          <div key={user._id} className="grid grid-cols-5 gap-4 p-4 border-b items-center">
+                            <div>{user.userID}</div>
                             <div>{user.name}</div>
                             <div>{user.email}</div>
                             <div>{user.credits}</div>
@@ -287,7 +315,7 @@ export default function AdminDashboardPage() {
                       <Button variant="outline" size="sm">
                         Previous
                       </Button>
-                      <div className="text-sm text-muted-foreground">Page 1 of 5</div>
+                      <div className="text-sm text-muted-foreground">Page {usersPagination.page} of {usersPagination.pages}</div>
                       <Button variant="outline" size="sm">
                         Next
                       </Button>
@@ -627,7 +655,7 @@ export default function AdminDashboardPage() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Add Credits</DialogTitle>
-            <DialogDescription>Add credits to {selectedUser?.name}'s account.</DialogDescription>
+            <DialogDescription>Add credits to {selectedUser?.userID}'s account.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -674,7 +702,7 @@ export default function AdminDashboardPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm text-muted-foreground">User ID</Label>
-                    <p className="font-medium">{selectedUser.id}</p>
+                    <p className="font-medium">{selectedUser.userID}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Status</Label>
@@ -698,12 +726,18 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Joined</Label>
-                    <p className="font-medium">{selectedUser.joined}</p>
+                    <p className="font-medium">{selectedUser.joined instanceof Date 
+                      ? selectedUser.joined.toLocaleDateString() 
+                      : String(selectedUser.joined)}</p>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Address</Label>
-                  <p className="font-medium">{selectedUser.address}</p>
+                  <p className="font-medium">
+                    {selectedUser.address 
+                      ? `${selectedUser.address.streetAddress}, ${selectedUser.address.city}, ${selectedUser.address.province}`
+                      : 'No address provided'}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Credits</Label>

@@ -267,3 +267,152 @@ export async function assignMealToDay(day: string, mealId: string): Promise<bool
     return false;
   }
 }
+
+// User interface type
+export interface User {
+  _id: string;
+  userID: string;
+  name: string;
+  nickname?: string;
+  email: string;
+  credits: number;
+  joined: Date | string;
+  status: string;
+  address?: {
+    unitNumber?: string;
+    streetAddress: string;
+    city: string;
+    postalCode: string;
+    province: string;
+    country: string;
+    buzzCode?: string;
+  };
+  phone?: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  isActive?: boolean;
+}
+
+// Get all users with pagination
+export async function getUsers(page = 1, limit = 10): Promise<{ users: User[], pagination: any }> {
+  try {
+    const response = await fetch(`/api/users?page=${page}&limit=${limit}`);
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return { 
+        users: result.data,
+        pagination: result.pagination 
+      };
+    }
+    
+    console.error('Failed to fetch users from API');
+    return { users: [], pagination: { total: 0, page, limit, pages: 0 } };
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return { users: [], pagination: { total: 0, page, limit, pages: 0 } };
+  }
+}
+
+// Get a user by ID
+export async function getUserById(id: string): Promise<User | null> {
+  try {
+    const response = await fetch(`/api/users/${id}`);
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as User;
+    }
+    
+    console.error('Failed to fetch user by ID');
+    return null;
+  } catch (error) {
+    console.error(`Error fetching user ${id}:`, error);
+    return null;
+  }
+}
+
+// Create a new user
+export async function createUser(userData: Omit<User, '_id'>): Promise<User | null> {
+  try {
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as User;
+    }
+    
+    console.error('Failed to create user');
+    return null;
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return null;
+  }
+}
+
+// Update a user
+export async function updateUser(id: string, userData: Partial<User>): Promise<User | null> {
+  try {
+    const response = await fetch(`/api/users/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as User;
+    }
+    
+    console.error('Failed to update user');
+    return null;
+  } catch (error) {
+    console.error(`Error updating user ${id}:`, error);
+    return null;
+  }
+}
+
+// Delete a user
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/users/${id}`, {
+      method: 'DELETE',
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      return true;
+    }
+    
+    console.error('Failed to delete user');
+    return false;
+  } catch (error) {
+    console.error(`Error deleting user ${id}:`, error);
+    return false;
+  }
+}
+
+// Add credits to a user
+export async function addCreditsToUser(id: string, credits: number): Promise<User | null> {
+  try {
+    const user = await getUserById(id);
+    if (!user) return null;
+    
+    const newCredits = user.credits + credits;
+    return updateUser(id, { credits: newCredits });
+  } catch (error) {
+    console.error(`Error adding credits to user ${id}:`, error);
+    return null;
+  }
+}
