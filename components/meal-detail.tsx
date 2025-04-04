@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -163,19 +163,43 @@ export function MealDetail({ meal, day, onSelect, isSelected }: MealDetailProps)
               )}
             </TabsList>
             <TabsContent value="description" className="space-y-2">
-              <p className="text-sm">
-                {meal.description ||
-                  `Our delicious ${meal.name} is prepared with fresh ingredients and delivered to your door. Perfect for a healthy and satisfying meal without the hassle of cooking.`}
-              </p>
+              {meal.description ? (
+                <div className="space-y-2">
+                  {meal.description.split('. ').filter(Boolean).map((sentence, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground">{sentence.trim()}.</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-muted-foreground">Our delicious {meal.name} is prepared with fresh ingredients.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-muted-foreground">Delivered to your door in eco-friendly packaging.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-muted-foreground">Perfect for a healthy and satisfying meal without the hassle of cooking.</p>
+                  </div>
+                </div>
+              )}
             </TabsContent>
             {(meal.ingredients?.length || meal.allergens?.length) && (
               <TabsContent value="ingredients" className="space-y-2">
                 {meal.ingredients && meal.ingredients.length > 0 && (
-                  <ul className="text-sm list-disc pl-5 space-y-1">
+                  <div className="space-y-2">
                     {meal.ingredients.map((ingredient, index) => (
-                      <li key={index}>{ingredient}</li>
+                      <div key={index} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-muted-foreground">{ingredient}</p>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
                 
                 {meal.allergens && meal.allergens.length > 0 && (

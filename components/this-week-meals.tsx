@@ -2,22 +2,28 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Clock, Flame, ChevronLeft, ChevronRight, Calendar, Check, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Check, Plus, CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { CapybaraLogo } from "./capybara-logo"
+import { type WeeklyMeals } from "@/lib/utils"
 
-export function ThisWeekMeals({ meals, onSelectMeal }) {
+interface ThisWeekMealsProps {
+  meals: WeeklyMeals;
+  onSelectMeal: () => void;
+}
+
+export function ThisWeekMeals({ meals, onSelectMeal }: ThisWeekMealsProps) {
   const [activeDay, setActiveDay] = useState("monday")
   const [isAutoplay, setIsAutoplay] = useState(true)
-  const [selectedMeals, setSelectedMeals] = useState({})
+  const [selectedMeals, setSelectedMeals] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
 
   const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-  const dayLabels = {
+  const dayLabels: Record<string, string> = {
     monday: "Monday",
     tuesday: "Tuesday",
     wednesday: "Wednesday",
@@ -41,7 +47,7 @@ export function ThisWeekMeals({ meals, onSelectMeal }) {
   }, [activeDay, isAutoplay, days])
 
   // Pause autoplay when user interacts
-  const handleDayChange = (day) => {
+  const handleDayChange = (day: string) => {
     setActiveDay(day)
     setIsAutoplay(false)
   }
@@ -60,7 +66,7 @@ export function ThisWeekMeals({ meals, onSelectMeal }) {
     setIsAutoplay(false)
   }
 
-  const handleSelectMeal = (day) => {
+  const handleSelectMeal = (day: string) => {
     setSelectedMeals({
       ...selectedMeals,
       [day]: !selectedMeals[day],
@@ -138,7 +144,7 @@ export function ThisWeekMeals({ meals, onSelectMeal }) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
                 <div className="flex items-center gap-2">
-                  {activeMeal.tags.slice(0, 2).map((tag) => (
+                  {activeMeal.tags?.slice(0, 2).map((tag: string) => (
                     <Badge key={tag} variant="secondary" className="bg-white/20 text-white backdrop-blur-sm">
                       {tag}
                     </Badge>
@@ -157,26 +163,19 @@ export function ThisWeekMeals({ meals, onSelectMeal }) {
               <div className="space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold">{activeMeal.name}</h2>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Flame className="h-4 w-4 text-orange-500" />
-                      <span>{activeMeal.calories} cal</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      <span>{activeMeal.time}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4 text-green-500" />
-                      <span>{dayLabels[activeDay]}</span>
-                    </div>
-                  </div>
                 </div>
 
-                <p className="text-muted-foreground">{activeMeal.description}</p>
+                <div className="space-y-2">
+                  {activeMeal.description.split('. ').filter(Boolean).map((sentence, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                      <p className="text-muted-foreground text-sm">{sentence.trim()}.</p>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="flex flex-wrap gap-1">
-                  {activeMeal.tags.map((tag) => (
+                  {activeMeal.tags?.map((tag: string) => (
                     <Badge key={tag} variant="outline" className="bg-muted/50">
                       {tag}
                     </Badge>
