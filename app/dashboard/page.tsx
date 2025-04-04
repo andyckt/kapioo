@@ -1055,7 +1055,6 @@ function WeeklyMealSelector({ credits, setCredits }) {
             <CardFooter className="flex justify-between">
               <div>
                 <p className="text-sm font-medium">Selected: {selectedCount} meals</p>
-                <p className="text-sm text-muted-foreground">{credits} credits available</p>
               </div>
               <Button disabled={!canCheckout} onClick={() => setCheckoutOpen(true)}>
                 Proceed to Checkout
