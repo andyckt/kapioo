@@ -41,8 +41,6 @@ export function getWeeklyMeals(): WeeklyMeals {
       calories: 520,
       time: "25 min",
       tags: ["High Protein", "Quick", "Family Favorite"],
-      ingredients: ["Beef strips", "Bell peppers", "Broccoli", "Carrots", "Savory sauce", "Jasmine rice"],
-      allergens: ["Soy", "Gluten"],
     },
     wednesday: {
       name: "Chicken Alfredo Pasta",
@@ -133,8 +131,6 @@ export function getAvailableMeals(): Meal[] {
       image: "/placeholder.svg?height=60&width=60",
       description: "Tender strips of beef stir-fried with colorful bell peppers, broccoli, and carrots in a savory sauce, served over steamed jasmine rice.",
       tags: ["High Protein", "Asian"],
-      ingredients: ["Beef strips", "Bell peppers", "Broccoli", "Carrots", "Savory sauce", "Jasmine rice"],
-      allergens: ["Soy", "Gluten"],
     },
     {
       name: "Mediterranean Bowl",

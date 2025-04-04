@@ -156,9 +156,11 @@ export function MealDetail({ meal, day, onSelect, isSelected }: MealDetailProps)
           </div>
 
           <Tabs defaultValue="description">
-            <TabsList className="grid w-full grid-cols-2 bg-background border">
+            <TabsList className={`grid w-full ${(meal.ingredients?.length || meal.allergens?.length) ? "grid-cols-2" : "grid-cols-1"} bg-background border`}>
               <TabsTrigger value="description" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Description</TabsTrigger>
-              <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Ingredients</TabsTrigger>
+              {(meal.ingredients?.length || meal.allergens?.length) && (
+                <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Ingredients</TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="description" className="space-y-2">
               <p className="text-sm">
@@ -166,35 +168,24 @@ export function MealDetail({ meal, day, onSelect, isSelected }: MealDetailProps)
                   `Our delicious ${meal.name} is prepared with fresh ingredients and delivered to your door. Perfect for a healthy and satisfying meal without the hassle of cooking.`}
               </p>
             </TabsContent>
-            <TabsContent value="ingredients" className="space-y-2">
-              {meal.ingredients && meal.ingredients.length > 0 ? (
-                <ul className="text-sm list-disc pl-5 space-y-1">
-                  {meal.ingredients.map((ingredient, index) => (
-                    <li key={index}>{ingredient}</li>
-                  ))}
-                </ul>
-              ) : (
-                <ul className="text-sm list-disc pl-5 space-y-1">
-                  <li>Fresh vegetables</li>
-                  <li>Premium protein</li>
-                  <li>Whole grains</li>
-                  <li>Herbs and spices</li>
-                  <li>Healthy oils</li>
-                </ul>
-              )}
-              
-              {meal.allergens && meal.allergens.length > 0 ? (
-                <div className="flex items-center gap-2 text-amber-600 text-sm mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>Contains: {meal.allergens.join(', ')}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-amber-600 text-sm mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>Contains: Gluten, Dairy</span>
-                </div>
-              )}
-            </TabsContent>
+            {(meal.ingredients?.length || meal.allergens?.length) && (
+              <TabsContent value="ingredients" className="space-y-2">
+                {meal.ingredients && meal.ingredients.length > 0 && (
+                  <ul className="text-sm list-disc pl-5 space-y-1">
+                    {meal.ingredients.map((ingredient, index) => (
+                      <li key={index}>{ingredient}</li>
+                    ))}
+                  </ul>
+                )}
+                
+                {meal.allergens && meal.allergens.length > 0 && (
+                  <div className="flex items-center gap-2 text-amber-600 text-sm mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Contains: {meal.allergens.join(', ')}</span>
+                  </div>
+                )}
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </DialogContent>
