@@ -24,6 +24,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { getWeeklyMeals, updateDayMeal, saveWeeklyMeals, initializeMealsStorage, type WeeklyMeals } from "@/lib/utils"
+
+// Add interface for user object
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  credits: number;
+  joined: string;
+  status: string;
+  address: string;
+  phone: string;
+}
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -31,7 +44,7 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [addCreditsOpen, setAddCreditsOpen] = useState(false)
   const [viewUserOpen, setViewUserOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [creditAmount, setCreditAmount] = useState(10)
 
   useEffect(() => {
@@ -42,18 +55,20 @@ export default function AdminDashboardPage() {
     }
   }, [router])
 
-  const handleAddCredits = (user) => {
+  const handleAddCredits = (user: User) => {
     setSelectedUser(user)
     setCreditAmount(10) // Reset to default
     setAddCreditsOpen(true)
   }
 
-  const handleViewUser = (user) => {
+  const handleViewUser = (user: User) => {
     setSelectedUser(user)
     setViewUserOpen(true)
   }
 
   const confirmAddCredits = () => {
+    if (!selectedUser) return;
+    
     toast({
       title: "Credits updated",
       description: `Added ${creditAmount} credits to ${selectedUser.name}'s account`,
@@ -287,108 +302,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-bold tracking-tight">Meal Management</h2>
                 </div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Weekly Menu</CardTitle>
-                    <CardDescription>Update the meals for each day of the week</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {[
-                        {
-                          day: "Monday",
-                          meal: "Grilled Salmon with Vegetables",
-                          image: "/placeholder.svg?height=60&width=60",
-                          id: "meal-mon",
-                        },
-                        {
-                          day: "Tuesday",
-                          meal: "Beef Stir Fry with Rice",
-                          image: "/placeholder.svg?height=60&width=60",
-                          id: "meal-tue",
-                        },
-                        {
-                          day: "Wednesday",
-                          meal: "Chicken Alfredo Pasta",
-                          image: "/placeholder.svg?height=60&width=60",
-                          id: "meal-wed",
-                        },
-                        {
-                          day: "Thursday",
-                          meal: "Vegetable Curry with Naan",
-                          image: "/placeholder.svg?height=60&width=60",
-                          id: "meal-thu",
-                        },
-                        {
-                          day: "Friday",
-                          meal: "Grilled Chicken with Quinoa",
-                          image: "/placeholder.svg?height=60&width=60",
-                          id: "meal-fri",
-                        },
-                        {
-                          day: "Saturday",
-                          meal: "Shrimp Tacos with Avocado",
-                          image: "/placeholder.svg?height=60&width=60",
-                          id: "meal-sat",
-                        },
-                        {
-                          day: "Sunday",
-                          meal: "Mushroom Risotto",
-                          image: "/placeholder.svg?height=60&width=60",
-                          id: "meal-sun",
-                        },
-                      ].map((item) => (
-                        <div key={item.day} className="grid gap-4 md:grid-cols-[1fr_2fr_1fr_1fr]">
-                          <div className="flex items-center">
-                            <span className="font-medium">{item.day}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <Input id={item.id} defaultValue={item.meal} />
-                          </div>
-                          <div className="flex items-center">
-                            <div className="flex items-center gap-2">
-                              <img
-                                src={item.image || "/placeholder.svg"}
-                                alt={item.meal}
-                                className="h-10 w-10 rounded-md object-cover"
-                              />
-                              <Button variant="outline" size="sm">
-                                Upload
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const mealName = document.getElementById(item.id)?.value
-                                toast({
-                                  title: "Meal updated",
-                                  description: `Updated ${item.day}'s meal to ${mealName} successfully`,
-                                })
-                              }}
-                            >
-                              Update
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      onClick={() => {
-                        toast({
-                          title: "All meals updated",
-                          description: "The weekly menu has been updated successfully",
-                        })
-                      }}
-                    >
-                      Save All Changes
-                    </Button>
-                  </CardFooter>
-                </Card>
+                <MealManagement />
               </motion.div>
             )}
 
@@ -817,5 +731,149 @@ export default function AdminDashboardPage() {
       </Dialog>
     </div>
   )
+}
+
+function MealManagement() {
+  const { toast } = useToast();
+  const [weeklyMeals, setWeeklyMeals] = useState<WeeklyMeals>({});
+  const [editedMeals, setEditedMeals] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize meals on component mount
+  useEffect(() => {
+    // Initialize storage with defaults if needed
+    initializeMealsStorage();
+    
+    // Get current meals
+    const meals = getWeeklyMeals();
+    setWeeklyMeals(meals);
+    
+    // Initialize edited meals with current names
+    const initialEditState: Record<string, string> = {};
+    Object.entries(meals).forEach(([day, meal]) => {
+      initialEditState[day] = meal.name;
+    });
+    setEditedMeals(initialEditState);
+    
+    setIsLoading(false);
+  }, []);
+
+  // Handle input change
+  const handleMealNameChange = (day: string, name: string) => {
+    setEditedMeals({
+      ...editedMeals,
+      [day]: name
+    });
+  };
+
+  // Update a single meal
+  const updateMeal = (day: string) => {
+    if (!editedMeals[day]) return;
+    
+    updateDayMeal(day, { name: editedMeals[day] });
+    
+    // Update local state
+    setWeeklyMeals({
+      ...weeklyMeals,
+      [day]: {
+        ...weeklyMeals[day],
+        name: editedMeals[day]
+      }
+    });
+    
+    toast({
+      title: "Meal updated",
+      description: `Updated ${day}'s meal to ${editedMeals[day]} successfully`
+    });
+  };
+
+  // Save all changes
+  const saveAllChanges = () => {
+    const updatedMeals = { ...weeklyMeals };
+    
+    // Update all meals with edited names
+    Object.entries(editedMeals).forEach(([day, name]) => {
+      updatedMeals[day] = {
+        ...updatedMeals[day],
+        name
+      };
+    });
+    
+    // Save to localStorage
+    saveWeeklyMeals(updatedMeals);
+    
+    // Update local state
+    setWeeklyMeals(updatedMeals);
+    
+    toast({
+      title: "All meals updated",
+      description: "The weekly menu has been updated successfully"
+    });
+  };
+
+  // Handle image upload (placeholder for now)
+  const handleImageUpload = (day: string) => {
+    toast({
+      title: "Image upload",
+      description: "This feature will be implemented soon"
+    });
+  };
+
+  if (isLoading) {
+    return <div>Loading meals...</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Weekly Menu</CardTitle>
+        <CardDescription>Update the meals for each day of the week</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {Object.entries(weeklyMeals).map(([day, meal]) => (
+            <div key={day} className="grid gap-4 md:grid-cols-[1fr_2fr_1fr_1fr]">
+              <div className="flex items-center">
+                <span className="font-medium capitalize">{day}</span>
+              </div>
+              <div className="flex items-center">
+                <Input 
+                  id={`meal-${day}`} 
+                  value={editedMeals[day] || ''} 
+                  onChange={(e) => handleMealNameChange(day, e.target.value)}
+                />
+              </div>
+              <div className="flex items-center">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={meal.image || "/placeholder.svg"}
+                    alt={meal.name}
+                    className="h-10 w-10 rounded-md object-cover"
+                  />
+                  <Button variant="outline" size="sm" onClick={() => handleImageUpload(day)}>
+                    Upload
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateMeal(day)}
+                >
+                  Update
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={saveAllChanges}>
+          Save All Changes
+        </Button>
+      </CardFooter>
+    </Card>
+  );
 }
 
