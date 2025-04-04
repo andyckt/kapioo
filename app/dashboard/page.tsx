@@ -52,7 +52,9 @@ export default function DashboardPage() {
     /* Commented out for now
     { id: "nutrition", label: "Nutrition", icon: <BarChart2 className="h-4 w-4" /> },
     */
+    /* Commented out Community tab 
     { id: "community", label: "Community", icon: <Users className="h-4 w-4" /> },
+    */
     { id: "credits", label: "Credits", icon: <CreditCard className="h-4 w-4" /> },
     { id: "refer", label: "Refer a Friend", icon: <Gift className="h-4 w-4" /> },
     /* Commented out for now
@@ -242,7 +244,7 @@ export default function DashboardPage() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <ThisWeekMeals
                     meals={meals}
-                    onSelectMeal={(day: string) => {
+                    onSelectMeal={() => {
                       setActiveTab("select-meals")
                     }}
                   />
