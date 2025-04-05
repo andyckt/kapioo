@@ -39,7 +39,7 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-40 bg-[#fff6ef] relative overflow-hidden">
+        <section className="w-full py-10 md:py-24 lg:py-32 xl:py-40 bg-[#fff6ef] relative overflow-hidden">
           {/* Background pattern for premium feel */}
           <div className="absolute inset-0 z-0 opacity-5">
             <div className="absolute inset-0 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:20px_20px]"></div>
@@ -51,35 +51,35 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="flex flex-col justify-center space-y-4"
+                className="flex flex-col justify-center space-y-4 order-2 lg:order-1"
               >
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
                     Delicious Meals Delivered Weekly
                   </h1>
-                  <p className="max-w-[600px] text-muted-foreground md:text-xl">
+                  <p className="max-w-[600px] text-base sm:text-lg text-muted-foreground md:text-xl">
                     Subscribe to Kapioo and enjoy chef-prepared meals delivered to your doorstep. Choose your meals for
                     the week and pay with your credits.
                   </p>
                 </div>
                 <motion.div 
-                  className="flex flex-col gap-2 min-[400px]:flex-row"
+                  className="flex flex-col sm:flex-row gap-2"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.6, delay: 0.6 }}
                 >
-                  <Button asChild size="lg" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white">
+                  <Button asChild size="lg" className="w-full sm:w-auto hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white">
                     <Link href="/login">
                       Get Started <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button variant="outline" size="lg" asChild className="hover:scale-105 transition-transform">
+                  <Button variant="outline" size="lg" asChild className="w-full sm:w-auto hover:scale-105 transition-transform">
                     <Link href="#how-it-works">How It Works</Link>
                   </Button>
                 </motion.div>
               </motion.div>
               <motion.div 
-                className="mx-auto w-full lg:order-last"
+                className="mx-auto w-full order-1 lg:order-2"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8 }}
@@ -94,7 +94,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="how-it-works" className="w-full py-12 md:py-24 lg:py-32 bg-background">
+        <section id="how-it-works" className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-background">
           <div className="container px-4 md:px-6">
             <motion.div 
               className="flex flex-col items-center justify-center space-y-4 text-center"
@@ -104,55 +104,55 @@ export default function Home() {
               transition={{ duration: 0.6 }}
             >
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">How It Works</h2>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">How It Works</h2>
+                <p className="max-w-[900px] text-sm sm:text-base text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   Our subscription service is simple and convenient. Here's how to get started.
                 </p>
               </div>
             </motion.div>
-            <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 lg:grid-cols-3 lg:gap-12">
+            <div className="mx-auto grid max-w-5xl items-center gap-6 py-8 sm:py-12 md:grid-cols-2 lg:grid-cols-3 lg:gap-12">
               <motion.div 
-                className="flex flex-col justify-center space-y-4 rounded-lg border p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+                className="flex flex-col justify-center space-y-4 rounded-lg border p-4 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
                   1
                 </div>
-                <h3 className="text-xl font-bold">Sign Up</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-lg sm:text-xl font-bold">Sign Up</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">
                   Create an account and purchase credits to use for your weekly meals.
                 </p>
               </motion.div>
               <motion.div 
-                className="flex flex-col justify-center space-y-4 rounded-lg border p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+                className="flex flex-col justify-center space-y-4 rounded-lg border p-4 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.2 }}
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
                   2
                 </div>
-                <h3 className="text-xl font-bold">Select Meals</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-lg sm:text-xl font-bold">Select Meals</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">
                   Browse our weekly menu and select the days you want meals delivered.
                 </p>
               </motion.div>
               <motion.div 
-                className="flex flex-col justify-center space-y-4 rounded-lg border p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+                className="flex flex-col justify-center space-y-4 rounded-lg border p-4 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 md:col-span-2 lg:col-span-1"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.3 }}
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
                   3
                 </div>
-                <h3 className="text-xl font-bold">Enjoy</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-lg sm:text-xl font-bold">Enjoy</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">
                   Receive your meals on your selected days and enjoy delicious, chef-prepared food.
                 </p>
               </motion.div>
@@ -160,19 +160,19 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="w-full border-t bg-background py-6 md:py-8">
-        <div className="container flex flex-col items-center justify-center gap-4 md:flex-row md:gap-8">
-          <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+      <footer className="w-full border-t bg-background py-4 sm:py-6 md:py-8">
+        <div className="container flex flex-col items-center justify-center gap-3 md:flex-row md:gap-8">
+          <p className="text-center text-xs sm:text-sm leading-loose text-muted-foreground md:text-left">
             © 2025 Kapioo. All rights reserved.
           </p>
-          <div className="flex gap-4">
-            <Link href="#" className="text-sm font-medium hover:underline">
+          <div className="flex gap-3 sm:gap-4">
+            <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
               Terms
             </Link>
-            <Link href="#" className="text-sm font-medium hover:underline">
+            <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
               Privacy
             </Link>
-            <Link href="#" className="text-sm font-medium hover:underline">
+            <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
               Contact
             </Link>
           </div>
