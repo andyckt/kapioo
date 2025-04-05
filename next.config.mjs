@@ -21,6 +21,14 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com',
+        port: '',
+        pathname: '/src/**',
+      },
+    ],
   },
   experimental: {
     webpackBuildWorker: true,
