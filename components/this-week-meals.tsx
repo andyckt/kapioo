@@ -302,9 +302,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                       willChange: "transform, opacity"
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
-                    {/* Tags removed from here */}
-                  </div>
                 </motion.div>
 
                 <motion.div 
@@ -394,7 +391,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       </CardContent>
 
       <CardFooter className="bg-muted/30 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center justify-between w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-3">
           <div className="flex -space-x-2">
             {activeDays.map((day, index) => (
               meals[day] && (
@@ -417,8 +414,8 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
               )
             ))}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-muted-foreground">
+          <div className="sm:flex sm:items-center sm:gap-3">
+            <div className="text-sm text-muted-foreground mb-2 sm:mb-0">
               {(() => {
                 const mealCount = Object.keys(selectedMeals).filter((day) => selectedMeals[day].selected).length;
                 return `${mealCount} meal${mealCount !== 1 ? 's' : ''} selected`;
@@ -427,7 +424,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
             <Button 
               onClick={() => onCheckout && onCheckout(selectedMeals)} 
               disabled={!Object.values(selectedMeals).some(m => m.selected)}
-              className="ml-auto"
+              className="w-full sm:w-auto sm:ml-auto"
             >
               Checkout
             </Button>

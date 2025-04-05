@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2 } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,6 +48,9 @@ export default function DashboardPage() {
     total: 0,
     pages: 1
   })
+  const [upcomingDeliveries, setUpcomingDeliveries] = useState(0)
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [orderStatsLoading, setOrderStatsLoading] = useState(true)
   
   // Add state for meal selection and checkout
   const [selectedMeals, setSelectedMeals] = useState({
@@ -271,6 +274,31 @@ export default function DashboardPage() {
     }
   }, [activeTab, userData?._id]);
 
+  // Effect to fetch total orders and upcoming deliveries when userData is loaded
+  useEffect(() => {
+    if (userData?._id) {
+      // Fetch order stats for the user
+      const fetchOrderStats = async () => {
+        setOrderStatsLoading(true);
+        try {
+          const response = await fetch(`/api/users/${userData._id}/orders/count`);
+          const data = await response.json();
+          
+          if (data.success && data.data) {
+            setTotalOrders(data.data.totalOrders);
+            setUpcomingDeliveries(data.data.upcomingDeliveries);
+          }
+        } catch (error) {
+          console.error('Error fetching order statistics:', error);
+        } finally {
+          setOrderStatsLoading(false);
+        }
+      };
+      
+      fetchOrderStats();
+    }
+  }, [userData?._id]);
+
   const fetchTransactions = async (page = 1) => {
     if (!userData) return;
     
@@ -319,9 +347,11 @@ export default function DashboardPage() {
 
   const menuItems = [
     { id: "overview", label: "Overview", icon: <User className="h-4 w-4" /> },
-    { id: "orders", label: "Upcoming Meal", icon: <History className="h-4 w-4" /> },
+    { id: "orders", label: "My Orders", icon: <History className="h-4 w-4" /> },
     { id: "select-meals", label: "Select Meals", icon: <ShoppingCart className="h-4 w-4" /> },
+    /* Commented out Delivery Tracking tab
     { id: "delivery", label: "Delivery Tracking", icon: <Calendar className="h-4 w-4" /> },
+    */
     /* Commented out for now
     { id: "nutrition", label: "Nutrition", icon: <BarChart2 className="h-4 w-4" /> },
     */
@@ -329,7 +359,9 @@ export default function DashboardPage() {
     { id: "community", label: "Community", icon: <Users className="h-4 w-4" /> },
     */
     { id: "credits", label: "Credits", icon: <CreditCard className="h-4 w-4" /> },
+    /* Commented out Referral tab
     { id: "refer", label: "Refer a Friend", icon: <Gift className="h-4 w-4" /> },
+    */
     /* Commented out for now
     { id: "loyalty", label: "Loyalty Program", icon: <Award className="h-4 w-4" /> },
     { id: "gift", label: "Gift Cards", icon: <Gift className="h-4 w-4" /> },
@@ -595,331 +627,383 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Header with mobile menu button */}
-      <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="container flex h-16 items-center justify-between py-4">
-          <div className="flex items-center">
+    <div className="flex flex-col h-screen">
+      <header className="bg-background sticky top-0 z-30 w-full border-b">
+        <div className="container flex h-16 items-center justify-between px-4">
+          <MainNav />
+          
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <UserNav setActiveTab={setActiveTab} />
+            
+            {/* Mobile Menu Button */}
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden mr-2"
+              className="md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            <MainNav />
-          </div>
-          <div className="flex items-center space-x-2">
-            <NotificationBell />
-            <UserNav />
           </div>
         </div>
       </header>
-
-      {/* Mobile menu overlay */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden">
-          <div className="fixed inset-y-0 left-0 z-50 w-3/4 max-w-xs bg-background p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-lg font-semibold">Menu</h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </Button>
-            </div>
-            <nav className="grid gap-2">
-              {menuItems.map((item) => (
-                <Button
-                  key={item.id}
-                  variant={activeTab === item.id ? "default" : "ghost"}
-                  className="justify-start"
-                  onClick={() => {
-                    setActiveTab(item.id)
-                    setIsMobileMenuOpen(false)
+      
+      {/* Mobile menu overlay with enhanced transitions and visual indicators */}
+      <AnimatePresence mode="wait">
+        {isMobileMenuOpen && (
+          <motion.div 
+            className="fixed inset-0 z-30 bg-background/90 backdrop-blur-md md:hidden overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <motion.div 
+              className="absolute top-0 right-0 left-0 h-1 bg-primary"
+              initial={{ scaleX: 0, transformOrigin: "left" }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+            />
+            
+            {/* Close button */}
+            <motion.button
+              className="absolute top-4 right-4 p-2 rounded-full bg-muted/80 backdrop-blur-sm text-foreground hover:bg-muted/90 focus:outline-none focus:ring-2 focus:ring-primary"
+              initial={{ opacity: 0, rotate: -90 }}
+              animate={{ opacity: 1, rotate: 0 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </motion.button>
+            
+            <motion.div 
+              className="container p-6 pt-20"
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <nav className="flex flex-col gap-4">
+                {menuItems.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: -20, filter: "blur(8px)" }}
+                    animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                    transition={{ 
+                      duration: 0.35, 
+                      delay: 0.05 + index * 0.05, 
+                      ease: [0.25, 1, 0.5, 1]
+                    }}
+                  >
+                    <Button
+                      variant={activeTab === item.id ? "default" : "ghost"}
+                      className={`justify-start gap-2 text-base w-full ${
+                        activeTab === item.id 
+                          ? "relative overflow-hidden group"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        // Add a slight delay before closing to show the selection animation
+                        setTimeout(() => setIsMobileMenuOpen(false), 150);
+                      }}
+                    >
+                      <motion.span
+                        initial={{ scale: 1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        {item.icon}
+                      </motion.span>
+                      {item.label}
+                      {activeTab === item.id && (
+                        <motion.div 
+                          className="absolute bottom-0 left-0 h-0.5 bg-primary/70 w-full"
+                          layoutId="activeTabIndicator"
+                        />
+                      )}
+                    </Button>
+                  </motion.div>
+                ))}
+                <motion.div
+                  initial={{ opacity: 0, x: -20, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  transition={{ 
+                    duration: 0.35, 
+                    delay: 0.05 + menuItems.length * 0.05, 
+                    ease: [0.25, 1, 0.5, 1]
                   }}
                 >
-                  {item.icon}
-                  <span className="ml-2">{item.label}</span>
-                </Button>
-              ))}
-              <Button
-                variant="ghost"
-                className="justify-start text-red-500 hover:text-red-600 hover:bg-red-100 mt-4"
-                onClick={() => {
-                  toast({
-                    title: "Logged out",
-                    description: "You have been logged out successfully",
-                  })
-                  router.push("/login")
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </Button>
-            </nav>
-          </div>
-        </div>
-      )}
+                  <Button
+                    variant="ghost"
+                    className="justify-start gap-2 text-base text-destructive w-full"
+                    onClick={() => {
+                      // Create a simple loading animation before logging out
+                      toast({
+                        title: "Logging out",
+                        description: "Please wait...",
+                      });
+                      
+                      // Close menu first with animation
+                      setIsMobileMenuOpen(false);
+                      
+                      // Then proceed with logout after a short delay
+                      setTimeout(() => {
+                        localStorage.removeItem('user');
+                        toast({
+                          title: "Logged out",
+                          description: "You have been logged out successfully",
+                        });
+                        router.push("/login");
+                      }, 800);
+                    }}
+                  >
+                    <motion.span
+                      initial={{ scale: 1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </motion.span>
+                    Log out
+                  </Button>
+                </motion.div>
+              </nav>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="container grid flex-1 gap-12 md:grid-cols-[200px_1fr] pt-6">
-        <aside className="hidden w-[200px] flex-col md:flex">
-          <motion.nav
-            className="grid items-start gap-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+      <div className="flex-1 flex flex-col md:flex-row">
+        <aside className="w-full md:w-64 border-r bg-background p-4 hidden md:block">
+          <nav className="grid gap-2">
             {menuItems.map((item) => (
               <Button
                 key={item.id}
                 variant={activeTab === item.id ? "default" : "ghost"}
-                className="justify-start"
+                className="justify-start gap-2"
                 onClick={() => setActiveTab(item.id)}
               >
                 {item.icon}
-                <span className="ml-2">{item.label}</span>
+                {item.label}
               </Button>
             ))}
-            <Button
-              variant="ghost"
-              className="justify-start text-red-500 hover:text-red-600 hover:bg-red-100"
-              onClick={() => {
-                toast({
-                  title: "Logged out",
-                  description: "You have been logged out successfully",
-                })
-                router.push("/login")
-              }}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
-          </motion.nav>
+          </nav>
         </aside>
-        <main className="flex-1 lg:max-w-6xl mx-auto w-full px-4 py-8">
-          <AnimatePresence>
-            {activeTab === "overview" && (
-              <motion.div
-                key="overview"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card className="transform transition-all hover:scale-105">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Available Credits</CardTitle>
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{credits}</div>
-                      <p className="text-xs text-muted-foreground">Credits can be used to order meals</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="transform transition-all hover:scale-105">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Upcoming Deliveries</CardTitle>
-                      <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">2</div>
-                      <p className="text-xs text-muted-foreground">Meals scheduled for this week</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="transform transition-all hover:scale-105">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                      <History className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">12</div>
-                      <p className="text-xs text-muted-foreground">Lifetime orders placed</p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <ThisWeekMeals
-                    meals={meals}
-                    onSelectMeal={() => setActiveTab("select-meals")}
-                    onCheckout={handleThisWeekCheckout}
-                    isLoading={isLoading}
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {activeTab === "orders" && (
-              <motion.div
-                key="orders"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Orders & Upcoming Meals</h2>
-                </div>
-
-                {/* Order History */}
-                {userData && (
-                  <OrderHistory userId={userData._id} />
-                )}
-
-                {/* Moved Upcoming Meals section from overview to here */}
-                <Card className="col-span-1">
-                  <CardHeader>
-                    <CardTitle>Upcoming Meals</CardTitle>
-                    <CardDescription>Your scheduled meals for this week</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
-                          M
+        
+        <main className="flex-1 pt-2 md:pt-6 px-4 pb-12 overflow-y-auto">
+          <div className="mx-auto max-w-5xl space-y-4">
+            <AnimatePresence mode="wait">
+              {activeTab === "overview" && (
+                <motion.div
+                  key="overview"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <Card className="transform transition-all hover:scale-105">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Available Credits</CardTitle>
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{credits}</div>
+                        <p className="text-xs text-muted-foreground">Credits can be used to order meals</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="transform transition-all hover:scale-105">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Upcoming Deliveries</CardTitle>
+                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {orderStatsLoading ? (
+                            <span className="text-muted-foreground opacity-70">...</span>
+                          ) : (
+                            upcomingDeliveries
+                          )}
                         </div>
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center">
-                            <p className="text-sm font-medium leading-none">Monday</p>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({(() => {
-                                try {
-                                  const now = new Date();
-                                  const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
-                                  const daysToAdd = 1 - dayOfWeek; // Monday is day 1
-                                  const monday = new Date(now);
-                                  monday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
-                                  
-                                  const monthFormatter = new Intl.DateTimeFormat('en-CA', {
-                                    month: 'short',
-                                    timeZone: 'America/Toronto'
-                                  });
-                                  
-                                  const dayFormatter = new Intl.DateTimeFormat('en-CA', {
-                                    day: 'numeric',
-                                    timeZone: 'America/Toronto'
-                                  });
-                                  
-                                  return `${monthFormatter.format(monday)} ${dayFormatter.format(monday)}`;
-                                } catch (error) {
-                                  console.error("Error formatting date:", error);
-                                  return "";
-                                }
-                              })()})
-                            </span>
+                        <p className="text-xs text-muted-foreground">Meals scheduled for this week</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="transform transition-all hover:scale-105">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                        <History className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {orderStatsLoading ? (
+                            <span className="text-muted-foreground opacity-70">...</span>
+                          ) : (
+                            totalOrders
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Lifetime orders placed</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <ThisWeekMeals
+                      meals={meals}
+                      onSelectMeal={() => setActiveTab("select-meals")}
+                      onCheckout={handleThisWeekCheckout}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === "orders" && (
+                <motion.div
+                  key="orders"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">My Orders</h2>
+                  </div>
+
+                  {/* Order History */}
+                  {userData && (
+                    <OrderHistory userId={userData._id} />
+                  )}
+
+                  {/* Commented out Upcoming Meals section
+                  <Card className="col-span-1">
+                    <CardHeader>
+                      <CardTitle>Upcoming Meals</CardTitle>
+                      <CardDescription>Your scheduled meals for this week</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
+                            M
                           </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
-                            <span className="ml-2">Pasta Primavera</span>
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center">
+                              <p className="text-sm font-medium leading-none">Monday</p>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({(() => {
+                                  try {
+                                    const now = new Date();
+                                    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
+                                    const daysToAdd = 1 - dayOfWeek; // Monday is day 1
+                                    const monday = new Date(now);
+                                    monday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
+                                    
+                                    const monthFormatter = new Intl.DateTimeFormat('en-CA', {
+                                      month: 'short',
+                                      timeZone: 'America/Toronto'
+                                    });
+                                    
+                                    const dayFormatter = new Intl.DateTimeFormat('en-CA', {
+                                      day: 'numeric',
+                                      timeZone: 'America/Toronto'
+                                    });
+                                    
+                                    return `${monthFormatter.format(monday)} ${dayFormatter.format(monday)}`;
+                                  } catch (error) {
+                                    console.error("Error formatting date:", error);
+                                    return "";
+                                  }
+                                })()})
+                              </span>
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
+                              <span className="ml-2">Pasta Primavera</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                          <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
+                            W
+                          </div>
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center">
+                              <p className="text-sm font-medium leading-none">Wednesday</p>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({(() => {
+                                  try {
+                                    const now = new Date();
+                                    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday, 3 is Wednesday
+                                    const daysToAdd = 3 - dayOfWeek; // Wednesday is day 3
+                                    const wednesday = new Date(now);
+                                    wednesday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
+                                    
+                                    const monthFormatter = new Intl.DateTimeFormat('en-CA', {
+                                      month: 'short',
+                                      timeZone: 'America/Toronto'
+                                    });
+                                    
+                                    const dayFormatter = new Intl.DateTimeFormat('en-CA', {
+                                      day: 'numeric',
+                                      timeZone: 'America/Toronto'
+                                    });
+                                    
+                                    return `${monthFormatter.format(wednesday)} ${dayFormatter.format(wednesday)}`;
+                                  } catch (error) {
+                                    console.error("Error formatting date:", error);
+                                    return "";
+                                  }
+                                })()})
+                              </span>
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
+                              <span className="ml-2">Chicken Teriyaki Bowl</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-4">
-                        <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
-                          W
-                        </div>
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center">
-                            <p className="text-sm font-medium leading-none">Wednesday</p>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({(() => {
-                                try {
-                                  const now = new Date();
-                                  const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday, 3 is Wednesday
-                                  const daysToAdd = 3 - dayOfWeek; // Wednesday is day 3
-                                  const wednesday = new Date(now);
-                                  wednesday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
-                                  
-                                  const monthFormatter = new Intl.DateTimeFormat('en-CA', {
-                                    month: 'short',
-                                    timeZone: 'America/Toronto'
-                                  });
-                                  
-                                  const dayFormatter = new Intl.DateTimeFormat('en-CA', {
-                                    day: 'numeric',
-                                    timeZone: 'America/Toronto'
-                                  });
-                                  
-                                  return `${monthFormatter.format(wednesday)} ${dayFormatter.format(wednesday)}`;
-                                } catch (error) {
-                                  console.error("Error formatting date:", error);
-                                  return "";
-                                }
-                              })()})
-                            </span>
-                          </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
-                            <span className="ml-2">Chicken Teriyaki Bowl</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
-                      onClick={() => setActiveTab("select-meals")}
-                    >
-                      Select More Meals
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            )}
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={() => setActiveTab("select-meals")}
+                      >
+                        Select More Meals
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                  */}
+                </motion.div>
+              )}
 
-            {activeTab === "delivery" && (
-              <motion.div
-                key="delivery"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Delivery Tracking</h2>
-                </div>
-                <DeliveryTracking />
-              </motion.div>
-            )}
+              {/* Comment out Delivery Tracking tab content */}
+              {/* 
+              {activeTab === "delivery" && (
+                <motion.div
+                  key="delivery"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">Delivery Tracking</h2>
+                  </div>
+                  <DeliveryTracking />
+                </motion.div>
+              )}
+              */}
 
-            {/* Nutrition section commented out for now
+              {/* Nutrition section commented out for now
 {activeTab === "nutrition" && (
   <motion.div
     key="nutrition"
@@ -937,414 +1021,417 @@ export default function DashboardPage() {
 )}
 */}
 
-            {activeTab === "community" && (
-              <motion.div
-                key="community"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Community</h2>
-                </div>
-                <CommunityRecipes />
-              </motion.div>
-            )}
-
-            {activeTab === "credits" && (
-              <motion.div
-                key="credits"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Credits</h2>
-                </div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Credit Balance</CardTitle>
-                    <CardDescription>Your current available credits</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col items-center justify-center p-6 rounded-lg">
-                      <div className="text-4xl font-bold mb-2">{userData?.credits || 0}</div>
-                      <div className="text-muted-foreground text-center">Available Credits</div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Credit History</CardTitle>
-                    <CardDescription>Your credit purchase and usage history</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {transactionsLoading ? (
-                        <div className="flex justify-center py-8">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        </div>
-                      ) : transactions && transactions.length > 0 ? (
-                        <>
-                          {transactions.map((transaction) => (
-                            <div key={transaction._id} className="flex justify-between items-center border-b pb-3 pt-1">
-                              <div>
-                                <p className="font-medium">{transaction.description}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {new Date(transaction.createdAt).toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                  })}
-                                </p>
-                              </div>
-                              <div className={
-                                transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
-                                  ? "text-green-500 font-medium" 
-                                  : "text-red-500 font-medium"
-                              }>
-                                {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
-                                  ? '+' 
-                                  : '-'
-                                }{transaction.amount} Credits
-                              </div>
-                            </div>
-                          ))}
-                          
-                          {transactionsPagination.pages > 1 && (
-                            <div className="flex items-center justify-between pt-4">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleTransactionPagination('prev')}
-                                disabled={transactionsPagination.page === 1}
-                              >
-                                Previous
-                              </Button>
-                              <div className="text-sm text-muted-foreground">
-                                Page {transactionsPagination.page} of {transactionsPagination.pages}
-                              </div>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleTransactionPagination('next')}
-                                disabled={transactionsPagination.page === transactionsPagination.pages}
-                              >
-                                Next
-                              </Button>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-6 text-muted-foreground">
-                          No transaction history found
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {activeTab === "refer" && (
-              <motion.div
-                key="refer"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Refer a Friend</h2>
-                </div>
-                <ReferralCard />
-                <Card>
-                  <CardHeader>
-                    <CardTitle>How Referrals Work</CardTitle>
-                    <CardDescription>Learn more about our referral program</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-6 md:grid-cols-3">
-                      <div className="flex flex-col items-center text-center space-y-2">
-                        <div className="rounded-full bg-primary/10 p-3">
-                          <Gift className="h-6 w-6 text-primary" />
-                        </div>
-                        <h3 className="font-medium">Share Your Code</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Send your unique referral code to friends and family
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-center text-center space-y-2">
-                        <div className="rounded-full bg-primary/10 p-3">
-                          <User className="h-6 w-6 text-primary" />
-                        </div>
-                        <h3 className="font-medium">Friend Signs Up</h3>
-                        <p className="text-sm text-muted-foreground">They create an account using your referral code</p>
-                      </div>
-                      <div className="flex flex-col items-center text-center space-y-2">
-                        <div className="rounded-full bg-primary/10 p-3">
-                          <CreditCard className="h-6 w-6 text-primary" />
-                        </div>
-                        <h3 className="font-medium">Both Get Credits</h3>
-                        <p className="text-sm text-muted-foreground">You both receive 5 credits to use on meals</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* Loyalty Program section commented out for now
-{activeTab === "loyalty" && (
-  <motion.div
-    key="loyalty"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.3 }}
-    className="space-y-6"
-  >
-    <div className="flex items-center justify-between">
-      <h2 className="text-3xl font-bold tracking-tight">Loyalty Program</h2>
-    </div>
-    <LoyaltyProgram credits={credits} totalOrders={12} />
-  </motion.div>
-)}
-*/}
-
-            {/* Gift Cards section commented out for now
-{activeTab === "gift" && (
-  <motion.div
-    key="gift"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.3 }}
-    className="space-y-6"
-  >
-    <div className="flex items-center justify-between">
-      <h2 className="text-3xl font-bold tracking-tight">Gift Cards</h2>
-    </div>
-    <GiftCard />
-  </motion.div>
-)}
-*/}
-
-            {/* Subscription section commented out for now
-{activeTab === "subscription" && (
-  <motion.div
-    key="subscription"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.3 }}
-    className="space-y-6"
-  >
-    <div className="flex items-center justify-between">
-      <h2 className="text-3xl font-bold tracking-tight">Subscription Management</h2>
-    </div>
-    <SubscriptionManagement />
-  </motion.div>
-)}
-*/}
-
-            {activeTab === "settings" && (
-              <motion.div
-                key="settings"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Account Settings</h2>
-                </div>
-
-                <Tabs defaultValue="personal" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="personal">Personal Info</TabsTrigger>
-                    <TabsTrigger value="password">Password</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="personal" className="space-y-4 mt-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Personal Information</CardTitle>
-                        <CardDescription>Update your account details</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex justify-between items-center mb-4 p-3 bg-muted rounded-md">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">Account Status</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className={`h-3 w-3 rounded-full ${userData?.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                            <span className="text-sm font-medium">{userData?.status || 'Unknown'}</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="userId">User ID</Label>
-                            <Input id="userId" value={userData?.userID || ''} readOnly className="bg-muted" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input id="name" value={personalInfo.name} onChange={handlePersonalInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="nickname">Nickname</Label>
-                            <Input id="nickname" value={personalInfo.nickname} onChange={handlePersonalInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" value={personalInfo.email} onChange={handlePersonalInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="phone">Phone</Label>
-                            <Input id="phone" value={personalInfo.phone} onChange={handlePersonalInfoChange} />
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button onClick={handleSavePersonalInfo}>Save Changes</Button>
-                      </CardFooter>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Delivery Address</CardTitle>
-                        <CardDescription>Update your delivery information</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="unitNumber">Unit/Apt Number</Label>
-                            <Input id="unitNumber" value={addressInfo.unitNumber} onChange={handleAddressInfoChange} />
-                          </div>
-                          <div className="space-y-2 sm:col-span-2">
-                            <Label htmlFor="streetAddress">Street Address</Label>
-                            <Input id="streetAddress" value={addressInfo.streetAddress} onChange={handleAddressInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="city">City</Label>
-                            <Input id="city" value={addressInfo.city} onChange={handleAddressInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="state">State</Label>
-                            <Input id="state" value={addressInfo.province} onChange={handleAddressInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="zip">ZIP Code</Label>
-                            <Input id="zip" value={addressInfo.postalCode} onChange={handleAddressInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="country">Country</Label>
-                            <Input id="country" value={addressInfo.country} onChange={handleAddressInfoChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="buzzCode" className="text-sm">Buzz Code / Entry Code <span className="text-muted-foreground text-xs">(Optional)</span></Label>
-                            <Input 
-                              id="buzzCode" 
-                              value={addressInfo.buzzCode} 
-                              onChange={handleAddressInfoChange}
-                              placeholder="Only if required for building access" 
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button onClick={handleSaveAddressInfo}>Save Changes</Button>
-                      </CardFooter>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="password" className="space-y-4 mt-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Password</CardTitle>
-                        <CardDescription>Change your password</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="current-password">Current Password</Label>
-                            <Input 
-                              id="current-password" 
-                              type="password" 
-                              value={passwordInfo.currentPassword}
-                              onChange={handlePasswordChange}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="new-password">New Password</Label>
-                            <Input 
-                              id="new-password" 
-                              type="password"
-                              value={passwordInfo.newPassword}
-                              onChange={handlePasswordChange}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="confirm-password">Confirm Password</Label>
-                            <Input 
-                              id="confirm-password" 
-                              type="password"
-                              value={passwordInfo.confirmPassword}
-                              onChange={handlePasswordChange}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button onClick={handleSavePassword}>
-                          Change Password
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-              </motion.div>
-            )}
-
-            {activeTab === "select-meals" && (
-              <motion.div
-                key="select-meals"
-                initial={{ y: 10 }}
-                animate={{ y: 0 }}
-                exit={{ y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Select Meals</h2>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium">Available Credits:</span>
-                    <span className="text-sm font-bold">{credits}</span>
+              {activeTab === "community" && (
+                <motion.div
+                  key="community"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">Community</h2>
                   </div>
-                </div>
+                  <CommunityRecipes />
+                </motion.div>
+              )}
 
-                <WeeklyMealSelector 
-                  credits={credits} 
-                  setCredits={setCredits} 
-                  setActiveTab={setActiveTab}
-                  updateParentAddress={setAddressInfo}
-                  initialSelectedMeals={selectedMeals}
-                  initialCheckoutOpen={checkoutOpen}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+              {activeTab === "credits" && (
+                <motion.div
+                  key="credits"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">Credits</h2>
+                  </div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Credit Balance</CardTitle>
+                      <CardDescription>Your current available credits</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-col items-center justify-center p-6 rounded-lg">
+                        <div className="text-4xl font-bold mb-2">{userData?.credits || 0}</div>
+                        <div className="text-muted-foreground text-center">Available Credits</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Credit History</CardTitle>
+                      <CardDescription>Your credit purchase and usage history</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {transactionsLoading ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                          </div>
+                        ) : transactions && transactions.length > 0 ? (
+                          <>
+                            {transactions.map((transaction) => (
+                              <div key={transaction._id} className="flex justify-between items-center border-b pb-3 pt-1">
+                                <div>
+                                  <p className="font-medium">{transaction.description}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {new Date(transaction.createdAt).toLocaleDateString('en-US', { 
+                                      year: 'numeric', 
+                                      month: 'long', 
+                                      day: 'numeric' 
+                                    })}
+                                  </p>
+                                </div>
+                                <div className={
+                                  transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
+                                    ? "text-green-500 font-medium" 
+                                    : "text-red-500 font-medium"
+                                }>
+                                  {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
+                                    ? '+' 
+                                    : '-'
+                                  }{transaction.amount} Credits
+                                </div>
+                              </div>
+                            ))}
+                            
+                            {transactionsPagination.pages > 1 && (
+                              <div className="flex items-center justify-between pt-4">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleTransactionPagination('prev')}
+                                  disabled={transactionsPagination.page === 1}
+                                >
+                                  Previous
+                                </Button>
+                                <div className="text-sm text-muted-foreground">
+                                  Page {transactionsPagination.page} of {transactionsPagination.pages}
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleTransactionPagination('next')}
+                                  disabled={transactionsPagination.page === transactionsPagination.pages}
+                                >
+                                  Next
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-6 text-muted-foreground">
+                            No transaction history found
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Commented out Referral tab */}
+              {/* 
+              {activeTab === "refer" && (
+                <motion.div
+                  key="refer"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">Refer a Friend</h2>
+                  </div>
+                  <ReferralCard />
+                  <Card className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-xl sm:text-2xl">How Referrals Work</CardTitle>
+                      <CardDescription className="text-sm sm:text-base">Our referral program is simple and rewarding</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-6 md:grid-cols-3">
+                        <motion.div 
+                          className="flex flex-col items-center text-center space-y-3 p-4 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-colors"
+                          whileHover={{ y: -5 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                        >
+                          <div className="rounded-full bg-primary/10 p-4 relative">
+                            <Gift className="h-7 w-7 text-primary" />
+                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">1</span>
+                          </div>
+                          <h3 className="font-medium text-base sm:text-lg">Share Your Code</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            Send your unique referral code to friends and family through text, email, or social media
+                          </p>
+                        </motion.div>
+                        
+                        <motion.div 
+                          className="flex flex-col items-center text-center space-y-3 p-4 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-colors"
+                          whileHover={{ y: -5 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                        >
+                          <div className="rounded-full bg-primary/10 p-4 relative">
+                            <User className="h-7 w-7 text-primary" />
+                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">2</span>
+                          </div>
+                          <h3 className="font-medium text-base sm:text-lg">Friend Signs Up</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            They create an account using your referral code during registration or checkout
+                          </p>
+                        </motion.div>
+                        
+                        <motion.div 
+                          className="flex flex-col items-center text-center space-y-3 p-4 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-colors"
+                          whileHover={{ y: -5 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                        >
+                          <div className="rounded-full bg-primary/10 p-4 relative">
+                            <CreditCard className="h-7 w-7 text-primary" />
+                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">3</span>
+                          </div>
+                          <h3 className="font-medium text-base sm:text-lg">Both Get Credits</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            You automatically receive 5 credits, and your friend gets 5 credits to use on their first order
+                          </p>
+                        </motion.div>
+                      </div>
+                      
+                      <div className="mt-6 rounded-lg border p-4 bg-muted/50">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <div className="shrink-0 rounded-full bg-primary/20 p-2">
+                            <Sparkles className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-medium mb-1">No Limit on Referrals</h4>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                              Refer as many friends as you want! There's no cap on how many credits you can earn through referrals. 
+                              The more friends you refer, the more free meals you get.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+              */}
+
+              {/* Commented out Loyalty Program section */}
+              {/* 
+              {activeTab === "loyalty" && (
+                <motion.div
+                  key="loyalty"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-3xl font-bold tracking-tight">Loyalty Program</h2>
+                  </div>
+                  <LoyaltyProgram credits={credits} totalOrders={12} />
+                </motion.div>
+              )}
+              */}
+
+              {activeTab === "settings" && (
+                <motion.div
+                  key="settings"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">Account Settings</h2>
+                  </div>
+
+                  <Tabs defaultValue="personal" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="personal">Personal Info</TabsTrigger>
+                      <TabsTrigger value="password">Password</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="personal" className="space-y-4 mt-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Personal Information</CardTitle>
+                          <CardDescription>Update your account details</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex justify-between items-center mb-4 p-3 bg-muted rounded-md">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">Account Status</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className={`h-3 w-3 rounded-full ${userData?.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span className="text-sm font-medium">{userData?.status || 'Unknown'}</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="userId">User ID</Label>
+                              <Input id="userId" value={userData?.userID || ''} readOnly className="bg-muted" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Name</Label>
+                              <Input id="name" value={personalInfo.name} onChange={handlePersonalInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="nickname">Nickname</Label>
+                              <Input id="nickname" value={personalInfo.nickname} onChange={handlePersonalInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email">Email</Label>
+                              <Input id="email" type="email" value={personalInfo.email} onChange={handlePersonalInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Phone</Label>
+                              <Input id="phone" value={personalInfo.phone} onChange={handlePersonalInfoChange} />
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter>
+                          <Button onClick={handleSavePersonalInfo}>Save Changes</Button>
+                        </CardFooter>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Delivery Address</CardTitle>
+                          <CardDescription>Update your delivery information</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="unitNumber">Unit/Apt Number</Label>
+                              <Input id="unitNumber" value={addressInfo.unitNumber} onChange={handleAddressInfoChange} />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                              <Label htmlFor="streetAddress">Street Address</Label>
+                              <Input id="streetAddress" value={addressInfo.streetAddress} onChange={handleAddressInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="city">City</Label>
+                              <Input id="city" value={addressInfo.city} onChange={handleAddressInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="state">State</Label>
+                              <Input id="state" value={addressInfo.province} onChange={handleAddressInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="zip">ZIP Code</Label>
+                              <Input id="zip" value={addressInfo.postalCode} onChange={handleAddressInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="country">Country</Label>
+                              <Input id="country" value={addressInfo.country} onChange={handleAddressInfoChange} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="buzzCode" className="text-sm">Buzz Code / Entry Code <span className="text-muted-foreground text-xs">(Optional)</span></Label>
+                              <Input 
+                                id="buzzCode" 
+                                value={addressInfo.buzzCode} 
+                                onChange={handleAddressInfoChange}
+                                placeholder="Only if required for building access" 
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter>
+                          <Button onClick={handleSaveAddressInfo}>Save Changes</Button>
+                        </CardFooter>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="password" className="space-y-4 mt-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Password</CardTitle>
+                          <CardDescription>Change your password</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="current-password">Current Password</Label>
+                              <Input 
+                                id="current-password" 
+                                type="password" 
+                                value={passwordInfo.currentPassword}
+                                onChange={handlePasswordChange}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="new-password">New Password</Label>
+                              <Input 
+                                id="new-password" 
+                                type="password"
+                                value={passwordInfo.newPassword}
+                                onChange={handlePasswordChange}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="confirm-password">Confirm Password</Label>
+                              <Input 
+                                id="confirm-password" 
+                                type="password"
+                                value={passwordInfo.confirmPassword}
+                                onChange={handlePasswordChange}
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter>
+                          <Button onClick={handleSavePassword}>
+                            Change Password
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </motion.div>
+              )}
+
+              {activeTab === "select-meals" && (
+                <motion.div
+                  key="select-meals"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-3xl font-bold tracking-tight">Select Meals</h2>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Available Credits:</span>
+                      <span className="text-sm font-bold">{credits}</span>
+                    </div>
+                  </div>
+
+                  <WeeklyMealSelector 
+                    credits={credits} 
+                    setCredits={setCredits} 
+                    setActiveTab={setActiveTab}
+                    updateParentAddress={setAddressInfo}
+                    initialSelectedMeals={selectedMeals}
+                    initialCheckoutOpen={checkoutOpen}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </main>
       </div>
-
-      {/* Removed SupportChat component */}
     </div>
   )
 }
@@ -1561,7 +1648,7 @@ function WeeklyMealSelector({
   }
 
   const selectedCount = Object.values(selectedMeals).filter(value => value.selected).length
-  const totalCost = selectedCount * 20
+  const totalCost = selectedCount * 1 // Changed from 20 to 1 credit per meal
   const canCheckout = selectedCount > 0 && totalCost <= credits
 
   const handleCheckout = async () => {
@@ -1819,7 +1906,7 @@ function WeeklyMealSelector({
             </CardContent>
             <CardFooter className="flex justify-between">
               <div>
-                <p className="text-sm font-medium">Selected: {selectedCount} meals ({selectedCount * 20} credits)</p>
+                <p className="text-sm font-medium">Selected: {selectedCount} meals ({selectedCount * 1} credits)</p>
               </div>
               <Button disabled={!canCheckout} onClick={() => setCheckoutOpen(true)}>
                 Proceed to Checkout
@@ -1890,7 +1977,7 @@ function WeeklyMealSelector({
                   </ul>
                   <div className="mt-4 pt-4 border-t flex justify-between font-medium">
                     <span className="text-sm">Total</span>
-                    <span className="text-sm">{selectedCount * 20} Credits</span>
+                    <span className="text-sm">{selectedCount * 1} Credits</span>
                   </div>
                 </div>
               </div>

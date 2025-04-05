@@ -2,44 +2,50 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { ChevronDown, ChevronUp, AlertCircle } from "lucide-react"
+import { Check, ChevronDown, ChevronUp, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { type Meal } from "@/lib/utils"
 
-export function MealCustomization({ meal, onClose }) {
+interface MealCustomizationProps {
+  meal: Meal;
+  onClose: () => void;
+}
+
+export function MealCustomization({ meal, onClose }: MealCustomizationProps) {
   const [baseOption, setBaseOption] = useState("default")
   const [protein, setProtein] = useState("default")
-  const [extras, setExtras] = useState([])
-  const [allergies, setAllergies] = useState([])
+  const [extras, setExtras] = useState<string[]>([])
+  const [allergies, setAllergies] = useState<string[]>([])
   const [specialInstructions, setSpecialInstructions] = useState("")
-  const [expanded, setExpanded] = useState(null)
+  const [expanded, setExpanded] = useState("base")
   const { toast } = useToast()
 
-  const toggleSection = (section) => {
+  const toggleSection = (section: string) => {
     if (expanded === section) {
-      setExpanded(null)
+      setExpanded("")
     } else {
       setExpanded(section)
     }
   }
 
-  const handleExtraToggle = (extra) => {
+  const handleExtraToggle = (extra: string) => {
     if (extras.includes(extra)) {
-      setExtras(extras.filter((e) => e !== extra))
+      setExtras(extras.filter(e => e !== extra))
     } else {
       setExtras([...extras, extra])
     }
   }
 
-  const handleAllergyToggle = (allergy) => {
+  const handleAllergyToggle = (allergy: string) => {
     if (allergies.includes(allergy)) {
-      setAllergies(allergies.filter((a) => a !== allergy))
+      setAllergies(allergies.filter(a => a !== allergy))
     } else {
       setAllergies([...allergies, allergy])
     }
@@ -81,7 +87,7 @@ export function MealCustomization({ meal, onClose }) {
                 </div>
                 <div className="flex items-center space-x-2 mb-2">
                   <RadioGroupItem value="quinoa" id="base-quinoa" />
-                  <Label htmlFor="base-quinoa">Quinoa (+1 credit)</Label>
+                  <Label htmlFor="base-quinoa">Quinoa (+0.2 credits)</Label>
                 </div>
                 <div className="flex items-center space-x-2 mb-2">
                   <RadioGroupItem value="cauliflower" id="base-cauliflower" />
@@ -119,7 +125,7 @@ export function MealCustomization({ meal, onClose }) {
                 </div>
                 <div className="flex items-center space-x-2 mb-2">
                   <RadioGroupItem value="double" id="protein-double" />
-                  <Label htmlFor="protein-double">Double Protein (+2 credits)</Label>
+                  <Label htmlFor="protein-double">Double Protein (+0.5 credits)</Label>
                 </div>
                 <div className="flex items-center space-x-2 mb-2">
                   <RadioGroupItem value="tofu" id="protein-tofu" />
@@ -127,7 +133,7 @@ export function MealCustomization({ meal, onClose }) {
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="beef" id="protein-beef" />
-                  <Label htmlFor="protein-beef">Beef (+1 credit)</Label>
+                  <Label htmlFor="protein-beef">Beef (+0.3 credits)</Label>
                 </div>
               </RadioGroup>
             </motion.div>
@@ -151,7 +157,7 @@ export function MealCustomization({ meal, onClose }) {
               className="pt-2"
             >
               <div className="grid grid-cols-2 gap-2">
-                {["Avocado (+1 credit)", "Extra Sauce", "Roasted Vegetables", "Cheese"].map((extra) => (
+                {["Avocado (+0.2 credits)", "Extra Sauce", "Roasted Vegetables", "Cheese"].map((extra) => (
                   <div key={extra} className="flex items-center space-x-2">
                     <Checkbox
                       id={`extra-${extra}`}

@@ -168,7 +168,7 @@ export function MealDetail({
             </div>
             
             <div className="flex items-center justify-center text-sm text-muted-foreground">
-              <span className="font-medium">20</span>
+              <span className="font-medium">1</span>
               <Gem className="h-3.5 w-3.5 ml-1 text-primary" />
             </div>
             
