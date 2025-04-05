@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Sparkles, Gem, CreditCard, Coins, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -104,115 +104,170 @@ interface MealDetailProps {
     allergens?: string[];
   };
   day: string;
+  dayDate?: string;
+  isToday?: boolean;
   onSelect: (day: string) => void;
   isSelected: boolean;
+  isUnavailable?: boolean;
+  unavailableReason?: string;
 }
 
-export function MealDetail({ meal, day, onSelect, isSelected }: MealDetailProps) {
+export function MealDetail({ 
+  meal, 
+  day, 
+  dayDate, 
+  isToday = false, 
+  onSelect, 
+  isSelected,
+  isUnavailable = false,
+  unavailableReason = ""
+}: MealDetailProps) {
   return (
     <Dialog>
       <motion.div
-        whileHover={{ scale: 1.03 }}
-        className={`rounded-lg border p-4 cursor-pointer relative ${isSelected ? "border-primary bg-primary/5" : ""}`}
+        whileHover={{ scale: 1.01 }}
+        className={`rounded-lg border p-4 cursor-pointer relative flex flex-col sm:flex-row
+          ${isSelected ? "border-primary bg-primary/5" : ""} 
+          ${isToday ? "ring-1 ring-primary/50" : ""}
+        `}
         onClick={() => onSelect(day)}
       >
-        <div className="aspect-square relative mb-2 overflow-hidden rounded-md">
-          <img
-            src={meal.image || "/placeholder.svg"}
-            alt={meal.name}
-            className="object-cover w-full h-full transition-transform hover:scale-105"
-          />
-          <div className="absolute top-2 right-2 bg-background rounded-full p-1 shadow">
-            <div className={`h-4 w-4 rounded-full ${isSelected ? "bg-primary" : "bg-muted"}`} />
+        {/* Left side - Image and day/date */}
+        <div className="sm:w-2/5 flex flex-col space-y-2">
+          <div className="aspect-square relative overflow-hidden rounded-md">
+            <img
+              src={meal.image || "/placeholder.svg"}
+              alt={meal.name}
+              className="object-cover w-full h-full transition-transform hover:scale-105"
+            />
+            
+            {isUnavailable && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-background/80 text-black text-xs rounded px-2 py-1 text-center max-w-[90%]">
+                  {unavailableReason === "This day has already passed" ? "This day has passed already" : unavailableReason}
+                </div>
+              </div>
+            )}
+            
+            <div className="absolute top-2 left-2 bg-background rounded-full p-1 shadow">
+              <div className={`h-4 w-4 rounded-full ${isSelected ? "bg-primary" : "bg-muted"}`} />
+            </div>
+            
+            <DialogTrigger asChild>
+              <CapybaraIcon 
+                className="absolute bottom-1 right-1 z-10 h-5 w-5 cursor-pointer transition-all duration-200 hover:scale-125 hover:drop-shadow-md opacity-75 hover:opacity-100"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </DialogTrigger>
           </div>
           
-          <DialogTrigger asChild>
-            <CapybaraIcon 
-              className="absolute bottom-1 right-1 z-10 h-5 w-5 cursor-pointer transition-all duration-200 hover:scale-125 hover:drop-shadow-md opacity-75 hover:opacity-100"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </DialogTrigger>
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-1">
+              <h3 className="text-lg font-medium capitalize">{day}</h3>
+              {dayDate && <span className="text-sm">({dayDate})</span>}
+            </div>
+            
+            <div className="flex items-center justify-center text-sm text-muted-foreground">
+              <span className="font-medium">20</span>
+              <Gem className="h-3.5 w-3.5 ml-1 text-primary" />
+            </div>
+            
+            {isToday && (
+              <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary mt-1">
+                Today
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-1 text-center">
-          <h3 className="font-medium capitalize">{day}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2">{meal.name}</p>
+        
+        {/* Right side - Description */}
+        <div className="sm:w-3/5 sm:pl-4 mt-3 sm:mt-0 flex flex-col justify-center">
+          <div className="space-y-2 max-w-md">
+            {meal.description ? (
+              <div>
+                {meal.description.split('. ')
+                  .filter(Boolean)
+                  .map((sentence, index) => (
+                    <div key={index} className="flex items-start gap-2 mb-2">
+                      <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-base md:text-xl">{sentence.replace(/\.$/, '').trim()}</p>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-start gap-2 mb-2">
+                  <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-base md:text-xl">Fresh ingredients prepared daily</p>
+                </div>
+                <div className="flex items-start gap-2 mb-2">
+                  <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-base md:text-xl">Delivered in eco-friendly packaging</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-base md:text-xl">Perfect for a healthy and satisfying meal without the hassle of cooking</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
       
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{meal.name}</span>
-          </DialogTitle>
-          <DialogDescription className="capitalize">{day}'s Meal</DialogDescription>
+          <DialogDescription className="flex items-center gap-1 text-foreground font-normal">
+            <span className="text-base font-medium capitalize">{day}</span>
+            {dayDate && <span className="text-base">({dayDate})</span>}
+            {isToday && <span className="text-xs font-medium bg-primary/10 text-primary rounded-full px-2 py-0.5 ml-2">Today</span>}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="aspect-square overflow-hidden rounded-md mx-auto" style={{ maxWidth: "250px" }}>
-            <img
-              src={meal.image || "/placeholder.svg?height=250&width=250"}
-              alt={meal.name}
-              className="object-cover w-full h-full"
-            />
+          <div className="relative">
+            <div className="aspect-square overflow-hidden rounded-md mx-auto" style={{ maxWidth: "250px" }}>
+              <img
+                src={meal.image || "/placeholder.svg"}
+                alt={meal.name}
+                className="object-cover w-full h-full"
+              />
+            </div>
           </div>
 
-          <Tabs defaultValue="description">
-            <TabsList className={`grid w-full ${(meal.ingredients?.length || meal.allergens?.length) ? "grid-cols-2" : "grid-cols-1"} bg-background border`}>
-              <TabsTrigger value="description" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Description</TabsTrigger>
-              {(meal.ingredients?.length || meal.allergens?.length) && (
-                <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Ingredients</TabsTrigger>
-              )}
-            </TabsList>
-            <TabsContent value="description" className="space-y-2">
-              {meal.description ? (
-                <div className="space-y-2">
-                  {meal.description.split('. ')
-                    .filter(Boolean)
-                    .map((sentence, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-muted-foreground">{sentence.replace(/\.$/, '').trim()}</p>
-                      </div>
-                    ))}
+          {isUnavailable && (
+            <div className="bg-destructive/10 text-destructive text-sm rounded-md p-3 my-2">
+              {unavailableReason}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {meal.description ? (
+              <div className="space-y-3">
+                {meal.description.split('. ')
+                  .filter(Boolean)
+                  .map((sentence, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                      <p className="text-base">{sentence.replace(/\.$/, '').trim()}</p>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                  <p className="text-base">Our delicious meal is prepared with fresh ingredients</p>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">Our delicious {meal.name} is prepared with fresh ingredients</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">Delivered to your door in eco-friendly packaging</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">Perfect for a healthy and satisfying meal without the hassle of cooking</p>
-                  </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                  <p className="text-base">Delivered to your door in eco-friendly packaging</p>
                 </div>
-              )}
-            </TabsContent>
-            {(meal.ingredients?.length || meal.allergens?.length) && (
-              <TabsContent value="ingredients" className="space-y-2">
-                {meal.ingredients && meal.ingredients.length > 0 && (
-                  <div className="space-y-2">
-                    {meal.ingredients.map((ingredient, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-muted-foreground">{ingredient}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {meal.allergens && meal.allergens.length > 0 && (
-                  <div className="flex items-center gap-2 text-amber-600 text-sm mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>Contains: {meal.allergens.join(', ')}</span>
-                  </div>
-                )}
-              </TabsContent>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                  <p className="text-base">Perfect for a healthy and satisfying meal without the hassle of cooking</p>
+                </div>
+              </div>
             )}
-          </Tabs>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

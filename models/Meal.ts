@@ -11,6 +11,7 @@ export interface IMeal extends Document {
   ingredients?: string[];
   allergens?: string[];
   day?: string; // for weekly meal assignment
+  date?: string; // to store specific date for the meal
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +28,7 @@ const MealSchema: Schema = new Schema(
     ingredients: { type: [String], default: [] },
     allergens: { type: [String], default: [] },
     day: { type: String, enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] },
+    date: { type: String }, // for storing a specific date as a string
   },
   { 
     timestamps: true,

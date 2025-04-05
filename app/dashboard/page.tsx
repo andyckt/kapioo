@@ -1,13 +1,14 @@
 "use client"
 
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 import { Label } from "@/components/ui/label"
 
-import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +26,8 @@ import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
+import { Checkbox } from "@/components/ui/checkbox"
+import { OrderHistory } from "@/components/order-history"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -37,6 +40,26 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState<UserType | null>(null)
   const [userLoading, setUserLoading] = useState(true)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
+  const [transactionsPagination, setTransactionsPagination] = useState({
+    page: 1,
+    limit: 5,
+    total: 0,
+    pages: 1
+  })
+  
+  // Add state for meal selection and checkout
+  const [selectedMeals, setSelectedMeals] = useState({
+    monday: { selected: false, date: '' },
+    tuesday: { selected: false, date: '' },
+    wednesday: { selected: false, date: '' },
+    thursday: { selected: false, date: '' },
+    friday: { selected: false, date: '' },
+    saturday: { selected: false, date: '' },
+    sunday: { selected: false, date: '' },
+  })
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
 
   // Add form state for user settings
   const [personalInfo, setPersonalInfo] = useState({
@@ -56,14 +79,77 @@ export default function DashboardPage() {
     buzzCode: ''
   });
 
+  // Add state for password fields
+  const [passwordInfo, setPasswordInfo] = useState<{
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // Add form state for checkout
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    specialInstructions: ''
+  });
+
+  // Effect to load meal selections from localStorage
+  useEffect(() => {
+    try {
+      const savedSelections = localStorage.getItem('selectedMeals');
+      if (savedSelections) {
+        const parsed = JSON.parse(savedSelections);
+        
+        // Handle both old and new structure
+        if (typeof parsed.monday === 'boolean') {
+          // Convert old structure to new structure
+          setSelectedMeals({
+            monday: { selected: parsed.monday || false, date: '' },
+            tuesday: { selected: parsed.tuesday || false, date: '' },
+            wednesday: { selected: parsed.wednesday || false, date: '' },
+            thursday: { selected: parsed.thursday || false, date: '' },
+            friday: { selected: parsed.friday || false, date: '' },
+            saturday: { selected: parsed.saturday || false, date: '' },
+            sunday: { selected: parsed.sunday || false, date: '' },
+          });
+        } else {
+          // New structure with dates
+          setSelectedMeals({
+            monday: parsed.monday || { selected: false, date: '' },
+            tuesday: parsed.tuesday || { selected: false, date: '' },
+            wednesday: parsed.wednesday || { selected: false, date: '' },
+            thursday: parsed.thursday || { selected: false, date: '' },
+            friday: parsed.friday || { selected: false, date: '' },
+            saturday: parsed.saturday || { selected: false, date: '' },
+            sunday: parsed.sunday || { selected: false, date: '' },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved meal selections:', error);
+    }
+  }, []);
+
   useEffect(() => {
     async function loadMeals() {
       try {
         setIsLoading(true)
+        console.log('[Dashboard] Fetching weekly meals...');
         const weeklyMeals = await getWeeklyMeals()
+        
+        console.log('[Dashboard] Meals received:', {
+          count: Object.keys(weeklyMeals).length,
+          days: Object.keys(weeklyMeals),
+          meals: weeklyMeals
+        });
+        
         setMeals(weeklyMeals)
       } catch (error) {
-        console.error('Error loading meals:', error)
+        console.error('[Dashboard] Error loading meals:', error)
         toast({
           title: "Error",
           description: "Failed to load this week's meals",
@@ -74,8 +160,12 @@ export default function DashboardPage() {
       }
     }
     
-    loadMeals()
-  }, [toast])
+    // Load meals on initial render and whenever the user switches to overview or select-meals tab
+    if (activeTab === "overview" || activeTab === "select-meals") {
+      console.log(`[Dashboard] Loading meals for tab: ${activeTab}`);
+      loadMeals()
+    }
+  }, [toast, activeTab])
 
   useEffect(() => {
     // Check if user is logged in - get user from localStorage
@@ -102,6 +192,13 @@ export default function DashboardPage() {
           
           setUserData(user);
           setCredits(user.credits || 0);
+          
+          // Set form data for checkout
+          setFormData({
+            name: user.name || '',
+            phone: user.phone || '',
+            specialInstructions: ''
+          });
           
           // Set form data
           setPersonalInfo({
@@ -138,6 +235,87 @@ export default function DashboardPage() {
     
     loadUserData();
   }, [router, toast]);
+
+  useEffect(() => {
+    if (activeTab === "credits" && userData) {
+      console.log("Credits tab is active and userData is available, fetching transactions...");
+      fetchTransactions();
+    }
+  }, [activeTab, userData]);
+
+  // Effect to reload address info when switching to settings tab
+  useEffect(() => {
+    if (activeTab === "settings" && userData?._id) {
+      // Load fresh user data to ensure we have the latest address
+      const fetchUserData = async () => {
+        try {
+          const user = await getUserById(userData._id);
+          if (user && user.address) {
+            // Update address info from the fresh data
+            setAddressInfo({
+              unitNumber: user.address.unitNumber || '',
+              streetAddress: user.address.streetAddress || '',
+              city: user.address.city || '',
+              province: user.address.province || '',
+              postalCode: user.address.postalCode || '',
+              country: user.address.country || '',
+              buzzCode: user.address.buzzCode || ''
+            });
+          }
+        } catch (error) {
+          console.error('Error refreshing user data:', error);
+        }
+      };
+      
+      fetchUserData();
+    }
+  }, [activeTab, userData?._id]);
+
+  const fetchTransactions = async (page = 1) => {
+    if (!userData) return;
+    
+    console.log("userData in fetchTransactions:", {
+      _id: userData._id,
+      userID: userData.userID,
+      name: userData.name,
+      email: userData.email
+    });
+    
+    setTransactionsLoading(true);
+    try {
+      console.log(`Fetching transactions for user: ${userData._id}, page: ${page}`);
+      const response = await fetch(`/api/transactions?userId=${userData._id}&page=${page}&limit=${transactionsPagination.limit}`);
+      const data = await response.json();
+      console.log("Transaction API response:", data);
+      
+      if (data.success) {
+        setTransactions(data.data.transactions || []);
+        setTransactionsPagination({
+          page: data.data.page,
+          limit: data.data.limit,
+          total: data.data.total,
+          pages: Math.ceil(data.data.total / data.data.limit)
+        });
+      } else {
+        console.error("API returned error:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      setTransactions([]);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+  
+  const handleTransactionPagination = (direction: 'prev' | 'next') => {
+    const newPage = direction === 'prev' 
+      ? Math.max(1, transactionsPagination.page - 1)
+      : Math.min(transactionsPagination.pages, transactionsPagination.page + 1);
+      
+    if (newPage !== transactionsPagination.page) {
+      fetchTransactions(newPage);
+    }
+  };
 
   const menuItems = [
     { id: "overview", label: "Overview", icon: <User className="h-4 w-4" /> },
@@ -202,6 +380,14 @@ export default function DashboardPage() {
         // Update local state with new data
         setUserData((prev: UserType | null) => prev ? { ...prev, ...personalInfo } : null);
         
+        // Update localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          const updatedUser = { ...userObj, ...personalInfo };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+        
         toast({
           title: "Settings updated",
           description: "Your account information has been updated",
@@ -257,6 +443,19 @@ export default function DashboardPage() {
           } 
         } : null);
         
+        // Update localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          const updatedUser = { 
+            ...userObj, 
+            address: {
+              ...addressInfo
+            } 
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+        
         toast({
           title: "Address updated",
           description: "Your delivery address has been updated",
@@ -272,11 +471,128 @@ export default function DashboardPage() {
       console.error('Error updating address:', error);
       toast({
         title: "Error",
+        description: "An unexpected error occurred while saving your address",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle password form changes
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setPasswordInfo((prev) => ({
+      ...prev,
+      [id === 'current-password' ? 'currentPassword' : 
+       id === 'new-password' ? 'newPassword' : 
+       id === 'confirm-password' ? 'confirmPassword' : id]: value
+    }));
+  };
+
+  // Handle saving password
+  const handleSavePassword = async () => {
+    if (!userData?._id) return;
+    
+    // Validate passwords
+    if (!passwordInfo.currentPassword) {
+      toast({
+        title: "Error",
+        description: "Current password is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!passwordInfo.newPassword) {
+      toast({
+        title: "Error",
+        description: "New password is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (passwordInfo.newPassword !== passwordInfo.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New password and confirm password do not match",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/users/${userData._id}/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: passwordInfo.currentPassword,
+          newPassword: passwordInfo.newPassword
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Clear password fields
+        setPasswordInfo({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        
+        toast({
+          title: "Password updated",
+          description: "Your password has been changed successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update password",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating password:', error);
+      toast({
+        title: "Error",
         description: "An unexpected error occurred",
         variant: "destructive"
       });
     }
   };
+
+  // Function to handle checkout from ThisWeekMeals
+  const handleThisWeekCheckout = (selections: Record<string, { selected: boolean, date: string }>) => {
+    // Save to localStorage
+    localStorage.setItem('selectedMeals', JSON.stringify(selections));
+    
+    // Set the selected meals with type casting to ensure compatibility
+    setSelectedMeals(selections as {
+      monday: { selected: boolean; date: string };
+      tuesday: { selected: boolean; date: string };
+      wednesday: { selected: boolean; date: string };
+      thursday: { selected: boolean; date: string };
+      friday: { selected: boolean; date: string };
+      saturday: { selected: boolean; date: string };
+      sunday: { selected: boolean; date: string };
+    });
+    
+    // Open the checkout
+    setCheckoutOpen(true);
+    // Switch to the weekly meal tab
+    setActiveTab("select-meals");
+  };
+
+  // Handle input change for all form fields
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target
+    setFormData({
+      ...formData,
+      [id]: value,
+    })
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -407,15 +723,15 @@ export default function DashboardPage() {
             </Button>
           </motion.nav>
         </aside>
-        <main className="flex w-full flex-1 flex-col overflow-hidden">
-          <AnimatePresence mode="wait">
+        <main className="flex-1 lg:max-w-6xl mx-auto w-full px-4 py-8">
+          <AnimatePresence>
             {activeTab === "overview" && (
               <motion.div
                 key="overview"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
@@ -457,9 +773,8 @@ export default function DashboardPage() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <ThisWeekMeals
                     meals={meals}
-                    onSelectMeal={() => {
-                      setActiveTab("select-meals")
-                    }}
+                    onSelectMeal={() => setActiveTab("select-meals")}
+                    onCheckout={handleThisWeekCheckout}
                     isLoading={isLoading}
                   />
                 </div>
@@ -469,15 +784,20 @@ export default function DashboardPage() {
             {activeTab === "orders" && (
               <motion.div
                 key="orders"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Upcoming Meal</h2>
+                  <h2 className="text-3xl font-bold tracking-tight">Orders & Upcoming Meals</h2>
                 </div>
+
+                {/* Order History */}
+                {userData && (
+                  <OrderHistory userId={userData._id} />
+                )}
 
                 {/* Moved Upcoming Meals section from overview to here */}
                 <Card className="col-span-1">
@@ -492,113 +812,104 @@ export default function DashboardPage() {
                           M
                         </div>
                         <div className="space-y-1 flex-1">
-                          <p className="text-sm font-medium leading-none">Monday</p>
-                          <p className="text-sm text-muted-foreground">Grilled Salmon with Vegetables</p>
+                          <div className="flex items-center">
+                            <p className="text-sm font-medium leading-none">Monday</p>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({(() => {
+                                try {
+                                  const now = new Date();
+                                  const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
+                                  const daysToAdd = 1 - dayOfWeek; // Monday is day 1
+                                  const monday = new Date(now);
+                                  monday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
+                                  
+                                  const monthFormatter = new Intl.DateTimeFormat('en-CA', {
+                                    month: 'short',
+                                    timeZone: 'America/Toronto'
+                                  });
+                                  
+                                  const dayFormatter = new Intl.DateTimeFormat('en-CA', {
+                                    day: 'numeric',
+                                    timeZone: 'America/Toronto'
+                                  });
+                                  
+                                  return `${monthFormatter.format(monday)} ${dayFormatter.format(monday)}`;
+                                } catch (error) {
+                                  console.error("Error formatting date:", error);
+                                  return "";
+                                }
+                              })()})
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
+                            <span className="ml-2">Pasta Primavera</span>
+                          </div>
                         </div>
-                        {/* <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setCustomizeMeal({
-                                  name: "Grilled Salmon with Vegetables",
-                                  day: "Monday",
-                                })
-                              }
-                            >
-                              Customize
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <MealCustomization meal={customizeMeal} onClose={() => setCustomizeMeal(null)} />
-                          </DialogContent>
-                        </Dialog> */}
                       </div>
+                      
                       <div className="flex items-center space-x-4">
                         <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
                           W
                         </div>
                         <div className="space-y-1 flex-1">
-                          <p className="text-sm font-medium leading-none">Wednesday</p>
-                          <p className="text-sm text-muted-foreground">Chicken Alfredo Pasta</p>
+                          <div className="flex items-center">
+                            <p className="text-sm font-medium leading-none">Wednesday</p>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({(() => {
+                                try {
+                                  const now = new Date();
+                                  const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday, 3 is Wednesday
+                                  const daysToAdd = 3 - dayOfWeek; // Wednesday is day 3
+                                  const wednesday = new Date(now);
+                                  wednesday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
+                                  
+                                  const monthFormatter = new Intl.DateTimeFormat('en-CA', {
+                                    month: 'short',
+                                    timeZone: 'America/Toronto'
+                                  });
+                                  
+                                  const dayFormatter = new Intl.DateTimeFormat('en-CA', {
+                                    day: 'numeric',
+                                    timeZone: 'America/Toronto'
+                                  });
+                                  
+                                  return `${monthFormatter.format(wednesday)} ${dayFormatter.format(wednesday)}`;
+                                } catch (error) {
+                                  console.error("Error formatting date:", error);
+                                  return "";
+                                }
+                              })()})
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
+                            <span className="ml-2">Chicken Teriyaki Bowl</span>
+                          </div>
                         </div>
-                        {/* <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setCustomizeMeal({
-                                  name: "Chicken Alfredo Pasta",
-                                  day: "Wednesday",
-                                })
-                              }
-                            >
-                              Customize
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <MealCustomization meal={customizeMeal} onClose={() => setCustomizeMeal(null)} />
-                          </DialogContent>
-                        </Dialog> */}
                       </div>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button variant="outline" className="w-full" onClick={() => setActiveTab("select-meals")}>
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => setActiveTab("select-meals")}
+                    >
                       Select More Meals
                     </Button>
                   </CardFooter>
                 </Card>
-
-                <div className="space-y-4">
-                  <h3 className="text-xl font-semibold">Past Orders</h3>
-                  {[1, 2, 3].map((order) => (
-                    <Card key={order} className="transform transition-all hover:scale-[1.01]">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">Order #{1000 + order}</CardTitle>
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {new Date(2025, 0, order * 7).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">Monday</span>
-                              <span className="text-sm text-muted-foreground">Beef Stir Fry</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">Wednesday</span>
-                              <span className="text-sm text-muted-foreground">Vegetable Curry</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">Friday</span>
-                              <span className="text-sm text-muted-foreground">Grilled Chicken</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">Total</span>
-                              <span className="text-sm font-bold">3 Credits</span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
               </motion.div>
             )}
 
             {activeTab === "delivery" && (
               <motion.div
                 key="delivery"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
@@ -629,10 +940,10 @@ export default function DashboardPage() {
             {activeTab === "community" && (
               <motion.div
                 key="community"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
@@ -645,10 +956,10 @@ export default function DashboardPage() {
             {activeTab === "credits" && (
               <motion.div
                 key="credits"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
@@ -657,91 +968,12 @@ export default function DashboardPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Credit Balance</CardTitle>
-                    <CardDescription>Your current credit balance and purchase options</CardDescription>
+                    <CardDescription>Your current available credits</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-5xl font-bold">{credits}</div>
-                        <p className="text-sm text-muted-foreground mt-2">Available Credits</p>
-                      </div>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <Card className="transform transition-all hover:scale-105 cursor-pointer">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">Basic</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-3xl font-bold">10</div>
-                          <p className="text-sm text-muted-foreground">Credits</p>
-                          <div className="mt-4 text-lg font-bold">$50</div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button
-                            className="w-full"
-                            onClick={() => {
-                              setCredits(credits + 10)
-                              toast({
-                                title: "Credits purchased",
-                                description: "10 credits have been added to your account",
-                              })
-                            }}
-                          >
-                            Purchase
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                      <Card className="transform transition-all hover:scale-105 cursor-pointer border-primary">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">Standard</CardTitle>
-                          <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-2 py-1 text-xs rounded-bl-lg">
-                            Popular
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-3xl font-bold">25</div>
-                          <p className="text-sm text-muted-foreground">Credits</p>
-                          <div className="mt-4 text-lg font-bold">$100</div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button
-                            className="w-full"
-                            onClick={() => {
-                              setCredits(credits + 25)
-                              toast({
-                                title: "Credits purchased",
-                                description: "25 credits have been added to your account",
-                              })
-                            }}
-                          >
-                            Purchase
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                      <Card className="transform transition-all hover:scale-105 cursor-pointer">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">Premium</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-3xl font-bold">50</div>
-                          <p className="text-sm text-muted-foreground">Credits</p>
-                          <div className="mt-4 text-lg font-bold">$175</div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button
-                            className="w-full"
-                            onClick={() => {
-                              setCredits(credits + 50)
-                              toast({
-                                title: "Credits purchased",
-                                description: "50 credits have been added to your account",
-                              })
-                            }}
-                          >
-                            Purchase
-                          </Button>
-                        </CardFooter>
-                      </Card>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center p-6 rounded-lg">
+                      <div className="text-4xl font-bold mb-2">{userData?.credits || 0}</div>
+                      <div className="text-muted-foreground text-center">Available Credits</div>
                     </div>
                   </CardContent>
                 </Card>
@@ -752,34 +984,66 @@ export default function DashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center border-b pb-2">
-                        <div>
-                          <p className="font-medium">Credit Purchase</p>
-                          <p className="text-sm text-muted-foreground">March 15, 2025</p>
+                      {transactionsLoading ? (
+                        <div className="flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
-                        <div className="text-green-500 font-medium">+25 Credits</div>
-                      </div>
-                      <div className="flex justify-between items-center border-b pb-2">
-                        <div>
-                          <p className="font-medium">Weekly Order</p>
-                          <p className="text-sm text-muted-foreground">March 10, 2025</p>
+                      ) : transactions && transactions.length > 0 ? (
+                        <>
+                          {transactions.map((transaction) => (
+                            <div key={transaction._id} className="flex justify-between items-center border-b pb-3 pt-1">
+                              <div>
+                                <p className="font-medium">{transaction.description}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(transaction.createdAt).toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                  })}
+                                </p>
+                              </div>
+                              <div className={
+                                transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
+                                  ? "text-green-500 font-medium" 
+                                  : "text-red-500 font-medium"
+                              }>
+                                {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
+                                  ? '+' 
+                                  : '-'
+                                }{transaction.amount} Credits
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {transactionsPagination.pages > 1 && (
+                            <div className="flex items-center justify-between pt-4">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleTransactionPagination('prev')}
+                                disabled={transactionsPagination.page === 1}
+                              >
+                                Previous
+                              </Button>
+                              <div className="text-sm text-muted-foreground">
+                                Page {transactionsPagination.page} of {transactionsPagination.pages}
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleTransactionPagination('next')}
+                                disabled={transactionsPagination.page === transactionsPagination.pages}
+                              >
+                                Next
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                          No transaction history found
                         </div>
-                        <div className="text-red-500 font-medium">-3 Credits</div>
-                      </div>
-                      <div className="flex justify-between items-center border-b pb-2">
-                        <div>
-                          <p className="font-medium">Credit Purchase</p>
-                          <p className="text-sm text-muted-foreground">March 1, 2025</p>
-                        </div>
-                        <div className="text-green-500 font-medium">+10 Credits</div>
-                      </div>
-                      <div className="flex justify-between items-center border-b pb-2">
-                        <div>
-                          <p className="font-medium">Weekly Order</p>
-                          <p className="text-sm text-muted-foreground">February 25, 2025</p>
-                        </div>
-                        <div className="text-red-500 font-medium">-2 Credits</div>
-                      </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -789,10 +1053,10 @@ export default function DashboardPage() {
             {activeTab === "refer" && (
               <motion.div
                 key="refer"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
@@ -892,10 +1156,10 @@ export default function DashboardPage() {
             {activeTab === "settings" && (
               <motion.div
                 key="settings"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
@@ -918,7 +1182,6 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-center mb-4 p-3 bg-muted rounded-md">
                           <div className="flex flex-col">
                             <span className="text-sm font-medium">Account Status</span>
-                            <span className="text-xs text-muted-foreground">User since {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString() : userData?.joined ? new Date(userData.joined).toLocaleDateString() : 'N/A'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className={`h-3 w-3 rounded-full ${userData?.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -986,8 +1249,13 @@ export default function DashboardPage() {
                             <Input id="country" value={addressInfo.country} onChange={handleAddressInfoChange} />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="buzzCode">Buzz Code / Entry Code</Label>
-                            <Input id="buzzCode" value={addressInfo.buzzCode} onChange={handleAddressInfoChange} />
+                            <Label htmlFor="buzzCode" className="text-sm">Buzz Code / Entry Code <span className="text-muted-foreground text-xs">(Optional)</span></Label>
+                            <Input 
+                              id="buzzCode" 
+                              value={addressInfo.buzzCode} 
+                              onChange={handleAddressInfoChange}
+                              placeholder="Only if required for building access" 
+                            />
                           </div>
                         </div>
                       </CardContent>
@@ -1007,27 +1275,35 @@ export default function DashboardPage() {
                         <div className="grid gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="current-password">Current Password</Label>
-                            <Input id="current-password" type="password" />
+                            <Input 
+                              id="current-password" 
+                              type="password" 
+                              value={passwordInfo.currentPassword}
+                              onChange={handlePasswordChange}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="new-password">New Password</Label>
-                            <Input id="new-password" type="password" />
+                            <Input 
+                              id="new-password" 
+                              type="password"
+                              value={passwordInfo.newPassword}
+                              onChange={handlePasswordChange}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="confirm-password">Confirm Password</Label>
-                            <Input id="confirm-password" type="password" />
+                            <Input 
+                              id="confirm-password" 
+                              type="password"
+                              value={passwordInfo.confirmPassword}
+                              onChange={handlePasswordChange}
+                            />
                           </div>
                         </div>
                       </CardContent>
                       <CardFooter>
-                        <Button
-                          onClick={() => {
-                            toast({
-                              title: "Password updated",
-                              description: "Your password has been changed successfully",
-                            })
-                          }}
-                        >
+                        <Button onClick={handleSavePassword}>
                           Change Password
                         </Button>
                       </CardFooter>
@@ -1040,10 +1316,10 @@ export default function DashboardPage() {
             {activeTab === "select-meals" && (
               <motion.div
                 key="select-meals"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
@@ -1054,7 +1330,14 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <WeeklyMealSelector credits={credits} setCredits={setCredits} />
+                <WeeklyMealSelector 
+                  credits={credits} 
+                  setCredits={setCredits} 
+                  setActiveTab={setActiveTab}
+                  updateParentAddress={setAddressInfo}
+                  initialSelectedMeals={selectedMeals}
+                  initialCheckoutOpen={checkoutOpen}
+                />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1066,33 +1349,143 @@ export default function DashboardPage() {
   )
 }
 
-// Update the WeeklyMealSelector function to use our new MealDetail component
-function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredits: (credits: number) => void }) {
-  const [selectedMeals, setSelectedMeals] = useState({
-    monday: false,
-    tuesday: false,
-    wednesday: false,
-    thursday: false,
-    friday: false,
-    saturday: false,
-    sunday: false,
-  })
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
+// Update the WeeklyMealSelector function to use the actual user data for the delivery information in the checkout section
+function WeeklyMealSelector({ 
+  credits, 
+  setCredits, 
+  setActiveTab,
+  updateParentAddress,
+  initialSelectedMeals = {
+    monday: { selected: false, date: '' },
+    tuesday: { selected: false, date: '' },
+    wednesday: { selected: false, date: '' },
+    thursday: { selected: false, date: '' },
+    friday: { selected: false, date: '' },
+    saturday: { selected: false, date: '' },
+    sunday: { selected: false, date: '' },
+  },
+  initialCheckoutOpen = false
+}: { 
+  credits: number; 
+  setCredits: (credits: number) => void;
+  setActiveTab: (tab: string) => void;
+  updateParentAddress: (address: any) => void;
+  initialSelectedMeals?: Record<string, { selected: boolean; date: string }>;
+  initialCheckoutOpen?: boolean;
+}) {
+  // Try to load saved selections from localStorage first, then fall back to initialSelectedMeals
+  const getSavedSelections = () => {
+    try {
+      const savedSelections = localStorage.getItem('selectedMeals');
+      if (savedSelections) {
+        const parsed = JSON.parse(savedSelections);
+        // Handle both old and new structure
+        if (typeof parsed.monday === 'boolean') {
+          // Convert old structure to new structure
+          return {
+            monday: { selected: parsed.monday || false, date: '' },
+            tuesday: { selected: parsed.tuesday || false, date: '' },
+            wednesday: { selected: parsed.wednesday || false, date: '' },
+            thursday: { selected: parsed.thursday || false, date: '' },
+            friday: { selected: parsed.friday || false, date: '' },
+            saturday: { selected: parsed.saturday || false, date: '' },
+            sunday: { selected: parsed.sunday || false, date: '' },
+          };
+        } else {
+          // New structure with dates
+          return {
+            monday: parsed.monday || { selected: false, date: '' },
+            tuesday: parsed.tuesday || { selected: false, date: '' },
+            wednesday: parsed.wednesday || { selected: false, date: '' },
+            thursday: parsed.thursday || { selected: false, date: '' },
+            friday: parsed.friday || { selected: false, date: '' },
+            saturday: parsed.saturday || { selected: false, date: '' },
+            sunday: parsed.sunday || { selected: false, date: '' },
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved selections:', error);
+    }
+    return initialSelectedMeals;
+  };
+
+  const [selectedMeals, setSelectedMeals] = useState(getSavedSelections())
+  const [checkoutOpen, setCheckoutOpen] = useState(initialCheckoutOpen)
   const [formData, setFormData] = useState({
-    nickname: "Johnny",
-    address: "123 Main St",
-    phone: "(123) 456-7890",
+    name: "",
+    phone: "",
+    specialInstructions: ''
   })
+  const [editingAddress, setEditingAddress] = useState(false)
+  const [addressFormData, setAddressFormData] = useState({
+    unitNumber: "",
+    streetAddress: "",
+    city: "",
+    province: "",
+    postalCode: "",
+    country: "",
+    buzzCode: ""
+  })
+  const [saveAddressForFuture, setSaveAddressForFuture] = useState(false)
   const [meals, setMeals] = useState<WeeklyMeals>({})
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
   const [customizeMeal, setCustomizeMeal] = useState(null)
+  const [userData, setUserData] = useState<UserType | null>(null)
+  const [today, setToday] = useState<string>("")
 
   // Define the proper order of days
   const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+  
+  // Check if a day is in the past or today after ordering cutoff time
+  const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
+    // Always return available - removing time and past day restrictions
+    return { unavailable: false, reason: "" };
+  };
 
   useEffect(() => {
+    // Get the current day name for highlighting
+    try {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Toronto',
+        weekday: 'long'
+      });
+      const currentDay = formatter.format(now).toLowerCase();
+      setToday(currentDay);
+    } catch (error) {
+      console.error("Error getting current day:", error);
+    }
+    
+    // Load user data from localStorage on component mount
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setUserData(user);
+      
+      // Initialize formData with user's info
+      setFormData({
+        name: user.name || "",
+        phone: user.phone || "",
+        specialInstructions: ''
+      });
+      
+      // Initialize address form data
+      if (user.address) {
+        setAddressFormData({
+          unitNumber: user.address.unitNumber || "",
+          streetAddress: user.address.streetAddress || "",
+          city: user.address.city || "",
+          province: user.address.province || "",
+          postalCode: user.address.postalCode || "",
+          country: user.address.country || "",
+          buzzCode: user.address.buzzCode || ""
+        });
+      }
+    }
+    
     async function loadMeals() {
       try {
         setIsLoading(true)
@@ -1112,44 +1505,275 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
     
     loadMeals()
   }, [toast])
+  
+  // Helper function to format address
+  const formatAddress = (address: any) => {
+    if (!address) return "";
+    
+    let formattedAddress = '';
+    
+    if (address.unitNumber) {
+      formattedAddress += `Unit ${address.unitNumber}, `;
+    }
+    
+    formattedAddress += address.streetAddress || '';
+    
+    if (address.city || address.province || address.postalCode) {
+      formattedAddress += `, ${address.city || ''} ${address.province || ''} ${address.postalCode || ''}`;
+    }
+    
+    if (address.country) {
+      formattedAddress += `, ${address.country}`;
+    }
+    
+    return formattedAddress;
+  };
 
   const toggleMeal = (day: string) => {
-    setSelectedMeals({
+    // Check if the day is unavailable before toggling
+    const { unavailable, reason } = isDayUnavailable(day);
+    
+    if (unavailable) {
+      toast({
+        title: "Cannot select this day",
+        description: reason,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get date information from the meals object
+    const dateValue = meals[day as keyof typeof meals]?.date || '';
+    
+    const updatedSelections = {
       ...selectedMeals,
-      [day]: !selectedMeals[day as keyof typeof selectedMeals],
-    })
+      [day]: { 
+        selected: !selectedMeals[day as keyof typeof selectedMeals].selected,
+        date: dateValue
+      },
+    };
+    
+    // Save to localStorage
+    localStorage.setItem('selectedMeals', JSON.stringify(updatedSelections));
+    
+    // Update state
+    setSelectedMeals(updatedSelections);
   }
 
-  const selectedCount = Object.values(selectedMeals).filter(Boolean).length
+  const selectedCount = Object.values(selectedMeals).filter(value => value.selected).length
   const totalCost = selectedCount * 20
   const canCheckout = selectedCount > 0 && totalCost <= credits
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (canCheckout) {
-      setCredits(credits - totalCost)
+      try {
+        // Validate delivery information
+        if (!formData.name || !formData.phone) {
+          toast({
+            title: "Missing information",
+            description: "Please provide your name and phone number for delivery.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (!userData?.address && !editingAddress) {
+          toast({
+            title: "Missing address",
+            description: "Please add a delivery address.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Use either the form address data (if editing) or the stored user address
+        const deliveryAddress = editingAddress ? addressFormData : userData?.address;
+        
+        if (!deliveryAddress || !deliveryAddress.streetAddress || !deliveryAddress.city || 
+            !deliveryAddress.province || !deliveryAddress.postalCode || !deliveryAddress.country) {
+          toast({
+            title: "Incomplete address",
+            description: "Please provide a complete delivery address.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Show loading state
+        toast({
+          title: "Processing order",
+          description: "Please wait while we process your order...",
+        });
+        
+        // Create order via API
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: userData?._id,
+            selectedMeals,
+            creditCost: totalCost,
+            specialInstructions: formData.specialInstructions || '',
+            deliveryAddress
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Update local credit balance
+          setCredits(result.data.remainingCredits);
+          
+          // Update localStorage credit information
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const userObj = JSON.parse(storedUser);
+            const updatedUser = { 
+              ...userObj, 
+              credits: result.data.remainingCredits 
+            };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+          
+          // Clear selected meals after successful checkout
+          const clearedSelections = {
+            monday: { selected: false, date: '' },
+            tuesday: { selected: false, date: '' },
+            wednesday: { selected: false, date: '' },
+            thursday: { selected: false, date: '' },
+            friday: { selected: false, date: '' },
+            saturday: { selected: false, date: '' },
+            sunday: { selected: false, date: '' },
+          };
+          
+          // Update localStorage
+          localStorage.setItem('selectedMeals', JSON.stringify(clearedSelections));
+          
+          // Update state
+          setSelectedMeals(clearedSelections);
+          setCheckoutOpen(false);
+          
+          // Show success toast
+          toast({
+            title: "Order placed successfully!",
+            description: `Your order (${result.data.order.orderId}) has been placed and is pending confirmation.`,
+          });
+          
+          // Optionally, navigate to orders tab to see the new order
+          setActiveTab("orders");
+        } else {
+          // Handle error
+          toast({
+            title: "Error placing order",
+            description: result.error || "An error occurred while placing your order.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Error placing order:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred while placing your order.",
+          variant: "destructive"
+        });
+      }
+    } else if (selectedCount === 0) {
       toast({
-        title: "Order placed successfully!",
-        description: `You have ordered ${selectedCount} meals for the week.`,
-      })
-      setSelectedMeals({
-        monday: false,
-        tuesday: false,
-        wednesday: false,
-        thursday: false,
-        friday: false,
-        saturday: false,
-        sunday: false,
-      })
-      setCheckoutOpen(false)
+        title: "No meals selected",
+        description: "Please select at least one meal to continue.",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Insufficient credits",
+        description: `You need ${totalCost} credits to complete this order. You currently have ${credits} credits.`,
+        variant: "destructive"
+      });
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
     setFormData({
       ...formData,
       [id]: value,
     })
+  }
+  
+  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setAddressFormData({
+      ...addressFormData,
+      [id === 'state' ? 'province' : id === 'zip' ? 'postalCode' : id]: value
+    })
+  }
+  
+  const handleSaveAddress = async () => {
+    // Always update the local userData for display in the current order
+    setUserData(prev => prev ? {
+      ...prev,
+      address: { ...addressFormData }
+    } : null);
+    
+    if (saveAddressForFuture && userData?._id) {
+      try {
+        const response = await fetch(`/api/users/${userData._id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            address: addressFormData
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Update localStorage
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const userObj = JSON.parse(storedUser);
+            const updatedUser = { 
+              ...userObj, 
+              address: { ...addressFormData } 
+            };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+          
+          // Update parent component's address state
+          updateParentAddress(addressFormData);
+          
+          toast({
+            title: "Address saved",
+            description: "Your delivery address has been updated for future orders",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to save address",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Error saving address:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred while saving your address",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Show toast that address is used only for this order
+      toast({
+        title: "Address updated",
+        description: "Address will be used only for this order",
+      });
+    }
+    
+    setEditingAddress(false);
   }
 
   return (
@@ -1158,11 +1782,11 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
         <>
           <Card>
             <CardHeader>
-              <CardTitle>This Week's Menu</CardTitle>
-              <CardDescription>Select the days you want meals delivered. Each meal costs 20 credits.</CardDescription>
+              <CardTitle>Kapioo's Weekly Menu</CardTitle>
+              <CardDescription>Select the days you want meals delivered.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
                 {isLoading ? (
                   <div className="col-span-full flex justify-center items-center h-[300px]">
                     <div className="text-center">
@@ -1181,8 +1805,12 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
                         <MealDetail 
                           meal={meal} 
                           day={day} 
+                          dayDate={meal.date}
+                          isToday={day === today}
                           onSelect={toggleMeal} 
-                          isSelected={selectedMeals[day as keyof typeof selectedMeals]} 
+                          isSelected={selectedMeals[day as keyof typeof selectedMeals].selected}
+                          isUnavailable={isDayUnavailable(day).unavailable}
+                          unavailableReason={isDayUnavailable(day).reason}
                         />
                       </div>
                     ))
@@ -1203,10 +1831,10 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
         </>
       ) : (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
+          initial={{ y: 10 }}
+          animate={{ y: 0 }}
+          exit={{ y: -10 }}
+          transition={{ duration: 0.2 }}
         >
           <Card>
             <CardHeader>
@@ -1217,24 +1845,52 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
               <div className="space-y-2">
                 <h3 className="font-medium">Selected Meals</h3>
                 <div className="rounded-md border p-4">
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {Object.entries(selectedMeals)
                       .sort(([dayA], [dayB]) => {
                         return dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
                       })
                       .map(
                         ([day, selected]) =>
-                          selected && meals[day as keyof typeof meals] && (
-                            <li key={day} className="flex justify-between">
-                              <span className="capitalize">{day}</span>
-                              <span className="text-muted-foreground">{meals[day as keyof typeof meals]?.name}</span>
+                          selected.selected && meals[day as keyof typeof meals] && (
+                            <li key={day} className="flex justify-between items-start">
+                              <span className="capitalize font-medium mr-2">
+                                {day}
+                                {meals[day as keyof typeof meals]?.date && (
+                                  <span className="text-sm ml-1 font-normal">({meals[day as keyof typeof meals]?.date})</span>
+                                )}
+                              </span>
+                              
+                              <div className="flex flex-wrap justify-end gap-3 flex-1">
+                                {meals[day as keyof typeof meals]?.description ? (
+                                  meals[day as keyof typeof meals]?.description?.split('. ')
+                                    .filter(Boolean)
+                                    .map((sentence: string, index: number) => (
+                                      <div key={index} className="flex items-center gap-1.5">
+                                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        <span className="text-sm md:text-base">{sentence.replace(/\.$/, '').trim()}</span>
+                                      </div>
+                                    ))
+                                ) : (
+                                  <>
+                                    <div className="flex items-center gap-1.5">
+                                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                      <span className="text-sm md:text-base">Fresh ingredients</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                      <span className="text-sm md:text-base">Eco-friendly packaging</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </li>
                           ),
                       )}
                   </ul>
                   <div className="mt-4 pt-4 border-t flex justify-between font-medium">
-                    <span>Total</span>
-                    <span>{selectedCount * 20} Credits</span>
+                    <span className="text-sm">Total</span>
+                    <span className="text-sm">{selectedCount * 20} Credits</span>
                   </div>
                 </div>
               </div>
@@ -1243,17 +1899,154 @@ function WeeklyMealSelector({ credits, setCredits }: { credits: number; setCredi
                 <h3 className="font-medium">Delivery Information</h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="nickname">Nickname</Label>
-                    <Input id="nickname" value={formData.nickname} onChange={handleInputChange} />
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input id="name" value={formData.name} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" value={formData.phone} onChange={handleInputChange} />
                   </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="address">Delivery Address</Label>
-                    <Input id="address" value={formData.address} onChange={handleInputChange} />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="specialInstructions">Special Instructions (Optional)</Label>
+                  <Textarea 
+                    id="specialInstructions" 
+                    placeholder="Delivery instructions, dietary preferences, etc." 
+                    value={formData.specialInstructions}
+                    onChange={handleInputChange}
+                    className="resize-none"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="pt-4">
+                  <div className="flex justify-between items-center">
+                    <Label className="font-medium">Delivery Address</Label>
+                    {!editingAddress && (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => setEditingAddress(true)}
+                      >
+                        {userData?.address ? "Edit Address" : "Add Address"}
+                      </Button>
+                    )}
                   </div>
+                  
+                  {editingAddress ? (
+                    <div className="mt-2 space-y-4 p-4 rounded-md border border-primary/30 bg-primary/5 shadow-sm">
+                      <div className="text-sm font-medium text-primary mb-2">Edit Delivery Details</div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="unitNumber" className="text-sm">Unit/Apt Number</Label>
+                          <Input 
+                            id="unitNumber" 
+                            value={addressFormData.unitNumber} 
+                            onChange={handleAddressInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor="streetAddress" className="text-sm">Street Address</Label>
+                          <Input 
+                            id="streetAddress" 
+                            value={addressFormData.streetAddress} 
+                            onChange={handleAddressInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="city" className="text-sm">City</Label>
+                          <Input 
+                            id="city" 
+                            value={addressFormData.city} 
+                            onChange={handleAddressInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state" className="text-sm">State/Province</Label>
+                          <Input 
+                            id="state" 
+                            value={addressFormData.province} 
+                            onChange={handleAddressInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="zip" className="text-sm">ZIP/Postal Code</Label>
+                          <Input 
+                            id="zip" 
+                            value={addressFormData.postalCode} 
+                            onChange={handleAddressInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="country" className="text-sm">Country</Label>
+                          <Input 
+                            id="country" 
+                            value={addressFormData.country} 
+                            onChange={handleAddressInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="buzzCode" className="text-sm">Buzz Code / Entry Code <span className="text-muted-foreground text-xs">(Optional)</span></Label>
+                          <Input 
+                            id="buzzCode" 
+                            value={addressFormData.buzzCode} 
+                            onChange={handleAddressInputChange} 
+                            placeholder="Only if required for building access"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 bg-background p-2 rounded-md">
+                        <Checkbox 
+                          id="saveAddress" 
+                          checked={saveAddressForFuture}
+                          onCheckedChange={(checked) => setSaveAddressForFuture(checked === true)}
+                        />
+                        <Label htmlFor="saveAddress" className="text-sm font-normal">
+                          Save this address for future orders
+                        </Label>
+                      </div>
+                      
+                      <div className="flex justify-end space-x-2 mt-4 pt-2 border-t border-primary/20">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditingAddress(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={handleSaveAddress}
+                        >
+                          Save Address
+                        </Button>
+                      </div>
+                    </div>
+                  ) : userData?.address ? (
+                    <div className="mt-2 p-4 rounded-md border">
+                      <div className="space-y-1">
+                        {userData.address.unitNumber && (
+                          <p>Unit: {userData.address.unitNumber}</p>
+                        )}
+                        <p>{userData.address.streetAddress}</p>
+                        <p>
+                          {userData.address.city}
+                          {userData.address.province && `, ${userData.address.province}`}
+                          {userData.address.postalCode && ` ${userData.address.postalCode}`}
+                        </p>
+                        <p>{userData.address.country}</p>
+                        {userData.address.buzzCode && (
+                          <p>Buzz Code: {userData.address.buzzCode}</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-2 p-4 rounded-md border">
+                      <p className="text-muted-foreground">No delivery address set.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

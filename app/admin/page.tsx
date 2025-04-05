@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -33,8 +33,39 @@ import {
   type Meal,
   getUsers,
   updateUser,
-  type User
+  type User,
+  setDayActiveStatus,
+  getAdminWeeklyMeals
 } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
+import { OrderManagement } from "@/components/order-management"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -53,6 +84,21 @@ export default function AdminDashboardPage() {
     pages: 1
   })
   const [usersError, setUsersError] = useState<string | null>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
+  const [transactionsPagination, setTransactionsPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1
+  })
+  const [userSearchQuery, setUserSearchQuery] = useState("")
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const [deductCreditsOpen, setDeductCreditsOpen] = useState(false)
+  const [deductAmount, setDeductAmount] = useState(1)
+  const [deductDescription, setDeductDescription] = useState("Admin deduction")
+  const [userTransactions, setUserTransactions] = useState<any[]>([])
+  const [userTransactionsLoading, setUserTransactionsLoading] = useState(false)
 
   useEffect(() => {
     // Check if admin is logged in - in a real app, this would verify the session
@@ -73,24 +119,28 @@ export default function AdminDashboardPage() {
     }
   }, [router, toast])
 
-  // Fetch users when the tab is switched to 'users'
+  // Fetch users when the tab is switched to 'users' or 'credits'
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (activeTab === 'users' || activeTab === 'credits') {
       fetchUsers(usersPagination.page, usersPagination.limit)
     }
   }, [activeTab, usersPagination.page, usersPagination.limit])
 
   const fetchUsers = async (page = 1, limit = 10) => {
     try {
+      console.log(`Fetching users, page: ${page}, limit: ${limit}`);
       setUsersLoading(true)
       setUsersError(null)
       
       const result = await getUsers(page, limit)
+      console.log(`Fetched ${result.users?.length || 0} users`);
       
       if (result.users) {
         setUsers(result.users)
+        setFilteredUsers(result.users)
         setUsersPagination(result.pagination)
       } else {
+        console.error('Failed to fetch users, result:', result);
         setUsersError('Failed to fetch users')
         toast({
           title: "Error",
@@ -112,32 +162,62 @@ export default function AdminDashboardPage() {
   }
 
   const handleAddCredits = (user: User) => {
-    setSelectedUser(user)
-    setCreditAmount(10) // Reset to default
-    setAddCreditsOpen(true)
+    // Find the most up-to-date user data from the array
+    const currentUser = users.find(u => u._id === user._id) || user;
+    setSelectedUser(currentUser);
+    setCreditAmount(10); // Reset to default
+    setAddCreditsOpen(true);
   }
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
     setViewUserOpen(true)
+    fetchUserTransactions(user._id)
   }
 
   const confirmAddCredits = async () => {
     if (!selectedUser) return
     
     try {
-      // Update user credits via utility function
-      const updatedUser = await updateUser(selectedUser._id, {
-        credits: selectedUser.credits + creditAmount
-      })
+      // Call the new add-credits API endpoint
+      const response = await fetch(`/api/users/${selectedUser._id}/add-credits`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          credits: creditAmount,
+          description: 'Added Credits'
+        })
+      });
       
-      if (updatedUser) {
-        // Update local state
-        setUsers(users.map(user => 
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update local state for users array
+        const updatedUsers = users.map(user => 
           user._id === selectedUser._id 
-            ? { ...user, credits: updatedUser.credits } 
+            ? { ...user, credits: result.data.credits } 
             : user
-        ))
+        );
+        setUsers(updatedUsers);
+        
+        // Update filtered users as well
+        setFilteredUsers(filteredUsers.map(user => 
+          user._id === selectedUser._id 
+            ? { ...user, credits: result.data.credits } 
+            : user
+        ));
+        
+        // Update selectedUser if it's still selected
+        if (selectedUser) {
+          setSelectedUser({ ...selectedUser, credits: result.data.credits });
+        }
+        
+        // Refresh transactions if on the Credits tab
+        if (activeTab === "credits") {
+          fetchTransactions();
+        }
         
         toast({
           title: "Credits updated",
@@ -146,7 +226,7 @@ export default function AdminDashboardPage() {
       } else {
         toast({
           title: "Error",
-          description: 'Failed to update credits',
+          description: result.error || 'Failed to update credits',
           variant: "destructive",
         })
       }
@@ -159,6 +239,199 @@ export default function AdminDashboardPage() {
       })
     } finally {
       setAddCreditsOpen(false)
+    }
+  }
+
+  // Add function to fetch transactions
+  const fetchTransactions = async (page = 1) => {
+    setTransactionsLoading(true);
+    try {
+      console.log(`Fetching transactions page ${page}, limit ${transactionsPagination.limit}`);
+      const response = await fetch(`/api/transactions?page=${page}&limit=${transactionsPagination.limit}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response from server (${response.status}):`, errorText);
+        throw new Error(`Server returned ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Transaction data received:', data);
+      
+      if (data.success) {
+        setTransactions(data.data.transactions || []);
+        setTransactionsPagination({
+          page: data.data.page,
+          limit: data.data.limit,
+          total: data.data.total,
+          pages: Math.ceil(data.data.total / data.data.limit)
+        });
+      } else {
+        console.error("API returned error:", data.error);
+        setTransactions([]);
+      }
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      setTransactions([]);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+  
+  // Add effect to fetch transactions when the Credits tab is active
+  useEffect(() => {
+    if (activeTab === "credits") {
+      console.log(`Credits tab is active, users data available: ${users.length} users`);
+      
+      // If no users data is available yet and not currently loading, fetch users
+      if (users.length === 0 && !usersLoading) {
+        console.log('No users data available, fetching users for Credits tab...');
+        fetchUsers(usersPagination.page, usersPagination.limit);
+      }
+      
+      fetchTransactions();
+    }
+  }, [activeTab, users.length, usersLoading]);
+  
+  // Add function to handle pagination
+  const handleTransactionPagination = (direction: 'prev' | 'next') => {
+    const newPage = direction === 'prev' 
+      ? Math.max(1, transactionsPagination.page - 1)
+      : Math.min(transactionsPagination.pages, transactionsPagination.page + 1);
+      
+    if (newPage !== transactionsPagination.page) {
+      fetchTransactions(newPage);
+    }
+  };
+
+  // Add a handler for search
+  const handleUserSearch = () => {
+    if (!userSearchQuery.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+    
+    const query = userSearchQuery.toLowerCase();
+    const filtered = users.filter(user => 
+      user.name?.toLowerCase().includes(query) || 
+      user.userID?.toLowerCase().includes(query) || 
+      user.email?.toLowerCase().includes(query)
+    );
+    
+    setFilteredUsers(filtered);
+    
+    if (filtered.length === 0) {
+      toast({
+        title: "No matches",
+        description: `No users found matching "${userSearchQuery}"`,
+      });
+    } else {
+      toast({
+        title: "Search results",
+        description: `Found ${filtered.length} users matching "${userSearchQuery}"`,
+      });
+    }
+  }
+
+  // Add a reset search function
+  const resetUserSearch = () => {
+    setUserSearchQuery("");
+    setFilteredUsers(users);
+  }
+
+  // Handle deduct credits button click
+  const handleDeductCredits = (user: User) => {
+    setSelectedUser(user)
+    setDeductAmount(1) // Reset to default
+    setDeductDescription("Admin deduction") // Reset to default
+    setDeductCreditsOpen(true)
+  }
+
+  // Confirm deduct credits
+  const confirmDeductCredits = async () => {
+    if (!selectedUser) return
+    
+    try {
+      // Call the deduct-credits API endpoint
+      const response = await fetch(`/api/users/${selectedUser._id}/deduct-credits`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          credits: deductAmount,
+          description: deductDescription
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update local state
+        setUsers(users.map(user => 
+          user._id === selectedUser._id 
+            ? { ...user, credits: result.data.credits } 
+            : user
+        ));
+        
+        // Also update filtered users if needed
+        setFilteredUsers(filteredUsers.map(user => 
+          user._id === selectedUser._id 
+            ? { ...user, credits: result.data.credits } 
+            : user
+        ));
+        
+        // Refresh transactions list if in Credits tab
+        if (activeTab === "credits") {
+          fetchTransactions();
+        }
+        
+        toast({
+          title: "Credits deducted",
+          description: `Deducted ${deductAmount} credits from ${selectedUser.userID}'s account`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || 'Failed to deduct credits',
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deducting credits:', error);
+      toast({
+        title: "Error",
+        description: 'An unexpected error occurred while deducting credits',
+        variant: "destructive",
+      });
+    } finally {
+      setDeductCreditsOpen(false);
+    }
+  }
+
+  // Add function to fetch transactions for a specific user
+  const fetchUserTransactions = async (userId: string) => {
+    setUserTransactionsLoading(true)
+    try {
+      const response = await fetch(`/api/transactions?userId=${userId}&limit=10`)
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setUserTransactions(data.data.transactions || [])
+      } else {
+        console.error("API returned error:", data.error)
+        setUserTransactions([])
+      }
+    } catch (error) {
+      console.error("Error fetching user transactions:", error)
+      setUserTransactions([])
+    } finally {
+      setUserTransactionsLoading(false)
     }
   }
 
@@ -280,33 +553,59 @@ export default function AdminDashboardPage() {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex items-center space-x-2">
-                        <Input placeholder="Search users..." className="max-w-sm" />
-                        <Button variant="outline">Search</Button>
+                        <Input 
+                          placeholder="Search users..." 
+                          className="max-w-sm" 
+                          value={userSearchQuery}
+                          onChange={(e) => setUserSearchQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleUserSearch();
+                            }
+                          }}
+                        />
+                        <Button variant="outline" onClick={handleUserSearch}>Search</Button>
+                        {userSearchQuery && (
+                          <Button variant="ghost" size="sm" onClick={resetUserSearch}>
+                            Clear
+                          </Button>
+                        )}
                       </div>
                       <div className="rounded-md border">
-                        <div className="grid grid-cols-5 gap-4 p-4 font-medium border-b">
-                          <div>User ID</div>
-                          <div>Name</div>
-                          <div>Email</div>
-                          <div>Credits</div>
-                          <div>Actions</div>
-                        </div>
-                        {users.map((user) => (
-                          <div key={user._id} className="grid grid-cols-5 gap-4 p-4 border-b items-center">
-                            <div>{user.userID}</div>
-                            <div>{user.name}</div>
-                            <div>{user.email}</div>
-                            <div>{user.credits}</div>
-                            <div className="flex space-x-2">
-                              <Button variant="outline" size="sm" onClick={() => handleAddCredits(user)}>
-                                Add Credits
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleViewUser(user)}>
-                                View
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left p-4 font-medium">User ID</th>
+                              <th className="text-left p-4 font-medium">Name</th>
+                              <th className="text-left p-4 font-medium">Email</th>
+                              <th className="text-left p-4 font-medium">Credits</th>
+                              <th className="text-center p-4 font-medium">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredUsers.map((user) => (
+                              <tr key={user._id} className="border-b">
+                                <td className="p-4">{user.userID}</td>
+                                <td className="p-4">{user.name}</td>
+                                <td className="p-4">{user.email}</td>
+                                <td className="p-4">{user.credits}</td>
+                                <td className="p-4">
+                                  <div className="flex justify-center gap-1">
+                                    <Button variant="outline" size="sm" onClick={() => handleAddCredits(user)}>
+                                      Add Credits
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleDeductCredits(user)} className="text-red-500 border-red-200 hover:bg-red-50">
+                                      Deduct
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleViewUser(user)}>
+                                      View
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </CardContent>
@@ -353,115 +652,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-bold tracking-tight">Order Management</h2>
                 </div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Current Week Orders</CardTitle>
-                    <CardDescription>View and manage orders for the current week</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <Input placeholder="Search orders..." className="max-w-sm" />
-                        <Button variant="outline">Search</Button>
-                      </div>
-                      <div className="rounded-md border">
-                        <div className="grid grid-cols-6 gap-4 p-4 font-medium border-b">
-                          <div>Order ID</div>
-                          <div>User</div>
-                          <div>Days</div>
-                          <div>Address</div>
-                          <div>Status</div>
-                          <div>Actions</div>
-                        </div>
-                        {[
-                          {
-                            id: "ORD-1001",
-                            user: "John Doe",
-                            days: "Mon, Wed",
-                            address: "123 Main St",
-                            status: "Pending",
-                          },
-                          {
-                            id: "ORD-1002",
-                            user: "Jane Smith",
-                            days: "Tue, Thu, Sat",
-                            address: "456 Oak Ave",
-                            status: "Confirmed",
-                          },
-                          {
-                            id: "ORD-1003",
-                            user: "Bob Johnson",
-                            days: "Mon, Fri",
-                            address: "789 Pine Rd",
-                            status: "Delivered",
-                          },
-                          {
-                            id: "ORD-1004",
-                            user: "Alice Brown",
-                            days: "Wed, Sun",
-                            address: "101 Maple Dr",
-                            status: "Confirmed",
-                          },
-                          {
-                            id: "ORD-1005",
-                            user: "Charlie Davis",
-                            days: "Mon, Thu, Fri",
-                            address: "202 Cedar Ln",
-                            status: "Pending",
-                          },
-                        ].map((order) => (
-                          <div key={order.id} className="grid grid-cols-6 gap-4 p-4 border-b items-center">
-                            <div>{order.id}</div>
-                            <div>{order.user}</div>
-                            <div>{order.days}</div>
-                            <div>{order.address}</div>
-                            <div>
-                              <span
-                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                  order.status === "Pending"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : order.status === "Confirmed"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-green-100 text-green-800"
-                                }`}
-                              >
-                                {order.status}
-                              </span>
-                            </div>
-                            <div className="flex space-x-2">
-                              <Button variant="outline" size="sm">
-                                View
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  toast({
-                                    title: "Status updated",
-                                    description: `Order ${order.id} status updated successfully`,
-                                  })
-                                }}
-                              >
-                                Update Status
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <div className="flex items-center justify-between w-full">
-                      <Button variant="outline" size="sm">
-                        Previous
-                      </Button>
-                      <div className="text-sm text-muted-foreground">Page 1 of 3</div>
-                      <Button variant="outline" size="sm">
-                        Next
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
+                <OrderManagement />
               </motion.div>
             )}
 
@@ -485,27 +676,167 @@ export default function AdminDashboardPage() {
                   <CardContent>
                     <div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr]">
                       <div className="space-y-2">
-                        <Label htmlFor="user-id">User ID</Label>
-                        <Input id="user-id" placeholder="Enter user ID" />
+                        <Label htmlFor="user-select">Select User</Label>
+                        {usersLoading ? (
+                          <div className="flex items-center space-x-2 h-10 px-3 rounded-md border border-input">
+                            <span className="text-muted-foreground">Loading users...</span>
+                            <div className="animate-pulse w-3 h-3 rounded-full bg-muted"></div>
+                          </div>
+                        ) : (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between"
+                              >
+                                {selectedUser ? (
+                                  `${selectedUser.name} (${selectedUser.userID})`
+                                ) : (
+                                  "Search for a user..."
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-full min-w-[300px]">
+                              <Command>
+                                <CommandInput placeholder="Search users..." className="h-9" />
+                                <CommandList>
+                                  <CommandEmpty>No users found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {users.map((user) => (
+                                      <CommandItem
+                                        key={user._id}
+                                        value={`${user.name} ${user.userID} ${user.email}`}
+                                        onSelect={() => {
+                                          setSelectedUser(user);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selectedUser?._id === user._id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col">
+                                          <span>{user.name}</span>
+                                          <span className="text-xs text-muted-foreground">{user.userID} - {user.email}</span>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="credits">Credits to Add</Label>
-                        <Input id="credits" type="number" defaultValue="10" />
+                        <Label htmlFor="credits-amount">Credits to Add</Label>
+                        <Input 
+                          id="credits-amount" 
+                          type="number" 
+                          min="1"
+                          defaultValue="10" 
+                          onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
+                        />
                       </div>
                       <div className="flex items-end">
                         <Button
                           className="w-full"
-                          onClick={() => {
-                            toast({
-                              title: "Credits added",
-                              description: "Credits have been added to the user's account",
-                            })
+                          onClick={async () => {
+                            if (!selectedUser) {
+                              toast({
+                                title: "Error",
+                                description: "Please select a user first",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            
+                            if (creditAmount <= 0) {
+                              toast({
+                                title: "Error",
+                                description: "Please enter a valid credit amount",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            
+                            try {
+                              const response = await fetch(`/api/users/${selectedUser._id}/add-credits`, {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                  credits: creditAmount,
+                                  description: 'Added Credits'
+                                })
+                              });
+                              
+                              const result = await response.json();
+                              
+                              if (result.success) {
+                                // Update all users list with new credit balance
+                                const updatedUsers = users.map(user => 
+                                  user._id === selectedUser._id 
+                                    ? { ...user, credits: result.data.credits } 
+                                    : user
+                                );
+                                setUsers(updatedUsers);
+                                
+                                // Update filtered users list
+                                setFilteredUsers(filteredUsers.map(user => 
+                                  user._id === selectedUser._id 
+                                    ? { ...user, credits: result.data.credits } 
+                                    : user
+                                ));
+                                
+                                // Update selectedUser if needed
+                                setSelectedUser({...selectedUser, credits: result.data.credits});
+                                
+                                // Refresh transactions list
+                                fetchTransactions();
+                                
+                                toast({
+                                  title: "Credits added",
+                                  description: `${creditAmount} credits added to ${selectedUser.name || selectedUser.userID}'s account`,
+                                });
+                                
+                                // Reset selection
+                                setSelectedUser(null);
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: result.error || "Failed to add credits",
+                                  variant: "destructive"
+                                });
+                              }
+                            } catch (error) {
+                              console.error('Error adding credits:', error);
+                              toast({
+                                title: "Error",
+                                description: "An unexpected error occurred while adding credits",
+                                variant: "destructive"
+                              });
+                            }
                           }}
+                          disabled={!selectedUser || creditAmount <= 0}
                         >
                           Add Credits
                         </Button>
                       </div>
                     </div>
+                    {selectedUser && (
+                      <div className="mt-4 p-3 bg-muted rounded-md">
+                        <p className="font-medium">Selected User:</p>
+                        <p>{selectedUser.name} ({selectedUser.userID})</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Current Credits: {selectedUser.credits || 0}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 <Card>
@@ -515,39 +846,96 @@ export default function AdminDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="rounded-md border">
-                      <div className="grid grid-cols-5 gap-4 p-4 font-medium border-b">
-                        <div>Transaction ID</div>
-                        <div>User</div>
-                        <div>Type</div>
-                        <div>Amount</div>
-                        <div>Date</div>
-                      </div>
-                      {[
-                        { id: "TRX-1001", user: "John Doe", type: "Purchase", amount: "+25", date: "2025-03-15" },
-                        { id: "TRX-1002", user: "Jane Smith", type: "Order", amount: "-3", date: "2025-03-14" },
-                        { id: "TRX-1003", user: "Bob Johnson", type: "Admin Add", amount: "+10", date: "2025-03-12" },
-                        { id: "TRX-1004", user: "Alice Brown", type: "Purchase", amount: "+50", date: "2025-03-10" },
-                        { id: "TRX-1005", user: "Charlie Davis", type: "Order", amount: "-2", date: "2025-03-08" },
-                      ].map((transaction) => (
-                        <div key={transaction.id} className="grid grid-cols-5 gap-4 p-4 border-b items-center">
-                          <div>{transaction.id}</div>
-                          <div>{transaction.user}</div>
-                          <div>{transaction.type}</div>
-                          <div className={transaction.amount.startsWith("+") ? "text-green-600" : "text-red-600"}>
-                            {transaction.amount}
-                          </div>
-                          <div>{transaction.date}</div>
-                        </div>
-                      ))}
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-4 font-medium">Transaction ID</th>
+                            <th className="text-left p-4 font-medium">User</th>
+                            <th className="text-left p-4 font-medium">Type</th>
+                            <th className="text-left p-4 font-medium">Amount</th>
+                            <th className="text-left p-4 font-medium">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {transactionsLoading ? (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                              </td>
+                            </tr>
+                          ) : transactions.length > 0 ? (
+                            transactions.map((transaction) => {
+                              // Find user for this transaction
+                              const userForTransaction = users.find(u => u._id === transaction.userId);
+                              
+                              const displayUser = usersLoading ? (
+                                <div className="flex items-center">
+                                  <span className="text-muted-foreground">Loading...</span>
+                                  <div className="ml-2 animate-pulse w-3 h-3 rounded-full bg-muted"></div>
+                                </div>
+                              ) : userForTransaction ? (
+                                <span>{userForTransaction.name || userForTransaction.userID}</span>
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  {transaction.userId?.toString().substring(0, 8)}...
+                                </span>
+                              );
+                              
+                              return (
+                                <tr key={transaction._id} className="border-b">
+                                  <td className="p-4">{transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`}</td>
+                                  <td className="p-4">{displayUser}</td>
+                                  <td className="p-4">{transaction.type === 'credit' ? 'Add' : transaction.type === 'debit' ? 'Deduct' : transaction.type === 'refund' ? 'Refund' : transaction.type}</td>
+                                  <td className="p-4">
+                                    <span className={
+                                      transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
+                                        ? "text-green-600" 
+                                        : "text-red-600"
+                                    }>
+                                      {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
+                                        ? '+' 
+                                        : '-'
+                                      }{transaction.amount}
+                                    </span>
+                                  </td>
+                                  <td className="p-4">{new Date(transaction.createdAt).toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                  })}</td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                                No transactions found
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </CardContent>
                   <CardFooter>
                     <div className="flex items-center justify-between w-full">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleTransactionPagination('prev')}
+                        disabled={transactionsPagination.page === 1 || transactionsLoading}
+                      >
                         Previous
                       </Button>
-                      <div className="text-sm text-muted-foreground">Page 1 of 5</div>
-                      <Button variant="outline" size="sm">
+                      <div className="text-sm text-muted-foreground">
+                        Page {transactionsPagination.page} of {transactionsPagination.pages}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleTransactionPagination('next')}
+                        disabled={transactionsPagination.page === transactionsPagination.pages || transactionsLoading}
+                      >
                         Next
                       </Button>
                     </div>
@@ -675,7 +1063,7 @@ export default function AdminDashboardPage() {
                   id="add-credits"
                   type="number"
                   value={creditAmount}
-                  onChange={(e) => setCreditAmount(Number.parseInt(e.target.value) || 0)}
+                  onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
                 />
               </div>
             </div>
@@ -694,11 +1082,17 @@ export default function AdminDashboardPage() {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>Detailed information about {selectedUser?.name}.</DialogDescription>
+            <DialogDescription>Information about {selectedUser?.name}</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {selectedUser && (
-              <div className="space-y-4">
+          
+          {selectedUser && (
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details">User Details</TabsTrigger>
+                <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="details" className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm text-muted-foreground">User ID</Label>
@@ -733,39 +1127,137 @@ export default function AdminDashboardPage() {
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Address</Label>
-                  <p className="font-medium">
-                    {selectedUser.address 
-                      ? `${selectedUser.address.streetAddress}, ${selectedUser.address.city}, ${selectedUser.address.province}`
-                      : 'No address provided'}
-                  </p>
+                  {selectedUser?.address ? (
+                    <div className="font-medium space-y-1 mt-1">
+                      {selectedUser.address.unitNumber && (
+                        <p>Unit: {selectedUser.address.unitNumber}</p>
+                      )}
+                      <p>{selectedUser.address.streetAddress}</p>
+                      <p>
+                        {selectedUser.address.city}
+                        {selectedUser.address.province && `, ${selectedUser.address.province}`}
+                        {selectedUser.address.postalCode && ` ${selectedUser.address.postalCode}`}
+                      </p>
+                      <p>{selectedUser.address.country}</p>
+                      {selectedUser.address.buzzCode && (
+                        <p>Buzz Code: {selectedUser.address.buzzCode}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="font-medium">No address provided</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Credits</Label>
                   <p className="font-medium">{selectedUser.credits}</p>
                 </div>
-                <div className="border-t pt-4">
-                  <Label className="text-sm font-medium">Recent Activity</Label>
-                  <div className="mt-2 space-y-2">
-                    <div className="rounded-md border p-2">
-                      <p className="text-sm">Ordered meals for Mon, Wed</p>
-                      <p className="text-xs text-muted-foreground">2 days ago</p>
-                    </div>
-                    <div className="rounded-md border p-2">
-                      <p className="text-sm">Added 10 credits</p>
-                      <p className="text-xs text-muted-foreground">1 week ago</p>
-                    </div>
-                    <div className="rounded-md border p-2">
-                      <p className="text-sm">Updated delivery address</p>
-                      <p className="text-xs text-muted-foreground">2 weeks ago</p>
-                    </div>
+              </TabsContent>
+              
+              <TabsContent value="activity" className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label className="font-medium">User Activity</Label>
+                  <div className="space-y-2">
+                    {userTransactionsLoading ? (
+                      <div className="flex justify-center p-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      </div>
+                    ) : userTransactions.length > 0 ? (
+                      userTransactions.map((transaction) => (
+                        <div key={transaction._id} className="rounded-md border p-3">
+                          <div className="flex justify-between">
+                            <p className="text-sm font-medium">
+                              {transaction.type === 'credit' ? 'Add' : 
+                               transaction.type === 'debit' ? 'Deduct' : 
+                               transaction.type === 'refund' ? 'Refund' : 
+                               transaction.type} 
+                              <span className={transaction.type === 'credit' || transaction.type === 'refund' ? "text-green-600" : "text-red-600"}>
+                                {' '}{transaction.type === 'credit' || transaction.type === 'refund' ? '+' : '-'}{transaction.amount}
+                              </span> credits
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          {transaction.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{transaction.description}</p>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-md border p-3 text-center text-muted-foreground">
+                        No transaction history found
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              </TabsContent>
+            </Tabs>
+          )}
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewUserOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deduct Credits Dialog */}
+      <Dialog open={deductCreditsOpen} onOpenChange={setDeductCreditsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-500">Deduct Credits</DialogTitle>
+            <DialogDescription>
+              Deduct credits from {selectedUser?.userID}'s account.
+              {selectedUser && (
+                <div className="mt-2 font-medium">
+                  Current balance: {selectedUser.credits || 0} credits
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="deductAmount" className="text-right">
+                Amount
+              </Label>
+              <Input
+                id="deductAmount"
+                type="number"
+                min="1"
+                max={selectedUser?.credits || 1}
+                className="col-span-3"
+                value={deductAmount}
+                onChange={(e) => setDeductAmount(Math.min(parseInt(e.target.value) || 1, selectedUser?.credits || 1))}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="deductReason" className="text-right">
+                Reason
+              </Label>
+              <Input
+                id="deductReason"
+                className="col-span-3"
+                value={deductDescription}
+                onChange={(e) => setDeductDescription(e.target.value)}
+                placeholder="Reason for deduction"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeductCreditsOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmDeductCredits} 
+              disabled={!selectedUser || deductAmount <= 0 || deductAmount > (selectedUser?.credits || 0)}
+              variant="destructive"
+            >
+              Deduct Credits
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -774,7 +1266,7 @@ export default function AdminDashboardPage() {
   )
 }
 
-// Update the MealManagement component to use the MongoDB API
+// Update the MealManagement component to use the getAdminWeeklyMeals function instead of getWeeklyMeals, and import it.
 function MealManagement() {
   const { toast } = useToast();
   const [weeklyMeals, setWeeklyMeals] = useState<WeeklyMeals>({});
@@ -784,13 +1276,15 @@ function MealManagement() {
   const [selectedMealId, setSelectedMealId] = useState<Record<string, string>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentEditMeal, setCurrentEditMeal] = useState<Meal | null>(null);
+  const [today, setToday] = useState<string>('');
+  const [activeDays, setActiveDays] = useState<Record<string, boolean>>({});
 
   // Load meals on component mount
   useEffect(() => {
     async function loadData() {
       try {
-        // Get current weekly meals
-        const mealsResult = await getWeeklyMeals();
+        // Get current weekly meals - use admin version to include inactive days
+        const mealsResult = await getAdminWeeklyMeals();
         setWeeklyMeals(mealsResult);
         
         // Get all available meals
@@ -800,14 +1294,17 @@ function MealManagement() {
         // Initialize edited meals with current names
         const initialEditState: Record<string, string> = {};
         const initialMealIdState: Record<string, string> = {};
+        const initialActiveDays: Record<string, boolean> = {};
         
         Object.entries(mealsResult).forEach(([day, meal]) => {
           initialEditState[day] = meal.name;
           initialMealIdState[day] = meal._id || '';
+          initialActiveDays[day] = meal.active !== false; // Default to true if not specified
         });
         
         setEditedMeals(initialEditState);
         setSelectedMealId(initialMealIdState);
+        setActiveDays(initialActiveDays);
         
         setIsLoading(false);
       } catch (error) {
@@ -908,10 +1405,20 @@ function MealManagement() {
   const saveAllChanges = async () => {
     try {
       setIsLoading(true);
+      console.log("[Admin] Saving all changes and refreshing menu...");
       
       // Refresh the weekly meals data
-      const updatedMeals = await getWeeklyMeals();
+      const updatedMeals = await getAdminWeeklyMeals();
+      console.log("[Admin] Updated meals after refresh:", {
+        count: Object.keys(updatedMeals).length,
+        days: Object.keys(updatedMeals),
+        activeDays: Object.entries(updatedMeals).filter(([day, meal]) => meal.active).map(([day]) => day)
+      });
+      
       setWeeklyMeals(updatedMeals);
+      
+      // Force browser to reload the page to ensure all data is fresh
+      window.location.reload();
       
       toast({
         title: "Menu refreshed",
@@ -919,7 +1426,7 @@ function MealManagement() {
       });
       
     } catch (error) {
-      console.error('Error refreshing menu:', error);
+      console.error('[Admin] Error refreshing menu:', error);
       toast({
         title: "Error",
         description: "An error occurred while refreshing the menu",
@@ -1006,6 +1513,73 @@ function MealManagement() {
     });
   };
 
+  // Toggle day active status
+  const toggleDayActive = async (day: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Toggle the active status
+      const newActiveStatus = !activeDays[day];
+      console.log(`[Admin] Toggling ${day} to active=${newActiveStatus}`);
+      
+      // Update via API
+      const success = await setDayActiveStatus(day, newActiveStatus);
+      
+      if (success) {
+        console.log(`[Admin] Successfully toggled ${day} to active=${newActiveStatus}`);
+        
+        // Update local state
+        setActiveDays({
+          ...activeDays,
+          [day]: newActiveStatus
+        });
+        
+        // Update the weekly meals state
+        setWeeklyMeals({
+          ...weeklyMeals,
+          [day]: {
+            ...weeklyMeals[day],
+            active: newActiveStatus
+          }
+        });
+        
+        toast({
+          title: newActiveStatus ? "Day activated" : "Day deactivated",
+          description: `${day.charAt(0).toUpperCase() + day.slice(1)} is now ${newActiveStatus ? 'active' : 'inactive'}`
+        });
+        
+        // Add a small delay before refreshing the data to ensure changes are propagated
+        setTimeout(async () => {
+          console.log(`[Admin] Refreshing data after toggling ${day}`);
+          // Refresh the weekly meals data
+          const updatedMeals = await getAdminWeeklyMeals();
+          console.log(`[Admin] Received updated meals after toggle:`, {
+            days: Object.keys(updatedMeals),
+            [day + "_active"]: updatedMeals[day]?.active
+          });
+          setWeeklyMeals(updatedMeals);
+          setIsLoading(false);
+        }, 1000);
+      } else {
+        console.error(`[Admin] Failed to toggle ${day} to active=${newActiveStatus}`);
+        toast({
+          title: "Update failed",
+          description: "Failed to update day status. Please try again.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error(`[Admin] Error toggling ${day} active status:`, error);
+      toast({
+        title: "Error",
+        description: "An error occurred while updating the day status",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-8">
@@ -1025,9 +1599,20 @@ function MealManagement() {
           <div className="space-y-6">
             {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
               weeklyMeals[day] && (
-                <div key={day} className="grid gap-4 md:grid-cols-[1fr_2fr_1fr_1fr]">
+                <div key={day} className="grid gap-4 md:grid-cols-[1.5fr_2fr_1fr_1fr]">
                   <div className="flex items-center">
-                    <span className="font-medium capitalize">{day}</span>
+                    <div className="min-w-[120px] p-2">
+                      <div>
+                        <span className="font-medium capitalize">
+                          {day}
+                        </span>
+                        {weeklyMeals[day]?.date && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Date: {weeklyMeals[day].date}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-center">
                     <div className="w-full px-3 py-2 rounded-md border border-input bg-muted text-sm truncate font-medium">
@@ -1043,15 +1628,29 @@ function MealManagement() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => openEditMeal(day)}
-                      disabled={isLoading}
-                    >
-                      Edit Details
-                    </Button>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => openEditMeal(day)}
+                        disabled={isLoading}
+                      >
+                        Edit Details
+                      </Button>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id={`active-${day}`}
+                          checked={activeDays[day] || false}
+                          onCheckedChange={() => toggleDayActive(day)}
+                          disabled={isLoading}
+                        />
+                        <Label htmlFor={`active-${day}`} className="text-sm">
+                          {activeDays[day] ? "Active" : "Inactive"}
+                        </Label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )
@@ -1231,6 +1830,19 @@ function MealManagement() {
                   id="edit-time"
                   value={currentEditMeal.time || ''}
                   onChange={(e) => handleEditMealChange('time', e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-date" className="text-right">
+                  Specific Date
+                </Label>
+                <Input
+                  id="edit-date"
+                  value={currentEditMeal.date || ''}
+                  onChange={(e) => handleEditMealChange('date', e.target.value)}
+                  placeholder="YYYY-MM-DD or any date format"
                   className="col-span-3"
                 />
               </div>

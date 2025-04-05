@@ -5,17 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export interface Meal {
+export type Meal = {
   _id?: string;
   name: string;
   image: string;
-  description: string;
+  description?: string;
   calories?: number;
   time?: string;
   tags?: string[];
   ingredients?: string[];
   allergens?: string[];
   day?: string;
+  date?: string;
+  active?: boolean;
 }
 
 export type WeeklyMeals = {
@@ -129,10 +131,29 @@ const DEFAULT_WEEKLY_MEALS: WeeklyMeals = {
 // Get weekly meals from the API
 export async function getWeeklyMeals(): Promise<WeeklyMeals> {
   try {
-    const response = await fetch('/api/weekly-meals');
+    // Add a timestamp parameter to prevent caching
+    const timestamp = new Date().getTime();
+    console.log(`[getWeeklyMeals] Fetching meals with cache-buster: ${timestamp}`);
+    
+    const response = await fetch(`/api/weekly-meals?_t=${timestamp}`);
     const result = await response.json();
     
+    console.log('[getWeeklyMeals] API Response:', { 
+      success: result.success,
+      dataKeys: result.data ? Object.keys(result.data) : null,
+      data: result.data
+    });
+    
     if (result.success && result.data) {
+      // Log which days are included in the response
+      const days = Object.keys(result.data);
+      console.log(`[getWeeklyMeals] Days returned from API: [${days.join(', ')}]`);
+      
+      // Check each day for active property
+      for (const day in result.data) {
+        console.log(`[getWeeklyMeals] Day ${day} active status:`, result.data[day].active);
+      }
+      
       return result.data as WeeklyMeals;
     }
     
@@ -141,6 +162,26 @@ export async function getWeeklyMeals(): Promise<WeeklyMeals> {
     return DEFAULT_WEEKLY_MEALS;
   } catch (error) {
     console.error('Error fetching weekly meals:', error);
+    // Fall back to default meals on error
+    return DEFAULT_WEEKLY_MEALS;
+  }
+}
+
+// Get all weekly meals for admin (including inactive days)
+export async function getAdminWeeklyMeals(): Promise<WeeklyMeals> {
+  try {
+    const response = await fetch('/api/weekly-meals/admin');
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data as WeeklyMeals;
+    }
+    
+    console.error('Failed to fetch admin weekly meals from API');
+    // Fall back to default meals
+    return DEFAULT_WEEKLY_MEALS;
+  } catch (error) {
+    console.error('Error fetching admin weekly meals:', error);
     // Fall back to default meals on error
     return DEFAULT_WEEKLY_MEALS;
   }
@@ -264,6 +305,35 @@ export async function assignMealToDay(day: string, mealId: string): Promise<bool
     return result.success;
   } catch (error) {
     console.error(`Error assigning meal to ${day}:`, error);
+    return false;
+  }
+}
+
+// Set a day as active or inactive
+export async function setDayActiveStatus(day: string, active: boolean): Promise<boolean> {
+  try {
+    console.log(`[setDayActiveStatus] Setting ${day} to active=${active}`);
+    
+    const response = await fetch('/api/weekly-meals/status', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ day, active }),
+    });
+    
+    const result = await response.json();
+    console.log(`[setDayActiveStatus] API response:`, result);
+    
+    if (result.success) {
+      console.log(`[setDayActiveStatus] Successfully set ${day} to active=${active}`);
+    } else {
+      console.error(`[setDayActiveStatus] Failed to set ${day} to active=${active}: ${result.error}`);
+    }
+    
+    return result.success;
+  } catch (error) {
+    console.error(`[setDayActiveStatus] Error setting ${day} active status:`, error);
     return false;
   }
 }
