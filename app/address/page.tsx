@@ -123,18 +123,18 @@ export default function AddressPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
-      <header className="w-full py-4 px-4">
-        <div className="container">
-          <Link 
-            href="/" 
-            className="inline-flex items-center text-sm font-medium transition-colors hover:text-primary group"
+      <div className="container relative pt-4">
+        <div className="absolute top-0 right-0">
+          <Button 
+            onClick={() => router.push('/dashboard')}
+            variant="ghost"
+            className="inline-flex items-center gap-1 text-[#D1A46C] hover:text-[#C2884E] hover:bg-transparent text-xs py-1 px-2 h-auto"
           >
-            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
-            Back to Home
-          </Link>
+            直接进入 Kapioo
+            <ArrowRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-1" />
+          </Button>
         </div>
-      </header>
-      
+      </div>
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -153,17 +153,6 @@ export default function AddressPage() {
               />
               <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
             </Link>
-          </div>
-          
-          <div className="flex justify-end mb-2">
-            <Button 
-              onClick={() => router.push('/dashboard')}
-              variant="ghost"
-              className="inline-flex items-center gap-1 text-[#C2884E] hover:text-[#D1A46C] hover:bg-transparent"
-            >
-              进入 Kapioo
-              <ArrowRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
-            </Button>
           </div>
           
           <form onSubmit={handleSaveAddress} className="p-7 sm:p-8 bg-white shadow-lg rounded-xl">
