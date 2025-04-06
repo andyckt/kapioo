@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
+import { sendVerificationEmail } from '@/lib/services/email';
 
 // POST handler - login user
 export async function POST(request: Request) {
@@ -54,11 +55,17 @@ export async function POST(request: Request) {
     const userResponse = user.toObject();
     delete userResponse.password;
     delete userResponse.salt;
+    delete userResponse.resetPasswordCode;
+    delete userResponse.resetPasswordExpires;
+    delete userResponse.verificationCode;
+    delete userResponse.verificationExpires;
     
+    // Allow login even if email is not verified, but include verification status
     return NextResponse.json({
       success: true,
       data: {
         user: userResponse,
+        isEmailVerified: user.isVerified,
         // In a real app, you would generate a JWT token here
         // token: generateJWT(user),
       }

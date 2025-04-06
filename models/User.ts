@@ -12,16 +12,16 @@ export interface IAddress {
   buzzCode?: string;
 }
 
-// Define Address schema
+// Define Address schema - make all fields optional to allow for empty addresses during registration
 const AddressSchema: Schema = new Schema({
   unitNumber: { type: String },
-  streetAddress: { type: String, required: true },
-  city: { type: String, required: true },
-  postalCode: { type: String, required: true },
-  province: { type: String, required: true },
-  country: { type: String, required: true },
+  streetAddress: { type: String, required: false },
+  city: { type: String, required: false },
+  postalCode: { type: String, required: false },
+  province: { type: String, required: false },
+  country: { type: String, required: false },
   buzzCode: { type: String }
-});
+}, { _id: false }); // Prevent MongoDB from creating an _id for embedded documents
 
 // Define User interface
 export interface IUser extends Document {
@@ -36,7 +36,15 @@ export interface IUser extends Document {
   credits: number;
   phone?: string;
   address?: IAddress;
+  verificationCode?: string;
+  verificationExpires?: Date;
+  isVerified: boolean;
+  resetPasswordCode?: string;
+  resetPasswordExpires?: Date;
+  setPassword: (password: string) => Promise<void>;
   comparePassword: (candidatePassword: string) => Promise<boolean>;
+  generateVerificationCode: () => { code: string, expires: Date };
+  generatePasswordResetCode: () => { code: string, expires: Date };
 }
 
 // Define User schema
@@ -88,7 +96,28 @@ const UserSchema: Schema = new Schema(
     phone: { 
       type: String 
     },
-    address: AddressSchema
+    address: { 
+      type: AddressSchema,
+      default: {} // Set a default empty object
+    },
+    // Email verification fields
+    verificationCode: {
+      type: String
+    },
+    verificationExpires: {
+      type: Date
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    // Password reset fields
+    resetPasswordCode: {
+      type: String
+    },
+    resetPasswordExpires: {
+      type: Date
+    }
   },
   { 
     timestamps: true,
@@ -97,18 +126,70 @@ const UserSchema: Schema = new Schema(
 
 // Method to hash password
 UserSchema.methods.setPassword = async function(password: string) {
-  // Generate a random salt
-  this.salt = crypto.randomBytes(16).toString('hex');
-  
-  // Hash the password with the salt
-  this.password = crypto.pbkdf2Sync(password, this.salt, 1000, 64, 'sha512').toString('hex');
+  try {
+    console.log('Setting password for user:', this.email);
+    console.log('Password received:', password ? 'Password provided' : 'No password provided');
+    
+    // Generate a random salt
+    this.salt = crypto.randomBytes(16).toString('hex');
+    console.log('Generated salt:', this.salt);
+    
+    // Hash the password with the salt
+    this.password = crypto.pbkdf2Sync(password, this.salt, 1000, 64, 'sha512').toString('hex');
+    console.log('Password hashed successfully');
+  } catch (error) {
+    console.error('Error in setPassword method:', error);
+    throw error;
+  }
 };
 
 // Method to verify password
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  const hash = crypto.pbkdf2Sync(candidatePassword, this.salt, 1000, 64, 'sha512').toString('hex');
-  return this.password === hash;
+  try {
+    const hash = crypto.pbkdf2Sync(candidatePassword, this.salt, 1000, 64, 'sha512').toString('hex');
+    return this.password === hash;
+  } catch (error) {
+    console.error('Error in comparePassword method:', error);
+    throw error;
+  }
+};
+
+// Method to generate email verification code
+UserSchema.methods.generateVerificationCode = function() {
+  try {
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24); // Code expires in 24 hours
+    
+    this.verificationCode = code;
+    this.verificationExpires = expires;
+    
+    console.log('Generated verification code:', code);
+    return { code, expires };
+  } catch (error) {
+    console.error('Error generating verification code:', error);
+    throw error;
+  }
+};
+
+// Method to generate password reset code
+UserSchema.methods.generatePasswordResetCode = function() {
+  try {
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 1); // Code expires in 1 hour
+    
+    this.resetPasswordCode = code;
+    this.resetPasswordExpires = expires;
+    
+    return { code, expires };
+  } catch (error) {
+    console.error('Error generating password reset code:', error);
+    throw error;
+  }
 };
 
 // Create model if it doesn't exist already (for Next.js hot reloading)
-export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema); 
+export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

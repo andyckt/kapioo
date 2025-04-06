@@ -175,7 +175,9 @@ export default function DashboardPage() {
   useEffect(() => {
     // Check if user is logged in - get user from localStorage
     const userDataStr = localStorage.getItem('user');
-    if (!userDataStr) {
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    
+    if (!userDataStr && !isAuthenticated) {
       router.push("/login");
       return;
     }

@@ -130,7 +130,7 @@ const translations: TranslationsType = {
     // Signup page
     createAccount: "创建账户",
     enterDetails: "输入您的详细信息以开始",
-    fullName: "全名",
+    fullName: "昵称",
     phoneNumber: "电话号码",
     enterPhoneNumber: "输入您的电话号码",
     confirmPassword: "确认密码",
@@ -346,7 +346,7 @@ const translations: TranslationsType = {
     // Signup page
     createAccount: "Create your account",
     enterDetails: "Enter your details to get started",
-    fullName: "Full Name",
+    fullName: "Name",
     phoneNumber: "Phone Number",
     enterPhoneNumber: "Enter your phone number",
     confirmPassword: "Confirm Password",

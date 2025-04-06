@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
 export default function LoginPage() {
   const [login, setLogin] = useState("")
@@ -23,6 +24,28 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { t } = useLanguage()
+
+  useEffect(() => {
+    // Check if user is already authenticated
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    const userDataStr = localStorage.getItem('user');
+    
+    if (isAuthenticated && userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        if (userData.userID === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Clear potentially corrupted data
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+      }
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,10 +67,13 @@ export default function LoginPage() {
         // Store user data in localStorage or a state management solution
         localStorage.setItem('user', JSON.stringify(result.data.user));
         
+        // Set authentication state
+        localStorage.setItem('isAuthenticated', 'true');
+        
         // Show success toast
         toast({
           title: t('loginSuccess'),
-          description: t('welcomeBack') + result.data.user.userID + '!',
+          description: t('welcomeBack') + result.data.user.name + '!',
         });
         
         // Redirect based on user ID (admin or regular user)
@@ -57,7 +83,7 @@ export default function LoginPage() {
           router.push('/dashboard');
         }
       } else {
-        // Show error toast
+        // Show general error toast
         toast({
           title: t('loginFailed'),
           description: result.error || t('invalidCredentials'),
