@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { Label } from "@/components/ui/label"
 import { CardFooter } from "@/components/ui/card"
@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { OrderManagement } from "@/components/order-management"
+import { NotificationType } from '@/lib/services/notifications';
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -99,6 +100,7 @@ export default function AdminDashboardPage() {
   const [deductDescription, setDeductDescription] = useState("Admin deduction")
   const [userTransactions, setUserTransactions] = useState<any[]>([])
   const [userTransactionsLoading, setUserTransactionsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     // Check if admin is logged in - in a real app, this would verify the session
@@ -199,67 +201,82 @@ export default function AdminDashboardPage() {
   const confirmAddCredits = async () => {
     if (!selectedUser) return
     
+    setIsLoading(true)
+    
     try {
-      // Call the new add-credits API endpoint
-      const response = await fetch(`/api/users/${selectedUser._id}/add-credits`, {
+      // Make API call to add credits to user
+      const response = await fetch(`/api/users/${selectedUser._id}/credits`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          credits: creditAmount,
-          description: 'Added Credits'
-        })
-      });
+        body: JSON.stringify({ 
+          amount: creditAmount,
+          description: `Admin added ${creditAmount} credits`
+        }),
+      })
       
-      const result = await response.json();
+      const data = await response.json()
       
-      if (result.success) {
-        // Update local state for users array
-        const updatedUsers = users.map(user => 
-          user._id === selectedUser._id 
-            ? { ...user, credits: result.data.credits } 
-            : user
-        );
-        setUsers(updatedUsers);
-        
-        // Update filtered users as well
-        setFilteredUsers(filteredUsers.map(user => 
-          user._id === selectedUser._id 
-            ? { ...user, credits: result.data.credits } 
-            : user
-        ));
-        
-        // Update selectedUser if it's still selected
-        if (selectedUser) {
-          setSelectedUser({ ...selectedUser, credits: result.data.credits });
-        }
-        
-        // Refresh transactions if on the Credits tab
-        if (activeTab === "credits") {
-          fetchTransactions();
-        }
-        
+      if (data.success) {
         toast({
-          title: "Credits updated",
-          description: `Added ${creditAmount} credits to ${selectedUser.userID}'s account`,
+          title: "Credits added",
+          description: `Added ${creditAmount} credits to ${selectedUser.name}`,
         })
+        
+        // Update the user's credit amount in the local state
+        const updatedUsers = users.map(user => {
+          if (user._id === selectedUser._id) {
+            return { ...user, credits: (user.credits || 0) + creditAmount }
+          }
+          return user
+        })
+        
+        setUsers(updatedUsers)
+        setFilteredUsers(updatedUsers)
+        
+        // Send notification to user about added credits
+        try {
+          const updatedUser = { 
+            ...selectedUser, 
+            credits: (selectedUser.credits || 0) + creditAmount 
+          };
+          
+          // Use the notifications API endpoint instead of direct call
+          await fetch('/api/notifications', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              notificationType: NotificationType.CREDITS_ADDED,
+              userId: selectedUser._id,
+              transactionId: data.data.transaction.transactionId,
+              amount: creditAmount
+            }),
+          });
+        } catch (notificationError) {
+          console.error('Error sending credit notification:', notificationError);
+          // Continue even if notification fails
+        }
+        
+        setAddCreditsOpen(false)
       } else {
         toast({
           title: "Error",
-          description: result.error || 'Failed to update credits',
+          description: data.error || "Failed to add credits",
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.error('Error updating credits:', error)
+      console.error('Error adding credits:', error)
       toast({
         title: "Error",
-        description: 'An unexpected error occurred while updating credits',
+        description: "An error occurred while adding credits",
         variant: "destructive",
       })
     } finally {
-      setAddCreditsOpen(false)
+      setIsLoading(false)
     }
   }
 
@@ -1080,7 +1097,9 @@ export default function AdminDashboardPage() {
                                 <tr key={transaction._id} className="border-b">
                                   <td className="p-4">{transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`}</td>
                                   <td className="p-4">{displayUser}</td>
-                                  <td className="p-4">{transaction.type === 'credit' ? 'Add' : transaction.type === 'debit' ? 'Deduct' : transaction.type === 'refund' ? 'Refund' : transaction.type}</td>
+                                  <td className="p-4">{transaction.type === 'credit' ? 'Add' : transaction.type === 'debit' ? 'Deduct' : 
+                                   transaction.type === 'refund' ? 'Refund' : 
+                                   transaction.type}</td>
                                   <td className="p-4">
                                     <span className={
                                       transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'

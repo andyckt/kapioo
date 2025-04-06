@@ -4,6 +4,7 @@ import Order from '@/models/Order';
 import mongoose from 'mongoose';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
+import { handleOrderNotification, NotificationType } from '@/lib/services/notifications';
 
 // Interface for route params
 interface RouteParams {
@@ -97,6 +98,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
     
+    // Store the previous status for notifications
+    const previousStatus = order.status;
+
     // If changing to refunded status, process the refund
     if (status === 'refunded' && order.status !== 'refunded') {
       // Find user to refund credits
@@ -137,6 +141,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         
         // Commit the transaction
         await session.commitTransaction();
+        
+        // Send notification for order status change
+        await handleOrderNotification(
+          NotificationType.ORDER_REFUNDED,
+          order,
+          user,
+          previousStatus
+        );
         
         return NextResponse.json({
           success: true,
@@ -199,6 +211,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         // Commit the transaction
         await session.commitTransaction();
 
+        // Send notification for order cancellation
+        await handleOrderNotification(
+          NotificationType.ORDER_CANCELLED,
+          order,
+          user,
+          previousStatus
+        );
         
         return NextResponse.json({
           success: true,
@@ -235,6 +254,39 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       
       await order.save();
 
+      // Find user for notification
+      const user = await User.findById(order.userId);
+      
+      if (user) {
+        // Map status to notification type
+        let notificationType;
+        switch (status) {
+          case 'confirmed':
+            notificationType = NotificationType.ORDER_CONFIRMED;
+            break;
+          case 'delivery':
+            notificationType = NotificationType.ORDER_DELIVERY;
+            break;
+          case 'delivered':
+            notificationType = NotificationType.ORDER_DELIVERED;
+            break;
+          case 'cancelled':
+            notificationType = NotificationType.ORDER_CANCELLED;
+            break;
+          default:
+            notificationType = null;
+        }
+        
+        // Send notification if applicable
+        if (notificationType) {
+          await handleOrderNotification(
+            notificationType,
+            order,
+            user,
+            previousStatus
+          );
+        }
+      }
       
       return NextResponse.json({
         success: true,

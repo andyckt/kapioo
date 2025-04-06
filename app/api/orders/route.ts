@@ -4,6 +4,7 @@ import Order from '@/models/Order';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import mongoose from 'mongoose';
+import { handleOrderNotification, NotificationType } from '@/lib/services/notifications';
 
 // GET handler - get orders with optional userId filtering
 export async function GET(request: Request) {
@@ -189,6 +190,13 @@ export async function POST(request: Request) {
       
       // Commit the transaction
       await session.commitTransaction();
+      
+      // Send notifications
+      await handleOrderNotification(
+        NotificationType.NEW_ORDER,
+        savedOrder,
+        user
+      );
 
       
       return NextResponse.json({

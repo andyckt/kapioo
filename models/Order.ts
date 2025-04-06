@@ -29,6 +29,7 @@ export interface IOrder extends Document {
   updatedAt: Date;
   confirmedAt?: Date;
   deliveredAt?: Date;
+  refundedAt?: Date;
 }
 
 // Interface for the model with static methods

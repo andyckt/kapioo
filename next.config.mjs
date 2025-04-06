@@ -35,6 +35,22 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+  webpack: (config, { isServer }) => {
+    // If client-side (browser), provide empty implementations for Node.js modules
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+        stream: false,
+        util: false,
+        buffer: false,
+        os: false,
+      };
+    }
+    return config;
+  },
 }
 
 if (userConfig) {
