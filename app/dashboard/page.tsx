@@ -1528,8 +1528,153 @@ function WeeklyMealSelector({
   
   // Check if a day is in the past or today after ordering cutoff time
   const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
-    // Always return available - removing time and past day restrictions
-    return { unavailable: false, reason: "" };
+    try {
+      // Get current date and time in Toronto timezone
+      const torontoOptions = { timeZone: 'America/Toronto' };
+      const now = new Date();
+      
+      // Format the Toronto time as a string to work with
+      const torontoDateString = now.toLocaleString('en-US', torontoOptions);
+      const torontoDate = new Date(torontoDateString);
+      
+      // Get today's day of the week
+      const todayIndex = torontoDate.getDay(); // 0 = Sunday, 1 = Monday, ...
+      const daysOfWeek = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const today = daysOfWeek[todayIndex];
+      
+      // Get the current hour in Toronto
+      const currentHour = torontoDate.getHours();
+      
+      // Check if we have a date for this meal
+      const mealDate = meals[day]?.date;
+
+      // Convert day string to index (0-6)
+      const dayIndex = daysOfWeek.indexOf(day.toLowerCase());
+      
+      // Debug logging to understand what's happening
+      console.log(`Day comparison for ${day}:`, {
+        day,
+        dayIndex,
+        today,
+        todayIndex,
+        currentHour,
+        mealDate
+      });
+      
+      // Only proceed with day comparison if we have valid indices
+      if (dayIndex !== -1 && todayIndex !== -1) {
+        // Correct logic for day comparison accounting for week wraparound
+        // Assume all days are for the current week
+        // If today is Saturday (6) or Sunday (0), then Monday (1) through Friday (5) 
+        // are for next week and shouldn't be marked as "passed"
+        
+        if (todayIndex === 6) { // Saturday
+          // No days should be unavailable, as we're at the end of the week
+          // and all meals shown are for the next week
+        } else if (todayIndex === 0) { // Sunday
+          // Only Sunday can be unavailable
+          if (dayIndex === 0 && currentHour >= 10) {
+            return {
+              unavailable: true,
+              reason: "Orders for today must be placed before 10am Toronto time"
+            };
+          }
+        } else {
+          // For other days, only days before today are unavailable
+          if (dayIndex < todayIndex) {
+            return { 
+              unavailable: true, 
+              reason: "This day has already passed" 
+            };
+          }
+          
+          // Check if it's today and after 10am
+          if (dayIndex === todayIndex && currentHour >= 10) {
+            return { 
+              unavailable: true, 
+              reason: "Orders for today must be placed before 10am Toronto time" 
+            };
+          }
+        }
+      }
+
+      // If we have a specific date string, parse it for additional validation
+      if (mealDate) {
+        try {
+          // Parse the date (expected format like "April 1" or "April 10")
+          const parts = mealDate.split(' ');
+          
+          // Handle formats like "April 1" or "April 10"
+          if (parts.length === 2) {
+            const monthStr = parts[0];
+            const dayStr = parts[1];
+            
+            // Get month index (0-11)
+            const months = ["January", "February", "March", "April", "May", "June", 
+                             "July", "August", "September", "October", "November", "December"];
+            const monthIndex = months.findIndex(m => 
+              monthStr.toLowerCase() === m.toLowerCase());
+            
+            // Parse day number (remove dot if present)
+            const dayNum = parseInt(dayStr.replace('.', ''));
+            
+            console.log(`Date parsing for ${mealDate}:`, {
+              monthStr,
+              monthIndex,
+              dayStr,
+              dayNum
+            });
+            
+            if (monthIndex !== -1 && !isNaN(dayNum)) {
+              // Create a date for the meal's specific date (use current year)
+              const mealSpecificDate = new Date(
+                torontoDate.getFullYear(), 
+                monthIndex, 
+                dayNum
+              );
+              
+              // Compare with today's date
+              const todayYMD = new Date(
+                torontoDate.getFullYear(), 
+                torontoDate.getMonth(), 
+                torontoDate.getDate()
+              );
+              
+              console.log(`Date comparison:`, {
+                mealSpecificDate: mealSpecificDate.toDateString(),
+                todayYMD: todayYMD.toDateString(),
+                isBeforeToday: mealSpecificDate < todayYMD,
+                isToday: mealSpecificDate.getTime() === todayYMD.getTime()
+              });
+              
+              // If meal date is before today
+              if (mealSpecificDate < todayYMD) {
+                return { 
+                  unavailable: true, 
+                  reason: "This specific date has already passed" 
+                };
+              }
+              
+              // If it's today and after 10am
+              if (mealSpecificDate.getTime() === todayYMD.getTime() && currentHour >= 10) {
+                return { 
+                  unavailable: true, 
+                  reason: "Orders for today must be placed before 10am Toronto time" 
+                };
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing meal date:', error);
+        }
+      }
+      
+      // If we get here, the day is available
+      return { unavailable: false, reason: "" };
+    } catch (error) {
+      console.error('Error in isDayUnavailable:', error);
+      return { unavailable: false, reason: "" }; // Default to available on error
+    }
   };
 
   useEffect(() => {

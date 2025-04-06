@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   LineChart,
   Line,
@@ -23,6 +23,7 @@ import {
   Filter,
   Download,
   RefreshCw,
+  CheckCircle,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -34,79 +35,181 @@ import { Badge } from "@/components/ui/badge"
 export function AdminDashboardEnhanced() {
   const [period, setPeriod] = useState("week")
   const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  
+  // State for real metrics
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [userGrowthRate, setUserGrowthRate] = useState(0)
+  const [pendingOrders, setPendingOrders] = useState(0)
+  const [pendingOrdersGrowth, setPendingOrdersGrowth] = useState(0)
+  const [deliveredOrders, setDeliveredOrders] = useState(0)
+  const [deliveredOrdersGrowth, setDeliveredOrdersGrowth] = useState(0)
+  const [popularDay, setPopularDay] = useState("")
+  const [popularDayChange, setPopularDayChange] = useState(0)
 
   const handleRefresh = () => {
     setRefreshing(true)
-    setTimeout(() => {
-      setRefreshing(false)
-    }, 1500)
+    fetchDashboardStats()
   }
 
-  // Sample data for charts
-  const revenueData = {
+  // Fetch dashboard statistics from backend
+  const fetchDashboardStats = async () => {
+    setLoading(true)
+    try {
+      // Fetch total users count
+      const usersResponse = await fetch('/api/users/count');
+      const usersData = await usersResponse.json();
+      
+      if (usersData.success) {
+        setTotalUsers(usersData.data.total);
+        setUserGrowthRate(usersData.data.growthRate || 0);
+      }
+      
+      // Fetch order statistics
+      const ordersResponse = await fetch('/api/orders/stats');
+      const ordersData = await ordersResponse.json();
+      
+      if (ordersData.success) {
+        setPendingOrders(ordersData.data.pendingOrders || 0);
+        setPendingOrdersGrowth(ordersData.data.pendingOrdersGrowth || 0);
+        setDeliveredOrders(ordersData.data.deliveredOrders || 0);
+        setDeliveredOrdersGrowth(ordersData.data.deliveredOrdersGrowth || 0);
+        setPopularDay(ordersData.data.popularDay || "Monday");
+        setPopularDayChange(ordersData.data.popularDayChange || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Fetch data on initial load and when period changes
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [period]); // Add period as dependency to refresh data when period changes
+  
+  // Handle export dashboard data to CSV
+  const handleExport = () => {
+    try {
+      // Create the CSV content
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      // Add headers
+      csvContent += "Metric,Value,Change\n";
+      
+      // Add KPI metrics data
+      csvContent += `Total Users,${totalUsers},${userGrowthRate}%\n`;
+      csvContent += `Pending Orders,${pendingOrders},${pendingOrdersGrowth}%\n`;
+      csvContent += `Successfully Delivered,${deliveredOrders},${deliveredOrdersGrowth}%\n`;
+      csvContent += `Popular Day,${popularDay},${popularDayChange}%\n`;
+      
+      // Add chart data header based on current period
+      csvContent += `\n${period.charAt(0).toUpperCase() + period.slice(1)} Data\n`;
+      
+      // Add pending orders data
+      csvContent += "\nPending Orders\n";
+      csvContent += "Date,Count\n";
+      pendingOrdersData[period as keyof typeof pendingOrdersData].forEach(item => {
+        csvContent += `${item.name},${item.pending}\n`;
+      });
+      
+      // Add delivered orders data
+      csvContent += "\nDelivered Orders\n";
+      csvContent += "Date,Count\n";
+      deliveredOrdersData[period as keyof typeof deliveredOrdersData].forEach(item => {
+        csvContent += `${item.name},${item.delivered}\n`;
+      });
+      
+      // Add user growth data
+      csvContent += "\nNew Users\n";
+      csvContent += "Date,Count\n";
+      userGrowthData[period as keyof typeof userGrowthData].forEach(item => {
+        csvContent += `${item.name},${item.users}\n`;
+      });
+      
+      // Create a download link
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `dashboard-${period}-data.csv`);
+      document.body.appendChild(link);
+      
+      // Trigger download and clean up
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error exporting dashboard data:", error);
+    }
+  };
+
+  // Sample data for charts - Update to have pending and delivered orders data
+  const pendingOrdersData = {
     week: [
-      { name: "Mon", revenue: 1200 },
-      { name: "Tue", revenue: 1400 },
-      { name: "Wed", revenue: 1300 },
-      { name: "Thu", revenue: 1500 },
-      { name: "Fri", revenue: 1800 },
-      { name: "Sat", revenue: 1600 },
-      { name: "Sun", revenue: 1200 },
+      { name: "Mon", pending: 12 },
+      { name: "Tue", pending: 9 },
+      { name: "Wed", pending: 15 },
+      { name: "Thu", pending: 10 },
+      { name: "Fri", pending: 18 },
+      { name: "Sat", pending: 8 },
+      { name: "Sun", pending: 6 },
     ],
     month: [
-      { name: "Week 1", revenue: 8500 },
-      { name: "Week 2", revenue: 9200 },
-      { name: "Week 3", revenue: 10500 },
-      { name: "Week 4", revenue: 11800 },
+      { name: "Week 1", pending: 45 },
+      { name: "Week 2", pending: 52 },
+      { name: "Week 3", pending: 63 },
+      { name: "Week 4", pending: 70 },
     ],
     year: [
-      { name: "Jan", revenue: 35000 },
-      { name: "Feb", revenue: 38000 },
-      { name: "Mar", revenue: 42000 },
-      { name: "Apr", revenue: 40000 },
-      { name: "May", revenue: 45000 },
-      { name: "Jun", revenue: 48000 },
-      { name: "Jul", revenue: 50000 },
-      { name: "Aug", revenue: 52000 },
-      { name: "Sep", revenue: 55000 },
-      { name: "Oct", revenue: 58000 },
-      { name: "Nov", revenue: 62000 },
-      { name: "Dec", revenue: 68000 },
+      { name: "Jan", pending: 120 },
+      { name: "Feb", pending: 140 },
+      { name: "Mar", pending: 160 },
+      { name: "Apr", pending: 152 },
+      { name: "May", pending: 180 },
+      { name: "Jun", pending: 190 },
+      { name: "Jul", pending: 210 },
+      { name: "Aug", pending: 185 },
+      { name: "Sep", pending: 195 },
+      { name: "Oct", pending: 225 },
+      { name: "Nov", pending: 240 },
+      { name: "Dec", pending: 260 },
     ],
   }
 
-  const orderData = {
+  const deliveredOrdersData = {
     week: [
-      { name: "Mon", orders: 32 },
-      { name: "Tue", orders: 25 },
-      { name: "Wed", orders: 40 },
-      { name: "Thu", orders: 35 },
-      { name: "Fri", orders: 45 },
-      { name: "Sat", orders: 20 },
-      { name: "Sun", orders: 15 },
+      { name: "Mon", delivered: 8 },
+      { name: "Tue", delivered: 12 },
+      { name: "Wed", delivered: 10 },
+      { name: "Thu", delivered: 14 },
+      { name: "Fri", delivered: 16 },
+      { name: "Sat", delivered: 7 },
+      { name: "Sun", delivered: 5 },
     ],
     month: [
-      { name: "Week 1", orders: 120 },
-      { name: "Week 2", orders: 145 },
-      { name: "Week 3", orders: 160 },
-      { name: "Week 4", orders: 180 },
+      { name: "Week 1", delivered: 35 },
+      { name: "Week 2", delivered: 42 },
+      { name: "Week 3", delivered: 48 },
+      { name: "Week 4", delivered: 55 },
     ],
     year: [
-      { name: "Jan", orders: 450 },
-      { name: "Feb", orders: 520 },
-      { name: "Mar", orders: 600 },
-      { name: "Apr", orders: 580 },
-      { name: "May", orders: 650 },
-      { name: "Jun", orders: 700 },
-      { name: "Jul", orders: 720 },
-      { name: "Aug", orders: 680 },
-      { name: "Sep", orders: 720 },
-      { name: "Oct", orders: 750 },
-      { name: "Nov", orders: 800 },
-      { name: "Dec", orders: 850 },
+      { name: "Jan", delivered: 80 },
+      { name: "Feb", delivered: 95 },
+      { name: "Mar", delivered: 110 },
+      { name: "Apr", delivered: 105 },
+      { name: "May", delivered: 125 },
+      { name: "Jun", delivered: 140 },
+      { name: "Jul", delivered: 160 },
+      { name: "Aug", delivered: 145 },
+      { name: "Sep", delivered: 155 },
+      { name: "Oct", delivered: 175 },
+      { name: "Nov", delivered: 195 },
+      { name: "Dec", delivered: 220 },
     ],
   }
 
+  // Keep the existing userGrowthData
   const userGrowthData = {
     week: [
       { name: "Mon", users: 5 },
@@ -139,37 +242,37 @@ export function AdminDashboardEnhanced() {
     ],
   }
 
-  // KPI metrics
+  // KPI metrics using real data
   const kpiMetrics = [
     {
       title: "Total Users",
-      value: 1284,
-      change: 12.5,
-      trend: "up",
+      value: loading ? "..." : totalUsers,
+      change: userGrowthRate,
+      trend: userGrowthRate >= 0 ? "up" : "down",
       icon: <Users className="h-4 w-4 text-muted-foreground" />,
       description: "Total registered users",
     },
     {
-      title: "Active Orders",
-      value: 45,
-      change: 8.3,
-      trend: "up",
+      title: "Pending Orders",
+      value: loading ? "..." : pendingOrders,
+      change: pendingOrdersGrowth,
+      trend: pendingOrdersGrowth >= 0 ? "up" : "down",
       icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />,
-      description: "Orders for this week",
+      description: "Orders in pending status",
     },
     {
-      title: "Revenue",
-      value: "$12,450",
-      change: 18.2,
-      trend: "up",
-      icon: <CreditCard className="h-4 w-4 text-muted-foreground" />,
-      description: "Monthly revenue",
+      title: "Successfully Delivered",
+      value: loading ? "..." : deliveredOrders,
+      change: deliveredOrdersGrowth,
+      trend: deliveredOrdersGrowth >= 0 ? "up" : "down",
+      icon: <CheckCircle className="h-4 w-4 text-muted-foreground" />,
+      description: "Orders delivered successfully",
     },
     {
       title: "Popular Day",
-      value: "Monday",
-      change: -2.1,
-      trend: "down",
+      value: loading ? "..." : popularDay,
+      change: popularDayChange,
+      trend: popularDayChange >= 0 ? "up" : "down",
       icon: <Calendar className="h-4 w-4 text-muted-foreground" />,
       description: "Most ordered day",
     },
@@ -193,7 +296,7 @@ export function AdminDashboardEnhanced() {
           <Button variant="outline" size="icon" onClick={handleRefresh}>
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -223,7 +326,7 @@ export function AdminDashboardEnhanced() {
                   ) : (
                     <ArrowDownRight className="h-3 w-3 mr-1" />
                   )}
-                  {Math.abs(metric.change)}%
+                  {loading ? "..." : Math.abs(metric.change)}%
                 </Badge>
                 <p className="text-xs text-muted-foreground ml-2">{metric.description}</p>
               </div>
@@ -247,36 +350,36 @@ export function AdminDashboardEnhanced() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="orders">
+          <Tabs defaultValue="pending">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="orders">Orders</TabsTrigger>
-              <TabsTrigger value="revenue">Revenue</TabsTrigger>
+              <TabsTrigger value="pending">Pending Orders</TabsTrigger>
+              <TabsTrigger value="delivered">Delivered Orders</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
             </TabsList>
-            <TabsContent value="orders" className="mt-4">
+            <TabsContent value="pending" className="mt-4">
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={orderData[period]}>
+                  <BarChart data={pendingOrdersData[period as keyof typeof pendingOrdersData]}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="orders" fill="#0088FE" />
+                    <Bar dataKey="pending" fill="#0088FE" name="Pending Orders" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </TabsContent>
-            <TabsContent value="revenue" className="mt-4">
+            <TabsContent value="delivered" className="mt-4">
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={revenueData[period]}>
+                  <LineChart data={deliveredOrdersData[period as keyof typeof deliveredOrdersData]}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="revenue" stroke="#00C49F" strokeWidth={2} />
+                    <Line type="monotone" dataKey="delivered" stroke="#00C49F" strokeWidth={2} name="Delivered Orders" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -284,13 +387,13 @@ export function AdminDashboardEnhanced() {
             <TabsContent value="users" className="mt-4">
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={userGrowthData[period]}>
+                  <BarChart data={userGrowthData[period as keyof typeof userGrowthData]}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="users" fill="#FFBB28" />
+                    <Bar dataKey="users" fill="#FFBB28" name="New Users" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

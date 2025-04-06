@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
   const [usersPagination, setUsersPagination] = useState({
     total: 0,
     page: 1,
-    limit: 10,
+    limit: 25,
     pages: 1
   })
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -88,7 +88,7 @@ export default function AdminDashboardPage() {
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [transactionsPagination, setTransactionsPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 25,
     total: 0,
     pages: 1
   })
@@ -136,8 +136,29 @@ export default function AdminDashboardPage() {
       console.log(`Fetched ${result.users?.length || 0} users`);
       
       if (result.users) {
-        setUsers(result.users)
-        setFilteredUsers(result.users)
+        // Fetch order counts for users
+        const usersWithOrderCounts = await Promise.all(
+          result.users.map(async (user) => {
+            try {
+              // Fetch order count from API
+              const response = await fetch(`/api/users/${user._id}/order-count`);
+              if (response.ok) {
+                const data = await response.json();
+                return { 
+                  ...user, 
+                  totalOrders: data.success ? data.count : 0 
+                };
+              }
+              return user;
+            } catch (e) {
+              console.error(`Error fetching order count for user ${user._id}:`, e);
+              return user;
+            }
+          })
+        );
+        
+        setUsers(usersWithOrderCounts)
+        setFilteredUsers(usersWithOrderCounts)
         setUsersPagination(result.pagination)
       } else {
         console.error('Failed to fetch users, result:', result);
@@ -260,12 +281,12 @@ export default function AdminDashboardPage() {
       
       if (data.success) {
         setTransactions(data.data.transactions || []);
-        setTransactionsPagination({
+        setTransactionsPagination(prev => ({
+          ...prev,
           page: data.data.page,
-          limit: data.data.limit,
           total: data.data.total,
           pages: Math.ceil(data.data.total / data.data.limit)
-        });
+        }));
       } else {
         console.error("API returned error:", data.error);
         setTransactions([]);
@@ -293,7 +314,7 @@ export default function AdminDashboardPage() {
     }
   }, [activeTab, users.length, usersLoading]);
   
-  // Add function to handle pagination
+  // Add function to handle pagination for transactions
   const handleTransactionPagination = (direction: 'prev' | 'next') => {
     const newPage = direction === 'prev' 
       ? Math.max(1, transactionsPagination.page - 1)
@@ -435,6 +456,111 @@ export default function AdminDashboardPage() {
     }
   }
 
+  // Format date helper
+  const formatDate = (date: Date | string) => {
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return String(date);
+    }
+  };
+
+  // Handle user pagination
+  const handleUserPagination = (direction: 'prev' | 'next') => {
+    const newPage = direction === 'prev' 
+      ? Math.max(1, usersPagination.page - 1)
+      : Math.min(usersPagination.pages, usersPagination.page + 1);
+      
+    if (newPage !== usersPagination.page) {
+      fetchUsers(newPage, usersPagination.limit);
+    }
+  };
+
+  // Export users to CSV
+  const handleExportUsers = () => {
+    try {
+      // Create headers for CSV
+      const headers = [
+        'User ID',
+        'Name',
+        'Phone',
+        'Email',
+        'City',
+        'Created',
+        'Total Orders',
+        'Credits'
+      ].join(',');
+
+      // Create rows for each user
+      const rows = filteredUsers.map(user => {
+        // Format data and handle commas in text to avoid breaking CSV
+        const formatCSV = (text: string | undefined) => {
+          if (!text) return '';
+          // If contains comma, quote the text
+          return text.includes(',') ? `"${text}"` : text;
+        };
+
+        // Format date properly for CSV to prevent it from being split across rows
+        const formatDateForCSV = (date: Date | string | undefined) => {
+          if (!date) return '';
+          try {
+            const dateObj = date instanceof Date ? date : new Date(date);
+            // Format as YYYY-MM-DD to avoid commas and ensure it's a single cell
+            return dateObj.toISOString().split('T')[0];
+          } catch (e) {
+            return '';
+          }
+        };
+
+        return [
+          formatCSV(user.userID),
+          formatCSV(user.name),
+          formatCSV(user.phone),
+          formatCSV(user.email),
+          formatCSV(user.address?.city),
+          formatDateForCSV(user.joined),
+          user.totalOrders || '0',
+          user.credits
+        ].join(',');
+      });
+
+      // Combine headers and rows
+      const csvContent = [headers, ...rows].join('\n');
+
+      // Create a Blob with the CSV content
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      // Create a temporary link to download the CSV
+      const link = document.createElement('a');
+      const fileName = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Export successful",
+        description: `${rows.length} users exported to ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Error exporting users:', error);
+      toast({
+        title: "Export failed",
+        description: "There was an error exporting users. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b bg-background">
@@ -544,6 +670,26 @@ export default function AdminDashboardPage() {
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchUsers(usersPagination.page, usersPagination.limit)}
+                      className="h-9 gap-1"
+                    >
+                      <RefreshCcw className={cn("h-4 w-4", usersLoading && "animate-spin")} />
+                      {usersLoading ? "Refreshing..." : "Refresh"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportUsers}
+                      className="h-9 gap-1"
+                    >
+                      <Download className="h-4 w-4" />
+                      Export Users
+                    </Button>
+                  </div>
                 </div>
                 <Card>
                   <CardHeader>
@@ -577,7 +723,10 @@ export default function AdminDashboardPage() {
                             <tr className="border-b">
                               <th className="text-left p-4 font-medium">User ID</th>
                               <th className="text-left p-4 font-medium">Name</th>
-                              <th className="text-left p-4 font-medium">Email</th>
+                              <th className="text-left p-4 font-medium">Phone</th>
+                              <th className="text-left p-4 font-medium">City</th>
+                              <th className="text-left p-4 font-medium">Created</th>
+                              <th className="text-left p-4 font-medium">Orders</th>
                               <th className="text-left p-4 font-medium">Credits</th>
                               <th className="text-center p-4 font-medium">Actions</th>
                             </tr>
@@ -587,7 +736,10 @@ export default function AdminDashboardPage() {
                               <tr key={user._id} className="border-b">
                                 <td className="p-4">{user.userID}</td>
                                 <td className="p-4">{user.name}</td>
-                                <td className="p-4">{user.email}</td>
+                                <td className="p-4">{user.phone || "-"}</td>
+                                <td className="p-4">{user.address?.city || "-"}</td>
+                                <td className="p-4">{user.joined ? formatDate(user.joined) : "-"}</td>
+                                <td className="p-4">{user.totalOrders || 0}</td>
                                 <td className="p-4">{user.credits}</td>
                                 <td className="p-4">
                                   <div className="flex justify-center gap-1">
@@ -611,13 +763,51 @@ export default function AdminDashboardPage() {
                   </CardContent>
                   <CardFooter>
                     <div className="flex items-center justify-between w-full">
-                      <Button variant="outline" size="sm">
-                        Previous
-                      </Button>
-                      <div className="text-sm text-muted-foreground">Page {usersPagination.page} of {usersPagination.pages}</div>
-                      <Button variant="outline" size="sm">
-                        Next
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleUserPagination('prev')}
+                          disabled={usersPagination.page <= 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="text-sm text-muted-foreground">Page {usersPagination.page} of {usersPagination.pages}</div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleUserPagination('next')}
+                          disabled={usersPagination.page >= usersPagination.pages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">Rows per page:</span>
+                        <Select
+                          value={usersPagination.limit.toString()}
+                          onValueChange={(value) => {
+                            const newLimit = parseInt(value);
+                            setUsersPagination(prev => ({
+                              ...prev,
+                              limit: newLimit,
+                              page: 1 // Reset to first page when changing limit
+                            }));
+                            fetchUsers(1, newLimit);
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-[80px]">
+                            <SelectValue placeholder={usersPagination.limit.toString()} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="25">25</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </CardFooter>
                 </Card>
@@ -919,25 +1109,53 @@ export default function AdminDashboardPage() {
                   </CardContent>
                   <CardFooter>
                     <div className="flex items-center justify-between w-full">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleTransactionPagination('prev')}
-                        disabled={transactionsPagination.page === 1 || transactionsLoading}
-                      >
-                        Previous
-                      </Button>
-                      <div className="text-sm text-muted-foreground">
-                        Page {transactionsPagination.page} of {transactionsPagination.pages}
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleTransactionPagination('prev')}
+                          disabled={transactionsPagination.page === 1 || transactionsLoading}
+                        >
+                          Previous
+                        </Button>
+                        <div className="text-sm text-muted-foreground">
+                          Page {transactionsPagination.page} of {transactionsPagination.pages}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleTransactionPagination('next')}
+                          disabled={transactionsPagination.page === transactionsPagination.pages || transactionsLoading}
+                        >
+                          Next
+                        </Button>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleTransactionPagination('next')}
-                        disabled={transactionsPagination.page === transactionsPagination.pages || transactionsLoading}
-                      >
-                        Next
-                      </Button>
+                      
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">Rows per page:</span>
+                        <Select
+                          value={transactionsPagination.limit.toString()}
+                          onValueChange={(value) => {
+                            const newLimit = parseInt(value);
+                            setTransactionsPagination(prev => ({
+                              ...prev,
+                              limit: newLimit,
+                              page: 1 // Reset to first page when changing limit
+                            }));
+                            fetchTransactions(1);
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-[80px]">
+                            <SelectValue placeholder={transactionsPagination.limit.toString()} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="25">25</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </CardFooter>
                 </Card>

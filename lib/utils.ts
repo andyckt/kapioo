@@ -361,6 +361,7 @@ export interface User {
   createdAt?: Date | string;
   updatedAt?: Date | string;
   isActive?: boolean;
+  totalOrders?: number;
 }
 
 // Get all users with pagination

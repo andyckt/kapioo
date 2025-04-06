@@ -15,13 +15,13 @@ export default function Home() {
           <div className="flex gap-4 md:gap-10">
             <Link href="/" className="flex items-center gap-2 group">
               <Image 
-                src="/capybara-svgrepo-com.svg" 
+                src="/未命名設計.png" 
                 alt="Kapioo Logo" 
                 width={32} 
                 height={32} 
                 className="h-8 w-8 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" 
               />
-              <span className="inline-block font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 text-lg sm:text-xl transition-all duration-300 group-hover:scale-105 group-hover:tracking-wider">Kapioo</span>
+              <span className="inline-block font-bold text-[#C2884E] text-lg sm:text-xl transition-all duration-300 group-hover:scale-105 group-hover:tracking-wider">Kapioo</span>
             </Link>
           </div>
           <div className="flex items-center">
@@ -53,11 +53,34 @@ export default function Home() {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="flex flex-col justify-center space-y-4 order-2 lg:order-1"
               >
-                <div className="space-y-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
-                    Delicious Meals Delivered Weekly
-                  </h1>
-                  <p className="max-w-[600px] text-base sm:text-lg text-muted-foreground md:text-xl">
+                <div className="space-y-2 relative">
+                  <div className="relative">
+                    <div className="relative">
+                      {/* Mascot character - commented out
+                      <motion.div
+                        initial={{ y: -10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        className="absolute bottom-[80%] sm:bottom-[85%] md:bottom-[90%] left-0 z-10"
+                      >
+                        <Image 
+                          src="/未命名設計 (2).png" 
+                          alt="Kapioo Mascot" 
+                          width={80} 
+                          height={80}
+                          sizes="(max-width: 640px) 80px, (max-width: 768px) 90px, 100px"
+                          priority
+                          className="select-none sm:w-[90px] sm:h-[90px] md:w-[100px] md:h-[100px]"
+                        />
+                      </motion.div>
+                      */}
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
+                        {/* <span className="inline-block w-[15px] sm:w-[20px] md:w-[25px]"></span> */}
+                        Delicious Meals Delivered Weekly
+                      </h1>
+                    </div>
+                  </div>
+                  <p className="max-w-[600px] text-base sm:text-lg text-muted-foreground md:text-xl mt-8">
                     Subscribe to Kapioo and enjoy chef-prepared meals delivered to your doorstep. Choose your meals for
                     the week and pay with your credits.
                   </p>

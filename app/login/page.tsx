@@ -97,13 +97,13 @@ export default function LoginPage() {
           <div className="flex flex-col items-center space-y-5 text-center">
             <Link href="/" className="inline-flex items-center gap-3 group">
               <Image 
-                src="/capybara-svgrepo-com.svg" 
+                src="/未命名設計.png" 
                 alt="Kapioo Logo" 
                 width={52} 
                 height={52} 
                 className="h-13 w-13 transition-transform duration-300 group-hover:rotate-6" 
               />
-              <span className="inline-block font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+              <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
             </Link>
           </div>
           

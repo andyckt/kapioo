@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw } from "lucide-react"
+import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -137,6 +137,7 @@ export function OrderManagement() {
   const [orders, setOrders] = useState<any[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [refundOrderDialog, setRefundOrderDialog] = useState<{ open: boolean, order: any | null }>({ 
     open: false, 
@@ -164,6 +165,7 @@ export function OrderManagement() {
   // Fetch all orders with optional status filter
   const fetchOrders = async (page = 1, status = '') => {
     setIsLoading(true);
+    setRefreshing(true);
     try {
       const url = new URL('/api/orders', window.location.origin);
       url.searchParams.append('page', page.toString());
@@ -202,6 +204,7 @@ export function OrderManagement() {
       });
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -352,12 +355,83 @@ export function OrderManagement() {
     setFilteredOrders(orders);
   };
 
+  // Handle export of orders data to CSV
+  const handleExport = () => {
+    try {
+      if (filteredOrders.length === 0) {
+        toast({
+          title: "No data to export",
+          description: "There are no orders available to export",
+          variant: "default"
+        });
+        return;
+      }
+      
+      // Create the CSV content
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      // Add headers
+      csvContent += "Order ID,Customer Name,Customer Email,Date,Status,Credits,Selected Meals,Delivery Address\n";
+      
+      // Add order data
+      filteredOrders.forEach(order => {
+        const customerName = order.userId && typeof order.userId === 'object' ? order.userId.name || 'N/A' : 'N/A';
+        const customerEmail = order.userId && typeof order.userId === 'object' ? order.userId.email || 'N/A' : 'N/A';
+        const date = new Date(order.createdAt).toLocaleDateString('en-US');
+        const status = order.status;
+        const credits = order.creditCost;
+        const meals = formatSelectedMeals(order.selectedMeals).replace(/,/g, ';'); // Avoid CSV comma issues
+        const address = formatAddress(order.deliveryAddress).replace(/,/g, ' '); // Avoid CSV comma issues
+        
+        csvContent += `${order.orderId},${customerName},${customerEmail},${date},${status},${credits},"${meals}","${address}"\n`;
+      });
+      
+      // Create a download link
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      const statusText = statusFilter !== 'all' ? `-${statusFilter}` : '';
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `orders${statusText}-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      
+      // Trigger download and clean up
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Export successful",
+        description: `${filteredOrders.length} orders exported to CSV`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Error exporting orders:", error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export orders",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Order Management</CardTitle>
-          <CardDescription>View and manage customer orders</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Order Management</CardTitle>
+              <CardDescription>View and manage customer orders</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={() => fetchOrders(pagination.page, statusFilter !== 'all' ? statusFilter : '')}>
+                <RefreshCcw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              </Button>
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 mb-6">

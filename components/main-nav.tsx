@@ -6,13 +6,13 @@ export function MainNav() {
     <div className="flex items-center">
       <Link href="/dashboard" className="flex items-center gap-2 group">
         <Image 
-          src="/capybara-svgrepo-com.svg" 
+          src="/未命名設計.png" 
           alt="Kapioo Logo" 
           width={32} 
           height={32} 
           className="h-8 w-8 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" 
         />
-        <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 text-xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+        <span className="font-bold text-[#C2884E] text-xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
       </Link>
     </div>
   )
