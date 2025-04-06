@@ -1,6 +1,5 @@
 import Link from "next/link"
 import Image from "next/image"
-import { LanguageSwitcher } from "@/components/language-switcher"
 
 export function MainNav() {
   return (
@@ -15,7 +14,6 @@ export function MainNav() {
         />
         <span className="font-bold text-[#C2884E] text-xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
       </Link>
-      <LanguageSwitcher />
     </div>
   )
 }

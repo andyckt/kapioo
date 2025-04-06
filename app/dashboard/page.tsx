@@ -29,6 +29,7 @@ import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } 
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
+import { LanguageSwitcher } from "@/components/language-switcher"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -637,7 +638,9 @@ export default function DashboardPage() {
           <MainNav />
           
           <div className="flex items-center gap-2">
-            <NotificationBell />
+            {/* NotificationBell component temporarily disabled */}
+            {/* <NotificationBell /> */}
+            <LanguageSwitcher />
             <UserNav setActiveTab={setActiveTab} />
             
             {/* Mobile Menu Button */}
