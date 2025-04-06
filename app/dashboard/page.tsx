@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,10 +28,12 @@ import { ThisWeekMeals } from "@/components/this-week-meals"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
+import { useLanguage } from "@/lib/language-context"
 
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { t, language } = useLanguage()
   const [credits, setCredits] = useState(50)
   const [activeTab, setActiveTab] = useState("overview")
   const [customizeMeal, setCustomizeMeal] = useState(null)
@@ -346,9 +348,9 @@ export default function DashboardPage() {
   };
 
   const menuItems = [
-    { id: "overview", label: "Overview", icon: <User className="h-4 w-4" /> },
-    { id: "orders", label: "My Orders", icon: <History className="h-4 w-4" /> },
-    { id: "select-meals", label: "Select Meals", icon: <ShoppingCart className="h-4 w-4" /> },
+    { id: "overview", label: t('overview'), icon: <User className="h-4 w-4" /> },
+    { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
+    { id: "select-meals", label: t('selectMeals'), icon: <ShoppingCart className="h-4 w-4" /> },
     /* Commented out Delivery Tracking tab
     { id: "delivery", label: "Delivery Tracking", icon: <Calendar className="h-4 w-4" /> },
     */
@@ -358,7 +360,7 @@ export default function DashboardPage() {
     /* Commented out Community tab 
     { id: "community", label: "Community", icon: <Users className="h-4 w-4" /> },
     */
-    { id: "credits", label: "Credits", icon: <CreditCard className="h-4 w-4" /> },
+    { id: "credits", label: t('credits'), icon: <CreditCard className="h-4 w-4" /> },
     /* Commented out Referral tab
     { id: "refer", label: "Refer a Friend", icon: <Gift className="h-4 w-4" /> },
     */
@@ -367,7 +369,7 @@ export default function DashboardPage() {
     { id: "gift", label: "Gift Cards", icon: <Gift className="h-4 w-4" /> },
     { id: "subscription", label: "Subscription", icon: <Bell className="h-4 w-4" /> },
     */
-    { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
+    { id: "settings", label: t('settings'), icon: <Settings className="h-4 w-4" /> },
   ]
 
   // Handle personal info form changes
@@ -421,21 +423,21 @@ export default function DashboardPage() {
         }
         
         toast({
-          title: "Settings updated",
-          description: "Your account information has been updated",
+          title: t('changesSaved'),
+          description: t('personalInfoSaved'),
         });
       } else {
         toast({
-          title: "Error",
-          description: result.error || "Failed to update settings",
+          title: t('errorOccurred'),
+          description: result.error || t('personalInfoError'),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error updating personal info:', error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: t('errorOccurred'),
+        description: t('personalInfoError'),
         variant: "destructive"
       });
     }
@@ -489,21 +491,21 @@ export default function DashboardPage() {
         }
         
         toast({
-          title: "Address updated",
-          description: "Your delivery address has been updated",
+          title: t('changesSaved'),
+          description: t('addressSaved'),
         });
       } else {
         toast({
-          title: "Error",
-          description: result.error || "Failed to update address",
+          title: t('errorOccurred'),
+          description: result.error || t('addressError'),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error updating address:', error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred while saving your address",
+        title: t('errorOccurred'),
+        description: t('addressError'),
         variant: "destructive"
       });
     }
@@ -527,8 +529,8 @@ export default function DashboardPage() {
     // Validate passwords
     if (!passwordInfo.currentPassword) {
       toast({
-        title: "Error",
-        description: "Current password is required",
+        title: t('errorOccurred'),
+        description: t('passwordRequired'),
         variant: "destructive"
       });
       return;
@@ -536,8 +538,8 @@ export default function DashboardPage() {
     
     if (!passwordInfo.newPassword) {
       toast({
-        title: "Error",
-        description: "New password is required",
+        title: t('errorOccurred'),
+        description: t('newPasswordRequired'),
         variant: "destructive"
       });
       return;
@@ -545,8 +547,8 @@ export default function DashboardPage() {
     
     if (passwordInfo.newPassword !== passwordInfo.confirmPassword) {
       toast({
-        title: "Error",
-        description: "New password and confirm password do not match",
+        title: t('errorOccurred'),
+        description: t('passwordMismatch'),
         variant: "destructive"
       });
       return;
@@ -575,21 +577,21 @@ export default function DashboardPage() {
         });
         
         toast({
-          title: "Password updated",
-          description: "Your password has been changed successfully",
+          title: t('changesSaved'),
+          description: t('passwordChanged'),
         });
       } else {
         toast({
-          title: "Error",
-          description: result.error || "Failed to update password",
+          title: t('errorOccurred'),
+          description: result.error || t('passwordError'),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error updating password:', error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: t('errorOccurred'),
+        description: t('passwordError'),
         variant: "destructive"
       });
     }
@@ -751,8 +753,8 @@ export default function DashboardPage() {
                       setTimeout(() => {
                         localStorage.removeItem('user');
                         toast({
-                          title: "Logged out",
-                          description: "You have been logged out successfully",
+                          title: language === 'en' ? "Logged out" : "已退出登录",
+                          description: language === 'en' ? "You have been logged out successfully" : "您已成功退出登录",
                         });
                         router.push("/login");
                       }, 800);
@@ -764,7 +766,7 @@ export default function DashboardPage() {
                     >
                       <LogOut className="h-4 w-4" />
                     </motion.span>
-                    Log out
+                    {t('logOut')}
                   </Button>
                 </motion.div>
               </nav>
@@ -803,49 +805,55 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">{language === 'en' ? `Welcome, ${userData?.name?.split(' ')[0] || ''}` : `欢迎, ${userData?.name?.split(' ')[0] || ''}`}</h2>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <Card className="transform transition-all hover:scale-105">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Available Credits</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('creditsAvailable')}</CardTitle>
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">{credits}</div>
-                        <p className="text-xs text-muted-foreground">Credits can be used to order meals</p>
+                        <p className="text-xs text-muted-foreground">{language === 'en' ? 'Credits can be used to order meals' : '餐券可用于订购餐点'}</p>
                       </CardContent>
                     </Card>
                     <Card className="transform transition-all hover:scale-105">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Upcoming Deliveries</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('upcomingDeliveries')}</CardTitle>
                         <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
                           {orderStatsLoading ? (
-                            <span className="text-muted-foreground opacity-70">...</span>
+                            <span className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              {language === 'en' ? 'Loading...' : '加载中...'}
+                            </span>
                           ) : (
                             upcomingDeliveries
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">Meals scheduled for this week</p>
+                        <p className="text-xs text-muted-foreground">{language === 'en' ? 'Pending or confirmed orders' : '待处理或已确认的订单'}</p>
                       </CardContent>
                     </Card>
                     <Card className="transform transition-all hover:scale-105">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('totalOrders')}</CardTitle>
                         <History className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
                           {orderStatsLoading ? (
-                            <span className="text-muted-foreground opacity-70">...</span>
+                            <span className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              {language === 'en' ? 'Loading...' : '加载中...'}
+                            </span>
                           ) : (
                             totalOrders
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">Lifetime orders placed</p>
+                        <p className="text-xs text-muted-foreground">{language === 'en' ? 'Lifetime orders placed' : '已下单的总订单数'}</p>
                       </CardContent>
                     </Card>
                   </div>
@@ -871,7 +879,7 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">My Orders</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">{t('myOrders')}</h2>
                   </div>
 
                   {/* Order History */}
@@ -1047,30 +1055,31 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">Credits</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">{t('credits')}</h2>
                   </div>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Credit Balance</CardTitle>
-                      <CardDescription>Your current available credits</CardDescription>
+                      <CardTitle>{t('creditsAvailable')}</CardTitle>
+                      <CardDescription>{t('currentAvailableCredits')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col items-center justify-center p-6 rounded-lg">
                         <div className="text-4xl font-bold mb-2">{userData?.credits || 0}</div>
-                        <div className="text-muted-foreground text-center">Available Credits</div>
+                        <div className="text-muted-foreground text-center">{t('creditsAvailable')}</div>
                       </div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Credit History</CardTitle>
-                      <CardDescription>Your credit purchase and usage history</CardDescription>
+                      <CardTitle>{t('transactionHistory')}</CardTitle>
+                      <CardDescription>{t('creditsUsageHistory')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         {transactionsLoading ? (
                           <div className="flex justify-center py-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            <span className="ml-2">{language === 'en' ? 'Loading...' : '加载中...'}</span>
                           </div>
                         ) : transactions && transactions.length > 0 ? (
                           <>
@@ -1079,7 +1088,8 @@ export default function DashboardPage() {
                                 <div>
                                   <p className="font-medium">{transaction.description}</p>
                                   <p className="text-sm text-muted-foreground">
-                                    {new Date(transaction.createdAt).toLocaleDateString('en-US', { 
+                                    {new Date(transaction.createdAt).toLocaleDateString(
+                                      language === 'en' ? 'en-US' : 'zh-CN', { 
                                       year: 'numeric', 
                                       month: 'long', 
                                       day: 'numeric' 
@@ -1094,7 +1104,7 @@ export default function DashboardPage() {
                                   {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
                                     ? '+' 
                                     : '-'
-                                  }{transaction.amount} Credits
+                                  }{transaction.amount} {t('credits')}
                                 </div>
                               </div>
                             ))}
@@ -1107,10 +1117,10 @@ export default function DashboardPage() {
                                   onClick={() => handleTransactionPagination('prev')}
                                   disabled={transactionsPagination.page === 1}
                                 >
-                                  Previous
+                                  {t('previous')}
                                 </Button>
                                 <div className="text-sm text-muted-foreground">
-                                  Page {transactionsPagination.page} of {transactionsPagination.pages}
+                                  {t('pageOf').replace('X', transactionsPagination.page.toString()).replace('Y', transactionsPagination.pages.toString())}
                                 </div>
                                 <Button 
                                   variant="outline" 
@@ -1118,14 +1128,14 @@ export default function DashboardPage() {
                                   onClick={() => handleTransactionPagination('next')}
                                   disabled={transactionsPagination.page === transactionsPagination.pages}
                                 >
-                                  Next
+                                  {t('next')}
                                 </Button>
                               </div>
                             )}
                           </>
                         ) : (
                           <div className="text-center py-6 text-muted-foreground">
-                            No transaction history found
+                            {t('noTransactionHistory')}
                           </div>
                         )}
                       </div>
@@ -1251,25 +1261,25 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">Account Settings</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">{t('accountSettings')}</h2>
                   </div>
 
                   <Tabs defaultValue="personal" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="personal">Personal Info</TabsTrigger>
-                      <TabsTrigger value="password">Password</TabsTrigger>
+                      <TabsTrigger value="personal">{t('personalInfoTab')}</TabsTrigger>
+                      <TabsTrigger value="password">{t('passwordTab')}</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="personal" className="space-y-4 mt-4">
                       <Card>
                         <CardHeader>
-                          <CardTitle>Personal Information</CardTitle>
-                          <CardDescription>Update your account details</CardDescription>
+                          <CardTitle>{t('personalInformation')}</CardTitle>
+                          <CardDescription>{t('updateAccountDetails')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                           <div className="flex justify-between items-center mb-4 p-3 bg-muted rounded-md">
                             <div className="flex flex-col">
-                              <span className="text-sm font-medium">Account Status</span>
+                              <span className="text-sm font-medium">{t('accountStatus')}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className={`h-3 w-3 rounded-full ${userData?.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -1279,76 +1289,76 @@ export default function DashboardPage() {
 
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
-                              <Label htmlFor="userId">User ID</Label>
+                              <Label htmlFor="userId">{t('userId')}</Label>
                               <Input id="userId" value={userData?.userID || ''} readOnly className="bg-muted" />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="name">Name</Label>
+                              <Label htmlFor="name">{t('name')}</Label>
                               <Input id="name" value={personalInfo.name} onChange={handlePersonalInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="nickname">Nickname</Label>
+                              <Label htmlFor="nickname">{t('nickname')}</Label>
                               <Input id="nickname" value={personalInfo.nickname} onChange={handlePersonalInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="email">Email</Label>
+                              <Label htmlFor="email">{t('email')}</Label>
                               <Input id="email" type="email" value={personalInfo.email} onChange={handlePersonalInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="phone">Phone</Label>
+                              <Label htmlFor="phone">{t('phone')}</Label>
                               <Input id="phone" value={personalInfo.phone} onChange={handlePersonalInfoChange} />
                             </div>
                           </div>
                         </CardContent>
                         <CardFooter>
-                          <Button onClick={handleSavePersonalInfo}>Save Changes</Button>
+                          <Button onClick={handleSavePersonalInfo}>{t('saveChanges')}</Button>
                         </CardFooter>
                       </Card>
 
                       <Card>
                         <CardHeader>
-                          <CardTitle>Delivery Address</CardTitle>
-                          <CardDescription>Update your delivery information</CardDescription>
+                          <CardTitle>{t('deliveryAddressTitle')}</CardTitle>
+                          <CardDescription>{t('updateDeliveryInfo')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
-                              <Label htmlFor="unitNumber">Unit/Apt Number</Label>
+                              <Label htmlFor="unitNumber">{t('unitAptNumber')}</Label>
                               <Input id="unitNumber" value={addressInfo.unitNumber} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2 sm:col-span-2">
-                              <Label htmlFor="streetAddress">Street Address</Label>
+                              <Label htmlFor="streetAddress">{t('streetAddress')}</Label>
                               <Input id="streetAddress" value={addressInfo.streetAddress} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="city">City</Label>
+                              <Label htmlFor="city">{t('city')}</Label>
                               <Input id="city" value={addressInfo.city} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="state">State</Label>
+                              <Label htmlFor="state">{t('state')}</Label>
                               <Input id="state" value={addressInfo.province} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="zip">ZIP Code</Label>
+                              <Label htmlFor="zip">{t('zipCode')}</Label>
                               <Input id="zip" value={addressInfo.postalCode} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="country">Country</Label>
+                              <Label htmlFor="country">{t('country')}</Label>
                               <Input id="country" value={addressInfo.country} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="buzzCode" className="text-sm">Buzz Code / Entry Code <span className="text-muted-foreground text-xs">(Optional)</span></Label>
+                              <Label htmlFor="buzzCode" className="text-sm">{t('buzzCodeLabel')} <span className="text-muted-foreground text-xs">{t('buzzCodeOptional')}</span></Label>
                               <Input 
                                 id="buzzCode" 
                                 value={addressInfo.buzzCode} 
                                 onChange={handleAddressInfoChange}
-                                placeholder="Only if required for building access" 
+                                placeholder={t('buzzCodePlaceholder')} 
                               />
                             </div>
                           </div>
                         </CardContent>
                         <CardFooter>
-                          <Button onClick={handleSaveAddressInfo}>Save Changes</Button>
+                          <Button onClick={handleSaveAddressInfo}>{t('saveChanges')}</Button>
                         </CardFooter>
                       </Card>
                     </TabsContent>
@@ -1356,13 +1366,13 @@ export default function DashboardPage() {
                     <TabsContent value="password" className="space-y-4 mt-4">
                       <Card>
                         <CardHeader>
-                          <CardTitle>Password</CardTitle>
-                          <CardDescription>Change your password</CardDescription>
+                          <CardTitle>{t('passwordTab')}</CardTitle>
+                          <CardDescription>{t('changePassword')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                           <div className="grid gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor="current-password">Current Password</Label>
+                              <Label htmlFor="current-password">{t('currentPasswordLabel')}</Label>
                               <Input 
                                 id="current-password" 
                                 type="password" 
@@ -1371,7 +1381,7 @@ export default function DashboardPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="new-password">New Password</Label>
+                              <Label htmlFor="new-password">{t('newPasswordLabel')}</Label>
                               <Input 
                                 id="new-password" 
                                 type="password"
@@ -1380,7 +1390,7 @@ export default function DashboardPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="confirm-password">Confirm Password</Label>
+                              <Label htmlFor="confirm-password">{t('confirmPasswordLabel')}</Label>
                               <Input 
                                 id="confirm-password" 
                                 type="password"
@@ -1392,7 +1402,7 @@ export default function DashboardPage() {
                         </CardContent>
                         <CardFooter>
                           <Button onClick={handleSavePassword}>
-                            Change Password
+                            {t('changePasswordBtn')}
                           </Button>
                         </CardFooter>
                       </Card>
@@ -1411,9 +1421,9 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">Select Meals</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">{t('selectMeals')}</h2>
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium">Available Credits:</span>
+                      <span className="text-sm font-medium">{t('creditsAvailable')}:</span>
                       <span className="text-sm font-bold">{credits}</span>
                     </div>
                   </div>
@@ -1461,6 +1471,7 @@ function WeeklyMealSelector({
   initialCheckoutOpen?: boolean;
 }) {
   // Try to load saved selections from localStorage first, then fall back to initialSelectedMeals
+  const { t, language } = useLanguage();
   const getSavedSelections = () => {
     try {
       const savedSelections = localStorage.getItem('selectedMeals');
@@ -1576,7 +1587,7 @@ function WeeklyMealSelector({
           if (dayIndex === 0 && currentHour >= 10) {
             return {
               unavailable: true,
-              reason: "Orders for today must be placed before 10am Toronto time"
+              reason: t('orderBeforeCutoff')
             };
           }
         } else {
@@ -1584,7 +1595,7 @@ function WeeklyMealSelector({
           if (dayIndex < todayIndex) {
             return { 
               unavailable: true, 
-              reason: "This day has already passed" 
+              reason: t('dayPassed') 
             };
           }
           
@@ -1592,7 +1603,7 @@ function WeeklyMealSelector({
           if (dayIndex === todayIndex && currentHour >= 10) {
             return { 
               unavailable: true, 
-              reason: "Orders for today must be placed before 10am Toronto time" 
+              reason: t('orderBeforeCutoff')
             };
           }
         }
@@ -1659,7 +1670,7 @@ function WeeklyMealSelector({
               if (mealSpecificDate.getTime() === todayYMD.getTime() && currentHour >= 10) {
                 return { 
                   unavailable: true, 
-                  reason: "Orders for today must be placed before 10am Toronto time" 
+                  reason: t('orderBeforeCutoff')
                 };
               }
             }
@@ -1802,8 +1813,8 @@ function WeeklyMealSelector({
         // Validate delivery information
         if (!formData.name || !formData.phone) {
           toast({
-            title: "Missing information",
-            description: "Please provide your name and phone number for delivery.",
+            title: t('errorOccurred'),
+            description: t('deliveryInfo'),
             variant: "destructive"
           });
           return;
@@ -1811,8 +1822,8 @@ function WeeklyMealSelector({
         
         if (!userData?.address && !editingAddress) {
           toast({
-            title: "Missing address",
-            description: "Please add a delivery address.",
+            title: t('errorOccurred'),
+            description: t('deliveryAddress'),
             variant: "destructive"
           });
           return;
@@ -1824,8 +1835,8 @@ function WeeklyMealSelector({
         if (!deliveryAddress || !deliveryAddress.streetAddress || !deliveryAddress.city || 
             !deliveryAddress.province || !deliveryAddress.postalCode || !deliveryAddress.country) {
           toast({
-            title: "Incomplete address",
-            description: "Please provide a complete delivery address.",
+            title: t('errorOccurred'),
+            description: t('addressError'),
             variant: "destructive"
           });
           return;
@@ -1833,8 +1844,8 @@ function WeeklyMealSelector({
         
         // Show loading state
         toast({
-          title: "Processing order",
-          description: "Please wait while we process your order...",
+          title: t('processingOrder'),
+          description: t('processingOrder'),
         });
         
         // Create order via API
@@ -1889,8 +1900,8 @@ function WeeklyMealSelector({
           
           // Show success toast
           toast({
-            title: "Order placed successfully!",
-            description: `Your order (${result.data.order.orderId}) has been placed and is pending confirmation.`,
+            title: t('orderPlacedSuccess'),
+            description: `${t('orderTitle')} (${result.data.order.orderId}) ${t('orderPlaced')}`,
           });
           
           // Optionally, navigate to orders tab to see the new order
@@ -1898,29 +1909,29 @@ function WeeklyMealSelector({
         } else {
           // Handle error
           toast({
-            title: "Error placing order",
-            description: result.error || "An error occurred while placing your order.",
+            title: t('errorPlacingOrder'),
+            description: result.error || t('unexpectedError'),
             variant: "destructive"
           });
         }
       } catch (error) {
         console.error('Error placing order:', error);
         toast({
-          title: "Error",
-          description: "An unexpected error occurred while placing your order.",
+          title: t('errorOccurred'),
+          description: t('unexpectedError'),
           variant: "destructive"
         });
       }
     } else if (selectedCount === 0) {
       toast({
-        title: "No meals selected",
-        description: "Please select at least one meal to continue.",
+        title: t('errorOccurred'),
+        description: t('noMealsSelected'),
         variant: "destructive"
       });
     } else {
       toast({
-        title: "Insufficient credits",
-        description: `You need ${totalCost} credits to complete this order. You currently have ${credits} credits.`,
+        title: t('insufficientCredits'),
+        description: `${t('insufficientCredits')} ${totalCost} ${t('credits')}. ${t('creditsAvailable')}: ${credits} ${t('credits')}.`,
         variant: "destructive"
       });
     }
@@ -1979,29 +1990,29 @@ function WeeklyMealSelector({
           updateParentAddress(addressFormData);
           
           toast({
-            title: "Address saved",
-            description: "Your delivery address has been updated for future orders",
+            title: t('addressSaved'),
+            description: t('addressUpdated'),
           });
         } else {
           toast({
-            title: "Error",
-            description: result.error || "Failed to save address",
+            title: t('errorOccurred'),
+            description: result.error || t('addressError'),
             variant: "destructive"
           });
         }
       } catch (error) {
         console.error('Error saving address:', error);
         toast({
-          title: "Error",
-          description: "An unexpected error occurred while saving your address",
+          title: t('errorOccurred'),
+          description: t('addressError'),
           variant: "destructive"
         });
       }
     } else {
       // Show toast that address is used only for this order
       toast({
-        title: "Address updated",
-        description: "Address will be used only for this order",
+        title: t('addressUpdated'),
+        description: t('addressForThisOrder'),
       });
     }
     
@@ -2014,8 +2025,8 @@ function WeeklyMealSelector({
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Kapioo's Weekly Menu</CardTitle>
-              <CardDescription>Select the days you want meals delivered.</CardDescription>
+              <CardTitle>{t('weeklyMenu')}</CardTitle>
+              <CardDescription>{t('selectDaysDelivery')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
@@ -2023,7 +2034,7 @@ function WeeklyMealSelector({
                   <div className="col-span-full flex justify-center items-center h-[300px]">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                      <p>Loading meal information...</p>
+                      <p>{t('loadingMeals')}</p>
                     </div>
                   </div>
                 ) : (
@@ -2051,10 +2062,10 @@ function WeeklyMealSelector({
             </CardContent>
             <CardFooter className="flex justify-between">
               <div>
-                <p className="text-sm font-medium">Selected: {selectedCount} meals ({selectedCount * 1} credits)</p>
+                <p className="text-sm font-medium">{t('selectedCount')}: {selectedCount} meals ({selectedCount * 1} {t('credits')})</p>
               </div>
               <Button disabled={!canCheckout} onClick={() => setCheckoutOpen(true)}>
-                Proceed to Checkout
+                {t('proceedToCheckout')}
               </Button>
             </CardFooter>
           </Card>
@@ -2070,12 +2081,12 @@ function WeeklyMealSelector({
         >
           <Card>
             <CardHeader>
-              <CardTitle>Checkout</CardTitle>
-              <CardDescription>Confirm your order details</CardDescription>
+              <CardTitle>{t('checkoutTitle')}</CardTitle>
+              <CardDescription>{t('confirmOrderDetails')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <h3 className="font-medium">Selected Meals</h3>
+                <h3 className="font-medium">{t('selectedMeals')}</h3>
                 <div className="rounded-md border p-4">
                   <ul className="space-y-3">
                     {Object.entries(selectedMeals)
@@ -2107,11 +2118,11 @@ function WeeklyMealSelector({
                                   <>
                                     <div className="flex items-center gap-1.5">
                                       <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                      <span className="text-sm md:text-base">Fresh ingredients</span>
+                                      <span className="text-sm md:text-base">{t('freshIngredients')}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                       <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                      <span className="text-sm md:text-base">Eco-friendly packaging</span>
+                                      <span className="text-sm md:text-base">{t('ecoPackaging')}</span>
                                     </div>
                                   </>
                                 )}
@@ -2121,30 +2132,32 @@ function WeeklyMealSelector({
                       )}
                   </ul>
                   <div className="mt-4 pt-4 border-t flex justify-between font-medium">
-                    <span className="text-sm">Total</span>
-                    <span className="text-sm">{selectedCount * 1} Credits</span>
+                    <span className="text-sm">{t('total')}</span>
+                    <span className="text-sm">{selectedCount * 1} {t('credits')}</span>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-medium">Delivery Information</h3>
+                <h3 className="font-medium">{t('deliveryInfo')}</h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="name">{t('fullName')}</Label>
                     <Input id="name" value={formData.name} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phone">{t('phoneNumber')}</Label>
                     <Input id="phone" value={formData.phone} onChange={handleInputChange} />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="specialInstructions">Special Instructions (Optional)</Label>
+                  <Label htmlFor="specialInstructions">
+                    {t('specialInstructions')} {language === 'en' ? '(if any)' : '（可选）'}
+                  </Label>
                   <Textarea 
                     id="specialInstructions" 
-                    placeholder="Delivery instructions, dietary preferences, etc." 
+                    placeholder=""
                     value={formData.specialInstructions}
                     onChange={handleInputChange}
                     className="resize-none"
@@ -2154,24 +2167,24 @@ function WeeklyMealSelector({
                 
                 <div className="pt-4">
                   <div className="flex justify-between items-center">
-                    <Label className="font-medium">Delivery Address</Label>
+                    <Label className="font-medium">{t('deliveryAddress')}</Label>
                     {!editingAddress && (
                       <Button 
                         variant="default" 
                         size="sm"
                         onClick={() => setEditingAddress(true)}
                       >
-                        {userData?.address ? "Edit Address" : "Add Address"}
+                        {userData?.address ? t('editAddress') : t('addAddress')}
                       </Button>
                     )}
                   </div>
                   
                   {editingAddress ? (
                     <div className="mt-2 space-y-4 p-4 rounded-md border border-primary/30 bg-primary/5 shadow-sm">
-                      <div className="text-sm font-medium text-primary mb-2">Edit Delivery Details</div>
+                      <div className="text-sm font-medium text-primary mb-2">{t('editDeliveryDetails')}</div>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="unitNumber" className="text-sm">Unit/Apt Number</Label>
+                          <Label htmlFor="unitNumber" className="text-sm">{t('unitAptNumber')}</Label>
                           <Input 
                             id="unitNumber" 
                             value={addressFormData.unitNumber} 
@@ -2179,7 +2192,7 @@ function WeeklyMealSelector({
                           />
                         </div>
                         <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="streetAddress" className="text-sm">Street Address</Label>
+                          <Label htmlFor="streetAddress" className="text-sm">{t('streetAddress')}</Label>
                           <Input 
                             id="streetAddress" 
                             value={addressFormData.streetAddress} 
@@ -2187,7 +2200,7 @@ function WeeklyMealSelector({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="city" className="text-sm">City</Label>
+                          <Label htmlFor="city" className="text-sm">{t('city')}</Label>
                           <Input 
                             id="city" 
                             value={addressFormData.city} 
@@ -2195,7 +2208,7 @@ function WeeklyMealSelector({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="state" className="text-sm">State/Province</Label>
+                          <Label htmlFor="state" className="text-sm">{t('state')}</Label>
                           <Input 
                             id="state" 
                             value={addressFormData.province} 
@@ -2203,7 +2216,7 @@ function WeeklyMealSelector({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="zip" className="text-sm">ZIP/Postal Code</Label>
+                          <Label htmlFor="zip" className="text-sm">{t('zipCode')}</Label>
                           <Input 
                             id="zip" 
                             value={addressFormData.postalCode} 
@@ -2211,7 +2224,7 @@ function WeeklyMealSelector({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="country" className="text-sm">Country</Label>
+                          <Label htmlFor="country" className="text-sm">{t('country')}</Label>
                           <Input 
                             id="country" 
                             value={addressFormData.country} 
@@ -2219,12 +2232,12 @@ function WeeklyMealSelector({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="buzzCode" className="text-sm">Buzz Code / Entry Code <span className="text-muted-foreground text-xs">(Optional)</span></Label>
+                          <Label htmlFor="buzzCode" className="text-sm">{t('buzzCodeLabel')} <span className="text-muted-foreground text-xs">{t('buzzCodeOptional')}</span></Label>
                           <Input 
                             id="buzzCode" 
                             value={addressFormData.buzzCode} 
                             onChange={handleAddressInputChange} 
-                            placeholder="Only if required for building access"
+                            placeholder={t('buzzCodePlaceholder')}
                           />
                         </div>
                       </div>
@@ -2236,7 +2249,7 @@ function WeeklyMealSelector({
                           onCheckedChange={(checked) => setSaveAddressForFuture(checked === true)}
                         />
                         <Label htmlFor="saveAddress" className="text-sm font-normal">
-                          Save this address for future orders
+                          {t('saveAddressFuture')}
                         </Label>
                       </div>
                       
@@ -2246,13 +2259,13 @@ function WeeklyMealSelector({
                           size="sm"
                           onClick={() => setEditingAddress(false)}
                         >
-                          Cancel
+                          {t('cancelBtn')}
                         </Button>
                         <Button 
                           size="sm"
                           onClick={handleSaveAddress}
                         >
-                          Save Address
+                          {t('saveAddress')}
                         </Button>
                       </div>
                     </div>
@@ -2276,7 +2289,7 @@ function WeeklyMealSelector({
                     </div>
                   ) : (
                     <div className="mt-2 p-4 rounded-md border">
-                      <p className="text-muted-foreground">No delivery address set.</p>
+                      <p className="text-muted-foreground">{t('noAddressSet')}</p>
                     </div>
                   )}
                 </div>
@@ -2284,9 +2297,9 @@ function WeeklyMealSelector({
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline" onClick={() => setCheckoutOpen(false)}>
-                Back
+                {t('back')}
               </Button>
-              <Button onClick={handleCheckout}>Complete Order</Button>
+              <Button onClick={handleCheckout}>{t('completeOrder')}</Button>
             </CardFooter>
           </Card>
         </motion.div>

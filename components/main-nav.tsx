@@ -1,9 +1,10 @@
 import Link from "next/link"
 import Image from "next/image"
+import { LanguageSwitcher } from "@/components/language-switcher"
 
 export function MainNav() {
   return (
-    <div className="flex items-center">
+    <div className="flex items-center gap-4">
       <Link href="/dashboard" className="flex items-center gap-2 group">
         <Image 
           src="/未命名設計.png" 
@@ -14,6 +15,7 @@ export function MainNav() {
         />
         <span className="font-bold text-[#C2884E] text-xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
       </Link>
+      <LanguageSwitcher />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import "@/app/globals.css"
 import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import AppInitializer from "@/components/app-initializer"
+import { LanguageProvider } from "@/lib/language-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -18,11 +19,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="zh">
       <body className={inter.className}>
-        <AppInitializer />
-        {children}
-        <Toaster />
+        <LanguageProvider>
+          <AppInitializer />
+          {children}
+          <Toaster />
+        </LanguageProvider>
       </body>
     </html>
   )

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, RefreshCcw } from "lucide-react"
+import { useLanguage } from "@/lib/language-context"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,47 +20,49 @@ import {
 
 // Order status component with appropriate icon and color
 function OrderStatus({ status }: { status: string }) {
+  const { t } = useLanguage();
+  
   switch (status) {
     case 'pending':
       return (
         <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          Pending
+          {t('pendingStatus')}
         </Badge>
       )
     case 'confirmed':
       return (
         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
           <CheckCircle className="h-3 w-3" />
-          Confirmed
+          {t('confirmedStatus')}
         </Badge>
       )
     case 'delivery':
       return (
         <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 flex items-center gap-1">
           <Truck className="h-3 w-3" />
-          Out for Delivery
+          {t('deliveryStatus')}
         </Badge>
       )
     case 'delivered':
       return (
         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
           <CheckCircle className="h-3 w-3" />
-          Delivered
+          {t('deliveredStatus')}
         </Badge>
       )
     case 'cancelled':
       return (
         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
           <AlertCircle className="h-3 w-3" />
-          Cancelled
+          {t('cancelledStatus')}
         </Badge>
       )
     case 'refunded':
       return (
         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 flex items-center gap-1">
           <RefreshCcw className="h-3 w-3" />
-          Refunded
+          {t('refundedStatus')}
         </Badge>
       )
     default:
@@ -73,12 +76,14 @@ function OrderStatus({ status }: { status: string }) {
 
 // Format address for display
 function formatAddress(address: any) {
-  if (!address) return "No address provided";
+  const { t, language } = useLanguage();
+  
+  if (!address) return language === 'en' ? "No address provided" : "未提供地址";
   
   let formattedAddress = '';
   
   if (address.unitNumber) {
-    formattedAddress += `Unit ${address.unitNumber}, `;
+    formattedAddress += language === 'en' ? `Unit ${address.unitNumber}, ` : `单元 ${address.unitNumber}, `;
   }
   
   formattedAddress += address.streetAddress || '';
@@ -96,7 +101,9 @@ function formatAddress(address: any) {
 
 // Format selected meals for display
 function formatSelectedMeals(selectedMeals: Record<string, any>) {
-  if (!selectedMeals) return "None";
+  const { language } = useLanguage();
+  
+  if (!selectedMeals) return language === 'en' ? "None" : "无";
   
   return Object.entries(selectedMeals)
     .filter(([_, value]) => {
@@ -136,6 +143,7 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
     pages: 1
   });
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   // Fetch orders for the user
   const fetchOrders = async (page = 1) => {
@@ -157,16 +165,16 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
       } else {
         console.error("Error fetching orders:", data.error);
         toast({
-          title: "Error",
-          description: "Failed to load your order history",
+          title: t('errorOccurred'),
+          description: t('loadingOrders'),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred while loading orders",
+        title: t('errorOccurred'),
+        description: t('loadingOrders'),
         variant: "destructive"
       });
     } finally {
@@ -184,16 +192,16 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
         setSelectedOrder(data.data);
       } else {
         toast({
-          title: "Error",
-          description: "Failed to load order details",
+          title: t('errorOccurred'),
+          description: t('loadingOrders'),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error("Error fetching order details:", error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: t('errorOccurred'),
+        description: t('loadingOrders'),
         variant: "destructive"
       });
     }
@@ -219,10 +227,10 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
 
   // Status timeline steps for order tracking
   const statusSteps = [
-    { status: 'pending', label: 'Order Placed' },
-    { status: 'confirmed', label: 'Order Confirmed' },
-    { status: 'delivery', label: 'Out for Delivery' },
-    { status: 'delivered', label: 'Delivered' },
+    { status: 'pending', label: t('orderPlaced') },
+    { status: 'confirmed', label: t('orderConfirmed') },
+    { status: 'delivery', label: t('outForDelivery') },
+    { status: 'delivered', label: t('delivered') },
   ];
 
   // Get current step index for timeline
@@ -234,14 +242,14 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Order History</CardTitle>
-        <CardDescription>View your meal orders and delivery status</CardDescription>
+        <CardTitle>{t('orderHistory')}</CardTitle>
+        <CardDescription>{t('viewOrdersAndStatus')}</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center items-center py-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">Loading your orders...</span>
+            <span className="ml-2">{t('loadingOrders')}</span>
           </div>
         ) : orders.length > 0 ? (
           <div className="space-y-4">
@@ -250,9 +258,10 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                 <CardHeader className="p-4 pb-2 bg-muted/20">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium text-sm">Order {order.orderId}</p>
+                      <p className="font-medium text-sm">{t('orderTitle')} {order.orderId}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleDateString('en-US', {
+                        {new Date(order.createdAt).toLocaleDateString(
+                          language === 'en' ? 'en-US' : 'zh-CN', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'
@@ -265,15 +274,15 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                 <CardContent className="p-4 pt-2">
                   <div className="grid md:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="font-medium">Selected Meals</p>
+                      <p className="font-medium">{t('selectedMeals')}</p>
                       <p className="text-muted-foreground">{formatSelectedMeals(order.selectedMeals)}</p>
                     </div>
                     <div>
-                      <p className="font-medium">Credits Used</p>
-                      <p className="text-muted-foreground">{order.creditCost} credits</p>
+                      <p className="font-medium">{t('creditsUsed')}</p>
+                      <p className="text-muted-foreground">{order.creditCost} {t('credits')}</p>
                     </div>
                     <div>
-                      <p className="font-medium">Delivery Address</p>
+                      <p className="font-medium">{t('deliveryAddress')}</p>
                       <p className="text-muted-foreground truncate max-w-[250px]">
                         {formatAddress(order.deliveryAddress)}
                       </p>
@@ -288,16 +297,17 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                         size="sm" 
                         onClick={() => fetchOrderDetails(order.orderId)}
                       >
-                        View Details
+                        {t('viewDetails')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
                       {selectedOrder && selectedOrder.orderId === order.orderId ? (
                         <>
                           <DialogHeader>
-                            <DialogTitle>Order {selectedOrder.orderId}</DialogTitle>
+                            <DialogTitle>{t('orderTitle')} {selectedOrder.orderId}</DialogTitle>
                             <DialogDescription>
-                              Placed on {new Date(selectedOrder.createdAt).toLocaleDateString('en-US', {
+                              {t('orderPlacedOn')} {new Date(selectedOrder.createdAt).toLocaleDateString(
+                                language === 'en' ? 'en-US' : 'zh-CN', {
                                 year: 'numeric',
                                 month: 'long',
                                 day: 'numeric',
@@ -310,7 +320,7 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                           <div className="py-4">
                             <div className="mb-4">
                               <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-semibold">Order Status</h3>
+                                <h3 className="font-semibold">{t('orderStatusTitle')}</h3>
                                 <OrderStatus status={selectedOrder.status} />
                               </div>
                               
@@ -342,14 +352,15 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                               
                               {selectedOrder.status === 'cancelled' && (
                                 <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 my-3">
-                                  This order has been cancelled.
+                                  {t('orderCancelled')}
                                   {/* Check for a refund transaction associated with this cancelled order */}
                                   {selectedOrder.refundTransaction && (
                                     <div className="mt-1">
-                                      {selectedOrder.creditCost} credits have been returned to your account.
+                                      {selectedOrder.creditCost} {t('creditsReturned')}
                                       {selectedOrder.refundTransaction.createdAt && (
                                         <div>
-                                          Refunded on {new Date(selectedOrder.refundTransaction.createdAt).toLocaleDateString('en-US', {
+                                          {t('refundedOn')} {new Date(selectedOrder.refundTransaction.createdAt).toLocaleDateString(
+                                            language === 'en' ? 'en-US' : 'zh-CN', {
                                             year: 'numeric',
                                             month: 'long',
                                             day: 'numeric'
@@ -363,10 +374,11 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
 
                               {selectedOrder.status === 'refunded' && (
                                 <div className="bg-orange-50 border border-orange-200 rounded-md p-3 text-sm text-orange-700 my-3">
-                                  This order has been refunded and {selectedOrder.creditCost} credits have been returned to your account.
+                                  {t('orderRefunded').replace('credits', `${selectedOrder.creditCost} ${t('credits')}`)}
                                   {selectedOrder.refundedAt && (
                                     <div className="mt-1">
-                                      Refunded on {new Date(selectedOrder.refundedAt).toLocaleDateString('en-US', {
+                                      {t('refundedOn')} {new Date(selectedOrder.refundedAt).toLocaleDateString(
+                                        language === 'en' ? 'en-US' : 'zh-CN', {
                                         year: 'numeric',
                                         month: 'long',
                                         day: 'numeric'
@@ -379,7 +391,7 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                             
                             <div className="grid gap-3 text-sm border-t pt-3">
                               <div>
-                                <h3 className="font-semibold mb-1">Selected Meals</h3>
+                                <h3 className="font-semibold mb-1">{t('selectedMeals')}</h3>
                                 <ul className="ml-5 list-disc space-y-1">
                                   {Object.entries(selectedOrder.selectedMeals)
                                     .filter(([_, mealValue]: [string, any]) => {
@@ -416,7 +428,7 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                               </div>
                               
                               <div>
-                                <h3 className="font-semibold mb-1">Delivery Address</h3>
+                                <h3 className="font-semibold mb-1">{t('deliveryAddress')}</h3>
                                 <p className="text-muted-foreground">
                                   {formatAddress(selectedOrder.deliveryAddress)}
                                 </p>
@@ -424,7 +436,7 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                               
                               {selectedOrder.specialInstructions && (
                                 <div>
-                                  <h3 className="font-semibold mb-1">Special Instructions</h3>
+                                  <h3 className="font-semibold mb-1">{t('specialInstructions')}</h3>
                                   <p className="text-muted-foreground">
                                     {selectedOrder.specialInstructions}
                                   </p>
@@ -432,9 +444,9 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                               )}
                               
                               <div>
-                                <h3 className="font-semibold mb-1">Payment</h3>
+                                <h3 className="font-semibold mb-1">{t('creditsUsed')}</h3>
                                 <p className="text-muted-foreground">
-                                  {selectedOrder.creditCost} credits
+                                  {selectedOrder.creditCost} {t('credits')}
                                 </p>
                               </div>
                             </div>
@@ -443,6 +455,7 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                       ) : (
                         <div className="flex justify-center items-center h-[200px]">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          <span className="ml-2">{language === 'en' ? 'Loading...' : '加载中...'}</span>
                         </div>
                       )}
                     </DialogContent>
@@ -460,10 +473,10 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                   onClick={() => handlePagination('prev')}
                   disabled={pagination.page === 1}
                 >
-                  Previous
+                  {t('previous')}
                 </Button>
                 <div className="text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.pages}
+                  {t('pageXofY').replace('X', pagination.page.toString()).replace('Y', pagination.pages.toString())}
                 </div>
                 <Button 
                   variant="outline" 
@@ -471,7 +484,7 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                   onClick={() => handlePagination('next')}
                   disabled={pagination.page === pagination.pages}
                 >
-                  Next
+                  {t('next')}
                 </Button>
               </div>
             )}
@@ -481,9 +494,9 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
             <div className="mb-3">
               <Package className="h-12 w-12 mx-auto text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium">No orders yet</h3>
+            <h3 className="text-lg font-medium">{t('noOrdersYet')}</h3>
             <p className="text-muted-foreground mt-1">
-              Your order history will appear here once you place your first order.
+              {t('orderHistoryAppearHere')}
             </p>
           </div>
         )}

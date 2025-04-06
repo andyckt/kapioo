@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/lib/language-context"
+import { LanguageSwitcher } from "@/components/language-switcher"
 
 export default function LoginPage() {
   const [login, setLogin] = useState("")
@@ -20,6 +22,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { t } = useLanguage()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,8 +46,8 @@ export default function LoginPage() {
         
         // Show success toast
         toast({
-          title: "Login successful",
-          description: `Welcome back, ${result.data.user.userID}!`,
+          title: t('loginSuccess'),
+          description: t('welcomeBack') + result.data.user.userID + '!',
         });
         
         // Redirect based on user ID (admin or regular user)
@@ -56,16 +59,16 @@ export default function LoginPage() {
       } else {
         // Show error toast
         toast({
-          title: "Login failed",
-          description: result.error || "Invalid credentials",
+          title: t('loginFailed'),
+          description: result.error || t('invalidCredentials'),
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Login error:', error);
       toast({
-        title: "Login failed",
-        description: "An error occurred during login",
+        title: t('loginFailed'),
+        description: t('loginError'),
         variant: "destructive",
       });
     } finally {
@@ -75,15 +78,18 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
-      <header className="w-full py-4 px-4 hidden sm:block">
-        <div className="container">
+      <header className="w-full py-4 px-4 flex justify-between items-center">
+        <div className="container flex justify-between items-center">
           <Link 
             href="/" 
             className="inline-flex items-center text-sm font-medium transition-colors hover:text-primary group"
           >
             <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
-            Back to Home
+            {t('backToHome')}
           </Link>
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
       
@@ -111,10 +117,10 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="p-7 sm:p-8 bg-white shadow-lg rounded-xl">
               <div className="grid gap-5">
                 <div className="grid gap-2.5">
-                  <Label htmlFor="login" className="text-sm font-medium">User ID or Email</Label>
+                  <Label htmlFor="login" className="text-sm font-medium">{t('userIdOrEmail')}</Label>
                   <Input
                     id="login"
-                    placeholder="Enter your ID or email"
+                    placeholder={t('userIdOrEmailPlaceholder')}
                     value={login}
                     onChange={(e) => setLogin(e.target.value)}
                     className="h-11 text-base placeholder:text-sm"
@@ -122,12 +128,12 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="grid gap-2.5">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">{t('password')}</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••"
+                      placeholder={t('passwordPlaceholder')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-11 pr-10 text-base placeholder:text-sm"
@@ -144,8 +150,8 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <Link href="#" className="text-sm font-medium hover:underline text-muted-foreground">
-                    Forgot password?
+                  <Link href="/forgot-password" className="text-sm font-medium hover:underline text-muted-foreground">
+                    {t('forgotPassword')}
                   </Link>
                 </div>
                 <Button 
@@ -153,16 +159,16 @@ export default function LoginPage() {
                   className="w-full h-11 mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base" 
                   disabled={isLoading}
                 >
-                  {isLoading ? "Signing in..." : "Sign In"}
+                  {isLoading ? t('signingIn') : t('signIn')}
                 </Button>
               </div>
             </form>
             
             <div className="text-center space-y-3">
               <div className="text-base">
-                <span className="text-muted-foreground">Don't have an account? </span>
-                <Link href="#" className="font-medium hover:underline text-primary">
-                  Sign up
+                <span className="text-muted-foreground">{t('noAccount')} </span>
+                <Link href="/signup" className="font-medium hover:underline text-primary">
+                  {t('signUp')}
                 </Link>
               </div>
             </div>

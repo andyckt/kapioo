@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/lib/language-context"
 import { CapybaraLogo } from "./capybara-logo"
 import { type WeeklyMeals } from "@/lib/utils"
 
@@ -33,17 +34,32 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
   const [imagesLoaded, setImagesLoaded] = useState(false)
   const [today, setToday] = useState<string>("")
   const { toast } = useToast()
+  const { t, language } = useLanguage()
 
   const days = useMemo(() => ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], [])
-  const dayLabels = useMemo((): Record<string, string> => ({
-    monday: "Monday",
-    tuesday: "Tuesday",
-    wednesday: "Wednesday",
-    thursday: "Thursday",
-    friday: "Friday",
-    saturday: "Saturday",
-    sunday: "Sunday",
-  }), [])
+  const dayLabels = useMemo((): Record<string, string> => {
+    if (language === 'en') {
+      return {
+        monday: "Monday",
+        tuesday: "Tuesday",
+        wednesday: "Wednesday",
+        thursday: "Thursday",
+        friday: "Friday",
+        saturday: "Saturday",
+        sunday: "Sunday",
+      };
+    } else {
+      return {
+        monday: "星期一",
+        tuesday: "星期二",
+        wednesday: "星期三",
+        thursday: "星期四",
+        friday: "星期五",
+        saturday: "星期六",
+        sunday: "星期日",
+      };
+    }
+  }, [language]);
 
   // Filter to get only days that have active meals
   const activeDays = useMemo(() => {
@@ -341,8 +357,10 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
     
     if (unavailable) {
       toast({
-        title: "Cannot select this meal",
-        description: reason,
+        title: language === 'en' ? "Cannot select this meal" : "无法选择此餐点",
+        description: isDayUnavailable(activeDay).reason === "This day has already passed" ? 
+          (language === 'en' ? "This day has already passed" : "此日期已过") : 
+          (language === 'en' ? "Orders for today must be placed before 10am Toronto time" : "今日订单必须在多伦多时间上午10点前下单"),
         variant: "destructive"
       });
       return;
@@ -392,7 +410,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       <CardHeader className="pb-0 px-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-xl sm:text-2xl font-bold">Kapioo's Weekly Menu</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl font-bold">{t('weeklyMenu')}</CardTitle>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             <Button variant="outline" size="icon" onClick={handlePrevDay} className="h-8 w-8 sm:h-9 sm:w-9">
@@ -488,7 +506,9 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                       
                       {isDayUnavailable(activeDay).unavailable && (
                         <div className="mt-2 text-sm text-muted-foreground">
-                          <strong>Note:</strong> {isDayUnavailable(activeDay).reason}
+                          <strong>{language === 'en' ? 'Note:' : '注意：'}</strong> {isDayUnavailable(activeDay).reason === "This day has already passed" ? 
+                            (language === 'en' ? "This day has already passed" : "此日期已过") : 
+                            (language === 'en' ? "Orders for today must be placed before 10am Toronto time" : "今日订单必须在多伦多时间上午10点前下单")}
                         </div>
                       )}
                     </motion.div>
@@ -506,21 +526,21 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                       {selectedMeals[activeDay]?.selected ? (
                         <>
                           <Check className="mr-1 md:mr-2 h-4 w-4" />
-                          Selected
+                          {language === 'en' ? 'Selected' : '已选择'}
                         </>
                       ) : isDayUnavailable(activeDay).unavailable ? (
                         <>
-                          Can't order
+                          {language === 'en' ? "Can't order" : '无法订购'}
                         </>
                       ) : (
                         <>
                           <Plus className="mr-1 md:mr-2 h-4 w-4" />
-                          Select This Meal
+                          {language === 'en' ? 'Select This Meal' : '选择此餐点'}
                         </>
                       )}
                     </Button>
                     <Button variant="outline" onClick={handleViewAll} size="sm" md-size="default" className="px-2 md:px-4">
-                      View All Meals
+                      {language === 'en' ? 'View All Meals' : '查看所有餐点'}
                     </Button>
                   </div>
                 </motion.div>
@@ -529,7 +549,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
               <div className="col-span-2 flex justify-center items-center h-[400px]">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p>Loading meal information...</p>
+                  <p>{language === 'en' ? 'Loading meal information...' : '正在加载餐点信息...'}</p>
                 </div>
               </div>
             )}
@@ -565,7 +585,9 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
             <div className="text-sm text-muted-foreground mb-2 sm:mb-0">
               {(() => {
                 const mealCount = Object.keys(selectedMeals).filter((day) => selectedMeals[day].selected).length;
-                return `${mealCount} meal${mealCount !== 1 ? 's' : ''} selected`;
+                return language === 'en' 
+                  ? `${mealCount} meal${mealCount !== 1 ? 's' : ''} selected`
+                  : `已选择 ${mealCount} 个餐点`;
               })()}
             </div>
             <Button 
@@ -573,7 +595,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
               disabled={!Object.values(selectedMeals).some(m => m.selected)}
               className="w-full sm:w-auto sm:ml-auto"
             >
-              Checkout
+              {language === 'en' ? 'Checkout' : '结账'}
             </Button>
           </div>
         </div>

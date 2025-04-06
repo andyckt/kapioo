@@ -16,10 +16,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/lib/language-context"
 
 export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const router = useRouter()
   const { toast } = useToast()
+  const { t } = useLanguage()
   const [userData, setUserData] = useState<{ name?: string; email?: string; userID?: string } | null>(null)
   
   useEffect(() => {
@@ -59,8 +61,8 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   
   const menuItems = [
     // { label: "Profile", icon: <User className="mr-2 h-4 w-4" />, tab: "profile" },
-    { label: "Credits", icon: <CreditCard className="mr-2 h-4 w-4" />, tab: "credits" },
-    { label: "Settings", icon: <Settings className="mr-2 h-4 w-4" />, tab: "settings" },
+    { label: t('credits'), icon: <CreditCard className="mr-2 h-4 w-4" />, tab: "credits" },
+    { label: t('settings'), icon: <Settings className="mr-2 h-4 w-4" />, tab: "settings" },
   ]
 
   return (
@@ -95,7 +97,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>{t('logOut')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
