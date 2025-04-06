@@ -58,7 +58,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   }
   
   const menuItems = [
-    { label: "Profile", icon: <User className="mr-2 h-4 w-4" />, tab: "settings" },
+    // { label: "Profile", icon: <User className="mr-2 h-4 w-4" />, tab: "profile" },
     { label: "Credits", icon: <CreditCard className="mr-2 h-4 w-4" />, tab: "credits" },
     { label: "Settings", icon: <Settings className="mr-2 h-4 w-4" />, tab: "settings" },
   ]

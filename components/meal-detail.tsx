@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 
 // Capybara Icon Component
 const CapybaraIcon = ({ 
@@ -216,6 +217,9 @@ export function MealDetail({
       
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
+          <VisuallyHidden>
+            <DialogTitle>Day Details</DialogTitle>
+          </VisuallyHidden>
           <DialogDescription className="flex items-center gap-1 text-foreground font-normal">
             <span className="text-base font-medium capitalize">{day}</span>
             {dayDate && <span className="text-base">({dayDate})</span>}

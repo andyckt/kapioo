@@ -166,6 +166,7 @@ export default function Home() {
             © 2025 Kapioo. All rights reserved.
           </p>
           <div className="flex gap-3 sm:gap-4">
+            {/* 
             <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
               Terms
             </Link>
@@ -175,6 +176,7 @@ export default function Home() {
             <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
               Contact
             </Link>
+            */}
           </div>
         </div>
       </footer>
