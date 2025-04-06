@@ -172,12 +172,6 @@ export function MealDetail({
               <span className="font-medium">1</span>
               <Gem className="h-3.5 w-3.5 ml-1 text-primary" />
             </div>
-            
-            {isToday && (
-              <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary mt-1">
-                Today
-              </div>
-            )}
           </div>
         </div>
         
@@ -223,7 +217,6 @@ export function MealDetail({
           <DialogDescription className="flex items-center gap-1 text-foreground font-normal">
             <span className="text-base font-medium capitalize">{day}</span>
             {dayDate && <span className="text-base">({dayDate})</span>}
-            {isToday && <span className="text-xs font-medium bg-primary/10 text-primary rounded-full px-2 py-0.5 ml-2">Today</span>}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

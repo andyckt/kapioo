@@ -2054,7 +2054,7 @@ function WeeklyMealSelector({
                           meal={meal} 
                           day={day} 
                           dayDate={meal.date}
-                          isToday={day === today}
+                          isToday={false}
                           onSelect={toggleMeal} 
                           isSelected={selectedMeals[day as keyof typeof selectedMeals].selected}
                           isUnavailable={isDayUnavailable(day).unavailable}
