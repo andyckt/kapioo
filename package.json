@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "kapioo-meal-subscription",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,8 @@
     "lint": "next lint",
     "seed": "tsx scripts/seed-database.ts",
     "seed:atlas": "node scripts/seed-atlas.js",
-    "update-transactions": "node scripts/update-transactions.js"
+    "update-transactions": "node scripts/update-transactions.js",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",

@@ -1,0 +1,15 @@
+{
+  "CORSRules": [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+      "AllowedOrigins": [
+        "http://localhost:3000", 
+        "https://kapioo.com", 
+        "https://www.kapioo.com", 
+        "https://*.vercel.app"
+      ],
+      "ExposeHeaders": ["ETag"]
+    }
+  ]
+} 
