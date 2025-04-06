@@ -401,7 +401,7 @@ export const sendOrderStatusUpdateNotification = async (
   }
 };
 
-// Send notification when credits are added to a user's account
+// Send notification when credits are added
 export const sendCreditsAddedNotification = async (
   user: NotificationUser,
   amount: number,
@@ -421,14 +421,9 @@ export const sendCreditsAddedNotification = async (
         </p>
         
         <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-            <div>
-              <h3 style="color: #C2884E; margin: 0;">交易确认</h3>
-              <p style="color: #666; margin: 0;">餐卷已添加到您的账户</p>
-            </div>
-            <div style="background-color: #C2884E; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
-              ✓
-            </div>
+          <div style="margin-bottom: 15px;">
+            <h3 style="color: #C2884E; margin: 0 0 5px 0;">交易确认</h3>
+            <p style="color: #666; margin: 0;">餐卷已添加到您的账户</p>
           </div>
           
           <table style="width: 100%; border-collapse: collapse;">

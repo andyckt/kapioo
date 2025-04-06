@@ -237,12 +237,6 @@ export default function AdminDashboardPage() {
         
         // Send notification to user about added credits
         try {
-          const updatedUser = { 
-            ...selectedUser, 
-            credits: (selectedUser.credits || 0) + creditAmount 
-          };
-          
-          // Use the notifications API endpoint instead of direct call
           await fetch('/api/notifications', {
             method: 'POST',
             headers: {
@@ -1007,6 +1001,25 @@ export default function AdminDashboardPage() {
                                 
                                 // Update selectedUser if needed
                                 setSelectedUser({...selectedUser, credits: result.data.credits});
+                                
+                                // Send notification to user about added credits
+                                try {
+                                  await fetch('/api/notifications', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                      notificationType: NotificationType.CREDITS_ADDED,
+                                      userId: selectedUser._id,
+                                      transactionId: result.data.transaction.transactionId,
+                                      amount: creditAmount
+                                    }),
+                                  });
+                                } catch (notificationError) {
+                                  console.error('Error sending credit notification:', notificationError);
+                                  // Continue even if notification fails
+                                }
                                 
                                 // Refresh transactions list
                                 fetchTransactions();
