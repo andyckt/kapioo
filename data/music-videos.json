@@ -1,0 +1,20 @@
+[
+  {
+    "id": "default",
+    "videoId": "ygTZZpVkmKg",
+    "title": "用餐背景音乐",
+    "description": "舒缓的旋律将提升您的用餐体验"
+  },
+  {
+    "id": "classical",
+    "videoId": "jgpJVI3tDbY",
+    "title": "古典音乐集锦",
+    "description": "精选古典音乐，营造典雅用餐氛围"
+  },
+  {
+    "id": "jazz",
+    "videoId": "neV3EPgvZ3g",
+    "title": "爵士咖啡馆",
+    "description": "轻松爵士乐，让用餐更加惬意"
+  }
+] 
