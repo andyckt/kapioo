@@ -574,6 +574,11 @@ export default function AdminDashboardPage() {
               variant="ghost"
               className="text-red-500 hover:text-red-600 hover:bg-red-100"
               onClick={() => {
+
+                // Remove all authentication-related items from localStorage
+                localStorage.removeItem('user');
+                localStorage.removeItem('isAuthenticated');
+                
                 toast({
                   title: "Logged out",
                   description: "You have been logged out successfully",
