@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams?.get('token')
@@ -319,5 +319,18 @@ export default function ResetPasswordPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center py-8">
+        <Loader2 className="h-10 w-10 text-[#C2884E] animate-spin mb-4" />
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   )
 } 
