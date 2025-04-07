@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight, Pause } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -22,6 +22,7 @@ export default function BGMPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState('');
+  const [isPlaying, setIsPlaying] = useState(true);
   const playerRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -63,8 +64,12 @@ export default function BGMPage() {
         try {
           playerRef.current?.contentWindow?.postMessage('{"event":"command","func":"unMute","args":""}', '*');
           setIsMuted(false);
+          
+          // Ensure the video is playing initially
+          playerRef.current?.contentWindow?.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+          setIsPlaying(true);
         } catch (error) {
-          console.error('Could not unmute automatically:', error);
+          console.error('Could not initialize player state:', error);
         }
       }, 2000);
       
@@ -190,13 +195,20 @@ export default function BGMPage() {
     if (musicVideos.length > 1) {
       setCurrentVideoIndex((prevIndex) => (prevIndex + 1) % musicVideos.length);
       
+      // Set playing state to true when changing videos
+      setIsPlaying(true);
+      
       // Need to reset the mute state after the iframe reloads
       setTimeout(() => {
-        if (playerRef.current && playerRef.current.contentWindow && !isMuted) {
+        if (playerRef.current && playerRef.current.contentWindow) {
           try {
-            playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+            if (!isMuted) {
+              playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+            }
+            // Ensure video is playing after changing
+            playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
           } catch (error) {
-            console.error('Error restoring unmute state after track change:', error);
+            console.error('Error restoring player state after track change:', error);
           }
         }
       }, 500);
@@ -207,13 +219,20 @@ export default function BGMPage() {
     if (musicVideos.length > 1) {
       setCurrentVideoIndex((prevIndex) => (prevIndex - 1 + musicVideos.length) % musicVideos.length);
       
+      // Set playing state to true when changing videos
+      setIsPlaying(true);
+      
       // Need to reset the mute state after the iframe reloads
       setTimeout(() => {
-        if (playerRef.current && playerRef.current.contentWindow && !isMuted) {
+        if (playerRef.current && playerRef.current.contentWindow) {
           try {
-            playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+            if (!isMuted) {
+              playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+            }
+            // Ensure video is playing after changing
+            playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
           } catch (error) {
-            console.error('Error restoring unmute state after track change:', error);
+            console.error('Error restoring player state after track change:', error);
           }
         }
       }, 500);
@@ -225,10 +244,16 @@ export default function BGMPage() {
       try {
         // Send message to the YouTube iframe to reset the video
         playerRef.current.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[0, true]}', '*');
+        
+        // Ensure the video is playing and unmuted after reset
+        playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
         if (isMuted) {
           playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
           setIsMuted(false);
         }
+        
+        // Update playing state
+        setIsPlaying(true);
       } catch (error) {
         console.error('Error resetting player:', error);
       }
@@ -236,13 +261,20 @@ export default function BGMPage() {
   };
 
   // Stop/pause the playing video
-  const stopVideo = () => {
+  const togglePlayPause = () => {
     if (playerRef.current && playerRef.current.contentWindow) {
       try {
-        // Send message to the YouTube iframe to pause the video
-        playerRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        if (isPlaying) {
+          // Pause the video
+          playerRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+          setIsPlaying(false);
+        } else {
+          // Play the video
+          playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+          setIsPlaying(true);
+        }
       } catch (error) {
-        console.error('Error stopping video:', error);
+        console.error('Error toggling play/pause:', error);
       }
     }
   };
@@ -265,14 +297,19 @@ export default function BGMPage() {
           if (!isMuted) {
             playerRef.current?.contentWindow?.postMessage('{"event":"command","func":"unMute","args":""}', '*');
           }
+          
+          // Ensure the video keeps playing if it should be playing
+          if (isPlaying) {
+            playerRef.current?.contentWindow?.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+          }
         } catch (error) {
-          console.error('Could not set mute state after video change:', error);
+          console.error('Could not set player state after video change:', error);
         }
       }, 1000);
       
       return () => clearTimeout(timer);
     }
-  }, [currentVideoIndex, loading, isMuted]);
+  }, [currentVideoIndex, loading, isMuted, isPlaying]);
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#fff6ef]/70 to-white/90 dark:from-[#332217]/30 dark:to-gray-950/90">
@@ -398,6 +435,7 @@ export default function BGMPage() {
                                 playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
                                 playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
                                 setIsMuted(false);
+                                setIsPlaying(true);
                               } catch (error) {
                                 console.error('Could not interact with video:', error);
                               }
@@ -458,13 +496,22 @@ export default function BGMPage() {
                           )}
                         </Button>
                         <Button 
-                          onClick={stopVideo} 
+                          onClick={togglePlayPause} 
                           variant="outline" 
                           size="sm"
                           className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
                         >
-                          <Pause className="h-4 w-4 mr-1" />
-                          停止
+                          {isPlaying ? (
+                            <>
+                              <Pause className="h-4 w-4 mr-1" />
+                              停止
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 mr-1" />
+                              播放
+                            </>
+                          )}
                         </Button>
                         <Button 
                           onClick={resetPlayer} 
