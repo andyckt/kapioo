@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -207,6 +207,18 @@ export default function BGMPage() {
     }
   };
 
+  // Stop/pause the playing video
+  const stopVideo = () => {
+    if (playerRef.current && playerRef.current.contentWindow) {
+      try {
+        // Send message to the YouTube iframe to pause the video
+        playerRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      } catch (error) {
+        console.error('Error stopping video:', error);
+      }
+    }
+  };
+
   const currentVideo = musicVideos[currentVideoIndex] || {
     id: 'default',
     videoId: 'ygTZZpVkmKg', 
@@ -343,16 +355,32 @@ export default function BGMPage() {
                       <div className="relative rounded-lg overflow-hidden bg-black aspect-video mb-4">
                         <iframe
                           ref={playerRef}
-                          src={`https://www.youtube.com/embed/${currentVideo.videoId}?autoplay=1&mute=1&loop=1&playlist=${currentVideo.videoId}&enablejsapi=1&modestbranding=1&rel=0`}
+                          src={`https://www.youtube.com/embed/${currentVideo.videoId}?autoplay=1&mute=1&loop=1&playlist=${currentVideo.videoId}&enablejsapi=1&modestbranding=1&rel=0&playsinline=1`}
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           className="absolute top-0 left-0 w-full h-full border-0"
                           title="背景音乐"
                         ></iframe>
                         
+                        <div 
+                          className="absolute inset-0 cursor-pointer" 
+                          onClick={() => {
+                            if (playerRef.current && playerRef.current.contentWindow) {
+                              try {
+                                // Unmute and try to play
+                                playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+                                playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                                setIsMuted(false);
+                              } catch (error) {
+                                console.error('Could not interact with video:', error);
+                              }
+                            }
+                          }}
+                        />
+                        
                         {isMuted && (
                           <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 animate-pulse">
                             <VolumeX className="h-4 w-4" />
-                            <span>点击下方取消静音</span>
+                            <span>点击取消静音</span>
                           </div>
                         )}
                       </div>
@@ -400,6 +428,15 @@ export default function BGMPage() {
                               静音
                             </>
                           )}
+                        </Button>
+                        <Button 
+                          onClick={stopVideo} 
+                          variant="outline" 
+                          size="sm"
+                          className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                        >
+                          <Pause className="h-4 w-4 mr-1" />
+                          停止
                         </Button>
                         <Button 
                           onClick={resetPlayer} 
