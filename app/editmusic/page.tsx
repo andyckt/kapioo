@@ -20,6 +20,14 @@ interface MusicVideo {
   description: string;
 }
 
+// Default video definition
+const defaultVideo: MusicVideo = {
+  id: 'default',
+  videoId: 'ygTZZpVkmKg',
+  title: '用餐背景音乐',
+  description: '舒缓的旋律将提升您的用餐体验'
+};
+
 export default function EditMusicPage() {
   // State for music videos
   const [musicVideos, setMusicVideos] = useState<MusicVideo[]>([]);
@@ -70,36 +78,6 @@ export default function EditMusicPage() {
     }
   };
 
-  // Load music videos from localStorage on component mount
-  useEffect(() => {
-    const loadVideos = async () => {
-      setIsLoading(true);
-      
-      // Try to load from localStorage first for immediate display
-      const storedVideos = localStorage.getItem('musicVideos');
-      if (storedVideos) {
-        try {
-          setMusicVideos(JSON.parse(storedVideos));
-        } catch (error) {
-          console.error('Error parsing stored music videos:', error);
-          // Initialize with default video if there's an error
-          initializeDefaultVideo();
-        }
-      } else {
-        // Initialize with default video if none exist
-        initializeDefaultVideo();
-      }
-      
-      // In a real application, you would also check for updates from the server
-      // This simulates that behavior
-      await simulateServerSync();
-      
-      setIsLoading(false);
-    };
-    
-    loadVideos();
-  }, []);
-  
   // Simulate server synchronization
   const simulateServerSync = async () => {
     setIsSyncing(true);
@@ -111,18 +89,107 @@ export default function EditMusicPage() {
       if (response.ok) {
         const serverVideos = await response.json();
         if (serverVideos && serverVideos.length > 0) {
+          console.log('Found server videos:', serverVideos.length);
           setMusicVideos(serverVideos);
           localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
+          return true;
+        } else {
+          console.log('No server videos found');
+          return false;
         }
       } else {
         console.error('Error fetching from server:', await response.text());
+        return false;
       }
     } catch (error) {
       console.error('Error syncing with server:', error);
+      return false;
     } finally {
       setIsSyncing(false);
     }
   };
+
+  // Load music videos
+  useEffect(() => {
+    const loadVideos = async () => {
+      setIsLoading(true);
+      let hasLoadedVideos = false;
+      
+      try {
+        // Always prioritize server data first
+        const serverSyncSuccess = await simulateServerSync();
+        hasLoadedVideos = serverSyncSuccess;
+        
+        // Only fall back to localStorage if server sync failed
+        if (!hasLoadedVideos) {
+          console.log('Server sync failed, trying localStorage');
+          
+          // Try to load from localStorage as fallback
+          const storedVideos = localStorage.getItem('musicVideos');
+          if (storedVideos) {
+            try {
+              const parsedVideos = JSON.parse(storedVideos);
+              if (parsedVideos && Array.isArray(parsedVideos) && parsedVideos.length > 0) {
+                console.log('Found localStorage videos:', parsedVideos.length);
+                setMusicVideos(parsedVideos);
+                
+                // Try to push localStorage videos to server
+                try {
+                  const response = await fetch('/api/music-videos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parsedVideos),
+                  });
+                  
+                  if (response.ok) {
+                    console.log('Successfully synced localStorage videos to server');
+                  } else {
+                    console.error('Failed to sync localStorage videos to server:', await response.text());
+                  }
+                } catch (error) {
+                  console.error('Error pushing localStorage videos to server:', error);
+                }
+                
+                hasLoadedVideos = true;
+              }
+            } catch (error) {
+              console.error('Error parsing stored music videos:', error);
+            }
+          }
+        }
+        
+        // If we still don't have videos, initialize with default
+        if (!hasLoadedVideos) {
+          console.log('No videos found, initializing default');
+          initializeDefaultVideo();
+          
+          // Push default to server
+          try {
+            const response = await fetch('/api/music-videos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify([defaultVideo]),
+            });
+            
+            if (!response.ok) {
+              console.error('Failed to push default video to server:', await response.text());
+            }
+          } catch (error) {
+            console.error('Error pushing default video to server:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading videos:', error);
+        showError('加载视频失败，请刷新页面重试');
+        // Always ensure we have at least the default video
+        initializeDefaultVideo();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadVideos();
+  }, []);
 
   // Force sync with server
   const forceSyncWithServer = async () => {
@@ -130,16 +197,61 @@ export default function EditMusicPage() {
     
     try {
       // Fetch from API
-      const response = await fetch('/api/music-videos');
+      const response = await fetch('/api/music-videos', {
+        // Add cache-busting query parameter
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+        cache: 'no-store',
+      });
       
       if (response.ok) {
         const serverVideos = await response.json();
-        if (serverVideos && serverVideos.length > 0) {
+        if (serverVideos && Array.isArray(serverVideos) && serverVideos.length > 0) {
           setMusicVideos(serverVideos);
           localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
           showSuccess('已成功同步音乐数据');
         } else {
-          showError('服务器上没有音乐数据');
+          // If server has no videos but we have localStorage videos, push those to server
+          const storedVideos = localStorage.getItem('musicVideos');
+          if (storedVideos) {
+            try {
+              const parsedVideos = JSON.parse(storedVideos);
+              if (parsedVideos && Array.isArray(parsedVideos) && parsedVideos.length > 0) {
+                // Save to server to initialize it
+                const pushResponse = await fetch('/api/music-videos', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: storedVideos,
+                });
+                
+                if (pushResponse.ok) {
+                  showSuccess('已将本地音乐数据同步到服务器');
+                } else {
+                  showError('同步到服务器失败: ' + await pushResponse.text());
+                }
+              } else {
+                initializeDefaultVideo();
+                showError('本地数据无效，已恢复默认音乐');
+              }
+            } catch (error) {
+              console.error('Error parsing stored videos:', error);
+              initializeDefaultVideo();
+              showError('解析本地数据失败，已恢复默认音乐');
+            }
+          } else {
+            showError('服务器上没有音乐数据，已恢复默认设置');
+            initializeDefaultVideo();
+            
+            // Push default video to server
+            try {
+              await fetch('/api/music-videos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify([defaultVideo]),
+              });
+            } catch (error) {
+              console.error('Error pushing default video to server:', error);
+            }
+          }
         }
       } else {
         const errorText = await response.text();

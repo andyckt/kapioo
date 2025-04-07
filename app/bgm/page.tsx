@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight, Pause, Play, Edit2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,6 +14,14 @@ interface MusicVideo {
   title: string;
   description: string;
 }
+
+// Default video definition
+const defaultVideo: MusicVideo = {
+  id: 'default',
+  videoId: 'ygTZZpVkmKg',
+  title: '用餐背景音乐',
+  description: '舒缓的旋律将提升您的用餐体验'
+};
 
 export default function BGMPage() {
   const [musicVideos, setMusicVideos] = useState<MusicVideo[]>([]);
@@ -29,26 +37,80 @@ export default function BGMPage() {
     const loadVideos = async () => {
       setLoading(true);
       
-      // Load from localStorage first for immediate display
-      const storedVideos = localStorage.getItem('musicVideos');
+      let hasValidVideos = false;
+      
+      // Prioritize getting videos from the server/MongoDB
       try {
-        if (storedVideos) {
-          const parsedVideos = JSON.parse(storedVideos);
-          if (parsedVideos && parsedVideos.length > 0) {
-            setMusicVideos(parsedVideos);
+        console.log('Fetching videos from server...');
+        const response = await fetch('/api/music-videos', {
+          // Add cache-busting to ensure we get fresh data
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+          cache: 'no-store',
+        });
+        
+        if (response.ok) {
+          const serverVideos = await response.json();
+          if (serverVideos && Array.isArray(serverVideos) && serverVideos.length > 0) {
+            console.log('Loaded videos from server:', serverVideos.length);
+            setMusicVideos(serverVideos);
+            localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
+            hasValidVideos = true;
           } else {
-            initializeDefaultVideo();
+            console.log('No videos found on server');
           }
         } else {
-          initializeDefaultVideo();
+          console.error('Error fetching from server:', await response.text());
         }
       } catch (error) {
-        console.error('Error loading videos:', error);
-        initializeDefaultVideo();
+        console.error('Error fetching from server:', error);
       }
       
-      // In a real app, you would check for server updates here
-      await simulateServerSync();
+      // Fall back to localStorage only if server fetch failed
+      if (!hasValidVideos) {
+        console.log('Trying to load from localStorage...');
+        const storedVideos = localStorage.getItem('musicVideos');
+        try {
+          if (storedVideos) {
+            const parsedVideos = JSON.parse(storedVideos);
+            if (parsedVideos && Array.isArray(parsedVideos) && parsedVideos.length > 0) {
+              console.log('Loaded videos from localStorage:', parsedVideos.length);
+              setMusicVideos(parsedVideos);
+              hasValidVideos = true;
+              
+              // Try to sync localStorage videos to server
+              try {
+                await fetch('/api/music-videos', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: storedVideos,
+                });
+                console.log('Synced localStorage videos to server');
+              } catch (syncError) {
+                console.error('Failed to sync localStorage videos to server:', syncError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error loading videos from localStorage:', error);
+        }
+      }
+      
+      // If we still don't have valid videos after trying both sources, initialize with default
+      if (!hasValidVideos) {
+        console.log('Initializing with default video');
+        initializeDefaultVideo();
+        
+        // Try to push default video to server
+        try {
+          await fetch('/api/music-videos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([defaultVideo]),
+          });
+        } catch (error) {
+          console.error('Failed to push default video to server:', error);
+        }
+      }
       
       setLoading(false);
     };
@@ -77,42 +139,21 @@ export default function BGMPage() {
     }
   }, [loading]);
   
-  // Simulate server synchronization (would be a real API call in production)
-  const simulateServerSync = async () => {
-    setSyncing(true);
-    
-    try {
-      // Fetch from API
-      const response = await fetch('/api/music-videos');
-      
-      if (response.ok) {
-        const serverVideos = await response.json();
-        if (serverVideos && serverVideos.length > 0) {
-          setMusicVideos(serverVideos);
-          localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
-        }
-      } else {
-        console.error('Error fetching from server:', await response.text());
-      }
-    } catch (error) {
-      console.error('Error syncing with server:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
-  
-  // Force sync with "server" (simulated)
+  // Force sync with server
   const forceSyncWithServer = async () => {
     setSyncing(true);
     setMessage('正在同步音乐数据...');
     
     try {
-      // Fetch from API
-      const response = await fetch('/api/music-videos');
+      // Fetch from API with cache busting
+      const response = await fetch('/api/music-videos', {
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+        cache: 'no-store',
+      });
       
       if (response.ok) {
         const serverVideos = await response.json();
-        if (serverVideos && serverVideos.length > 0) {
+        if (serverVideos && Array.isArray(serverVideos) && serverVideos.length > 0) {
           setMusicVideos(serverVideos);
           localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
           setMessage('音乐数据已同步');
@@ -123,7 +164,7 @@ export default function BGMPage() {
           if (storedVideos) {
             try {
               const parsedVideos = JSON.parse(storedVideos);
-              if (parsedVideos && parsedVideos.length > 0) {
+              if (parsedVideos && Array.isArray(parsedVideos) && parsedVideos.length > 0) {
                 // Save back to server to initialize it
                 await fetch('/api/music-videos', {
                   method: 'POST',
@@ -146,6 +187,18 @@ export default function BGMPage() {
           } else {
             setMessage('服务器上没有音乐数据，已恢复默认设置');
             initializeDefaultVideo();
+            
+            // Push default to server
+            try {
+              await fetch('/api/music-videos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify([defaultVideo]),
+              });
+            } catch (error) {
+              console.error('Error pushing default video to server:', error);
+            }
+            
             setTimeout(() => setMessage(''), 2000);
           }
         }
@@ -165,12 +218,6 @@ export default function BGMPage() {
   };
 
   const initializeDefaultVideo = () => {
-    const defaultVideo: MusicVideo = {
-      id: 'default',
-      videoId: 'ygTZZpVkmKg',
-      title: '用餐背景音乐',
-      description: '舒缓的旋律将提升您的用餐体验'
-    };
     setMusicVideos([defaultVideo]);
     localStorage.setItem('musicVideos', JSON.stringify([defaultVideo]));
   };
@@ -279,12 +326,7 @@ export default function BGMPage() {
     }
   };
 
-  const currentVideo = musicVideos[currentVideoIndex] || {
-    id: 'default',
-    videoId: 'ygTZZpVkmKg', 
-    title: '用餐背景音乐',
-    description: '舒缓的旋律将提升您的用餐体验'
-  };
+  const currentVideo = musicVideos[currentVideoIndex] || defaultVideo;
 
   // Keep track of changes to the current video to handle mute state
   useEffect(() => {
@@ -421,172 +463,148 @@ export default function BGMPage() {
                         <iframe
                           ref={playerRef}
                           src={`https://www.youtube.com/embed/${currentVideo.videoId}?autoplay=1&mute=1&loop=1&playlist=${currentVideo.videoId}&enablejsapi=1&modestbranding=1&rel=0&playsinline=1`}
+                          frameBorder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          className="absolute top-0 left-0 w-full h-full border-0"
-                          title="背景音乐"
+                          allowFullScreen
+                          title={currentVideo.title}
+                          className="absolute inset-0 w-full h-full"
                         ></iframe>
-                        
-                        <div 
-                          className="absolute inset-0 cursor-pointer" 
-                          onClick={() => {
-                            if (playerRef.current && playerRef.current.contentWindow) {
-                              try {
-                                // Unmute and try to play
-                                playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
-                                playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-                                setIsMuted(false);
-                                setIsPlaying(true);
-                              } catch (error) {
-                                console.error('Could not interact with video:', error);
-                              }
-                            }
-                          }}
-                        />
-                        
-                        {isMuted && (
-                          <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 animate-pulse">
-                            <VolumeX className="h-4 w-4" />
-                            <span>点击取消静音</span>
+                      </div>
+                      
+                      {/* Player Controls */}
+                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg p-4 mb-4">
+                        <div className="flex flex-wrap gap-3 justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={resetPlayer}
+                              className="w-9 h-9 p-0 border-[#C2884E]/30"
+                            >
+                              <RotateCcw className="h-4 w-4 text-[#C2884E]" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={prevVideo}
+                              disabled={musicVideos.length <= 1}
+                              className="w-9 h-9 p-0 border-[#C2884E]/30"
+                            >
+                              <ChevronLeft className="h-5 w-5 text-[#C2884E]" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={togglePlayPause}
+                              className="w-9 h-9 p-0 border-[#C2884E]/30"
+                            >
+                              {isPlaying ? (
+                                <Pause className="h-5 w-5 text-[#C2884E]" />
+                              ) : (
+                                <Play className="h-5 w-5 text-[#C2884E]" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={nextVideo}
+                              disabled={musicVideos.length <= 1}
+                              className="w-9 h-9 p-0 border-[#C2884E]/30"
+                            >
+                              <ChevronRight className="h-5 w-5 text-[#C2884E]" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={toggleMute}
+                              className="w-9 h-9 p-0 border-[#C2884E]/30"
+                            >
+                              {isMuted ? (
+                                <VolumeX className="h-4 w-4 text-[#C2884E]" />
+                              ) : (
+                                <Volume2 className="h-4 w-4 text-[#C2884E]" />
+                              )}
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 justify-center mb-4">
-                        {musicVideos.length > 1 && (
-                          <>
-                            <Button 
-                              onClick={prevVideo} 
-                              variant="outline" 
+                          
+                          <div className="flex-grow min-w-[200px]">
+                            <h3 className="font-medium text-[#C2884E] truncate">{currentVideo.title}</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{currentVideo.description}</p>
+                          </div>
+                          
+                          <Link href="/editmusic" className="ml-auto">
+                            <Button
+                              variant="outline"
                               size="sm"
                               className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
                             >
-                              <ChevronLeft className="h-4 w-4 mr-1" />
-                              上一个
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              管理音乐
                             </Button>
-                            <Button 
-                              onClick={nextVideo} 
-                              variant="outline" 
-                              size="sm"
-                              className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
-                            >
-                              下一个
-                              <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                          </>
-                        )}
-                        <Button 
-                          onClick={toggleMute} 
-                          variant={isMuted ? "default" : "outline"}
-                          size="sm"
-                          className={isMuted 
-                            ? "bg-[#C2884E] hover:bg-[#D1A46C] text-white" 
-                            : "border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
-                          }
-                        >
-                          {isMuted ? (
-                            <>
-                              <VolumeX className="h-4 w-4 mr-1" />
-                              取消静音
-                            </>
-                          ) : (
-                            <>
-                              <Volume2 className="h-4 w-4 mr-1" />
-                              静音
-                            </>
-                          )}
-                        </Button>
-                        <Button 
-                          onClick={togglePlayPause} 
-                          variant="outline" 
-                          size="sm"
-                          className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
-                        >
-                          {isPlaying ? (
-                            <>
-                              <Pause className="h-4 w-4 mr-1" />
-                              停止
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-4 w-4 mr-1" />
-                              播放
-                            </>
-                          )}
-                        </Button>
-                        <Button 
-                          onClick={resetPlayer} 
-                          variant="outline" 
-                          size="sm"
-                          className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-1" />
-                          重新开始
-                        </Button>
+                          </Link>
+                        </div>
                       </div>
                       
-                      <div className="p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-[#C2884E]/10">
-                        <h3 className="text-lg font-medium text-[#C2884E] mb-2">
-                          {currentVideo.title}
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {currentVideo.description}
-                        </p>
+                      {/* Info box for desktop */}
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div className="flex gap-3">
+                          <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-1">关于背景音乐</h4>
+                            <p className="text-sm text-blue-600 dark:text-blue-400">
+                              背景音乐将随餐厅环境自动播放。如果您想更改音乐，请点击上方的"管理音乐"按钮。
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </>
                   )}
                 </div>
                 
-                {/* Video List - for desktop only */}
-                <div className="w-full md:w-1/3 hidden md:block">
-                  <div className="rounded-lg border border-[#C2884E]/20 bg-white/60 dark:bg-gray-800/60 overflow-hidden h-full">
-                    <div className="p-3 bg-[#C2884E]/10 border-b border-[#C2884E]/20">
-                      <h3 className="font-medium text-[#C2884E]">可用音乐</h3>
-                    </div>
-                    <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)', minHeight: '200px' }}>
-                      {loading ? (
-                        <div className="flex justify-center items-center py-20">
-                          <RefreshCw className="h-6 w-6 text-[#C2884E] animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="p-2">
-                          {musicVideos.map((video, index) => (
-                            <button
-                              key={video.id}
-                              onClick={() => setCurrentVideoIndex(index)}
-                              className={`w-full text-left p-3 mb-2 rounded-lg transition-all ${
-                                currentVideoIndex === index
-                                  ? 'bg-[#C2884E] text-white'
-                                  : 'bg-white dark:bg-gray-700 hover:bg-[#C2884E]/10'
-                              }`}
-                            >
-                              <div className="flex items-center">
-                                <div className="h-8 w-8 rounded-md bg-black/5 dark:bg-black/40 mr-3 flex-shrink-0 overflow-hidden">
-                                  <img 
-                                    src={`https://img.youtube.com/vi/${video.videoId}/default.jpg`}
-                                    alt={video.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div className="overflow-hidden">
-                                  <h4 className={`font-medium text-sm truncate ${
-                                    currentVideoIndex === index ? 'text-white' : 'text-[#C2884E]'
-                                  }`}>
-                                    {video.title}
-                                  </h4>
-                                  <p className={`text-xs truncate ${
-                                    currentVideoIndex === index ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
-                                  }`}>
-                                    {video.description}
-                                  </p>
-                                </div>
+                {/* Music List (Desktop) */}
+                {!loading && musicVideos.length > 1 && (
+                  <div className="w-full md:w-1/3 hidden md:block">
+                    <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg p-4 h-full">
+                      <h3 className="font-medium text-[#C2884E] mb-3">音乐列表</h3>
+                      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                        {musicVideos.map((video, index) => (
+                          <button
+                            key={video.id}
+                            onClick={() => setCurrentVideoIndex(index)}
+                            className={`w-full text-left p-2 rounded-md transition-colors ${
+                              currentVideoIndex === index
+                                ? 'bg-[#C2884E] text-white'
+                                : 'bg-[#C2884E]/10 text-[#C2884E] hover:bg-[#C2884E]/20'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-black/10 rounded-md flex-shrink-0 overflow-hidden">
+                                <img 
+                                  src={`https://img.youtube.com/vi/${video.videoId}/default.jpg`}
+                                  alt={video.title}
+                                  className="w-full h-full object-cover"
+                                />
                               </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                              <div className="flex-grow overflow-hidden">
+                                <h4 className="font-medium truncate">{video.title}</h4>
+                                <p className="text-xs opacity-80 truncate">{video.description}</p>
+                              </div>
+                              {currentVideoIndex === index && (
+                                <div className="ml-auto">
+                                  {isPlaying ? (
+                                    <Pause className="h-4 w-4" />
+                                  ) : (
+                                    <Play className="h-4 w-4" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </CardContent>
             
@@ -594,7 +612,11 @@ export default function BGMPage() {
               <div className="flex items-center gap-2 flex-wrap justify-center">
                 <span className="text-[#C2884E]">Kapioo 卡皮喔</span> 
                 <span className="text-[#C2884E]/50">•</span> 
-                <span>背景音乐播放器</span>
+                <span>背景音乐播放系统</span>
+                <span className="text-[#C2884E]/50">•</span>
+                <Link href="/editmusic" className="text-[#C2884E] hover:underline">
+                  管理音乐视频
+                </Link>
               </div>
             </CardFooter>
           </Card>
@@ -602,4 +624,4 @@ export default function BGMPage() {
       </div>
     </div>
   );
-} 
+}
