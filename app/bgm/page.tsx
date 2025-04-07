@@ -595,10 +595,6 @@ export default function BGMPage() {
                 <span className="text-[#C2884E]">Kapioo 卡皮喔</span> 
                 <span className="text-[#C2884E]/50">•</span> 
                 <span>背景音乐播放器</span>
-                <span className="text-[#C2884E]/50">•</span>
-                <Link href="/editmusic" className="text-[#C2884E] hover:underline">
-                  管理音乐列表
-                </Link>
               </div>
             </CardFooter>
           </Card>
