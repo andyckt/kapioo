@@ -328,6 +328,45 @@ export default function BGMPage() {
 
   const currentVideo = musicVideos[currentVideoIndex] || defaultVideo;
 
+  // Handle YouTube player events including video end
+  useEffect(() => {
+    // Only run if not loading and we have videos
+    if (loading || !musicVideos.length) return;
+    
+    // Function to handle YouTube player state changes
+    const handleYouTubeEvent = (event: MessageEvent) => {
+      // Only process messages from YouTube
+      if (typeof event.data !== 'string') {
+        try {
+          const data = JSON.parse(event.data);
+          // YouTube API sends event data in a specific format
+          if (data.event === "onStateChange" && data.info === 0) {
+            // State 0 means the video ended
+            console.log('Video ended, playing next video');
+            if (musicVideos.length > 1) {
+              nextVideo();
+            } else {
+              // If there's only one video, restart it
+              resetPlayer();
+            }
+          }
+        } catch (error) {
+          // Not JSON or not our event, ignore
+        }
+      }
+    };
+    
+    // Add the event listener
+    window.addEventListener('message', handleYouTubeEvent);
+    console.log('Added YouTube event listener');
+    
+    // Clean up event listener on component unmount or when deps change
+    return () => {
+      window.removeEventListener('message', handleYouTubeEvent);
+      console.log('Removed YouTube event listener');
+    };
+  }, [loading, musicVideos, nextVideo, resetPlayer]);
+
   // Keep track of changes to the current video to handle mute state
   useEffect(() => {
     // Only run this effect if we have a player ref and we're not loading
@@ -462,7 +501,7 @@ export default function BGMPage() {
                       <div className="relative rounded-lg overflow-hidden bg-black aspect-video mb-4">
                         <iframe
                           ref={playerRef}
-                          src={`https://www.youtube.com/embed/${currentVideo.videoId}?autoplay=1&mute=1&loop=1&playlist=${currentVideo.videoId}&enablejsapi=1&modestbranding=1&rel=0&playsinline=1`}
+                          src={`https://www.youtube.com/embed/${currentVideo.videoId}?autoplay=1&mute=1&enablejsapi=1&modestbranding=1&rel=0&playsinline=1&origin=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
                           frameBorder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
@@ -530,19 +569,6 @@ export default function BGMPage() {
                           <div className="flex-grow min-w-[200px]">
                             <h3 className="font-medium text-[#C2884E] truncate">{currentVideo.title}</h3>
                             <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{currentVideo.description}</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Info box for desktop */}
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                        <div className="flex gap-3">
-                          <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-1">关于背景音乐</h4>
-                            <p className="text-sm text-blue-600 dark:text-blue-400">
-                              背景音乐将随餐厅环境自动播放。如果您想更改音乐，请点击上方的"管理音乐"按钮。
-                            </p>
                           </div>
                         </div>
                       </div>
