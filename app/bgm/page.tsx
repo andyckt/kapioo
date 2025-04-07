@@ -358,8 +358,8 @@ export default function BGMPage() {
       <header className="w-full py-5 px-4 flex justify-center items-center sticky top-0 z-10 backdrop-blur-sm bg-white/60 dark:bg-gray-950/60 border-b border-[#C2884E]/10">
         <Link href="/" className="inline-flex items-center gap-3 group">
           <Image 
-            src="/未命名設計.png" 
-            alt="Kapioo 标志" 
+            src="/songlogo.png" 
+            alt="Kapioo 音乐" 
             width={42} 
             height={42} 
             className="h-[42px] w-[42px] transition-transform duration-300 group-hover:rotate-6" 
