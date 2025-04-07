@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 
-// Define the data file path
-const dataFilePath = path.join(process.cwd(), 'data', 'music-videos.json');
+// Define a default video if needed
+const defaultVideo = {
+  id: 'default',
+  videoId: 'ygTZZpVkmKg',
+  title: '用餐背景音乐',
+  description: '舒缓的旋律将提升您的用餐体验'
+};
 
 // Interface for music video data
 interface MusicVideo {
@@ -13,62 +16,13 @@ interface MusicVideo {
   description: string;
 }
 
-// Ensure data directory exists
-const ensureDataDirExists = () => {
-  const dir = path.join(process.cwd(), 'data');
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-};
-
-// Initialize with default data if file doesn't exist
-const initializeDataFileIfNeeded = () => {
-  ensureDataDirExists();
-  
-  if (!fs.existsSync(dataFilePath)) {
-    const defaultVideos: MusicVideo[] = [
-      {
-        id: 'default',
-        videoId: 'ygTZZpVkmKg',
-        title: '用餐背景音乐',
-        description: '舒缓的旋律将提升您的用餐体验'
-      }
-    ];
-    
-    fs.writeFileSync(dataFilePath, JSON.stringify(defaultVideos, null, 2));
-  }
-};
-
-// Read music videos from file
-const readMusicVideos = (): MusicVideo[] => {
-  initializeDataFileIfNeeded();
-  
-  try {
-    const data = fs.readFileSync(dataFilePath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading music videos:', error);
-    return [];
-  }
-};
-
-// Write music videos to file
-const writeMusicVideos = (videos: MusicVideo[]): boolean => {
-  ensureDataDirExists();
-  
-  try {
-    fs.writeFileSync(dataFilePath, JSON.stringify(videos, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error writing music videos:', error);
-    return false;
-  }
-};
+// In-memory storage for server-side as a fallback when file system isn't available
+// This will reset on server restart but serves as a temporary solution
+let musicVideosCache: MusicVideo[] = [defaultVideo];
 
 // GET handler - Return all music videos
 export async function GET() {
-  const videos = readMusicVideos();
-  return NextResponse.json(videos);
+  return NextResponse.json(musicVideosCache);
 }
 
 // POST handler - Update music videos
@@ -93,20 +47,14 @@ export async function POST(request: Request) {
       }
     }
     
-    const success = writeMusicVideos(videos);
+    // Update in-memory cache
+    musicVideosCache = videos;
     
-    if (success) {
-      return NextResponse.json({ success: true, message: 'Music videos updated successfully' });
-    } else {
-      return NextResponse.json(
-        { error: 'Failed to save music videos.' },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({ success: true, message: 'Music videos updated successfully' });
   } catch (error) {
     console.error('Error updating music videos:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

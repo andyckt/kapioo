@@ -57,6 +57,7 @@ export default function EditMusicPage() {
       
       if (!response.ok) {
         console.error('Error saving to server:', result.error);
+        showError(`保存失败: ${result.error || '服务器错误'}`);
         return false;
       }
       
@@ -64,6 +65,7 @@ export default function EditMusicPage() {
     } catch (error) {
       console.error('Error saving videos:', error);
       setIsSyncing(false);
+      showError(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
       return false;
     }
   };

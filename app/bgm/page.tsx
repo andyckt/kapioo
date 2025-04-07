@@ -113,8 +113,36 @@ export default function BGMPage() {
           setMessage('音乐数据已同步');
           setTimeout(() => setMessage(''), 2000);
         } else {
-          setMessage('服务器上没有音乐数据');
-          setTimeout(() => setMessage(''), 2000);
+          // If server has no videos, we'll use what's in localStorage
+          const storedVideos = localStorage.getItem('musicVideos');
+          if (storedVideos) {
+            try {
+              const parsedVideos = JSON.parse(storedVideos);
+              if (parsedVideos && parsedVideos.length > 0) {
+                // Save back to server to initialize it
+                await fetch('/api/music-videos', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: storedVideos,
+                });
+                setMessage('已将本地音乐数据同步到服务器');
+                setTimeout(() => setMessage(''), 2000);
+              } else {
+                initializeDefaultVideo();
+                setMessage('已恢复默认音乐');
+                setTimeout(() => setMessage(''), 2000);
+              }
+            } catch (error) {
+              console.error('Error parsing stored videos:', error);
+              initializeDefaultVideo();
+              setMessage('已恢复默认音乐');
+              setTimeout(() => setMessage(''), 2000);
+            }
+          } else {
+            setMessage('服务器上没有音乐数据，已恢复默认设置');
+            initializeDefaultVideo();
+            setTimeout(() => setMessage(''), 2000);
+          }
         }
       } else {
         const errorText = await response.text();
@@ -124,7 +152,7 @@ export default function BGMPage() {
       }
     } catch (error) {
       console.error('Error syncing with server:', error);
-      setMessage('同步失败，请稍后再试');
+      setMessage('同步失败，使用本地数据');
       setTimeout(() => setMessage(''), 2000);
     } finally {
       setSyncing(false);
