@@ -531,17 +531,6 @@ export default function BGMPage() {
                             <h3 className="font-medium text-[#C2884E] truncate">{currentVideo.title}</h3>
                             <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{currentVideo.description}</p>
                           </div>
-                          
-                          <Link href="/editmusic" className="ml-auto">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
-                            >
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              管理音乐
-                            </Button>
-                          </Link>
                         </div>
                       </div>
                       
@@ -613,10 +602,6 @@ export default function BGMPage() {
                 <span className="text-[#C2884E]">Kapioo 卡皮喔</span> 
                 <span className="text-[#C2884E]/50">•</span> 
                 <span>背景音乐播放系统</span>
-                <span className="text-[#C2884E]/50">•</span>
-                <Link href="/editmusic" className="text-[#C2884E] hover:underline">
-                  管理音乐视频
-                </Link>
               </div>
             </CardFooter>
           </Card>
