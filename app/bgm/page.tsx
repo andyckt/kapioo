@@ -55,6 +55,23 @@ export default function BGMPage() {
     loadVideos();
   }, []);
   
+  // Try to unmute after the player loads
+  useEffect(() => {
+    if (playerRef.current && playerRef.current.contentWindow) {
+      // Try to unmute after a short delay to allow the player to initialize
+      const timer = setTimeout(() => {
+        try {
+          playerRef.current?.contentWindow?.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+          setIsMuted(false);
+        } catch (error) {
+          console.error('Could not unmute automatically:', error);
+        }
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+  
   // Simulate server synchronization (would be a real API call in production)
   const simulateServerSync = async () => {
     setSyncing(true);
@@ -144,12 +161,34 @@ export default function BGMPage() {
   const nextVideo = () => {
     if (musicVideos.length > 1) {
       setCurrentVideoIndex((prevIndex) => (prevIndex + 1) % musicVideos.length);
+      
+      // Need to reset the mute state after the iframe reloads
+      setTimeout(() => {
+        if (playerRef.current && playerRef.current.contentWindow && !isMuted) {
+          try {
+            playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+          } catch (error) {
+            console.error('Error restoring unmute state after track change:', error);
+          }
+        }
+      }, 500);
     }
   };
 
   const prevVideo = () => {
     if (musicVideos.length > 1) {
       setCurrentVideoIndex((prevIndex) => (prevIndex - 1 + musicVideos.length) % musicVideos.length);
+      
+      // Need to reset the mute state after the iframe reloads
+      setTimeout(() => {
+        if (playerRef.current && playerRef.current.contentWindow && !isMuted) {
+          try {
+            playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+          } catch (error) {
+            console.error('Error restoring unmute state after track change:', error);
+          }
+        }
+      }, 500);
     }
   };
 
@@ -174,6 +213,26 @@ export default function BGMPage() {
     title: '用餐背景音乐',
     description: '舒缓的旋律将提升您的用餐体验'
   };
+
+  // Keep track of changes to the current video to handle mute state
+  useEffect(() => {
+    // Only run this effect if we have a player ref and we're not loading
+    if (playerRef.current && playerRef.current.contentWindow && !loading) {
+      // Short delay to let the new video load
+      const timer = setTimeout(() => {
+        try {
+          // If we should be unmuted, make sure we restore that state
+          if (!isMuted) {
+            playerRef.current?.contentWindow?.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+          }
+        } catch (error) {
+          console.error('Could not set mute state after video change:', error);
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentVideoIndex, loading, isMuted]);
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#fff6ef]/70 to-white/90 dark:from-[#332217]/30 dark:to-gray-950/90">
@@ -289,6 +348,13 @@ export default function BGMPage() {
                           className="absolute top-0 left-0 w-full h-full border-0"
                           title="背景音乐"
                         ></iframe>
+                        
+                        {isMuted && (
+                          <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 animate-pulse">
+                            <VolumeX className="h-4 w-4" />
+                            <span>点击下方取消静音</span>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex flex-wrap gap-2 justify-center mb-4">
@@ -316,9 +382,12 @@ export default function BGMPage() {
                         )}
                         <Button 
                           onClick={toggleMute} 
-                          variant="outline" 
+                          variant={isMuted ? "default" : "outline"}
                           size="sm"
-                          className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                          className={isMuted 
+                            ? "bg-[#C2884E] hover:bg-[#D1A46C] text-white" 
+                            : "border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                          }
                         >
                           {isMuted ? (
                             <>
