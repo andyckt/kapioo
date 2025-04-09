@@ -67,6 +67,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { OrderManagement } from "@/components/order-management"
 import { NotificationType } from '@/lib/services/notifications';
+import { WeekYearDisplay } from "@/components/week-year-display"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -1533,6 +1534,10 @@ function MealManagement() {
   const [currentEditMeal, setCurrentEditMeal] = useState<Meal | null>(null);
   const [today, setToday] = useState<string>('');
   const [activeDays, setActiveDays] = useState<Record<string, boolean>>({});
+  // Add new state for week/year management
+  const [currentWeek, setCurrentWeek] = useState<number>(0);
+  const [currentYear, setCurrentYear] = useState<number>(0);
+  const [showWeekYearModal, setShowWeekYearModal] = useState(false);
 
   // Load meals on component mount
   useEffect(() => {
@@ -1560,6 +1565,16 @@ function MealManagement() {
         setEditedMeals(initialEditState);
         setSelectedMealId(initialMealIdState);
         setActiveDays(initialActiveDays);
+        
+        // Initialize week and year if any meal has this data
+        // This assumes all meals have the same week/year
+        if (Object.values(mealsResult).length > 0) {
+          const firstMeal = Object.values(mealsResult)[0];
+          // Check if the data exists on a meal
+          const weekData = await getCurrentWeekYear();
+          setCurrentWeek(weekData.week);
+          setCurrentYear(weekData.year);
+        }
         
         setIsLoading(false);
       } catch (error) {
@@ -1784,19 +1799,19 @@ function MealManagement() {
         console.log(`[Admin] Successfully toggled ${day} to active=${newActiveStatus}`);
         
         // Update local state
-        setActiveDays({
-          ...activeDays,
+        setActiveDays(prevActiveDays => ({
+          ...prevActiveDays,
           [day]: newActiveStatus
-        });
+        }));
         
         // Update the weekly meals state
-        setWeeklyMeals({
-          ...weeklyMeals,
+        setWeeklyMeals(prevMeals => ({
+          ...prevMeals,
           [day]: {
-            ...weeklyMeals[day],
+            ...prevMeals[day],
             active: newActiveStatus
           }
-        });
+        }));
         
         toast({
           title: newActiveStatus ? "Day activated" : "Day deactivated",
@@ -1806,14 +1821,27 @@ function MealManagement() {
         // Add a small delay before refreshing the data to ensure changes are propagated
         setTimeout(async () => {
           console.log(`[Admin] Refreshing data after toggling ${day}`);
-          // Refresh the weekly meals data
-          const updatedMeals = await getAdminWeeklyMeals();
-          console.log(`[Admin] Received updated meals after toggle:`, {
-            days: Object.keys(updatedMeals),
-            [day + "_active"]: updatedMeals[day]?.active
-          });
-          setWeeklyMeals(updatedMeals);
-          setIsLoading(false);
+          try {
+            // Refresh the weekly meals data
+            const updatedMeals = await getAdminWeeklyMeals();
+            console.log(`[Admin] Received updated meals after toggle:`, {
+              days: Object.keys(updatedMeals),
+              [day + "_active"]: updatedMeals[day]?.active
+            });
+            setWeeklyMeals(updatedMeals);
+            
+            // Update the active days state based on the latest data
+            const newActiveDays = { ...activeDays };
+            Object.entries(updatedMeals).forEach(([mealDay, meal]) => {
+              newActiveDays[mealDay] = meal.active !== false; // Default to true if not specified
+            });
+            setActiveDays(newActiveDays);
+            
+          } catch (refreshError) {
+            console.error(`[Admin] Error refreshing data:`, refreshError);
+          } finally {
+            setIsLoading(false);
+          }
         }, 1000);
       } else {
         console.error(`[Admin] Failed to toggle ${day} to active=${newActiveStatus}`);
@@ -1835,6 +1863,81 @@ function MealManagement() {
     }
   };
 
+  // Add a helper function to get current week/year
+  async function getCurrentWeekYear() {
+    try {
+      const response = await fetch('/api/weekly-meals/week-info');
+      const data = await response.json();
+      if (data.success) {
+        return { week: data.data.week, year: data.data.year };
+      } else {
+        // Fallback to calculating week/year client-side
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 1);
+        const diff = now.getTime() - start.getTime();
+        const oneWeek = 604800000; // milliseconds in a week
+        const week = Math.floor(diff / oneWeek) + 1;
+        return { week, year: now.getFullYear() };
+      }
+    } catch (error) {
+      console.error('Error getting week/year info:', error);
+      // Fallback to calculating week/year client-side
+      const now = new Date();
+      const start = new Date(now.getFullYear(), 0, 1);
+      const diff = now.getTime() - start.getTime();
+      const oneWeek = 604800000; // milliseconds in a week
+      const week = Math.floor(diff / oneWeek) + 1;
+      return { week, year: now.getFullYear() };
+    }
+  }
+
+  // Add a function to update the week/year for all meals
+  const updateWeekYear = async () => {
+    try {
+      setIsLoading(true);
+      console.log(`[Admin] Updating all meals to week ${currentWeek}, year ${currentYear}`);
+      
+      const response = await fetch('/api/weekly-meals/update-week-year', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ week: currentWeek, year: currentYear }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Week/Year Updated",
+          description: `All meals updated to Week ${currentWeek}, Year ${currentYear}`,
+        });
+        
+        // Refresh the data
+        const updatedMeals = await getAdminWeeklyMeals();
+        setWeeklyMeals(updatedMeals);
+        
+        setShowWeekYearModal(false);
+      } else {
+        console.error('[Admin] Failed to update week/year:', result.error);
+        toast({
+          title: "Update Failed",
+          description: result.error || "Failed to update week/year",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('[Admin] Error updating week/year:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while updating week/year",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-8">
@@ -1845,10 +1948,24 @@ function MealManagement() {
 
   return (
     <>
-      <Card>
+      {/* Add the WeekYearDisplay component at the top */}
+      {currentWeek > 0 && currentYear > 0 && (
+        <div className="mb-6">
+          <WeekYearDisplay week={currentWeek} year={currentYear} />
+        </div>
+      )}
+      
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Weekly Menu</CardTitle>
-          <CardDescription>Update the meals for each day of the week</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Weekly Menu Management</CardTitle>
+              <CardDescription>Update the meals for each day of the week</CardDescription>
+            </div>
+            <Button variant="outline" onClick={() => setShowWeekYearModal(true)}>
+              Week/Year Settings
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -1918,6 +2035,53 @@ function MealManagement() {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Week/Year Settings Modal */}
+      <Dialog open={showWeekYearModal} onOpenChange={setShowWeekYearModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Week & Year Settings</DialogTitle>
+            <DialogDescription>
+              Update the week and year for all meal schedules. This is useful when transitioning to a new week of meals.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="week">Week Number (1-53)</Label>
+                <Input
+                  id="week"
+                  type="number"
+                  value={currentWeek}
+                  onChange={(e) => setCurrentWeek(parseInt(e.target.value) || 1)}
+                  min="1"
+                  max="53"
+                />
+                <p className="text-xs text-muted-foreground">Current value: {currentWeek}</p>
+              </div>
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="year">Year</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={currentYear}
+                  onChange={(e) => setCurrentYear(parseInt(e.target.value) || new Date().getFullYear())}
+                  min="2023"
+                  max="2050"
+                />
+                <p className="text-xs text-muted-foreground">Current value: {currentYear}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">This will update all meal schedules to the new week and year.</p>
+              <Button onClick={updateWeekYear} disabled={isLoading}>
+                {isLoading ? <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div> : null}
+                Update All Meals
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Meal Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>

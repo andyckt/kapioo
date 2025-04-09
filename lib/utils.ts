@@ -135,13 +135,18 @@ export async function getWeeklyMeals(): Promise<WeeklyMeals> {
     const timestamp = new Date().getTime();
     console.log(`[getWeeklyMeals] Fetching meals with cache-buster: ${timestamp}`);
     
-    const response = await fetch(`/api/weekly-meals?_t=${timestamp}`);
+    const response = await fetch(`/api/weekly-meals?_t=${timestamp}`, {
+      cache: 'no-store',
+      headers: {
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    });
     const result = await response.json();
     
     console.log('[getWeeklyMeals] API Response:', { 
       success: result.success,
-      dataKeys: result.data ? Object.keys(result.data) : null,
-      data: result.data
+      dataKeys: result.data ? Object.keys(result.data) : null
     });
     
     if (result.success && result.data) {
@@ -170,10 +175,31 @@ export async function getWeeklyMeals(): Promise<WeeklyMeals> {
 // Get all weekly meals for admin (including inactive days)
 export async function getAdminWeeklyMeals(): Promise<WeeklyMeals> {
   try {
-    const response = await fetch('/api/weekly-meals/admin');
+    // Add a timestamp parameter to prevent caching
+    const timestamp = new Date().getTime();
+    console.log(`[getAdminWeeklyMeals] Fetching admin meals with cache-buster: ${timestamp}`);
+    
+    const response = await fetch(`/api/weekly-meals/admin?_t=${timestamp}`, {
+      cache: 'no-store',
+      headers: {
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    });
     const result = await response.json();
     
+    console.log('[getAdminWeeklyMeals] API Response:', { 
+      success: result.success,
+      dataKeys: result.data ? Object.keys(result.data) : null
+    });
+    
     if (result.success && result.data) {
+      // Log which days are included in the response and their active status
+      console.log('[getAdminWeeklyMeals] Days and active status:');
+      for (const day in result.data) {
+        console.log(`  - ${day}: active=${result.data[day].active}`);
+      }
+      
       return result.data as WeeklyMeals;
     }
     
@@ -318,9 +344,28 @@ export async function setDayActiveStatus(day: string, active: boolean): Promise<
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
       },
       body: JSON.stringify({ day, active }),
     });
+    
+    // Log the response status before parsing
+    console.log(`[setDayActiveStatus] Response status: ${response.status} ${response.statusText}`);
+    
+    // If response is not ok, throw an error
+    if (!response.ok) {
+      console.error(`[setDayActiveStatus] HTTP error: ${response.status} ${response.statusText}`);
+      // Try to parse error response
+      try {
+        const errorData = await response.json();
+        console.error(`[setDayActiveStatus] Error details:`, errorData);
+        return false;
+      } catch (parseError) {
+        console.error(`[setDayActiveStatus] Could not parse error response: ${parseError}`);
+        return false;
+      }
+    }
     
     const result = await response.json();
     console.log(`[setDayActiveStatus] API response:`, result);

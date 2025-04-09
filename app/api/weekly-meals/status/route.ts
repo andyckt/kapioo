@@ -33,18 +33,24 @@ export async function PATCH(request: Request) {
     
     await connectToDatabase();
     
-    // Find the weekly meal entry
-    const existingEntry = await WeeklyMeal.findOne({ day, week, year });
+    // Find the weekly meal entry - first try the current week/year
+    let existingEntry = await WeeklyMeal.findOne({ day, week, year });
+    
+    // If not found, try to find an entry for this day with any week/year
+    if (!existingEntry) {
+      console.log(`[Status API] No meal found for current week/year. Searching for any entry for day=${day}`);
+      existingEntry = await WeeklyMeal.findOne({ day }).sort({ year: -1, week: -1 });
+    }
     
     if (!existingEntry) {
-      console.log(`[Status API] No meal found for day=${day}, week=${week}, year=${year}`);
+      console.log(`[Status API] No meal found for day=${day} in any week/year`);
       return NextResponse.json(
         { success: false, error: 'No meal assigned to this day yet' },
         { status: 404 }
       );
     }
     
-    console.log(`[Status API] Found meal for ${day}. Current active=${existingEntry.active}, setting to active=${active}`);
+    console.log(`[Status API] Found meal for ${day} (week=${existingEntry.week}, year=${existingEntry.year}). Current active=${existingEntry.active}, setting to active=${active}`);
     
     // Update the active status
     existingEntry.active = active;
@@ -57,9 +63,9 @@ export async function PATCH(request: Request) {
         success: true, 
         data: { 
           day, 
-          active, 
-          week, 
-          year 
+          active,
+          week: existingEntry.week,
+          year: existingEntry.year
         } 
       }
     );
