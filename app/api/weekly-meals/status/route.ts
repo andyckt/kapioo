@@ -58,15 +58,25 @@ export async function PATCH(request: Request) {
     
     console.log(`[Status API] Successfully updated ${day} to active=${active}`);
     
+    // Pull the updated record to confirm the change
+    const updatedEntry = await WeeklyMeal.findById(existingEntry._id);
+    console.log(`[Status API] Confirmed status after update: active=${updatedEntry?.active}`);
+    
     return NextResponse.json(
       { 
         success: true, 
         data: { 
           day, 
-          active,
+          active: updatedEntry?.active, // Use the confirmed value from the database
           week: existingEntry.week,
-          year: existingEntry.year
+          year: existingEntry.year,
+          meal: existingEntry.meal
         } 
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate'
+        }
       }
     );
   } catch (error) {

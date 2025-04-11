@@ -188,19 +188,24 @@ export async function getAdminWeeklyMeals(): Promise<WeeklyMeals> {
     });
     const result = await response.json();
     
-    console.log('[getAdminWeeklyMeals] API Response:', { 
-      success: result.success,
-      dataKeys: result.data ? Object.keys(result.data) : null
-    });
+    console.log('[getAdminWeeklyMeals] API Response:', result);
     
     if (result.success && result.data) {
-      // Log which days are included in the response and their active status
-      console.log('[getAdminWeeklyMeals] Days and active status:');
-      for (const day in result.data) {
-        console.log(`  - ${day}: active=${result.data[day].active}`);
+      // Check if the response has the new structure with 'meals' property
+      const mealsData = result.data.meals || result.data;
+      
+      // Log the week/year if available in the response
+      if (result.data.week && result.data.year) {
+        console.log(`[getAdminWeeklyMeals] Week/Year from API: ${result.data.week}/${result.data.year}`);
       }
       
-      return result.data as WeeklyMeals;
+      // Log which days are included in the response and their active status
+      console.log('[getAdminWeeklyMeals] Days and active status:');
+      for (const day in mealsData) {
+        console.log(`  - ${day}: active=${mealsData[day].active}`);
+      }
+      
+      return mealsData as WeeklyMeals;
     }
     
     console.error('Failed to fetch admin weekly meals from API');

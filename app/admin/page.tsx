@@ -1559,18 +1559,30 @@ function MealManagement() {
         Object.entries(mealsResult).forEach(([day, meal]) => {
           initialEditState[day] = meal.name;
           initialMealIdState[day] = meal._id || '';
-          initialActiveDays[day] = meal.active !== false; // Default to true if not specified
+          // FIXED: Use strict equality to properly set active status
+          initialActiveDays[day] = meal.active === true;
         });
+        
+        console.log("[Admin] Setting initial active days:", initialActiveDays);
         
         setEditedMeals(initialEditState);
         setSelectedMealId(initialMealIdState);
         setActiveDays(initialActiveDays);
         
-        // Initialize week and year if any meal has this data
-        // This assumes all meals have the same week/year
-        if (Object.values(mealsResult).length > 0) {
-          const firstMeal = Object.values(mealsResult)[0];
-          // Check if the data exists on a meal
+        // Get week/year information
+        try {
+          const response = await fetch('/api/weekly-meals/week-info');
+          const data = await response.json();
+          if (data.success && data.data) {
+            console.log(`[Admin] Setting week/year from API: ${data.data.week}/${data.data.year}`);
+            setCurrentWeek(data.data.week);
+            setCurrentYear(data.data.year);
+          } else {
+            throw new Error('Failed to get week/year info');
+          }
+        } catch (weekYearError) {
+          console.error('[Admin] Error getting week/year info:', weekYearError);
+          // Fallback to calculating week/year client-side
           const weekData = await getCurrentWeekYear();
           setCurrentWeek(weekData.week);
           setCurrentYear(weekData.year);
@@ -1822,21 +1834,24 @@ function MealManagement() {
         setTimeout(async () => {
           console.log(`[Admin] Refreshing data after toggling ${day}`);
           try {
-            // Refresh the weekly meals data
             const updatedMeals = await getAdminWeeklyMeals();
             console.log(`[Admin] Received updated meals after toggle:`, {
               days: Object.keys(updatedMeals),
               [day + "_active"]: updatedMeals[day]?.active
             });
+            
+            // Update state with the fresh data from the server
             setWeeklyMeals(updatedMeals);
             
-            // Update the active days state based on the latest data
-            const newActiveDays = { ...activeDays };
-            Object.entries(updatedMeals).forEach(([mealDay, meal]) => {
-              newActiveDays[mealDay] = meal.active !== false; // Default to true if not specified
+            // Update the active days state based on the latest data from the API
+            // Use strict equality to properly set active status
+            const newActiveDays: Record<string, boolean> = {};
+            Object.keys(updatedMeals).forEach(day => {
+              newActiveDays[day] = updatedMeals[day].active === true;
             });
-            setActiveDays(newActiveDays);
             
+            console.log('[Admin] Updated active days after refresh:', newActiveDays);
+            setActiveDays(newActiveDays);
           } catch (refreshError) {
             console.error(`[Admin] Error refreshing data:`, refreshError);
           } finally {
