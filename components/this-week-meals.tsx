@@ -107,45 +107,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
         mealDate
       });
       
-      // Only proceed with day comparison if we have valid indices
-      if (dayIndex !== -1 && todayIndex !== -1) {
-        // Correct logic for day comparison accounting for week wraparound
-        // Assume all days are for the current week
-        // If today is Saturday (6) or Sunday (0), then Monday (1) through Friday (5) 
-        // are for next week and shouldn't be marked as "passed"
-        
-        if (todayIndex === 6) { // Saturday
-          // No days should be unavailable, as we're at the end of the week
-          // and all meals shown are for the next week
-        } else if (todayIndex === 0) { // Sunday
-          // Only Sunday can be unavailable
-          if (dayIndex === 0 && currentHour >= 10) {
-            return {
-              unavailable: true,
-              reason: "Orders for today must be placed before 10am Toronto time"
-            };
-          }
-        } else {
-          // For other days, only days before today are unavailable
-          if (dayIndex < todayIndex) {
-            return { 
-              unavailable: true, 
-              reason: "This day has already passed" 
-            };
-          }
-          
-          // Check if it's today and after 10am
-          if (dayIndex === todayIndex && currentHour >= 10) {
-            return { 
-              unavailable: true, 
-              reason: "Orders for today must be placed before 10am Toronto time" 
-            };
-          }
-        }
-      } else {
-        console.log(`Invalid day index for ${day}: ${dayIndex}`);
-      }
-
       // If we have a specific date string, parse it for additional validation
       if (mealDate) {
         try {
@@ -164,7 +125,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
               monthStr.toLowerCase() === m.toLowerCase());
             
             // Parse day number (remove dot if present)
-            const dayNum = parseInt(dayStr.replace('.', ''));
+            const dayNum = parseInt(dayStr.replace(',', '').replace('.', ''));
             
             console.log(`Date parsing for ${mealDate}:`, {
               monthStr,
@@ -210,10 +171,52 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                   reason: "Orders for today must be placed before 10am Toronto time" 
                 };
               }
+              
+              // If we have a specific date and it's valid, return available
+              return { unavailable: false, reason: "" };
             }
           }
         } catch (error) {
           console.error('Error parsing meal date:', error);
+        }
+      } else {
+        // Only proceed with day comparison if we have valid indices and no specific date
+        if (dayIndex !== -1 && todayIndex !== -1) {
+          // Correct logic for day comparison accounting for week wraparound
+          // Assume all days are for the current week
+          // If today is Saturday (6) or Sunday (0), then Monday (1) through Friday (5) 
+          // are for next week and shouldn't be marked as "passed"
+          
+          if (todayIndex === 6) { // Saturday
+            // No days should be unavailable, as we're at the end of the week
+            // and all meals shown are for the next week
+          } else if (todayIndex === 0) { // Sunday
+            // Only Sunday can be unavailable
+            if (dayIndex === 0 && currentHour >= 10) {
+              return {
+                unavailable: true,
+                reason: "Orders for today must be placed before 10am Toronto time"
+              };
+            }
+          } else {
+            // For other days, only days before today are unavailable
+            if (dayIndex < todayIndex) {
+              return { 
+                unavailable: true, 
+                reason: "This day has already passed" 
+              };
+            }
+            
+            // Check if it's today and after 10am
+            if (dayIndex === todayIndex && currentHour >= 10) {
+              return { 
+                unavailable: true, 
+                reason: "Orders for today must be placed before 10am Toronto time" 
+              };
+            }
+          }
+        } else {
+          console.log(`Invalid day index for ${day}: ${dayIndex}`);
         }
       }
       
