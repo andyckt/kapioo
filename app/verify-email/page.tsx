@@ -62,10 +62,18 @@ export default function VerifyEmailPage() {
         
         // If there's user data in the response, store it
         if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user))
-          
-          // Store authentication state
-          localStorage.setItem('isAuthenticated', 'true')
+          // Make sure user data includes the _id field before storing
+          if (data.user._id) {
+            localStorage.setItem('user', JSON.stringify(data.user))
+            
+            // Store authentication state
+            localStorage.setItem('isAuthenticated', 'true')
+          } else {
+            console.error('Verification response missing user _id:', data.user);
+            setErrorMessage("User data is incomplete. Please try logging in instead.");
+            setVerificationState('error');
+            return;
+          }
         }
         
         // Clear any pending user data

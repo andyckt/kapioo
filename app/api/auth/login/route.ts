@@ -60,6 +60,9 @@ export async function POST(request: Request) {
     delete userResponse.verificationCode;
     delete userResponse.verificationExpires;
     
+    // Ensure _id is included
+    console.log('User login successful, returning user data with ID:', userResponse._id);
+    
     // Allow login even if email is not verified, but include verification status
     return NextResponse.json({
       success: true,

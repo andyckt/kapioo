@@ -189,6 +189,18 @@ export default function DashboardPage() {
         setUserLoading(true);
         const userData = JSON.parse(userDataStr!);
         
+        // Check if userData has _id before proceeding
+        if (!userData || !userData._id) {
+          console.error('User data is missing _id:', userData);
+          toast({
+            title: "Error",
+            description: "User data is incomplete. Please log out and log in again.",
+            variant: "destructive"
+          });
+          setUserLoading(false);
+          return;
+        }
+        
         // Use the getUserById function to get full user data
         const user = await getUserById(userData._id);
         
@@ -228,6 +240,14 @@ export default function DashboardPage() {
               buzzCode: user.address.buzzCode || ''
             });
           }
+        } else {
+          // Handle the case when user data couldn't be fetched
+          console.error('Failed to fetch user data from API');
+          toast({
+            title: "Error",
+            description: "Failed to load user data from server",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         console.error('Error loading user data:', error);
