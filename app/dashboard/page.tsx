@@ -35,7 +35,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { t, language } = useLanguage()
-  const [credits, setCredits] = useState(50)
+  const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
   const [customizeMeal, setCustomizeMeal] = useState(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -839,7 +839,16 @@ export default function DashboardPage() {
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">{credits}</div>
+                        <div className="text-2xl font-bold">
+                          {userLoading ? (
+                            <span className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              {language === 'en' ? 'Loading...' : '加载中...'}
+                            </span>
+                          ) : (
+                            credits
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{language === 'en' ? 'Credits can be used to order meals' : '餐券可用于订购餐点'}</p>
                       </CardContent>
                     </Card>

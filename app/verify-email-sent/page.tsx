@@ -302,7 +302,7 @@ export default function VerifyEmailSentPage() {
                 )}
               </Button>
               <p className="text-xs text-center text-muted-foreground pt-2">
-                <Link href="/dashboard" className="text-gray-500 font-medium hover:underline">直接前往 Kapioo</Link>
+                <Link href="/dashboard" className="text-gray-500 font-medium hover:underline">{/* 直接前往 Kapioo */}</Link>
               </p>
             </CardFooter>
           </>
