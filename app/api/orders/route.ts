@@ -89,7 +89,8 @@ export async function POST(request: Request) {
       selectedMeals,
       creditCost,
       specialInstructions,
-      deliveryAddress
+      deliveryAddress,
+      phoneNumber
     } = await request.json();
     
     // Validate input
@@ -167,6 +168,7 @@ export async function POST(request: Request) {
         creditCost,
         specialInstructions,
         deliveryAddress,
+        phoneNumber,
         status: 'pending'
       });
       

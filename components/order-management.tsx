@@ -486,51 +486,60 @@ export function OrderManagement() {
             </div>
           ) : filteredOrders.length > 0 ? (
             <div className="rounded-md border overflow-hidden">
-              <table className="w-full">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left p-4 font-medium">Order ID</th>
-                    <th className="text-left p-4 font-medium">Customer</th>
-                    <th className="text-left p-4 font-medium">Date</th>
-                    <th className="text-left p-4 font-medium">Meals</th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                    <th className="text-center p-4 font-medium">Actions</th>
+                    <th className="text-left p-3 font-medium w-[10%]">Order ID</th>
+                    <th className="text-left p-3 font-medium w-[15%]">Customer</th>
+                    <th className="text-left p-3 font-medium w-[10%]">Phone</th>
+                    <th className="text-left p-3 font-medium w-[20%]">Address</th>
+                    <th className="text-left p-3 font-medium w-[10%]">Date</th>
+                    <th className="text-left p-3 font-medium w-[15%]">Meals</th>
+                    <th className="text-left p-3 font-medium w-[10%]">Status</th>
+                    <th className="text-center p-3 font-medium w-[10%]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredOrders.map((order) => (
                     <tr key={order._id} className="border-t">
-                      <td className="p-4 font-medium">{order.orderId}</td>
-                      <td className="p-4">
+                      <td className="p-3 font-medium">{order.orderId}</td>
+                      <td className="p-3">
                         {order.userId && typeof order.userId === 'object' ? (
                           <div>
-                            <div>{order.userId.name}</div>
-                            <div className="text-sm text-muted-foreground">{order.userId.email}</div>
+                            <div className="truncate">{order.userId.name}</div>
+                            <div className="text-xs text-muted-foreground truncate">{order.userId.email}</div>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">User ID: {order.userId}</span>
                         )}
                       </td>
-                      <td className="p-4 whitespace-nowrap">
+                      <td className="p-3 truncate">
+                        {order.phoneNumber || 'N/A'}
+                      </td>
+                      <td className="p-3 truncate">
+                        {formatAddress(order.deliveryAddress)}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
                         {new Date(order.createdAt).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric'
                         })}
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 truncate">
                         {formatSelectedMeals(order.selectedMeals)}
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <OrderStatus status={order.status} />
                       </td>
-                      <td className="p-4">
-                        <div className="flex justify-center gap-2">
+                      <td className="p-3">
+                        <div className="flex justify-center gap-1">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button 
                                 variant="outline" 
                                 size="sm" 
+                                className="h-7 px-2 text-xs"
                                 onClick={() => fetchOrderDetails(order.orderId)}
                               >
                                 View
@@ -565,6 +574,7 @@ export function OrderManagement() {
                                               <p><span className="font-medium">Name:</span> {selectedOrder.userId.name}</p>
                                               <p><span className="font-medium">Email:</span> {selectedOrder.userId.email}</p>
                                               <p><span className="font-medium">User ID:</span> {selectedOrder.userId.userID}</p>
+                                              <p><span className="font-medium">Phone:</span> {selectedOrder.phoneNumber || 'N/A'}</p>
                                             </>
                                           ) : (
                                             <p><span className="font-medium">User ID:</span> {selectedOrder.userId}</p>
@@ -671,7 +681,7 @@ export function OrderManagement() {
                           
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                                 Update
                               </Button>
                             </DropdownMenuTrigger>

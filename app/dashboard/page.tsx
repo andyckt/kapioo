@@ -1860,6 +1860,7 @@ function WeeklyMealSelector({
             selectedMeals,
             creditCost: totalCost,
             specialInstructions: formData.specialInstructions || '',
+            phoneNumber: formData.phone || '',
             deliveryAddress
           })
         });
