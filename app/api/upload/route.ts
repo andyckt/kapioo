@@ -2,6 +2,11 @@ import { NextRequest } from 'next/server';
 import { S3Client, PutObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
 import { successResponseApp as successResponse, errorResponseApp as errorResponse } from '@/lib/api-utils';
 
+// Configure the body parser for this route to allow larger uploads
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const maxDuration = 60; // Extend duration for large uploads
+
 // Configure S3 client with more detailed logging
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'ap-southeast-2',

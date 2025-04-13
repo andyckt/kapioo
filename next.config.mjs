@@ -30,6 +30,11 @@ const nextConfig = {
       },
     ],
   },
+  // Use more compatible configuration to increase body size limit
+  serverRuntimeConfig: {
+    // Will only be available on the server side
+    bodyParserSizeLimit: '10mb',
+  },
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,

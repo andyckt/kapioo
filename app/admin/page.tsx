@@ -2140,6 +2140,20 @@ function MealManagement() {
                       if (e.target.files && e.target.files[0]) {
                         const file = e.target.files[0];
                         
+                        // Check file size client-side before attempting upload
+                        const fileSizeMB = file.size / (1024 * 1024);
+                        console.log(`File size: ${fileSizeMB.toFixed(2)} MB`);
+                        
+                        if (fileSizeMB > 10) {
+                          toast({
+                            title: "File too large",
+                            description: `Maximum file size is 10MB. Your file is ${fileSizeMB.toFixed(2)}MB.`,
+                            variant: "destructive"
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+                        
                         // Create a FormData object
                         const formData = new FormData();
                         formData.append('file', file);
@@ -2156,6 +2170,12 @@ function MealManagement() {
                           });
                           
                           console.log('Upload response status:', response.status);
+                          
+                          // Handle non-OK responses
+                          if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`Upload failed with status ${response.status}: ${errorText}`);
+                          }
                           
                           const result = await response.json();
                           console.log('Upload result:', result);
