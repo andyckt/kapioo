@@ -110,6 +110,10 @@ export const sendNewOrderNotification = async (order: IOrder, user: IUser): Prom
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">支付餐卷:</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${order.creditCost} 餐卷</td>
             </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">联系电话:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${order.phoneNumber || '未提供'}</td>
+            </tr>
           </table>
         </div>
         
@@ -189,6 +193,10 @@ export const sendNewOrderAdminNotification = async (order: IOrder, user: IUser):
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">Customer:</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${user.name} (${user.email})</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">Phone Number:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${order.phoneNumber || 'Not provided'}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">User ID:</td>
@@ -354,6 +362,10 @@ export const sendOrderStatusUpdateNotification = async (
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">订单日期:</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date(order.createdAt).toLocaleDateString('zh-CN')}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">联系电话:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${order.phoneNumber || '未提供'}</td>
             </tr>
             ${order.status === 'refunded' ? `
             <tr>
