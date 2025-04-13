@@ -1849,27 +1849,135 @@ function WeeklyMealSelector({
           description: t('processingOrder'),
         });
         
-        // Create order via API
-        const response = await fetch('/api/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            userId: userData?._id,
-            selectedMeals,
-            creditCost: totalCost,
-            specialInstructions: formData.specialInstructions || '',
-            phoneNumber: formData.phone || '',
-            deliveryAddress
-          })
+        // Helper function to format date strings consistently
+        const formatDateString = (dateStr: string): string => {
+          try {
+            // Parse the date (expected format like "April 1" or "April 10")
+            const parts = dateStr.split(' ');
+            if (parts.length === 2) {
+              const monthStr = parts[0];
+              let dayStr = parts[1].replace(',', '').replace('.', '');
+              
+              // Get month index (0-11)
+              const months = ["January", "February", "March", "April", "May", "June", 
+                              "July", "August", "September", "October", "November", "December"];
+              const monthIndex = months.findIndex(m => monthStr.toLowerCase() === m.toLowerCase());
+              
+              // Parse day number
+              const dayNum = parseInt(dayStr);
+              
+              if (monthIndex !== -1 && !isNaN(dayNum)) {
+                // Create a standardized date string
+                const currentYear = new Date().getFullYear();
+                const date = new Date(currentYear, monthIndex, dayNum);
+                return date.toISOString().split('T')[0]; // Returns "YYYY-MM-DD" format
+              }
+            }
+            return dateStr; // Return original if parsing fails
+          } catch (error) {
+            console.error('Error formatting date:', error);
+            return dateStr;
+          }
+        };
+        
+        // Group selected meals by delivery date
+        const mealsByDate: Record<string, any> = {};
+        let totalSelectedCount = 0;
+        
+        // First, organize meals by their delivery dates
+        Object.entries(selectedMeals).forEach(([day, meal]) => {
+          if (meal.selected && meal.date) {
+            // Format the date consistently
+            const formattedDate = formatDateString(meal.date);
+            
+            if (!mealsByDate[formattedDate]) {
+              mealsByDate[formattedDate] = {};
+            }
+            mealsByDate[formattedDate][day] = meal;
+            totalSelectedCount++;
+          }
         });
         
-        const result = await response.json();
+        // Check if we have any selected meals
+        if (totalSelectedCount === 0) {
+          toast({
+            title: t('errorOccurred'),
+            description: t('noMealsSelected'),
+            variant: "destructive"
+          });
+          return;
+        }
         
-        if (result.success) {
+        // Keep track of all created orders
+        const createdOrders = [];
+        let updatedCredits = credits;
+        
+        // Create separate orders for each delivery date
+        for (const [date, mealsForDate] of Object.entries(mealsByDate)) {
+          // Create formatted selected meals object for this date
+          const selectedMealsForDate: Record<string, { selected: boolean, date: string }> = {
+            monday: { selected: false, date: '' },
+            tuesday: { selected: false, date: '' },
+            wednesday: { selected: false, date: '' },
+            thursday: { selected: false, date: '' },
+            friday: { selected: false, date: '' },
+            saturday: { selected: false, date: '' },
+            sunday: { selected: false, date: '' },
+          };
+          
+          // Fill in the selected meals for this date
+          Object.entries(mealsForDate).forEach(([day, meal]: [string, any]) => {
+            selectedMealsForDate[day] = meal;
+          });
+          
+          // Calculate cost for this order (1 credit per meal)
+          const mealCount = Object.values(mealsForDate).length;
+          const orderCost = mealCount; // 1 credit per meal
+          
+          // Add a note about delivery date to special instructions
+          const mealsArray = Object.values(mealsForDate) as Array<{date: string}>;
+          const deliveryDateInfo = mealsArray.length > 0 && mealsArray[0].date 
+            ? `Delivery Date: ${mealsArray[0].date}` 
+            : 'Delivery Date: Not specified';
+          const specialInstructions = formData.specialInstructions 
+            ? `${deliveryDateInfo}\n\n${formData.specialInstructions}`
+            : deliveryDateInfo;
+          
+          // Create order for this date
+          const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              userId: userData?._id,
+              selectedMeals: selectedMealsForDate,
+              creditCost: orderCost,
+              specialInstructions: specialInstructions,
+              phoneNumber: formData.phone || '',
+              deliveryAddress
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            createdOrders.push(result.data.order);
+            updatedCredits = result.data.remainingCredits;
+          } else {
+            // If any order fails, show error and stop processing
+            toast({
+              title: t('errorPlacingOrder'),
+              description: result.error || t('unexpectedError'),
+              variant: "destructive"
+            });
+            return;
+          }
+        }
+        
+        if (createdOrders.length > 0) {
           // Update local credit balance
-          setCredits(result.data.remainingCredits);
+          setCredits(updatedCredits);
           
           // Update localStorage credit information
           const storedUser = localStorage.getItem('user');
@@ -1877,7 +1985,7 @@ function WeeklyMealSelector({
             const userObj = JSON.parse(storedUser);
             const updatedUser = { 
               ...userObj, 
-              credits: result.data.remainingCredits 
+              credits: updatedCredits 
             };
             localStorage.setItem('user', JSON.stringify(updatedUser));
           }
@@ -1901,20 +2009,16 @@ function WeeklyMealSelector({
           setCheckoutOpen(false);
           
           // Show success toast
+          const orderIds = createdOrders.map(order => order.orderId).join(', ');
           toast({
             title: t('orderPlacedSuccess'),
-            description: `${t('orderTitle')} (${result.data.order.orderId}) ${t('orderPlaced')}`,
+            description: `${createdOrders.length > 1 
+              ? `${t('orderTitle')}s (${orderIds}) ${t('orderPlaced')}`
+              : `${t('orderTitle')} (${orderIds}) ${t('orderPlaced')}`}`,
           });
           
-          // Optionally, navigate to orders tab to see the new order
+          // Optionally, navigate to orders tab to see the new orders
           setActiveTab("orders");
-        } else {
-          // Handle error
-          toast({
-            title: t('errorPlacingOrder'),
-            description: result.error || t('unexpectedError'),
-            variant: "destructive"
-          });
         }
       } catch (error) {
         console.error('Error placing order:', error);
