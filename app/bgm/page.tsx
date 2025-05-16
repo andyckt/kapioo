@@ -11,6 +11,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
+// Add YouTube IFrame API type definitions
+declare global {
+  interface Window {
+    YT: {
+      Player: any;
+      PlayerState: {
+        ENDED: 0;
+        PLAYING: 1;
+        PAUSED: 2;
+        BUFFERING: 3;
+        CUED: 5;
+      };
+    };
+    onYouTubeIframeAPIReady: () => void;
+    ytPlayer: any;
+  }
+}
+
 interface MusicVideo {
   id: string;
   videoId: string;
@@ -340,44 +358,132 @@ export default function BGMPage() {
 
   const currentVideo = musicVideos[currentVideoIndex] || defaultVideo;
 
-  // Handle YouTube player events including video end
+  // Handle YouTube player events
   useEffect(() => {
-    // Only run if not loading and we have videos
     if (loading || !musicVideos.length) return;
     
-    // Function to handle YouTube player state changes
-    const handleYouTubeEvent = (event: MessageEvent) => {
-      // Only process messages from YouTube
-      if (typeof event.data !== 'string') {
+    // Create a player reference to store at global scope
+    let player: any = null;
+    
+    // Initialize YouTube API
+    if (typeof window !== 'undefined' && !window.YT) {
+      // Load YouTube IFrame API
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      
+      // Create global onYouTubeIframeAPIReady callback
+      window.onYouTubeIframeAPIReady = initializeYouTubePlayer;
+    } else if (typeof window !== 'undefined' && window.YT && window.YT.Player) {
+      // YouTube API already loaded
+      initializeYouTubePlayer();
+    }
+    
+    // Initialize YouTube player with API
+    function initializeYouTubePlayer() {
+      console.log('Initializing YouTube player with API');
+      if (!playerRef.current) {
+        console.warn('Player reference not available');
+        return;
+      }
+      
+      try {
+        player = new window.YT.Player('youtube-player', {
+          events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange,
+            'onError': (e: any) => console.error('YouTube Player Error:', e.data)
+          }
+        });
+        
+        // Store player reference globally
+        window.ytPlayer = player;
+        console.log('YouTube player initialized successfully');
+      } catch (error) {
+        console.error('Error initializing YouTube player:', error);
+      }
+    }
+    
+    // When player is ready
+    function onPlayerReady(event: any) {
+      console.log('YouTube player is ready');
+      // Set initial mute state
+      if (!isMuted) {
+        event.target.unMute();
+      } else {
+        event.target.mute();
+      }
+      
+      // Ensure video is playing
+      if (isPlaying) {
+        event.target.playVideo();
+      }
+    }
+    
+    // When player state changes
+    function onPlayerStateChange(event: any) {
+      console.log('YouTube player state changed to:', event.data);
+      
+      // YT.PlayerState.ENDED = 0
+      if (event.data === 0) {
+        console.log('Video ended, playing next song automatically');
+        // Play next song
+        setCurrentVideoIndex(prevIndex => {
+          const nextIndex = (prevIndex + 1) % musicVideos.length;
+          console.log(`Moving from song ${prevIndex} to song ${nextIndex}`);
+          return nextIndex;
+        });
+      }
+    }
+    
+    // Create an interval to check video progress and handle auto-play as a backup mechanism
+    const checkVideoInterval = setInterval(() => {
+      if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
         try {
-          const data = JSON.parse(event.data);
-          // YouTube API sends event data in a specific format
-          if (data.event === "onStateChange" && data.info === 0) {
-            // State 0 means the video ended
-            console.log('Video ended, playing next video');
-            if (musicVideos.length > 1) {
-              nextVideo();
-            } else {
-              // If there's only one video, restart it
-              resetPlayer();
-            }
+          const currentTime = player.getCurrentTime();
+          const duration = player.getDuration();
+          const remainingTime = duration - currentTime;
+          
+          // If less than 1 second remains and it's not already at the end
+          if (remainingTime > 0 && remainingTime < 1 && duration > 1) {
+            console.log('Video almost ended (interval check), preparing next song');
+            
+            // Move to the next song when it gets very close to the end
+            // This is a backup to the onStateChange event
+            setCurrentVideoIndex(prevIndex => {
+              const nextIndex = (prevIndex + 1) % musicVideos.length;
+              console.log(`Backup mechanism: Moving from song ${prevIndex} to song ${nextIndex}`);
+              return nextIndex;
+            });
           }
         } catch (error) {
-          // Not JSON or not our event, ignore
+          // Silent catch
+        }
+      }
+    }, 1000);
+    
+    // Cleanup
+    return () => {
+      clearInterval(checkVideoInterval);
+      
+      if (typeof window !== 'undefined') {
+        // Clean up YouTube API
+        if ('onYouTubeIframeAPIReady' in window) {
+          window.onYouTubeIframeAPIReady = () => {};
+        }
+        // Clean up player reference
+        if (window.ytPlayer) {
+          try {
+            window.ytPlayer.destroy();
+          } catch (error) {
+            console.error('Error destroying YouTube player:', error);
+          }
+          window.ytPlayer = undefined;
         }
       }
     };
-    
-    // Add the event listener
-    window.addEventListener('message', handleYouTubeEvent);
-    console.log('Added YouTube event listener');
-    
-    // Clean up event listener on component unmount or when deps change
-    return () => {
-      window.removeEventListener('message', handleYouTubeEvent);
-      console.log('Removed YouTube event listener');
-    };
-  }, [loading, musicVideos, nextVideo, resetPlayer]);
+  }, [loading, musicVideos, isMuted, isPlaying]);
 
   // Keep track of changes to the current video to handle mute state
   useEffect(() => {
@@ -577,12 +683,13 @@ export default function BGMPage() {
                       <div className="relative rounded-lg overflow-hidden bg-black aspect-video mb-4">
                         <iframe
                           ref={playerRef}
-                          src={`https://www.youtube.com/embed/${currentVideo.videoId}?autoplay=1&mute=1&enablejsapi=1&modestbranding=1&rel=0&playsinline=1&origin=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
+                          src={`https://www.youtube.com/embed/${currentVideo.videoId}?autoplay=1&mute=1&enablejsapi=1&modestbranding=1&rel=0&playsinline=1&loop=0&playlist=${currentVideo.videoId}&origin=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
                           frameBorder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
                           title={currentVideo.title}
                           className="absolute inset-0 w-full h-full"
+                          id="youtube-player"
                         ></iframe>
                       </div>
                       
