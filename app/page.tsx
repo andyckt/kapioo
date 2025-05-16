@@ -81,12 +81,12 @@ export default function Home() {
                       */}
                       <h1 className="text-2xl sm:text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
                         {/* <span className="inline-block w-[15px] sm:w-[20px] md:w-[25px]"></span> */}
-                        {t('heroTitle')}
+                        <span dangerouslySetInnerHTML={{ __html: t('heroTitle') }} />
                       </h1>
                     </div>
                   </div>
-                  <p className="max-w-[600px] text-base sm:text-lg text-muted-foreground md:text-xl mt-8">
-                    {t('heroDescription')}
+                  <p className="max-w-[600px] text-sm sm:text-base text-muted-foreground md:text-lg mt-8">
+                    <span dangerouslySetInnerHTML={{ __html: t('heroDescription') }} />
                   </p>
                 </div>
                 <motion.div 

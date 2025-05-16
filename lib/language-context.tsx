@@ -91,8 +91,8 @@ const translations: TranslationsType = {
     login: "登录",
     getStarted: "立即开始",
     // Hero section
-    heroTitle: "美味的餐点，送至您家",
-    heroDescription: "订购Kapioo，享受厨师准备的美食直接送到您家门口。选择您一周的餐点并使用您的餐卷支付。",
+    heroTitle: "Kapioo 卡皮喔<br/>胃满了，心就轻了。",
+    heroDescription: "每天现做直送，拒绝隔夜饭<br/>🥦 是你爱吃的味道，变健康了｜好吃≠不健康<br/>🎧 每餐都有团队专属设计的配饭歌单，吃饭也要有节奏<br/>📅 餐券系统灵活订阅，不吃不扣",
     getStartedBtn: "立即开始",
     howItWorksBtn: "如何运作",
     // How it works section
