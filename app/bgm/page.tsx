@@ -601,15 +601,29 @@ export default function BGMPage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowSubmissionForm(true)}
-                    className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    animate={{ 
+                      y: [0, -3, 0],
+                      transition: { 
+                        repeat: Infinity, 
+                        duration: 2,
+                        ease: "easeInOut" 
+                      }
+                    }}
                   >
-                    <Music className="h-4 w-4 mr-2" />
-                    推荐我的歌
-                  </Button>
+                    <Button
+                      onClick={() => setShowSubmissionForm(true)}
+                      className="relative overflow-hidden bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#D1A46C] hover:to-[#C2884E] text-white shadow-md hover:shadow-lg transition-all duration-300"
+                      size="sm"
+                    >
+                      <Music className="h-4 w-4 mr-2" />
+                      <span className="font-medium">推荐我的歌</span>
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                      </span>
+                    </Button>
+                  </motion.div>
                   
                   <Button
                     variant="outline"
