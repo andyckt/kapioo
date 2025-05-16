@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 // Music video interface
 interface MusicVideo {
@@ -18,6 +20,17 @@ interface MusicVideo {
   videoId: string;
   title: string;
   description: string;
+}
+
+// Music submission interface
+interface MusicSubmission {
+  _id: string;
+  songName: string;
+  artistName: string;
+  reason: string;
+  submitterName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 // Default video definition
@@ -43,6 +56,11 @@ export default function EditMusicPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'videos' | 'submissions'>('videos');
+  const [submissions, setSubmissions] = useState<MusicSubmission[]>([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [submissionStatusUpdating, setSubmissionStatusUpdating] = useState<string | null>(null);
+  const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
   const router = useRouter();
 
   // Save both in localStorage and through API (for cross-device syncing)
@@ -190,6 +208,34 @@ export default function EditMusicPage() {
     
     loadVideos();
   }, []);
+
+  // Load music submissions
+  useEffect(() => {
+    const loadSubmissions = async () => {
+      if (activeTab !== 'submissions') return;
+      
+      setSubmissionsLoading(true);
+      
+      try {
+        const response = await fetch('/api/music-submissions');
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSubmissions(data);
+        } else {
+          console.error('Error fetching submissions:', await response.text());
+          showError('加载音乐推荐失败');
+        }
+      } catch (error) {
+        console.error('Error loading submissions:', error);
+        showError('加载音乐推荐失败');
+      } finally {
+        setSubmissionsLoading(false);
+      }
+    };
+    
+    loadSubmissions();
+  }, [activeTab]);
 
   // Force sync with server
   const forceSyncWithServer = async () => {
@@ -413,6 +459,75 @@ export default function EditMusicPage() {
     }
   };
 
+  const handleSubmissionStatusChange = async (submissionId: string, status: 'pending' | 'approved' | 'rejected') => {
+    setSubmissionStatusUpdating(submissionId);
+    
+    try {
+      const response = await fetch('/api/music-submissions', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          submissionId,
+          status
+        })
+      });
+      
+      if (response.ok) {
+        // Update the submission status in the local state
+        setSubmissions(prevSubmissions => 
+          prevSubmissions.map(sub => 
+            sub._id === submissionId ? { ...sub, status } : sub
+          )
+        );
+        
+        showSuccess(`音乐推荐状态已更新为 ${
+          status === 'approved' ? '已批准' : 
+          status === 'rejected' ? '已拒绝' : 
+          '待处理'
+        }`);
+        
+        // If approved, you could optionally add it to the videos list
+        if (status === 'approved') {
+          const submission = submissions.find(sub => sub._id === submissionId);
+          if (submission) {
+            // Optional: Prompt to add to video list
+            setSuccessMessage(`已批准 "${submission.songName}"。请手动添加到音乐列表。`);
+          }
+        }
+      } else {
+        const errorData = await response.json();
+        showError(`更新状态失败: ${errorData.error || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('Error updating submission status:', error);
+      showError('更新状态失败，请稍后再试');
+    } finally {
+      setSubmissionStatusUpdating(null);
+    }
+  };
+
+  // Add this function to convert a submission to a new video
+  const convertSubmissionToVideo = (submission: MusicSubmission) => {
+    // Set the form values to quickly add this song
+    setNewTitle(`${submission.songName} - ${submission.artistName}`);
+    setNewDescription(`推荐者: ${submission.submitterName}\n\n${submission.reason}`);
+    setNewVideoId('');
+    
+    // Switch to videos tab
+    setActiveTab('videos');
+    
+    // Show a helpful message
+    showSuccess(`请为 "${submission.songName}" 填写YouTube视频ID并添加`);
+    
+    // Scroll to the add form
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#fff6ef]/70 to-white/90 dark:from-[#332217]/30 dark:to-gray-950/90">
       <header className="w-full py-5 px-4 flex justify-center items-center sticky top-0 z-10 backdrop-blur-sm bg-white/60 dark:bg-gray-950/60 border-b border-[#C2884E]/10">
@@ -498,236 +613,431 @@ export default function EditMusicPage() {
                 )}
               </AnimatePresence>
 
-              {/* Add new video form */}
-              <div className="mb-8 p-5 border border-[#C2884E]/20 rounded-lg bg-white/50 dark:bg-gray-800/50">
-                <h3 className="text-lg font-medium text-[#C2884E] mb-4">添加新音乐视频</h3>
-                <div className="grid gap-4">
-                  <div>
-                    <Label htmlFor="videoId" className="mb-1.5 block text-sm font-medium">
-                      YouTube 视频 ID 或 URL
-                    </Label>
-                    <Input
-                      id="videoId"
-                      value={newVideoId}
-                      onChange={(e) => setNewVideoId(e.target.value)}
-                      placeholder="例如: ygTZZpVkmKg 或 https://www.youtube.com/watch?v=ygTZZpVkmKg"
-                      className="bg-white/80 dark:bg-gray-800/80"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="title" className="mb-1.5 block text-sm font-medium">
-                      标题
-                    </Label>
-                    <Input
-                      id="title"
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder="视频标题"
-                      className="bg-white/80 dark:bg-gray-800/80"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description" className="mb-1.5 block text-sm font-medium">
-                      描述
-                    </Label>
-                    <Textarea
-                      id="description"
-                      value={newDescription}
-                      onChange={(e) => setNewDescription(e.target.value)}
-                      placeholder="视频描述（可选）"
-                      className="resize-none h-20 bg-white/80 dark:bg-gray-800/80"
-                    />
-                  </div>
-                  <div>
-                    <Button 
-                      onClick={handleAddVideo}
-                      disabled={isSyncing}
-                      className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#D1A46C] hover:to-[#C2884E] text-white"
-                    >
-                      {isSyncing ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          处理中...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-2" />
-                          添加视频
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Info box about syncing */}
-              <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <div className="flex gap-3">
-                  <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-1">音乐同步说明</h4>
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      您添加的音乐将自动同步到所有设备。如果您在其他设备上看不到最新音乐，请点击上方的"同步数据"按钮更新。
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Video list */}
-              <div>
-                <h3 className="text-lg font-medium text-[#C2884E] mb-4">已保存的音乐视频</h3>
+              {/* Tabs */}
+              <Tabs 
+                defaultValue="videos" 
+                value={activeTab} 
+                onValueChange={(value) => setActiveTab(value as 'videos' | 'submissions')}
+                className="mb-8"
+              >
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger 
+                    value="videos"
+                    className="data-[state=active]:bg-[#C2884E] data-[state=active]:text-white"
+                  >
+                    音乐视频管理
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="submissions"
+                    className="data-[state=active]:bg-[#C2884E] data-[state=active]:text-white"
+                  >
+                    用户推荐歌曲
+                    {submissions.filter(sub => sub.status === 'pending').length > 0 && (
+                      <Badge className="ml-2 bg-red-500 hover:bg-red-600">
+                        {submissions.filter(sub => sub.status === 'pending').length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
                 
-                {/* Loading state */}
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-20">
-                    <RefreshCw className="h-8 w-8 text-[#C2884E] animate-spin" />
+                <TabsContent value="videos" className="focus-visible:outline-none focus-visible:ring-0">
+                  {/* Add new video form */}
+                  <div className="mb-8 p-5 border border-[#C2884E]/20 rounded-lg bg-white/50 dark:bg-gray-800/50">
+                    <h3 className="text-lg font-medium text-[#C2884E] mb-4">添加新音乐视频</h3>
+                    <div className="grid gap-4">
+                      <div>
+                        <Label htmlFor="videoId" className="mb-1.5 block text-sm font-medium">
+                          YouTube 视频 ID 或 URL
+                        </Label>
+                        <Input
+                          id="videoId"
+                          value={newVideoId}
+                          onChange={(e) => setNewVideoId(e.target.value)}
+                          placeholder="例如: ygTZZpVkmKg 或 https://www.youtube.com/watch?v=ygTZZpVkmKg"
+                          className="bg-white/80 dark:bg-gray-800/80"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="title" className="mb-1.5 block text-sm font-medium">
+                          标题
+                        </Label>
+                        <Input
+                          id="title"
+                          value={newTitle}
+                          onChange={(e) => setNewTitle(e.target.value)}
+                          placeholder="视频标题"
+                          className="bg-white/80 dark:bg-gray-800/80"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="description" className="mb-1.5 block text-sm font-medium">
+                          描述
+                        </Label>
+                        <Textarea
+                          id="description"
+                          value={newDescription}
+                          onChange={(e) => setNewDescription(e.target.value)}
+                          placeholder="视频描述（可选）"
+                          className="resize-none h-20 bg-white/80 dark:bg-gray-800/80"
+                        />
+                      </div>
+                      <div>
+                        <Button 
+                          onClick={handleAddVideo}
+                          disabled={isSyncing}
+                          className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#D1A46C] hover:to-[#C2884E] text-white"
+                        >
+                          {isSyncing ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              处理中...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-2" />
+                              添加视频
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
-                    {musicVideos.map((video) => (
-                      <Card key={video.id} className="border-[#C2884E]/20 overflow-hidden">
-                        {editingId === video.id ? (
-                          // Editing mode
-                          <div className="p-4">
-                            <div className="grid gap-3 mb-4">
-                              <div>
-                                <Label htmlFor={`edit-videoId-${video.id}`} className="mb-1.5 block text-sm font-medium">
-                                  YouTube 视频 ID 或 URL
-                                </Label>
-                                <Input
-                                  id={`edit-videoId-${video.id}`}
-                                  value={editedVideoId}
-                                  onChange={(e) => setEditedVideoId(e.target.value)}
-                                  className="bg-white/80 dark:bg-gray-800/80"
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor={`edit-title-${video.id}`} className="mb-1.5 block text-sm font-medium">
-                                  标题
-                                </Label>
-                                <Input
-                                  id={`edit-title-${video.id}`}
-                                  value={editedTitle}
-                                  onChange={(e) => setEditedTitle(e.target.value)}
-                                  className="bg-white/80 dark:bg-gray-800/80"
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor={`edit-description-${video.id}`} className="mb-1.5 block text-sm font-medium">
-                                  描述
-                                </Label>
-                                <Textarea
-                                  id={`edit-description-${video.id}`}
-                                  value={editedDescription}
-                                  onChange={(e) => setEditedDescription(e.target.value)}
-                                  className="resize-none h-20 bg-white/80 dark:bg-gray-800/80"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                onClick={() => handleSaveEdit(video.id)}
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                                disabled={isSyncing}
-                              >
-                                {isSyncing ? (
-                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Check className="h-4 w-4 mr-1" />
-                                    保存
-                                  </>
-                                )}
-                              </Button>
-                              <Button 
-                                onClick={handleCancelEdit}
-                                size="sm"
-                                variant="outline"
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                取消
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          // Display mode
-                          <>
-                            <div className="aspect-video relative bg-black/5 dark:bg-black/20">
-                              <img 
-                                src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
-                                alt={video.title}
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                                  <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="p-4">
-                              <h4 className="text-lg font-medium text-[#C2884E] mb-1">{video.title}</h4>
-                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{video.description}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                                视频 ID: {video.videoId}
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                <Button 
-                                  onClick={() => handleEdit(video)}
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
-                                  disabled={isSyncing}
-                                >
-                                  <Edit2 className="h-4 w-4 mr-1" />
-                                  编辑
-                                </Button>
-                                
-                                {confirmDelete === video.id ? (
-                                  <div className="flex gap-2">
-                                    <Button 
-                                      onClick={() => handleDelete(video.id)}
-                                      size="sm"
-                                      className="bg-red-600 hover:bg-red-700 text-white"
-                                      disabled={isSyncing}
-                                    >
-                                      {isSyncing ? (
-                                        <RefreshCw className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        "确认"
-                                      )}
-                                    </Button>
-                                    <Button 
-                                      onClick={() => setConfirmDelete(null)}
-                                      size="sm"
-                                      variant="outline"
-                                    >
-                                      取消
-                                    </Button>
+
+                  {/* Info box about syncing */}
+                  <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex gap-3">
+                      <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-1">音乐同步说明</h4>
+                        <p className="text-sm text-blue-600 dark:text-blue-400">
+                          您添加的音乐将自动同步到所有设备。如果您在其他设备上看不到最新音乐，请点击上方的"同步数据"按钮更新。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Video list */}
+                  <div>
+                    <h3 className="text-lg font-medium text-[#C2884E] mb-4">已保存的音乐视频</h3>
+                    
+                    {/* Loading state */}
+                    {isLoading ? (
+                      <div className="flex justify-center items-center py-20">
+                        <RefreshCw className="h-8 w-8 text-[#C2884E] animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+                        {musicVideos.map((video) => (
+                          <Card key={video.id} className="border-[#C2884E]/20 overflow-hidden">
+                            {editingId === video.id ? (
+                              // Editing mode
+                              <div className="p-4">
+                                <div className="grid gap-3 mb-4">
+                                  <div>
+                                    <Label htmlFor={`edit-videoId-${video.id}`} className="mb-1.5 block text-sm font-medium">
+                                      YouTube 视频 ID 或 URL
+                                    </Label>
+                                    <Input
+                                      id={`edit-videoId-${video.id}`}
+                                      value={editedVideoId}
+                                      onChange={(e) => setEditedVideoId(e.target.value)}
+                                      className="bg-white/80 dark:bg-gray-800/80"
+                                    />
                                   </div>
-                                ) : (
+                                  <div>
+                                    <Label htmlFor={`edit-title-${video.id}`} className="mb-1.5 block text-sm font-medium">
+                                      标题
+                                    </Label>
+                                    <Input
+                                      id={`edit-title-${video.id}`}
+                                      value={editedTitle}
+                                      onChange={(e) => setEditedTitle(e.target.value)}
+                                      className="bg-white/80 dark:bg-gray-800/80"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`edit-description-${video.id}`} className="mb-1.5 block text-sm font-medium">
+                                      描述
+                                    </Label>
+                                    <Textarea
+                                      id={`edit-description-${video.id}`}
+                                      value={editedDescription}
+                                      onChange={(e) => setEditedDescription(e.target.value)}
+                                      className="resize-none h-20 bg-white/80 dark:bg-gray-800/80"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
                                   <Button 
-                                    onClick={() => setConfirmDelete(video.id)}
+                                    onClick={() => handleSaveEdit(video.id)}
                                     size="sm"
-                                    variant="outline"
-                                    className="border-red-500 text-red-500 hover:bg-red-500/10"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
                                     disabled={isSyncing}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    删除
+                                    {isSyncing ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Check className="h-4 w-4 mr-1" />
+                                        保存
+                                      </>
+                                    )}
                                   </Button>
-                                )}
+                                  <Button 
+                                    onClick={handleCancelEdit}
+                                    size="sm"
+                                    variant="outline"
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    取消
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                          </>
-                        )}
-                      </Card>
-                    ))}
+                            ) : (
+                              // Display mode
+                              <>
+                                <div className="aspect-video relative bg-black/5 dark:bg-black/20">
+                                  <img 
+                                    src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
+                                    alt={video.title}
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                    <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                                      <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="p-4">
+                                  <h4 className="text-lg font-medium text-[#C2884E] mb-1">{video.title}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{video.description}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                                    视频 ID: {video.videoId}
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button 
+                                      onClick={() => handleEdit(video)}
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                                      disabled={isSyncing}
+                                    >
+                                      <Edit2 className="h-4 w-4 mr-1" />
+                                      编辑
+                                    </Button>
+                                    
+                                    {confirmDelete === video.id ? (
+                                      <div className="flex gap-2">
+                                        <Button 
+                                          onClick={() => handleDelete(video.id)}
+                                          size="sm"
+                                          className="bg-red-600 hover:bg-red-700 text-white"
+                                          disabled={isSyncing}
+                                        >
+                                          {isSyncing ? (
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            "确认"
+                                          )}
+                                        </Button>
+                                        <Button 
+                                          onClick={() => setConfirmDelete(null)}
+                                          size="sm"
+                                          variant="outline"
+                                        >
+                                          取消
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <Button 
+                                        onClick={() => setConfirmDelete(video.id)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-red-500 text-red-500 hover:bg-red-500/10"
+                                        disabled={isSyncing}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-1" />
+                                        删除
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </TabsContent>
+                
+                <TabsContent value="submissions" className="focus-visible:outline-none focus-visible:ring-0">
+                  <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex gap-3">
+                      <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-1">用户歌曲推荐</h4>
+                        <p className="text-sm text-blue-600 dark:text-blue-400">
+                          这里显示用户通过前台表单提交的歌曲推荐。您可以查看详情、批准或拒绝这些推荐。批准后，您需要在音乐视频管理标签中手动添加对应的YouTube视频。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {submissionsLoading ? (
+                    <div className="flex justify-center items-center py-20">
+                      <RefreshCw className="h-8 w-8 text-[#C2884E] animate-spin" />
+                    </div>
+                  ) : submissions.length === 0 ? (
+                    <div className="text-center py-12 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                      <Music className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-600 mb-3" />
+                      <h3 className="text-lg font-medium text-gray-500 dark:text-gray-400 mb-1">暂无歌曲推荐</h3>
+                      <p className="text-sm text-gray-400 dark:text-gray-500">
+                        用户提交的歌曲推荐将显示在这里
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {submissions.map((submission) => (
+                        <Card 
+                          key={submission._id} 
+                          className={`border-[#C2884E]/20 overflow-hidden ${
+                            submission.status === 'pending' 
+                              ? 'bg-amber-50/80 dark:bg-amber-900/10' 
+                              : submission.status === 'approved'
+                              ? 'bg-green-50/80 dark:bg-green-900/10'
+                              : 'bg-red-50/80 dark:bg-red-900/10'
+                          }`}
+                        >
+                          <div className="p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="text-lg font-medium text-[#C2884E]">
+                                  {submission.songName}
+                                </h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                  {submission.artistName}
+                                </p>
+                              </div>
+                              <Badge className={`
+                                ${submission.status === 'pending' 
+                                  ? 'bg-amber-500 hover:bg-amber-600' 
+                                  : submission.status === 'approved'
+                                  ? 'bg-green-500 hover:bg-green-600'
+                                  : 'bg-red-500 hover:bg-red-600'
+                                }
+                              `}>
+                                {submission.status === 'pending' ? '待处理' : 
+                                 submission.status === 'approved' ? '已批准' : '已拒绝'}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex justify-between items-center mb-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                推荐者: {submission.submitterName}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {new Date(submission.createdAt).toLocaleString('zh-CN', { 
+                                  year: 'numeric', 
+                                  month: 'numeric', 
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                            
+                            {expandedSubmission === submission._id && (
+                              <div className="my-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-md">
+                                <h5 className="text-sm font-medium text-[#C2884E] mb-1">推荐理由:</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">
+                                  {submission.reason}
+                                </p>
+                              </div>
+                            )}
+                            
+                            <div className="flex flex-wrap gap-2 mt-4">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setExpandedSubmission(
+                                  expandedSubmission === submission._id ? null : submission._id
+                                )}
+                                className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                              >
+                                {expandedSubmission === submission._id ? '收起详情' : '查看详情'}
+                              </Button>
+                              
+                              {submission.status === 'pending' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => handleSubmissionStatusChange(submission._id, 'approved')}
+                                    disabled={submissionStatusUpdating === submission._id}
+                                  >
+                                    {submissionStatusUpdating === submission._id ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Check className="h-4 w-4 mr-1" />
+                                        批准
+                                      </>
+                                    )}
+                                  </Button>
+                                  
+                                  <Button
+                                    size="sm"
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                    onClick={() => handleSubmissionStatusChange(submission._id, 'rejected')}
+                                    disabled={submissionStatusUpdating === submission._id}
+                                  >
+                                    {submissionStatusUpdating === submission._id ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <X className="h-4 w-4 mr-1" />
+                                        拒绝
+                                      </>
+                                    )}
+                                  </Button>
+                                </>
+                              )}
+                              
+                              {submission.status === 'approved' && (
+                                <Button
+                                  size="sm"
+                                  className="bg-[#C2884E] hover:bg-[#C2884E]/90 text-white"
+                                  onClick={() => convertSubmissionToVideo(submission)}
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  添加到音乐列表
+                                </Button>
+                              )}
+                              
+                              {submission.status !== 'pending' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSubmissionStatusChange(submission._id, 'pending')}
+                                  disabled={submissionStatusUpdating === submission._id}
+                                  className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                                >
+                                  {submissionStatusUpdating === submission._id ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                  ) : '标为待处理'}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
             <CardFooter className="text-xs sm:text-sm text-[#C2884E]/70 justify-center border-t border-[#C2884E]/10 bg-gradient-to-r from-[#C2884E]/5 to-[#D1A46C]/5 py-4">
               <div className="flex items-center gap-2 flex-wrap justify-center">

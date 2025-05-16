@@ -3,10 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight, Pause, Play, Edit2, Info } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Music, RefreshCw, ChevronLeft, ChevronRight, Pause, Play, Edit2, Info, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface MusicVideo {
   id: string;
@@ -32,6 +35,15 @@ export default function BGMPage() {
   const [message, setMessage] = useState('');
   const [isPlaying, setIsPlaying] = useState(true);
   const playerRef = useRef<HTMLIFrameElement>(null);
+  const [showSubmissionForm, setShowSubmissionForm] = useState(false);
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionForm, setSubmissionForm] = useState({
+    songName: '',
+    artistName: '',
+    reason: '',
+    submitterName: ''
+  });
 
   useEffect(() => {
     const loadVideos = async () => {
@@ -392,6 +404,58 @@ export default function BGMPage() {
     }
   }, [currentVideoIndex, loading, isMuted, isPlaying]);
 
+  const handleSubmissionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setSubmissionForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const submitSongRecommendation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form - only songName and submitterName are required
+    if (!submissionForm.songName || !submissionForm.submitterName) {
+      setMessage('请填写所有必填字段（歌曲名称和您的名字是必填的）');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/music-submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submissionForm),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setSubmissionSuccess(true);
+        // Reset form
+        setSubmissionForm({
+          songName: '',
+          artistName: '',
+          reason: '',
+          submitterName: ''
+        });
+      } else {
+        setMessage(data.message || '提交失败，请稍后再试');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (error) {
+      setMessage('网络错误，请稍后再试');
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#fff6ef]/70 to-white/90 dark:from-[#332217]/30 dark:to-gray-950/90">
       <header className="w-full py-5 px-4 flex justify-center items-center sticky top-0 z-10 backdrop-blur-sm bg-white/60 dark:bg-gray-950/60 border-b border-[#C2884E]/10">
@@ -430,25 +494,37 @@ export default function BGMPage() {
                   </div>
                 </div>
                 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={forceSyncWithServer}
-                  disabled={syncing}
-                  className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
-                >
-                  {syncing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      同步中...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      同步数据
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSubmissionForm(true)}
+                    className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                  >
+                    <Music className="h-4 w-4 mr-2" />
+                    推荐我的歌
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={forceSyncWithServer}
+                    disabled={syncing}
+                    className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10"
+                  >
+                    {syncing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        同步中...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        同步数据
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             
@@ -632,6 +708,152 @@ export default function BGMPage() {
             </CardFooter>
           </Card>
         </motion.div>
+
+        {/* Modal popup for submission form */}
+        <AnimatePresence>
+          {showSubmissionForm && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-lg"
+              >
+                <Card className="border-[#C2884E]/20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl">
+                  <CardHeader className="border-b border-[#C2884E]/10 bg-gradient-to-r from-[#C2884E]/5 to-[#D1A46C]/5">
+                    <CardTitle className="text-xl font-bold text-[#C2884E]">推荐我的歌 🎵</CardTitle>
+                    <CardDescription className="text-[#D1A46C]">
+                      把你爱听的歌推荐给大家吧～我们会从投稿中挑选加入每日歌单！
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  {submissionSuccess ? (
+                    <CardContent className="p-6 text-center">
+                      <div className="text-[#C2884E] mb-2 flex justify-center">
+                        <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-bold text-[#C2884E] mb-2">投稿成功！</h3>
+                      <p className="text-[#D1A46C] mb-4">
+                        感谢你的推荐～我们会根据顺序逐一加入每日歌单，Kapioo用户很快就能听到你的歌啦！🎧
+                      </p>
+                      <Button 
+                        onClick={() => {
+                          setSubmissionSuccess(false);
+                          setShowSubmissionForm(false);
+                        }}
+                        className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#D1A46C] hover:to-[#C2884E] text-white"
+                      >
+                        关闭
+                      </Button>
+                    </CardContent>
+                  ) : (
+                    <>
+                      <CardContent className="p-5 sm:p-8">
+                        <form onSubmit={submitSongRecommendation} className="space-y-4">
+                          <div>
+                            <Label htmlFor="songName" className="text-[#C2884E] mb-1.5 block">
+                              🎵 歌曲名称：
+                            </Label>
+                            <Input 
+                              id="songName"
+                              name="songName"
+                              value={submissionForm.songName}
+                              onChange={handleSubmissionChange}
+                              placeholder="请输入歌曲名称"
+                              className="bg-white/80 dark:bg-gray-800/80"
+                              required
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="artistName" className="text-[#C2884E] mb-1.5 block">
+                              👤 歌手名字：
+                            </Label>
+                            <Input 
+                              id="artistName"
+                              name="artistName"
+                              value={submissionForm.artistName}
+                              onChange={handleSubmissionChange}
+                              placeholder="请输入歌手名字"
+                              className="bg-white/80 dark:bg-gray-800/80"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="reason" className="text-[#C2884E] mb-1.5 block">
+                              💬 为什么想分享这首歌？
+                            </Label>
+                            <Textarea 
+                              id="reason"
+                              name="reason"
+                              value={submissionForm.reason}
+                              onChange={handleSubmissionChange}
+                              placeholder="回忆，故事，你喜欢的歌手，聊聊都行！"
+                              className="resize-none h-24 bg-white/80 dark:bg-gray-800/80"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="submitterName" className="text-[#C2884E] mb-1.5 block">
+                              📝 想我们怎么称呼你？
+                            </Label>
+                            <Input 
+                              id="submitterName"
+                              name="submitterName"
+                              value={submissionForm.submitterName}
+                              onChange={handleSubmissionChange}
+                              placeholder="小名、网名、昵称都可以～"
+                              className="bg-white/80 dark:bg-gray-800/80"
+                              required
+                            />
+                          </div>
+                          
+                          {message && (
+                            <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-800 dark:text-red-300">
+                              {message}
+                            </div>
+                          )}
+                        </form>
+                      </CardContent>
+                      
+                      <CardFooter className="flex justify-end gap-3 pt-2 border-t border-[#C2884E]/10 bg-gradient-to-r from-[#C2884E]/5 to-[#D1A46C]/5 py-4">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setShowSubmissionForm(false)}
+                          className="border-[#C2884E] text-[#C2884E]"
+                        >
+                          取消
+                        </Button>
+                        
+                        <Button 
+                          type="button"
+                          onClick={submitSongRecommendation}
+                          className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#D1A46C] hover:to-[#C2884E] text-white"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              提交中...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4 mr-2" />
+                              提交!
+                            </>
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </>
+                  )}
+                </Card>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
