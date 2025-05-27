@@ -8,7 +8,7 @@ import { LanguageProvider } from "@/lib/language-context"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "Kapioo - Capybara-Approved Meal Service",
+  title: "Kapioo - Dietitian-Approved Chinese Fusion Meals, Delivered Fresh Daily in Toronto",
   description: "A subscription-based food meal service with capybara-approved quality",
   generator: 'v0.dev'
 }
