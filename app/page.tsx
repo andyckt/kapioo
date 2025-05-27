@@ -63,7 +63,7 @@ export default function Home() {
                 transition={{ duration: 0.8 }}
               >
                 {/* Full-height carousel wrapper */}
-                <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full h-[85vh] max-h-[calc(100vh-8rem)]">
+                <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full min-h-[500px] max-h-[600px]">
                   <HeroCarousel />
                 </div>
               </motion.div>
