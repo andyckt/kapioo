@@ -94,60 +94,54 @@ export default function Home() {
                       </h1>
                     </div>
                     
-                    <div className="border-l-2 border-[#C2884E]/40 pl-5">
-                      <div className="prose prose-sm sm:prose-base text-muted-foreground">
-                        <div className="text-base sm:text-lg font-medium text-[#C2884E]/90 mb-3 flex items-center">
-                          <span className="mr-2">每日现做 每日配送</span>
-                          <div className="h-px flex-grow bg-gradient-to-r from-[#C2884E]/30 to-transparent"></div>
+                    <div className="space-y-6">
+                      {/* Tagline section - removed background container */}
+                      <div className="p-1">
+                        <div className="text-base sm:text-lg font-medium text-[#C2884E] mb-3">
+                          每日现做 每日配送
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-y-2 gap-x-4 mb-4">
-                          <div className="flex items-center">
-                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
-                            <span className="text-sm">健康</span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
-                            <span className="text-sm">高质</span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
-                            <span className="text-sm">舒服</span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
-                            <span className="text-sm">幸福</span>
-                          </div>
+                        {/* Tags in a more elegant layout */}
+                        <div className="flex flex-wrap gap-3 mb-4">
+                          {['健康', '高质', '舒服', '幸福'].map((tag, index) => (
+                            <span 
+                              key={index}
+                              className="px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-sm text-[#C2884E] shadow-sm flex items-center"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5 inline-block"></span>
+                              {tag}
+                            </span>
+                          ))}
                         </div>
-                        
-                        <div className="pt-3 border-t border-[#C2884E]/20">
-                          <p className="text-sm sm:text-base italic">
+                      </div>
+                      
+                      {/* Motto section with buttons on the same line */}
+                      <div className="flex justify-between items-center p-1">
+                        <div className="space-y-2">
+                          <p className="text-sm sm:text-base italic text-[#6B5F53]">
                             一顿饭的时间 给生活松一口气
                           </p>
                           <p className="text-sm sm:text-base font-medium text-[#C2884E]">
                             Kapioo，你每天的松弛美好时刻
                           </p>
                         </div>
+                        
+                        <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
+                          <Button asChild size="sm" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-sm">
+                            <Link href="/login">
+                              {t('getStartedBtn')} <ArrowRight className="ml-1 h-3 w-3" />
+                            </Link>
+                          </Button>
+                          {/* 
+                          <Button variant="outline" size="sm" asChild className="hover:scale-105 transition-transform border-[#C2884E]/30 text-[#C2884E]">
+                            <Link href="#how-it-works">{t('howItWorksBtn')}</Link>
+                          </Button>
+                          */}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                <motion.div 
-                  className="flex flex-col sm:flex-row gap-3 mt-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.6, delay: 0.6 }}
-                >
-                  <Button asChild size="lg" className="w-full sm:w-auto hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md">
-                    <Link href="/login">
-                      {t('getStartedBtn')} <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="lg" asChild className="w-full sm:w-auto hover:scale-105 transition-transform border-[#C2884E]/30 text-[#C2884E]">
-                    <Link href="#how-it-works">{t('howItWorksBtn')}</Link>
-                  </Button>
-                </motion.div>
               </motion.div>
               <motion.div 
                 className="mx-auto w-full order-1 lg:order-2"
