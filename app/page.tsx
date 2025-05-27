@@ -8,6 +8,8 @@ import { HeroCarousel } from "@/components/hero-carousel"
 import { motion } from "framer-motion"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { ScreenshotCarousel } from "@/components/screenshot-carousel"
+import CustomerReviewsSection from "@/components/customer-reviews-section"
 
 export default function Home() {
   const { t } = useLanguage();
@@ -459,7 +461,8 @@ export default function Home() {
           </div>
         </section>
         
-        {/* How It Works section removed */}
+        {/* Customer Reviews Section - NEW */}
+        <CustomerReviewsSection />
         
       </main>
       <footer className="w-full border-t bg-background py-4 sm:py-6 md:py-8">
