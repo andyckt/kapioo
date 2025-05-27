@@ -60,13 +60,13 @@ export default function SocialMediaPage() {
                 }}
                 className="relative"
               >
-                <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48">
+                <div className="relative w-40 h-40 sm:w-44 sm:h-44 md:w-48 md:h-48">
                   <Image
                     src={platform.logo}
                     alt={platform.id === "instagram" ? "Instagram logo" : "Xiaohongshu logo"}
                     fill
                     className="object-contain transition-all duration-300 ease-in-out"
-                    sizes="(max-width: 640px) 128px, (max-width: 768px) 160px, 192px"
+                    sizes="(max-width: 640px) 160px, (max-width: 768px) 176px, 192px"
                     priority
                   />
                 </div>
