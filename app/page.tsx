@@ -50,57 +50,101 @@ export default function Home() {
             <div className="absolute inset-0 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:20px_20px]"></div>
           </div>
           
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
+          
           <div className="container px-4 md:px-6 relative z-10">
             <div className="grid gap-8 lg:grid-cols-[1fr_600px] lg:gap-12 xl:grid-cols-[1fr_700px] items-center">
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="flex flex-col justify-center space-y-4 order-2 lg:order-1"
+                className="flex flex-col justify-center space-y-8 order-2 lg:order-1"
               >
-                <div className="space-y-2 relative">
-                  <div className="relative">
-                    <div className="relative">
-                      {/* Mascot character - commented out
-                      <motion.div
-                        initial={{ y: -10, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ duration: 0.5, delay: 0.3 }}
-                        className="absolute bottom-[80%] sm:bottom-[85%] md:bottom-[90%] left-0 z-10"
-                      >
-                        <Image 
-                          src="/未命名設計 (2).png" 
-                          alt="Kapioo Mascot" 
-                          width={80} 
-                          height={80}
-                          sizes="(max-width: 640px) 80px, (max-width: 768px) 90px, 100px"
-                          priority
-                          className="select-none sm:w-[90px] sm:h-[90px] md:w-[100px] md:h-[100px]"
-                        />
-                      </motion.div>
-                      */}
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
-                        {/* <span className="inline-block w-[15px] sm:w-[20px] md:w-[25px]"></span> */}
+                {/* Redesigned title and subtitle section */}
+                <div className="relative z-10 bg-white/80 backdrop-blur-sm p-8 rounded-xl border border-[#C2884E]/20 shadow-lg mt-10">
+                  {/* Logo positioned on top right of card with automatic animation */}
+                  <motion.div 
+                    className="absolute -top-16 right-8"
+                    animate={{ 
+                      y: [0, -8, 0],
+                      rotate: [0, 6, 0]
+                    }}
+                    transition={{ 
+                      repeat: Infinity,
+                      duration: 2,
+                      ease: "easeInOut" 
+                    }}
+                  >
+                    <Image 
+                      src="/未命名設計.png" 
+                      alt="Kapioo Logo" 
+                      width={50} 
+                      height={50}
+                      className="h-20 w-20 drop-shadow-lg" 
+                    />
+                  </motion.div>
+                  
+                  <div className="space-y-6">
+                    <div className="relative mb-8">
+                      <div className="w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-4"></div>
+                      <h1 className="text-xl sm:text-2xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
                         <span dangerouslySetInnerHTML={{ __html: t('heroTitle') }} />
                       </h1>
                     </div>
+                    
+                    <div className="border-l-2 border-[#C2884E]/40 pl-5">
+                      <div className="prose prose-sm sm:prose-base text-muted-foreground">
+                        <div className="text-base sm:text-lg font-medium text-[#C2884E]/90 mb-3 flex items-center">
+                          <span className="mr-2">每日现做 每日配送</span>
+                          <div className="h-px flex-grow bg-gradient-to-r from-[#C2884E]/30 to-transparent"></div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-y-2 gap-x-4 mb-4">
+                          <div className="flex items-center">
+                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
+                            <span className="text-sm">健康</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
+                            <span className="text-sm">高质</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
+                            <span className="text-sm">舒服</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="inline-block h-3 w-3 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5"></span>
+                            <span className="text-sm">幸福</span>
+                          </div>
+                        </div>
+                        
+                        <div className="pt-3 border-t border-[#C2884E]/20">
+                          <p className="text-sm sm:text-base italic">
+                            一顿饭的时间 给生活松一口气
+                          </p>
+                          <p className="text-sm sm:text-base font-medium text-[#C2884E]">
+                            Kapioo，你每天的松弛美好时刻
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <p className="max-w-[600px] text-sm sm:text-base text-muted-foreground md:text-lg mt-8">
-                    <span dangerouslySetInnerHTML={{ __html: t('heroDescription') }} />
-                  </p>
                 </div>
+                
                 <motion.div 
-                  className="flex flex-col sm:flex-row gap-2"
+                  className="flex flex-col sm:flex-row gap-3 mt-4"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.6, delay: 0.6 }}
                 >
-                  <Button asChild size="lg" className="w-full sm:w-auto hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white">
+                  <Button asChild size="lg" className="w-full sm:w-auto hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md">
                     <Link href="/login">
                       {t('getStartedBtn')} <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button variant="outline" size="lg" asChild className="w-full sm:w-auto hover:scale-105 transition-transform">
+                  <Button variant="outline" size="lg" asChild className="w-full sm:w-auto hover:scale-105 transition-transform border-[#C2884E]/30 text-[#C2884E]">
                     <Link href="#how-it-works">{t('howItWorksBtn')}</Link>
                   </Button>
                 </motion.div>
