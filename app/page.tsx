@@ -44,7 +44,7 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1">
-        <section className="w-full py-10 md:py-24 lg:py-32 xl:py-40 bg-[#fff6ef] relative overflow-hidden">
+        <section className="w-full relative overflow-hidden h-[calc(100vh-4rem)] bg-[#fff6ef]">
           {/* Background pattern for premium feel */}
           <div className="absolute inset-0 z-0 opacity-5">
             <div className="absolute inset-0 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:20px_20px]"></div>
@@ -54,16 +54,27 @@ export default function Home() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           
-          <div className="container px-4 md:px-6 relative z-10">
-            <div className="grid gap-8 lg:grid-cols-[1fr_600px] lg:gap-12 xl:grid-cols-[1fr_700px] items-center">
+          <div className="container h-full px-4 md:px-6 relative z-10 flex items-center">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12 items-center h-full py-4 md:py-6">
+              <motion.div 
+                className="mx-auto w-full order-1 h-full flex items-center"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8 }}
+              >
+                {/* Full-height carousel wrapper */}
+                <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full h-[85vh] max-h-[calc(100vh-8rem)]">
+                  <HeroCarousel />
+                </div>
+              </motion.div>
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="flex flex-col justify-center space-y-8 order-2 lg:order-1"
+                className="flex flex-col justify-center space-y-6 order-2"
               >
                 {/* Redesigned title and subtitle section */}
-                <div className="relative z-10 bg-white/80 backdrop-blur-sm p-8 rounded-xl border border-[#C2884E]/20 shadow-lg mt-10">
+                <div className="relative z-10 bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-xl border border-[#C2884E]/20 shadow-lg">
                   {/* Logo positioned on top right of card with automatic animation */}
                   <motion.div 
                     className="absolute -top-16 right-8"
@@ -141,17 +152,6 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-              <motion.div 
-                className="mx-auto w-full order-1 lg:order-2"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8 }}
-              >
-                {/* Premium styled carousel wrapper */}
-                <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full">
-                  <HeroCarousel />
                 </div>
               </motion.div>
             </div>
