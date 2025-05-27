@@ -2298,43 +2298,48 @@ function WeeklyMealSelector({
                           />
                         </div>
                         <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="streetAddress" className="text-sm">{t('streetAddress')}</Label>
+                          <Label htmlFor="streetAddress" className="text-sm">{t('streetAddress')} <span className="text-red-500">*</span></Label>
                           <Input 
                             id="streetAddress" 
                             value={addressFormData.streetAddress} 
-                            onChange={handleAddressInputChange} 
+                            onChange={handleAddressInputChange}
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="city" className="text-sm">{t('city')}</Label>
+                          <Label htmlFor="city" className="text-sm">{t('city')} <span className="text-red-500">*</span></Label>
                           <Input 
                             id="city" 
                             value={addressFormData.city} 
-                            onChange={handleAddressInputChange} 
+                            onChange={handleAddressInputChange}
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="state" className="text-sm">{t('state')}</Label>
+                          <Label htmlFor="state" className="text-sm">{t('state')} <span className="text-red-500">*</span></Label>
                           <Input 
                             id="state" 
                             value={addressFormData.province} 
-                            onChange={handleAddressInputChange} 
+                            onChange={handleAddressInputChange}
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="zip" className="text-sm">{t('zipCode')}</Label>
+                          <Label htmlFor="zip" className="text-sm">{t('zipCode')} <span className="text-red-500">*</span></Label>
                           <Input 
                             id="zip" 
                             value={addressFormData.postalCode} 
-                            onChange={handleAddressInputChange} 
+                            onChange={handleAddressInputChange}
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="country" className="text-sm">{t('country')}</Label>
+                          <Label htmlFor="country" className="text-sm">{t('country')} <span className="text-red-500">*</span></Label>
                           <Input 
                             id="country" 
                             value={addressFormData.country} 
-                            onChange={handleAddressInputChange} 
+                            onChange={handleAddressInputChange}
+                            required
                           />
                         </div>
                         <div className="space-y-2">
