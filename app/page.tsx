@@ -54,16 +54,16 @@ export default function Home() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           
-          <div className="container h-full px-4 md:px-6 relative z-10 flex items-center">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12 items-center h-full py-4 md:py-6">
+          <div className="h-full relative z-10 flex items-center">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12 items-center h-full py-0">
               <motion.div 
-                className="mx-auto w-full order-1 h-full flex items-center"
+                className="mx-0 w-full order-1 h-full flex items-center"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8 }}
               >
                 {/* Full-height carousel wrapper */}
-                <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full h-[85vh] max-h-[calc(100vh-8rem)]">
+                <div className="overflow-hidden shadow-2xl shadow-black/20 relative w-full h-[100vh] max-h-[calc(100vh-4rem)]">
                   <HeroCarousel />
                 </div>
               </motion.div>

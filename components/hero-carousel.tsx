@@ -8,7 +8,7 @@ const IMAGE_PATH = "/images/_MG_E2616.jpg"
 
 export function HeroCarousel() {
   return (
-    <div className="h-full w-full overflow-hidden rounded-xl">
+    <div className="h-full w-full overflow-hidden">
       <div className="h-full w-full">
         <Image 
           src={IMAGE_PATH}
