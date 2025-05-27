@@ -244,7 +244,6 @@ export default function Home() {
                     boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
                   }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
                   <motion.div 
                     className="relative h-full w-full overflow-hidden"
                     whileHover={{ scale: 1.07 }}
@@ -299,7 +298,6 @@ export default function Home() {
                     boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
                   }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
                   <motion.div 
                     className="relative h-full w-full overflow-hidden"
                     whileHover={{ scale: 1.07 }}
@@ -350,7 +348,6 @@ export default function Home() {
                     boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
                   }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
                   <motion.div 
                     className="relative h-full w-full overflow-hidden"
                     whileHover={{ scale: 1.07 }}
@@ -401,7 +398,6 @@ export default function Home() {
                     boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
                   }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
                   <motion.div 
                     className="relative h-full w-full overflow-hidden"
                     whileHover={{ scale: 1.07 }}
