@@ -159,71 +159,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="how-it-works" className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-background">
-          <div className="container px-4 md:px-6">
-            <motion.div 
-              className="flex flex-col items-center justify-center space-y-4 text-center"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="space-y-2">
-                <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">{t('howItWorksTitle')}</h2>
-                <p className="max-w-[900px] text-sm sm:text-base text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  {t('howItWorksDescription')}
-                </p>
-              </div>
-            </motion.div>
-            <div className="mx-auto grid max-w-5xl items-center gap-6 py-8 sm:py-12 md:grid-cols-2 lg:grid-cols-3 lg:gap-12">
-              <motion.div 
-                className="flex flex-col justify-center space-y-4 rounded-lg border p-4 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-              >
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
-                  1
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold">{t('step1Title')}</h3>
-                <p className="text-sm sm:text-base text-muted-foreground">
-                  {t('step1Description')}
-                </p>
-              </motion.div>
-              <motion.div 
-                className="flex flex-col justify-center space-y-4 rounded-lg border p-4 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-              >
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
-                  2
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold">{t('step2Title')}</h3>
-                <p className="text-sm sm:text-base text-muted-foreground">
-                  {t('step2Description')}
-                </p>
-              </motion.div>
-              <motion.div 
-                className="flex flex-col justify-center space-y-4 rounded-lg border p-4 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 md:col-span-2 lg:col-span-1"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-              >
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#C2884E]/20 cursor-pointer">
-                  3
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold">{t('step3Title')}</h3>
-                <p className="text-sm sm:text-base text-muted-foreground">
-                  {t('step3Description')}
-                </p>
-              </motion.div>
-            </div>
-          </div>
-        </section>
+        {/* How It Works section removed */}
+        
       </main>
       <footer className="w-full border-t bg-background py-4 sm:py-6 md:py-8">
         <div className="container flex flex-col items-center justify-center gap-3 md:flex-row md:gap-8">
