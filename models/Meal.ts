@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 // Define Meal interface
 export interface IMeal extends Document {
   name: string;
-  image: string;
+  image?: string;
   description: string;
   calories?: number;
   time?: string;
@@ -20,7 +20,7 @@ export interface IMeal extends Document {
 const MealSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
-    image: { type: String, required: true },
+    image: { type: String },
     description: { type: String, required: true },
     calories: { type: Number },
     time: { type: String },
