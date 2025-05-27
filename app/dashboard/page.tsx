@@ -727,7 +727,7 @@ export default function DashboardPage() {
                       variant={activeTab === item.id ? "default" : "ghost"}
                       className={`justify-start gap-2 text-base w-full ${
                         activeTab === item.id 
-                          ? "relative overflow-hidden group"
+                          ? "relative overflow-hidden group bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white"
                           : ""
                       }`}
                       onClick={() => {
@@ -745,7 +745,7 @@ export default function DashboardPage() {
                       {item.label}
                       {activeTab === item.id && (
                         <motion.div 
-                          className="absolute bottom-0 left-0 h-0.5 bg-primary/70 w-full"
+                          className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full"
                           layoutId="activeTabIndicator"
                         />
                       )}
@@ -807,7 +807,9 @@ export default function DashboardPage() {
               <Button
                 key={item.id}
                 variant={activeTab === item.id ? "default" : "ghost"}
-                className="justify-start gap-2"
+                className={`justify-start gap-2 ${
+                  activeTab === item.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
+                }`}
                 onClick={() => setActiveTab(item.id)}
               >
                 {item.icon}

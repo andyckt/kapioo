@@ -26,7 +26,7 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(25, 95%, 53%)", // Warm capybara brown
+          DEFAULT: "#C2884E", // Updated to match the Get Started button color
           foreground: "hsl(0, 0%, 100%)",
         },
         secondary: {
