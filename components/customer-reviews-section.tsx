@@ -70,8 +70,6 @@ export default function CustomerReviewsSection() {
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 right-[10%] w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-[100px]"></div>
         <div className="absolute -bottom-20 left-[5%] w-[400px] h-[400px] bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-[80px]"></div>
-        <div className="absolute top-1/3 right-0 w-40 h-40 rounded-full border border-[#C2884E]/5 opacity-50"></div>
-        <div className="absolute bottom-1/4 left-[10%] w-16 h-16 rounded-full border border-[#C2884E]/10 opacity-70"></div>
         
         {/* Decorative pattern */}
         <div className="absolute inset-0 opacity-[0.03]">
@@ -80,57 +78,13 @@ export default function CustomerReviewsSection() {
       </div>
       
       <div className="max-w-7xl mx-auto">
-        <motion.div 
-          className="text-center max-w-3xl mx-auto mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <div className="inline-flex items-center justify-center mb-4">
-              <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
-              <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
-                <span className="text-sm font-medium text-[#C2884E]">用户体验</span>
-              </div>
-              <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
-            </div>
-          </motion.div>
-          
-          <motion.h2 
-            className="text-3xl md:text-4xl font-bold mb-4 relative inline-block"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-              来自用户的真实反馈
+              What our customers say about Kapioo
             </span>
-            <motion.div 
-              className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#C2884E]/0 via-[#C2884E]/70 to-[#C2884E]/0"
-              initial={{ width: 0, x: "50%" }}
-              whileInView={{ width: "100%", x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.7 }}
-            ></motion.div>
-          </motion.h2>
-          
-          <motion.p 
-            className="text-lg md:text-xl text-[#6B5F53] mt-6 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            What our customers say about Kapioo
-          </motion.p>
-        </motion.div>
+          </h2>
+        </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left side - Screenshot Stack Carousel */}
@@ -164,17 +118,16 @@ export default function CustomerReviewsSection() {
               {/* Image Stack */}
               <div className="relative w-80 h-96">
                 {reviewImages.map((image, index) => (
-                  <motion.div
+                  <div
                     key={image.id}
                     className="absolute inset-0 transition-all duration-500 ease-out cursor-pointer"
                     style={getImageStyle(index)}
                     onClick={() => setCurrentIndex(index)}
-                    whileHover={{ scale: index === currentIndex ? 1.05 : 1, transition: { duration: 0.3 } }}
                   >
                     <div className="w-full h-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-[#C2884E]/10">
                       <Image src={image.src} alt={image.alt} fill className="object-cover" />
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -201,6 +154,11 @@ export default function CustomerReviewsSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
           >
+            <div className="inline-flex items-center space-x-2 bg-[#C2884E]/10 text-[#C2884E] px-4 py-2 rounded-full text-sm font-medium">
+              <span>💬</span>
+              <span>来自用户的真实反馈</span>
+            </div>
+
             <div className="space-y-4 text-[#6B5F53] leading-relaxed">
               <p className="text-lg">这些不是精心包装的宣传语，而是用户吃过之后亲自发来的消息截图。</p>
 
@@ -212,36 +170,26 @@ export default function CustomerReviewsSection() {
 
               <p>Kapioo 不只是送餐，更是在忙碌生活中，带来一份温暖与真实的连接。</p>
 
-              <div className="relative">
-                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#C2884E] to-[#D1A46C] rounded-full"></div>
-                <p className="text-[#6B5F53] italic pl-6">
-                  每一句评价，我们都珍藏，也会继续努力，让更多人吃到满意的一餐。
-                </p>
+              <p className="text-[#6B5F53]/80 italic border-l-4 border-[#C2884E]/20 pl-4">
+                每一句评价，我们都珍藏，也会继续努力，让更多人吃到满意的一餐。
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#C2884E]">500+</div>
+                <div className="text-sm text-[#6B5F53]">满意评价</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#C2884E]">4.9</div>
+                <div className="text-sm text-[#6B5F53]">平均评分</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#C2884E]">98%</div>
+                <div className="text-sm text-[#6B5F53]">回购率</div>
               </div>
             </div>
-            
-            {/* Decorative element */}
-            <motion.div 
-              className="w-24 h-24 absolute -bottom-12 -right-12 opacity-20 pointer-events-none"
-              animate={{ 
-                rotate: 360,
-                scale: [1, 1.1, 1]
-              }}
-              transition={{ 
-                rotate: { 
-                  duration: 20, 
-                  repeat: Infinity,
-                  ease: "linear"
-                },
-                scale: {
-                  duration: 8,
-                  repeat: Infinity,
-                  repeatType: "reverse"
-                }
-              }}
-            >
-              <div className="w-full h-full rounded-full border-4 border-dashed border-[#C2884E]/30"></div>
-            </motion.div>
           </motion.div>
         </div>
       </div>
