@@ -159,6 +159,315 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Food Gallery Section - Enhanced */}
+        <section className="w-full py-20 sm:py-28 bg-gradient-to-b from-white to-[#FBF7F2] relative overflow-hidden">
+          {/* Enhanced decorative elements */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-20 right-[10%] w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-[100px]"></div>
+            <div className="absolute -bottom-20 left-[5%] w-[400px] h-[400px] bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-[80px]"></div>
+            <div className="absolute top-1/3 right-0 w-40 h-40 rounded-full border border-[#C2884E]/5 opacity-50"></div>
+            <div className="absolute bottom-1/4 left-[10%] w-16 h-16 rounded-full border border-[#C2884E]/10 opacity-70"></div>
+            <div className="absolute top-1/2 left-[30%] w-3 h-3 rounded-full bg-[#C2884E]/20"></div>
+            <div className="absolute top-[70%] right-[20%] w-5 h-5 rounded-full bg-[#C2884E]/20"></div>
+            
+            {/* Decorative pattern */}
+            <div className="absolute inset-0 opacity-[0.03]">
+              <div className="absolute inset-0 bg-[radial-gradient(#C2884E_1px,transparent_1px)] [background-size:24px_24px]"></div>
+            </div>
+          </div>
+          
+          <div className="container px-4 md:px-6 relative">
+            {/* Enhanced Section Header */}
+            <motion.div 
+              className="text-center max-w-3xl mx-auto mb-20"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <div className="inline-flex items-center justify-center mb-4">
+                  <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
+                  <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
+                    <span className="text-sm font-medium text-[#C2884E]">精选菜系</span>
+                  </div>
+                  <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
+                </div>
+              </motion.div>
+              
+              <motion.h2 
+                className="text-3xl md:text-5xl font-bold mb-4 relative inline-block"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
+                  多元融合 丰富美味 轻盈健康
+                </span>
+                <motion.div 
+                  className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#C2884E]/0 via-[#C2884E]/70 to-[#C2884E]/0"
+                  initial={{ width: 0, x: "50%" }}
+                  whileInView={{ width: "100%", x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1, delay: 0.7 }}
+                ></motion.div>
+              </motion.h2>
+              
+              <motion.p 
+                className="text-lg md:text-xl text-[#6B5F53] mt-6 max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+              >
+                Diverse Fusion, Rich Flavors, Light & Healthy
+              </motion.p>
+            </motion.div>
+            
+            {/* Enhanced Food Gallery Grid - Creative Layout */}
+            <div className="relative z-10 max-w-7xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
+                {/* Chinese Cuisine - Larger Size Card */}
+                <motion.div 
+                  className="group relative rounded-2xl overflow-hidden shadow-xl lg:col-span-2 lg:row-span-2 h-[480px] md:h-[550px] transform transition-all duration-700"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.7 }}
+                  whileHover={{ 
+                    y: -5,
+                    boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
+                  <motion.div 
+                    className="relative h-full w-full overflow-hidden"
+                    whileHover={{ scale: 1.07 }}
+                    transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  >
+                    <Image 
+                      src="/food-gallery/Chinese style meal.jpg" 
+                      alt="Chinese Cuisine" 
+                      fill
+                      className="object-cover transition-transform duration-[1.5s]"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </motion.div>
+                  <div className="absolute inset-x-0 bottom-0 z-20 p-8">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                      className="space-y-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <div className="h-[2px] w-8 bg-[#C2884E]"></div>
+                        <span className="text-[#C2884E] font-medium">FEATURED</span>
+                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">中式菜系</h3>
+                      <p className="text-white/90 text-sm sm:text-base max-w-md">
+                        优质食材 · 控油控盐 · 健康烹饪方式 · 轻盈美味
+                      </p>
+                      <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
+                        <motion.div 
+                          className="h-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                          initial={{ x: "-100%" }}
+                          whileInView={{ x: "0%" }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.7 }}
+                        ></motion.div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+                
+                {/* Western Cuisine */}
+                <motion.div 
+                  className="group relative rounded-2xl overflow-hidden shadow-xl lg:col-span-2 h-[300px] md:h-[350px] transform transition-all duration-700"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.7, delay: 0.1 }}
+                  whileHover={{ 
+                    y: -5,
+                    boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
+                  <motion.div 
+                    className="relative h-full w-full overflow-hidden"
+                    whileHover={{ scale: 1.07 }}
+                    transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  >
+                    <Image 
+                      src="/food-gallery/westernfood.JPG" 
+                      alt="Western Cuisine" 
+                      fill
+                      className="object-cover transition-transform duration-[1.5s]"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </motion.div>
+                  <div className="absolute inset-x-0 bottom-0 z-20 p-6">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                      className="space-y-3"
+                    >
+                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">西式餐点</h3>
+                      <p className="text-white/90 text-sm max-w-md">
+                        融合风格 · 中西结合 · 创意改良
+                      </p>
+                      <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
+                        <motion.div 
+                          className="h-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                          initial={{ x: "-100%" }}
+                          whileInView={{ x: "0%" }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.7 }}
+                        ></motion.div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+                
+                {/* Japanese/Korean Cuisine */}
+                <motion.div 
+                  className="group relative rounded-2xl overflow-hidden shadow-xl h-[300px] md:h-[350px] transform transition-all duration-700"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.7, delay: 0.2 }}
+                  whileHover={{ 
+                    y: -5,
+                    boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
+                  <motion.div 
+                    className="relative h-full w-full overflow-hidden"
+                    whileHover={{ scale: 1.07 }}
+                    transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  >
+                    <Image 
+                      src="/food-gallery/Korean.jpg" 
+                      alt="Korean Cuisine" 
+                      fill
+                      className="object-cover transition-transform duration-[1.5s]"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    />
+                  </motion.div>
+                  <div className="absolute inset-x-0 bottom-0 z-20 p-6">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                      className="space-y-3"
+                    >
+                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">日韩料理</h3>
+                      <p className="text-white/90 text-sm max-w-md">
+                        原汁原味 · local食材 · 经典味道
+                      </p>
+                      <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
+                        <motion.div 
+                          className="h-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                          initial={{ x: "-100%" }}
+                          whileInView={{ x: "0%" }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.7 }}
+                        ></motion.div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+                
+                {/* Southeast Asian Cuisine */}
+                <motion.div 
+                  className="group relative rounded-2xl overflow-hidden shadow-xl h-[300px] md:h-[350px] transform transition-all duration-700"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.7, delay: 0.3 }}
+                  whileHover={{ 
+                    y: -5,
+                    boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10 opacity-80 group-hover:opacity-70 transition-opacity duration-500"></div>
+                  <motion.div 
+                    className="relative h-full w-full overflow-hidden"
+                    whileHover={{ scale: 1.07 }}
+                    transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  >
+                    <Image 
+                      src="/food-gallery/Thai.JPG" 
+                      alt="Southeast Asian Cuisine" 
+                      fill
+                      className="object-cover transition-transform duration-[1.5s]"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    />
+                  </motion.div>
+                  <div className="absolute inset-x-0 bottom-0 z-20 p-6">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: 0.5 }}
+                      className="space-y-3"
+                    >
+                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">东南亚风味</h3>
+                      <p className="text-white/90 text-sm max-w-md">
+                        地域风情 · 香料酸辣 · 特色滋味
+                      </p>
+                      <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
+                        <motion.div 
+                          className="h-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                          initial={{ x: "-100%" }}
+                          whileInView={{ x: "0%" }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.7 }}
+                        ></motion.div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              </div>
+              
+              {/* Decorative design element */}
+              <motion.div 
+                className="w-24 h-24 absolute -bottom-12 -right-12 opacity-20 pointer-events-none"
+                animate={{ 
+                  rotate: 360,
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  rotate: { 
+                    duration: 20, 
+                    repeat: Infinity,
+                    ease: "linear"
+                  },
+                  scale: {
+                    duration: 8,
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }
+                }}
+              >
+                <div className="w-full h-full rounded-full border-4 border-dashed border-[#C2884E]/30"></div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+        
         {/* How It Works section removed */}
         
       </main>
