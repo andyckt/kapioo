@@ -265,10 +265,6 @@ export default function Home() {
                       transition={{ duration: 0.5, delay: 0.2 }}
                       className="space-y-4"
                     >
-                      <div className="flex items-center space-x-2">
-                        <div className="h-[2px] w-8 bg-[#C2884E]"></div>
-                        <span className="text-[#C2884E] font-medium">FEATURED</span>
-                      </div>
                       <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">中式菜系</h3>
                       <p className="text-white/90 text-sm sm:text-base max-w-md">
                         优质食材 · 控油控盐 · 健康烹饪方式 · 轻盈美味
