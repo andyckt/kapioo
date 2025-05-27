@@ -152,7 +152,6 @@ export default function Home() {
                 {/* Premium styled carousel wrapper */}
                 <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full">
                   <HeroCarousel />
-                  <div className="absolute inset-0 pointer-events-none rounded-xl ring-1 ring-inset ring-black/10"></div>
                 </div>
               </motion.div>
             </div>
