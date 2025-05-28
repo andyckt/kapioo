@@ -1,13 +1,18 @@
 "use client"
 
-import { CreditCard, Calendar, Truck } from "lucide-react"
+import { CreditCard, Calendar, Truck, X, Download, CheckCircle } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { motion, AnimatePresence } from "framer-motion"
 
 export default function HowItWorksSection() {
   const [isVisible, setIsVisible] = useState(false)
+  const [showQRCode, setShowQRCode] = useState(false)
+  const [downloaded, setDownloaded] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
+  const qrCodePath = '/KapiooWeChatQRcode.JPG'
+  const wechatId = 'Kapioo卡皮喔'
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -38,8 +43,53 @@ export default function HowItWorksSection() {
       url: "https://www.xiaohongshu.com/user/profile/66ad59e5000000001d0303d8?xsec_token=ABdcazfEV_I7ZnKK-qYVq8RyEXTqmw8Dtv2AguBABFh6w=&xsec_source=pc_search",
       logo: "/XiaohongshuLOGO (1).svg",
       ariaLabel: "Visit our Xiaohongshu (Redbook) page"
+    },
+    {
+      id: "wechat",
+      url: "#",
+      logo: "/wechat-logo.svg",
+      ariaLabel: "View our WeChat QR code",
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        setShowQRCode(true);
+      }
     }
   ];
+
+  // Function to close popup
+  const closeQRPopup = () => {
+    setShowQRCode(false);
+  };
+
+  // Close popup when clicking outside or pressing escape
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowQRCode(false);
+      }
+    };
+
+    if (showQRCode) {
+      document.addEventListener("keydown", handleEscKey);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscKey);
+    };
+  }, [showQRCode]);
+
+  // Download QR code
+  const downloadQR = () => {
+    const link = document.createElement('a')
+    link.href = qrCodePath
+    link.download = 'Kapioo-微信二维码.jpeg'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    setDownloaded(true)
+    setTimeout(() => setDownloaded(false), 2000)
+  }
 
   const steps = [
     {
@@ -154,11 +204,12 @@ export default function HowItWorksSection() {
                               rel="noopener noreferrer"
                               aria-label={platform.ariaLabel}
                               className="group/icon transition-all duration-300 hover:scale-110"
+                              onClick={platform.onClick}
                             >
                               <div className="w-8 h-8 relative overflow-hidden">
                                 <Image
                                   src={platform.logo}
-                                  alt={platform.id === "instagram" ? "Instagram logo" : "Xiaohongshu logo"}
+                                  alt={platform.id === "instagram" ? "Instagram logo" : platform.id === "xiaohongshu" ? "Xiaohongshu logo" : "WeChat logo"}
                                   fill
                                   className="object-contain"
                                   sizes="32px"
@@ -215,6 +266,94 @@ export default function HowItWorksSection() {
           animation: float 3s ease-in-out infinite;
         }
       `}</style>
+
+      {/* WeChat QR Code Popup */}
+      <AnimatePresence>
+        {showQRCode && (
+          <div className="fixed inset-0 flex items-center justify-center z-[100] p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.7 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black"
+              onClick={closeQRPopup}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", damping: 20 }}
+              className="relative z-[101] w-full max-w-md"
+            >
+              <div className="relative bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-2xl border border-[#C2884E]/20">
+                <button 
+                  onClick={closeQRPopup}
+                  className="absolute top-3 right-3 text-gray-400 hover:text-[#C2884E] transition-colors z-10"
+                >
+                  <X size={24} />
+                </button>
+
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-[#C2884E] mb-1">关注我们的微信</h3>
+                  <p className="text-sm text-[#6B5F53] mb-6">扫描二维码添加我们的微信</p>
+
+                  <div className="relative mx-auto mb-6 w-[280px] h-[280px]">
+                    <div className="rounded-xl overflow-hidden border-4 border-[#C2884E]/20 shadow-lg">
+                      <Image 
+                        src="/KapiooWeChatQRcode.JPG"
+                        alt="Kapioo WeChat QR code" 
+                        width={280} 
+                        height={280}
+                        className="w-full h-full object-cover"
+                        priority
+                      />
+                    </div>
+                    
+                    <div className="absolute -bottom-3 -right-3">
+                      <Image 
+                        src="/未命名設計.png" 
+                        alt="Kapioo logo" 
+                        width={50} 
+                        height={50}
+                        className="h-14 w-14 drop-shadow-md"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-[#C2884E]/5 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-gray-500">微信号</p>
+                    <p className="font-medium text-[#C2884E]">{wechatId}</p>
+                  </div>
+
+                  <div className="w-full bg-[#C2884E]/5 dark:bg-[#C2884E]/10 rounded-lg p-4 mb-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">保存二维码</p>
+                      <p className="font-medium text-[#C2884E]">下载到手机</p>
+                    </div>
+                    <button
+                      onClick={downloadQR}
+                      className="border border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/10 min-w-[90px] py-1.5 px-3 rounded-md text-sm font-medium flex items-center justify-center transition-colors"
+                    >
+                      {downloaded ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          已保存
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-1" />
+                          保存图片
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   )
 }
