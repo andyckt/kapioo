@@ -39,12 +39,6 @@ export default function HowItWorksSection() {
       ariaLabel: "Visit our Instagram page"
     },
     {
-      id: "xiaohongshu",
-      url: "https://www.xiaohongshu.com/user/profile/66ad59e5000000001d0303d8?xsec_token=ABdcazfEV_I7ZnKK-qYVq8RyEXTqmw8Dtv2AguBABFh6w=&xsec_source=pc_search",
-      logo: "/XiaohongshuLOGO (1).svg",
-      ariaLabel: "Visit our Xiaohongshu (Redbook) page"
-    },
-    {
       id: "wechat",
       url: "#",
       logo: "/wechat-logo.svg",
@@ -209,7 +203,7 @@ export default function HowItWorksSection() {
                               <div className="w-8 h-8 relative overflow-hidden">
                                 <Image
                                   src={platform.logo}
-                                  alt={platform.id === "instagram" ? "Instagram logo" : platform.id === "xiaohongshu" ? "Xiaohongshu logo" : "WeChat logo"}
+                                  alt={platform.id === "instagram" ? "Instagram logo" : "WeChat logo"}
                                   fill
                                   className="object-contain"
                                   sizes="32px"
