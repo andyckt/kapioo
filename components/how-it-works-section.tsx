@@ -302,16 +302,6 @@ export default function HowItWorksSection() {
                         priority
                       />
                     </div>
-                    
-                    <div className="absolute -bottom-3 -right-3">
-                      <Image 
-                        src="/未命名設計.png" 
-                        alt="Kapioo logo" 
-                        width={50} 
-                        height={50}
-                        className="h-14 w-14 drop-shadow-md"
-                      />
-                    </div>
                   </div>
 
                   <div className="bg-[#C2884E]/5 rounded-lg p-3 mb-4">
