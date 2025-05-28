@@ -11,6 +11,7 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import CustomerReviewsSection from "@/components/customer-reviews-section"
 import HowItWorksSection from "@/components/how-it-works-section"
+import WeeklyMenuSection from "@/components/weekly-menu-section"
 
 export default function Home() {
   const { t } = useLanguage();
@@ -462,7 +463,10 @@ export default function Home() {
           </div>
         </section>
         
-        {/* Customer Reviews Section - NEW */}
+        {/* Weekly Menu Section - MOVED */}
+        <WeeklyMenuSection />
+        
+        {/* Customer Reviews Section */}
         <CustomerReviewsSection />
         
         {/* How It Works Section */}

@@ -79,11 +79,21 @@ export default function CustomerReviewsSection() {
       
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className="inline-flex items-center justify-center mb-4">
+            <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
+            <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
+              <span className="text-sm font-medium text-[#C2884E]">订阅用户反馈</span>
+            </div>
+            <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
+          </div>
+          
+          <h2 className="text-4xl md:text-5xl font-light mb-6 tracking-tight">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-              What our customers say about Kapioo
+              What Our Customers
             </span>
+            <span className="block font-extralight text-[#6B5F53]">Say About Kapioo</span>
           </h2>
+          <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto"></div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
