@@ -48,7 +48,7 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1">
-        <section className="w-full relative overflow-hidden h-[calc(100vh-4rem)] bg-[#fff6ef]">
+        <section className="w-full relative overflow-hidden min-h-screen bg-[#fff6ef]">
           {/* Background pattern for premium feel */}
           <div className="absolute inset-0 z-0 opacity-5">
             <div className="absolute inset-0 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:20px_20px]"></div>
@@ -58,107 +58,108 @@ export default function Home() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           
-          <div className="container h-full px-4 md:px-6 relative z-10 flex items-center">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12 items-center h-full py-4 md:py-6">
-              <motion.div 
-                className="mx-auto w-full order-1 h-full flex items-center"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8 }}
-              >
-                {/* Full-height carousel wrapper */}
-                <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full min-h-[500px] max-h-[600px]">
-                  <HeroCarousel />
+          <div className="container px-4 md:px-6 relative z-10 py-4 md:py-6 flex flex-col lg:flex-row lg:items-center lg:h-[calc(100vh-4rem)]">
+            {/* Mobile: Order 1 - Desktop: Order 1 */}
+            <motion.div 
+              className="w-full order-1 lg:w-1/2 mb-6 lg:mb-0"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+            >
+              {/* 16:9 aspect ratio carousel */}
+              <div className="rounded-xl overflow-hidden shadow-2xl shadow-black/20 relative w-full">
+                {/* 16:9 aspect ratio container using padding-bottom technique */}
+                <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                  <div className="absolute inset-0">
+                    <HeroCarousel />
+                  </div>
                 </div>
-              </motion.div>
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="flex flex-col justify-center space-y-6 order-2"
-              >
-                {/* Redesigned title and subtitle section */}
-                <div className="relative z-10 bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-xl border border-[#C2884E]/20 shadow-lg">
-                  {/* Logo positioned on top right of card with automatic animation */}
-                  <motion.div 
-                    className="absolute -top-16 right-8"
-                    animate={{ 
-                      y: [0, -8, 0],
-                      rotate: [0, 6, 0]
-                    }}
-                    transition={{ 
-                      repeat: Infinity,
-                      duration: 2,
-                      ease: "easeInOut" 
-                    }}
-                  >
-                    <Image 
-                      src="/未命名設計.png" 
-                      alt="Kapioo Logo" 
-                      width={50} 
-                      height={50}
-                      className="h-20 w-20 drop-shadow-lg" 
-                    />
-                  </motion.div>
+              </div>
+            </motion.div>
+            
+            {/* Mobile: Order 2 - Desktop: Order 2 */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="flex flex-col justify-center space-y-6 order-2 lg:w-1/2 lg:pl-12"
+            >
+              {/* Card container with preserved styling */}
+              <div className="relative z-10 bg-white/80 backdrop-blur-sm p-5 sm:p-8 rounded-xl border border-[#C2884E]/20 shadow-lg">
+                {/* Logo positioned on top right of card with automatic animation */}
+                <motion.div 
+                  className="absolute -top-14 sm:-top-16 right-4 sm:right-8"
+                  animate={{ 
+                    y: [0, -8, 0],
+                    rotate: [0, 6, 0]
+                  }}
+                  transition={{ 
+                    repeat: Infinity,
+                    duration: 2,
+                    ease: "easeInOut" 
+                  }}
+                >
+                  <Image 
+                    src="/未命名設計.png" 
+                    alt="Kapioo Logo" 
+                    width={50} 
+                    height={50}
+                    className="h-16 w-16 sm:h-20 sm:w-20 drop-shadow-lg" 
+                  />
+                </motion.div>
+                
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="relative mb-4 sm:mb-8">
+                    <div className="w-16 sm:w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-3 sm:mb-4"></div>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
+                      <span dangerouslySetInnerHTML={{ __html: t('heroTitle') }} />
+                    </h1>
+                  </div>
                   
-                  <div className="space-y-6">
-                    <div className="relative mb-8">
-                      <div className="w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-4"></div>
-                      <h1 className="text-xl sm:text-2xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
-                        <span dangerouslySetInnerHTML={{ __html: t('heroTitle') }} />
-                      </h1>
-                    </div>
-                    
-                    <div className="space-y-6">
-                      {/* Tagline section - removed background container */}
-                      <div className="p-1">
-                        <div className="text-base sm:text-lg font-medium text-[#C2884E] mb-3">
-                          每日现做 每日配送
-                        </div>
-                        
-                        {/* Tags in a more elegant layout */}
-                        <div className="flex flex-wrap gap-3 mb-4">
-                          {['健康', '高质', '舒服', '幸福'].map((tag, index) => (
-                            <span 
-                              key={index}
-                              className="px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-sm text-[#C2884E] shadow-sm flex items-center"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5 inline-block"></span>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                  <div className="space-y-4 sm:space-y-6">
+                    {/* Tagline section - removed background container */}
+                    <div className="p-1">
+                      <div className="text-sm sm:text-base md:text-lg font-medium text-[#C2884E] mb-2 sm:mb-3">
+                        每日现做 每日配送
                       </div>
                       
-                      {/* Motto section with buttons on the same line */}
-                      <div className="flex justify-between items-center p-1">
-                        <div className="space-y-2">
-                          <p className="text-sm sm:text-base italic text-[#6B5F53]">
-                            一顿饭的时间 给生活松一口气
-                          </p>
-                          <p className="text-sm sm:text-base font-medium text-[#C2884E]">
-                            Kapioo，你每天的松弛美好时刻
-                          </p>
-                        </div>
-                        
-                        <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
-                          <Button asChild size="sm" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-sm">
-                            <Link href="/login">
-                              {t('getStartedBtn')} <ArrowRight className="ml-1 h-3 w-3" />
-                            </Link>
-                          </Button>
-                          {/* 
-                          <Button variant="outline" size="sm" asChild className="hover:scale-105 transition-transform border-[#C2884E]/30 text-[#C2884E]">
-                            <Link href="#how-it-works">{t('howItWorksBtn')}</Link>
-                          </Button>
-                          */}
-                        </div>
+                      {/* Tags in a more elegant layout */}
+                      <div className="flex flex-wrap gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        {['健康', '高质', '舒服', '幸福'].map((tag, index) => (
+                          <span 
+                            key={index}
+                            className="px-2 sm:px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-xs sm:text-sm text-[#C2884E] shadow-sm flex items-center"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5 inline-block"></span>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Motto section with buttons - stacked on mobile, row on larger screens */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-1 gap-4 sm:gap-0">
+                      <div className="space-y-1 sm:space-y-2">
+                        <p className="text-xs sm:text-sm md:text-base italic text-[#6B5F53]">
+                          一顿饭的时间 给生活松一口气
+                        </p>
+                        <p className="text-xs sm:text-sm md:text-base font-medium text-[#C2884E]">
+                          Kapioo，你每天的松弛美好时刻
+                        </p>
+                      </div>
+                      
+                      <div className="flex-shrink-0 self-start sm:self-auto">
+                        <Button asChild size="sm" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-sm px-4">
+                          <Link href="/login">
+                            {t('getStartedBtn')} <ArrowRight className="ml-1 h-3 w-3" />
+                          </Link>
+                        </Button>
                       </div>
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            </div>
+              </div>
+            </motion.div>
           </div>
         </section>
 
@@ -496,4 +497,5 @@ export default function Home() {
     </div>
   )
 }
+
 
