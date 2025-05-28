@@ -10,6 +10,7 @@ import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import CustomerReviewsSection from "@/components/customer-reviews-section"
+import HowItWorksSection from "@/components/how-it-works-section"
 
 export default function Home() {
   const { t } = useLanguage();
@@ -463,6 +464,9 @@ export default function Home() {
         
         {/* Customer Reviews Section - NEW */}
         <CustomerReviewsSection />
+        
+        {/* How It Works Section */}
+        <HowItWorksSection />
         
       </main>
       <footer className="w-full border-t bg-background py-4 sm:py-6 md:py-8">
