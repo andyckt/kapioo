@@ -2,6 +2,8 @@
 
 import { CreditCard, Calendar, Truck } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
+import Image from "next/image"
 
 export default function HowItWorksSection() {
   const [isVisible, setIsVisible] = useState(false)
@@ -23,6 +25,21 @@ export default function HowItWorksSection() {
 
     return () => observer.disconnect()
   }, [])
+
+  const socialLinks = [
+    {
+      id: "instagram",
+      url: "https://www.instagram.com/kapioo_official/?igsh=NzR3cWF0YWU5cjZk",
+      logo: "/instagram.svg",
+      ariaLabel: "Visit our Instagram page"
+    },
+    {
+      id: "xiaohongshu",
+      url: "https://www.xiaohongshu.com/user/profile/66ad59e5000000001d0303d8?xsec_token=ABdcazfEV_I7ZnKK-qYVq8RyEXTqmw8Dtv2AguBABFh6w=&xsec_source=pc_search",
+      logo: "/XiaohongshuLOGO (1).svg",
+      ariaLabel: "Visit our Xiaohongshu (Redbook) page"
+    }
+  ];
 
   const steps = [
     {
@@ -125,6 +142,32 @@ export default function HowItWorksSection() {
                     <div className="space-y-3 max-w-md mx-auto lg:mx-0">
                       <p className="text-[#6B5F53] leading-relaxed font-light">{step.description}</p>
                       <p className="text-sm text-[#6B5F53]/80 leading-relaxed">{step.subdescription}</p>
+                      
+                      {/* Social Media Icons - Only for the first step */}
+                      {index === 0 && (
+                        <div className={`flex gap-4 mt-4 ${isEven ? "lg:justify-start" : "lg:justify-end"} justify-center`}>
+                          {socialLinks.map((platform) => (
+                            <Link 
+                              key={platform.id}
+                              href={platform.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              aria-label={platform.ariaLabel}
+                              className="group/icon transition-all duration-300 hover:scale-110"
+                            >
+                              <div className="w-8 h-8 relative overflow-hidden">
+                                <Image
+                                  src={platform.logo}
+                                  alt={platform.id === "instagram" ? "Instagram logo" : "Xiaohongshu logo"}
+                                  fill
+                                  className="object-contain"
+                                  sizes="32px"
+                                />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -152,11 +195,14 @@ export default function HowItWorksSection() {
           }`}
           style={{ transitionDelay: isVisible ? "600ms" : "0ms" }}
         >
-          <button className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white rounded-full font-light tracking-wide hover:shadow-lg hover:shadow-[#C2884E]/20 transition-all duration-300 hover:scale-105">
+          <Link 
+            href="/login" 
+            className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white rounded-full font-light tracking-wide hover:shadow-lg hover:shadow-[#C2884E]/20 transition-all duration-300 hover:scale-105"
+          >
             <span>开始订阅 Kapioo</span>
             <span className="text-xs opacity-70 group-hover:opacity-100 transition-opacity">Start Your Journey</span>
             <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -171,4 +217,4 @@ export default function HowItWorksSection() {
       `}</style>
     </section>
   )
-} 
+}
