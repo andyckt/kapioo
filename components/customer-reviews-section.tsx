@@ -42,22 +42,22 @@ export default function CustomerReviewsSection() {
       // Adjacent images - slightly visible
       const isNext = normalizedDiff === 1
       return {
-        transform: `translateX(${isNext ? "60px" : "-60px"}) translateY(10px) scale(0.9) rotateY(${isNext ? "-15deg" : "15deg"})`,
+        transform: `translateX(${isNext ? "55px" : "-55px"}) translateY(10px) scale(0.92) rotateY(${isNext ? "-10deg" : "10deg"})`,
         zIndex: 20,
-        opacity: 0.7,
+        opacity: 0.8,
       }
     } else if (normalizedDiff === 2 || normalizedDiff === totalImages - 2) {
       // Second layer - barely visible
       const isNext = normalizedDiff === 2
       return {
-        transform: `translateX(${isNext ? "80px" : "-80px"}) translateY(20px) scale(0.8) rotateY(${isNext ? "-25deg" : "25deg"})`,
+        transform: `translateX(${isNext ? "75px" : "-75px"}) translateY(20px) scale(0.85) rotateY(${isNext ? "-15deg" : "15deg"})`,
         zIndex: 10,
-        opacity: 0.4,
+        opacity: 0.5,
       }
     } else {
       // Hidden images
       return {
-        transform: "translateX(0) translateY(30px) scale(0.7)",
+        transform: "translateX(0) translateY(30px) scale(0.8)",
         zIndex: 0,
         opacity: 0,
       }
@@ -105,7 +105,7 @@ export default function CustomerReviewsSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <div className="relative h-[500px] flex items-center justify-center perspective-1000">
+            <div className="relative h-[450px] flex items-center justify-center perspective-1000">
               {/* Navigation Buttons */}
               <Button
                 variant="outline"
@@ -126,7 +126,7 @@ export default function CustomerReviewsSection() {
               </Button>
 
               {/* Image Stack */}
-              <div className="relative w-80 h-96">
+              <div className="relative w-[300px] h-[400px]">
                 {reviewImages.map((image, index) => (
                   <div
                     key={image.id}
@@ -134,8 +134,16 @@ export default function CustomerReviewsSection() {
                     style={getImageStyle(index)}
                     onClick={() => setCurrentIndex(index)}
                   >
-                    <div className="w-full h-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-[#C2884E]/10">
-                      <Image src={image.src} alt={image.alt} fill className="object-cover" />
+                    <div className="w-full h-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-[#C2884E]/10">
+                      <Image 
+                        src={image.src} 
+                        alt={image.alt} 
+                        fill 
+                        className="object-cover"
+                        objectPosition="top center"
+                        sizes="(max-width: 768px) 100vw, 300px"
+                        priority={index === currentIndex}
+                      />
                     </div>
                   </div>
                 ))}
