@@ -2176,22 +2176,20 @@ function WeeklyMealSelector({
                         ? "from-[#FBF7F2] to-[#F5EDE4]" 
                         : "from-[#F5EDE4] to-[#FBF7F2]";
                       
-                      // Parse description to create meal items
+                      // Update the meal items creation to remove calories
                       const mealItems = meal.description 
                         ? meal.description.split('. ').filter(Boolean).map(item => ({
-                            name: item.replace(/\.$/, '').trim(),
-                            calories: Math.round(Math.random() * 100) + 50, // Placeholder calories
-                            hasIcon: Math.random() > 0.3 // Random icon display
+                            name: item.replace(/\.$/, '').trim()
                           }))
                         : [
-                            { name: "Fresh ingredients prepared daily", calories: 80, hasIcon: true },
-                            { name: "Nutritious balanced meal", calories: 120, hasIcon: true },
-                            { name: "Eco-friendly packaging", calories: 0, hasIcon: false },
-                            { name: "Professionally prepared", calories: 200, hasIcon: true }
+                            { name: "Fresh ingredients prepared daily" },
+                            { name: "Nutritious balanced meal" },
+                            { name: "Eco-friendly packaging" },
+                            { name: "Professionally prepared" }
                           ];
                       
                       // Calculate total calories
-                      const totalCalories = mealItems.reduce((sum, item) => sum + item.calories, 0);
+                      const totalCalories = meal.calories || 500; // Use meal calories from database or default
                       
                       // Generate tags based on meal properties or defaults
                       const tags = meal.tags?.map(tag => ({
@@ -2205,7 +2203,7 @@ function WeeklyMealSelector({
                       return (
                         <div 
                           key={day} 
-                          className={`transition-all duration-300 ease-out ${unavailable ? "opacity-70" : "opacity-100"}`}
+                          className={`transition-all duration-300 ease-out ${unavailable ? "opacity-90" : "opacity-100"}`}
                           onClick={() => !unavailable && toggleMeal(day)}
                         >
                           <div className={`relative transition-all duration-300 ease-out ${isSelected ? "scale-105 -translate-y-2" : "scale-100"}`}>
@@ -2237,21 +2235,14 @@ function WeeklyMealSelector({
                                 {mealItems.map((item, mealIndex) => (
                                   <div
                                     key={mealIndex}
-                                    className={`flex items-center justify-between transition-all duration-300 ${
+                                    className={`flex items-center transition-all duration-300 ${
                                       isSelected ? "translate-x-1" : "translate-x-0"
                                     }`}
                                     style={{ transitionDelay: `${mealIndex * 50}ms` }}
                                   >
                                     <div className="flex items-center gap-2 flex-1">
-                                      <div className={`w-1 h-1 rounded-full ${accentColors.dot} opacity-50`}></div>
                                       <span className="text-sm text-[#6B5F53] leading-relaxed">{item.name}</span>
-                                      {item.hasIcon && (
-                                        <div className={`w-2 h-2 rounded-full ${accentColors.dot} opacity-40`}></div>
-                                      )}
                                     </div>
-                                    <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
-                                      {item.calories}kcal
-                                    </span>
                                   </div>
                                 ))}
                               </div>
@@ -2307,11 +2298,14 @@ function WeeklyMealSelector({
 
                               {/* Unavailable Overlay */}
                               {unavailable && (
-                                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                                  <div className="bg-background/80 text-foreground text-sm font-medium rounded-lg px-4 py-2 text-center max-w-[90%] shadow-md">
-                                    {reason}
+                                <>
+                                  <div className="absolute inset-0 bg-background/30 rounded-3xl pointer-events-none" />
+                                  <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center">
+                                    <div className="bg-background/90 text-foreground text-sm font-medium rounded-lg px-4 py-2 text-center max-w-[90%] shadow-md border border-destructive/30">
+                                      {reason}
+                                    </div>
                                   </div>
-                                </div>
+                                </>
                               )}
                             </div>
                           </div>
