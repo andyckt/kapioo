@@ -100,7 +100,7 @@ export default function Home() {
                   }}
                 >
                   <Image 
-                    src="/未命名設計.png" 
+                    src="/未命名設計 (2).png" 
                     alt="Kapioo Logo" 
                     width={50} 
                     height={50}
