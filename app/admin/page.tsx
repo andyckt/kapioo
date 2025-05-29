@@ -2122,14 +2122,15 @@ function MealManagement() {
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-image" className="text-right">
-                  Image URL
+                  Image URL (Optional)
                 </Label>
                 <div className="col-span-3 flex space-x-2">
                   <Input
                     id="edit-image"
-                    value={currentEditMeal.image}
+                    value={currentEditMeal.image || ''}
                     onChange={(e) => handleEditMealChange('image', e.target.value)}
                     className="flex-1"
+                    placeholder="Leave empty for no image"
                   />
                   <input
                     type="file"

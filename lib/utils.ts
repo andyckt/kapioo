@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export type Meal = {
   _id?: string;
   name: string;
-  image: string;
+  image?: string;
   description?: string;
   calories?: number;
   time?: string;
@@ -257,6 +257,11 @@ export async function getMealById(id: string): Promise<Meal | null> {
 // Create a new meal
 export async function createMeal(mealData: Omit<Meal, '_id'>): Promise<Meal | null> {
   try {
+    // Handle empty image field
+    if (mealData.image === '') {
+      mealData.image = undefined;
+    }
+    
     const response = await fetch('/api/meals', {
       method: 'POST',
       headers: {
@@ -282,6 +287,11 @@ export async function createMeal(mealData: Omit<Meal, '_id'>): Promise<Meal | nu
 // Update an existing meal
 export async function updateMeal(id: string, mealData: Partial<Meal>): Promise<Meal | null> {
   try {
+    // Handle empty image field
+    if (mealData.image === '') {
+      mealData.image = undefined;
+    }
+    
     const response = await fetch(`/api/meals/${id}`, {
       method: 'PUT',
       headers: {

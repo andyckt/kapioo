@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     const data = await request.json();
     
     // Validate required fields
-    if (!data.name || !data.image || !data.description) {
+    if (!data.name || !data.description) {
       return NextResponse.json(
-        { success: false, error: 'Name, image, and description are required' },
+        { success: false, error: 'Name and description are required' },
         { status: 400 }
       );
     }
