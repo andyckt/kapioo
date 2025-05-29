@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2 } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -2137,48 +2137,205 @@ function WeeklyMealSelector({
               <CardDescription>{t('selectDaysDelivery')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-                {isLoading ? (
-                  <div className="col-span-full flex justify-center items-center h-[300px]">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                      <p>{t('loadingMeals')}</p>
-                    </div>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-[300px]">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p>{t('loadingMeals')}</p>
                   </div>
-                ) : (
-                  // Sort the entries by the day order before rendering
-                  Object.entries(meals)
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {/* Sort the entries by the day order before rendering */}
+                  {Object.entries(meals)
                     .sort(([dayA], [dayB]) => {
                       return dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
                     })
-                    .map(([day, meal]) => (
-                      <div key={day} className="relative">
-                        <MealDetail 
-                          meal={meal} 
-                          day={day} 
-                          dayDate={meal.date}
-                          isToday={false}
-                          onSelect={toggleMeal} 
-                          isSelected={selectedMeals[day as keyof typeof selectedMeals].selected}
-                          isUnavailable={isDayUnavailable(day).unavailable}
-                          unavailableReason={isDayUnavailable(day).reason}
-                        />
-                      </div>
-                    ))
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <div>
-                <p className="text-sm font-medium">{t('selectedCount')}: {selectedCount} meals ({selectedCount * 1} {t('credits')})</p>
-              </div>
-              <Button disabled={!canCheckout} onClick={() => setCheckoutOpen(true)}>
-                {t('proceedToCheckout')}
-              </Button>
-            </CardFooter>
-          </Card>
+                    .map(([day, meal], index) => {
+                      const isSelected = selectedMeals[day as keyof typeof selectedMeals].selected;
+                      const { unavailable, reason } = isDayUnavailable(day);
+                      const accentType = index % 2 === 0 ? 'brown1' : 'brown2';
+                      const accentColors = {
+                        brown1: { 
+                          bg: "bg-[#C2884E]/10", 
+                          border: "border-[#C2884E]/20", 
+                          text: "text-[#C2884E]", 
+                          dot: "bg-[#C2884E]",
+                          gradient: "from-[#C2884E] to-[#D1A46C]"
+                        },
+                        brown2: { 
+                          bg: "bg-[#D1A46C]/10", 
+                          border: "border-[#D1A46C]/20", 
+                          text: "text-[#D1A46C]", 
+                          dot: "bg-[#D1A46C]",
+                          gradient: "from-[#D1A46C] to-[#C2884E]"
+                        }
+                      }[accentType];
+                      
+                      const cardColor = index % 2 === 0 
+                        ? "from-[#FBF7F2] to-[#F5EDE4]" 
+                        : "from-[#F5EDE4] to-[#FBF7F2]";
+                      
+                      // Parse description to create meal items
+                      const mealItems = meal.description 
+                        ? meal.description.split('. ').filter(Boolean).map(item => ({
+                            name: item.replace(/\.$/, '').trim(),
+                            calories: Math.round(Math.random() * 100) + 50, // Placeholder calories
+                            hasIcon: Math.random() > 0.3 // Random icon display
+                          }))
+                        : [
+                            { name: "Fresh ingredients prepared daily", calories: 80, hasIcon: true },
+                            { name: "Nutritious balanced meal", calories: 120, hasIcon: true },
+                            { name: "Eco-friendly packaging", calories: 0, hasIcon: false },
+                            { name: "Professionally prepared", calories: 200, hasIcon: true }
+                          ];
+                      
+                      // Calculate total calories
+                      const totalCalories = mealItems.reduce((sum, item) => sum + item.calories, 0);
+                      
+                      // Generate tags based on meal properties or defaults
+                      const tags = meal.tags?.map(tag => ({
+                        name: tag,
+                        icon: getIconForTag(tag)
+                      })) || [
+                        { name: "Balanced Meal", icon: "Sparkles" },
+                        { name: "Fresh Ingredients", icon: "Leaf" }
+                      ];
 
-          {/* <MealCalendar selectedMeals={selectedMeals} meals={meals} /> */}
+                      return (
+                        <div 
+                          key={day} 
+                          className={`transition-all duration-300 ease-out ${unavailable ? "opacity-70" : "opacity-100"}`}
+                          onClick={() => !unavailable && toggleMeal(day)}
+                        >
+                          <div className={`relative transition-all duration-300 ease-out ${isSelected ? "scale-105 -translate-y-2" : "scale-100"}`}>
+                            {/* Enhanced Glassmorphism Card */}
+                            <div className={`
+                              relative backdrop-blur-xl bg-gradient-to-br ${cardColor} 
+                              rounded-3xl p-6 border ${isSelected ? "border-primary shadow-xl" : "border-[#C2884E]/10 shadow-lg"}
+                              transition-all duration-300 ease-out cursor-pointer
+                              ${isSelected ? "shadow-xl shadow-primary/10" : "shadow-lg shadow-[#C2884E]/5"}
+                            `}>
+                              {/* Day Header */}
+                              <div className="text-center mb-6 relative">
+                                <div className={`inline-block transition-all duration-300 ${isSelected ? "scale-110" : "scale-100"}`}>
+                                  <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{day}</h3>
+                                  <div className={`w-8 h-px ${accentColors.bg} mx-auto mb-2 transition-all duration-300 ${
+                                    isSelected ? "w-12" : "w-8"
+                                  }`}></div>
+                                  {meal.date && <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{meal.date}</p>}
+                                </div>
+                              </div>
+
+                              {/* Selection indicator */}
+                              <div className="absolute top-6 right-6">
+                                <div className={`h-4 w-4 rounded-full transition-all duration-300 ${isSelected ? "bg-primary scale-125" : "bg-muted scale-100"}`} />
+                              </div>
+
+                              {/* Meals List */}
+                              <div className="space-y-3 mb-6">
+                                {mealItems.map((item, mealIndex) => (
+                                  <div
+                                    key={mealIndex}
+                                    className={`flex items-center justify-between transition-all duration-300 ${
+                                      isSelected ? "translate-x-1" : "translate-x-0"
+                                    }`}
+                                    style={{ transitionDelay: `${mealIndex * 50}ms` }}
+                                  >
+                                    <div className="flex items-center gap-2 flex-1">
+                                      <div className={`w-1 h-1 rounded-full ${accentColors.dot} opacity-50`}></div>
+                                      <span className="text-sm text-[#6B5F53] leading-relaxed">{item.name}</span>
+                                      {item.hasIcon && (
+                                        <div className={`w-2 h-2 rounded-full ${accentColors.dot} opacity-40`}></div>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
+                                      {item.calories}kcal
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Total Calories */}
+                              <div className="text-center mb-5">
+                                <div className={`inline-block transition-all duration-300 ${
+                                  isSelected ? "scale-110" : "scale-100"
+                                }`}>
+                                  <div className={`px-5 py-2 ${accentColors.bg} ${accentColors.border} border rounded-full`}>
+                                    <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
+                                      = {totalCalories}KCAL
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Credit Cost */}
+                              <div className="text-center mb-5">
+                                <div className={`inline-block transition-all duration-300 ${
+                                  isSelected ? "scale-110" : "scale-100"
+                                }`}>
+                                  <div className={`px-4 py-2 bg-primary/10 border border-primary/20 rounded-full`}>
+                                    <span className="text-sm font-medium text-primary flex items-center justify-center gap-1">
+                                      <span>1</span>
+                                      <Gem className="h-3.5 w-3.5" />
+                                      <span>{t('credits')}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Meal Tags */}
+                              <div className="flex flex-wrap gap-2 justify-center mt-4">
+                                {tags.map((tag, tagIndex) => (
+                                  <div
+                                    key={tagIndex}
+                                    className="transition-all duration-300"
+                                    style={{ transitionDelay: `${tagIndex * 75}ms` }}
+                                  >
+                                    <div className={`
+                                      px-4 py-2 rounded-full 
+                                      flex items-center gap-2
+                                      bg-gradient-to-r ${accentColors.gradient}
+                                      text-white shadow-sm
+                                    `}>
+                                      <TagIcon type={tag.icon} className="w-3.5 h-3.5" />
+                                      <span className="text-xs font-medium">{tag.name}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Unavailable Overlay */}
+                              {unavailable && (
+                                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm rounded-3xl flex items-center justify-center">
+                                  <div className="bg-background/80 text-foreground text-sm font-medium rounded-lg px-4 py-2 text-center max-w-[90%] shadow-md">
+                                    {reason}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              {t('selectedCount')}: <span className="font-medium">{selectedCount}</span> | 
+              {t('total')}: <span className="font-medium">{totalCost} {t('credits')}</span>
+            </p>
+            <Button 
+              onClick={() => setCheckoutOpen(true)} 
+              disabled={!canCheckout}
+              className="gap-2"
+            >
+              {canCheckout ? t('proceedToCheckout') : t('selectMeals')}
+              {canCheckout && <CheckCircle2 className="h-4 w-4" />}
+            </Button>
+          </div>
         </>
       ) : (
         <motion.div
@@ -2419,5 +2576,45 @@ function WeeklyMealSelector({
       )}
     </div>
   )
+}
+
+// Fix for the TagIcon component and getIconForTag function
+// Helper function to render icon components
+function TagIcon({ type, className }: { type: string; className?: string }) {
+  const icons = {
+    Sparkles: <Sparkles className={className} />,
+    Leaf: <Leaf className={className} />,
+    Shield: <Shield className={className} />,
+    Zap: <Zap className={className} />,
+    Heart: <Heart className={className} />,
+    Flame: <Flame className={className} />,
+    Apple: <Apple className={className} />,
+    ChefHat: <ChefHat className={className} />
+  };
+  
+  return icons[type as keyof typeof icons] || <Sparkles className={className} />;
+}
+
+// Helper function to match tag names to icons
+function getIconForTag(tag: string): string {
+  const iconMap: Record<string, string> = {
+    'High Protein': 'Zap',
+    'Omega-3': 'Heart',
+    'Gluten-Free': 'Shield',
+    'Quick': 'Flame',
+    'Family Favorite': 'Heart',
+    'Comfort Food': 'Heart',
+    'Italian': 'ChefHat',
+    'Creamy': 'Sparkles',
+    'Vegetarian': 'Leaf',
+    'Spicy': 'Flame',
+    'Indian': 'ChefHat',
+    'Healthy': 'Heart',
+    'Seafood': 'Shield',
+    'Mexican': 'ChefHat',
+    'Fresh': 'Leaf'
+  };
+  
+  return iconMap[tag] || 'Sparkles';
 }
 
