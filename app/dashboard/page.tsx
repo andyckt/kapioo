@@ -2203,7 +2203,7 @@ function WeeklyMealSelector({
                       return (
                         <div 
                           key={day} 
-                          className={`transition-all duration-300 ease-out ${unavailable ? "opacity-90" : "opacity-100"}`}
+                          className={`transition-all duration-300 ease-out group ${unavailable ? "opacity-90" : "opacity-100"}`}
                           onClick={() => !unavailable && toggleMeal(day)}
                         >
                           <div className={`relative transition-all duration-300 ease-out ${isSelected ? "scale-105 -translate-y-2" : "scale-100"}`}>
@@ -2296,12 +2296,14 @@ function WeeklyMealSelector({
                                 ))}
                               </div>
 
-                              {/* Unavailable Overlay */}
+                              {/* Unavailable Overlay - blur always visible, message only on hover */}
                               {unavailable && (
                                 <>
-                                  <div className="absolute inset-0 bg-background/30 rounded-3xl pointer-events-none" />
-                                  <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center">
-                                    <div className="bg-background/90 text-foreground text-sm font-medium rounded-lg px-4 py-2 text-center max-w-[90%] shadow-md border border-destructive/30">
+                                  {/* Permanent blur effect */}
+                                  <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px] rounded-3xl pointer-events-none"></div>
+                                  {/* Message only visible on hover */}
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <div className="bg-background/90 text-foreground text-sm font-medium rounded-lg px-4 py-2 text-center max-w-[85%] shadow-md border border-destructive/30 transform scale-95 group-hover:scale-100 transition-transform duration-300">
                                       {reason}
                                     </div>
                                   </div>
