@@ -110,10 +110,13 @@ export default function Home() {
                 
                 <div className="space-y-4 sm:space-y-6">
                   <div className="relative mb-4 sm:mb-8">
-                    <div className="w-16 sm:w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-3 sm:mb-4"></div>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80">
-                      <span dangerouslySetInnerHTML={{ __html: t('heroTitle') }} />
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 mb-4 sm:mb-5">
+                      北美健康餐食订阅品牌
                     </h1>
+                    <div className="w-16 sm:w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-3 sm:mb-4"></div>
+                    <p className="text-lg sm:text-xl md:text-2xl text-[#6B5F53] font-medium">
+                      让你每天拥有「被好好对待」的时刻
+                    </p>
                   </div>
                   
                   <div className="space-y-4 sm:space-y-6">
