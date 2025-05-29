@@ -49,11 +49,6 @@ export default function Home() {
       </header>
       <main className="flex-1">
         <section className="w-full relative overflow-hidden min-h-screen bg-[#fff6ef]">
-          {/* Background pattern for premium feel */}
-          <div className="absolute inset-0 z-0 opacity-5">
-            <div className="absolute inset-0 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:20px_20px]"></div>
-          </div>
-          
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
@@ -110,11 +105,11 @@ export default function Home() {
                 
                 <div className="space-y-4 sm:space-y-6">
                   <div className="relative mb-4 sm:mb-8">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 mb-4 sm:mb-5">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 mb-4 sm:mb-5 leading-tight">
                       北美健康餐食订阅品牌
                     </h1>
-                    <div className="w-16 sm:w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-3 sm:mb-4"></div>
-                    <p className="text-lg sm:text-xl md:text-2xl text-[#6B5F53] font-medium">
+                    <div className="w-16 sm:w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-4 sm:mb-5"></div>
+                    <p className="text-base sm:text-xl md:text-2xl text-[#6B5F53] font-medium leading-relaxed">
                       让你每天拥有「被好好对待」的时刻
                     </p>
                   </div>
