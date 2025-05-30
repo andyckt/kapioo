@@ -95,11 +95,11 @@ export default function Home() {
                   }}
                 >
                   <Image 
-                    src="/未命名設計 (2).png" 
+                    src="/bobe.png" 
                     alt="Kapioo Logo" 
-                    width={50} 
-                    height={50}
-                    className="h-16 w-16 sm:h-20 sm:w-20 drop-shadow-lg" 
+                    width={70} 
+                    height={70}
+                    className="h-20 w-20 sm:h-24 sm:w-24 drop-shadow-lg" 
                   />
                 </motion.div>
                 
