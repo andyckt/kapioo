@@ -19,7 +19,7 @@ export const metadata = {
       { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
     ],
     other: [
-      { rel: 'mask-icon', url: '/safari-pinned-tab.svg', color: '#C2884E' },
+      { rel: 'mask-icon', url: '/favicon.ico', color: '#C2884E' },
       { rel: 'shortcut icon', url: '/favicon.ico' },
       { rel: 'android-chrome', url: '/android-chrome-192x192.png', sizes: '192x192' },
       { rel: 'android-chrome', url: '/android-chrome-512x512.png', sizes: '512x512' },
