@@ -519,7 +519,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                 >
                   <div className={`
                     flex flex-col items-center justify-center 
-                    w-14 h-18 rounded-lg transition-all duration-300
+                    w-10 sm:w-14 h-16 sm:h-18 rounded-lg transition-all duration-300
                     ${isActive 
                       ? "bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20" 
                       : unavailable 
@@ -534,7 +534,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                       {dayLabels[day].substring(0, 3)}
                     </span>
                     <span className={`
-                      text-lg font-bold my-1
+                      text-sm sm:text-lg font-bold my-1
                       ${isActive ? "text-primary-foreground" : ""}
                     `}>
                       {dayDate ? dayDate.split(' ')[1].replace(',', '') : idx + 1}
@@ -542,7 +542,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                     
                     {isSelected && (
                       <div className={`
-                        h-1.5 w-8 rounded-full mb-1.5
+                        h-1.5 w-6 sm:w-8 rounded-full mb-1.5
                         ${isActive ? "bg-white/60" : "bg-primary/60"}
                       `} />
                     )}
@@ -615,7 +615,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                   {/* Meal Header with Date */}
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                      <h3 className="text-lg font-medium capitalize flex items-center gap-2">
+                      <h3 className="text-lg font-medium capitalize flex items-center gap-2 flex-wrap">
                         {activeDay}
                         {isSelected && (
                           <motion.span 
@@ -662,33 +662,33 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                     <div className={`h-1 w-full ${isSelected ? "bg-primary" : "bg-gradient-to-r from-transparent via-border to-transparent"}`}></div>
                     
                     {/* Meal Content */}
-                    <div className="p-5">
+                    <div className="p-4 sm:p-5">
                       {/* Meal Items */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
                         {mealItems.map((item, index) => (
                           <motion.div
                             key={index}
                             initial={{ opacity: 0, x: -5 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1, duration: 0.2 }}
-                            className="flex items-start gap-2.5 group/item"
+                            className="flex items-start gap-2 sm:gap-2.5 group/item"
                             whileHover={{ x: 3 }}
                           >
                             <div className={`
-                              w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+                              w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
                               ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}
                               group-hover/item:scale-110 transition-transform duration-200
                             `}>
                               <span className="text-xs font-medium">{index + 1}</span>
                             </div>
-                            <p className="text-sm leading-tight">{item.name}</p>
+                            <p className="text-xs sm:text-sm leading-tight">{item.name}</p>
                           </motion.div>
                         ))}
                       </div>
                       
                       {/* Info Badges Row */}
-                      <div className="flex flex-wrap gap-2 justify-between items-center mb-5 border-t border-border/50 pt-4">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-between sm:items-center gap-3 mb-4 sm:mb-5 border-t border-border/50 pt-4">
+                        <div className="flex flex-wrap items-center gap-2">
                           {/* Tags */}
                           {tags.slice(0, 3).map((tag, index) => (
                             <motion.div
@@ -698,28 +698,28 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                             >
                               <Badge 
                                 variant="secondary" 
-                                className="rounded-md gap-1 h-7 border border-border/50 hover:border-primary/20 transition-colors"
+                                className="rounded-md gap-1 h-6 sm:h-7 border border-border/50 hover:border-primary/20 transition-colors text-xs sm:text-sm"
                               >
-                                <TagIcon type={tag.icon} className="h-3.5 w-3.5 text-primary" />
+                                <TagIcon type={tag.icon} className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary" />
                                 <span>{tag.name}</span>
                               </Badge>
                             </motion.div>
                           ))}
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {/* Calorie Badge */}
                           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                            <div className="bg-orange-500/10 text-orange-600 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border border-orange-200/20">
-                              <Flame className="h-3.5 w-3.5" />
+                            <div className="bg-orange-500/10 text-orange-600 px-2 sm:px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border border-orange-200/20">
+                              <Flame className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               <span>{totalCalories} kcal</span>
                             </div>
                           </motion.div>
                           
                           {/* Credit Badge */}
                           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                            <div className="bg-primary/10 text-primary px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border border-primary/20">
-                              <Gem className="h-3.5 w-3.5" />
+                            <div className="bg-primary/10 text-primary px-2 sm:px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border border-primary/20">
+                              <Gem className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               <span>1 {t('credits')}</span>
                             </div>
                           </motion.div>
@@ -729,11 +729,11 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                     
                     {/* Action Footer */}
                     <div className={`
-                      border-t p-4 flex justify-between items-center
+                      border-t p-3 sm:p-4 flex flex-wrap justify-between items-center
                       ${isSelected ? "bg-primary/10 border-primary/20" : "bg-muted/20 border-border/50"}
                       transition-colors duration-300
                     `}>
-                      <div className="text-sm">
+                      <div className="text-xs sm:text-sm">
                         {isSelected ? (
                           <motion.span 
                             className="flex items-center gap-1.5 text-primary font-medium"
@@ -741,7 +741,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <Check className="h-4 w-4" />
+                            <Check className="h-3 w-3 sm:h-4 sm:w-4" />
                             {language === 'en' ? "Selected for delivery" : "已选择配送"}
                           </motion.span>
                         ) : (
@@ -751,14 +751,14 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                         )}
                       </div>
                       
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }} className="mt-2 sm:mt-0">
                         <Button
                           onClick={() => handleSelectMeal(activeDay)}
                           disabled={unavailable}
                           size="sm"
                           variant={isSelected ? "outline" : "default"}
                           className={`
-                            gap-1.5 rounded-md
+                            gap-1.5 rounded-md text-xs sm:text-sm
                             ${isSelected 
                               ? "border-primary text-primary hover:bg-primary/5" 
                               : "bg-primary hover:bg-primary/90"
@@ -768,14 +768,14 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                         >
                           {isSelected ? (
                             <>
-                              <Check className="h-3.5 w-3.5" />
+                              <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               <span>{language === 'en' ? 'Selected' : '已选择'}</span>
                             </>
                           ) : unavailable ? (
                             <>{language === 'en' ? "Can't order" : '无法订购'}</>
                           ) : (
                             <>
-                              <Plus className="h-3.5 w-3.5" />
+                              <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               <span>{language === 'en' ? 'Select This Meal' : '选择此餐点'}</span>
                             </>
                           )}
@@ -789,7 +789,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                         <div className="absolute inset-0 bg-background/30 backdrop-blur-[1px] pointer-events-none"></div>
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <motion.div 
-                            className="bg-background/90 text-foreground text-sm font-medium rounded-lg px-4 py-2 text-center max-w-[85%] shadow-lg border border-border transform scale-95 group-hover:scale-100 transition-transform duration-300"
+                            className="bg-background/90 text-foreground text-xs sm:text-sm font-medium rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-center max-w-[85%] shadow-lg border border-border transform scale-95 group-hover:scale-100 transition-transform duration-300"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.1 }}
@@ -821,13 +821,13 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       </AnimatePresence>
 
       {/* Enhanced Footer Actions */}
-      <div className="border-t pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="border-t pt-4 sm:pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <Badge 
             variant="outline" 
-            className="gap-1.5 h-7 px-3 rounded-md bg-primary/5 border-primary/20"
+            className="gap-1.5 h-6 sm:h-7 px-2 sm:px-3 rounded-md bg-primary/5 border-primary/20 text-xs sm:text-sm"
           >
-            <Calendar className="h-3.5 w-3.5 text-primary" />
+            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary" />
             <span>
               {(() => {
                 const mealCount = Object.keys(selectedMeals).filter((day) => selectedMeals[day].selected).length;
@@ -847,9 +847,9 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
           <Button 
             variant="outline" 
             onClick={handleViewAll}
-            className="sm:w-auto w-full rounded-md border-primary/30 hover:border-primary hover:bg-primary/5 text-sm gap-1.5 transition-all duration-200"
+            className="sm:w-auto w-full rounded-md border-primary/30 hover:border-primary hover:bg-primary/5 text-xs sm:text-sm gap-1.5 transition-all duration-200"
           >
-            <CalendarDays className="h-4 w-4" />
+            <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             {language === 'en' ? 'View All Meals' : '查看所有餐点'}
           </Button>
         </motion.div>
