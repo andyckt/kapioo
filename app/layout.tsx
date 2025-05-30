@@ -13,14 +13,14 @@ export const metadata = {
   generator: 'v0.dev',
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/xiaohongshu.png', sizes: 'any' },
     ],
     apple: [
       { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
     ],
     other: [
-      { rel: 'mask-icon', url: '/favicon.ico', color: '#C2884E' },
-      { rel: 'shortcut icon', url: '/favicon.ico' },
+      { rel: 'mask-icon', url: '/xiaohongshu.png', color: '#C2884E' },
+      { rel: 'shortcut icon', url: '/xiaohongshu.png' },
       { rel: 'android-chrome', url: '/android-chrome-192x192.png', sizes: '192x192' },
       { rel: 'android-chrome', url: '/android-chrome-512x512.png', sizes: '512x512' },
     ],
