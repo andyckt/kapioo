@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -835,13 +835,17 @@ export default function DashboardPage() {
                     <h2 className="text-3xl font-bold tracking-tight">{language === 'en' ? `Welcome, ${userData?.name?.split(' ')[0] || ''}` : `欢迎, ${userData?.name?.split(' ')[0] || ''}`}</h2>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Card className="transform transition-all hover:scale-105">
+                    <Card 
+                      className="transform transition-all duration-300 hover:scale-105 hover:shadow-md cursor-pointer relative group overflow-hidden" 
+                      onClick={() => setActiveTab("credits")}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{t('creditsAvailable')}</CardTitle>
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        <CreditCard className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-2xl font-bold group-hover:text-primary transition-colors duration-300">
                           {userLoading ? (
                             <span className="flex items-center gap-2">
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -852,15 +856,22 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{language === 'en' ? 'Credits can be used to order meals' : '餐券可用于订购餐点'}</p>
+                        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <ArrowRight className="h-4 w-4 text-primary" />
+                        </div>
                       </CardContent>
                     </Card>
-                    <Card className="transform transition-all hover:scale-105">
+                    <Card 
+                      className="transform transition-all duration-300 hover:scale-105 hover:shadow-md cursor-pointer relative group overflow-hidden" 
+                      onClick={() => setActiveTab("orders")}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{t('upcomingDeliveries')}</CardTitle>
-                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                        <ShoppingCart className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-2xl font-bold group-hover:text-primary transition-colors duration-300">
                           {orderStatsLoading ? (
                             <span className="flex items-center gap-2">
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -871,15 +882,22 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{language === 'en' ? 'Pending or confirmed orders' : '待处理或已确认的订单'}</p>
+                        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <ArrowRight className="h-4 w-4 text-primary" />
+                        </div>
                       </CardContent>
                     </Card>
-                    <Card className="transform transition-all hover:scale-105">
+                    <Card 
+                      className="transform transition-all duration-300 hover:scale-105 hover:shadow-md cursor-pointer relative group overflow-hidden" 
+                      onClick={() => setActiveTab("orders")}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{t('totalOrders')}</CardTitle>
-                        <History className="h-4 w-4 text-muted-foreground" />
+                        <History className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-2xl font-bold group-hover:text-primary transition-colors duration-300">
                           {orderStatsLoading ? (
                             <span className="flex items-center gap-2">
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -890,6 +908,9 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{language === 'en' ? 'Lifetime orders placed' : '已下单的总订单数'}</p>
+                        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <ArrowRight className="h-4 w-4 text-primary" />
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
