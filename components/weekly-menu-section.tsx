@@ -218,221 +218,614 @@ export default function WeeklyMenuSection() {
 
         {/* Menu Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {menuData.map((dayMenu, index) => {
-            const accentColors = getAccentColors(dayMenu.accent)
-            const isHovered = hoveredCard === index
-
-            return (
-              <div
-                key={dayMenu.day}
-                className={`group transition-all duration-1000 ease-out ${
-                  isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16"
-                }`}
-                style={{ transitionDelay: isVisible ? `${index * 150}ms` : "0ms" }}
-                onMouseEnter={() => setHoveredCard(index)}
-                onMouseLeave={() => setHoveredCard(null)}
-              >
-                <div
-                  className={`relative h-full transition-all duration-700 ease-out ${
-                    isHovered ? "scale-105 -translate-y-4" : "scale-100 translate-y-0"
-                  }`}
-                >
-                  {/* Enhanced Glassmorphism Card */}
+          {menuData.length === 5 ? (
+            <>
+              {/* First row: 3 cards */}
+              {menuData.slice(0, 3).map((dayMenu, index) => {
+                const accentColors = getAccentColors(dayMenu.accent)
+                const isHovered = hoveredCard === index
+                
+                return (
                   <div
-                    className={`
-                    relative backdrop-blur-xl bg-gradient-to-br ${dayMenu.color} 
-                    rounded-3xl p-8 border border-[#C2884E]/10 shadow-xl
-                    transition-all duration-700 ease-out
-                    ${isHovered ? "shadow-2xl shadow-[#C2884E]/10" : "shadow-lg shadow-[#C2884E]/5"}
-                    before:absolute before:inset-0 before:rounded-3xl before:bg-white/40 before:opacity-0 before:transition-opacity before:duration-500
-                    ${isHovered ? "before:opacity-100" : "before:opacity-0"}
-                  `}
+                    key={dayMenu.day}
+                    className={`group transition-all duration-1000 ease-out ${
+                      isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16"
+                    }`}
+                    style={{ transitionDelay: isVisible ? `${index * 150}ms` : "0ms" }}
+                    onMouseEnter={() => setHoveredCard(index)}
+                    onMouseLeave={() => setHoveredCard(null)}
                   >
-                    {/* Floating Day Header */}
-                    <div className="text-center mb-8 relative">
+                    <div
+                      className={`relative h-full transition-all duration-700 ease-out ${
+                        isHovered ? "scale-105 -translate-y-4" : "scale-100 translate-y-0"
+                      }`}
+                    >
+                      {/* Card content - same as before */}
                       <div
-                        className={`inline-block transition-all duration-500 ${isHovered ? "scale-110" : "scale-100"}`}
+                        className={`
+                        relative backdrop-blur-xl bg-gradient-to-br ${dayMenu.color} 
+                        rounded-3xl p-8 border border-[#C2884E]/10 shadow-xl
+                        transition-all duration-700 ease-out
+                        ${isHovered ? "shadow-2xl shadow-[#C2884E]/10" : "shadow-lg shadow-[#C2884E]/5"}
+                        before:absolute before:inset-0 before:rounded-3xl before:bg-white/40 before:opacity-0 before:transition-opacity before:duration-500
+                        ${isHovered ? "before:opacity-100" : "before:opacity-0"}
+                      `}
                       >
-                        <div className="flex flex-col items-center">
-                          <h3 className="text-3xl font-extralight text-[#6B5F53] mb-0.5 tracking-wide">
-                            {dayMenu.day}
-                          </h3>
-                          
-                          <div className="flex items-center justify-center gap-1.5 mb-1">
-                            <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider uppercase">{dayMenu.dayZh}</p>
-                            {dayMenu.date && (
-                              <>
-                                <span className="inline-block w-0.5 h-0.5 rounded-full bg-[#C2884E]/40"></span>
-                                <p className={`text-xs text-[#C2884E]/80 font-medium tracking-wide ${isHovered ? 'opacity-100' : 'opacity-70'}`}>
-                                  {dayMenu.date}
-                                </p>
-                              </>
-                            )}
+                        {/* Floating Day Header */}
+                        <div className="text-center mb-8 relative">
+                          <div
+                            className={`inline-block transition-all duration-500 ${isHovered ? "scale-110" : "scale-100"}`}
+                          >
+                            <div className="flex flex-col items-center">
+                              <h3 className="text-3xl font-extralight text-[#6B5F53] mb-0.5 tracking-wide">
+                                {dayMenu.day}
+                              </h3>
+                              
+                              <div className="flex items-center justify-center gap-1.5 mb-1">
+                                <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider uppercase">{dayMenu.dayZh}</p>
+                                {dayMenu.date && (
+                                  <>
+                                    <span className="inline-block w-0.5 h-0.5 rounded-full bg-[#C2884E]/40"></span>
+                                    <p className={`text-xs text-[#C2884E]/80 font-medium tracking-wide ${isHovered ? 'opacity-100' : 'opacity-70'}`}>
+                                      {dayMenu.date}
+                                    </p>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div
+                              className={`w-8 h-px ${accentColors.bg} mx-auto transition-all duration-500 ${
+                                isHovered ? "w-12" : "w-8"
+                              }`}
+                            ></div>
                           </div>
                         </div>
-                        
-                        <div
-                          className={`w-8 h-px ${accentColors.bg} mx-auto transition-all duration-500 ${
-                            isHovered ? "w-12" : "w-8"
-                          }`}
-                        ></div>
-                      </div>
-                    </div>
 
-                    {/* Meals List with Staggered Animation */}
-                    <div className="space-y-4 mb-8">
-                      {dayMenu.meals.map((meal, mealIndex) => (
-                        <div
-                          key={mealIndex}
-                          className={`flex flex-col group/meal transition-all duration-500 ${
-                            isHovered ? "translate-x-2" : "translate-x-0"
-                          }`}
-                          style={{ transitionDelay: isHovered ? `${mealIndex * 50}ms` : "0ms" }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1">
-                              {/* Commented out dot
-                              <div
-                                className={`w-1 h-1 rounded-full ${accentColors.dot} opacity-50 transition-all duration-300 ${
-                                  isHovered ? "scale-150" : "scale-100"
-                                }`}
-                              ></div>
-                              */}
-                              <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
-                              {meal.hasIcon && (
-                                /* Commented out dot
-                                <div
-                                  className={`w-2 h-2 rounded-full ${accentColors.dot} opacity-40 transition-all duration-300 ${
-                                    isHovered ? "opacity-60 scale-125" : "opacity-40 scale-100"
-                                  }`}
-                                ></div>
-                                */
-                                null
+                        {/* Meals List with Staggered Animation */}
+                        <div className="space-y-4 mb-8">
+                          {dayMenu.meals.map((meal, mealIndex) => (
+                            <div
+                              key={mealIndex}
+                              className={`flex flex-col group/meal transition-all duration-500 ${
+                                isHovered ? "translate-x-2" : "translate-x-0"
+                              }`}
+                              style={{ transitionDelay: isHovered ? `${mealIndex * 50}ms` : "0ms" }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
+                                </div>
+                                <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
+                                  {meal.calories}kcal
+                                </span>
+                              </div>
+                              
+                              {/* Meal description if available */}
+                              {meal.description && (
+                                <div 
+                                  className={`
+                                    mt-1 ml-3 mb-1 overflow-hidden max-h-0 opacity-0 
+                                    transition-all duration-500 ease-in-out
+                                    ${isHovered ? "max-h-20 opacity-100" : ""}
+                                  `}
+                                >
+                                  <div className={`
+                                    text-xs italic text-[#6B5F53]/70 
+                                    border-l-2 ${accentColors.border}
+                                    pl-2 py-0.5 mt-0.5
+                                    relative
+                                    after:absolute after:bottom-0 after:left-0 after:right-0 
+                                    after:h-full after:bg-gradient-to-r after:from-[#C2884E]/5 after:to-transparent after:rounded-r-md
+                                    after:-z-10
+                                  `}>
+                                    <span className="flex flex-wrap gap-1.5">
+                                      {meal.description.split('、').map((ingredient, i) => (
+                                        <span 
+                                          key={i} 
+                                          className={`
+                                            inline-flex items-center rounded-full px-2 py-0.5 
+                                            bg-white/50 backdrop-blur-sm text-[10px] font-medium 
+                                            border border-[#C2884E]/10 shadow-sm
+                                            transition-all duration-300
+                                            hover:scale-105 hover:shadow-md hover:border-[#C2884E]/20
+                                            transform opacity-0
+                                            ${isHovered ? 'opacity-100 translate-x-0' : 'translate-x-1'}
+                                          `}
+                                          style={{ 
+                                            transitionDelay: `${i * 100 + 100}ms`,
+                                            animationDelay: `${i * 100 + 100}ms` 
+                                          }}
+                                        >
+                                          {ingredient}
+                                        </span>
+                                      ))}
+                                    </span>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
-                              {meal.calories}kcal
-                            </span>
-                          </div>
-                          
-                          {/* Meal description if available */}
-                          {meal.description && (
-                            <div 
-                              className={`
-                                mt-1 ml-3 mb-1 overflow-hidden max-h-0 opacity-0 
-                                transition-all duration-500 ease-in-out
-                                ${isHovered ? "max-h-20 opacity-100" : ""}
-                              `}
+                          ))}
+                        </div>
+
+                        {/* Floating Total Calories */}
+                        <div className="text-center mb-8">
+                          <div
+                            className={`inline-block transition-all duration-500 ${
+                              isHovered ? "scale-110 -translate-y-1" : "scale-100 translate-y-0"
+                            }`}
+                          >
+                            <div
+                              className={`px-6 py-3 ${accentColors.bg} ${accentColors.border} border rounded-full backdrop-blur-sm`}
                             >
-                              <div className={`
-                                text-xs italic text-[#6B5F53]/70 
-                                border-l-2 ${accentColors.border}
-                                pl-2 py-0.5 mt-0.5
-                                relative
-                                after:absolute after:bottom-0 after:left-0 after:right-0 
-                                after:h-full after:bg-gradient-to-r after:from-[#C2884E]/5 after:to-transparent after:rounded-r-md
-                                after:-z-10
-                              `}>
-                                <span className="flex flex-wrap gap-1.5">
-                                  {meal.description.split('、').map((ingredient, i) => (
-                                    <span 
-                                      key={i} 
-                                      className={`
-                                        inline-flex items-center rounded-full px-2 py-0.5 
-                                        bg-white/50 backdrop-blur-sm text-[10px] font-medium 
-                                        border border-[#C2884E]/10 shadow-sm
-                                        transition-all duration-300
-                                        hover:scale-105 hover:shadow-md hover:border-[#C2884E]/20
-                                        transform opacity-0
-                                        ${isHovered ? 'opacity-100 translate-x-0' : 'translate-x-1'}
-                                      `}
-                                      style={{ 
-                                        transitionDelay: `${i * 100 + 100}ms`,
-                                        animationDelay: `${i * 100 + 100}ms` 
-                                      }}
-                                    >
-                                      {ingredient}
-                                    </span>
-                                  ))}
+                              <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
+                                = {dayMenu.totalCalories}KCAL
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Enhanced Nutrient Tags */}
+                        <div className="flex flex-wrap gap-3 justify-center mt-6">
+                          {dayMenu.tags.map((tag, tagIndex) => {
+                            const TagIcon = tag.icon
+                            return (
+                              <div
+                                key={tagIndex}
+                                className={`
+                                  relative group/tag
+                                  transition-all duration-500 
+                                  ${isHovered ? "translate-y-0 opacity-100" : "translate-y-1 opacity-90"}
+                                `}
+                                style={{ transitionDelay: isHovered ? `${tagIndex * 100}ms` : "0ms" }}
+                              >
+                                {/* Enhanced Tag with Icon */}
+                                <div
+                                  className={`
+                                    relative overflow-hidden
+                                    px-5 py-2.5 rounded-full 
+                                    flex items-center gap-2
+                                    bg-gradient-to-r ${dayMenu.gradient} 
+                                    text-white shadow-lg
+                                    hover:shadow-xl hover:scale-105 transition-all duration-300
+                                  `}
+                                >
+                                  <TagIcon className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium tracking-wide">{tag.name}</span>
+
+                                  {/* Subtle shine effect */}
+                                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-700 -translate-x-full group-hover/tag:translate-x-full"></div>
+                                </div>
+
+                                {/* Subtle glow effect */}
+                                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/10 to-white/5 blur-md -z-10"></div>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {/* Subtle Glow Effect */}
+                        <div
+                          className={`absolute inset-0 rounded-3xl transition-opacity duration-700 ${
+                            isHovered ? "opacity-100" : "opacity-0"
+                          }`}
+                        >
+                          <div
+                            className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${dayMenu.color} opacity-20 blur-xl`}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              
+              {/* Second row: 2 cards, centered */}
+              <div className="lg:col-span-3 flex flex-col md:flex-row justify-center gap-8 w-full">
+                {menuData.slice(3, 5).map((dayMenu, index) => {
+                  const accentColors = getAccentColors(dayMenu.accent)
+                  const actualIndex = index + 3 // For hover state tracking
+                  const isHovered = hoveredCard === actualIndex
+                  
+                  return (
+                    <div
+                      key={dayMenu.day}
+                      className={`group transition-all duration-1000 ease-out ${
+                        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16"
+                      } w-full md:w-1/2 lg:w-1/3`}
+                      style={{ transitionDelay: isVisible ? `${actualIndex * 150}ms` : "0ms" }}
+                      onMouseEnter={() => setHoveredCard(actualIndex)}
+                      onMouseLeave={() => setHoveredCard(null)}
+                    >
+                      <div
+                        className={`relative h-full transition-all duration-700 ease-out ${
+                          isHovered ? "scale-105 -translate-y-4" : "scale-100 translate-y-0"
+                        }`}
+                      >
+                        {/* Card content - same as before */}
+                        <div
+                          className={`
+                          relative backdrop-blur-xl bg-gradient-to-br ${dayMenu.color} 
+                          rounded-3xl p-8 border border-[#C2884E]/10 shadow-xl
+                          transition-all duration-700 ease-out
+                          ${isHovered ? "shadow-2xl shadow-[#C2884E]/10" : "shadow-lg shadow-[#C2884E]/5"}
+                          before:absolute before:inset-0 before:rounded-3xl before:bg-white/40 before:opacity-0 before:transition-opacity before:duration-500
+                          ${isHovered ? "before:opacity-100" : "before:opacity-0"}
+                        `}
+                        >
+                          {/* Rest of card content */}
+                          {/* Floating Day Header */}
+                          <div className="text-center mb-8 relative">
+                            <div
+                              className={`inline-block transition-all duration-500 ${isHovered ? "scale-110" : "scale-100"}`}
+                            >
+                              <div className="flex flex-col items-center">
+                                <h3 className="text-3xl font-extralight text-[#6B5F53] mb-0.5 tracking-wide">
+                                  {dayMenu.day}
+                                </h3>
+                                
+                                <div className="flex items-center justify-center gap-1.5 mb-1">
+                                  <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider uppercase">{dayMenu.dayZh}</p>
+                                  {dayMenu.date && (
+                                    <>
+                                      <span className="inline-block w-0.5 h-0.5 rounded-full bg-[#C2884E]/40"></span>
+                                      <p className={`text-xs text-[#C2884E]/80 font-medium tracking-wide ${isHovered ? 'opacity-100' : 'opacity-70'}`}>
+                                        {dayMenu.date}
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div
+                                className={`w-8 h-px ${accentColors.bg} mx-auto transition-all duration-500 ${
+                                  isHovered ? "w-12" : "w-8"
+                                }`}
+                              ></div>
+                            </div>
+                          </div>
+
+                          {/* Meals List with Staggered Animation */}
+                          <div className="space-y-4 mb-8">
+                            {dayMenu.meals.map((meal, mealIndex) => (
+                              <div
+                                key={mealIndex}
+                                className={`flex flex-col group/meal transition-all duration-500 ${
+                                  isHovered ? "translate-x-2" : "translate-x-0"
+                                }`}
+                                style={{ transitionDelay: isHovered ? `${mealIndex * 50}ms` : "0ms" }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
+                                  </div>
+                                  <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
+                                    {meal.calories}kcal
+                                  </span>
+                                </div>
+                                
+                                {/* Meal description if available */}
+                                {meal.description && (
+                                  <div 
+                                    className={`
+                                      mt-1 ml-3 mb-1 overflow-hidden max-h-0 opacity-0 
+                                      transition-all duration-500 ease-in-out
+                                      ${isHovered ? "max-h-20 opacity-100" : ""}
+                                    `}
+                                  >
+                                    <div className={`
+                                      text-xs italic text-[#6B5F53]/70 
+                                      border-l-2 ${accentColors.border}
+                                      pl-2 py-0.5 mt-0.5
+                                      relative
+                                      after:absolute after:bottom-0 after:left-0 after:right-0 
+                                      after:h-full after:bg-gradient-to-r after:from-[#C2884E]/5 after:to-transparent after:rounded-r-md
+                                      after:-z-10
+                                    `}>
+                                      <span className="flex flex-wrap gap-1.5">
+                                        {meal.description.split('、').map((ingredient, i) => (
+                                          <span 
+                                            key={i} 
+                                            className={`
+                                              inline-flex items-center rounded-full px-2 py-0.5 
+                                              bg-white/50 backdrop-blur-sm text-[10px] font-medium 
+                                              border border-[#C2884E]/10 shadow-sm
+                                              transition-all duration-300
+                                              hover:scale-105 hover:shadow-md hover:border-[#C2884E]/20
+                                              transform opacity-0
+                                              ${isHovered ? 'opacity-100 translate-x-0' : 'translate-x-1'}
+                                            `}
+                                            style={{ 
+                                              transitionDelay: `${i * 100 + 100}ms`,
+                                              animationDelay: `${i * 100 + 100}ms` 
+                                            }}
+                                          >
+                                            {ingredient}
+                                          </span>
+                                        ))}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Floating Total Calories */}
+                          <div className="text-center mb-8">
+                            <div
+                              className={`inline-block transition-all duration-500 ${
+                                isHovered ? "scale-110 -translate-y-1" : "scale-100 translate-y-0"
+                              }`}
+                            >
+                              <div
+                                className={`px-6 py-3 ${accentColors.bg} ${accentColors.border} border rounded-full backdrop-blur-sm`}
+                              >
+                                <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
+                                  = {dayMenu.totalCalories}KCAL
                                 </span>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                          </div>
 
-                    {/* Floating Total Calories */}
-                    <div className="text-center mb-8">
-                      <div
-                        className={`inline-block transition-all duration-500 ${
-                          isHovered ? "scale-110 -translate-y-1" : "scale-100 translate-y-0"
-                        }`}
-                      >
-                        <div
-                          className={`px-6 py-3 ${accentColors.bg} ${accentColors.border} border rounded-full backdrop-blur-sm`}
-                        >
-                          <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
-                            = {dayMenu.totalCalories}KCAL
-                          </span>
+                          {/* Enhanced Nutrient Tags */}
+                          <div className="flex flex-wrap gap-3 justify-center mt-6">
+                            {dayMenu.tags.map((tag, tagIndex) => {
+                              const TagIcon = tag.icon
+                              return (
+                                <div
+                                  key={tagIndex}
+                                  className={`
+                                    relative group/tag
+                                    transition-all duration-500 
+                                    ${isHovered ? "translate-y-0 opacity-100" : "translate-y-1 opacity-90"}
+                                  `}
+                                  style={{ transitionDelay: isHovered ? `${tagIndex * 100}ms` : "0ms" }}
+                                >
+                                  {/* Enhanced Tag with Icon */}
+                                  <div
+                                    className={`
+                                      relative overflow-hidden
+                                      px-5 py-2.5 rounded-full 
+                                      flex items-center gap-2
+                                      bg-gradient-to-r ${dayMenu.gradient} 
+                                      text-white shadow-lg
+                                      hover:shadow-xl hover:scale-105 transition-all duration-300
+                                    `}
+                                  >
+                                    <TagIcon className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium tracking-wide">{tag.name}</span>
+
+                                    {/* Subtle shine effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-700 -translate-x-full group-hover/tag:translate-x-full"></div>
+                                  </div>
+
+                                  {/* Subtle glow effect */}
+                                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/10 to-white/5 blur-md -z-10"></div>
+                                </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Subtle Glow Effect */}
+                          <div
+                            className={`absolute inset-0 rounded-3xl transition-opacity duration-700 ${
+                              isHovered ? "opacity-100" : "opacity-0"
+                            }`}
+                          >
+                            <div
+                              className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${dayMenu.color} opacity-20 blur-xl`}
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            // Original layout for non-5 cards case
+            menuData.map((dayMenu, index) => {
+              const accentColors = getAccentColors(dayMenu.accent)
+              const isHovered = hoveredCard === index
 
-                    {/* Enhanced Nutrient Tags */}
-                    <div className="flex flex-wrap gap-3 justify-center mt-6">
-                      {dayMenu.tags.map((tag, tagIndex) => {
-                        const TagIcon = tag.icon
-                        return (
-                          <div
-                            key={tagIndex}
-                            className={`
-                              relative group/tag
-                              transition-all duration-500 
-                              ${isHovered ? "translate-y-0 opacity-100" : "translate-y-1 opacity-90"}
-                            `}
-                            style={{ transitionDelay: isHovered ? `${tagIndex * 100}ms` : "0ms" }}
-                          >
-                            {/* Enhanced Tag with Icon */}
-                            <div
-                              className={`
-                                relative overflow-hidden
-                                px-5 py-2.5 rounded-full 
-                                flex items-center gap-2
-                                bg-gradient-to-r ${dayMenu.gradient} 
-                                text-white shadow-lg
-                                hover:shadow-xl hover:scale-105 transition-all duration-300
-                              `}
-                            >
-                              <TagIcon className="w-3.5 h-3.5" />
-                              <span className="text-xs font-medium tracking-wide">{tag.name}</span>
-
-                              {/* Subtle shine effect */}
-                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-700 -translate-x-full group-hover/tag:translate-x-full"></div>
-                            </div>
-
-                            {/* Subtle glow effect */}
-                            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/10 to-white/5 blur-md -z-10"></div>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Subtle Glow Effect */}
+              return (
+                <div
+                  key={dayMenu.day}
+                  className={`group transition-all duration-1000 ease-out ${
+                    isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16"
+                  }`}
+                  style={{ transitionDelay: isVisible ? `${index * 150}ms` : "0ms" }}
+                  onMouseEnter={() => setHoveredCard(index)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                >
+                  <div
+                    className={`relative h-full transition-all duration-700 ease-out ${
+                      isHovered ? "scale-105 -translate-y-4" : "scale-100 translate-y-0"
+                    }`}
+                  >
+                    {/* Card content here - existing code */}
                     <div
-                      className={`absolute inset-0 rounded-3xl transition-opacity duration-700 ${
-                        isHovered ? "opacity-100" : "opacity-0"
-                      }`}
+                      className={`
+                      relative backdrop-blur-xl bg-gradient-to-br ${dayMenu.color} 
+                      rounded-3xl p-8 border border-[#C2884E]/10 shadow-xl
+                      transition-all duration-700 ease-out
+                      ${isHovered ? "shadow-2xl shadow-[#C2884E]/10" : "shadow-lg shadow-[#C2884E]/5"}
+                      before:absolute before:inset-0 before:rounded-3xl before:bg-white/40 before:opacity-0 before:transition-opacity before:duration-500
+                      ${isHovered ? "before:opacity-100" : "before:opacity-0"}
+                    `}
                     >
+                      {/* Rest of existing code for cards */}
+                      {/* Floating Day Header */}
+                      <div className="text-center mb-8 relative">
+                        <div
+                          className={`inline-block transition-all duration-500 ${isHovered ? "scale-110" : "scale-100"}`}
+                        >
+                          <div className="flex flex-col items-center">
+                            <h3 className="text-3xl font-extralight text-[#6B5F53] mb-0.5 tracking-wide">
+                              {dayMenu.day}
+                            </h3>
+                            
+                            <div className="flex items-center justify-center gap-1.5 mb-1">
+                              <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider uppercase">{dayMenu.dayZh}</p>
+                              {dayMenu.date && (
+                                <>
+                                  <span className="inline-block w-0.5 h-0.5 rounded-full bg-[#C2884E]/40"></span>
+                                  <p className={`text-xs text-[#C2884E]/80 font-medium tracking-wide ${isHovered ? 'opacity-100' : 'opacity-70'}`}>
+                                    {dayMenu.date}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div
+                            className={`w-8 h-px ${accentColors.bg} mx-auto transition-all duration-500 ${
+                              isHovered ? "w-12" : "w-8"
+                            }`}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Meals List with Staggered Animation */}
+                      <div className="space-y-4 mb-8">
+                        {dayMenu.meals.map((meal, mealIndex) => (
+                          <div
+                            key={mealIndex}
+                            className={`flex flex-col group/meal transition-all duration-500 ${
+                              isHovered ? "translate-x-2" : "translate-x-0"
+                            }`}
+                            style={{ transitionDelay: isHovered ? `${mealIndex * 50}ms` : "0ms" }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-1">
+                                <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
+                              </div>
+                              <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
+                                {meal.calories}kcal
+                              </span>
+                            </div>
+                            
+                            {/* Meal description if available */}
+                            {meal.description && (
+                              <div 
+                                className={`
+                                  mt-1 ml-3 mb-1 overflow-hidden max-h-0 opacity-0 
+                                  transition-all duration-500 ease-in-out
+                                  ${isHovered ? "max-h-20 opacity-100" : ""}
+                                `}
+                              >
+                                <div className={`
+                                  text-xs italic text-[#6B5F53]/70 
+                                  border-l-2 ${accentColors.border}
+                                  pl-2 py-0.5 mt-0.5
+                                  relative
+                                  after:absolute after:bottom-0 after:left-0 after:right-0 
+                                  after:h-full after:bg-gradient-to-r after:from-[#C2884E]/5 after:to-transparent after:rounded-r-md
+                                  after:-z-10
+                                `}>
+                                  <span className="flex flex-wrap gap-1.5">
+                                    {meal.description.split('、').map((ingredient, i) => (
+                                      <span 
+                                        key={i} 
+                                        className={`
+                                          inline-flex items-center rounded-full px-2 py-0.5 
+                                          bg-white/50 backdrop-blur-sm text-[10px] font-medium 
+                                          border border-[#C2884E]/10 shadow-sm
+                                          transition-all duration-300
+                                          hover:scale-105 hover:shadow-md hover:border-[#C2884E]/20
+                                          transform opacity-0
+                                          ${isHovered ? 'opacity-100 translate-x-0' : 'translate-x-1'}
+                                        `}
+                                        style={{ 
+                                          transitionDelay: `${i * 100 + 100}ms`,
+                                          animationDelay: `${i * 100 + 100}ms` 
+                                        }}
+                                      >
+                                        {ingredient}
+                                      </span>
+                                    ))}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Floating Total Calories */}
+                      <div className="text-center mb-8">
+                        <div
+                          className={`inline-block transition-all duration-500 ${
+                            isHovered ? "scale-110 -translate-y-1" : "scale-100 translate-y-0"
+                          }`}
+                        >
+                          <div
+                            className={`px-6 py-3 ${accentColors.bg} ${accentColors.border} border rounded-full backdrop-blur-sm`}
+                          >
+                            <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
+                              = {dayMenu.totalCalories}KCAL
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Enhanced Nutrient Tags */}
+                      <div className="flex flex-wrap gap-3 justify-center mt-6">
+                        {dayMenu.tags.map((tag, tagIndex) => {
+                          const TagIcon = tag.icon
+                          return (
+                            <div
+                              key={tagIndex}
+                              className={`
+                                relative group/tag
+                                transition-all duration-500 
+                                ${isHovered ? "translate-y-0 opacity-100" : "translate-y-1 opacity-90"}
+                              `}
+                              style={{ transitionDelay: isHovered ? `${tagIndex * 100}ms` : "0ms" }}
+                            >
+                              {/* Enhanced Tag with Icon */}
+                              <div
+                                className={`
+                                  relative overflow-hidden
+                                  px-5 py-2.5 rounded-full 
+                                  flex items-center gap-2
+                                  bg-gradient-to-r ${dayMenu.gradient} 
+                                  text-white shadow-lg
+                                  hover:shadow-xl hover:scale-105 transition-all duration-300
+                                `}
+                              >
+                                <TagIcon className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium tracking-wide">{tag.name}</span>
+
+                                {/* Subtle shine effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-700 -translate-x-full group-hover/tag:translate-x-full"></div>
+                              </div>
+
+                              {/* Subtle glow effect */}
+                              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/10 to-white/5 blur-md -z-10"></div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* Subtle Glow Effect */}
                       <div
-                        className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${dayMenu.color} opacity-20 blur-xl`}
-                      ></div>
+                        className={`absolute inset-0 rounded-3xl transition-opacity duration-700 ${
+                          isHovered ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        <div
+                          className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${dayMenu.color} opacity-20 blur-xl`}
+                        ></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })
+          )}
         </div>
       </div>
     </section>
