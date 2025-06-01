@@ -3,6 +3,30 @@
 import { useEffect, useRef, useState } from "react"
 import { ChefHat, Sparkles, Leaf, Shield, Zap, Heart, Flame, Apple } from "lucide-react"
 
+// Add interface definitions for better type safety
+interface Meal {
+  name: string;
+  calories: number;
+  hasIcon: boolean;
+  description?: string;
+}
+
+interface Tag {
+  name: string;
+  icon: any;
+}
+
+interface DayMenu {
+  day: string;
+  dayZh: string;
+  meals: Meal[];
+  totalCalories: number;
+  tags: Tag[];
+  color: string;
+  accent: string;
+  gradient: string;
+}
+
 export default function WeeklyMenuSection() {
   const [isVisible, setIsVisible] = useState(false)
   const [hoveredCard, setHoveredCard] = useState<number | null>(null)
@@ -30,9 +54,9 @@ export default function WeeklyMenuSection() {
       day: "Mon",
       dayZh: "周一",
       meals: [
-        { name: "字母番茄蔬菜汤", calories: 65, hasIcon: false },
+        { name: "字母番茄蔬菜汤", calories: 65, hasIcon: false, description: "字母意面、番茄、胡萝卜、洋葱、西芹、黑胡椒" },
         { name: "奥尔良烤鸡腿肉", calories: 210, hasIcon: true },
-        { name: "罗马生菜羽衣甘蓝沙拉", calories: 58, hasIcon: true },
+        { name: "罗马生菜羽衣甘蓝沙拉", calories: 58, hasIcon: true, description: "罗马生菜、羽衣甘蓝、小番茄、低脂千岛沙拉酱" },
         { name: "绵密土豆泥", calories: 160, hasIcon: true },
       ],
       totalCalories: 493,
@@ -48,7 +72,7 @@ export default function WeeklyMenuSection() {
       day: "Tue",
       dayZh: "周二",
       meals: [
-        { name: "三彩豆炒虾仁", calories: 145, hasIcon: false },
+        { name: "三彩豆炒虾仁", calories: 145, hasIcon: false, description: "胡萝卜、青豆、玉米粒、虾仁" },
         { name: "浓郁番茄炖牛肉", calories: 168, hasIcon: true },
         { name: "西兰花炒蘑菇", calories: 78, hasIcon: true },
         { name: "补血紫米饭 + 烤妈咪南瓜", calories: 128, hasIcon: true },
@@ -102,7 +126,7 @@ export default function WeeklyMenuSection() {
       day: "Fri",
       dayZh: "周五",
       meals: [
-        { name: "三鲜菌菇汤", calories: 55, hasIcon: true },
+        { name: "三鲜菌菇汤", calories: 55, hasIcon: true, description: "蘑菇、豆腐、鸡蛋" },
         { name: "日式咖喱鸡", calories: 225, hasIcon: true },
         { name: "番茄炖茄子", calories: 95, hasIcon: false },
         { name: "补血紫米饭", calories: 112, hasIcon: true },
@@ -251,34 +275,80 @@ export default function WeeklyMenuSection() {
                       {dayMenu.meals.map((meal, mealIndex) => (
                         <div
                           key={mealIndex}
-                          className={`flex items-center justify-between group/meal transition-all duration-500 ${
+                          className={`flex flex-col group/meal transition-all duration-500 ${
                             isHovered ? "translate-x-2" : "translate-x-0"
                           }`}
                           style={{ transitionDelay: isHovered ? `${mealIndex * 50}ms` : "0ms" }}
                         >
-                          <div className="flex items-center gap-3 flex-1">
-                            {/* Commented out dot
-                            <div
-                              className={`w-1 h-1 rounded-full ${accentColors.dot} opacity-50 transition-all duration-300 ${
-                                isHovered ? "scale-150" : "scale-100"
-                              }`}
-                            ></div>
-                            */}
-                            <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
-                            {meal.hasIcon && (
-                              /* Commented out dot
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 flex-1">
+                              {/* Commented out dot
                               <div
-                                className={`w-2 h-2 rounded-full ${accentColors.dot} opacity-40 transition-all duration-300 ${
-                                  isHovered ? "opacity-60 scale-125" : "opacity-40 scale-100"
+                                className={`w-1 h-1 rounded-full ${accentColors.dot} opacity-50 transition-all duration-300 ${
+                                  isHovered ? "scale-150" : "scale-100"
                                 }`}
                               ></div>
-                              */
-                              null
-                            )}
+                              */}
+                              <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
+                              {meal.hasIcon && (
+                                /* Commented out dot
+                                <div
+                                  className={`w-2 h-2 rounded-full ${accentColors.dot} opacity-40 transition-all duration-300 ${
+                                    isHovered ? "opacity-60 scale-125" : "opacity-40 scale-100"
+                                  }`}
+                                ></div>
+                                */
+                                null
+                              )}
+                            </div>
+                            <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
+                              {meal.calories}kcal
+                            </span>
                           </div>
-                          <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
-                            {meal.calories}kcal
-                          </span>
+                          
+                          {/* Meal description if available */}
+                          {meal.description && (
+                            <div 
+                              className={`
+                                mt-1 ml-3 mb-1 overflow-hidden max-h-0 opacity-0 
+                                transition-all duration-500 ease-in-out
+                                ${isHovered ? "max-h-20 opacity-100" : ""}
+                              `}
+                            >
+                              <div className={`
+                                text-xs italic text-[#6B5F53]/70 
+                                border-l-2 ${accentColors.border}
+                                pl-2 py-0.5 mt-0.5
+                                relative
+                                after:absolute after:bottom-0 after:left-0 after:right-0 
+                                after:h-full after:bg-gradient-to-r after:from-[#C2884E]/5 after:to-transparent after:rounded-r-md
+                                after:-z-10
+                              `}>
+                                <span className="flex flex-wrap gap-1.5">
+                                  {meal.description.split('、').map((ingredient, i) => (
+                                    <span 
+                                      key={i} 
+                                      className={`
+                                        inline-flex items-center rounded-full px-2 py-0.5 
+                                        bg-white/50 backdrop-blur-sm text-[10px] font-medium 
+                                        border border-[#C2884E]/10 shadow-sm
+                                        transition-all duration-300
+                                        hover:scale-105 hover:shadow-md hover:border-[#C2884E]/20
+                                        transform opacity-0
+                                        ${isHovered ? 'opacity-100 translate-x-0' : 'translate-x-1'}
+                                      `}
+                                      style={{ 
+                                        transitionDelay: `${i * 100 + 100}ms`,
+                                        animationDelay: `${i * 100 + 100}ms` 
+                                      }}
+                                    >
+                                      {ingredient}
+                                    </span>
+                                  ))}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
