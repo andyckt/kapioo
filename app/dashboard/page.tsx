@@ -2262,7 +2262,7 @@ function WeeklyMealSelector({
                                     key={mealIndex}
                                     className={`flex items-center transition-all duration-300 ${
                                       isSelected ? "translate-x-1" : "translate-x-0"
-                                    }`}
+                                    } p-2 rounded-lg border ${isSelected ? "border-primary/20" : "border-primary/10"} ${accentColors.bg}`}
                                     style={{ transitionDelay: `${mealIndex * 50}ms` }}
                                   >
                                     <div className="flex items-center gap-2 flex-1">
