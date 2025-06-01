@@ -2231,16 +2231,16 @@ function WeeklyMealSelector({
                             {/* Enhanced Glassmorphism Card */}
                             <div className={`
                               relative backdrop-blur-xl bg-gradient-to-br ${cardColor} 
-                              rounded-3xl p-6 border ${isSelected ? "border-primary shadow-xl" : "border-[#C2884E]/10 shadow-lg"}
+                              rounded-3xl p-6 border ${isSelected ? "border-primary shadow-xl" : "border-[#C2884E]/20 shadow-lg"}
                               transition-all duration-300 ease-out cursor-pointer
-                              ${isSelected ? "shadow-xl shadow-primary/10" : "shadow-lg shadow-[#C2884E]/5"}
+                              ${isSelected ? "shadow-xl shadow-primary/10" : "shadow-lg shadow-[#C2884E]/10"}
                             `}>
                               {/* Day Header */}
                               <div className="text-center mb-6 relative">
                                 <div className={`inline-block transition-all duration-300 ${isSelected ? "scale-110" : "scale-100"}`}>
                                   <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{day}</h3>
                                   <div className={`w-8 h-px ${accentColors.bg} mx-auto mb-2 transition-all duration-300 ${
-                                    isSelected ? "w-12" : "w-8"
+                                    isSelected ? "w-12 bg-primary/30" : "w-8"
                                   }`}></div>
                                   {meal.date && <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{meal.date}</p>}
                                 </div>
@@ -2248,7 +2248,11 @@ function WeeklyMealSelector({
 
                               {/* Selection indicator */}
                               <div className="absolute top-6 right-6">
-                                <div className={`h-4 w-4 rounded-full transition-all duration-300 ${isSelected ? "bg-primary scale-125" : "bg-muted scale-100"}`} />
+                                <div className={`h-4 w-4 rounded-full transition-all duration-300 ${
+                                  isSelected 
+                                    ? "bg-primary scale-125" 
+                                    : `${accentColors.dot}/50 scale-100 hover:${accentColors.dot}/70 hover:scale-110`
+                                }`} />
                               </div>
 
                               {/* Meals List */}
@@ -2286,8 +2290,8 @@ function WeeklyMealSelector({
                                 <div className={`inline-block transition-all duration-300 ${
                                   isSelected ? "scale-110" : "scale-100"
                                 }`}>
-                                  <div className={`px-4 py-2 bg-primary/10 border border-primary/20 rounded-full`}>
-                                    <span className="text-sm font-medium text-primary flex items-center justify-center gap-1">
+                                  <div className={`px-4 py-2 ${accentColors.bg} ${accentColors.border} border rounded-full`}>
+                                    <span className={`text-sm font-medium ${accentColors.text} flex items-center justify-center gap-1`}>
                                       <span>1</span>
                                       <Gem className="h-3.5 w-3.5" />
                                       <span>{t('credits')}</span>
