@@ -257,18 +257,23 @@ export default function WeeklyMenuSection() {
                           style={{ transitionDelay: isHovered ? `${mealIndex * 50}ms` : "0ms" }}
                         >
                           <div className="flex items-center gap-3 flex-1">
+                            {/* Commented out dot
                             <div
                               className={`w-1 h-1 rounded-full ${accentColors.dot} opacity-50 transition-all duration-300 ${
                                 isHovered ? "scale-150" : "scale-100"
                               }`}
                             ></div>
+                            */}
                             <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
                             {meal.hasIcon && (
+                              /* Commented out dot
                               <div
                                 className={`w-2 h-2 rounded-full ${accentColors.dot} opacity-40 transition-all duration-300 ${
                                   isHovered ? "opacity-60 scale-125" : "opacity-40 scale-100"
                                 }`}
                               ></div>
+                              */
+                              null
                             )}
                           </div>
                           <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
