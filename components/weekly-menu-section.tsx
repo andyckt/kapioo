@@ -25,6 +25,7 @@ interface DayMenu {
   color: string;
   accent: string;
   gradient: string;
+  date?: string;
 }
 
 export default function WeeklyMenuSection() {
@@ -53,6 +54,7 @@ export default function WeeklyMenuSection() {
     {
       day: "Mon",
       dayZh: "周一",
+      date: "June 2",
       meals: [
         { name: "字母番茄蔬菜汤", calories: 65, hasIcon: false, description: "字母意面、番茄、胡萝卜、洋葱、西芹、黑胡椒" },
         { name: "奥尔良烤鸡腿肉", calories: 210, hasIcon: true },
@@ -71,6 +73,7 @@ export default function WeeklyMenuSection() {
     {
       day: "Tue",
       dayZh: "周二",
+      date: "June 3",
       meals: [
         { name: "三彩豆炒虾仁", calories: 145, hasIcon: false, description: "胡萝卜、青豆、玉米粒、虾仁" },
         { name: "浓郁番茄炖牛肉", calories: 168, hasIcon: true },
@@ -89,6 +92,7 @@ export default function WeeklyMenuSection() {
     {
       day: "Wed",
       dayZh: "周三",
+      date: "June 4",
       meals: [
         { name: "日式味增豆腐汤", calories: 52, hasIcon: true },
         { name: "蒲烧鳗鱼", calories: 215, hasIcon: false },
@@ -107,6 +111,7 @@ export default function WeeklyMenuSection() {
     {
       day: "Thu",
       dayZh: "周四",
+      date: "June 5",
       meals: [
         { name: "法式洋葱汤", calories: 78, hasIcon: false },
         { name: "意式肉酱", calories: 220, hasIcon: true },
@@ -125,6 +130,7 @@ export default function WeeklyMenuSection() {
     {
       day: "Fri",
       dayZh: "周五",
+      date: "June 6",
       meals: [
         { name: "三鲜菌菇汤", calories: 55, hasIcon: true, description: "蘑菇、豆腐、鸡蛋" },
         { name: "日式咖喱鸡", calories: 225, hasIcon: true },
@@ -139,25 +145,7 @@ export default function WeeklyMenuSection() {
       color: "from-[#FBF7F2] to-[#F5EDE4]",
       accent: "brown1",
       gradient: "from-[#C2884E] to-[#D1A46C]",
-    },
-    {
-      day: "Sun",
-      dayZh: "周日",
-      meals: [
-        { name: "休息", calories: 0, hasIcon: false },
-        { name: "OFF", calories: 0, hasIcon: false },
-        { name: "", calories: 0, hasIcon: false },
-        { name: "", calories: 0, hasIcon: false },
-      ],
-      totalCalories: 0,
-      tags: [
-        { name: "休息日", icon: Heart },
-        { name: "OFF", icon: Sparkles },
-      ],
-      color: "from-[#F5EDE4] to-[#FBF7F2]",
-      accent: "brown2",
-      gradient: "from-[#D1A46C] to-[#C2884E]",
-    },
+    }
   ]
 
   const getAccentColors = (accent: string) => {
@@ -219,6 +207,11 @@ export default function WeeklyMenuSection() {
               </span>
               <span className="block font-extralight text-[#6B5F53]">Menu</span>
             </h2>
+            <div className="flex items-center justify-center gap-2 mt-3 mb-2">
+              <div className="h-px w-5 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
+              <span className="text-sm text-[#6B5F53]/70 font-light">June 2 — 6</span>
+              <div className="h-px w-5 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
+            </div>
             <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto"></div>
           </div>
         </div>
@@ -260,13 +253,29 @@ export default function WeeklyMenuSection() {
                       <div
                         className={`inline-block transition-all duration-500 ${isHovered ? "scale-110" : "scale-100"}`}
                       >
-                        <h3 className="text-3xl font-extralight text-[#6B5F53] mb-1 tracking-wide">{dayMenu.day}</h3>
+                        <div className="flex flex-col items-center">
+                          <h3 className="text-3xl font-extralight text-[#6B5F53] mb-0.5 tracking-wide">
+                            {dayMenu.day}
+                          </h3>
+                          
+                          <div className="flex items-center justify-center gap-1.5 mb-1">
+                            <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider uppercase">{dayMenu.dayZh}</p>
+                            {dayMenu.date && (
+                              <>
+                                <span className="inline-block w-0.5 h-0.5 rounded-full bg-[#C2884E]/40"></span>
+                                <p className={`text-xs text-[#C2884E]/80 font-medium tracking-wide ${isHovered ? 'opacity-100' : 'opacity-70'}`}>
+                                  {dayMenu.date}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
                         <div
-                          className={`w-8 h-px ${accentColors.bg} mx-auto mb-2 transition-all duration-500 ${
+                          className={`w-8 h-px ${accentColors.bg} mx-auto transition-all duration-500 ${
                             isHovered ? "w-12" : "w-8"
                           }`}
                         ></div>
-                        <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider uppercase">{dayMenu.dayZh}</p>
                       </div>
                     </div>
 
