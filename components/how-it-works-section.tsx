@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
+import { useLanguage } from "@/lib/language-context"
 
 export default function HowItWorksSection() {
   const [isVisible, setIsVisible] = useState(false)
@@ -13,6 +14,7 @@ export default function HowItWorksSection() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const qrCodePath = '/KapiooWeChatQRcode.JPG'
   const wechatId = 'Kapioo卡皮喔'
+  const { t } = useLanguage();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -87,30 +89,30 @@ export default function HowItWorksSection() {
 
   const steps = [
     {
-      number: "01",
+      number: t('step1Number'),
       icon: CreditCard,
-      title: "充值餐券",
-      subtitle: "Top up meal vouchers",
-      description: "Kapioo采用【先购餐券，送一餐扣一餐】的灵活订阅模式",
-      subdescription: "请通过以下任一客服渠道进行餐券购买",
+      title: t('step1MainTitle'),
+      subtitle: t('step1Subtitle'),
+      description: t('step1Desc'),
+      subdescription: t('step1SubDesc'),
       delay: "0ms",
     },
     {
-      number: "02",
+      number: t('step2Number'),
       icon: Calendar,
-      title: "安排你的送餐日程",
-      subtitle: "Schedule your delivery",
-      description: "每天从中央厨房统一制作出餐，当天配送当天餐食",
-      subdescription: "根据你的需求，选择每周需要餐食的日期（例如：周一，二，四，五需要）",
+      title: t('step2MainTitle'),
+      subtitle: t('step2Subtitle'),
+      description: t('step2Desc'),
+      subdescription: t('step2SubDesc'),
       delay: "200ms",
     },
     {
-      number: "03",
+      number: t('step3Number'),
       icon: Truck,
-      title: "新鲜送达 开启你的松弛美好时刻",
-      subtitle: "Fresh delivery & enjoy your relaxing moments",
-      description: "你选择的日期，我们都会出现。收到新鲜餐食，享受你的餐食",
-      subdescription: "享受「被好好对待」的时刻",
+      title: t('step3MainTitle'),
+      subtitle: t('step3Subtitle'),
+      description: t('step3Desc'),
+      subdescription: t('step3SubDesc'),
       delay: "400ms",
     },
   ]
@@ -139,16 +141,16 @@ export default function HowItWorksSection() {
             <div className="inline-flex items-center justify-center mb-4">
               <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
               <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
-                <span className="text-sm font-medium text-[#C2884E]">如何订阅</span>
+                <span className="text-sm font-medium text-[#C2884E]">{t('howItWorksTag')}</span>
               </div>
               <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
             </div>
             
             <h2 className="text-4xl md:text-5xl font-light mb-6 tracking-tight">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                How Kapioo
+                {t('howItWorksMainTitle')}
               </span>
-              <span className="block font-extralight text-[#6B5F53]">Meal Plan Works</span>
+              <span className="block font-extralight text-[#6B5F53]">{t('howItWorksSubtitle')}</span>
             </h2>
             <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto"></div>
           </div>
@@ -244,8 +246,8 @@ export default function HowItWorksSection() {
             href="/login" 
             className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white rounded-full font-light tracking-wide hover:shadow-lg hover:shadow-[#C2884E]/20 transition-all duration-300 hover:scale-105"
           >
-            <span>开始订阅 Kapioo</span>
-            <span className="text-xs opacity-70 group-hover:opacity-100 transition-opacity">Start Your Journey</span>
+            <span>{t('startSubscriptionBtn')}</span>
+            <span className="text-xs opacity-70 group-hover:opacity-100 transition-opacity">{t('startSubscriptionBtnSub')}</span>
             <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
           </Link>
         </div>

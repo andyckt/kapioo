@@ -5,9 +5,11 @@ import Image from "next/image"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
+import { useLanguage } from "@/lib/language-context"
 
 export default function CustomerReviewsSection() {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const { t } = useLanguage();
 
   // Array of review images
   const reviewImages = Array.from({ length: 9 }, (_, i) => ({
@@ -82,16 +84,16 @@ export default function CustomerReviewsSection() {
           <div className="inline-flex items-center justify-center mb-4">
             <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
             <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
-              <span className="text-sm font-medium text-[#C2884E]">订阅用户反馈</span>
+              <span className="text-sm font-medium text-[#C2884E]">{t('customerReviewsTag')}</span>
             </div>
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
           </div>
           
           <h2 className="text-4xl md:text-5xl font-light mb-6 tracking-tight">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-              What Our Customers
+              {t('customerReviewsTitle')}
             </span>
-            <span className="block font-extralight text-[#6B5F53]">Say About Kapioo</span>
+            <span className="block font-extralight text-[#6B5F53]">{t('customerReviewsSubtitle')}</span>
           </h2>
           <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto"></div>
         </div>
@@ -174,22 +176,18 @@ export default function CustomerReviewsSection() {
           >
             <div className="inline-flex items-center space-x-2 bg-[#C2884E]/10 text-[#C2884E] px-4 py-2 rounded-full text-sm font-medium">
               <span>💬</span>
-              <span>来自用户的真实反馈</span>
+              <span>{t('realFeedbackTag')}</span>
             </div>
 
             <div className="space-y-4 text-[#6B5F53] leading-relaxed">
-              <p className="text-lg">这些不是精心包装的宣传语，而是用户吃过之后亲自发来的消息截图。</p>
+              <p className="text-lg">{t('realFeedbackDesc1')}</p>
 
-              <p>
-                有人说<span className="text-[#C2884E] font-medium">"第一次体验就满分"</span>，有人说
-                <span className="text-[#C2884E] font-medium">"这是我吃过最满意的一餐"</span>，还有人直接晒图夸
-                <span className="text-[#C2884E] font-medium">"连拍照都好看"</span>。
-              </p>
+              <p dangerouslySetInnerHTML={{ __html: t('realFeedbackDesc2') }}></p>
 
-              <p>Kapioo 不只是送餐，更是在忙碌生活中，带来一份温暖与真实的连接。</p>
+              <p>{t('realFeedbackDesc3')}</p>
 
               <p className="text-[#6B5F53]/80 italic border-l-4 border-[#C2884E]/20 pl-4">
-                每一句评价，我们都珍藏，也会继续努力，让更多人吃到满意的一餐。
+                {t('realFeedbackQuote')}
               </p>
             </div>
 
@@ -197,15 +195,15 @@ export default function CustomerReviewsSection() {
             <div className="grid grid-cols-3 gap-4 pt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-[#C2884E]">500+</div>
-                <div className="text-sm text-[#6B5F53]">满意评价</div>
+                <div className="text-sm text-[#6B5F53]">{t('satisfiedReviews')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-[#C2884E]">4.9</div>
-                <div className="text-sm text-[#6B5F53]">平均评分</div>
+                <div className="text-sm text-[#6B5F53]">{t('averageRating')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-[#C2884E]">98%</div>
-                <div className="text-sm text-[#6B5F53]">回购率</div>
+                <div className="text-sm text-[#6B5F53]">{t('repurchaseRate')}</div>
               </div>
             </div>
           </motion.div>

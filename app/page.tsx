@@ -80,7 +80,8 @@ export default function Home() {
               className="flex flex-col justify-center space-y-6 order-2 lg:w-1/2 lg:pl-12"
             >
               {/* Card container with preserved styling */}
-              <div className="relative z-10 bg-white/80 backdrop-blur-sm p-5 sm:p-8 rounded-xl border border-[#C2884E]/20 shadow-lg">
+              <motion.div 
+                className="relative z-10 bg-white/80 backdrop-blur-sm p-5 sm:p-8 rounded-xl border border-[#C2884E]/20 shadow-lg">
                 {/* Logo positioned on top right of card with automatic animation */}
                 <motion.div 
                   className="absolute -top-14 sm:-top-16 right-4 sm:right-8"
@@ -106,11 +107,11 @@ export default function Home() {
                 <div className="space-y-4 sm:space-y-6">
                   <div className="relative mb-4 sm:mb-8">
                     <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 mb-4 sm:mb-5 leading-tight">
-                      北美健康餐食订阅品牌
+                      {t('mainSlogan')}
                     </h1>
                     <div className="w-16 sm:w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-4 sm:mb-5"></div>
                     <p className="text-base sm:text-xl md:text-2xl text-[#6B5F53] font-medium leading-relaxed">
-                      让你每天拥有「被好好对待」的时刻
+                      {t('subSlogan')}
                     </p>
                   </div>
                   
@@ -118,12 +119,12 @@ export default function Home() {
                     {/* Tagline section - removed background container */}
                     <div className="p-1">
                       <div className="text-sm sm:text-base md:text-lg font-medium text-[#C2884E] mb-2 sm:mb-3">
-                        每日现做 每日配送
+                        {t('tagline')}
                       </div>
                       
                       {/* Tags in a more elegant layout */}
                       <div className="flex flex-wrap gap-2 sm:gap-3 mb-3 sm:mb-4">
-                        {['健康', '高质', '舒服', '幸福'].map((tag, index) => (
+                        {t('healthyTags').split('|').map((tag, index) => (
                           <span 
                             key={index}
                             className="px-2 sm:px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-xs sm:text-sm text-[#C2884E] shadow-sm flex items-center"
@@ -139,10 +140,10 @@ export default function Home() {
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-1 gap-4 sm:gap-0">
                       <div className="space-y-1 sm:space-y-2">
                         <p className="text-xs sm:text-sm md:text-base italic text-[#6B5F53]">
-                          一顿饭的时间 给生活松一口气
+                          {t('mottoFirstLine')}
                         </p>
                         <p className="text-xs sm:text-sm md:text-base font-medium text-[#C2884E]">
-                          Kapioo，你每天的松弛美好时刻
+                          {t('mottoSecondLine')}
                         </p>
                       </div>
                       
@@ -156,7 +157,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           </div>
         </section>
@@ -196,7 +197,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center mb-4">
                   <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
                   <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
-                    <span className="text-sm font-medium text-[#C2884E]">精选菜系</span>
+                    <span className="text-sm font-medium text-[#C2884E]">{t('foodGalleryTag')}</span>
                   </div>
                   <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
                 </div>
@@ -210,7 +211,7 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                  多元融合 丰富美味 轻盈健康
+                  {t('foodGalleryTitle')}
                 </span>
                 <motion.div 
                   className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#C2884E]/0 via-[#C2884E]/70 to-[#C2884E]/0"
@@ -228,7 +229,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.4 }}
               >
-                Diverse Fusion, Rich Flavors, Light & Healthy
+                {t('foodGallerySubtitle')}
               </motion.p>
             </motion.div>
             
@@ -268,9 +269,9 @@ export default function Home() {
                       transition={{ duration: 0.5, delay: 0.2 }}
                       className="space-y-4"
                     >
-                      <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">中式菜系</h3>
+                      <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{t('chineseCuisineTitle')}</h3>
                       <p className="text-white/90 text-sm sm:text-base max-w-md">
-                        优质食材 · 控油控盐 · 健康烹饪方式 · 轻盈美味
+                        {t('chineseCuisineDesc')}
                       </p>
                       <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
                         <motion.div 
@@ -318,9 +319,9 @@ export default function Home() {
                       transition={{ duration: 0.5, delay: 0.3 }}
                       className="space-y-3"
                     >
-                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">西式餐点</h3>
+                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{t('westernCuisineTitle')}</h3>
                       <p className="text-white/90 text-sm max-w-md">
-                        融合风格 · 中西结合 · 创意改良
+                        {t('westernCuisineDesc')}
                       </p>
                       <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
                         <motion.div 
@@ -368,9 +369,9 @@ export default function Home() {
                       transition={{ duration: 0.5, delay: 0.4 }}
                       className="space-y-3"
                     >
-                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">日韩料理</h3>
+                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{t('japaneseKoreanCuisineTitle')}</h3>
                       <p className="text-white/90 text-sm max-w-md">
-                        原汁原味 · local食材 · 经典味道
+                        {t('japaneseKoreanCuisineDesc')}
                       </p>
                       <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
                         <motion.div 
@@ -418,9 +419,9 @@ export default function Home() {
                       transition={{ duration: 0.5, delay: 0.5 }}
                       className="space-y-3"
                     >
-                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">东南亚风味</h3>
+                      <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{t('southeastAsianCuisineTitle')}</h3>
                       <p className="text-white/90 text-sm max-w-md">
-                        地域风情 · 香料酸辣 · 特色滋味
+                        {t('southeastAsianCuisineDesc')}
                       </p>
                       <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
                         <motion.div 

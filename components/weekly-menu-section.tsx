@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { ChefHat, Sparkles, Leaf, Shield, Zap, Heart, Flame, Apple } from "lucide-react"
+import { useLanguage } from "@/lib/language-context"
 
 // Add interface definitions for better type safety
 interface Meal {
@@ -32,6 +33,7 @@ export default function WeeklyMenuSection() {
   const [isVisible, setIsVisible] = useState(false)
   const [hoveredCard, setHoveredCard] = useState<number | null>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -52,95 +54,95 @@ export default function WeeklyMenuSection() {
 
   const menuData = [
     {
-      day: "Mon",
-      dayZh: "周一",
+      day: language === 'en' ? "Mon" : "Mon",
+      dayZh: t('monday'),
       date: "June 2",
       meals: [
-        { name: "字母番茄蔬菜汤", calories: 65, hasIcon: false, description: "字母意面、番茄、胡萝卜、洋葱、西芹、黑胡椒" },
-        { name: "奥尔良烤鸡腿肉", calories: 210, hasIcon: true },
-        { name: "罗马生菜羽衣甘蓝沙拉", calories: 58, hasIcon: true, description: "罗马生菜、羽衣甘蓝、小番茄、低脂千岛沙拉酱" },
-        { name: "绵密土豆泥", calories: 160, hasIcon: true },
+        { name: t('meal_1_1'), calories: 65, hasIcon: false, description: t('meal_1_1_desc') },
+        { name: t('meal_1_2'), calories: 210, hasIcon: true },
+        { name: t('meal_1_3'), calories: 58, hasIcon: true, description: t('meal_1_3_desc') },
+        { name: t('meal_1_4'), calories: 160, hasIcon: true },
       ],
       totalCalories: 493,
       tags: [
-        { name: "维生素丰富", icon: Leaf },
-        { name: "提升免疫力", icon: Shield },
+        { name: t('tag_1_1'), icon: Leaf },
+        { name: t('tag_1_2'), icon: Shield },
       ],
       color: "from-[#FBF7F2] to-[#F5EDE4]",
       accent: "brown1",
       gradient: "from-[#C2884E] to-[#D1A46C]",
     },
     {
-      day: "Tue",
-      dayZh: "周二",
+      day: language === 'en' ? "Tue" : "Tue",
+      dayZh: t('tuesday'),
       date: "June 3",
       meals: [
-        { name: "三彩豆炒虾仁", calories: 145, hasIcon: false, description: "胡萝卜、青豆、玉米粒、虾仁" },
-        { name: "浓郁番茄炖牛肉", calories: 168, hasIcon: true },
-        { name: "西兰花炒蘑菇", calories: 78, hasIcon: true },
-        { name: "补血紫米饭 + 烤妈咪南瓜", calories: 128, hasIcon: true },
+        { name: t('meal_2_1'), calories: 145, hasIcon: false, description: t('meal_2_1_desc') },
+        { name: t('meal_2_2'), calories: 168, hasIcon: true },
+        { name: t('meal_2_3'), calories: 78, hasIcon: true },
+        { name: t('meal_2_4'), calories: 128, hasIcon: true },
       ],
       totalCalories: 519,
       tags: [
-        { name: "优质蛋白 高纤维", icon: Zap },
-        { name: "补血养胃", icon: Heart },
+        { name: t('tag_2_1'), icon: Zap },
+        { name: t('tag_2_2'), icon: Heart },
       ],
       color: "from-[#F5EDE4] to-[#FBF7F2]",
       accent: "brown2",
       gradient: "from-[#D1A46C] to-[#C2884E]",
     },
     {
-      day: "Wed",
-      dayZh: "周三",
+      day: language === 'en' ? "Wed" : "Wed",
+      dayZh: t('wednesday'),
       date: "June 4",
       meals: [
-        { name: "日式味增豆腐汤", calories: 52, hasIcon: true },
-        { name: "蒲烧鳗鱼", calories: 215, hasIcon: false },
-        { name: "意式烤西葫芦彩椒", calories: 75, hasIcon: true },
-        { name: "补血紫米饭 + 烤红薯", calories: 137, hasIcon: true },
+        { name: t('meal_3_1'), calories: 52, hasIcon: true },
+        { name: t('meal_3_2'), calories: 215, hasIcon: false },
+        { name: t('meal_3_3'), calories: 75, hasIcon: true },
+        { name: t('meal_3_4'), calories: 137, hasIcon: true },
       ],
       totalCalories: 479,
       tags: [
-        { name: "低热量高抗氧", icon: Shield },
-        { name: "饱腹供能不发胖", icon: Flame },
+        { name: t('tag_3_1'), icon: Shield },
+        { name: t('tag_3_2'), icon: Flame },
       ],
       color: "from-[#FBF7F2] to-[#F5EDE4]",
       accent: "brown1",
       gradient: "from-[#C2884E] to-[#D1A46C]",
     },
     {
-      day: "Thu",
-      dayZh: "周四",
+      day: language === 'en' ? "Thu" : "Thu",
+      dayZh: t('thursday'),
       date: "June 5",
       meals: [
-        { name: "法式洋葱汤", calories: 78, hasIcon: false },
-        { name: "意式肉酱", calories: 220, hasIcon: true },
-        { name: "烘烤孢子甘蓝", calories: 78, hasIcon: true },
-        { name: "意大利面", calories: 152, hasIcon: true },
+        { name: t('meal_4_1'), calories: 78, hasIcon: false },
+        { name: t('meal_4_2'), calories: 220, hasIcon: true },
+        { name: t('meal_4_3'), calories: 78, hasIcon: true },
+        { name: t('meal_4_4'), calories: 152, hasIcon: true },
       ],
       totalCalories: 528,
       tags: [
-        { name: "高蛋白 高纤维", icon: Zap },
-        { name: "满足感强", icon: Flame },
+        { name: t('tag_4_1'), icon: Zap },
+        { name: t('tag_4_2'), icon: Flame },
       ],
       color: "from-[#F5EDE4] to-[#FBF7F2]",
       accent: "brown2",
       gradient: "from-[#D1A46C] to-[#C2884E]",
     },
     {
-      day: "Fri",
-      dayZh: "周五",
+      day: language === 'en' ? "Fri" : "Fri",
+      dayZh: t('friday'),
       date: "June 6",
       meals: [
-        { name: "三鲜菌菇汤", calories: 55, hasIcon: true, description: "蘑菇、豆腐、鸡蛋" },
-        { name: "日式咖喱鸡", calories: 225, hasIcon: true },
-        { name: "番茄炖茄子", calories: 95, hasIcon: false },
-        { name: "补血紫米饭", calories: 112, hasIcon: true },
+        { name: t('meal_5_1'), calories: 55, hasIcon: true, description: t('meal_5_1_desc') },
+        { name: t('meal_5_2'), calories: 225, hasIcon: true },
+        { name: t('meal_5_3'), calories: 95, hasIcon: false },
+        { name: t('meal_5_4'), calories: 112, hasIcon: true },
       ],
       totalCalories: 487,
       tags: [
-        { name: "提升肠道活力", icon: Shield },
-        { name: "低卡 营养全面", icon: Leaf },
+        { name: t('tag_5_1'), icon: Shield },
+        { name: t('tag_5_2'), icon: Leaf },
       ],
       color: "from-[#FBF7F2] to-[#F5EDE4]",
       accent: "brown1",
@@ -196,20 +198,20 @@ export default function WeeklyMenuSection() {
             <div className="inline-flex items-center justify-center mb-4">
               <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
               <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
-                <span className="text-sm font-medium text-[#C2884E]">一览本周菜单</span>
+                <span className="text-sm font-medium text-[#C2884E]">{t('weeklyMenuTag')}</span>
               </div>
               <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
             </div>
             
             <h2 className="text-4xl md:text-5xl font-light mb-6 tracking-tight">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                This Week's
+                {t('weeklyMenuTitle')}
               </span>
               <span className="block font-extralight text-[#6B5F53]">Menu</span>
             </h2>
             <div className="flex items-center justify-center gap-2 mt-3 mb-2">
               <div className="h-px w-5 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
-              <span className="text-sm text-[#6B5F53]/70 font-light">June 2 — 6</span>
+              <span className="text-sm text-[#6B5F53]/70 font-light">{t('weeklyMenuWeekDates')}</span>
               <div className="h-px w-5 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
             </div>
             <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto"></div>
@@ -297,7 +299,7 @@ export default function WeeklyMenuSection() {
                                   <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
                                 </div>
                                 <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
-                                  {meal.calories}kcal
+                                  {meal.calories}{t('totalCalories').toLowerCase()}
                                 </span>
                               </div>
                               
@@ -359,7 +361,7 @@ export default function WeeklyMenuSection() {
                               className={`px-6 py-3 ${accentColors.bg} ${accentColors.border} border rounded-full backdrop-blur-sm`}
                             >
                               <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
-                                = {dayMenu.totalCalories}KCAL
+                                = {dayMenu.totalCalories}{t('totalCalories')}
                               </span>
                             </div>
                           </div>
@@ -500,7 +502,7 @@ export default function WeeklyMenuSection() {
                                     <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
                                   </div>
                                   <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
-                                    {meal.calories}kcal
+                                    {meal.calories}{t('totalCalories').toLowerCase()}
                                   </span>
                                 </div>
                                 
@@ -562,7 +564,7 @@ export default function WeeklyMenuSection() {
                                 className={`px-6 py-3 ${accentColors.bg} ${accentColors.border} border rounded-full backdrop-blur-sm`}
                               >
                                 <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
-                                  = {dayMenu.totalCalories}KCAL
+                                  = {dayMenu.totalCalories}{t('totalCalories')}
                                 </span>
                               </div>
                             </div>
@@ -703,7 +705,7 @@ export default function WeeklyMenuSection() {
                                 <span className="text-sm text-[#6B5F53] leading-relaxed font-light">{meal.name}</span>
                               </div>
                               <span className="text-xs text-[#6B5F53]/60 font-medium ml-4 tabular-nums">
-                                {meal.calories}kcal
+                                {meal.calories}{t('totalCalories').toLowerCase()}
                               </span>
                             </div>
                             
@@ -765,7 +767,7 @@ export default function WeeklyMenuSection() {
                             className={`px-6 py-3 ${accentColors.bg} ${accentColors.border} border rounded-full backdrop-blur-sm`}
                           >
                             <span className={`text-sm font-medium ${accentColors.text} tabular-nums`}>
-                              = {dayMenu.totalCalories}KCAL
+                              = {dayMenu.totalCalories}{t('totalCalories')}
                             </span>
                           </div>
                         </div>
