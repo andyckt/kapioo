@@ -92,6 +92,7 @@ export async function GET(request: Request) {
     if (Object.keys(formattedMeals).length < 7) {
       // Get the days that already have meals assigned
       const assignedDays = Object.keys(formattedMeals);
+      console.log(`[ADMIN API] Days already assigned: [${assignedDays.join(', ')}]`);
       
       // Find default meals
       const defaultMeals = await Meal.find({ day: { $exists: true } });
@@ -103,8 +104,12 @@ export async function GET(request: Request) {
           const mealObj = meal.toObject ? meal.toObject() : { ...meal };
           mealObj.active = false; // Default to inactive for default meals that haven't been explicitly set
           
+          console.log(`[ADMIN API] Adding default meal for ${meal.day} with active=false:`, {
+            mealId: meal._id,
+            mealName: meal.name
+          });
+          
           formattedMeals[meal.day] = mealObj;
-          console.log(`[ADMIN API] Added default meal for ${meal.day} with active=false`);
         }
       });
     }

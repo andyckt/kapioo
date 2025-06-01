@@ -63,12 +63,36 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
 
   // Filter to get only days that have active meals
   const activeDays = useMemo(() => {
-    const filtered = days.filter(day => meals[day]);
+    console.log('[ThisWeekMeals] Full meals object:', meals);
+    
+    // Log the active status of each day directly
+    const activeDaysStatus = days.map(day => {
+      const mealActive = meals[day]?.active;
+      return { day, active: mealActive, exists: !!meals[day] };
+    });
+    console.log('[ThisWeekMeals] Days with active status:', activeDaysStatus);
+    
+    // Filter days where the meal exists AND is active
+    const filtered = days.filter(day => {
+      const mealExists = !!meals[day];
+      const mealActive = meals[day]?.active;
+      
+      // Log the decision process for each day
+      console.log(`[ThisWeekMeals] Day ${day}: exists=${mealExists}, active=${mealActive}, will show=${mealExists && mealActive === true}`);
+      
+      // Only include days that exist in the meals object AND are marked as active
+      return mealExists && mealActive === true;
+    });
+    
+    // Get all the available meal keys for debugging
+    const mealKeys = Object.keys(meals);
+    
     console.log('[ThisWeekMeals] Active days filtered:', {
       original: days,
       filtered,
-      mealKeys: Object.keys(meals)
+      mealKeys
     });
+    
     return filtered;
   }, [days, meals]);
 

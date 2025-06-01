@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import WeeklyMeal from '@/models/WeeklyMeal';
+import Meal from '@/models/Meal';
 
 // Helper function to get current week and year
 function getCurrentWeekYear() {
@@ -43,20 +44,50 @@ export async function PATCH(request: Request) {
     }
     
     if (!existingEntry) {
-      console.log(`[Status API] No meal found for day=${day} in any week/year`);
-      return NextResponse.json(
-        { success: false, error: 'No meal assigned to this day yet' },
-        { status: 404 }
-      );
+      console.log(`[Status API] No meal found for day=${day} in any week/year. Creating a new entry with active=${active}`);
+      
+      // Create a new entry to track the active status
+      // We'll use a placeholder meal if needed - this won't be shown to users but allows us to store the active flag
+      const defaultMeals = await Meal.find({ day }).limit(1);
+      let mealId;
+      
+      if (defaultMeals.length > 0) {
+        // Use an existing meal with this day if available
+        mealId = defaultMeals[0]._id;
+        console.log(`[Status API] Using existing meal for ${day}: ${mealId}`);
+      } else {
+        // If no meal exists for this day, find any meal to use as a placeholder
+        const anyMeal = await Meal.findOne();
+        if (!anyMeal) {
+          console.log(`[Status API] No meals available in database to use as placeholder`);
+          return NextResponse.json(
+            { success: false, error: 'No meals available in database' },
+            { status: 500 }
+          );
+        }
+        mealId = anyMeal._id;
+        console.log(`[Status API] Using placeholder meal: ${mealId}`);
+      }
+      
+      // Create a new weekly meal entry with the specified active status
+      existingEntry = await WeeklyMeal.create({
+        day,
+        week,
+        year,
+        meal: mealId,
+        active
+      });
+      
+      console.log(`[Status API] Created new entry for ${day} with active=${active}`);
+    } else {
+      console.log(`[Status API] Found meal for ${day} (week=${existingEntry.week}, year=${existingEntry.year}). Current active=${existingEntry.active}, setting to active=${active}`);
+      
+      // Update the active status
+      existingEntry.active = active;
+      await existingEntry.save();
+      
+      console.log(`[Status API] Successfully updated ${day} to active=${active}`);
     }
-    
-    console.log(`[Status API] Found meal for ${day} (week=${existingEntry.week}, year=${existingEntry.year}). Current active=${existingEntry.active}, setting to active=${active}`);
-    
-    // Update the active status
-    existingEntry.active = active;
-    await existingEntry.save();
-    
-    console.log(`[Status API] Successfully updated ${day} to active=${active}`);
     
     // Pull the updated record to confirm the change
     const updatedEntry = await WeeklyMeal.findById(existingEntry._id);

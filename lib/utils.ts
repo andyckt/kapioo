@@ -144,19 +144,38 @@ export async function getWeeklyMeals(): Promise<WeeklyMeals> {
     });
     const result = await response.json();
     
-    console.log('[getWeeklyMeals] API Response:', { 
-      success: result.success,
-      dataKeys: result.data ? Object.keys(result.data) : null
-    });
+    console.log('[getWeeklyMeals] Raw API Response:', result);
     
     if (result.success && result.data) {
-      // Log which days are included in the response
-      const days = Object.keys(result.data);
-      console.log(`[getWeeklyMeals] Days returned from API: [${days.join(', ')}]`);
+      // Log which days are included in the response with full details
+      console.log('[getWeeklyMeals] Detailed meals data received:');
+      Object.entries(result.data).forEach(([day, meal]) => {
+        console.log(`  - ${day}:`, {
+          name: (meal as any).name,
+          active: (meal as any).active !== false, // Log effective active status
+          explicitActiveValue: (meal as any).active, // Log the actual active property value
+          hasActiveProperty: 'active' in (meal as any), // Check if active property exists
+          mealProperties: Object.keys(meal as any)
+        });
+      });
       
-      // Check each day for active property
-      for (const day in result.data) {
-        console.log(`[getWeeklyMeals] Day ${day} active status:`, result.data[day].active);
+      // Debugging: log if saturday/sunday are in the response
+      const hasSaturday = 'saturday' in result.data;
+      const hasSunday = 'sunday' in result.data;
+      console.log(`[getWeeklyMeals] Weekend days check: saturday=${hasSaturday}, sunday=${hasSunday}`);
+      
+      if (hasSaturday) {
+        console.log('[getWeeklyMeals] Saturday meal details:', {
+          active: result.data.saturday.active,
+          name: result.data.saturday.name
+        });
+      }
+      
+      if (hasSunday) {
+        console.log('[getWeeklyMeals] Sunday meal details:', {
+          active: result.data.sunday.active,
+          name: result.data.sunday.name
+        });
       }
       
       return result.data as WeeklyMeals;
