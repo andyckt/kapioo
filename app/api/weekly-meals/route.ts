@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     );
     
     // Find weekly meals for the specified week and populate the meal data
+    // Only get meals that are explicitly marked as active
     const weeklyMeals = await WeeklyMeal.find({ 
       week,
       year,
@@ -70,45 +71,7 @@ export async function GET(request: Request) {
       console.log(`[API] Formatted meal for ${weeklyMeal.day} with active=${mealObj.active}`);
     });
     
-    // If we have fewer than 7 days, check for any default meals
-    if (Object.keys(formattedMeals).length < 7) {
-      // Get the days that already have meals assigned
-      const assignedDays = Object.keys(formattedMeals);
-      console.log(`[API] Days with assigned meals: [${assignedDays.join(', ')}]`);
-      
-      // Get the days that are explicitly marked as inactive in the database
-      const inactiveDays = allWeeklyMeals
-        .filter(meal => meal.active === false)
-        .map(meal => meal.day);
-      console.log(`[API] Days explicitly marked as inactive: [${inactiveDays.join(', ')}]`);
-      
-      // Find default meals
-      const defaultMeals = await Meal.find({ day: { $exists: true } });
-      console.log(`[API] Found ${defaultMeals.length} potential default meals`);
-      
-      let defaultsAdded = 0;
-      
-      defaultMeals.forEach((meal: any) => {
-        // Only add a default meal if:
-        // 1. It has a day property
-        // 2. The day doesn't already have a meal assigned
-        // 3. The day isn't explicitly marked as inactive
-        if (
-          meal.day && 
-          !formattedMeals[meal.day] && 
-          !inactiveDays.includes(meal.day)
-        ) {
-          formattedMeals[meal.day] = meal;
-          defaultsAdded++;
-          console.log(`[API] Adding default meal for ${meal.day}`);
-        } else if (meal.day && inactiveDays.includes(meal.day)) {
-          console.log(`[API] Skipping default meal for inactive day ${meal.day}`);
-        }
-      });
-      
-      console.log(`[API] Added ${defaultsAdded} default meals`);
-    }
-    
+    // Log which days are included in the final response
     console.log(`[API] Final response contains days: [${Object.keys(formattedMeals).join(', ')}]`);
     
     // Return response with headers to prevent caching
