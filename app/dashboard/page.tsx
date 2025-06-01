@@ -2231,9 +2231,9 @@ function WeeklyMealSelector({
                             {/* Enhanced Glassmorphism Card */}
                             <div className={`
                               relative backdrop-blur-xl bg-gradient-to-br ${cardColor} 
-                              rounded-3xl p-6 border ${isSelected ? "border-primary shadow-xl" : "border-[#C2884E]/20 shadow-lg"}
+                              rounded-3xl p-6 border ${isSelected ? "border-primary shadow-xl" : "border-primary/20 shadow-lg"}
                               transition-all duration-300 ease-out cursor-pointer
-                              ${isSelected ? "shadow-xl shadow-primary/10" : "shadow-lg shadow-[#C2884E]/10"}
+                              ${isSelected ? "shadow-xl shadow-primary/10" : "shadow-lg shadow-primary/5"}
                             `}>
                               {/* Day Header */}
                               <div className="text-center mb-6 relative">
