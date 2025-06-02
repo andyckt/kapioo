@@ -183,15 +183,15 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
               };
             }
             
-            // If it's today and after 10am
-            if (mealSpecificDate.getTime() === todayYMD.getTime() && currentHour >= 10) {
+            // If it's today, it's unavailable (must order the day before)
+            if (mealSpecificDate.getTime() === todayYMD.getTime()) {
               return { 
                 unavailable: true, 
-                reason: "Orders for today must be placed before 10am Toronto time" 
+                reason: "Orders must be placed before 11:59 PM the day before delivery" 
               };
             }
             
-            // If we have a valid date and it's in the future or today before 10am, it's available
+            // If we have a valid date and it's in the future, it's available
             return { unavailable: false, reason: "" };
           }
         }
