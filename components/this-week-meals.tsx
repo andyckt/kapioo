@@ -109,6 +109,8 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       
       // Get the current hour in Toronto
       const currentHour = torontoDate.getHours();
+      // Get the current minute in Toronto
+      const currentMinute = torontoDate.getMinutes();
       
       // Check if we have a date for this meal
       const mealDate = meals[day]?.date;
@@ -125,6 +127,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       console.log(`Day comparison for ${day}:`, {
         day,
         currentHour,
+        currentMinute,
         mealDate
       });
 
@@ -168,11 +171,17 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
               torontoDate.getDate()
             );
             
+            // Create a date for tomorrow's date (for the cutoff check)
+            const tomorrowYMD = new Date(todayYMD);
+            tomorrowYMD.setDate(tomorrowYMD.getDate() + 1);
+            
             console.log(`Date comparison:`, {
               mealSpecificDate: mealSpecificDate.toDateString(),
               todayYMD: todayYMD.toDateString(),
+              tomorrowYMD: tomorrowYMD.toDateString(),
               isBeforeToday: mealSpecificDate < todayYMD,
-              isToday: mealSpecificDate.getTime() === todayYMD.getTime()
+              isToday: mealSpecificDate.getTime() === todayYMD.getTime(),
+              isTomorrow: mealSpecificDate.getTime() === tomorrowYMD.getTime()
             });
             
             // If meal date is before today
@@ -183,15 +192,16 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
               };
             }
             
-            // If it's today and after 10am
-            if (mealSpecificDate.getTime() === todayYMD.getTime() && currentHour >= 10) {
+            // If it's tomorrow and it's after 11:59am today
+            if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
+                (currentHour > 11 || (currentHour === 11 && currentMinute >= 59))) {
               return { 
                 unavailable: true, 
-                reason: "Orders for today must be placed before 10am Toronto time" 
+                reason: "Orders must be placed before 11:59am the day before delivery" 
               };
             }
             
-            // If we have a valid date and it's in the future or today before 10am, it's available
+            // If we have a valid date and it meets the timing requirements, it's available
             return { unavailable: false, reason: "" };
           }
         }
@@ -347,9 +357,9 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
     if (unavailable) {
       toast({
         title: language === 'en' ? "Cannot select this meal" : "无法选择此餐点",
-        description: isDayUnavailable(activeDay).reason === "This day has already passed" ? 
+        description: isDayUnavailable(activeDay).reason === "This specific date has already passed" ? 
           (language === 'en' ? "This day has already passed" : "此日期已过") : 
-          (language === 'en' ? "Orders for today must be placed before 10am Toronto time" : "今日订单必须在多伦多时间上午10点前下单"),
+          (language === 'en' ? "Orders must be placed before 11:59am the day before delivery" : "订单必须在配送前一天的上午11:59之前下单"),
         variant: "destructive"
       });
       return;

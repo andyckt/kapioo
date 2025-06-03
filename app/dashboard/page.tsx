@@ -1607,6 +1607,8 @@ function WeeklyMealSelector({
       
       // Get the current hour in Toronto
       const currentHour = torontoDate.getHours();
+      // Get the current minute in Toronto
+      const currentMinute = torontoDate.getMinutes();
       
       // Check if we have a date for this meal
       const mealDate = meals[day]?.date;
@@ -1623,6 +1625,7 @@ function WeeklyMealSelector({
       console.log(`Day comparison for ${day}:`, {
         day,
         currentHour,
+        currentMinute,
         mealDate
       });
 
@@ -1666,11 +1669,17 @@ function WeeklyMealSelector({
               torontoDate.getDate()
             );
             
+            // Create a date for tomorrow's date (for the cutoff check)
+            const tomorrowYMD = new Date(todayYMD);
+            tomorrowYMD.setDate(tomorrowYMD.getDate() + 1);
+            
             console.log(`Date comparison:`, {
               mealSpecificDate: mealSpecificDate.toDateString(),
               todayYMD: todayYMD.toDateString(),
+              tomorrowYMD: tomorrowYMD.toDateString(),
               isBeforeToday: mealSpecificDate < todayYMD,
-              isToday: mealSpecificDate.getTime() === todayYMD.getTime()
+              isToday: mealSpecificDate.getTime() === todayYMD.getTime(),
+              isTomorrow: mealSpecificDate.getTime() === tomorrowYMD.getTime()
             });
             
             // If meal date is before today
@@ -1681,15 +1690,16 @@ function WeeklyMealSelector({
               };
             }
             
-            // If it's today and after 10am
-            if (mealSpecificDate.getTime() === todayYMD.getTime() && currentHour >= 10) {
+            // If it's tomorrow and it's after 11:59am today
+            if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
+                (currentHour > 11 || (currentHour === 11 && currentMinute >= 59))) {
               return { 
                 unavailable: true, 
                 reason: t('orderBeforeCutoff')
               };
             }
             
-            // If we have a valid date and it's in the future or today before 10am, it's available
+            // If we have a valid date and it meets the timing requirements, it's available
             return { unavailable: false, reason: "" };
           }
         }
