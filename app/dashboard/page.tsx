@@ -1605,8 +1605,9 @@ function WeeklyMealSelector({
       const torontoDateString = now.toLocaleString('en-US', torontoOptions);
       const torontoDate = new Date(torontoDateString);
       
-      // Get the current hour in Toronto
+      // Get the current hour and minute in Toronto
       const currentHour = torontoDate.getHours();
+      const currentMinute = torontoDate.getMinutes();
       
       // Check if we have a date for this meal
       const mealDate = meals[day]?.date;
@@ -1666,10 +1667,19 @@ function WeeklyMealSelector({
               torontoDate.getDate()
             );
             
+            // Create tomorrow's date for comparison
+            const tomorrowYMD = new Date(
+              torontoDate.getFullYear(),
+              torontoDate.getMonth(),
+              torontoDate.getDate() + 1
+            );
+            
             console.log(`Date comparison:`, {
               mealSpecificDate: mealSpecificDate.toDateString(),
               todayYMD: todayYMD.toDateString(),
+              tomorrowYMD: tomorrowYMD.toDateString(),
               isBeforeToday: mealSpecificDate < todayYMD,
+              isTomorrow: mealSpecificDate.getTime() === tomorrowYMD.getTime(),
               isToday: mealSpecificDate.getTime() === todayYMD.getTime()
             });
             
@@ -1681,15 +1691,24 @@ function WeeklyMealSelector({
               };
             }
             
-            // If it's today and after 10am
-            if (mealSpecificDate.getTime() === todayYMD.getTime() && currentHour >= 10) {
+            // If it's for tomorrow and it's past 11:59 AM today
+            if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
+                (currentHour > 11 || (currentHour === 11 && currentMinute >= 59))) {
               return { 
                 unavailable: true, 
                 reason: t('orderBeforeCutoff')
               };
             }
             
-            // If we have a valid date and it's in the future or today before 10am, it's available
+            // If it's for today (which should not be available for ordering)
+            if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+              return { 
+                unavailable: true, 
+                reason: "Orders must be placed by 11:59 AM the day before delivery"
+              };
+            }
+            
+            // If we have a valid date and it's at least 2 days in the future or tomorrow before 11:59 AM, it's available
             return { unavailable: false, reason: "" };
           }
         }
