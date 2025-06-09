@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     
     // If we have no meals (DB is empty), add default meals for weekdays only
     if (Object.keys(formattedMeals).length === 0) {
-      console.log(`[API] No active meals found in database. Adding default weekday meals.`);
+      console.log(`[API] No active meals found in database. Adding default meals.`);
       
       // Get the days that are explicitly marked as inactive in the database
       const inactiveDays = allWeeklyMeals
@@ -86,11 +86,10 @@ export async function GET(request: Request) {
       
       console.log(`[API] Days explicitly marked as inactive: [${inactiveDays.join(', ')}]`);
       
-      // Define weekdays and weekend days
-      const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-      const weekendDays = ['saturday', 'sunday'];
+      // Define all days of the week (including weekend days)
+      const allDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       
-      console.log(`[API] Adding default meals for weekdays only: [${weekdays.join(', ')}]`);
+      console.log(`[API] Adding default meals for all days not marked as inactive: [${allDays.join(', ')}]`);
       
       // Find default meals
       const defaultMeals = await Meal.find({ day: { $exists: true } });
@@ -101,29 +100,25 @@ export async function GET(request: Request) {
       defaultMeals.forEach((meal: any) => {
         // Only add a default meal if:
         // 1. It has a day property
-        // 2. It's a weekday (not Saturday or Sunday)
-        // 3. It's not explicitly marked as inactive
+        // 2. It's not explicitly marked as inactive
         if (
           meal.day && 
-          weekdays.includes(meal.day) && 
           !inactiveDays.includes(meal.day)
         ) {
           console.log(`[API] Adding default meal for ${meal.day}`);
           
-          // Convert to plain object and set active to true for weekdays
+          // Convert to plain object and set active to true
           const mealObj = meal.toObject ? meal.toObject() : { ...meal };
-          mealObj.active = true;  // All weekday default meals are active
+          mealObj.active = true;  // All default meals are active unless marked inactive
           
           formattedMeals[meal.day] = mealObj;
           defaultsAdded++;
-        } else if (meal.day && weekendDays.includes(meal.day)) {
-          console.log(`[API] Skipping weekend day ${meal.day}`);
         } else if (meal.day && inactiveDays.includes(meal.day)) {
           console.log(`[API] Skipping explicitly inactive day ${meal.day}`);
         }
       });
       
-      console.log(`[API] Added ${defaultsAdded} default weekday meals`);
+      console.log(`[API] Added ${defaultsAdded} default meals`);
     }
     
     console.log(`[API] Final response contains only active days: [${Object.keys(formattedMeals).join(', ')}]`);
