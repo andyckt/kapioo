@@ -28,7 +28,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
     wednesday: { selected: false, date: '' },
     thursday: { selected: false, date: '' },
     friday: { selected: false, date: '' },
-    saturday: { selected: false, date: '' },
     sunday: { selected: false, date: '' },
   });
   const [imagesLoaded, setImagesLoaded] = useState(false)
@@ -36,7 +35,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
   const { toast } = useToast()
   const { t, language } = useLanguage()
 
-  const days = useMemo(() => ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], [])
+  const days = useMemo(() => ["monday", "tuesday", "wednesday", "thursday", "friday", "sunday"], [])
   const dayLabels = useMemo((): Record<string, string> => {
     if (language === 'en') {
       return {
@@ -45,7 +44,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
         wednesday: "Wednesday",
         thursday: "Thursday",
         friday: "Friday",
-        saturday: "Saturday",
         sunday: "Sunday",
       };
     } else {
@@ -55,7 +53,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
         wednesday: "星期三",
         thursday: "星期四",
         friday: "星期五",
-        saturday: "星期六",
         sunday: "星期日",
       };
     }
@@ -241,6 +238,32 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       setImagesLoaded(false);
       return;
     }
+    
+    // Set default dates starting from June 9 if not provided
+    const startDate = new Date(2024, 5, 9); // June 9, 2024 is a Sunday
+    const dayMap: Record<string, number> = {
+      'sunday': 0,  // June 9
+      'monday': 1,  // June 10
+      'tuesday': 2, // June 11
+      'wednesday': 3, // June 12
+      'thursday': 4, // June 13
+      'friday': 5,  // June 14
+    };
+    
+    // Update meals with default dates if not provided
+    Object.keys(meals).forEach(day => {
+      if (!meals[day]?.date) {
+        const dayOffset = dayMap[day] || 0;
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + dayOffset);
+        const month = date.toLocaleString('en-US', { month: 'long' });
+        const dayNum = date.getDate();
+        
+        if (meals[day]) {
+          meals[day].date = `${month} ${dayNum}`;
+        }
+      }
+    });
     
     console.log('[ThisWeekMeals] Loading meals:', {
       count: Object.keys(meals).length,
