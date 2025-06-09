@@ -293,14 +293,62 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
     }
   }, [meals, activeDays, activeDay]);
 
+  // New: Set active day to first available orderable day
+  useEffect(() => {
+    if (meals && Object.keys(meals).length > 0 && activeDays.length > 0) {
+      console.log('[ThisWeekMeals] Finding first available orderable day');
+      
+      // Keep track of whether we've found an available day
+      let foundAvailable = false;
+      
+      // Check each active day to find the first one that's not unavailable
+      for (const day of activeDays) {
+        const { unavailable } = isDayUnavailable(day);
+        console.log(`[ThisWeekMeals] Checking availability of ${day}: unavailable=${unavailable}`);
+        
+        if (!unavailable) {
+          console.log(`[ThisWeekMeals] Found first available day: ${day}`);
+          setActiveDay(day);
+          foundAvailable = true;
+          break;
+        }
+      }
+      
+      if (!foundAvailable) {
+        console.log('[ThisWeekMeals] No available days found, defaulting to first active day');
+        // If no day is available for ordering, just show the first active day
+        setActiveDay(activeDays[0]);
+      }
+    }
+  }, [meals, activeDays]);
+
   // Auto-rotate through days
   useEffect(() => {
     if (!isAutoplay) return
 
     const interval = setInterval(() => {
-      const currentIndex = activeDays.indexOf(activeDay)
-      const nextIndex = (currentIndex + 1) % activeDays.length
-      setActiveDay(activeDays[nextIndex])
+      // Filter to only available days for autoplay
+      const availableDays = activeDays.filter(day => !isDayUnavailable(day).unavailable);
+      
+      // If no available days, don't autoplay
+      if (availableDays.length === 0) {
+        console.log('[ThisWeekMeals] No available days for autoplay');
+        return;
+      }
+      
+      // Find current index in available days
+      const currentAvailableDays = availableDays.indexOf(activeDay);
+      
+      // If current day is not in available days, switch to first available
+      if (currentAvailableDays === -1) {
+        console.log('[ThisWeekMeals] Current day not available, switching to first available');
+        setActiveDay(availableDays[0]);
+        return;
+      }
+      
+      // Get next available day
+      const nextIndex = (currentAvailableDays + 1) % availableDays.length;
+      setActiveDay(availableDays[nextIndex]);
     }, 5000)
 
     return () => clearInterval(interval)
@@ -308,22 +356,65 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
 
   // Pause autoplay when user interacts
   const handleDayChange = (day: string) => {
-    setActiveDay(day)
-    setIsAutoplay(false)
+    // Check if the day is unavailable
+    const { unavailable, reason } = isDayUnavailable(day);
+    
+    if (unavailable) {
+      // Show a toast message explaining why the day is unavailable
+      toast({
+        title: language === 'en' ? "Cannot select this day" : "无法选择此日",
+        description: reason,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setActiveDay(day);
+    setIsAutoplay(false);
   }
 
   const handleNextDay = () => {
-    const currentIndex = activeDays.indexOf(activeDay)
-    const nextIndex = (currentIndex + 1) % activeDays.length
-    setActiveDay(activeDays[nextIndex])
-    setIsAutoplay(false)
+    // Filter to only available days for navigation
+    const availableDays = activeDays.filter(day => !isDayUnavailable(day).unavailable);
+    
+    // If no available days, don't navigate
+    if (availableDays.length === 0) return;
+    
+    // Find current index in available days
+    const currentIndex = availableDays.indexOf(activeDay);
+    
+    // If current day is not in available days, switch to first available
+    if (currentIndex === -1) {
+      setActiveDay(availableDays[0]);
+    } else {
+      // Get next available day
+      const nextIndex = (currentIndex + 1) % availableDays.length;
+      setActiveDay(availableDays[nextIndex]);
+    }
+    
+    setIsAutoplay(false);
   }
 
   const handlePrevDay = () => {
-    const currentIndex = activeDays.indexOf(activeDay)
-    const nextIndex = (currentIndex - 1 + activeDays.length) % activeDays.length
-    setActiveDay(activeDays[nextIndex])
-    setIsAutoplay(false)
+    // Filter to only available days for navigation
+    const availableDays = activeDays.filter(day => !isDayUnavailable(day).unavailable);
+    
+    // If no available days, don't navigate
+    if (availableDays.length === 0) return;
+    
+    // Find current index in available days
+    const currentIndex = availableDays.indexOf(activeDay);
+    
+    // If current day is not in available days, switch to first available
+    if (currentIndex === -1) {
+      setActiveDay(availableDays[0]);
+    } else {
+      // Get previous available day
+      const prevIndex = (currentIndex - 1 + availableDays.length) % availableDays.length;
+      setActiveDay(availableDays[prevIndex]);
+    }
+    
+    setIsAutoplay(false);
   }
 
   // Load selected meals from localStorage
