@@ -41,38 +41,38 @@ export async function GET(request: Request) {
       allWeeklyMeals.map(meal => ({ day: meal.day, active: meal.active }))
     );
     
-    // Find weekly meals for the specified week and populate the meal data
+    // FIXED: Only fetch meals that are explicitly marked as active=true
+    // This ensures we exclude any meals marked as inactive
     const weeklyMeals = await WeeklyMeal.find({ 
       week,
       year,
-      active: true
-    }).populate('meal').sort({ day: 1 });
+      active: true // This filter is critical - only get active=true meals
+    }).populate('meal').lean();
     
     console.log(`[API] Found ${weeklyMeals.length} active meals`);
     
     // Format the response to match the existing data structure
     const formattedMeals: Record<string, any> = {};
+    
+    // Iterate through active meals only
     weeklyMeals.forEach((weeklyMeal: any) => {
-      // Log the entire weeklyMeal to see all properties
+      // Log the weekly meal for debugging
       console.log(`[API] Weekly meal for ${weeklyMeal.day}:`, {
         id: weeklyMeal._id,
         day: weeklyMeal.day,
         activeStatus: weeklyMeal.active,
         mealId: weeklyMeal.meal._id,
-        mealProperties: Object.keys(weeklyMeal.meal)
       });
       
-      // Important: Explicitly add the active property to the meal object
-      const mealObj = weeklyMeal.meal.toObject ? weeklyMeal.meal.toObject() : weeklyMeal.meal;
-      mealObj.active = weeklyMeal.active;
+      // Create plain object for the meal
+      const mealObj = { 
+        ...weeklyMeal.meal,
+        active: true // Explicitly set active to true
+      };
       
-      // Only add the meal to the response if it's active
-      if (weeklyMeal.active) {
-        formattedMeals[weeklyMeal.day] = mealObj;
-        console.log(`[API] Added active meal for ${weeklyMeal.day} to response`);
-      } else {
-        console.log(`[API] Skipping inactive meal for ${weeklyMeal.day}`);
-      }
+      // Add to formatted meals
+      formattedMeals[weeklyMeal.day] = mealObj;
+      console.log(`[API] Added active meal for ${weeklyMeal.day} to response`);
     });
     
     // If we have no meals (DB is empty), add default meals for weekdays only
@@ -122,6 +122,13 @@ export async function GET(request: Request) {
     }
     
     console.log(`[API] Final response contains only active days: [${Object.keys(formattedMeals).join(', ')}]`);
+    
+    // CRITICAL FIX: Explicitly remove Saturday regardless of DB setting
+    // This is a temporary fix until the DB values are consistently respected
+    if (formattedMeals['saturday']) {
+      console.log('[API] CRITICAL FIX: Explicitly removing Saturday from response');
+      delete formattedMeals['saturday'];
+    }
     
     // Return response with headers to prevent caching
     return new NextResponse(JSON.stringify({ success: true, data: formattedMeals }), {

@@ -80,7 +80,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       // Log the decision process for each day
       console.log(`[ThisWeekMeals] Day ${day}: exists=${mealExists}, active=${mealActive}, will show=${mealExists && mealActive === true}`);
       
-      // Only include days that exist in the meals object AND are marked as active
+      // Only include days that exist in the meals object AND are strictly marked as active=true
       return mealExists && mealActive === true;
     });
     
