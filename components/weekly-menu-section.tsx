@@ -56,7 +56,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Mon" : "Mon",
       dayZh: t('monday'),
-      date: "June 2",
+      date: "June 9",
       meals: [
         { name: "烤香草鸡胸肉", calories: 165, hasIcon: true, description: "" },
         { name: "蘑菇浓汤", calories: 90, hasIcon: true, description: "" },
@@ -75,7 +75,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Tue" : "Tue",
       dayZh: t('tuesday'),
-      date: "June 3",
+      date: "June 10",
       meals: [
         { name: "番茄豆腐肉末煲", calories: 180, hasIcon: true, description: "" },
         { name: "高汤手切牛肉", calories: 120, hasIcon: true, description: "" },
@@ -94,7 +94,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Wed" : "Wed",
       dayZh: t('wednesday'),
-      date: "June 4",
+      date: "June 11",
       meals: [
         { name: "泰式椰汁绿咖喱鸡", calories: 190, hasIcon: true, description: "" },
         { name: "爽口凉粉（辣）", calories: 90, hasIcon: true, description: "" },
@@ -113,7 +113,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Thu" : "Thu",
       dayZh: t('thursday'),
-      date: "June 5",
+      date: "June 12",
       meals: [
         { name: "烤巴沙鱼", calories: 145, hasIcon: true, description: "" },
         { name: "韩式豆腐汤", calories: 95, hasIcon: true, description: "" },
@@ -132,7 +132,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Fri" : "Fri",
       dayZh: t('friday'),
-      date: "June 6",
+      date: "June 13",
       meals: [
         { name: "意式番茄蒜香青口贝", calories: 80, hasIcon: true, description: "" },
         { name: "墨西哥风味铁板虾", calories: 175, hasIcon: true, description: "" },
@@ -151,7 +151,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Sun" : "Sun",
       dayZh: "周日",
-      date: "June 8",
+      date: "June 15",
       meals: [
         { name: "冬瓜丸子粉丝汤", calories: 110, hasIcon: true, description: "" },
         { name: "秘制烤嫩鸡腿", calories: 185, hasIcon: true, description: "" },
@@ -226,7 +226,6 @@ export default function WeeklyMenuSection() {
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
                 {t('weeklyMenuTitle')}
               </span>
-              <span className="block font-extralight text-[#6B5F53]">Menu</span>
             </h2>
             <div className="flex items-center justify-center gap-2 mt-3 mb-2">
               <div className="h-px w-5 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
