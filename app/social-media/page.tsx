@@ -24,8 +24,74 @@ export default function SocialMediaPage() {
   ];
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#fcfaf8] dark:bg-gray-950 px-4">
-      <div className="flex flex-col md:flex-row items-center justify-center gap-16 md:gap-32">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#fcfaf8] dark:bg-gray-950 px-4 relative overflow-hidden">
+      {/* Brand icon background elements */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {/* Large semi-transparent brand icon in bottom right */}
+        <div className="absolute -bottom-20 -right-20 w-[500px] h-[500px] opacity-[0.03]">
+          <Image 
+            src="/未命名設計.png" 
+            alt="Kapioo Logo Background" 
+            fill
+            className="object-contain"
+          />
+        </div>
+        
+        {/* Smaller brand icon in top left */}
+        <div className="absolute -top-10 -left-10 w-[300px] h-[300px] opacity-[0.02] rotate-12">
+          <Image 
+            src="/未命名設計.png" 
+            alt="Kapioo Logo Background" 
+            fill
+            className="object-contain"
+          />
+        </div>
+        
+        {/* Subtle pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, #C2884E 1px, transparent 0)`,
+            backgroundSize: "24px 24px",
+          }}
+        ></div>
+      </div>
+
+      {/* Company Logo at top center with text */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="mb-16 mt-8"
+      >
+        <Link href="/" className="group flex items-center gap-3">
+          <motion.div
+            whileHover={{ 
+              scale: 1.1,
+              rotate: 6,
+              transition: { 
+                type: "spring", 
+                stiffness: 300,
+                damping: 15 
+              }
+            }}
+            className="relative"
+          >
+            <Image 
+              src="/未命名設計.png" 
+              alt="Kapioo Logo" 
+              width={70} 
+              height={70}
+              className="drop-shadow-lg transition-all duration-300"
+              priority
+            />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#C2884E]/5 to-[#D1A46C]/10 opacity-0 group-hover:opacity-70 transition-opacity duration-500 animate-pulse"></div>
+          </motion.div>
+          <span className="font-bold text-[#C2884E] text-2xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+        </Link>
+      </motion.div>
+
+      <div className="flex flex-row items-center justify-center gap-8 sm:gap-16 md:gap-32 z-10">
         {socialLinks.map((platform) => (
           <motion.div
             key={platform.id}
@@ -60,13 +126,13 @@ export default function SocialMediaPage() {
                 }}
                 className="relative"
               >
-                <div className="relative w-40 h-40 sm:w-44 sm:h-44 md:w-48 md:h-48">
+                <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-48 md:h-48">
                   <Image
                     src={platform.logo}
                     alt={platform.id === "instagram" ? "Instagram logo" : "Xiaohongshu logo"}
                     fill
                     className="object-contain transition-all duration-300 ease-in-out"
-                    sizes="(max-width: 640px) 160px, (max-width: 768px) 176px, 192px"
+                    sizes="(max-width: 640px) 128px, (max-width: 768px) 144px, 192px"
                     priority
                   />
                 </div>
