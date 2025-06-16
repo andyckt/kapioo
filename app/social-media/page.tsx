@@ -1,9 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+
+// Typing animation component
+function TypingAnimation({ text }: { text: string }) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }, 100); // Speed of typing
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setIsComplete(true);
+    }
+  }, [currentIndex, text]);
+
+  return (
+    <div className="relative h-8 mt-4">
+      <motion.span 
+        className="text-[#6B5F53] text-lg font-light tracking-wider"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        {displayedText}
+        {!isComplete && (
+          <motion.span
+            className="inline-block w-1 h-5 ml-0.5 bg-[#C2884E]/70"
+            animate={{ opacity: [1, 0, 1] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
+          />
+        )}
+      </motion.span>
+    </div>
+  );
+}
 
 export default function SocialMediaPage() {
   const [hoveredLogo, setHoveredLogo] = useState<string | null>(null);
@@ -62,7 +102,7 @@ export default function SocialMediaPage() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="mb-16 mt-8"
+        className="mb-8 mt-8 flex flex-col items-center"
       >
         <Link href="/" className="group flex items-center gap-3">
           <motion.div
@@ -89,9 +129,12 @@ export default function SocialMediaPage() {
           </motion.div>
           <span className="font-bold text-[#C2884E] text-2xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
         </Link>
+        
+        {/* Typing animation */}
+        <TypingAnimation text="让你每天拥有「被好好对待」的时刻" />
       </motion.div>
 
-      <div className="flex flex-row items-center justify-center gap-8 sm:gap-16 md:gap-32 z-10">
+      <div className="flex flex-row items-center justify-center gap-8 sm:gap-16 md:gap-32 z-10 mt-8">
         {socialLinks.map((platform) => (
           <motion.div
             key={platform.id}
