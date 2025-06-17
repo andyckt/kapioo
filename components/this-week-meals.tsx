@@ -568,7 +568,34 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
 
   return (
     <div className="space-y-6 w-full">
-      {/* Enhanced Header with Weekly Calendar UI */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <Button 
+          onClick={() => onSelectMeal()}
+          className="w-full py-7 text-base font-medium bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden relative group"
+        >
+          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
+          <div className="absolute -inset-full h-full w-1/3 block transform -skew-x-12 bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:animate-shine" />
+          <div className="flex items-center justify-center relative z-10">
+            <motion.div
+              initial={{ rotate: 0 }}
+              whileHover={{ rotate: 15 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              className="mr-3"
+            >
+              <CalendarDays className="h-5 w-5" />
+            </motion.div>
+            <span>{language === 'en' ? 'Select Meals' : '选择餐点'}</span>
+          </div>
+        </Button>
+      </motion.div>
+
+      {/* Commented out Enhanced Calendar Day Selector and meal display
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-2.5 rounded-full shadow-sm">
@@ -584,127 +611,35 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
         
         <div className="flex items-center gap-2">
           <Button 
-            onClick={() => onCheckout && onCheckout(selectedMeals)} 
-            disabled={!Object.values(selectedMeals).some(m => m.selected)}
+            onClick={() => onSelectMeal()} 
             size="sm"
-            className="rounded-full bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90 shadow-sm gap-1.5 transition-all duration-300 pr-2.5 pl-4"
+            className="rounded-full bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90 shadow-sm gap-1.5 transition-all duration-300 px-4"
           >
-            <span>{language === 'en' ? 'Checkout' : '结账'}</span>
-            <span className="bg-white/20 flex items-center gap-1 py-0.5 px-2 rounded-full text-xs ml-1">
-              <Gem className="h-3 w-3" />
-              <span className="font-medium">{Object.values(selectedMeals).filter(m => m.selected).length}</span>
-            </span>
+            <span>{language === 'en' ? 'Go to Select Meals' : '前往选择餐点'}</span>
           </Button>
         </div>
       </div>
 
-      {/* Enhanced Calendar Day Selector */}
-      <div className="relative mt-2">
-        <motion.div 
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10"
-          whileHover={{ scale: 1.1, x: -10 }}
-          whileTap={{ scale: 0.95 }}
-        >
+      <Card className="w-full">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <CalendarDays className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-medium mb-2">{language === 'en' ? 'Browse Our Weekly Menu' : '浏览我们的每周菜单'}</h3>
+          <p className="text-muted-foreground text-center mb-6 max-w-md">
+            {language === 'en' 
+              ? 'Check out our delicious meal options and select what you want for delivery this week.' 
+              : '查看我们美味的餐点选项，选择您本周想要配送的餐点。'
+            }
+          </p>
           <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handlePrevDay} 
-            className="h-8 w-8 rounded-full bg-background/80 shadow-sm hover:shadow-md transition-shadow"
+            onClick={() => onSelectMeal()}
+            className="gap-2"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <CalendarDays className="h-4 w-4" />
+            {language === 'en' ? 'Select Your Meals' : '选择您的餐点'}
           </Button>
-        </motion.div>
-        
-        <div className="overflow-hidden mx-6">
-          <motion.div 
-            className="flex justify-between items-center"
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.1}
-            onDragEnd={(e, { offset, velocity }) => {
-              const swipe = Math.abs(offset.x) * velocity.x;
-              if (swipe < -50) {
-                handleNextDay();
-              } else if (swipe > 50) {
-                handlePrevDay();
-              }
-            }}
-          >
-            {activeDays.map((day, idx) => {
-              const isActive = activeDay === day;
-              const dayDate = meals[day]?.date || '';
-              const { unavailable } = isDayUnavailable(day);
-              const isSelected = selectedMeals[day]?.selected;
-              
-              return (
-                <motion.div 
-                  key={day}
-                  className={`
-                    relative cursor-pointer select-none mx-1
-                    ${isActive ? "z-10" : "z-0"}
-                  `}
-                  onClick={() => handleDayChange(day)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <div className={`
-                    flex flex-col items-center justify-center 
-                    w-10 sm:w-14 h-16 sm:h-18 rounded-lg transition-all duration-300
-                    ${isActive 
-                      ? "bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20" 
-                      : unavailable 
-                        ? "bg-muted/60 text-muted-foreground"
-                        : isSelected
-                          ? "bg-primary/10 text-primary border border-primary/30"
-                          : "bg-card hover:bg-accent text-card-foreground border border-border/50 hover:border-border"
-                    }
-                    ${unavailable ? "opacity-60" : "opacity-100"}
-                  `}>
-                    <span className="text-xs font-medium uppercase mt-2">
-                      {dayLabels[day].substring(0, 3)}
-                    </span>
-                    <span className={`
-                      text-sm sm:text-lg font-bold my-1
-                      ${isActive ? "text-primary-foreground" : ""}
-                    `}>
-                      {dayDate ? dayDate.split(' ')[1].replace(',', '') : idx + 1}
-                    </span>
-                    
-                    {isSelected && (
-                      <div className={`
-                        h-1.5 w-6 sm:w-8 rounded-full mb-1.5
-                        ${isActive ? "bg-white/60" : "bg-primary/60"}
-                      `} />
-                    )}
-                    {!isSelected && <div className="h-1.5 mb-1.5" />}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-        
-        <motion.div 
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10"
-          whileHover={{ scale: 1.1, x: 10 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleNextDay} 
-            className="h-8 w-8 rounded-full bg-background/80 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </motion.div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Enhanced Content Area */}
       <AnimatePresence mode="wait">
         {!isLoading && meals[activeDay] ? (
           <motion.div
@@ -746,7 +681,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
 
               return (
                 <div className="space-y-5">
-                  {/* Meal Header with Date */}
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <h3 className="text-lg font-medium capitalize flex items-center gap-2 flex-wrap">
@@ -778,7 +712,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                     )}
                   </div>
                   
-                  {/* Main Content Card */}
                   <motion.div 
                     className={`
                       relative overflow-hidden rounded-xl border
@@ -792,12 +725,9 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                     whileHover={{ y: -2 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   >
-                    {/* Top Accent Line */}
                     <div className={`h-1 w-full ${isSelected ? "bg-primary" : "bg-gradient-to-r from-transparent via-border to-transparent"}`}></div>
                     
-                    {/* Meal Content */}
                     <div className="p-4 sm:p-5">
-                      {/* Meal Items */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
                         {mealItems.map((item, index) => (
                           <motion.div
@@ -820,10 +750,8 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                         ))}
                       </div>
                       
-                      {/* Info Badges Row */}
                       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-between sm:items-center gap-3 mb-4 sm:mb-5 border-t border-border/50 pt-4">
                         <div className="flex flex-wrap items-center gap-2">
-                          {/* Tags */}
                           {tags.slice(0, 3).map((tag, index) => (
                             <motion.div
                               key={index}
@@ -842,7 +770,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Calorie Badge */}
                           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
                             <div className="bg-orange-500/10 text-orange-600 px-2 sm:px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border border-orange-200/20">
                               <Flame className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -850,7 +777,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                             </div>
                           </motion.div>
                           
-                          {/* Credit Badge */}
                           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
                             <div className="bg-primary/10 text-primary px-2 sm:px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border border-primary/20">
                               <Gem className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -861,7 +787,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                       </div>
                     </div>
                     
-                    {/* Action Footer */}
                     <div className={`
                       border-t p-3 sm:p-4 flex flex-wrap justify-between items-center
                       ${isSelected ? "bg-primary/10 border-primary/20" : "bg-muted/20 border-border/50"}
@@ -917,7 +842,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
                       </motion.div>
                     </div>
                     
-                    {/* Unavailable Overlay */}
                     {unavailable && (
                       <>
                         <div className="absolute inset-0 bg-background/30 backdrop-blur-[1px] pointer-events-none"></div>
@@ -954,7 +878,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
         )}
       </AnimatePresence>
 
-      {/* Enhanced Footer Actions */}
       <div className="border-t pt-4 sm:pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <Badge 
@@ -988,6 +911,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
           </Button>
         </motion.div>
       </div>
+      */}
     </div>
   )
 }
