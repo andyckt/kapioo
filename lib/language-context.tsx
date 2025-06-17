@@ -141,7 +141,7 @@ const translations: TranslationsType = {
     // Weekly Menu Section
     weeklyMenuTag: "一览本周菜单",
     weeklyMenuTitle: "This Week's Menu",
-    weeklyMenuWeekDates: "June 9 — 15",
+    weeklyMenuWeekDates: "June 16 — 22",
     // Weekly Menu translations
     monday: "周一",
     tuesday: "周二",
@@ -460,7 +460,7 @@ const translations: TranslationsType = {
     // Weekly Menu Section
     weeklyMenuTag: "Browse This Week's Menu",
     weeklyMenuTitle: "This Week's Menu",
-    weeklyMenuWeekDates: "June 9 — 15",
+    weeklyMenuWeekDates: "June 16 — 22",
     // Weekly Menu translations
     monday: "MON",
     tuesday: "TUE",
