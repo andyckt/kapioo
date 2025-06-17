@@ -297,6 +297,9 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
   useEffect(() => {
     if (meals && Object.keys(meals).length > 0 && activeDays.length > 0) {
       console.log('[ThisWeekMeals] Finding first available orderable day');
+      console.log(`[ThisWeekMeals] Current activeDay: ${activeDay}`);
+      console.log(`[ThisWeekMeals] Available active days:`, activeDays);
+      console.log(`[ThisWeekMeals] Does current activeDay exist in meals?`, !!meals[activeDay]);
       
       // Keep track of whether we've found an available day
       let foundAvailable = false;
@@ -308,6 +311,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
         
         if (!unavailable) {
           console.log(`[ThisWeekMeals] Found first available day: ${day}`);
+          console.log(`[ThisWeekMeals] Setting activeDay from ${activeDay} to ${day}`);
           setActiveDay(day);
           foundAvailable = true;
           break;
@@ -317,10 +321,18 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       if (!foundAvailable) {
         console.log('[ThisWeekMeals] No available days found, defaulting to first active day');
         // If no day is available for ordering, just show the first active day
-        setActiveDay(activeDays[0]);
+        if (activeDay !== activeDays[0]) {
+          console.log(`[ThisWeekMeals] Setting activeDay from ${activeDay} to ${activeDays[0]}`);
+          setActiveDay(activeDays[0]);
+        }
       }
+      
+      // Force a check after a short delay to ensure the state was updated
+      setTimeout(() => {
+        console.log(`[ThisWeekMeals] After update check - activeDay: ${activeDay}`);
+      }, 100);
     }
-  }, [meals, activeDays]);
+  }, [meals, activeDays, activeDay]);
 
   // Auto-rotate through days
   useEffect(() => {
@@ -356,6 +368,10 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
 
   // Pause autoplay when user interacts
   const handleDayChange = (day: string) => {
+    // Add debug logging to track day change attempts
+    console.log(`[ThisWeekMeals] handleDayChange called with day: ${day}`);
+    console.log(`[ThisWeekMeals] Current activeDay: ${activeDay}`);
+    
     // Check if the day is unavailable
     const { unavailable, reason } = isDayUnavailable(day);
     
@@ -369,7 +385,19 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       return;
     }
     
+    // Force update the active day state
+    console.log(`[ThisWeekMeals] Setting activeDay to: ${day}`);
     setActiveDay(day);
+    
+    // Ensure the state update is applied by using a small timeout
+    setTimeout(() => {
+      console.log(`[ThisWeekMeals] Confirming activeDay is now: ${day}`);
+      if (activeDay !== day) {
+        console.log(`[ThisWeekMeals] State update failed, forcing update again`);
+        setActiveDay(day);
+      }
+    }, 50);
+    
     setIsAutoplay(false);
   }
 
@@ -502,7 +530,13 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
     }
   }
 
-  const activeMeal = useMemo(() => meals[activeDay], [meals, activeDay]);
+  // Use useMemo to ensure activeMeal is always in sync with activeDay
+  const activeMeal = useMemo(() => {
+    console.log(`[ThisWeekMeals] Computing activeMeal for activeDay: ${activeDay}`);
+    const meal = meals[activeDay];
+    console.log(`[ThisWeekMeals] Found meal:`, meal);
+    return meal;
+  }, [meals, activeDay]);
 
   // Helper function to get accent colors based on index
   const getAccentColors = (index: number) => {
@@ -708,7 +742,7 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
       <AnimatePresence mode="wait">
         {!isLoading && meals[activeDay] ? (
           <motion.div
-            key={activeDay}
+            key={`meal-card-${activeDay}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -716,6 +750,10 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
             className="w-full"
           >
             {(() => {
+              // Log which meal is being rendered
+              console.log(`[ThisWeekMeals] Rendering meal card for: ${activeDay}`);
+              console.log(`[ThisWeekMeals] Meal data:`, meals[activeDay]);
+              
               const meal = meals[activeDay];
               const isSelected = selectedMeals[activeDay]?.selected;
               const { unavailable, reason } = isDayUnavailable(activeDay);
