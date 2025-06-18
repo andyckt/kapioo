@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import Image from "next/image"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -801,6 +802,38 @@ export default function DashboardPage() {
       </AnimatePresence>
 
       <div className="flex-1 flex flex-col md:flex-row">
+        {/* Brand icon background elements */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* Large semi-transparent brand icon in bottom right */}
+          <div className="absolute -bottom-20 -right-20 w-[500px] h-[500px] opacity-[0.03]">
+            <Image 
+              src="/未命名設計.png" 
+              alt="Kapioo Logo Background" 
+              fill
+              className="object-contain"
+            />
+          </div>
+          
+          {/* Smaller brand icon in top left */}
+          <div className="absolute -top-10 -left-10 w-[300px] h-[300px] opacity-[0.02] rotate-12">
+            <Image 
+              src="/未命名設計.png" 
+              alt="Kapioo Logo Background" 
+              fill
+              className="object-contain"
+            />
+          </div>
+          
+          {/* Subtle pattern overlay */}
+          <div 
+            className="absolute inset-0 opacity-[0.015]"
+            style={{
+              backgroundImage: `radial-gradient(circle at 1px 1px, #C2884E 1px, transparent 0)`,
+              backgroundSize: "24px 24px",
+            }}
+          ></div>
+        </div>
+        
         <aside className="w-full md:w-64 border-r bg-background p-4 hidden md:block">
           <nav className="grid gap-2">
             {menuItems.map((item) => (
