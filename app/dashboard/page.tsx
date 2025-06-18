@@ -803,33 +803,35 @@ export default function DashboardPage() {
 
       <div className="flex-1 flex flex-col md:flex-row">
         {/* Brand icon background elements */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
           {/* Large semi-transparent brand icon in bottom right */}
-          <div className="absolute -bottom-20 -right-20 w-[500px] h-[500px] opacity-[0.03]">
+          <div className="absolute -bottom-10 -right-10 w-[320px] h-[320px] sm:w-[450px] sm:h-[450px] md:w-[550px] md:h-[550px] opacity-[0.025]">
             <Image 
               src="/未命名設計.png" 
               alt="Kapioo Logo Background" 
               fill
               className="object-contain"
+              priority={false}
             />
           </div>
           
           {/* Smaller brand icon in top left */}
-          <div className="absolute -top-10 -left-10 w-[300px] h-[300px] opacity-[0.02] rotate-12">
+          <div className="absolute -top-5 -left-5 w-[230px] h-[230px] sm:w-[280px] sm:h-[280px] md:w-[320px] md:h-[320px] opacity-[0.02] rotate-12">
             <Image 
               src="/未命名設計.png" 
               alt="Kapioo Logo Background" 
               fill
               className="object-contain"
+              priority={false}
             />
           </div>
           
           {/* Subtle pattern overlay */}
           <div 
-            className="absolute inset-0 opacity-[0.015]"
+            className="absolute inset-0 opacity-[0.01] sm:opacity-[0.015]"
             style={{
               backgroundImage: `radial-gradient(circle at 1px 1px, #C2884E 1px, transparent 0)`,
-              backgroundSize: "24px 24px",
+              backgroundSize: "16px 16px",
             }}
           ></div>
         </div>
