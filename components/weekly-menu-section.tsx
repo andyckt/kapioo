@@ -227,11 +227,6 @@ export default function WeeklyMenuSection() {
                 {t('weeklyMenuTitle')}
               </span>
             </h2>
-            <div className="flex items-center justify-center gap-2 mt-3 mb-2">
-              <div className="h-px w-5 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full"></div>
-              <span className="text-sm text-[#6B5F53]/70 font-light">{t('weeklyMenuWeekDates')}</span>
-              <div className="h-px w-5 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full"></div>
-            </div>
             <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto"></div>
           </div>
         </div>
