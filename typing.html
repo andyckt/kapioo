@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template with Typing Animation</title>
+    <style>
+        /* CSS for typing animation */
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        .typing-effect {
+            display: inline-block;
+            overflow: hidden; /* Ensures the text is hidden until animated */
+            white-space: nowrap; /* Prevents text wrapping */
+            border-right: 2px solid; /* Creates a cursor effect */
+            animation: typing 3s steps(30, end), blink-caret 0.75s step-end infinite;
+        }
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: black; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
+        <tr>
+            <td align="center">
+                <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);">
+                    <tr>
+                        <td style="padding: 20px; text-align: center;">
+                            <h1 class="typing-effect" style="color: #333333; font-family: Arial, sans-serif; font-size: 24px; font-weight: bold;">
+                                Welcome to Our Newsletter!
+                            </h1>
+                            <p style="color: #666666; font-family: Arial, sans-serif; font-size: 16px;">Stay updated with the latest news and offers.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px; text-align: center;">
+                            <a href="#" style="background-color: #007BFF; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif;">Get Started</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                            <h2 style="color: #333333; font-family: Arial, sans-serif;">Featured Articles</h2>
+                            <p style="color: #666666; font-family: Arial, sans-serif; font-size: 14px;">Check out our latest articles to enhance your knowledge.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px;">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td style="width: 50%; padding: 10px;">
+                                        <div style="background-color: #f9f9f9; border-radius: 5px; padding: 10px;">
+                                            <h3 style="color: #333333; font-family: Arial, sans-serif;">Article 1</h3>
+                                            <p style="color: #666666; font-family: Arial, sans-serif; font-size: 12px;">A brief description of the first article goes here.</p>
+                                        </div>
+                                    </td>
+                                    <td style="width: 50%; padding: 10px;">
+                                        <div style="background-color: #f9f9f9; border-radius: 5px; padding: 10px;">
+                                            <h3 style="color: #333333; font-family: Arial, sans-serif;">Article 2</h3>
+                                            <p style="color: #666666; font-family: Arial, sans-serif; font-size: 12px;">A brief description of the second article goes here.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px; text-align: center; font-family: Arial, sans-serif; font-size: 12px; color: #999999;">
+                            <p>&copy; 2023 Your Company. All rights reserved.</p>
+                            <p><a href="#" style="color: #007BFF; text-decoration: none;">Unsubscribe</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

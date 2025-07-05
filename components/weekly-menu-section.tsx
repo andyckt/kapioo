@@ -56,7 +56,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Mon" : "Mon",
       dayZh: t('monday'),
-      date: "June 23",
+      date: "June 30",
       meals: [
         { name: "冬瓜丸子汤", calories: 110, hasIcon: true, description: "" },
         { name: "番茄肉末豆腐煲", calories: 181, hasIcon: true, description: "" },
@@ -75,7 +75,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Tue" : "Tue",
       dayZh: t('tuesday'),
-      date: "June 24",
+      date: "July 1",
       meals: [
         { name: "日式味噌豆腐汤", calories: 52, hasIcon: true, description: "" },
         { name: "日式烤鳗鱼", calories: 215, hasIcon: true, description: "" },
@@ -94,7 +94,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Wed" : "Wed",
       dayZh: t('wednesday'),
-      date: "June 25",
+      date: "July 2",
       meals: [
         { name: "玉米豆腐", calories: 135, hasIcon: true, description: "" },
         { name: "酸菜排骨锅", calories: 162, hasIcon: true, description: "" },
@@ -113,7 +113,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Thu" : "Thu",
       dayZh: t('thursday'),
-      date: "June 26",
+      date: "July 3",
       meals: [
         { name: "蘑菇汤", calories: 60, hasIcon: true, description: "" },
         { name: "泰式绿咖喱鸡", calories: 190, hasIcon: true, description: "" },
@@ -132,9 +132,9 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Fri" : "Fri",
       dayZh: t('friday'),
-      date: "June 27",
+      date: "July 4",
       meals: [
-        { name: "高汤手切牛肉", calories: 135, hasIcon: true, description: "" },
+        { name: "E 高汤手切牛肉", calories: 135, hasIcon: true, description: "" },
         { name: "葱烤鸡腿肉", calories: 212, hasIcon: true, description: "" },
         { name: "蒜蓉上海青", calories: 72, hasIcon: true, description: "" },
         { name: "补血紫米饭 + 烤南瓜", calories: 128, hasIcon: true, description: "" },
@@ -151,7 +151,7 @@ export default function WeeklyMenuSection() {
     {
       day: language === 'en' ? "Sun" : "Sun",
       dayZh: "周日",
-      date: "June 29",
+      date: "July 6",
       meals: [
         { name: "佛式炖牛肉", calories: 182, hasIcon: true, description: "" },
         { name: "墨西哥风味铁板虾", calories: 142, hasIcon: true, description: "" },
