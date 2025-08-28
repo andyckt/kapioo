@@ -8,8 +8,12 @@ export interface EmailOptions {
 // Send an email
 export const sendEmail = async (options: EmailOptions) => {
   try {
+    console.log('Sending email to:', options.to);
+    console.log('Email subject:', options.subject);
+    
     // Check if we're in a browser environment
     if (typeof window !== 'undefined') {
+      console.log('Sending email from browser environment via API route');
       // We're in the browser, use the API route
       const response = await fetch('/api/email', {
         method: 'POST',
@@ -22,14 +26,19 @@ export const sendEmail = async (options: EmailOptions) => {
       const result = await response.json();
       
       if (!result.success) {
+        console.error('Email API route returned error:', result.error);
         throw new Error(result.error || 'Failed to send email via API');
       }
       
+      console.log('Email sent successfully via API route');
       return result;
     } else {
+      console.log('Sending email from server environment');
       // We're on the server, use the server-side email service
       const { sendEmailFromServer } = await import('./server-email');
-      return await sendEmailFromServer(options);
+      const result = await sendEmailFromServer(options);
+      console.log('Email sent successfully from server');
+      return result;
     }
   } catch (error) {
     console.error('Error sending email:', error);
@@ -171,4 +180,140 @@ export const sendPasswordResetEmail = async (to: string, code: string) => {
     subject: '重置您的密码 - Kapioo',
     html,
   });
-}; 
+};
+
+// Send notification to admin for credit purchase requests
+export const sendAdminNotification = async (subject: string, message: string) => {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">管理员通知</h2>
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto;">
+        <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+          ${message}
+        </p>
+        <div style="text-align: center;">
+          <a href="${baseUrl}/admin" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">进入管理后台</a>
+        </div>
+      </div>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
+        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to: adminEmail,
+    subject: `[Kapioo Admin] ${subject}`,
+    html,
+  });
+};
+
+// Send notification to admin about new credit purchase request
+export const sendAdminCreditRequestNotification = async (requestDetails: {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  imageProofUrl: string;
+  notes?: string;
+  requestId: string;
+}) => {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const adminDashboardLink = `${baseUrl}/admin?tab=credit-requests`;
+
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的餐券购买请求待审核</h2>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        用户 <strong>${requestDetails.userName}</strong> (${requestDetails.userEmail}) 提交了一个新的餐券购买请求。
+      </p>
+      <ul style="list-style: none; padding: 0; margin-bottom: 20px; border: 1px solid #eee; border-radius: 8px; background-color: #f9f9f9;">
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款金额:</strong> $${requestDetails.amount}</li>
+        <li style="padding: 10px 15px;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
+      </ul>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+        请点击下方链接查看付款凭证并进行审核：
+      </p>
+      <div style="text-align: center; margin-bottom: 30px;">
+        <a href="${requestDetails.imageProofUrl}" style="display: inline-block; background: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">查看付款凭证</a>
+      </div>
+      <div style="text-align: center;">
+        <a href="${adminDashboardLink}" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">前往管理后台审核</a>
+      </div>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
+        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: adminEmail,
+    subject: `新的餐券购买请求 (#${requestDetails.requestId}) 待审核`,
+    html,
+  });
+};
+
+// Send notification to user for credit purchase status
+export const sendCreditPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', credits?: number) => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  let statusText = '';
+  let statusColor = '';
+  let statusMessage = '';
+  
+  if (status === 'approved') {
+    statusText = '已批准';
+    statusColor = '#4CAF50';
+    statusMessage = `您的充值请求已获批准，${credits} 餐券已添加到您的账户。`;
+  } else {
+    statusText = '已拒绝';
+    statusColor = '#F44336';
+    statusMessage = '很遗憾，您的充值请求未获批准。请联系客服了解更多详情。';
+  }
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">餐券充值状态更新</h2>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
+        ${name}，您的餐券充值请求状态已更新：
+      </p>
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto; text-align: center;">
+        <div style="display: inline-block; padding: 8px 16px; background-color: ${statusColor}; color: white; border-radius: 20px; font-weight: bold; margin-bottom: 15px;">
+          ${statusText}
+        </div>
+        <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
+          请求编号: ${requestId}
+        </p>
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          ${statusMessage}
+        </p>
+      </div>
+      <div style="text-align: center; margin-top: 30px;">
+        <a href="${baseUrl}/dashboard?tab=credits" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">查看我的餐券</a>
+      </div>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
+        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to,
+    subject: `[Kapioo] 您的餐券充值请求${status === 'approved' ? '已批准' : '已拒绝'}`,
+    html,
+  });
+};

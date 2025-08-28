@@ -18,7 +18,12 @@ const createTransporter = () => {
 // Send an email from the server
 export const sendEmailFromServer = async (options: EmailOptions) => {
   try {
+    console.log('Creating email transporter...');
+    console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
+    console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set (hidden)' : 'Not set');
+    
     const transporter = createTransporter();
+    console.log('Email transporter created');
     
     const mailOptions = {
       from: options.from || `"Kapioo" <${process.env.EMAIL_USER || 'kapioomeal@gmail.com'}>`,
@@ -33,11 +38,23 @@ export const sendEmailFromServer = async (options: EmailOptions) => {
       }
     };
     
+    console.log('Sending email with options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject
+    });
+    
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent:', info.messageId);
+    console.log('Email sent successfully:', info.messageId);
     return info;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error sending email from server:', error);
+    // Try to provide more context about the error
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     throw error;
   }
 }; 

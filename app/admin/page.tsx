@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -73,6 +73,21 @@ export default function AdminDashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("dashboard")
+  const [creditRequestsLoading, setCreditRequestsLoading] = useState(false)
+  const [creditRequests, setCreditRequests] = useState<any[]>([])
+  const [creditRequestsPagination, setCreditRequestsPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1
+  })
+  const [viewRequestOpen, setViewRequestOpen] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState<any>(null)
+  const [approveRequestOpen, setApproveRequestOpen] = useState(false)
+  const [declineRequestOpen, setDeclineRequestOpen] = useState(false)
+  const [approvedCredits, setApprovedCredits] = useState(0)
+  const [adminNotes, setAdminNotes] = useState('')
+  const [processingRequest, setProcessingRequest] = useState(false)
   const [addCreditsOpen, setAddCreditsOpen] = useState(false)
   const [viewUserOpen, setViewUserOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -275,6 +290,179 @@ export default function AdminDashboardPage() {
     }
   }
 
+  // Fetch credit purchase requests
+  const fetchCreditRequests = async (page = 1) => {
+    setCreditRequestsLoading(true);
+    try {
+      const response = await fetch(`/api/credits/request/admin?page=${page}&limit=${creditRequestsPagination.limit}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response from server (${response.status}):`, errorText);
+        throw new Error(`Server returned ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setCreditRequests(data.data.requests || []);
+        setCreditRequestsPagination(prev => ({
+          ...prev,
+          page: data.data.page,
+          total: data.data.total,
+          pages: Math.ceil(data.data.total / data.data.limit)
+        }));
+      } else {
+        console.error("API returned error:", data.error);
+        setCreditRequests([]);
+      }
+    } catch (error) {
+      console.error("Error fetching credit requests:", error);
+      setCreditRequests([]);
+      toast({
+        title: "Error",
+        description: "Failed to fetch credit purchase requests",
+        variant: "destructive"
+      });
+    } finally {
+      setCreditRequestsLoading(false);
+    }
+  };
+  
+  // Handle credit request pagination
+  const handleCreditRequestPagination = (direction: 'prev' | 'next') => {
+    const newPage = direction === 'prev' 
+      ? Math.max(1, creditRequestsPagination.page - 1)
+      : Math.min(creditRequestsPagination.pages, creditRequestsPagination.page + 1);
+      
+    if (newPage !== creditRequestsPagination.page) {
+      fetchCreditRequests(newPage);
+    }
+  };
+  
+  // View credit request details
+  const handleViewRequest = (request: any) => {
+    setSelectedRequest(request);
+    setViewRequestOpen(true);
+  };
+  
+  // Open approve dialog
+  const handleApproveRequest = (request: any) => {
+    setSelectedRequest(request);
+    // Default to the amount paid as a starting point
+    setApprovedCredits(request.amount || 0);
+    setAdminNotes('');
+    setApproveRequestOpen(true);
+  };
+  
+  // Open decline dialog
+  const handleDeclineRequest = (request: any) => {
+    setSelectedRequest(request);
+    setAdminNotes('');
+    setDeclineRequestOpen(true);
+  };
+  
+  // Process approve request
+  const confirmApproveRequest = async () => {
+    if (!selectedRequest) return;
+    
+    setProcessingRequest(true);
+    try {
+      const response = await fetch('/api/credits/request/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requestId: selectedRequest.requestId,
+          action: 'approve',
+          approvedCredits,
+          adminNotes
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Request approved",
+          description: `Approved ${approvedCredits} credits for user`
+        });
+        
+        // Refresh credit requests
+        fetchCreditRequests(creditRequestsPagination.page);
+        
+        // Close dialog
+        setApproveRequestOpen(false);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to approve request",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRequest(false);
+    }
+  };
+  
+  // Process decline request
+  const confirmDeclineRequest = async () => {
+    if (!selectedRequest) return;
+    
+    setProcessingRequest(true);
+    try {
+      const response = await fetch('/api/credits/request/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requestId: selectedRequest.requestId,
+          action: 'decline',
+          adminNotes
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Request declined",
+          description: "Credit purchase request has been declined"
+        });
+        
+        // Refresh credit requests
+        fetchCreditRequests(creditRequestsPagination.page);
+        
+        // Close dialog
+        setDeclineRequestOpen(false);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to decline request",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error declining request:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRequest(false);
+    }
+  };
+
   // Add function to fetch transactions
   const fetchTransactions = async (page = 1) => {
     setTransactionsLoading(true);
@@ -310,6 +498,13 @@ export default function AdminDashboardPage() {
       setTransactionsLoading(false);
     }
   };
+  
+  // Add effect to fetch credit requests when the tab is active
+  useEffect(() => {
+    if (activeTab === "credit-requests") {
+      fetchCreditRequests();
+    }
+  }, [activeTab]);
   
   // Add effect to fetch transactions when the Credits tab is active
   useEffect(() => {
@@ -651,6 +846,14 @@ export default function AdminDashboardPage() {
             >
               <CreditCard className="mr-2 h-4 w-4" />
               Credits
+            </Button>
+            <Button
+              variant={activeTab === "credit-requests" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => setActiveTab("credit-requests")}
+            >
+              <DollarSign className="mr-2 h-4 w-4" />
+              Credit Requests
             </Button>
             <Button
               variant={activeTab === "settings" ? "default" : "ghost"}
@@ -1200,6 +1403,206 @@ export default function AdminDashboardPage() {
               </motion.div>
             )}
 
+            {activeTab === "credit-requests" && (
+              <motion.div
+                key="credit-requests"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold tracking-tight">Credit Purchase Requests</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchCreditRequests(creditRequestsPagination.page)}
+                    className="h-9 gap-1"
+                  >
+                    <RefreshCcw className={cn("h-4 w-4", creditRequestsLoading && "animate-spin")} />
+                    {creditRequestsLoading ? "Refreshing..." : "Refresh"}
+                  </Button>
+                </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Credit Purchase Requests</CardTitle>
+                    <CardDescription>Review and process credit purchase requests from users</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-4 font-medium">Request ID</th>
+                            <th className="text-left p-4 font-medium">User</th>
+                            <th className="text-left p-4 font-medium">Amount</th>
+                            <th className="text-left p-4 font-medium">Date</th>
+                            <th className="text-left p-4 font-medium">Status</th>
+                            <th className="text-center p-4 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {creditRequestsLoading ? (
+                            <tr>
+                              <td colSpan={7} className="p-8 text-center">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                              </td>
+                            </tr>
+                          ) : creditRequests.length > 0 ? (
+                            creditRequests.map((request) => {
+                              // Get user info
+                              const user = request.userId;
+                              const userName = user ? (user.name || user.userID) : 'Unknown User';
+                              
+                              // Format status badge
+                              let statusBadge;
+                              switch(request.status) {
+                                case 'pending':
+                                  statusBadge = (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                      Pending
+                                    </span>
+                                  );
+                                  break;
+                                case 'approved':
+                                  statusBadge = (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      Approved
+                                    </span>
+                                  );
+                                  break;
+                                case 'declined':
+                                  statusBadge = (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                      Declined
+                                    </span>
+                                  );
+                                  break;
+                                default:
+                                  statusBadge = (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                      {request.status}
+                                    </span>
+                                  );
+                              }
+                              
+                              return (
+                                <tr key={request._id} className="border-b">
+                                  <td className="p-4">{request.requestId}</td>
+                                  <td className="p-4">{userName}</td>
+                                  <td className="p-4">
+                                    <div>${request.amount.toFixed(2)}</div>
+                                    <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
+                                    {request.status === 'approved' && request.approvedCredits && (
+                                      <div className="text-xs text-green-600 font-medium mt-1">
+                                        {request.approvedCredits} credits approved
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="p-4">{new Date(request.createdAt).toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}</td>
+                                  <td className="p-4">{statusBadge}</td>
+                                  <td className="p-4">
+                                    <div className="flex justify-center gap-1">
+                                      <Button variant="outline" size="sm" onClick={() => handleViewRequest(request)}>
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                      
+                                      {request.status === 'pending' && (
+                                        <>
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-green-600 border-green-200 hover:bg-green-50"
+                                            onClick={() => handleApproveRequest(request)}
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                            onClick={() => handleDeclineRequest(request)}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                                No credit purchase requests found
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleCreditRequestPagination('prev')}
+                          disabled={creditRequestsPagination.page === 1 || creditRequestsLoading}
+                        >
+                          Previous
+                        </Button>
+                        <div className="text-sm text-muted-foreground">
+                          Page {creditRequestsPagination.page} of {creditRequestsPagination.pages}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleCreditRequestPagination('next')}
+                          disabled={creditRequestsPagination.page === creditRequestsPagination.pages || creditRequestsLoading}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">Rows per page:</span>
+                        <Select
+                          value={creditRequestsPagination.limit.toString()}
+                          onValueChange={(value) => {
+                            const newLimit = parseInt(value);
+                            setCreditRequestsPagination(prev => ({
+                              ...prev,
+                              limit: newLimit,
+                              page: 1 // Reset to first page when changing limit
+                            }));
+                            fetchCreditRequests(1);
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-[80px]">
+                            <SelectValue placeholder={creditRequestsPagination.limit.toString()} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5">5</SelectItem>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="25">25</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            )}
+            
             {activeTab === "settings" && (
               <motion.div
                 key="settings"
@@ -1457,6 +1860,376 @@ export default function AdminDashboardPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewUserOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Credit Request Dialog */}
+      <Dialog open={viewRequestOpen} onOpenChange={setViewRequestOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Credit Purchase Request Details</DialogTitle>
+            <DialogDescription>Request ID: {selectedRequest?.requestId}</DialogDescription>
+          </DialogHeader>
+          
+          {selectedRequest && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground">Status</Label>
+                  <p className="font-medium">
+                    {selectedRequest.status === 'pending' && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
+                    )}
+                    {selectedRequest.status === 'approved' && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Approved
+                      </span>
+                    )}
+                    {selectedRequest.status === 'declined' && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Declined
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Date Submitted</Label>
+                  <p className="font-medium">
+                    {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground">User</Label>
+                  <p className="font-medium">
+                    {selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedRequest.userId?.email || ''}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">User ID</Label>
+                  <p className="font-medium truncate">
+                    {selectedRequest.userId?._id || 'Unknown'}
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm text-muted-foreground">Amount Paid</Label>
+                <p className="font-medium">
+                  ${selectedRequest.amount.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Amount transferred by user via e-Transfer</p>
+              </div>
+              
+              {selectedRequest.status === 'approved' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Approved Credits</Label>
+                    <p className="font-medium">
+                      {selectedRequest.approvedCredits || selectedRequest.requestedCredits}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Approved Date</Label>
+                    <p className="font-medium">
+                      {selectedRequest.approvedAt ? new Date(selectedRequest.approvedAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      }) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {selectedRequest.status === 'declined' && (
+                <div>
+                  <Label className="text-sm text-muted-foreground">Declined Date</Label>
+                  <p className="font-medium">
+                    {selectedRequest.declinedAt ? new Date(selectedRequest.declinedAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    }) : 'N/A'}
+                  </p>
+                </div>
+              )}
+              
+              {selectedRequest.notes && (
+                <div>
+                  <Label className="text-sm text-muted-foreground">User Notes</Label>
+                  <p className="font-medium bg-muted p-3 rounded-md">
+                    {selectedRequest.notes}
+                  </p>
+                </div>
+              )}
+              
+              {selectedRequest.adminNotes && (
+                <div>
+                  <Label className="text-sm text-muted-foreground">Admin Notes</Label>
+                  <p className="font-medium bg-muted p-3 rounded-md">
+                    {selectedRequest.adminNotes}
+                  </p>
+                </div>
+              )}
+              
+              <div>
+                <Label className="text-sm text-muted-foreground">Payment Proof</Label>
+                <div className="mt-2 border rounded-md overflow-hidden">
+                  <div className="relative aspect-video bg-muted">
+                    <img 
+                      src={selectedRequest.imageProof} 
+                      alt="Payment proof" 
+                      className="object-contain w-full h-full"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </div>
+                  <div className="p-2 bg-muted flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      asChild
+                      className="gap-1"
+                    >
+                      <a href={selectedRequest.imageProof} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Open in New Tab
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setViewRequestOpen(false)}>
+              Close
+            </Button>
+            
+            {selectedRequest && selectedRequest.status === 'pending' && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    setViewRequestOpen(false);
+                    handleDeclineRequest(selectedRequest);
+                  }}
+                >
+                  Decline
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setViewRequestOpen(false);
+                    handleApproveRequest(selectedRequest);
+                  }}
+                >
+                  Approve
+                </Button>
+              </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Approve Credit Request Dialog */}
+      <Dialog open={approveRequestOpen} onOpenChange={setApproveRequestOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Approve Credit Purchase</DialogTitle>
+            <DialogDescription>
+              Review and approve the credit purchase request.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedRequest && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="request-id" className="text-right">
+                  Request ID
+                </Label>
+                <Input
+                  id="request-id"
+                  value={selectedRequest.requestId}
+                  className="col-span-3"
+                  disabled
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="user" className="text-right">
+                  User
+                </Label>
+                <Input
+                  id="user"
+                  value={selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                  className="col-span-3"
+                  disabled
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount" className="text-right">
+                  Amount Paid
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="amount"
+                    value={`$${selectedRequest.amount.toFixed(2)}`}
+                    disabled
+                  />
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Amount transferred via e-Transfer
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="approved-credits" className="text-right">
+                  Credits to Add
+                </Label>
+                <Input
+                  id="approved-credits"
+                  type="number"
+                  value={approvedCredits}
+                  onChange={(e) => setApprovedCredits(parseInt(e.target.value) || 0)}
+                  className="col-span-3"
+                  min="1"
+                />
+                <div className="col-span-4 text-sm text-muted-foreground pl-[25%]">
+                  <span>Enter the number of credits to add to the user's account based on the amount paid.</span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="admin-notes" className="text-right pt-2">
+                  Notes
+                </Label>
+                <textarea
+                  id="admin-notes"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  className="col-span-3 min-h-[80px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+                  placeholder="Optional admin notes"
+                />
+              </div>
+              
+              <div className="col-span-full">
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    asChild
+                    className="gap-1"
+                  >
+                    <a href={selectedRequest.imageProof} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      View Payment Proof
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveRequestOpen(false)} disabled={processingRequest}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmApproveRequest} 
+              disabled={processingRequest || approvedCredits <= 0}
+              className="gap-1"
+            >
+              {processingRequest && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
+              Approve Credits
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Decline Credit Request Dialog */}
+      <Dialog open={declineRequestOpen} onOpenChange={setDeclineRequestOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-500">Decline Credit Purchase</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to decline this credit purchase request?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedRequest && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="decline-request-id" className="text-right">
+                  Request ID
+                </Label>
+                <Input
+                  id="decline-request-id"
+                  value={selectedRequest.requestId}
+                  className="col-span-3"
+                  disabled
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="decline-user" className="text-right">
+                  User
+                </Label>
+                <Input
+                  id="decline-user"
+                  value={selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                  className="col-span-3"
+                  disabled
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="decline-notes" className="text-right pt-2">
+                  Reason
+                </Label>
+                <textarea
+                  id="decline-notes"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  className="col-span-3 min-h-[80px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+                  placeholder="Reason for declining (optional)"
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeclineRequestOpen(false)} disabled={processingRequest}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeclineRequest} 
+              disabled={processingRequest}
+              className="gap-1"
+            >
+              {processingRequest && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
+              Decline Request
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +25,8 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
+import { CreditPurchaseForm } from "@/components/credit-purchase-form"
+import { CreditPurchaseHistory } from "@/components/credit-purchase-history"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
@@ -46,6 +48,7 @@ export default function DashboardPage() {
   const [userLoading, setUserLoading] = useState(true)
   const [transactions, setTransactions] = useState<any[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
+  const [purchaseHistoryKey, setPurchaseHistoryKey] = useState(0)
   const [transactionsPagination, setTransactionsPagination] = useState({
     page: 1,
     limit: 5,
@@ -1150,9 +1153,35 @@ export default function DashboardPage() {
                     <h2 className="text-3xl font-bold tracking-tight">{t('credits')}</h2>
                   </div>
                   <Card>
-                    <CardHeader>
-                      <CardTitle>{t('creditsAvailable')}</CardTitle>
-                      <CardDescription>{t('currentAvailableCredits')}</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle>{t('creditsAvailable')}</CardTitle>
+                        <CardDescription>{t('currentAvailableCredits')}</CardDescription>
+                      </div>
+                      {userData && userData._id && (
+                        <div className="flex-shrink-0">
+                          <CreditPurchaseForm 
+                            userId={userData._id} 
+                            onSuccess={() => {
+                              // Refresh user data to get updated credits
+                              if (userData?._id) {
+                                getUserById(userData._id).then(user => {
+                                  if (user) {
+                                    setUserData(user);
+                                    setCredits(user.credits || 0);
+                                  }
+                                });
+                              }
+                              
+                              // Refresh transaction history
+                              fetchTransactions();
+                              
+                              // Force refresh of credit purchase history component
+                              setPurchaseHistoryKey(prev => prev + 1);
+                            }} 
+                          />
+                        </div>
+                      )}
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col items-center justify-center p-6 rounded-lg">
@@ -1161,6 +1190,17 @@ export default function DashboardPage() {
                       </div>
                     </CardContent>
                   </Card>
+                  
+                  {/* Credit Purchase History */}
+                  {userData && userData._id && (
+                    <div className="mb-6">
+                      <CreditPurchaseHistory 
+                        key={purchaseHistoryKey} 
+                        userId={userData._id} 
+                      />
+                    </div>
+                  )}
+                  
                   <Card>
                     <CardHeader>
                       <CardTitle>{t('transactionHistory')}</CardTitle>
