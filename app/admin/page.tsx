@@ -114,7 +114,7 @@ export default function AdminDashboardPage() {
     const userData = JSON.parse(user)
     if (userData.userID !== 'admin') {
       toast({
-        title: "Access deniedd",
+        title: "Access denied",
         description: "You must be an admin to view this page",
         variant: "destructive",
       })
