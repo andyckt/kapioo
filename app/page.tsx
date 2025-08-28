@@ -13,6 +13,7 @@ import CustomerReviewsSection from "@/components/customer-reviews-section"
 import HowItWorksSection from "@/components/how-it-works-section"
 import WeeklyMenuSection from "@/components/weekly-menu-section"
 import LocationMealPlans from "@/components/location-meal-plans"
+import SectionNavigation from "@/components/section-navigation"
 
 export default function Home() {
   const { t } = useLanguage();
@@ -49,6 +50,8 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1">
+        {/* Navigation Menu */}
+        <SectionNavigation />
         <section className="w-full relative overflow-hidden min-h-screen bg-[#fff6ef]">
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
@@ -164,10 +167,12 @@ export default function Home() {
         </section>
         
         {/* Location-based Meal Plans Section */}
-        <LocationMealPlans />
+        <div id="meal-plans">
+          <LocationMealPlans />
+        </div>
 
         {/* Food Gallery Section - Enhanced */}
-        <section className="w-full py-20 sm:py-28 bg-gradient-to-b from-white to-[#FBF7F2] relative overflow-hidden">
+        <section id="food-gallery" className="w-full py-20 sm:py-28 bg-gradient-to-b from-white to-[#FBF7F2] relative overflow-hidden">
           {/* Enhanced decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-20 right-[10%] w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-[100px]"></div>
@@ -468,13 +473,17 @@ export default function Home() {
         </section>
         
         {/* Weekly Menu Section - MOVED */}
-        <WeeklyMenuSection />
+        <div id="weekly-menu">
+          <WeeklyMenuSection />
+        </div>
         
         {/* Customer Reviews Section */}
-        <CustomerReviewsSection />
+        <div id="reviews">
+          <CustomerReviewsSection />
+        </div>
         
-        {/* How It Works Section */}
-        <HowItWorksSection />
+        {/* How It Works Section - Commented out as requested */}
+        {/* <HowItWorksSection /> */}
         
       </main>
       <footer className="w-full border-t bg-background py-4 sm:py-6 md:py-8">
