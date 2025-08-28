@@ -289,7 +289,7 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
                       type="file"
                       id="proof-upload"
                       className="hidden"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept="image/jpeg,image/png,image/jpg,image/webp,image/heic,image/heif,image/tiff,image/bmp"
                       onChange={handleFileChange}
                     />
                     
@@ -349,34 +349,23 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
           </>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle className="text-center text-green-600 flex items-center justify-center gap-2">
-                <Check className="h-5 w-5" />
-                {language === 'en' ? 'Request Submitted' : '请求已提交'}
-              </DialogTitle>
-              <DialogDescription className="text-center">
-                {language === 'en' 
-                  ? 'Your credit purchase request has been submitted successfully.' 
-                  : '您的餐券购买请求已成功提交。'
-                }
-              </DialogDescription>
-            </DialogHeader>
+
             <div className="py-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                  <Check className="h-8 w-8 text-green-600" />
+              <div className="bg-[#F9F3EC] border border-[#D1A46C] rounded-lg p-6 text-center">
+                <div className="mx-auto w-16 h-16 rounded-full bg-[#F2E8D9] flex items-center justify-center mb-4">
+                  <Check className="h-8 w-8 text-[#C2884E]" />
                 </div>
-                <h3 className="text-lg font-medium text-green-800 mb-2">
+                <h3 className="text-lg font-medium text-[#8A5A34] mb-2">
                   {language === 'en' ? 'Thank You!' : '谢谢！'}
                 </h3>
-                <p className="text-green-700 mb-4">
+                <p className="text-[#9B6B3F] mb-4">
                   {language === 'en'
                     ? 'Your request is now pending approval. We will notify you once it\'s processed.'
                     : '您的请求正在等待批准。处理完成后，我们会通知您。'
                   }
                 </p>
-                <div className="border-t border-green-200 pt-4 mt-4">
-                  <p className="text-sm text-green-700">
+                <div className="border-t border-[#E5D6BC] pt-4 mt-4">
+                  <p className="text-sm text-[#9B6B3F]">
                     {language === 'en'
                       ? 'You can check the status of your request in the "Credit Requests" section.'
                       : '您可以在"餐券请求"部分查看请求状态。'
