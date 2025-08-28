@@ -21,6 +21,10 @@ type TranslationKey =
   | 'japaneseKoreanCuisineTitle' | 'japaneseKoreanCuisineDesc'
   | 'southeastAsianCuisineTitle' | 'southeastAsianCuisineDesc'
   | 'weeklyMenuTag' | 'weeklyMenuTitle' | 'weeklyMenuWeekDates'
+  // Location-based meal plans section
+  | 'serviceAreasTag' | 'mealPlanOptionsTitle' | 'selectAreaText'
+  | 'servicesOverviewTitle' | 'weeklySubscriptionTitle' | 'weeklySubscriptionDesc'
+  | 'dailyDeliveryTitle' | 'dailyDeliveryDesc'
   | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday'
   | 'totalCalories'
   | 'meal_1_1' | 'meal_1_1_desc' | 'meal_1_2' | 'meal_1_3' | 'meal_1_3_desc' | 'meal_1_4'
@@ -114,6 +118,15 @@ const translations: TranslationsType = {
     // Header
     login: "登录",
     getStarted: "立即开始",
+    // Location-based meal plans
+    serviceAreasTag: "服务区域",
+    mealPlanOptionsTitle: "餐食订阅计划",
+    selectAreaText: "选择您所在的区域，查看可用的餐食计划选项",
+    servicesOverviewTitle: "服务概览",
+    weeklySubscriptionTitle: "周次订阅 Meal Box",
+    weeklySubscriptionDesc: "包周配送 一周配送2次 周日&周二 | 晚间送达",
+    dailyDeliveryTitle: "每日直送系列",
+    dailyDeliveryDesc: "每天新鲜制作，每天直送 | 午间送达",
     // Hero section
     heroTitle: "北美健康餐食订阅品牌 <br/><span style=\"white-space: nowrap;\">让你每天拥有「被好好对待」的时刻</span>",
     heroDescription: "每日现做 每日配送<br/>健康｜高质｜舒服｜幸福<br/><br/>一顿饭的时间 给生活松一口气<br/>Kapioo，你每天的松弛美好时刻",
@@ -433,6 +446,15 @@ const translations: TranslationsType = {
     // Header
     login: "Login",
     getStarted: "Get Started",
+    // Location-based meal plans
+    serviceAreasTag: "Service Areas",
+    mealPlanOptionsTitle: "Meal Plan Options",
+    selectAreaText: "Select your area to see available meal plan options",
+    servicesOverviewTitle: "Services Overview",
+    weeklySubscriptionTitle: "Weekly Subscription",
+    weeklySubscriptionDesc: "Weekly delivery service with 2 deliveries per week (Sunday & Tuesday) | Evening delivery",
+    dailyDeliveryTitle: "Daily Fresh Delivery",
+    dailyDeliveryDesc: "Freshly made every day, delivered daily | Afternoon delivery",
     // Hero section
     heroTitle: "Premium Meal Subscription in North America <br/><span style=\"white-space: nowrap;\">Bringing care to your everyday moments</span>",
     heroDescription: "Freshly made, daily delivery<br/>Healthy | Quality | Comfort | Happiness<br/><br/>Take a moment to relax with a good meal<br/>Kapioo, your daily moment of comfort and joy",

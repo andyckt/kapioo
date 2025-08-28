@@ -12,6 +12,7 @@ import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import CustomerReviewsSection from "@/components/customer-reviews-section"
 import HowItWorksSection from "@/components/how-it-works-section"
 import WeeklyMenuSection from "@/components/weekly-menu-section"
+import LocationMealPlans from "@/components/location-meal-plans"
 
 export default function Home() {
   const { t } = useLanguage();
@@ -161,6 +162,9 @@ export default function Home() {
             </motion.div>
           </div>
         </section>
+        
+        {/* Location-based Meal Plans Section */}
+        <LocationMealPlans />
 
         {/* Food Gallery Section - Enhanced */}
         <section className="w-full py-20 sm:py-28 bg-gradient-to-b from-white to-[#FBF7F2] relative overflow-hidden">
