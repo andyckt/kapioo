@@ -110,7 +110,7 @@ export default function LocationMealPlans() {
   const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
   
   return (
-    <section className="py-24 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-hidden">
+    <section className="pt-12 pb-24 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-[10%] w-[400px] h-[400px] bg-gradient-to-tr from-[#C2884E]/5 to-transparent rounded-full blur-[80px]"></div>
