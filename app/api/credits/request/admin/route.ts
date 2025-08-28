@@ -139,8 +139,9 @@ export async function POST(request: Request) {
         // Commit the transaction
         await session.commitTransaction();
         
-        // Send email notification to user
+        // Send email notifications to user
         try {
+          // Send status update email
           await sendCreditPurchaseStatusEmail(
             user.email,
             user.name || user.userID,
@@ -148,6 +149,20 @@ export async function POST(request: Request) {
             'approved',
             approvedCredits
           );
+          
+          // Also send the same notification as the "Add Credits" button
+          await fetch('/api/notifications', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              notificationType: 'credits_added',
+              userId: user._id,
+              transactionId: transaction.transactionId,
+              amount: approvedCredits
+            }),
+          });
         } catch (emailError) {
           console.error('Error sending approval email:', emailError);
           // Continue even if email fails
