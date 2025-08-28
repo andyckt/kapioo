@@ -94,7 +94,7 @@ export default function SectionNavigation() {
   }, [sections])
   
   return (
-    <div className="fixed left-1/2 transform -translate-x-1/2 bottom-8 z-50">
+    <div className="fixed left-1/2 transform -translate-x-1/2 bottom-8 z-50 hidden md:block">
       <motion.div 
         className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-[#C2884E]/20 px-6 py-3 flex items-center gap-6"
         initial={{ y: 100, opacity: 0 }}
