@@ -90,21 +90,20 @@ export default function DailyDelivery() {
     const loadMockData = () => {
       setIsLoading(true)
       
-      // Get current date and generate dates for the week
-      const today = new Date()
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      // Define the order of days we want to display with fixed mock dates
+      const mockDaysWithDates = [
+        { day: 'monday', date: 'Sep 1' },
+        { day: 'tuesday', date: 'Sep 2' },
+        { day: 'wednesday', date: 'Sep 3' },
+        { day: 'thursday', date: 'Sep 4' },
+        { day: 'friday', date: 'Sep 5' },
+        { day: 'sunday', date: 'Sep 7' }
+      ];
+      
       const mockDays: Record<string, DayData> = {}
       
-      // Skip today and generate for next 6 days (excluding Saturday)
-      for (let i = 1; i <= 7; i++) {
-        const date = new Date(today)
-        date.setDate(today.getDate() + i)
-        
-        // Skip Saturday (day 6)
-        if (date.getDay() === 6) continue
-        
-        const dayName = dayNames[date.getDay()]
-        const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      // Generate data for each day in order
+      mockDaysWithDates.forEach(({ day: dayName, date: formattedDate }, index) => {
         
         mockDays[dayName] = {
           date: formattedDate,
@@ -118,7 +117,7 @@ export default function DailyDelivery() {
                 "Eco-friendly packaging"
               ],
               calories: 650,
-              tags: ["Fresh", "Healthy", i % 2 === 0 ? "Vegetarian" : "High Protein"],
+              tags: ["Fresh", "Healthy", index % 2 === 0 ? "Vegetarian" : "High Protein"],
               typeA: {
                 dishes: ["Main dish", "Side salad", "Dessert"],
                 voucherType: 'twoDish'
@@ -137,7 +136,7 @@ export default function DailyDelivery() {
                 "Restaurant quality"
               ],
               calories: 850,
-              tags: ["Gourmet", i % 2 === 0 ? "Seafood" : "Comfort Food"],
+              tags: ["Gourmet", index % 2 === 0 ? "Seafood" : "Comfort Food"],
               typeA: {
                 dishes: ["Premium main dish", "Gourmet side", "Premium dessert"],
                 voucherType: 'twoDish'
@@ -148,11 +147,11 @@ export default function DailyDelivery() {
               }
             }
           ]
-        }
-      }
+        };
+      });
       
-      setDays(mockDays)
-      setIsLoading(false)
+      setDays(mockDays);
+      setIsLoading(false);
     }
     
     loadMockData()
