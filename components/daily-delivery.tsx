@@ -302,13 +302,14 @@ export default function DailyDelivery() {
                   </div>
                 </div>
 
-                {/* Combos for this day */}
+                {/* Combos for this day - Grid layout for desktop */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {days[selectedDay].combos.map((combo, comboIndex) => (
-                    <div key={combo.id} className="mb-6 last:mb-0">
+                    <div key={combo.id}>
                       <div className={`
                         relative backdrop-blur-xl bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4]
                         rounded-2xl p-5 border border-[#C2884E]/20 shadow-md
-                        transition-all duration-300 ease-out
+                        transition-all duration-300 ease-out h-full
                       `}>
                         <div className="flex flex-wrap items-center justify-between mb-3">
                           <h3 className="text-base font-medium text-[#6B5F53]">{combo.name}</h3>
@@ -436,6 +437,7 @@ export default function DailyDelivery() {
                       </div>
                     </div>
                   ))}
+                </div>
               </div>
             )}
           </div>
