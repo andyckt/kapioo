@@ -350,7 +350,6 @@ export default function DailyDelivery() {
                           
                           {/* 2-Dish Voucher Dish List */}
                           <div className="mt-2">
-                            <div className="text-xs font-medium mb-1 text-[#6B5F53]">Includes:</div>
                             <ul className="space-y-1">
                               {combo.typeA.dishes.map((dish, idx) => (
                                 <li key={idx} className="flex items-center gap-1.5">
@@ -400,7 +399,7 @@ export default function DailyDelivery() {
                           {/* 3-Dish Voucher Additional Dishes */}
                           <div className="mt-2">
                             <div className="text-xs font-medium mb-1 text-[#6B5F53]">
-                              包含每餐2菜的所有菜品，另加:
+                              包含以上的所有菜品，再加:
                             </div>
                             <ul className="space-y-1">
                               {combo.typeB.dishes
