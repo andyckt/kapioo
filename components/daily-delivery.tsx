@@ -364,13 +364,8 @@ export default function DailyDelivery() {
                         </div>
                         
                         {/* Divider */}
-                        <div className="relative my-3">
-                          <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-dashed border-[#6B5F53]/20"></div>
-                          </div>
-                          <div className="relative flex justify-center">
-                            <span className="px-2 text-xs text-[#6B5F53]/60 bg-[#F5EDE4]">UPGRADE TO</span>
-                          </div>
+                        <div className="my-3">
+                          <div className="w-full border-t border-dashed border-[#6B5F53]/20"></div>
                         </div>
                         
                         {/* 3-Dish Voucher Option */}
