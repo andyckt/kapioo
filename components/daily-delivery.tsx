@@ -185,13 +185,7 @@ export default function DailyDelivery() {
         }
       ])
     }
-    
-    const voucherTypeText = type === 'A' ? '2-Dish Voucher' : '3-Dish Voucher'
-    
-    toast({
-      title: t('itemAddedToCart'),
-      description: `${combo.name} (${voucherTypeText}) added to cart`,
-    })
+    // No toast notification when adding to cart
   }
   
   // Remove item from cart
@@ -494,33 +488,7 @@ export default function DailyDelivery() {
         </div>
       )}
       
-      {/* Cart Summary (Mobile) */}
-      {cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg">
-          <Button 
-            className="w-full flex items-center justify-between bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white hover:from-[#B17A40] hover:to-[#C09660]"
-            onClick={() => {
-              toast({
-                title: t('checkoutNotImplemented'),
-                description: t('featureComingSoon'),
-              })
-            }}
-          >
-            <span className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              <span>{getTotalItems()} items</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs px-1.5 py-0.5 rounded bg-white/20 border border-white/30">
-                每餐2菜: {getTotalVouchers().twoDish}
-              </span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-white/20 border border-white/30">
-                每餐3菜: {getTotalVouchers().threeDish}
-              </span>
-            </div>
-          </Button>
-        </div>
-      )}
+      {/* Cart Summary removed as requested */}
     </div>
   )
 }
