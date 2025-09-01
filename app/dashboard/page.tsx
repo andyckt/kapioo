@@ -33,6 +33,7 @@ import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import Image from "next/image"
+import DailyDelivery from "@/components/daily-delivery"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -378,9 +379,7 @@ export default function DashboardPage() {
     { id: "overview", label: t('overview'), icon: <User className="h-4 w-4" /> },
     { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
     { id: "select-meals", label: t('selectMeals'), icon: <ShoppingCart className="h-4 w-4" /> },
-    /* Commented out Delivery Tracking tab
-    { id: "delivery", label: "Delivery Tracking", icon: <Calendar className="h-4 w-4" /> },
-    */
+    { id: "daily-delivery", label: t('dailyDelivery'), icon: <Calendar className="h-4 w-4" /> },
     /* Commented out for now
     { id: "nutrition", label: "Nutrition", icon: <BarChart2 className="h-4 w-4" /> },
     */
@@ -1568,6 +1567,19 @@ export default function DashboardPage() {
                     initialSelectedMeals={selectedMeals}
                     initialCheckoutOpen={checkoutOpen}
                   />
+                </motion.div>
+              )}
+              
+              {activeTab === "daily-delivery" && (
+                <motion.div
+                  key="daily-delivery"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <DailyDelivery />
                 </motion.div>
               )}
             </AnimatePresence>

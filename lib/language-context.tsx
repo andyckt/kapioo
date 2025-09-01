@@ -56,7 +56,7 @@ type TranslationKey =
   | 'resetPassword' | 'enterPhoneReset' | 'createNewPassword' | 'verifyPhoneNumber'
   | 'newPassword' | 'confirmNewPassword' | 'resetPasswordBtn' | 'rememberPassword'
   // Dashboard translations
-  | 'overview' | 'myOrders' | 'selectMeals' | 'deliveryTracking' | 'credits' | 'settings'
+  | 'overview' | 'myOrders' | 'selectMeals' | 'dailyDelivery' | 'deliveryTracking' | 'credits' | 'settings'
   | 'profile' | 'referFriend' | 'logOut' | 'upcomingDeliveries' | 'creditsAvailable'
   | 'totalOrders' | 'personalInfo' | 'addressInfo' | 'security' | 'save' | 'saving'
   | 'changesSaved' | 'errorSaving' | 'currentPassword' | 'newPasswordDash' | 'updatePassword'
@@ -84,7 +84,7 @@ type TranslationKey =
   | 'orderCancelled' | 'creditsReturned' | 'refundedOn' | 'orderRefunded'
   | 'noOrdersYet' | 'orderHistoryAppearHere' | 'pageXofY'
   // Select Meals tab
-  | 'weeklyMenu' | 'selectDaysDelivery' | 'loadingMeals' | 'selectedCount' | 'proceedToCheckout'
+  | 'weeklyMenu' | 'selectDaysDelivery' | 'loadingMeals' | 'selectedCount' | 'proceedToCheckout' | 'itemAddedToCart' | 'checkoutNotImplemented' | 'featureComingSoon' | 'cartEmpty' | 'addItemsToCart' | 'loading'
   | 'checkoutTitle' | 'confirmOrderDetails' | 'deliveryInfo' | 'editAddress' | 'addAddress'
   | 'editDeliveryDetails' | 'saveAddressFuture' | 'cancelBtn' | 'saveAddress' | 'noAddressSet'
   | 'back' | 'completeOrder' | 'freshIngredients' | 'ecoPackaging' | 'total'
@@ -303,6 +303,7 @@ const translations: TranslationsType = {
     overview: "概览",
     myOrders: "我的订单",
     selectMeals: "选择餐点",
+    dailyDelivery: "每日配送",
     deliveryTracking: "配送追踪",
     credits: "餐券",
     settings: "设置",
@@ -417,6 +418,12 @@ const translations: TranslationsType = {
     loadingMeals: "正在加载餐点信息...",
     selectedCount: "已选择",
     proceedToCheckout: "前往结账",
+    itemAddedToCart: "已添加到购物车",
+    checkoutNotImplemented: "结账功能尚未实现",
+    featureComingSoon: "此功能即将推出",
+    cartEmpty: "购物车为空",
+    addItemsToCart: "请添加商品到购物车",
+    loading: "加载中",
     checkoutTitle: "结账",
     confirmOrderDetails: "确认您的订单详情",
     deliveryInfo: "配送信息",
@@ -631,6 +638,7 @@ const translations: TranslationsType = {
     overview: "Overview",
     myOrders: "My Orders",
     selectMeals: "Select Meals",
+    dailyDelivery: "Daily Delivery",
     deliveryTracking: "Delivery Tracking",
     credits: "Credits",
     settings: "Settings",
@@ -745,6 +753,12 @@ const translations: TranslationsType = {
     loadingMeals: "Loading meal information...",
     selectedCount: "Selected",
     proceedToCheckout: "Proceed to Checkout",
+    itemAddedToCart: "Item Added to Cart",
+    checkoutNotImplemented: "Checkout Not Implemented",
+    featureComingSoon: "This feature is coming soon",
+    cartEmpty: "Cart is Empty",
+    addItemsToCart: "Please add items to your cart",
+    loading: "Loading",
     checkoutTitle: "Checkout",
     confirmOrderDetails: "Confirm your order details",
     deliveryInfo: "Delivery Information",
