@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Gem, CheckCircle2, Plus, Minus, ShoppingCart, Calendar } from 'lucide-react'
+import { Gem, CheckCircle2, Plus, Minus, ShoppingCart } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -321,8 +321,7 @@ export default function DailyDelivery() {
                       : "hover:bg-[#F5EDE4] text-[#6B5F53]"
                   )}
                 >
-                  <Calendar className="h-4 w-4" />
-                  <div>
+                  <div className="w-full">
                     <p className="font-medium capitalize text-sm">{day.substring(0, 3)}</p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
                   </div>
