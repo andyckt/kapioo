@@ -354,9 +354,7 @@ export default function DailyDelivery() {
                         </div>
                       </div>
                       
-                      {/* Combo Options Card with Dish Details */}
-                      <div className={`p-4 rounded-xl ${accentTypes.brown1.bg} border ${accentTypes.brown1.border}`}>
-                        {/* 2-Dish Voucher Option */}
+                      {/* 2-Dish Voucher Option */}
                         <div className="mb-4">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -458,7 +456,6 @@ export default function DailyDelivery() {
                             </ul>
                           </div>
                         </div>
-                      </div>
                       
                       {/* Meal Tags */}
                       <div className="flex flex-wrap gap-1 mt-3">
