@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Gem, CheckCircle2, Plus, Minus, ShoppingCart } from 'lucide-react'
+import { Plus, Minus, ShoppingCart } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -50,42 +50,7 @@ export default function DailyDelivery() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedDay, setSelectedDay] = useState<string>('monday')
   
-  // Helper function to get icon component for tags
-  const getIconForTag = (tag: string): string => {
-    const iconMap: Record<string, string> = {
-      'High Protein': 'Zap',
-      'Omega-3': 'Heart',
-      'Gluten-Free': 'Shield',
-      'Quick': 'Flame',
-      'Family Favorite': 'Heart',
-      'Comfort Food': 'Heart',
-      'Italian': 'ChefHat',
-      'Creamy': 'Sparkles',
-      'Vegetarian': 'Leaf',
-      'Spicy': 'Flame',
-      'Indian': 'ChefHat',
-      'Healthy': 'Heart',
-      'Seafood': 'Shield',
-      'Mexican': 'ChefHat',
-      'Fresh': 'Leaf'
-    }
-    return iconMap[tag] || 'Sparkles'
-  }
-  
-  // Helper function to render icon components
-  const TagIcon = ({ type, className }: { type: string; className?: string }) => {
-    const icons = {
-      Sparkles: <span className={className}>✨</span>,
-      Leaf: <span className={className}>🍃</span>,
-      Shield: <span className={className}>🛡️</span>,
-      Zap: <span className={className}>⚡</span>,
-      Heart: <span className={className}>❤️</span>,
-      Flame: <span className={className}>🔥</span>,
-      Apple: <span className={className}>🍎</span>,
-      ChefHat: <span className={className}>👨‍🍳</span>
-    }
-    return icons[type as keyof typeof icons] || <span className={className}>✨</span>
-  }
+  // Tag helper functions removed as icons are no longer used
 
   // Load mock data for now (will be replaced with API call later)
   useEffect(() => {
@@ -385,7 +350,7 @@ export default function DailyDelivery() {
                           </div>
                           
                           {/* 2-Dish Voucher Dish List */}
-                          <div className="mt-2 bg-white/50 p-2 rounded-md">
+                          <div className="mt-2">
                             <div className="text-xs font-medium mb-1 text-[#6B5F53]">Includes:</div>
                             <ul className="space-y-1">
                               {combo.typeA.dishes.map((dish, idx) => (
@@ -439,7 +404,7 @@ export default function DailyDelivery() {
                           </div>
                           
                           {/* 3-Dish Voucher Additional Dishes */}
-                          <div className="mt-2 bg-white/50 p-2 rounded-md">
+                          <div className="mt-2">
                             <div className="text-xs font-medium mb-1 text-[#6B5F53]">
                               包含每餐2菜的所有菜品，另加:
                             </div>
@@ -464,13 +429,12 @@ export default function DailyDelivery() {
                             key={tagIndex}
                             className="transition-all duration-300"
                           >
-                            <div className={`
+                                                          <div className={`
                               px-2 py-1 rounded-full 
-                              flex items-center gap-1
+                              flex items-center
                               bg-gradient-to-r ${accentTypes.brown1.gradient}
                               text-white shadow-sm
                             `}>
-                              <TagIcon type={getIconForTag(tag)} className="w-3 h-3" />
                               <span className="text-xs font-medium">{tag}</span>
                             </div>
                           </div>
