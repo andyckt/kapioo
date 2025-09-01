@@ -18,11 +18,11 @@ type ComboItem = {
   tags: string[]
   typeA: {
     dishes: string[]
-    price: number
+    voucherType: 'twoDish'
   }
   typeB: {
     dishes: string[]
-    price: number
+    voucherType: 'threeDish'
   }
 }
 
@@ -38,7 +38,7 @@ type CartItem = {
   comboName: string
   type: ComboType
   quantity: number
-  price: number
+  voucherType: 'twoDish' | 'threeDish'
 }
 
 export default function DailyDelivery() {
@@ -121,11 +121,11 @@ export default function DailyDelivery() {
               tags: ["Fresh", "Healthy", i % 2 === 0 ? "Vegetarian" : "High Protein"],
               typeA: {
                 dishes: ["Main dish", "Side salad", "Dessert"],
-                price: 2
+                voucherType: 'twoDish'
               },
               typeB: {
                 dishes: ["Main dish", "Side salad", "Dessert", "Drink", "Appetizer"],
-                price: 3
+                voucherType: 'threeDish'
               }
             },
             {
@@ -140,11 +140,11 @@ export default function DailyDelivery() {
               tags: ["Gourmet", i % 2 === 0 ? "Seafood" : "Comfort Food"],
               typeA: {
                 dishes: ["Premium main dish", "Gourmet side", "Premium dessert"],
-                price: 3
+                voucherType: 'twoDish'
               },
               typeB: {
                 dishes: ["Premium main dish", "Gourmet side", "Premium dessert", "Wine pairing", "Chef's special appetizer"],
-                price: 4
+                voucherType: 'threeDish'
               }
             }
           ]
@@ -180,14 +180,16 @@ export default function DailyDelivery() {
           comboName: combo.name,
           type,
           quantity: 1,
-          price: type === 'A' ? combo.typeA.price : combo.typeB.price
+          voucherType: type === 'A' ? 'twoDish' : 'threeDish'
         }
       ])
     }
     
+    const voucherTypeText = type === 'A' ? '2-Dish Voucher' : '3-Dish Voucher'
+    
     toast({
       title: t('itemAddedToCart'),
-      description: `${combo.name} (${type === 'A' ? 'Type A' : 'Type B'}) added to cart`,
+      description: `${combo.name} (${voucherTypeText}) added to cart`,
     })
   }
   
@@ -216,9 +218,22 @@ export default function DailyDelivery() {
     return item ? item.quantity : 0
   }
   
-  // Calculate total price
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+  // Calculate total vouchers used
+  const getTotalVouchers = () => {
+    const totals = {
+      twoDish: 0,
+      threeDish: 0
+    }
+    
+    cart.forEach(item => {
+      if (item.voucherType === 'twoDish') {
+        totals.twoDish += item.quantity
+      } else {
+        totals.threeDish += item.quantity
+      }
+    })
+    
+    return totals
   }
   
   // Calculate total items
@@ -253,7 +268,14 @@ export default function DailyDelivery() {
         >
           <ShoppingCart className="h-4 w-4" />
           <span>{getTotalItems()}</span>
-          <span className="ml-2">{getTotalPrice()} {t('credits')}</span>
+          <div className="ml-2 flex items-center gap-2">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+              2D: {getTotalVouchers().twoDish}
+            </span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+              3D: {getTotalVouchers().threeDish}
+            </span>
+          </div>
         </Button>
       </div>
       
@@ -322,9 +344,7 @@ export default function DailyDelivery() {
                               <div className="flex items-center gap-2">
                                 <span className="bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded-full">Type A</span>
                                 <div className="flex items-center gap-1 text-sm">
-                                  <span>{combo.typeA.price}</span>
-                                  <Gem className="h-3.5 w-3.5" />
-                                  <span>{t('credits')}</span>
+                                  <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">2-Dish Voucher</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -376,9 +396,7 @@ export default function DailyDelivery() {
                               <div className="flex items-center gap-2">
                                 <span className="bg-primary/20 text-primary text-xs font-medium px-2 py-1 rounded-full">Type B</span>
                                 <div className="flex items-center gap-1 text-sm">
-                                  <span>{combo.typeB.price}</span>
-                                  <Gem className="h-3.5 w-3.5" />
-                                  <span>{t('credits')}</span>
+                                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">3-Dish Voucher</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -448,7 +466,14 @@ export default function DailyDelivery() {
               <ShoppingCart className="h-4 w-4" />
               <span>{getTotalItems()} items</span>
             </span>
-            <span>{getTotalPrice()} {t('credits')}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                2D: {getTotalVouchers().twoDish}
+              </span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                3D: {getTotalVouchers().threeDish}
+              </span>
+            </div>
           </Button>
         </div>
       )}
