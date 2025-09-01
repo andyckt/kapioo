@@ -293,33 +293,31 @@ export default function DailyDelivery() {
           <div className="w-4/5 pl-4">
             {days[selectedDay] && (
               <div className="relative transition-all duration-300 ease-out">
-                {/* Enhanced Glassmorphism Card */}
-                <div className={`
-                  relative backdrop-blur-xl bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4]
-                  rounded-3xl p-6 border border-[#C2884E]/20 shadow-lg
-                  transition-all duration-300 ease-out
-                  shadow-lg shadow-[#C2884E]/5
-                `}>
-                  {/* Day Header - Hidden on mobile */}
-                  <div className="hidden md:block text-center mb-6 relative">
-                    <div className="inline-block">
-                      <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{selectedDay}</h3>
-                      <div className={`w-8 h-px ${accentTypes.brown1.bg} mx-auto mb-2`}></div>
-                      <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[selectedDay].date}</p>
-                    </div>
+                {/* Day Header - Hidden on mobile */}
+                <div className="hidden md:block text-center mb-6 relative">
+                  <div className="inline-block">
+                    <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{selectedDay}</h3>
+                    <div className={`w-8 h-px ${accentTypes.brown1.bg} mx-auto mb-2`}></div>
+                    <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[selectedDay].date}</p>
                   </div>
+                </div>
 
-                  {/* Combos for this day */}
+                {/* Combos for this day */}
                   {days[selectedDay].combos.map((combo, comboIndex) => (
                     <div key={combo.id} className="mb-6 last:mb-0">
-                      <div className="flex flex-wrap items-center justify-between mb-3">
-                        <h3 className="text-base font-medium text-[#6B5F53]">{combo.name}</h3>
-                        <div className="text-sm text-[#6B5F53]/80">
-                          {combo.calories} KCAL
+                      <div className={`
+                        relative backdrop-blur-xl bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4]
+                        rounded-2xl p-5 border border-[#C2884E]/20 shadow-md
+                        transition-all duration-300 ease-out
+                      `}>
+                        <div className="flex flex-wrap items-center justify-between mb-3">
+                          <h3 className="text-base font-medium text-[#6B5F53]">{combo.name}</h3>
+                          <div className="text-sm text-[#6B5F53]/80">
+                            {combo.calories} KCAL
+                          </div>
                         </div>
-                      </div>
-                      
-                      {/* 2-Dish Voucher Option */}
+                        
+                        {/* 2-Dish Voucher Option */}
                         <div className="mb-4">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -417,27 +415,27 @@ export default function DailyDelivery() {
                           </div>
                         </div>
                       
-                      {/* Meal Tags */}
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {combo.tags.map((tag, tagIndex) => (
-                          <div
-                            key={tagIndex}
-                            className="transition-all duration-300"
-                          >
-                                                          <div className={`
-                              px-2 py-1 rounded-full 
-                              flex items-center
-                              bg-gradient-to-r ${accentTypes.brown1.gradient}
-                              text-white shadow-sm
-                            `}>
-                              <span className="text-xs font-medium">{tag}</span>
+                        {/* Meal Tags */}
+                        <div className="flex flex-wrap gap-1 mt-3">
+                          {combo.tags.map((tag, tagIndex) => (
+                            <div
+                              key={tagIndex}
+                              className="transition-all duration-300"
+                            >
+                              <div className={`
+                                px-2 py-1 rounded-full 
+                                flex items-center
+                                bg-gradient-to-r ${accentTypes.brown1.gradient}
+                                text-white shadow-sm
+                              `}>
+                                <span className="text-xs font-medium">{tag}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}
-                </div>
               </div>
             )}
           </div>
