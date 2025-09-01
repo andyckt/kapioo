@@ -300,8 +300,8 @@ export default function DailyDelivery() {
                   transition-all duration-300 ease-out
                   shadow-lg shadow-[#C2884E]/5
                 `}>
-                  {/* Day Header */}
-                  <div className="text-center mb-6 relative">
+                  {/* Day Header - Hidden on mobile */}
+                  <div className="hidden md:block text-center mb-6 relative">
                     <div className="inline-block">
                       <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{selectedDay}</h3>
                       <div className={`w-8 h-px ${accentTypes.brown1.bg} mx-auto mb-2`}></div>
