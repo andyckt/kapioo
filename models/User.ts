@@ -34,6 +34,8 @@ export interface IUser extends Document {
   joined: Date;
   status: string;
   credits: number;
+  twoDishVoucher: number;  // Voucher for two-dish meals
+  threeDishVoucher: number; // Voucher for three-dish meals
   phone?: string;
   address?: IAddress;
   verificationCode?: string;
@@ -92,6 +94,14 @@ const UserSchema: Schema = new Schema(
     credits: { 
       type: Number, 
       default: 0 
+    },
+    twoDishVoucher: {
+      type: Number,
+      default: 0
+    },
+    threeDishVoucher: {
+      type: Number,
+      default: 0
     },
     phone: { 
       type: String 

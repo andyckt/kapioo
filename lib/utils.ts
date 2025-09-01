@@ -415,6 +415,8 @@ export interface User {
   nickname?: string;
   email: string;
   credits: number;
+  twoDishVoucher: number;
+  threeDishVoucher: number;
   joined: Date | string;
   status: string;
   address?: {
