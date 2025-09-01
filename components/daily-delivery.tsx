@@ -323,7 +323,7 @@ export default function DailyDelivery() {
                 >
                   <Calendar className="h-4 w-4" />
                   <div>
-                    <p className="font-medium capitalize text-sm">{day}</p>
+                    <p className="font-medium capitalize text-sm">{day.substring(0, 3)}</p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
                   </div>
                 </button>
