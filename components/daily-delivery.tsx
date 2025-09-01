@@ -110,7 +110,7 @@ export default function DailyDelivery() {
           combos: [
             {
               id: `${dayName}-combo1`,
-              name: `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} Combo 1`,
+              name: `套餐 1`,
               description: [
                 "Fresh ingredients prepared daily",
                 "Nutritious balanced meal",
@@ -129,7 +129,7 @@ export default function DailyDelivery() {
             },
             {
               id: `${dayName}-combo2`,
-              name: `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} Combo 2`,
+              name: `套餐 2`,
               description: [
                 "Gourmet chef-prepared meal",
                 "Premium ingredients",
@@ -243,6 +243,24 @@ export default function DailyDelivery() {
   // Define the proper order of days for display
   const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "sunday"]
   
+  // Define the accent colors for alternating days
+  const accentTypes = {
+    brown1: { 
+      bg: "bg-[#C2884E]/10", 
+      border: "border-[#C2884E]/20", 
+      text: "text-[#C2884E]", 
+      dot: "bg-[#C2884E]",
+      gradient: "from-[#C2884E] to-[#D1A46C]"
+    },
+    brown2: { 
+      bg: "bg-[#D1A46C]/10", 
+      border: "border-[#D1A46C]/20", 
+      text: "text-[#D1A46C]", 
+      dot: "bg-[#D1A46C]",
+      gradient: "from-[#D1A46C] to-[#C2884E]"
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -286,166 +304,174 @@ export default function DailyDelivery() {
           </div>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Days of the week */}
-          {dayOrder.map(day => days[day] && (
-            <Card key={day} className="overflow-hidden">
-              <CardHeader className="bg-primary/5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="capitalize">{day}</CardTitle>
-                    <CardDescription>{days[day].date}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Combos for this day */}
-                  {days[day].combos.map((combo, comboIndex) => (
-                    <div key={combo.id} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">{combo.name}</h3>
-                        <div className="flex items-center gap-2">
-                          {combo.tags.map((tag, tagIndex) => (
-                            <div
-                              key={tagIndex}
-                              className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs flex items-center gap-1"
-                            >
-                              <TagIcon type={getIconForTag(tag)} className="w-3 h-3" />
-                              <span>{tag}</span>
-                            </div>
-                          ))}
+        <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* Days of the week */}
+              {dayOrder.map((day, index) => days[day] && (
+                <div 
+                  key={day}
+                  className="transition-all duration-300 ease-out group"
+                >
+                  <div className="relative transition-all duration-300 ease-out">
+                    {/* Enhanced Glassmorphism Card */}
+                    <div className={`
+                      relative backdrop-blur-xl bg-gradient-to-br ${index % 2 === 0 ? "from-[#FBF7F2] to-[#F5EDE4]" : "from-[#F5EDE4] to-[#FBF7F2]"}
+                      rounded-3xl p-6 border border-primary/20 shadow-lg
+                      transition-all duration-300 ease-out
+                      shadow-lg shadow-primary/5
+                    `}>
+                      {/* Day Header */}
+                      <div className="text-center mb-6 relative">
+                        <div className="inline-block">
+                          <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{day}</h3>
+                          <div className={`w-8 h-px ${index % 2 === 0 ? accentTypes.brown1.bg : accentTypes.brown2.bg} mx-auto mb-2`}></div>
+                          <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[day].date}</p>
                         </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        {combo.description.map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                            <span className="text-sm">{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground">
-                        {combo.calories} KCAL
-                      </div>
-                      
-                      {/* Combined Type A and B Card */}
-                      <Card className="border border-primary/20">
-                        <CardHeader className="py-3 px-4 bg-primary/5">
-                          <CardTitle className="text-sm font-medium">Combo Options</CardTitle>
-                        </CardHeader>
-                        <CardContent className="py-3 px-4">
-                          {/* Type A Section */}
-                          <div className="mb-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded-full">Type A</span>
-                                <div className="flex items-center gap-1 text-sm">
-                                  <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">2-Dish Voucher</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => removeFromCart(day, combo, 'A')}
-                                  disabled={getQuantityInCart(day, combo.id, 'A') === 0}
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <span className="w-6 text-center">
-                                  {getQuantityInCart(day, combo.id, 'A')}
-                                </span>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => addToCart(day, days[day].date, combo, 'A')}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <ul className="space-y-1 text-sm pl-2">
-                              {combo.typeA.dishes.map((dish, idx) => (
-                                <li key={idx} className="flex items-center gap-2">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary/70"></span>
-                                  {dish}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          
-                          {/* Divider */}
-                          <div className="relative my-4">
-                            <div className="absolute inset-0 flex items-center">
-                              <div className="w-full border-t border-dashed border-primary/20"></div>
-                            </div>
-                            <div className="relative flex justify-center">
-                              <span className="bg-background px-2 text-xs text-muted-foreground">UPGRADE TO</span>
+
+                      {/* Combos for this day */}
+                      {days[day].combos.map((combo, comboIndex) => (
+                        <div key={combo.id} className="mb-6 last:mb-0">
+                          <div className="flex flex-wrap items-center justify-between mb-3">
+                            <h3 className="text-base font-medium text-[#6B5F53]">{combo.name}</h3>
+                            <div className="text-sm text-[#6B5F53]/80">
+                              {combo.calories} KCAL
                             </div>
                           </div>
                           
-                          {/* Type B Section */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="bg-primary/20 text-primary text-xs font-medium px-2 py-1 rounded-full">Type B</span>
-                                <div className="flex items-center gap-1 text-sm">
-                                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">3-Dish Voucher</span>
+                          {/* Combo Options Card with Dish Details */}
+                          <div className={`p-4 rounded-xl ${index % 2 === 0 ? accentTypes.brown1.bg : accentTypes.brown2.bg} border ${index % 2 === 0 ? accentTypes.brown1.border : accentTypes.brown2.border}`}>
+                            {/* 2-Dish Voucher Option */}
+                            <div className="mb-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium">每餐2菜</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-7 w-7 bg-white/80"
+                                    onClick={() => removeFromCart(day, combo, 'A')}
+                                    disabled={getQuantityInCart(day, combo.id, 'A') === 0}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="w-5 text-center text-sm">
+                                    {getQuantityInCart(day, combo.id, 'A')}
+                                  </span>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-7 w-7 bg-white/80"
+                                    onClick={() => addToCart(day, days[day].date, combo, 'A')}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => removeFromCart(day, combo, 'B')}
-                                  disabled={getQuantityInCart(day, combo.id, 'B') === 0}
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <span className="w-6 text-center">
-                                  {getQuantityInCart(day, combo.id, 'B')}
-                                </span>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => addToCart(day, days[day].date, combo, 'B')}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
+                              
+                              {/* 2-Dish Voucher Dish List */}
+                              <div className="mt-2 bg-white/50 p-2 rounded-md">
+                                <div className="text-xs font-medium mb-1 text-[#6B5F53]">Includes:</div>
+                                <ul className="space-y-1">
+                                  {combo.typeA.dishes.map((dish, idx) => (
+                                    <li key={idx} className="flex items-center gap-1.5">
+                                      <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                                      <span className="text-xs text-[#6B5F53]">{dish}</span>
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
                             </div>
                             
-                            {/* Only show the additional dishes that Type B has over Type A */}
-                            <div className="bg-primary/5 rounded-md p-3">
-                              <div className="text-xs font-medium mb-2 text-primary/80">Includes all Type A dishes, plus:</div>
-                              <ul className="space-y-1 text-sm pl-2">
-                                {combo.typeB.dishes
-                                  .filter(dish => !combo.typeA.dishes.includes(dish))
-                                  .map((dish, idx) => (
-                                    <li key={idx} className="flex items-center gap-2">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                                      {dish}
-                                    </li>
-                                  ))
-                                }
-                              </ul>
+                            {/* Divider */}
+                            <div className="relative my-3">
+                              <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-dashed border-[#6B5F53]/20"></div>
+                              </div>
+                              <div className="relative flex justify-center">
+                                <span className="px-2 text-xs text-[#6B5F53]/60 bg-[#F5EDE4]">UPGRADE TO</span>
+                              </div>
+                            </div>
+                            
+                            {/* 3-Dish Voucher Option */}
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium">每餐3菜</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-7 w-7 bg-white/80"
+                                    onClick={() => removeFromCart(day, combo, 'B')}
+                                    disabled={getQuantityInCart(day, combo.id, 'B') === 0}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="w-5 text-center text-sm">
+                                    {getQuantityInCart(day, combo.id, 'B')}
+                                  </span>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-7 w-7 bg-white/80"
+                                    onClick={() => addToCart(day, days[day].date, combo, 'B')}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              {/* 3-Dish Voucher Additional Dishes */}
+                              <div className="mt-2 bg-white/50 p-2 rounded-md">
+                                <div className="text-xs font-medium mb-1 text-[#6B5F53]">
+                                  包含每餐2菜的所有菜品，另加:
+                                </div>
+                                <ul className="space-y-1">
+                                  {combo.typeB.dishes
+                                    .filter(dish => !combo.typeA.dishes.includes(dish))
+                                    .map((dish, idx) => (
+                                      <li key={idx} className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-green-500"></span>
+                                        <span className="text-xs text-[#6B5F53]">{dish}</span>
+                                      </li>
+                                    ))
+                                  }
+                                </ul>
+                              </div>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                          
+                          {/* Meal Tags */}
+                          <div className="flex flex-wrap gap-1 mt-3">
+                            {combo.tags.map((tag, tagIndex) => (
+                              <div
+                                key={tagIndex}
+                                className="transition-all duration-300"
+                              >
+                                <div className={`
+                                  px-2 py-1 rounded-full 
+                                  flex items-center gap-1
+                                  bg-gradient-to-r ${index % 2 === 0 ? accentTypes.brown1.gradient : accentTypes.brown2.gradient}
+                                  text-white shadow-sm
+                                `}>
+                                  <TagIcon type={getIconForTag(tag)} className="w-3 h-3" />
+                                  <span className="text-xs font-medium">{tag}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              ))}
+            </div>
         </div>
       )}
       
@@ -453,7 +479,7 @@ export default function DailyDelivery() {
       {cart.length > 0 && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg">
           <Button 
-            className="w-full flex items-center justify-between"
+            className="w-full flex items-center justify-between bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white hover:from-[#B17A40] hover:to-[#C09660]"
             onClick={() => {
               toast({
                 title: t('checkoutNotImplemented'),
@@ -466,11 +492,11 @@ export default function DailyDelivery() {
               <span>{getTotalItems()} items</span>
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-                2D: {getTotalVouchers().twoDish}
+              <span className="text-xs px-1.5 py-0.5 rounded bg-white/20 border border-white/30">
+                每餐2菜: {getTotalVouchers().twoDish}
               </span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-                3D: {getTotalVouchers().threeDish}
+              <span className="text-xs px-1.5 py-0.5 rounded bg-white/20 border border-white/30">
+                每餐3菜: {getTotalVouchers().threeDish}
               </span>
             </div>
           </Button>
