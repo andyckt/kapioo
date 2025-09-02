@@ -61,28 +61,41 @@ export default function WeeklySubscription() {
         : format(date, 'MMM dd')
     }
     
-    // Mock meal options
-    const mockOptions: MealOption[] = [
+    // Mock meal options for Sunday
+    const sundayOptions: MealOption[] = [
       {
-        id: 'six-meals',
-        name: language === 'zh' ? '6餐套餐' : '6 Meal Package',
-
-        price: 6,
-
+        id: 'sunday-option1',
+        name: '鲜虾鸡翅焖煲 + 紫米饭 + 蘑菇青菜',
+        price: 6
       },
       {
-        id: 'ten-meals',
-        name: language === 'zh' ? '10餐套餐' : '10 Meal Package',
-
-        price: 10,
-
+        id: 'sunday-option2',
+        name: '罗勒青酱意面 + 意式香草烤鸡',
+        price: 6
       },
       {
-        id: 'custom-meals',
-        name: language === 'zh' ? '自定义套餐' : 'Custom Package',
-
-        price: 0,
-
+        id: 'sunday-option3',
+        name: '桂侯萝卜慢炖牛腋 + 紫米饭 + 蔑油菜心',
+        price: 6
+      }
+    ]
+    
+    // Mock meal options for Tuesday
+    const tuesdayOptions: MealOption[] = [
+      {
+        id: 'tuesday-option1',
+        name: '豌豆/爆炒牛肉粒 + 玉米饭 + 时蔬',
+        price: 6
+      },
+      {
+        id: 'tuesday-option2',
+        name: '西班牙浓郁海鲜烩饭',
+        price: 6
+      },
+      {
+        id: 'tuesday-option3',
+        name: '泰式柠檬干煎鸡 + 清炒黄瓜条',
+        price: 6
       }
     ]
     
@@ -92,13 +105,13 @@ export default function WeeklySubscription() {
         id: 'sunday',
         name: language === 'zh' ? '周日配送' : 'Sunday Delivery',
         date: formatDate(nextSunday),
-        options: mockOptions
+        options: sundayOptions
       },
       {
         id: 'tuesday',
         name: language === 'zh' ? '周二配送' : 'Tuesday Delivery',
         date: formatDate(nextTuesday),
-        options: mockOptions
+        options: tuesdayOptions
       }
     ])
     
