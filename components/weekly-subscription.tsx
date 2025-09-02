@@ -199,11 +199,14 @@ export default function WeeklySubscription() {
 
   return (
     <div className="flex flex-col h-full space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">{language === 'zh' ? '每周订阅' : 'Weekly Subscription'}</h2>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">{language === 'zh' ? '每周订阅' : 'Weekly Subscription'}</h2>
+          <div className="h-1 w-20 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] rounded-full mt-1"></div>
+        </div>
         <Button 
           variant="outline" 
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
           onClick={handleCheckout}
         >
           <ShoppingCart className="h-4 w-4" />
@@ -252,7 +255,7 @@ export default function WeeklySubscription() {
                   {day.options.map((option) => (
                     <Card 
                       key={option.id}
-                      className="overflow-hidden transition-all duration-300 hover:shadow-md"
+                      className="overflow-hidden transition-all duration-300 hover:shadow-md border-[#C2884E]/10 hover:border-[#C2884E]/30 bg-white rounded-lg hover:rounded-xl"
                     >
                       <CardContent className="p-0">
                         <div className="p-4">
@@ -295,8 +298,8 @@ export default function WeeklySubscription() {
             ))}
           </div>
           
-          {/* Subscription Summary */}
-          {getTotalItems() > 0 && (
+          {/* Subscription Summary - Commented out for now */}
+          {/* {getTotalItems() > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -320,7 +323,7 @@ export default function WeeklySubscription() {
                             {day?.name} - {option.name} x{item.quantity}
                           </span>
                           <span className="font-medium">
-                            {option.price * item.quantity} {language === 'zh' ? '餐券' : 'credits'}
+                            {item.quantity} {language === 'zh' ? '餐券' : 'credits'}
                           </span>
                         </div>
                       )
@@ -341,7 +344,7 @@ export default function WeeklySubscription() {
                 </CardContent>
               </Card>
             </motion.div>
-          )}
+          )} */}
         </div>
       )}
     </div>
