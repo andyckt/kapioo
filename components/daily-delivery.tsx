@@ -66,6 +66,83 @@ export default function DailyDelivery() {
         { day: 'sunday', date: 'Sep 7' }
       ];
       
+      // Define different dishes for each day
+      type DailyDishesType = {
+        [key: string]: {
+          combo1: {
+            typeA: string[],
+            typeB: string[]
+          },
+          combo2: {
+            typeA: string[],
+            typeB: string[]
+          }
+        }
+      };
+      
+      const dailyDishes: DailyDishesType = {
+        monday: {
+          combo1: {
+            typeA: ["红烧肉", "清炒时蔬", "杨枝甘露"],
+            typeB: ["红烧肉", "清炒时蔬", "杨枝甘露", "酸梅汤", "春卷"]
+          },
+          combo2: {
+            typeA: ["北京烤鸭", "松露炒饭", "芒果布丁"],
+            typeB: ["北京烤鸭", "松露炒饭", "芒果布丁", "花雕酒", "凉拌海蜇"]
+          }
+        },
+        tuesday: {
+          combo1: {
+            typeA: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕"],
+            typeB: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕", "乌龙茶", "鲜虾春卷"]
+          },
+          combo2: {
+            typeA: ["水煮鱼", "榨菜肉丝面", "红豆沙"],
+            typeB: ["水煮鱼", "榨菜肉丝面", "红豆沙", "青梅酒", "酱牛肉"]
+          }
+        },
+        wednesday: {
+          combo1: {
+            typeA: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆"],
+            typeB: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆", "菊花茶", "香菇青菜包"]
+          },
+          combo2: {
+            typeA: ["东坡肉", "虾仁炒蛋", "桃胶雪燕"],
+            typeB: ["东坡肉", "虾仁炒蛋", "桃胶雪燕", "梅子酒", "卤鸭翅"]
+          }
+        },
+        thursday: {
+          combo1: {
+            typeA: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露"],
+            typeB: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露", "龙井茶", "蟹黄小笼包"]
+          },
+          combo2: {
+            typeA: ["葱爆羊肉", "干锅土豆片", "桂圆红枣羹"],
+            typeB: ["葱爆羊肉", "干锅土豆片", "桂圆红枣羹", "竹叶青酒", "凉拌木耳"]
+          }
+        },
+        friday: {
+          combo1: {
+            typeA: ["鱼香肉丝", "炝炒油菜", "奶黄包"],
+            typeB: ["鱼香肉丝", "炝炒油菜", "奶黄包", "普洱茶", "千层饼"]
+          },
+          combo2: {
+            typeA: ["辣子鸡", "虾仁豆腐", "蛋黄酥"],
+            typeB: ["辣子鸡", "虾仁豆腐", "蛋黄酥", "黄酒", "卤鸡爪"]
+          }
+        },
+        sunday: {
+          combo1: {
+            typeA: ["回锅肉", "蒜泥白肉", "豆沙包"],
+            typeB: ["回锅肉", "蒜泥白肉", "豆沙包", "铁观音", "香酥鸭"]
+          },
+          combo2: {
+            typeA: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤"],
+            typeB: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤", "绍兴酒", "盐水鸭"]
+          }
+        }
+      };
+      
       const mockDays: Record<string, DayData> = {}
       
       // Generate data for each day in order
@@ -81,11 +158,11 @@ export default function DailyDelivery() {
               calories: 650,
               tags: ["Fresh", "Healthy", index % 2 === 0 ? "Vegetarian" : "High Protein"],
               typeA: {
-                dishes: ["红烧肉", "清炒时蔬", "杨枝甘露"],
+                dishes: dailyDishes[dayName].combo1.typeA,
                 voucherType: 'twoDish'
               },
               typeB: {
-                dishes: ["红烧肉", "清炒时蔬", "杨枝甘露", "酸梅汤", "春卷"],
+                dishes: dailyDishes[dayName].combo1.typeB,
                 voucherType: 'threeDish'
               }
             },
@@ -96,11 +173,11 @@ export default function DailyDelivery() {
               calories: 850,
               tags: ["Gourmet", index % 2 === 0 ? "Seafood" : "Comfort Food"],
               typeA: {
-                dishes: ["北京烤鸭", "松露炒饭", "芒果布丁"],
+                dishes: dailyDishes[dayName].combo2.typeA,
                 voucherType: 'twoDish'
               },
               typeB: {
-                dishes: ["北京烤鸭", "松露炒饭", "芒果布丁", "花雕酒", "凉拌海蜇"],
+                dishes: dailyDishes[dayName].combo2.typeB,
                 voucherType: 'threeDish'
               }
             }
