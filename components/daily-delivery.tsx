@@ -352,8 +352,7 @@ export default function DailyDelivery() {
                           <div className="mt-2">
                             <ul className="space-y-1">
                               {combo.typeA.dishes.map((dish, idx) => (
-                                <li key={idx} className="flex items-center gap-1.5">
-                                  <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                                <li key={idx} className="flex items-center">
                                   <span className="text-xs text-[#6B5F53]">{dish}</span>
                                 </li>
                               ))}
@@ -405,8 +404,7 @@ export default function DailyDelivery() {
                               {combo.typeB.dishes
                                 .filter(dish => !combo.typeA.dishes.includes(dish))
                                 .map((dish, idx) => (
-                                  <li key={idx} className="flex items-center gap-1.5">
-                                    <span className="w-1 h-1 rounded-full bg-green-500"></span>
+                                  <li key={idx} className="flex items-center">
                                     <span className="text-xs text-[#6B5F53]">{dish}</span>
                                   </li>
                                 ))
