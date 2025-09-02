@@ -17,7 +17,7 @@ type MealOption = {
   id: string
   name: string
 
-  price: number
+
 
 }
 
@@ -66,17 +66,17 @@ export default function WeeklySubscription() {
       {
         id: 'sunday-option1',
         name: '鲜虾鸡翅焖煲 + 紫米饭 + 蘑菇青菜',
-        price: 6
+
       },
       {
         id: 'sunday-option2',
         name: '罗勒青酱意面 + 意式香草烤鸡',
-        price: 6
+
       },
       {
         id: 'sunday-option3',
         name: '桂侯萝卜慢炖牛腋 + 紫米饭 + 蔑油菜心',
-        price: 6
+
       }
     ]
     
@@ -85,17 +85,17 @@ export default function WeeklySubscription() {
       {
         id: 'tuesday-option1',
         name: '豌豆/爆炒牛肉粒 + 玉米饭 + 时蔬',
-        price: 6
+
       },
       {
         id: 'tuesday-option2',
         name: '西班牙浓郁海鲜烩饭',
-        price: 6
+
       },
       {
         id: 'tuesday-option3',
         name: '泰式柠檬干煎鸡 + 清炒黄瓜条',
-        price: 6
+
       }
     ]
     
@@ -174,11 +174,8 @@ export default function WeeklySubscription() {
   
   // Calculate total credits needed
   const getTotalCredits = () => {
-    return cart.reduce((total, item) => {
-      const day = deliveryDays.find(d => d.id === item.dayId)
-      const option = day?.options.find(o => o.id === item.optionId)
-      return total + (option?.price || 0) * item.quantity
-    }, 0)
+    // Simply return the number of items in the cart
+    return getTotalItems()
   }
   
   // Handle checkout
@@ -211,11 +208,6 @@ export default function WeeklySubscription() {
         >
           <ShoppingCart className="h-4 w-4" />
           <span>{getTotalItems()}</span>
-          <div className="ml-2">
-            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-              {getTotalCredits()} {language === 'zh' ? '餐券' : 'Credits'}
-            </span>
-          </div>
         </Button>
       </div>
       
@@ -266,18 +258,7 @@ export default function WeeklySubscription() {
                         <div className="p-4">
                               <div className="flex items-start justify-between">
                                 <h4 className="font-medium text-[#6B5F53]">{option.name}</h4>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="bg-[#F5EDE4] px-2 py-1 rounded text-xs font-medium text-[#C2884E]">
-                                        {option.price} {language === 'zh' ? '餐券/餐' : 'credits/meal'}
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{language === 'zh' ? '每餐所需餐券数量' : 'Credits needed per meal'}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+
                               </div>
 
                             </div>
