@@ -56,7 +56,7 @@ type TranslationKey =
   | 'resetPassword' | 'enterPhoneReset' | 'createNewPassword' | 'verifyPhoneNumber'
   | 'newPassword' | 'confirmNewPassword' | 'resetPasswordBtn' | 'rememberPassword'
   // Dashboard translations
-  | 'overview' | 'myOrders' | 'selectMeals' | 'dailyDelivery' | 'deliveryTracking' | 'credits' | 'settings'
+  | 'overview' | 'myOrders' | 'selectMeals' | 'dailyDelivery' | 'deliveryTracking' | 'credits' | 'settings' | 'weeklySubscription'
   | 'profile' | 'referFriend' | 'logOut' | 'upcomingDeliveries' | 'creditsAvailable'
   | 'totalOrders' | 'personalInfo' | 'addressInfo' | 'security' | 'save' | 'saving'
   | 'changesSaved' | 'errorSaving' | 'currentPassword' | 'newPasswordDash' | 'updatePassword'
@@ -304,6 +304,7 @@ const translations: TranslationsType = {
     myOrders: "我的订单",
     selectMeals: "选择餐点",
     dailyDelivery: "每日配送",
+    weeklySubscription: "每周订阅",
     deliveryTracking: "配送追踪",
     credits: "餐券",
     settings: "设置",
@@ -639,6 +640,7 @@ const translations: TranslationsType = {
     myOrders: "My Orders",
     selectMeals: "Select Meals",
     dailyDelivery: "Daily Delivery",
+    weeklySubscription: "Weekly Subscription",
     deliveryTracking: "Delivery Tracking",
     credits: "Credits",
     settings: "Settings",

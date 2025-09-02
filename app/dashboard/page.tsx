@@ -34,6 +34,7 @@ import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import Image from "next/image"
 import DailyDelivery from "@/components/daily-delivery"
+import WeeklySubscription from "@/components/weekly-subscription"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -380,6 +381,7 @@ export default function DashboardPage() {
     { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
     { id: "select-meals", label: t('selectMeals'), icon: <ShoppingCart className="h-4 w-4" /> },
     { id: "daily-delivery", label: t('dailyDelivery'), icon: <Calendar className="h-4 w-4" /> },
+    { id: "weekly-subscription", label: t('weeklySubscription'), icon: <Gift className="h-4 w-4" /> },
     /* Commented out for now
     { id: "nutrition", label: "Nutrition", icon: <BarChart2 className="h-4 w-4" /> },
     */
@@ -1580,6 +1582,19 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <DailyDelivery />
+                </motion.div>
+              )}
+              
+              {activeTab === "weekly-subscription" && (
+                <motion.div
+                  key="weekly-subscription"
+                  initial={{ y: 10 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <WeeklySubscription />
                 </motion.div>
               )}
             </AnimatePresence>
