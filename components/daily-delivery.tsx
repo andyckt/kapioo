@@ -14,7 +14,6 @@ type ComboType = 'A' | 'B'
 type ComboItem = {
   id: string
   name: string
-  description: string[]
   calories: number
   tags: string[]
   typeA: {
@@ -78,38 +77,30 @@ export default function DailyDelivery() {
             {
               id: `${dayName}-combo1`,
               name: `套餐 1`,
-              description: [
-                "Fresh ingredients prepared daily",
-                "Nutritious balanced meal",
-                "Eco-friendly packaging"
-              ],
+
               calories: 650,
               tags: ["Fresh", "Healthy", index % 2 === 0 ? "Vegetarian" : "High Protein"],
               typeA: {
-                dishes: ["Main dish", "Side salad", "Dessert"],
+                dishes: ["红烧肉", "清炒时蔬", "杨枝甘露"],
                 voucherType: 'twoDish'
               },
               typeB: {
-                dishes: ["Main dish", "Side salad", "Dessert", "Drink", "Appetizer"],
+                dishes: ["红烧肉", "清炒时蔬", "杨枝甘露", "酸梅汤", "春卷"],
                 voucherType: 'threeDish'
               }
             },
             {
               id: `${dayName}-combo2`,
               name: `套餐 2`,
-              description: [
-                "Gourmet chef-prepared meal",
-                "Premium ingredients",
-                "Restaurant quality"
-              ],
+
               calories: 850,
               tags: ["Gourmet", index % 2 === 0 ? "Seafood" : "Comfort Food"],
               typeA: {
-                dishes: ["Premium main dish", "Gourmet side", "Premium dessert"],
+                dishes: ["北京烤鸭", "松露炒饭", "芒果布丁"],
                 voucherType: 'twoDish'
               },
               typeB: {
-                dishes: ["Premium main dish", "Gourmet side", "Premium dessert", "Wine pairing", "Chef's special appetizer"],
+                dishes: ["北京烤鸭", "松露炒饭", "芒果布丁", "花雕酒", "凉拌海蜇"],
                 voucherType: 'threeDish'
               }
             }
