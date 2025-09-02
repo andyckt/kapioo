@@ -48,6 +48,7 @@ export default function DailyDelivery() {
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedDay, setSelectedDay] = useState<string>('monday')
+  const [dayWarning, setDayWarning] = useState<string | null>(null)
   
   // Tag helper functions removed as icons are no longer used
 
@@ -340,7 +341,23 @@ export default function DailyDelivery() {
               {dayOrder.map((day, index) => days[day] && (
                 <button
                   key={day}
-                  onClick={() => setSelectedDay(day)}
+                  onClick={() => {
+                    // Check if current day has at least 2 items selected
+                    const currentDayItems = cart.filter(item => item.day === selectedDay);
+                    const currentDayTotal = currentDayItems.reduce((total, item) => total + item.quantity, 0);
+                    
+                    if (currentDayTotal === 1) {
+                      // Show warning if only 1 item is selected
+                      // Capitalize the first letter of the day
+                      const capitalizedDay = selectedDay.charAt(0).toUpperCase() + selectedDay.slice(1);
+                      setDayWarning(`请至少选择两餐 for ${capitalizedDay}`);
+                      setTimeout(() => setDayWarning(null), 5000); // Clear warning after 5 seconds
+                    } else {
+                      // Clear any existing warning and change day
+                      setDayWarning(null);
+                      setSelectedDay(day);
+                    }
+                  }}
                   className={cn(
                     "w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2",
                     selectedDay === day 
@@ -369,6 +386,19 @@ export default function DailyDelivery() {
                     <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[selectedDay].date}</p>
                   </div>
                 </div>
+                
+                {/* Order Notice - Visible on all devices */}
+                <div className="text-left mb-6 pl-3 border-l-2 border-[#C2884E]">
+                  <h4 className="text-xs font-bold text-[#C2884E] mb-1">下单须知</h4>
+                  <p className="text-[10px] text-[#6B5F53]">每天至少选购两餐，即可享受免费派送</p>
+                </div>
+                
+                {/* Day Warning - Shows when trying to switch days with only 1 item */}
+                {dayWarning && (
+                  <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-xs text-red-600 font-medium">{dayWarning}</p>
+                  </div>
+                )}
 
                 {/* Combos for this day - Grid layout for desktop */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
