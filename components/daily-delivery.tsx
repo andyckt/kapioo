@@ -379,9 +379,9 @@ export default function DailyDelivery() {
                         rounded-2xl p-5 border border-[#C2884E]/20 shadow-md
                         transition-all duration-300 ease-out h-full
                       `}>
-                        <div className="flex flex-wrap items-center justify-between mb-3">
-                          <h3 className="text-base font-medium text-[#6B5F53]">{combo.name}</h3>
-                          <div className="text-sm text-[#6B5F53]/80">
+                        <div className="flex flex-wrap items-center justify-between mb-4">
+                          <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{combo.name}</h3>
+                          <div className="text-sm font-medium bg-[#C2884E]/5 px-2 py-1 rounded-md text-[#C2884E]">
                             {combo.calories} KCAL
                           </div>
                         </div>
@@ -390,7 +390,7 @@ export default function DailyDelivery() {
                         <div className="mb-4">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">每餐2菜</span>
+                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐2菜</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button 
@@ -417,11 +417,11 @@ export default function DailyDelivery() {
                           </div>
                           
                           {/* 2-Dish Voucher Dish List */}
-                          <div className="mt-2">
-                            <ul className="space-y-1">
+                          <div className="mt-3">
+                            <ul className="grid grid-cols-1 gap-2">
                               {combo.typeA.dishes.map((dish, idx) => (
                                 <li key={idx} className="flex items-center">
-                                  <span className="text-xs text-[#6B5F53]">{dish}</span>
+                                  <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{dish}</span>
                                 </li>
                               ))}
                             </ul>
@@ -437,7 +437,7 @@ export default function DailyDelivery() {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">每餐3菜</span>
+                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#D1A46C]/10 text-[#D1A46C]">每餐3菜</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button 
@@ -464,16 +464,16 @@ export default function DailyDelivery() {
                           </div>
                           
                           {/* 3-Dish Voucher Additional Dishes */}
-                          <div className="mt-2">
-                            <div className="text-xs font-medium mb-1 text-[#6B5F53]">
+                          <div className="mt-3">
+                            <div className="text-xs font-medium mb-2 text-[#6B5F53]/80 italic">
                               包含以上的所有菜品，再加:
                             </div>
-                            <ul className="space-y-1">
+                            <ul className="grid grid-cols-1 gap-2">
                               {combo.typeB.dishes
                                 .filter(dish => !combo.typeA.dishes.includes(dish))
                                 .map((dish, idx) => (
                                   <li key={idx} className="flex items-center">
-                                    <span className="text-xs text-[#6B5F53]">{dish}</span>
+                                    <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{dish}</span>
                                   </li>
                                 ))
                               }
