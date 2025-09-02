@@ -36,6 +36,8 @@ export interface IUser extends Document {
   credits: number;
   twoDishVoucher: number;  // Voucher for two-dish meals
   threeDishVoucher: number; // Voucher for three-dish meals
+  weeklySIXmeals: number;  // Weekly subscription for 6 meals
+  weeklyTENmeals: number;  // Weekly subscription for 10 meals
   phone?: string;
   address?: IAddress;
   verificationCode?: string;
@@ -100,6 +102,14 @@ const UserSchema: Schema = new Schema(
       default: 0
     },
     threeDishVoucher: {
+      type: Number,
+      default: 0
+    },
+    weeklySIXmeals: {
+      type: Number,
+      default: 0
+    },
+    weeklyTENmeals: {
       type: Number,
       default: 0
     },
