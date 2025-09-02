@@ -437,7 +437,7 @@ export default function DailyDelivery() {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#D1A46C]/10 text-[#D1A46C]">每餐3菜</span>
+                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐3菜</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button 
