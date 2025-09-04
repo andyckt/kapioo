@@ -47,7 +47,7 @@ export default function DailyDelivery() {
   const [days, setDays] = useState<Record<string, DayData>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
-  const [selectedDay, setSelectedDay] = useState<string>('monday')
+  const [selectedDay, setSelectedDay] = useState<string>('monday-w1')
   const [dayWarning, setDayWarning] = useState<string | null>(null)
   
   // Tag helper functions removed as icons are no longer used
@@ -57,14 +57,22 @@ export default function DailyDelivery() {
     const loadMockData = () => {
       setIsLoading(true)
       
-      // Define the order of days we want to display with fixed mock dates
+      // Define the order of days we want to display with fixed mock dates for two weeks
       const mockDaysWithDates = [
-        { day: 'monday', date: 'Sep 1' },
-        { day: 'tuesday', date: 'Sep 2' },
-        { day: 'wednesday', date: 'Sep 3' },
-        { day: 'thursday', date: 'Sep 4' },
-        { day: 'friday', date: 'Sep 5' },
-        { day: 'sunday', date: 'Sep 7' }
+        // Week 1
+        { day: 'monday-w1', displayName: 'monday', date: 'Sep 1', week: 1 },
+        { day: 'tuesday-w1', displayName: 'tuesday', date: 'Sep 2', week: 1 },
+        { day: 'wednesday-w1', displayName: 'wednesday', date: 'Sep 3', week: 1 },
+        { day: 'thursday-w1', displayName: 'thursday', date: 'Sep 4', week: 1 },
+        { day: 'friday-w1', displayName: 'friday', date: 'Sep 5', week: 1 },
+        { day: 'sunday-w1', displayName: 'sunday', date: 'Sep 7', week: 1 },
+        // Week 2
+        { day: 'monday-w2', displayName: 'monday', date: 'Sep 8', week: 2 },
+        { day: 'tuesday-w2', displayName: 'tuesday', date: 'Sep 9', week: 2 },
+        { day: 'wednesday-w2', displayName: 'wednesday', date: 'Sep 10', week: 2 },
+        { day: 'thursday-w2', displayName: 'thursday', date: 'Sep 11', week: 2 },
+        { day: 'friday-w2', displayName: 'friday', date: 'Sep 12', week: 2 },
+        { day: 'sunday-w2', displayName: 'sunday', date: 'Sep 14', week: 2 }
       ];
       
       // Define different dishes for each day
@@ -82,7 +90,8 @@ export default function DailyDelivery() {
       };
       
       const dailyDishes: DailyDishesType = {
-        monday: {
+        // Week 1
+        'monday-w1': {
           combo1: {
             typeA: ["红烧肉", "清炒时蔬", "杨枝甘露"],
             typeB: ["红烧肉", "清炒时蔬", "杨枝甘露", "酸梅汤", "春卷"]
@@ -92,7 +101,7 @@ export default function DailyDelivery() {
             typeB: ["北京烤鸭", "松露炒饭", "芒果布丁", "花雕酒", "凉拌海蜇"]
           }
         },
-        tuesday: {
+        'tuesday-w1': {
           combo1: {
             typeA: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕"],
             typeB: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕", "乌龙茶", "鲜虾春卷"]
@@ -102,7 +111,7 @@ export default function DailyDelivery() {
             typeB: ["水煮鱼", "榨菜肉丝面", "红豆沙", "青梅酒", "酱牛肉"]
           }
         },
-        wednesday: {
+        'wednesday-w1': {
           combo1: {
             typeA: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆"],
             typeB: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆", "菊花茶", "香菇青菜包"]
@@ -112,7 +121,7 @@ export default function DailyDelivery() {
             typeB: ["东坡肉", "虾仁炒蛋", "桃胶雪燕", "梅子酒", "卤鸭翅"]
           }
         },
-        thursday: {
+        'thursday-w1': {
           combo1: {
             typeA: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露"],
             typeB: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露", "龙井茶", "蟹黄小笼包"]
@@ -122,7 +131,7 @@ export default function DailyDelivery() {
             typeB: ["葱爆羊肉", "干锅土豆片", "桂圆红枣羹", "竹叶青酒", "凉拌木耳"]
           }
         },
-        friday: {
+        'friday-w1': {
           combo1: {
             typeA: ["鱼香肉丝", "炝炒油菜", "奶黄包"],
             typeB: ["鱼香肉丝", "炝炒油菜", "奶黄包", "普洱茶", "千层饼"]
@@ -132,7 +141,7 @@ export default function DailyDelivery() {
             typeB: ["辣子鸡", "虾仁豆腐", "蛋黄酥", "黄酒", "卤鸡爪"]
           }
         },
-        sunday: {
+        'sunday-w1': {
           combo1: {
             typeA: ["回锅肉", "蒜泥白肉", "豆沙包"],
             typeB: ["回锅肉", "蒜泥白肉", "豆沙包", "铁观音", "香酥鸭"]
@@ -141,16 +150,79 @@ export default function DailyDelivery() {
             typeA: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤"],
             typeB: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤", "绍兴酒", "盐水鸭"]
           }
+        },
+        // Week 2
+        'monday-w2': {
+          combo1: {
+            typeA: ["小笼包", "上海炒面", "芒果西米露"],
+            typeB: ["小笼包", "上海炒面", "芒果西米露", "乌梅汁", "锅贴"]
+          },
+          combo2: {
+            typeA: ["梅菜扣肉", "蛋炒饭", "红豆糯米糍"],
+            typeB: ["梅菜扣肉", "蛋炒饭", "红豆糯米糍", "桂花酒", "凉拌海带"]
+          }
+        },
+        'tuesday-w2': {
+          combo1: {
+            typeA: ["酸菜鱼", "蒜蓉茼蒿", "桃胶银耳羹"],
+            typeB: ["酸菜鱼", "蒜蓉茼蒿", "桃胶银耳羹", "茉莉花茶", "虾饺"]
+          },
+          combo2: {
+            typeA: ["干煸四季豆", "葱油拌面", "芋圆"],
+            typeB: ["干煸四季豆", "葱油拌面", "芋圆", "米酒", "卤水鸡"]
+          }
+        },
+        'wednesday-w2': {
+          combo1: {
+            typeA: ["鱼香茄子", "蒸蛋", "桂花糖藕"],
+            typeB: ["鱼香茄子", "蒸蛋", "桂花糖藕", "菊花普洱", "萝卜糕"]
+          },
+          combo2: {
+            typeA: ["香辣蟹", "扬州炒饭", "椰汁糕"],
+            typeB: ["香辣蟹", "扬州炒饭", "椰汁糕", "玫瑰露酒", "卤水鹅翅"]
+          }
+        },
+        'thursday-w2': {
+          combo1: {
+            typeA: ["蚝油牛肉", "清炒菠菜", "杏仁豆腐"],
+            typeB: ["蚝油牛肉", "清炒菠菜", "杏仁豆腐", "铁观音", "灌汤包"]
+          },
+          combo2: {
+            typeA: ["辣椒炒肉", "腊肠煲仔饭", "莲子羹"],
+            typeB: ["辣椒炒肉", "腊肠煲仔饭", "莲子羹", "黄酒", "卤水鸭舌"]
+          }
+        },
+        'friday-w2': {
+          combo1: {
+            typeA: ["香菇滑鸡", "上汤西洋菜", "豆腐花"],
+            typeB: ["香菇滑鸡", "上汤西洋菜", "豆腐花", "大红袍", "蛋挞"]
+          },
+          combo2: {
+            typeA: ["咕噜肉", "干炒牛河", "姜汁撞奶"],
+            typeB: ["咕噜肉", "干炒牛河", "姜汁撞奶", "桃花酿", "烧卖"]
+          }
+        },
+        'sunday-w2': {
+          combo1: {
+            typeA: ["叉烧", "虾仁云吞", "杨枝甘露"],
+            typeB: ["叉烧", "虾仁云吞", "杨枝甘露", "普洱", "萝卜牛腩煲"]
+          },
+          combo2: {
+            typeA: ["白切鸡", "荷叶饭", "芝麻糊"],
+            typeB: ["白切鸡", "荷叶饭", "芝麻糊", "竹叶青", "卤水鸡爪"]
+          }
         }
       };
       
       const mockDays: Record<string, DayData> = {}
       
       // Generate data for each day in order
-      mockDaysWithDates.forEach(({ day: dayName, date: formattedDate }, index) => {
+      mockDaysWithDates.forEach(({ day: dayName, displayName, date: formattedDate, week }, index) => {
         
         mockDays[dayName] = {
           date: formattedDate,
+          displayName,
+          week,
           combos: [
             {
               id: `${dayName}-combo1`,
@@ -271,7 +343,7 @@ export default function DailyDelivery() {
   }
 
   // Define the proper order of days for display
-  const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "sunday"]
+  const dayOrder = ["monday-w1", "tuesday-w1", "wednesday-w1", "thursday-w1", "friday-w1", "sunday-w1", "monday-w2", "tuesday-w2", "wednesday-w2", "thursday-w2", "friday-w2", "sunday-w2"]
   
   // Define the accent colors for alternating days
   const accentTypes = {
@@ -338,7 +410,9 @@ export default function DailyDelivery() {
           {/* Sidebar Day Tabs - Always visible on all devices */}
           <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 pr-2">
             <div className="sticky top-4 space-y-1">
-              {dayOrder.map((day, index) => days[day] && (
+              
+              {/* Week 1 Days */}
+              {dayOrder.filter(day => day.endsWith('-w1')).map((day, index) => days[day] && (
                 <button
                   key={day}
                   onClick={() => {
@@ -349,7 +423,8 @@ export default function DailyDelivery() {
                     if (currentDayTotal === 1) {
                       // Show warning if only 1 item is selected
                       // Capitalize the first letter of the day
-                      const capitalizedDay = selectedDay.charAt(0).toUpperCase() + selectedDay.slice(1);
+                      const displayName = days[selectedDay].displayName;
+                      const capitalizedDay = displayName.charAt(0).toUpperCase() + displayName.slice(1);
                       setDayWarning(`请至少选择两餐 for ${capitalizedDay}`);
                       setTimeout(() => setDayWarning(null), 5000); // Clear warning after 5 seconds
                     } else {
@@ -366,7 +441,48 @@ export default function DailyDelivery() {
                   )}
                 >
                   <div className="w-full">
-                    <p className="font-medium capitalize text-sm">{day.substring(0, 3)}</p>
+                    <p className="font-medium capitalize text-sm">{days[day].displayName.substring(0, 3)}</p>
+                    <p className="text-xs opacity-80">{days[day].date}</p>
+                  </div>
+                </button>
+              ))}
+              
+              {/* Next Week Header */}
+              <div className="mt-4 mb-2 px-3 py-1">
+                <p className="text-xs font-bold text-[#C2884E]">Next Week</p>
+              </div>
+              
+              {/* Week 2 Days */}
+              {dayOrder.filter(day => day.endsWith('-w2')).map((day, index) => days[day] && (
+                <button
+                  key={day}
+                  onClick={() => {
+                    // Check if current day has at least 2 items selected
+                    const currentDayItems = cart.filter(item => item.day === selectedDay);
+                    const currentDayTotal = currentDayItems.reduce((total, item) => total + item.quantity, 0);
+                    
+                    if (currentDayTotal === 1) {
+                      // Show warning if only 1 item is selected
+                      // Capitalize the first letter of the day
+                      const displayName = days[selectedDay].displayName;
+                      const capitalizedDay = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                      setDayWarning(`请至少选择两餐 for ${capitalizedDay}`);
+                      setTimeout(() => setDayWarning(null), 5000); // Clear warning after 5 seconds
+                    } else {
+                      // Clear any existing warning and change day
+                      setDayWarning(null);
+                      setSelectedDay(day);
+                    }
+                  }}
+                  className={cn(
+                    "w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2",
+                    selectedDay === day 
+                      ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" 
+                      : "hover:bg-[#F5EDE4] text-[#6B5F53]"
+                  )}
+                >
+                  <div className="w-full">
+                    <p className="font-medium capitalize text-sm">{days[day].displayName.substring(0, 3)}</p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
                   </div>
                 </button>
@@ -381,7 +497,10 @@ export default function DailyDelivery() {
                 {/* Day Header - Hidden on mobile */}
                 <div className="hidden md:block text-center mb-6 relative">
                   <div className="inline-block">
-                    <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{selectedDay}</h3>
+                    <div className="flex items-center justify-center gap-2">
+                      <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{days[selectedDay].displayName}</h3>
+                      <span className="text-sm bg-[#C2884E]/10 text-[#C2884E] px-2 py-0.5 rounded-full">{days[selectedDay].week === 1 ? 'This Week' : 'Next Week'}</span>
+                    </div>
                     <div className={`w-8 h-px ${accentTypes.brown1.bg} mx-auto mb-2`}></div>
                     <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[selectedDay].date}</p>
                   </div>
