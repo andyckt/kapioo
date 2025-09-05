@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
@@ -28,6 +28,8 @@ type ComboItem = {
 
 type DayData = {
   date: string
+  displayName: string
+  week: number
   combos: ComboItem[]
 }
 
@@ -52,217 +54,66 @@ export default function DailyDelivery() {
   
   // Tag helper functions removed as icons are no longer used
 
-  // Load mock data for now (will be replaced with API call later)
+  // Load data from API
   useEffect(() => {
-    const loadMockData = () => {
+    const fetchData = async () => {
       setIsLoading(true)
-      
-      // Define the order of days we want to display with fixed mock dates for two weeks
-      const mockDaysWithDates = [
-        // Week 1
-        { day: 'monday-w1', displayName: 'monday', date: 'Sep 1', week: 1 },
-        { day: 'tuesday-w1', displayName: 'tuesday', date: 'Sep 2', week: 1 },
-        { day: 'wednesday-w1', displayName: 'wednesday', date: 'Sep 3', week: 1 },
-        { day: 'thursday-w1', displayName: 'thursday', date: 'Sep 4', week: 1 },
-        { day: 'friday-w1', displayName: 'friday', date: 'Sep 5', week: 1 },
-        { day: 'sunday-w1', displayName: 'sunday', date: 'Sep 7', week: 1 },
-        // Week 2
-        { day: 'monday-w2', displayName: 'monday', date: 'Sep 8', week: 2 },
-        { day: 'tuesday-w2', displayName: 'tuesday', date: 'Sep 9', week: 2 },
-        { day: 'wednesday-w2', displayName: 'wednesday', date: 'Sep 10', week: 2 },
-        { day: 'thursday-w2', displayName: 'thursday', date: 'Sep 11', week: 2 },
-        { day: 'friday-w2', displayName: 'friday', date: 'Sep 12', week: 2 },
-        { day: 'sunday-w2', displayName: 'sunday', date: 'Sep 14', week: 2 }
-      ];
-      
-      // Define different dishes for each day
-      type DailyDishesType = {
-        [key: string]: {
-          combo1: {
-            typeA: string[],
-            typeB: string[]
-          },
-          combo2: {
-            typeA: string[],
-            typeB: string[]
-          }
-        }
-      };
-      
-      const dailyDishes: DailyDishesType = {
-        // Week 1
-        'monday-w1': {
-          combo1: {
-            typeA: ["红烧肉", "清炒时蔬", "杨枝甘露"],
-            typeB: ["红烧肉", "清炒时蔬", "杨枝甘露", "酸梅汤", "春卷"]
-          },
-          combo2: {
-            typeA: ["北京烤鸭", "松露炒饭", "芒果布丁"],
-            typeB: ["北京烤鸭", "松露炒饭", "芒果布丁", "花雕酒", "凉拌海蜇"]
-          }
-        },
-        'tuesday-w1': {
-          combo1: {
-            typeA: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕"],
-            typeB: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕", "乌龙茶", "鲜虾春卷"]
-          },
-          combo2: {
-            typeA: ["水煮鱼", "榨菜肉丝面", "红豆沙"],
-            typeB: ["水煮鱼", "榨菜肉丝面", "红豆沙", "青梅酒", "酱牛肉"]
-          }
-        },
-        'wednesday-w1': {
-          combo1: {
-            typeA: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆"],
-            typeB: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆", "菊花茶", "香菇青菜包"]
-          },
-          combo2: {
-            typeA: ["东坡肉", "虾仁炒蛋", "桃胶雪燕"],
-            typeB: ["东坡肉", "虾仁炒蛋", "桃胶雪燕", "梅子酒", "卤鸭翅"]
-          }
-        },
-        'thursday-w1': {
-          combo1: {
-            typeA: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露"],
-            typeB: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露", "龙井茶", "蟹黄小笼包"]
-          },
-          combo2: {
-            typeA: ["葱爆羊肉", "干锅土豆片", "桂圆红枣羹"],
-            typeB: ["葱爆羊肉", "干锅土豆片", "桂圆红枣羹", "竹叶青酒", "凉拌木耳"]
-          }
-        },
-        'friday-w1': {
-          combo1: {
-            typeA: ["鱼香肉丝", "炝炒油菜", "奶黄包"],
-            typeB: ["鱼香肉丝", "炝炒油菜", "奶黄包", "普洱茶", "千层饼"]
-          },
-          combo2: {
-            typeA: ["辣子鸡", "虾仁豆腐", "蛋黄酥"],
-            typeB: ["辣子鸡", "虾仁豆腐", "蛋黄酥", "黄酒", "卤鸡爪"]
-          }
-        },
-        'sunday-w1': {
-          combo1: {
-            typeA: ["回锅肉", "蒜泥白肉", "豆沙包"],
-            typeB: ["回锅肉", "蒜泥白肉", "豆沙包", "铁观音", "香酥鸭"]
-          },
-          combo2: {
-            typeA: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤"],
-            typeB: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤", "绍兴酒", "盐水鸭"]
-          }
-        },
-        // Week 2
-        'monday-w2': {
-          combo1: {
-            typeA: ["小笼包", "上海炒面", "芒果西米露"],
-            typeB: ["小笼包", "上海炒面", "芒果西米露", "乌梅汁", "锅贴"]
-          },
-          combo2: {
-            typeA: ["梅菜扣肉", "蛋炒饭", "红豆糯米糍"],
-            typeB: ["梅菜扣肉", "蛋炒饭", "红豆糯米糍", "桂花酒", "凉拌海带"]
-          }
-        },
-        'tuesday-w2': {
-          combo1: {
-            typeA: ["酸菜鱼", "蒜蓉茼蒿", "桃胶银耳羹"],
-            typeB: ["酸菜鱼", "蒜蓉茼蒿", "桃胶银耳羹", "茉莉花茶", "虾饺"]
-          },
-          combo2: {
-            typeA: ["干煸四季豆", "葱油拌面", "芋圆"],
-            typeB: ["干煸四季豆", "葱油拌面", "芋圆", "米酒", "卤水鸡"]
-          }
-        },
-        'wednesday-w2': {
-          combo1: {
-            typeA: ["鱼香茄子", "蒸蛋", "桂花糖藕"],
-            typeB: ["鱼香茄子", "蒸蛋", "桂花糖藕", "菊花普洱", "萝卜糕"]
-          },
-          combo2: {
-            typeA: ["香辣蟹", "扬州炒饭", "椰汁糕"],
-            typeB: ["香辣蟹", "扬州炒饭", "椰汁糕", "玫瑰露酒", "卤水鹅翅"]
-          }
-        },
-        'thursday-w2': {
-          combo1: {
-            typeA: ["蚝油牛肉", "清炒菠菜", "杏仁豆腐"],
-            typeB: ["蚝油牛肉", "清炒菠菜", "杏仁豆腐", "铁观音", "灌汤包"]
-          },
-          combo2: {
-            typeA: ["辣椒炒肉", "腊肠煲仔饭", "莲子羹"],
-            typeB: ["辣椒炒肉", "腊肠煲仔饭", "莲子羹", "黄酒", "卤水鸭舌"]
-          }
-        },
-        'friday-w2': {
-          combo1: {
-            typeA: ["香菇滑鸡", "上汤西洋菜", "豆腐花"],
-            typeB: ["香菇滑鸡", "上汤西洋菜", "豆腐花", "大红袍", "蛋挞"]
-          },
-          combo2: {
-            typeA: ["咕噜肉", "干炒牛河", "姜汁撞奶"],
-            typeB: ["咕噜肉", "干炒牛河", "姜汁撞奶", "桃花酿", "烧卖"]
-          }
-        },
-        'sunday-w2': {
-          combo1: {
-            typeA: ["叉烧", "虾仁云吞", "杨枝甘露"],
-            typeB: ["叉烧", "虾仁云吞", "杨枝甘露", "普洱", "萝卜牛腩煲"]
-          },
-          combo2: {
-            typeA: ["白切鸡", "荷叶饭", "芝麻糊"],
-            typeB: ["白切鸡", "荷叶饭", "芝麻糊", "竹叶青", "卤水鸡爪"]
-          }
-        }
-      };
-      
-      const mockDays: Record<string, DayData> = {}
-      
-      // Generate data for each day in order
-      mockDaysWithDates.forEach(({ day: dayName, displayName, date: formattedDate, week }, index) => {
+      try {
+        // Fetch active days
+        const daysResponse = await fetch('/api/days?isActive=true')
+        const daysData = await daysResponse.json()
         
-        mockDays[dayName] = {
-          date: formattedDate,
-          displayName,
-          week,
-          combos: [
-            {
-              id: `${dayName}-combo1`,
-              name: `套餐 1`,
-
-              calories: 650,
-              tags: ["Fresh", "Healthy", index % 2 === 0 ? "Vegetarian" : "High Protein"],
-              typeA: {
-                dishes: dailyDishes[dayName].combo1.typeA,
-                voucherType: 'twoDish'
-              },
-              typeB: {
-                dishes: dailyDishes[dayName].combo1.typeB,
-                voucherType: 'threeDish'
-              }
-            },
-            {
-              id: `${dayName}-combo2`,
-              name: `套餐 2`,
-
-              calories: 850,
-              tags: ["Gourmet", index % 2 === 0 ? "Seafood" : "Comfort Food"],
-              typeA: {
-                dishes: dailyDishes[dayName].combo2.typeA,
-                voucherType: 'twoDish'
-              },
-              typeB: {
-                dishes: dailyDishes[dayName].combo2.typeB,
-                voucherType: 'threeDish'
+        if (daysData.success) {
+          const formattedDays: Record<string, DayData> = {}
+          
+          // Process each day
+          for (const day of daysData.data) {
+            // Fetch combos for this day
+            const combosResponse = await fetch(`/api/days/${day.dayId}/combos`)
+            const combosData = await combosResponse.json()
+            
+            if (combosData.success) {
+              // Format combo data to match our component's expected structure
+              const formattedCombos = combosData.data.map((combo: any) => ({
+                id: combo.comboId,
+                name: combo.name,
+                calories: combo.calories,
+                tags: combo.tags,
+                typeA: combo.typeA,
+                typeB: combo.typeB
+              }))
+              
+              formattedDays[day.dayId] = {
+                date: day.date,
+                displayName: day.displayName,
+                week: day.week,
+                combos: formattedCombos
               }
             }
-          ]
-        };
-      });
-      
-      setDays(mockDays);
-      setIsLoading(false);
+          }
+          
+          setDays(formattedDays)
+          
+          // Set default selected day if available
+          if (Object.keys(formattedDays).length > 0) {
+            setSelectedDay(Object.keys(formattedDays)[0])
+          }
+        } else {
+          throw new Error(daysData.error || 'Failed to fetch days')
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load data. Please try again.",
+          variant: "destructive"
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
     
-    loadMockData()
+    fetchData()
   }, [])
   
   // Add item to cart
@@ -343,7 +194,22 @@ export default function DailyDelivery() {
   }
 
   // Define the proper order of days for display
-  const dayOrder = ["monday-w1", "tuesday-w1", "wednesday-w1", "thursday-w1", "friday-w1", "sunday-w1", "monday-w2", "tuesday-w2", "wednesday-w2", "thursday-w2", "friday-w2", "sunday-w2"]
+  const dayOrder = useMemo(() => {
+    // Sort days by week and then by displayName
+    return Object.keys(days).sort((a, b) => {
+      const dayA = days[a];
+      const dayB = days[b];
+      
+      // First sort by week
+      if (dayA.week !== dayB.week) {
+        return dayA.week - dayB.week;
+      }
+      
+      // Then sort by day of week (using a helper function)
+      const dayOrderMap: Record<string, number> = { 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7 };
+      return (dayOrderMap[dayA.displayName] || 0) - (dayOrderMap[dayB.displayName] || 0);
+    });
+  }, [days])
   
   // Define the accent colors for alternating days
   const accentTypes = {

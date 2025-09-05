@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Card, 
   CardContent, 
@@ -30,6 +30,7 @@ import {
   TableRow 
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 import { 
   Calendar as CalendarIcon, 
   Plus, 
@@ -70,437 +71,88 @@ type DayData = {
 }
 
 export function DailyDeliveryManagement() {
+  const { toast } = useToast()
+  
   // State for managing the data
-  const [days, setDays] = useState<Record<string, DayData>>({
-    // Week 1
-    'monday-w1': {
-      date: 'Sep 1',
-      displayName: 'monday',
-      week: 1,
-      combos: [
-        {
-          id: 'monday-w1-combo1',
-          name: '套餐 1',
-          calories: 650,
-          tags: ["Fresh", "Healthy", "Vegetarian"],
-          typeA: {
-            dishes: ["红烧肉", "清炒时蔬", "杨枝甘露"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["红烧肉", "清炒时蔬", "杨枝甘露", "酸梅汤", "春卷"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'monday-w1-combo2',
-          name: '套餐 2',
-          calories: 850,
-          tags: ["Gourmet", "Seafood"],
-          typeA: {
-            dishes: ["北京烤鸭", "松露炒饭", "芒果布丁"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["北京烤鸭", "松露炒饭", "芒果布丁", "花雕酒", "凉拌海蜇"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'tuesday-w1': {
-      date: 'Sep 2',
-      displayName: 'tuesday',
-      week: 1,
-      combos: [
-        {
-          id: 'tuesday-w1-combo1',
-          name: '套餐 1',
-          calories: 620,
-          tags: ["Fresh", "High Protein"],
-          typeA: {
-            dishes: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["宫保鸡丁", "蒜蓉空心菜", "桂花糕", "乌龙茶", "鲜虾春卷"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'tuesday-w1-combo2',
-          name: '套餐 2',
-          calories: 780,
-          tags: ["Gourmet", "Comfort Food"],
-          typeA: {
-            dishes: ["水煮鱼", "榨菜肉丝面", "红豆沙"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["水煮鱼", "榨菜肉丝面", "红豆沙", "青梅酒", "酱牛肉"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'wednesday-w1': {
-      date: 'Sep 3',
-      displayName: 'wednesday',
-      week: 1,
-      combos: [
-        {
-          id: 'wednesday-w1-combo1',
-          name: '套餐 1',
-          calories: 680,
-          tags: ["Healthy", "Vegetarian"],
-          typeA: {
-            dishes: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["麻婆豆腐", "上汤娃娃菜", "芝麻汤圆", "菊花茶", "香菇青菜包"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'wednesday-w1-combo2',
-          name: '套餐 2',
-          calories: 820,
-          tags: ["Gourmet", "High Protein"],
-          typeA: {
-            dishes: ["东坡肉", "虾仁炒蛋", "桃胶雪燕"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["东坡肉", "虾仁炒蛋", "桃胶雪燕", "梅子酒", "卤鸭翅"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'thursday-w1': {
-      date: 'Sep 4',
-      displayName: 'thursday',
-      week: 1,
-      combos: [
-        {
-          id: 'thursday-w1-combo1',
-          name: '套餐 1',
-          calories: 640,
-          tags: ["Fresh", "Healthy"],
-          typeA: {
-            dishes: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["糖醋排骨", "蒜蓉西兰花", "椰汁西米露", "龙井茶", "蟹黄小笼包"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'thursday-w1-combo2',
-          name: '套餐 2',
-          calories: 890,
-          tags: ["Gourmet", "High Protein"],
-          typeA: {
-            dishes: ["葱爆羊肉", "干锅土豆片", "桂圆红枣羹"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["葱爆羊肉", "干锅土豆片", "桂圆红枣羹", "竹叶青酒", "凉拌木耳"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'friday-w1': {
-      date: 'Sep 5',
-      displayName: 'friday',
-      week: 1,
-      combos: [
-        {
-          id: 'friday-w1-combo1',
-          name: '套餐 1',
-          calories: 630,
-          tags: ["Fresh", "Vegetarian"],
-          typeA: {
-            dishes: ["鱼香肉丝", "炝炒油菜", "奶黄包"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["鱼香肉丝", "炝炒油菜", "奶黄包", "普洱茶", "千层饼"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'friday-w1-combo2',
-          name: '套餐 2',
-          calories: 800,
-          tags: ["Gourmet", "Comfort Food"],
-          typeA: {
-            dishes: ["辣子鸡", "虾仁豆腐", "蛋黄酥"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["辣子鸡", "虾仁豆腐", "蛋黄酥", "黄酒", "卤鸡爪"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'sunday-w1': {
-      date: 'Sep 7',
-      displayName: 'sunday',
-      week: 1,
-      combos: [
-        {
-          id: 'sunday-w1-combo1',
-          name: '套餐 1',
-          calories: 660,
-          tags: ["Fresh", "Healthy"],
-          typeA: {
-            dishes: ["回锅肉", "蒜泥白肉", "豆沙包"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["回锅肉", "蒜泥白肉", "豆沙包", "铁观音", "香酥鸭"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'sunday-w1-combo2',
-          name: '套餐 2',
-          calories: 830,
-          tags: ["Seafood", "Gourmet"],
-          typeA: {
-            dishes: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["清蒸鲈鱼", "腊味炒饭", "龙眼甜汤", "绍兴酒", "盐水鸭"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    
-    // Week 2
-    'monday-w2': {
-      date: 'Sep 8',
-      displayName: 'monday',
-      week: 2,
-      combos: [
-        {
-          id: 'monday-w2-combo1',
-          name: '套餐 1',
-          calories: 610,
-          tags: ["Fresh", "Vegetarian"],
-          typeA: {
-            dishes: ["小笼包", "上海炒面", "芒果西米露"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["小笼包", "上海炒面", "芒果西米露", "乌梅汁", "锅贴"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'monday-w2-combo2',
-          name: '套餐 2',
-          calories: 840,
-          tags: ["Gourmet", "Comfort Food"],
-          typeA: {
-            dishes: ["梅菜扣肉", "蛋炒饭", "红豆糯米糍"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["梅菜扣肉", "蛋炒饭", "红豆糯米糍", "桂花酒", "凉拌海带"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'tuesday-w2': {
-      date: 'Sep 9',
-      displayName: 'tuesday',
-      week: 2,
-      combos: [
-        {
-          id: 'tuesday-w2-combo1',
-          name: '套餐 1',
-          calories: 670,
-          tags: ["Seafood", "Healthy"],
-          typeA: {
-            dishes: ["酸菜鱼", "蒜蓉茼蒿", "桃胶银耳羹"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["酸菜鱼", "蒜蓉茼蒿", "桃胶银耳羹", "茉莉花茶", "虾饺"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'tuesday-w2-combo2',
-          name: '套餐 2',
-          calories: 750,
-          tags: ["Vegetarian", "Comfort Food"],
-          typeA: {
-            dishes: ["干煸四季豆", "葱油拌面", "芋圆"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["干煸四季豆", "葱油拌面", "芋圆", "米酒", "卤水鸡"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'wednesday-w2': {
-      date: 'Sep 10',
-      displayName: 'wednesday',
-      week: 2,
-      combos: [
-        {
-          id: 'wednesday-w2-combo1',
-          name: '套餐 1',
-          calories: 620,
-          tags: ["Vegetarian", "Healthy"],
-          typeA: {
-            dishes: ["鱼香茄子", "蒸蛋", "桂花糖藕"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["鱼香茄子", "蒸蛋", "桂花糖藕", "菊花普洱", "萝卜糕"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'wednesday-w2-combo2',
-          name: '套餐 2',
-          calories: 880,
-          tags: ["Seafood", "Gourmet"],
-          typeA: {
-            dishes: ["香辣蟹", "扬州炒饭", "椰汁糕"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["香辣蟹", "扬州炒饭", "椰汁糕", "玫瑰露酒", "卤水鹅翅"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'thursday-w2': {
-      date: 'Sep 11',
-      displayName: 'thursday',
-      week: 2,
-      combos: [
-        {
-          id: 'thursday-w2-combo1',
-          name: '套餐 1',
-          calories: 690,
-          tags: ["High Protein", "Fresh"],
-          typeA: {
-            dishes: ["蚝油牛肉", "清炒菠菜", "杏仁豆腐"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["蚝油牛肉", "清炒菠菜", "杏仁豆腐", "铁观音", "灌汤包"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'thursday-w2-combo2',
-          name: '套餐 2',
-          calories: 810,
-          tags: ["Comfort Food", "Gourmet"],
-          typeA: {
-            dishes: ["辣椒炒肉", "腊肠煲仔饭", "莲子羹"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["辣椒炒肉", "腊肠煲仔饭", "莲子羹", "黄酒", "卤水鸭舌"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'friday-w2': {
-      date: 'Sep 12',
-      displayName: 'friday',
-      week: 2,
-      combos: [
-        {
-          id: 'friday-w2-combo1',
-          name: '套餐 1',
-          calories: 640,
-          tags: ["Healthy", "Fresh"],
-          typeA: {
-            dishes: ["香菇滑鸡", "上汤西洋菜", "豆腐花"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["香菇滑鸡", "上汤西洋菜", "豆腐花", "大红袍", "蛋挞"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'friday-w2-combo2',
-          name: '套餐 2',
-          calories: 860,
-          tags: ["Gourmet", "Comfort Food"],
-          typeA: {
-            dishes: ["咕噜肉", "干炒牛河", "姜汁撞奶"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["咕噜肉", "干炒牛河", "姜汁撞奶", "桃花酿", "烧卖"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    },
-    'sunday-w2': {
-      date: 'Sep 14',
-      displayName: 'sunday',
-      week: 2,
-      combos: [
-        {
-          id: 'sunday-w2-combo1',
-          name: '套餐 1',
-          calories: 650,
-          tags: ["Fresh", "High Protein"],
-          typeA: {
-            dishes: ["叉烧", "虾仁云吞", "杨枝甘露"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["叉烧", "虾仁云吞", "杨枝甘露", "普洱", "萝卜牛腩煲"],
-            voucherType: 'threeDish'
-          }
-        },
-        {
-          id: 'sunday-w2-combo2',
-          name: '套餐 2',
-          calories: 790,
-          tags: ["Gourmet", "Comfort Food"],
-          typeA: {
-            dishes: ["白切鸡", "荷叶饭", "芝麻糊"],
-            voucherType: 'twoDish'
-          },
-          typeB: {
-            dishes: ["白切鸡", "荷叶饭", "芝麻糊", "竹叶青", "卤水鸡爪"],
-            voucherType: 'threeDish'
-          }
-        }
-      ]
-    }
-  })
+  const [days, setDays] = useState<Record<string, DayData>>({})
   
   // State for managing tags
-  const [availableTags, setAvailableTags] = useState<string[]>([
-    "Fresh", "Healthy", "Vegetarian", "High Protein", "Gourmet", "Seafood", "Comfort Food"
-  ])
+  const [availableTags, setAvailableTags] = useState<string[]>([])
+  
+  // State for loading status
+  const [isLoading, setIsLoading] = useState(true)
+  
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        // Fetch days
+        const daysResponse = await fetch('/api/days')
+        const daysData = await daysResponse.json()
+        
+        if (daysData.success) {
+          const formattedDays: Record<string, DayData> = {}
+          
+          // Process each day
+          for (const day of daysData.data) {
+            // Fetch combos for this day
+            const combosResponse = await fetch(`/api/days/${day.dayId}/combos`)
+            const combosData = await combosResponse.json()
+            
+            if (combosData.success) {
+              // Format combo data to match our component's expected structure
+              const formattedCombos = combosData.data.map((combo: any) => ({
+                id: combo.comboId,
+                name: combo.name,
+                calories: combo.calories,
+                tags: combo.tags,
+                typeA: combo.typeA,
+                typeB: combo.typeB
+              }))
+              
+              formattedDays[day.dayId] = {
+                date: day.date,
+                displayName: day.displayName,
+                week: day.week,
+                combos: formattedCombos
+              }
+            }
+          }
+          
+          setDays(formattedDays)
+          
+          // Set default selected day if available
+          if (Object.keys(formattedDays).length > 0) {
+            setSelectedDay(Object.keys(formattedDays)[0])
+          }
+        } else {
+          throw new Error(daysData.error || 'Failed to fetch days')
+        }
+        
+        // Fetch tags
+        const tagsResponse = await fetch('/api/tags')
+        const tagsData = await tagsResponse.json()
+        
+        if (tagsData.success) {
+          setAvailableTags(tagsData.data.map((tag: any) => tag.name))
+        } else {
+          throw new Error(tagsData.error || 'Failed to fetch tags')
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+        toast({
+          title: 'Error',
+          description: `Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          variant: 'destructive'
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchData()
+  }, [])
   
   // State for editing
   const [selectedDay, setSelectedDay] = useState<string>('monday-w1')
@@ -645,27 +297,92 @@ export function DailyDeliveryManagement() {
   }
   
   // Helper function to add a new tag to the available tags
-  const addNewTag = () => {
+  const addNewTag = async () => {
     if (newTag && !availableTags.includes(newTag)) {
-      setAvailableTags([...availableTags, newTag])
-      setNewTag('')
+      try {
+        // Create tag via API
+        const response = await fetch('/api/tags', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: newTag
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update local state
+          setAvailableTags([...availableTags, newTag]);
+          setNewTag('');
+          
+          toast({
+            title: 'Success',
+            description: 'Tag created successfully',
+          });
+        } else {
+          throw new Error(data.error || 'Failed to create tag');
+        }
+      } catch (error) {
+        console.error('Error creating tag:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to create tag: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          variant: 'destructive'
+        });
+      }
     }
   }
   
   // Helper function to update a day
-  const updateDay = (dayId: string, updatedDay: Partial<DayData>) => {
-    setDays(prevDays => {
-      const day = prevDays[dayId]
-      if (!day) return prevDays
+  const updateDay = async (dayId: string, updatedDay: Partial<DayData>) => {
+    try {
+      const response = await fetch(`/api/days/${dayId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: updatedDay.date,
+          displayName: updatedDay.displayName,
+          week: updatedDay.week
+        }),
+      })
       
-      return {
-        ...prevDays,
-        [dayId]: {
-          ...day,
-          ...updatedDay
-        }
+      const data = await response.json()
+      
+      if (data.success) {
+        // Update local state
+        setDays(prevDays => {
+          const day = prevDays[dayId]
+          if (!day) return prevDays
+          
+          return {
+            ...prevDays,
+            [dayId]: {
+              ...day,
+              ...updatedDay
+            }
+          }
+        })
+        
+        toast({
+          title: 'Success',
+          description: 'Day updated successfully',
+        })
+      } else {
+        throw new Error(data.error || 'Failed to update day')
       }
-    })
+    } catch (error) {
+      console.error('Error updating day:', error)
+      toast({
+        title: 'Error',
+        description: `Failed to update day: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive'
+      })
+    }
   }
   
   // Start editing a day
@@ -680,9 +397,9 @@ export function DailyDeliveryManagement() {
   }
   
   // Save day edits
-  const saveEditedDay = () => {
+  const saveEditedDay = async () => {
     if (editingDay) {
-      updateDay(editingDay, {
+      await updateDay(editingDay, {
         date: editedDate,
         displayName: editedDisplayName,
         week: editedWeek
@@ -698,6 +415,14 @@ export function DailyDeliveryManagement() {
 
   return (
     <div className="flex-1 space-y-6">
+      {isLoading ? (
+        <div className="flex justify-center items-center h-[300px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading data...</p>
+          </div>
+        </div>
+      ) : (
       <Tabs defaultValue="dates" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="dates" className="flex items-center gap-2">
@@ -724,19 +449,71 @@ export function DailyDeliveryManagement() {
                   <div className="flex gap-2">
                     <Button 
                       size="sm"
-                      onClick={() => {
-                        // Generate a new unique day ID
-                        const newDayId = `new-day-${Date.now()}`;
-                        // Add a new day with default values
-                        setDays(prevDays => ({
-                          ...prevDays,
-                          [newDayId]: {
-                            date: 'New Date',
-                            displayName: 'new-day',
-                            week: 1,
-                            combos: [
-                              {
-                                id: `${newDayId}-combo1`,
+                      onClick={async () => {
+                        try {
+                          // Generate a new unique day ID
+                          const newDayId = `new-day-${Date.now()}`;
+                          
+                          // Create new day via API
+                          const dayResponse = await fetch('/api/days', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              dayId: newDayId,
+                              date: 'New Date',
+                              displayName: 'new-day',
+                              week: 1,
+                              isActive: true
+                            }),
+                          });
+                          
+                          const dayData = await dayResponse.json();
+                          
+                          if (!dayData.success) {
+                            throw new Error(dayData.error || 'Failed to create day');
+                          }
+                          
+                          // Create default combo for the new day
+                          const comboId = `${newDayId}-combo1`;
+                          const comboResponse = await fetch('/api/combos', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              comboId,
+                              dayId: newDayId,
+                              name: '套餐 1',
+                              calories: 650,
+                              tags: ["Fresh", "Healthy"],
+                              typeA: {
+                                dishes: ["Dish 1", "Dish 2", "Dish 3"],
+                                voucherType: 'twoDish'
+                              },
+                              typeB: {
+                                dishes: ["Dish 1", "Dish 2", "Dish 3", "Dish 4", "Dish 5"],
+                                voucherType: 'threeDish'
+                              }
+                            }),
+                          });
+                          
+                          const comboData = await comboResponse.json();
+                          
+                          if (!comboData.success) {
+                            throw new Error(comboData.error || 'Failed to create combo');
+                          }
+                          
+                          // Update local state
+                          setDays(prevDays => ({
+                            ...prevDays,
+                            [newDayId]: {
+                              date: 'New Date',
+                              displayName: 'new-day',
+                              week: 1,
+                              combos: [{
+                                id: comboId,
                                 name: '套餐 1',
                                 calories: 650,
                                 tags: ["Fresh", "Healthy"],
@@ -748,12 +525,25 @@ export function DailyDeliveryManagement() {
                                   dishes: ["Dish 1", "Dish 2", "Dish 3", "Dish 4", "Dish 5"],
                                   voucherType: 'threeDish'
                                 }
-                              }
-                            ]
-                          }
-                        }));
-                        // Start editing the new day immediately
-                        startEditingDay(newDayId);
+                              }]
+                            }
+                          }));
+                          
+                          // Start editing the new day immediately
+                          startEditingDay(newDayId);
+                          
+                          toast({
+                            title: 'Success',
+                            description: 'New day created successfully',
+                          });
+                        } catch (error) {
+                          console.error('Error creating day:', error);
+                          toast({
+                            title: 'Error',
+                            description: `Failed to create day: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                            variant: 'destructive'
+                          });
+                        }
                       }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -836,14 +626,40 @@ export function DailyDeliveryManagement() {
                                   variant="ghost" 
                                   size="icon" 
                                   className="text-red-500"
-                                  onClick={() => {
-                                    // Show confirmation dialog in a real app
+                                  onClick={async () => {
+                                    // Show confirmation dialog
                                     if (confirm(`Are you sure you want to delete ${day.displayName} (${day.date})?`)) {
-                                      setDays(prevDays => {
-                                        const newDays = { ...prevDays };
-                                        delete newDays[dayId];
-                                        return newDays;
-                                      });
+                                      try {
+                                        // Delete day via API
+                                        const response = await fetch(`/api/days/${dayId}`, {
+                                          method: 'DELETE',
+                                        });
+                                        
+                                        const data = await response.json();
+                                        
+                                        if (data.success) {
+                                          // Update local state
+                                          setDays(prevDays => {
+                                            const newDays = { ...prevDays };
+                                            delete newDays[dayId];
+                                            return newDays;
+                                          });
+                                          
+                                          toast({
+                                            title: 'Success',
+                                            description: 'Day deleted successfully',
+                                          });
+                                        } else {
+                                          throw new Error(data.error || 'Failed to delete day');
+                                        }
+                                      } catch (error) {
+                                        console.error('Error deleting day:', error);
+                                        toast({
+                                          title: 'Error',
+                                          description: `Failed to delete day: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                          variant: 'destructive'
+                                        });
+                                      }
                                     }
                                   }}
                                 >
@@ -1010,7 +826,49 @@ export function DailyDeliveryManagement() {
                                       variant="ghost" 
                                       size="icon" 
                                       className="h-5 w-5 text-red-500"
-                                      onClick={() => setAvailableTags(availableTags.filter(t => t !== tag))}
+                                      onClick={async () => {
+                                        try {
+                                          // Find tag ID by name
+                                          const tagsResponse = await fetch('/api/tags');
+                                          const tagsData = await tagsResponse.json();
+                                          
+                                          if (!tagsData.success) {
+                                            throw new Error(tagsData.error || 'Failed to fetch tags');
+                                          }
+                                          
+                                          const tagObj = tagsData.data.find((t: any) => t.name === tag);
+                                          
+                                          if (!tagObj) {
+                                            throw new Error('Tag not found');
+                                          }
+                                          
+                                          // Delete tag via API
+                                          const response = await fetch(`/api/tags/${tagObj._id}`, {
+                                            method: 'DELETE',
+                                          });
+                                          
+                                          const data = await response.json();
+                                          
+                                          if (data.success) {
+                                            // Update local state
+                                            setAvailableTags(availableTags.filter(t => t !== tag));
+                                            
+                                            toast({
+                                              title: 'Success',
+                                              description: 'Tag deleted successfully',
+                                            });
+                                          } else {
+                                            throw new Error(data.error || 'Failed to delete tag');
+                                          }
+                                        } catch (error) {
+                                          console.error('Error deleting tag:', error);
+                                          toast({
+                                            title: 'Error',
+                                            description: `Failed to delete tag: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                            variant: 'destructive'
+                                          });
+                                        }
+                                      }}
                                     >
                                       <Trash2 className="h-3 w-3" />
                                     </Button>
@@ -1160,6 +1018,7 @@ export function DailyDeliveryManagement() {
         </TabsContent>
         
       </Tabs>
+      )}
     </div>
   )
 }
