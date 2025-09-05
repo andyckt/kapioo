@@ -160,6 +160,8 @@ export function DailyDeliveryManagement() {
   const [editingDay, setEditingDay] = useState<string | null>(null)
   const [newTag, setNewTag] = useState<string>('')
   const [newDish, setNewDish] = useState<string>('')
+  const [editingDish, setEditingDish] = useState<{comboId: string, dish: string, type: 'typeA' | 'typeB'} | null>(null)
+  const [editedDishName, setEditedDishName] = useState<string>('')
   
   // State for date editing
   const [editedDate, setEditedDate] = useState<string>('')
@@ -339,6 +341,101 @@ export function DailyDeliveryManagement() {
         }
       }
     })
+  }
+  
+  // Helper function to update a dish name
+  const updateDishName = async (dayId: string, comboId: string, oldDishName: string, newDishName: string, type: 'typeA' | 'typeB') => {
+    if (oldDishName === newDishName) {
+      // No change, just cancel editing
+      setEditingDish(null);
+      return;
+    }
+    
+    try {
+      // First update local state for immediate feedback
+      setDays(prevDays => {
+        const day = prevDays[dayId];
+        if (!day) return prevDays;
+        
+        const updatedCombos = day.combos.map(combo => {
+          if (combo.id === comboId) {
+            return {
+              ...combo,
+              [type]: {
+                ...combo[type],
+                dishes: combo[type].dishes.map(dish => 
+                  dish === oldDishName ? newDishName : dish
+                )
+              }
+            };
+          }
+          return combo;
+        });
+        
+        return {
+          ...prevDays,
+          [dayId]: {
+            ...day,
+            combos: updatedCombos
+          }
+        };
+      });
+      
+      // Then update the backend
+      const day = days[dayId];
+      if (!day) return;
+      
+      const combo = day.combos.find(c => c.id === comboId);
+      if (!combo) return;
+      
+      // Create a copy of the combo with the updated dish name
+      const updatedCombo = {
+        ...combo,
+        [type]: {
+          ...combo[type],
+          dishes: combo[type].dishes.map(dish => 
+            dish === oldDishName ? newDishName : dish
+          )
+        }
+      };
+      
+      // Send the update to the backend
+      const response = await fetch(`/api/combos/${comboId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: updatedCombo.name,
+          calories: updatedCombo.calories,
+          tags: updatedCombo.tags,
+          typeA: updatedCombo.typeA,
+          typeB: updatedCombo.typeB
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Dish updated successfully',
+        });
+      } else {
+        throw new Error(data.error || 'Failed to update dish');
+      }
+    } catch (error) {
+      console.error('Error updating dish:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to update dish: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive'
+      });
+    } finally {
+      // Reset editing state
+      setEditingDish(null);
+      setEditedDishName('');
+    }
   }
   
   // Helper function to add a new tag to the available tags
@@ -1106,18 +1203,65 @@ export function DailyDeliveryManagement() {
                                 <div className="space-y-2">
                                   {combo.typeA.dishes.map((dish, index) => (
                                     <div key={dish} className="flex items-center justify-between bg-white p-3 rounded-md border border-blue-100">
-                                      <div className="flex items-center">
+                                      <div className="flex items-center flex-grow">
                                         <span className="font-medium text-blue-900">{index + 1}.</span>
-                                        <span className="ml-2">{dish}</span>
+                                        {editingDish && editingDish.comboId === combo.id && editingDish.dish === dish && editingDish.type === 'typeA' ? (
+                                          <div className="ml-2 flex-grow flex gap-2">
+                                            <Input
+                                              value={editedDishName}
+                                              onChange={(e) => setEditedDishName(e.target.value)}
+                                              className="h-8"
+                                              autoFocus
+                                            />
+                                            <div className="flex gap-1">
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-8 text-green-600"
+                                                onClick={() => updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeA')}
+                                              >
+                                                <Check className="h-4 w-4" />
+                                              </Button>
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-8"
+                                                onClick={() => {
+                                                  setEditingDish(null);
+                                                  setEditedDishName('');
+                                                }}
+                                              >
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <span className="ml-2">{dish}</span>
+                                        )}
                                       </div>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeA')}
-                                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
+                                      <div className="flex gap-1">
+                                        {!(editingDish && editingDish.comboId === combo.id && editingDish.dish === dish) && (
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => {
+                                              setEditingDish({ comboId: combo.id, dish, type: 'typeA' });
+                                              setEditedDishName(dish);
+                                            }}
+                                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeA')}
+                                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   ))}
                                   <div className="flex gap-2 mt-4">
@@ -1153,23 +1297,72 @@ export function DailyDeliveryManagement() {
                                 <div className="space-y-2">
                                   {combo.typeB.dishes.map((dish, index) => (
                                     <div key={dish} className="flex items-center justify-between bg-white p-3 rounded-md border border-green-100">
-                                      <div className="flex items-center">
+                                      <div className="flex items-center flex-grow">
                                         <span className="font-medium text-green-900">{index + 1}.</span>
-                                        <span className="ml-2">{dish}</span>
-                                        {combo.typeA.dishes.includes(dish) && (
-                                          <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-600 border-green-200">
-                                            Also in 2-dish option
-                                          </Badge>
+                                        {editingDish && editingDish.comboId === combo.id && editingDish.dish === dish && editingDish.type === 'typeB' ? (
+                                          <div className="ml-2 flex-grow flex gap-2">
+                                            <Input
+                                              value={editedDishName}
+                                              onChange={(e) => setEditedDishName(e.target.value)}
+                                              className="h-8"
+                                              autoFocus
+                                            />
+                                            <div className="flex gap-1">
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-8 text-green-600"
+                                                onClick={() => updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeB')}
+                                              >
+                                                <Check className="h-4 w-4" />
+                                              </Button>
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-8"
+                                                onClick={() => {
+                                                  setEditingDish(null);
+                                                  setEditedDishName('');
+                                                }}
+                                              >
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <span className="ml-2">{dish}</span>
+                                            {combo.typeA.dishes.includes(dish) && (
+                                              <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-600 border-green-200">
+                                                Also in 2-dish option
+                                              </Badge>
+                                            )}
+                                          </>
                                         )}
                                       </div>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeB')}
-                                        className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
+                                      <div className="flex gap-1">
+                                        {!(editingDish && editingDish.comboId === combo.id && editingDish.dish === dish) && (
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => {
+                                              setEditingDish({ comboId: combo.id, dish, type: 'typeB' });
+                                              setEditedDishName(dish);
+                                            }}
+                                            className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeB')}
+                                          className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   ))}
                                   <div className="flex gap-2 mt-4">
