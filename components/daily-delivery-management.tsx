@@ -166,7 +166,7 @@ export function DailyDeliveryManagement() {
   const [editedDisplayName, setEditedDisplayName] = useState<string>('')
   const [editedWeek, setEditedWeek] = useState<number>(1)
   
-  // Helper function to update a combo
+  // Helper function to update a combo locally
   const updateCombo = (dayId: string, comboId: string, updatedCombo: Partial<ComboItem>) => {
     setDays(prevDays => {
       const day = prevDays[dayId]
@@ -184,6 +184,51 @@ export function DailyDeliveryManagement() {
         }
       }
     })
+  }
+  
+  // Helper function to save combo changes to backend
+  const saveComboChanges = async (dayId: string, comboId: string) => {
+    try {
+      const day = days[dayId]
+      if (!day) return
+      
+      const combo = day.combos.find(c => c.id === comboId)
+      if (!combo) return
+      
+      const response = await fetch(`/api/combos/${comboId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: combo.name,
+          calories: combo.calories,
+          tags: combo.tags,
+          typeA: combo.typeA,
+          typeB: combo.typeB
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Combo updated successfully',
+        })
+        return true
+      } else {
+        throw new Error(data.error || 'Failed to update combo')
+      }
+    } catch (error) {
+      console.error('Error updating combo:', error)
+      toast({
+        title: 'Error',
+        description: `Failed to update combo: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive'
+      })
+      return false
+    }
   }
   
   // Helper function to add a tag to a combo
@@ -703,7 +748,97 @@ export function DailyDeliveryManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        if (!selectedDay) {
+                          toast({
+                            title: 'Error',
+                            description: 'Please select a day first',
+                            variant: 'destructive'
+                          });
+                          return;
+                        }
+                        
+                        // Generate a new unique combo ID
+                        const newComboId = `${selectedDay}-combo-${Date.now()}`;
+                        
+                        // Create new combo via API
+                        const response = await fetch('/api/combos', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            comboId: newComboId,
+                            dayId: selectedDay,
+                            name: '新套餐',
+                            calories: 650,
+                            tags: ["New"],
+                            typeA: {
+                              dishes: ["Dish 1", "Dish 2"],
+                              voucherType: 'twoDish'
+                            },
+                            typeB: {
+                              dishes: ["Dish 1", "Dish 2", "Dish 3"],
+                              voucherType: 'threeDish'
+                            }
+                          }),
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                          // Update local state
+                          setDays(prevDays => {
+                            const day = prevDays[selectedDay];
+                            if (!day) return prevDays;
+                            
+                            return {
+                              ...prevDays,
+                              [selectedDay]: {
+                                ...day,
+                                combos: [
+                                  ...day.combos,
+                                  {
+                                    id: newComboId,
+                                    name: '新套餐',
+                                    calories: 650,
+                                    tags: ["New"],
+                                    typeA: {
+                                      dishes: ["Dish 1", "Dish 2"],
+                                      voucherType: 'twoDish'
+                                    },
+                                    typeB: {
+                                      dishes: ["Dish 1", "Dish 2", "Dish 3"],
+                                      voucherType: 'threeDish'
+                                    }
+                                  }
+                                ]
+                              }
+                            };
+                          });
+                          
+                          toast({
+                            title: 'Success',
+                            description: 'New combo created successfully',
+                          });
+                          
+                          // Start editing the new combo immediately
+                          setEditingCombo(newComboId);
+                        } else {
+                          throw new Error(data.error || 'Failed to create combo');
+                        }
+                      } catch (error) {
+                        console.error('Error creating combo:', error);
+                        toast({
+                          title: 'Error',
+                          description: `Failed to create combo: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                          variant: 'destructive'
+                        });
+                      }
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Combo
                   </Button>
@@ -715,12 +850,91 @@ export function DailyDeliveryManagement() {
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-lg">{combo.name}</CardTitle>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditingCombo(combo.id === editingCombo ? null : combo.id)}>
-                            {combo.id === editingCombo ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-red-500">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {combo.id === editingCombo ? (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-green-600"
+                                onClick={async () => {
+                                  const success = await saveComboChanges(selectedDay, combo.id);
+                                  if (success) {
+                                    setEditingCombo(null);
+                                  }
+                                }}
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Save
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setEditingCombo(null)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setEditingCombo(combo.id)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-500"
+                                onClick={async () => {
+                                  // Show confirmation dialog
+                                  if (confirm(`Are you sure you want to delete ${combo.name}?`)) {
+                                    try {
+                                      // Delete combo via API
+                                      const response = await fetch(`/api/combos/${combo.id}`, {
+                                        method: 'DELETE',
+                                      });
+                                      
+                                      const data = await response.json();
+                                      
+                                      if (data.success) {
+                                        // Update local state
+                                        setDays(prevDays => {
+                                          const day = prevDays[selectedDay];
+                                          if (!day) return prevDays;
+                                          
+                                          return {
+                                            ...prevDays,
+                                            [selectedDay]: {
+                                              ...day,
+                                              combos: day.combos.filter(c => c.id !== combo.id)
+                                            }
+                                          };
+                                        });
+                                        
+                                        toast({
+                                          title: 'Success',
+                                          description: 'Combo deleted successfully',
+                                        });
+                                      } else {
+                                        throw new Error(data.error || 'Failed to delete combo');
+                                      }
+                                    } catch (error) {
+                                      console.error('Error deleting combo:', error);
+                                      toast({
+                                        title: 'Error',
+                                        description: `Failed to delete combo: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                        variant: 'destructive'
+                                      });
+                                    }
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
