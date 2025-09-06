@@ -216,12 +216,6 @@ export default function MealVoucherPurchase() {
                     {language === 'zh' ? '有效期1年' : 'Valid for 1 year'}
                   </span>
                 </div>
-                <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                  <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '可转赠亲友' : 'Transferable'}
-                  </span>
-                </div>
                 {plan.savings && (
                   <div className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
@@ -726,21 +720,22 @@ export default function MealVoucherPurchase() {
       )}
 
       {/* Service Area Information */}
-      <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] p-4 rounded-lg shadow-sm border border-[#C2884E]/10">
-        <div className="bg-white p-2 rounded-full shadow-sm">
-          <MapPin className="h-5 w-5 text-[#C2884E]" />
-        </div>
-        <div>
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <MapPin className="h-4 w-4 text-[#C2884E]" />
           <p className="text-sm font-medium text-[#6B5F53]">
             {language === 'zh' ? '配送区域' : 'Available Areas'}
           </p>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {serviceAreas.map((area) => (
-              <Badge key={area} variant="outline" className="bg-white text-[#6B5F53] border-[#C2884E]/20">
-                {area}
-              </Badge>
-            ))}
-          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {serviceAreas.map((area) => (
+            <div 
+              key={area} 
+              className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"
+            >
+              {area}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -914,17 +909,6 @@ export default function MealVoucherPurchase() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {language === 'zh' ? '自购买之日起一年内有效' : 'Valid for one year from purchase date'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '可转赠' : 'Transferable'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {language === 'zh' ? '餐券可转赠给亲友' : 'Vouchers can be gifted to others'}
                       </p>
                     </div>
                   </div>
