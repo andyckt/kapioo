@@ -27,8 +27,11 @@ function getFileExtension(mimeType: string): string {
 export async function POST(request: NextRequest) {
   try {
     // Check if AWS credentials are configured
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_BUCKET_NAME) {
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_S3_BUCKET) {
       console.error('AWS credentials not configured');
+      console.error('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Not set');
+      console.error('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? 'Set' : 'Not set');
+      console.error('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET ? 'Set' : 'Not set');
       return NextResponse.json(
         { success: false, error: 'AWS credentials not configured' },
         { status: 500 }
@@ -74,17 +77,17 @@ export async function POST(request: NextRequest) {
 
     // Upload to S3
     const uploadParams = {
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.AWS_S3_BUCKET,
       Key: fileName,
       Body: buffer,
       ContentType: file.type,
-      ACL: 'public-read' // Make the file publicly accessible
+      ACL: 'public-read' as const // Make the file publicly accessible
     };
 
     await s3Client.send(new PutObjectCommand(uploadParams));
 
     // Generate the URL for the uploaded file
-    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${fileName}`;
+    const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${fileName}`;
 
     return NextResponse.json({
       success: true,

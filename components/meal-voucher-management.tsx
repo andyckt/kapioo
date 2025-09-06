@@ -51,96 +51,12 @@ interface VoucherPurchaseRequest {
   adminNotes?: string;
 }
 
-// Mock data for voucher purchase requests
-const mockRequests: VoucherPurchaseRequest[] = [
-  {
-    id: 'VPR-001',
-    requestId: 'VPR-001',
-    userId: {
-      _id: 'user1',
-      name: 'John Smith',
-      email: 'john@example.com'
-    },
-    type: 'twoDish',
-    quantity: 10,
-    amount: 195,
-    imageProof: 'payment_proof_1.jpg',
-    notes: 'First time purchase',
-    status: 'pending',
-    createdAt: '2023-05-27T08:30:00Z'
-  },
-  {
-    id: 'VPR-002',
-    requestId: 'VPR-002',
-    userId: {
-      _id: 'user2',
-      name: 'Emily Wong',
-      email: 'emily@example.com'
-    },
-    type: 'threeDish',
-    quantity: 22,
-    amount: 417,
-    imageProof: 'payment_proof_2.jpg',
-    notes: 'Monthly subscription',
-    status: 'approved',
-    createdAt: '2023-05-26T15:45:00Z',
-    approvedAt: '2023-05-26T17:20:00Z',
-    adminNotes: 'Payment verified'
-  },
-  {
-    id: 'VPR-003',
-    requestId: 'VPR-003',
-    userId: {
-      _id: 'user3',
-      name: 'Michael Chen',
-      email: 'michael@example.com'
-    },
-    type: 'twoDish',
-    quantity: 46,
-    amount: 712,
-    imageProof: 'payment_proof_3.jpg',
-    status: 'declined',
-    createdAt: '2023-05-25T10:15:00Z',
-    declinedAt: '2023-05-25T14:30:00Z',
-    adminNotes: 'Payment not received'
-  },
-  {
-    id: 'VPR-004',
-    requestId: 'VPR-004',
-    userId: {
-      _id: 'user4',
-      name: 'Sarah Johnson',
-      email: 'sarah@example.com'
-    },
-    type: 'threeDish',
-    quantity: 10,
-    amount: 228,
-    imageProof: 'payment_proof_4.jpg',
-    notes: 'Family plan',
-    status: 'pending',
-    createdAt: '2023-05-27T09:45:00Z'
-  },
-  {
-    id: 'VPR-005',
-    requestId: 'VPR-005',
-    userId: {
-      _id: 'user5',
-      name: 'David Lee',
-      email: 'david@example.com'
-    },
-    type: 'twoDish',
-    quantity: 22,
-    amount: 356,
-    imageProof: 'payment_proof_5.jpg',
-    status: 'pending',
-    createdAt: '2023-05-27T11:20:00Z'
-  }
-]
+// No mock data - we'll fetch real data from the API
 
 export function MealVoucherManagement() {
   const { toast } = useToast()
-  const [requests, setRequests] = useState<VoucherPurchaseRequest[]>(mockRequests)
-  const [isLoading, setIsLoading] = useState(false)
+  const [requests, setRequests] = useState<VoucherPurchaseRequest[]>([])
+  const [isLoading, setIsLoading] = useState(true) // Start with loading state true
   const [viewRequestOpen, setViewRequestOpen] = useState(false)
   const [approveRequestOpen, setApproveRequestOpen] = useState(false)
   const [declineRequestOpen, setDeclineRequestOpen] = useState(false)
