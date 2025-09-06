@@ -70,6 +70,7 @@ import { NotificationType } from '@/lib/services/notifications';
 import { WeekYearDisplay } from "@/components/week-year-display"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
+import { MealVoucherManagement } from "@/components/meal-voucher-management"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -874,6 +875,14 @@ export default function AdminDashboardPage() {
               Credit Requests
             </Button>
             <Button
+              variant={activeTab === "meal-vouchers" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => setActiveTab("meal-vouchers")}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Meal Vouchers
+            </Button>
+            <Button
               variant={activeTab === "settings" ? "default" : "ghost"}
               className="justify-start"
               onClick={() => setActiveTab("settings")}
@@ -1450,6 +1459,18 @@ export default function AdminDashboardPage() {
                     </div>
                   </CardFooter>
                 </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "meal-vouchers" && (
+              <motion.div
+                key="meal-vouchers"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MealVoucherManagement />
               </motion.div>
             )}
 
