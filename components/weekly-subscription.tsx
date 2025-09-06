@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
@@ -23,6 +23,119 @@ export default function WeeklySubscription() {
   const [deliveryDays, setDeliveryDays] = useState<DeliveryDay[]>([])
   const [activeTab, setActiveTab] = useState('current-week')
   
+  // Function to check if a day is unavailable for ordering
+  const isDayUnavailable = (day: DeliveryDay): { unavailable: boolean, reason: string } => {
+    try {
+      // Get current date and time in Toronto timezone
+      const torontoOptions = { timeZone: 'America/Toronto' };
+      const now = new Date();
+      
+      // Format the Toronto time as a string to work with
+      const torontoDateString = now.toLocaleString('en-US', torontoOptions);
+      const torontoDate = new Date(torontoDateString);
+      
+      // Get the current hour and minute in Toronto
+      const currentHour = torontoDate.getHours();
+      const currentMinute = torontoDate.getMinutes();
+      
+      // Check if we have a date for this meal
+      if (!day || !day.date) {
+        return { 
+          unavailable: true, 
+          reason: language === 'zh' ? "此餐点无可用日期" : "Date not available for this meal" 
+        };
+      }
+      
+      const mealDate = day.date;
+      
+      // Parse the date (expected format like "Jan 01" or "Oct 10")
+      try {
+        const parts = mealDate.split(' ');
+        
+        // Handle formats like "Jan 01" or "Oct 10"
+        if (parts.length === 2) {
+          const monthStr = parts[0];
+          const dayStr = parts[1];
+          
+          // Get month index (0-11) using short month names
+          const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const monthIndex = shortMonths.findIndex(m => 
+            monthStr.toLowerCase() === m.toLowerCase());
+          
+          // Parse day number
+          const dayNum = parseInt(dayStr);
+          
+          if (monthIndex !== -1 && !isNaN(dayNum)) {
+            // Create a date for the meal's specific date (use current year)
+            const mealSpecificDate = new Date(
+              torontoDate.getFullYear(), 
+              monthIndex, 
+              dayNum
+            );
+            
+            // Compare with today's date
+            const todayYMD = new Date(
+              torontoDate.getFullYear(), 
+              torontoDate.getMonth(), 
+              torontoDate.getDate()
+            );
+            
+            // Create tomorrow's date for comparison
+            const tomorrowYMD = new Date(
+              torontoDate.getFullYear(),
+              torontoDate.getMonth(),
+              torontoDate.getDate() + 1
+            );
+            
+            // If meal date is before today
+            if (mealSpecificDate < todayYMD) {
+              return { 
+                unavailable: true, 
+                reason: language === 'zh' ? "此日期已过" : "This specific date has already passed" 
+              };
+            }
+            
+            // If it's for tomorrow and it's past 11:59 AM today (allow orders at exactly 11:59)
+            if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
+                (currentHour > 11 || (currentHour === 11 && currentMinute > 59))) {
+              return { 
+                unavailable: true, 
+                reason: language === 'zh' ? "订单必须在配送前一天的上午11:59之前下单" : "Orders must be placed by 11:59 AM the day before delivery" 
+              };
+            }
+            
+            // If it's for today (which should not be available for ordering)
+            if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+              return { 
+                unavailable: true, 
+                reason: language === 'zh' ? "订单必须在配送前一天的上午11:59之前下单" : "Orders must be placed by 11:59 AM the day before delivery"
+              };
+            }
+            
+            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at 11:59 AM, it's available
+            return { unavailable: false, reason: "" };
+          }
+        }
+        
+        // If we couldn't parse the date properly
+        return { 
+          unavailable: true, 
+          reason: language === 'zh' ? "日期格式无效" : "Invalid date format" 
+        };
+      } catch (error) {
+        console.error('Error parsing meal date:', error);
+        return { 
+          unavailable: true, 
+          reason: language === 'zh' ? "解析日期时出错" : "Error parsing date" 
+        };
+      }
+    } catch (error) {
+      console.error('Error in isDayUnavailable:', error);
+      return { unavailable: false, reason: "" }; // Default to available on error
+    }
+  };
+  
   // Fetch delivery days and meal options from API
   useEffect(() => {
     const fetchData = async () => {
@@ -30,7 +143,7 @@ export default function WeeklySubscription() {
       try {
         const data = await getUserWeeklySubscription();
         if (data && data.length > 0) {
-    // Format dates based on language
+          // Format dates based on language
           const formattedData = data.map(day => ({
             ...day,
             name: language === 'zh' 
@@ -39,6 +152,20 @@ export default function WeeklySubscription() {
           }));
           
           setDeliveryDays(formattedData);
+          
+          // Auto-select the first available tab
+          const currentWeekDays = formattedData.filter(day => day.weekOffset === 0);
+          const nextWeekDays = formattedData.filter(day => day.weekOffset === 1);
+          
+          // Check if any days in current week are available
+          const hasAvailableCurrentWeekDays = currentWeekDays.some(day => !isDayUnavailable(day).unavailable);
+          
+          // If no current week days are available, check next week
+          if (!hasAvailableCurrentWeekDays && nextWeekDays.some(day => !isDayUnavailable(day).unavailable)) {
+            setActiveTab('next-week');
+          } else {
+            setActiveTab('current-week'); // Default to current week even if all days unavailable
+          }
         } else {
           toast({
             title: language === 'zh' ? '加载失败' : 'Failed to load data',
@@ -63,6 +190,23 @@ export default function WeeklySubscription() {
   
   // Add item to cart
   const addToCart = (dayId: string, optionId: string) => {
+    // Find the day to check availability
+    const day = deliveryDays.find(d => d.id === dayId);
+    
+    if (day) {
+      // Check if the day is unavailable
+      const { unavailable, reason } = isDayUnavailable(day);
+      
+      if (unavailable) {
+        // Show warning toast but still allow adding to cart
+        toast({
+          title: language === 'zh' ? "此日期不可用" : "This day is unavailable",
+          description: reason,
+          variant: "warning"
+        });
+      }
+    }
+    
     const existingItemIndex = cart.findIndex(
       item => item.dayId === dayId && item.optionId === optionId
     )
@@ -268,13 +412,23 @@ export default function WeeklySubscription() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="flex flex-col"
+                    className={`flex flex-col ${isDayUnavailable(day).unavailable ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-center gap-2 mb-4">
                       <Calendar className="h-5 w-5 text-[#C2884E]" />
                       <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
                       <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
+                      {isDayUnavailable(day).unavailable && (
+                        <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">
+                          {language === 'zh' ? '不可用' : 'Unavailable'}
+                        </span>
+                      )}
                     </div>
+                    {isDayUnavailable(day).unavailable && (
+                      <div className="text-sm text-amber-600 mb-2 bg-amber-50 p-2 rounded-md">
+                        {isDayUnavailable(day).reason}
+                      </div>
+                    )}
                     
                     <div className="space-y-4">
                       {day.options.map((option) => (
@@ -335,13 +489,23 @@ export default function WeeklySubscription() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="flex flex-col"
+                className={`flex flex-col ${isDayUnavailable(day).unavailable ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center gap-2 mb-4">
                   <Calendar className="h-5 w-5 text-[#C2884E]" />
                   <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
                   <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
+                  {isDayUnavailable(day).unavailable && (
+                    <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">
+                      {language === 'zh' ? '不可用' : 'Unavailable'}
+                    </span>
+                  )}
                 </div>
+                {isDayUnavailable(day).unavailable && (
+                  <div className="text-sm text-amber-600 mb-2 bg-amber-50 p-2 rounded-md">
+                    {isDayUnavailable(day).reason}
+                  </div>
+                )}
                 
                 <div className="space-y-4">
                   {day.options.map((option) => (
