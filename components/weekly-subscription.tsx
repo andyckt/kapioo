@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Plus, Minus, ShoppingCart, Calendar, Info } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Calendar, Info, ChevronRight, ChevronLeft } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { format, addDays } from 'date-fns'
+import { format, addDays, addWeeks } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Type definitions
 type MealOption = {
@@ -25,6 +26,7 @@ type DeliveryDay = {
   id: 'sunday' | 'tuesday'
   name: string
   date: string
+  weekOffset: number // 0 for current week, 1 for next week
   options: MealOption[]
 }
 
@@ -40,6 +42,7 @@ export default function WeeklySubscription() {
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
   const [deliveryDays, setDeliveryDays] = useState<DeliveryDay[]>([])
+  const [activeTab, setActiveTab] = useState('current-week')
   
   // Calculate next Sunday and Tuesday dates
   useEffect(() => {
@@ -54,6 +57,10 @@ export default function WeeklySubscription() {
     const nextSunday = daysUntilSunday === 0 ? addDays(today, 7) : addDays(today, daysUntilSunday)
     const nextTuesday = daysUntilTuesday === 0 ? addDays(today, 7) : addDays(today, daysUntilTuesday)
     
+    // Calculate the following week's dates
+    const followingSunday = addWeeks(nextSunday, 1)
+    const followingTuesday = addWeeks(nextTuesday, 1)
+    
     // Format dates based on language
     const formatDate = (date: Date) => {
       return language === 'zh' 
@@ -61,7 +68,7 @@ export default function WeeklySubscription() {
         : format(date, 'MMM dd')
     }
     
-    // Mock meal options for Sunday
+    // Mock meal options for current Sunday
     const sundayOptions: MealOption[] = [
       {
         id: 'sunday-option1',
@@ -80,7 +87,7 @@ export default function WeeklySubscription() {
       }
     ]
     
-    // Mock meal options for Tuesday
+    // Mock meal options for current Tuesday
     const tuesdayOptions: MealOption[] = [
       {
         id: 'tuesday-option1',
@@ -99,19 +106,73 @@ export default function WeeklySubscription() {
       }
     ]
     
+    // Mock meal options for next Sunday
+    const nextSundayOptions: MealOption[] = [
+      {
+        id: 'next-sunday-option1',
+        name: '香煎三文鱼 + 藜麦饭 + 芦笋',
+
+      },
+      {
+        id: 'next-sunday-option2',
+        name: '日式照烧鸡腿 + 糙米饭 + 炒菠菜',
+
+      },
+      {
+        id: 'next-sunday-option3',
+        name: '意式肉酱面 + 帕玛森奶酪 + 烤蔬菜',
+
+      }
+    ]
+    
+    // Mock meal options for next Tuesday
+    const nextTuesdayOptions: MealOption[] = [
+      {
+        id: 'next-tuesday-option1',
+        name: '泰式青咖喱鸡 + 香米饭 + 炒青菜',
+
+      },
+      {
+        id: 'next-tuesday-option2',
+        name: '红烧牛肉面 + 清炒西兰花',
+
+      },
+      {
+        id: 'next-tuesday-option3',
+        name: '墨西哥牛肉卷 + 鳄梨酱 + 炸玉米片',
+
+      }
+    ]
+    
     // Set delivery days with dates and options
     setDeliveryDays([
       {
         id: 'sunday',
         name: language === 'zh' ? '周日配送' : 'Sunday Delivery',
         date: formatDate(nextSunday),
+        weekOffset: 0,
         options: sundayOptions
       },
       {
         id: 'tuesday',
         name: language === 'zh' ? '周二配送' : 'Tuesday Delivery',
         date: formatDate(nextTuesday),
+        weekOffset: 0,
         options: tuesdayOptions
+      },
+      {
+        id: 'sunday',
+        name: language === 'zh' ? '周日配送' : 'Sunday Delivery',
+        date: formatDate(followingSunday),
+        weekOffset: 1,
+        options: nextSundayOptions
+      },
+      {
+        id: 'tuesday',
+        name: language === 'zh' ? '周二配送' : 'Tuesday Delivery',
+        date: formatDate(followingTuesday),
+        weekOffset: 1,
+        options: nextTuesdayOptions
       }
     ])
     
@@ -235,68 +296,157 @@ export default function WeeklySubscription() {
             </p>
           </div>
           
-          {/* Delivery Days */}
-          <div className="grid gap-8 md:grid-cols-2">
-            {deliveryDays.map((day) => (
-              <motion.div 
-                key={day.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col"
+          {/* Week Selection Tabs */}
+          <Tabs defaultValue="current-week" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-2 w-full mb-6 bg-[#F5EDE4]/30">
+              <TabsTrigger 
+                value="current-week" 
+                className="data-[state=active]:bg-[#F5EDE4] data-[state=active]:text-[#C2884E] font-medium"
               >
-                <div className="flex items-center gap-2 mb-4">
-                  <Calendar className="h-5 w-5 text-[#C2884E]" />
-                  <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
-                  <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
-                </div>
-                
-                <div className="space-y-4">
-                  {day.options.map((option) => (
-                    <Card 
-                      key={option.id}
-                      className="overflow-hidden transition-all duration-300 hover:shadow-md border-[#C2884E]/10 hover:border-[#C2884E]/30 bg-white rounded-lg hover:rounded-xl"
-                    >
-                      <CardContent className="p-0">
-                        <div className="p-4">
-                              <div className="flex items-start justify-between">
-                                <h4 className="font-medium text-[#6B5F53]">{option.name}</h4>
-
-                              </div>
-
+                {language === 'zh' ? '本周' : 'Current Week'}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="next-week" 
+                className="data-[state=active]:bg-[#F5EDE4] data-[state=active]:text-[#C2884E] font-medium"
+              >
+                {language === 'zh' ? '下周' : 'Next Week'}
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Current Week Content */}
+            <TabsContent value="current-week" className="mt-0">
+              <div className="grid gap-8 md:grid-cols-2">
+                {deliveryDays
+                  .filter(day => day.weekOffset === 0)
+                  .map((day) => (
+                  <motion.div 
+                    key={`${day.id}-${day.weekOffset}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col"
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <Calendar className="h-5 w-5 text-[#C2884E]" />
+                      <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
+                      <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {day.options.map((option) => (
+                        <Card 
+                          key={option.id}
+                          className="overflow-hidden transition-all duration-300 hover:shadow-md border-[#C2884E]/10 hover:border-[#C2884E]/30 bg-white rounded-lg hover:rounded-xl"
+                        >
+                          <CardContent className="p-0">
+                            <div className="p-4">
+                                  <div className="flex items-start justify-between">
+                                    <h4 className="font-medium text-[#6B5F53]">{option.name}</h4>
+    
+                                  </div>
+    
+                                </div>
+                                
+                                <div className="flex items-center justify-end mt-4">
+                                  <div className="flex items-center gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="icon" 
+                                      className="h-7 w-7 bg-white/80"
+                                      onClick={() => removeFromCart(day.id, option.id)}
+                                      disabled={getQuantityInCart(day.id, option.id) === 0}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-5 text-center text-sm">
+                                      {getQuantityInCart(day.id, option.id)}
+                                    </span>
+                                    <Button 
+                                      variant="outline" 
+                                      size="icon" 
+                                      className="h-7 w-7 bg-white/80"
+                                      onClick={() => addToCart(day.id, option.id)}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                             </div>
-                            
-                            <div className="flex items-center justify-end mt-4">
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-7 w-7 bg-white/80"
-                                  onClick={() => removeFromCart(day.id, option.id)}
-                                  disabled={getQuantityInCart(day.id, option.id) === 0}
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <span className="w-5 text-center text-sm">
-                                  {getQuantityInCart(day.id, option.id)}
-                                </span>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-7 w-7 bg-white/80"
-                                  onClick={() => addToCart(day.id, option.id)}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </TabsContent>
+            
+            {/* Next Week Content */}
+            <TabsContent value="next-week" className="mt-0">
+              <div className="grid gap-8 md:grid-cols-2">
+                {deliveryDays
+                  .filter(day => day.weekOffset === 1)
+                  .map((day) => (
+                  <motion.div 
+                    key={`${day.id}-${day.weekOffset}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col"
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <Calendar className="h-5 w-5 text-[#C2884E]" />
+                      <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
+                      <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {day.options.map((option) => (
+                        <Card 
+                          key={option.id}
+                          className="overflow-hidden transition-all duration-300 hover:shadow-md border-[#C2884E]/10 hover:border-[#C2884E]/30 bg-white rounded-lg hover:rounded-xl"
+                        >
+                          <CardContent className="p-0">
+                            <div className="p-4">
+                                  <div className="flex items-start justify-between">
+                                    <h4 className="font-medium text-[#6B5F53]">{option.name}</h4>
+    
+                                  </div>
+    
+                                </div>
+                                
+                                <div className="flex items-center justify-end mt-4">
+                                  <div className="flex items-center gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="icon" 
+                                      className="h-7 w-7 bg-white/80"
+                                      onClick={() => removeFromCart(day.id, option.id)}
+                                      disabled={getQuantityInCart(day.id, option.id) === 0}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-5 text-center text-sm">
+                                      {getQuantityInCart(day.id, option.id)}
+                                    </span>
+                                    <Button 
+                                      variant="outline" 
+                                      size="icon" 
+                                      className="h-7 w-7 bg-white/80"
+                                      onClick={() => addToCart(day.id, option.id)}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
           
           {/* Subscription Summary - Commented out for now */}
           {/* {getTotalItems() > 0 && (
