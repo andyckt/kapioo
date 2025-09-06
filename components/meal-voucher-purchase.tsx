@@ -60,14 +60,14 @@ export default function MealVoucherPurchase() {
   // Define voucher plans
   const twoDishPlans: VoucherPlan[] = [
     { id: 'two-6', type: 'twoDish', quantity: 6, price: 131, pricePerMeal: 21.83 },
-    { id: 'two-10', type: 'twoDish', quantity: 10, price: 195, pricePerMeal: 19.50, isPopular: true, savings: '首次推荐' },
+    { id: 'two-10', type: 'twoDish', quantity: 10, price: 195, pricePerMeal: 19.50, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
     { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18 },
     { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48 }
   ]
 
   const threeDishPlans: VoucherPlan[] = [
     { id: 'three-6', type: 'threeDish', quantity: 6, price: 150, pricePerMeal: 25.00 },
-    { id: 'three-10', type: 'threeDish', quantity: 10, price: 228, pricePerMeal: 22.80, isPopular: true, savings: '首次推荐' },
+    { id: 'three-10', type: 'threeDish', quantity: 10, price: 228, pricePerMeal: 22.80, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
     { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95 },
     { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78 }
   ]
@@ -145,7 +145,7 @@ export default function MealVoucherPurchase() {
             {/* Popular badge */}
             {plan.isPopular && (
               <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
-                {language === 'zh' ? '推荐' : 'Popular'}
+                  {language === 'zh' ? '推荐' : 'Most Popular'}
               </div>
             )}
             
@@ -875,73 +875,89 @@ export default function MealVoucherPurchase() {
       </div>
 
       {/* Purchase Steps */}
-      {purchaseStep === 'select' && (
-        <>
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-[#6B5F53] flex items-center gap-2">
-                <Tag className="h-5 w-5 text-[#C2884E]" />
-                {language === 'zh' ? '选择餐券套餐' : 'Choose Your Meal Plan'}
-              </h3>
-              {/* <div className="text-sm text-muted-foreground">
-                {language === 'zh' ? '餐券有效期：1年' : 'Vouchers valid for: 1 year'}
-              </div> */}
+      <AnimatePresence mode="wait">
+        {purchaseStep === 'select' && (
+          <motion.div
+            key="select-step"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+          >
+            <div className="mb-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-[#6B5F53] flex items-center gap-2">
+                  <Tag className="h-5 w-5 text-[#C2884E]" />
+                  {language === 'zh' ? '选择餐券套餐' : 'Choose Your Meal Plan'}
+                </h3>
+                {/* <div className="text-sm text-muted-foreground">
+                  {language === 'zh' ? '餐券有效期：1年' : 'Vouchers valid for: 1 year'}
+                </div> */}
+              </div>
             </div>
-          </div>
-          
-          <Tabs defaultValue={activeTab} onValueChange={(v) => setActiveTab(v as 'twoDish' | 'threeDish')} className="w-full">
-            <TabsList className="grid grid-cols-2 w-full mb-8 bg-[#F5EDE4]/30 p-1 rounded-xl">
-              <TabsTrigger 
-                value="twoDish" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
-              >
-                <div className="flex items-center gap-2">
-                  <Utensils className="h-4 w-4" />
-                  {language === 'zh' ? '每餐2菜' : '2-Dish Meal'}
-                </div>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="threeDish" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
-              >
-                <div className="flex items-center gap-2">
-                  <Utensils className="h-4 w-4" />
-                  {language === 'zh' ? '每餐3菜' : '3-Dish Meal'}
-                </div>
-              </TabsTrigger>
-            </TabsList>
             
-            
-            <AnimatePresence mode="wait">
-              <TabsContent value="twoDish" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
+            <Tabs defaultValue={activeTab} onValueChange={(v) => setActiveTab(v as 'twoDish' | 'threeDish')} className="w-full">
+              <TabsList className="grid grid-cols-2 w-full mb-8 bg-[#F5EDE4]/30 p-1 rounded-xl">
+                <TabsTrigger 
+                  value="twoDish" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
                 >
-                  {renderPlanCards(twoDishPlans)}
-                </motion.div>
-              </TabsContent>
+                  <div className="flex items-center gap-2">
+                    <Utensils className="h-4 w-4" />
+                    {language === 'zh' ? '每餐2菜' : '2-Dish Meal'}
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="threeDish" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <Utensils className="h-4 w-4" />
+                    {language === 'zh' ? '每餐3菜' : '3-Dish Meal'}
+                  </div>
+                </TabsTrigger>
+              </TabsList>
               
-              <TabsContent value="threeDish" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {renderPlanCards(threeDishPlans)}
-                </motion.div>
-              </TabsContent>
-            </AnimatePresence>
-          </Tabs>
+              
+              <AnimatePresence mode="wait">
+                <TabsContent value="twoDish" className="mt-0">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderPlanCards(twoDishPlans)}
+                  </motion.div>
+                </TabsContent>
+                
+                <TabsContent value="threeDish" className="mt-0">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderPlanCards(threeDishPlans)}
+                  </motion.div>
+                </TabsContent>
+              </AnimatePresence>
+            </Tabs>
+          </motion.div>
+        )}
 
-
-        </>
-      )}
-
-      {purchaseStep === 'upload' && renderUploadSection()}
+        {purchaseStep === 'upload' && (
+          <motion.div
+            key="upload-step"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+          >
+            {renderUploadSection()}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Purchase History Section */}
       {purchaseStep === 'select' && (
