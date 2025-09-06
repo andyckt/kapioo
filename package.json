@@ -10,7 +10,8 @@
     "seed": "tsx scripts/seed-database.ts",
     "seed:atlas": "node scripts/seed-atlas.js",
     "update-transactions": "node scripts/update-transactions.js",
-    "vercel-build": "next build"
+    "vercel-build": "next build",
+    "migrate:weekly": "tsx scripts/migrate-weekly-subscription.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",

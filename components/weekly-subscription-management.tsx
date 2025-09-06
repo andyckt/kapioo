@@ -6,36 +6,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, Edit, Plus, Trash2 } from "lucide-react"
+import { Calendar, Edit, Plus, Trash2, Loader2, Save } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-
-// Type definitions for meal options and delivery days
-type MealOption = {
-  id: string
-  name: string
-  tags?: string[]
-  active: boolean
-}
-
-type DeliveryDay = {
-  id: 'sunday' | 'tuesday'
-  name: string
-  date: string
-  active: boolean
-  options: MealOption[]
-}
-
-type DeliverySection = {
-  id: string
-  title: string
-  day: DeliveryDay
-}
+import { 
+  MealOption, 
+  DeliveryDay, 
+  DeliverySection,
+  getAdminWeeklySubscription,
+  updateDeliveryDay,
+  addMealOption,
+  updateMealOption,
+  deleteMealOption
+} from "@/lib/weekly-subscription"
 
 export function WeeklySubscriptionManagement() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [savingDateId, setSavingDateId] = useState<string | null>(null)
   const [deliverySections, setDeliverySections] = useState<DeliverySection[]>([])
   const [editingMeal, setEditingMeal] = useState<MealOption | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -45,167 +34,132 @@ export function WeeklySubscriptionManagement() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [mealToDelete, setMealToDelete] = useState<MealOption | null>(null)
   
-  // Initialize with mock data
+  // Fetch delivery sections from API
   useEffect(() => {
-    // Create mock delivery sections
-    setDeliverySections([
-      {
-        id: 'current-sunday',
-        title: 'This Week Sunday Delivery',
-        day: {
-          id: 'sunday',
-          name: 'Sunday Delivery',
-          date: 'Sep 07',
-          active: true,
-          options: [
-            {
-              id: 'sunday-option1',
-              name: '鲜虾鸡翅焖煲 + 紫米饭 + 蘑菇青菜',
-              tags: ['High Protein', 'Low Carb'],
-              active: true
-            },
-            {
-              id: 'sunday-option2',
-              name: '罗勒青酱意面 + 意式香草烤鸡',
-              tags: ['Italian', 'Herb'],
-              active: true
-            },
-            {
-              id: 'sunday-option3',
-              name: '桂侯萝卜慢炖牛腋 + 紫米饭 + 蔑油菜心',
-              tags: ['Slow Cooked', 'Beef'],
-              active: true
-            }
-          ]
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getAdminWeeklySubscription();
+        if (data && data.length > 0) {
+          setDeliverySections(data);
+        } else {
+          // If no data returned, use fallback mock data
+          toast({
+            title: "Failed to load data",
+            description: "Using fallback data. Please try again later.",
+            variant: "destructive"
+          });
         }
-      },
-      {
-        id: 'current-tuesday',
-        title: 'This Week Tuesday Delivery',
-        day: {
-          id: 'tuesday',
-          name: 'Tuesday Delivery',
-          date: 'Sep 09',
-          active: true,
-          options: [
-            {
-              id: 'tuesday-option1',
-              name: '豌豆/爆炒牛肉粒 + 玉米饭 + 时蔬',
-              tags: ['Beef', 'Stir Fry'],
-              active: true
-            },
-            {
-              id: 'tuesday-option2',
-              name: '西班牙浓郁海鲜烩饭',
-              tags: ['Seafood', 'Spanish'],
-              active: true
-            },
-            {
-              id: 'tuesday-option3',
-              name: '泰式柠檬干煎鸡 + 清炒黄瓜条',
-              tags: ['Thai', 'Chicken'],
-              active: true
-            }
-          ]
-        }
-      },
-      {
-        id: 'next-sunday',
-        title: 'Next Week Sunday Delivery',
-        day: {
-          id: 'sunday',
-          name: 'Sunday Delivery',
-          date: 'Sep 14',
-          active: true,
-          options: [
-            {
-              id: 'next-sunday-option1',
-              name: '香煎三文鱼 + 藜麦饭 + 芦笋',
-              tags: ['Seafood', 'High Protein'],
-              active: true
-            },
-            {
-              id: 'next-sunday-option2',
-              name: '日式照烧鸡腿 + 糙米饭 + 炒菠菜',
-              tags: ['Japanese', 'Chicken'],
-              active: true
-            },
-            {
-              id: 'next-sunday-option3',
-              name: '意式肉酱面 + 帕玛森奶酪 + 烤蔬菜',
-              tags: ['Italian', 'Pasta'],
-              active: true
-            }
-          ]
-        }
-      },
-      {
-        id: 'next-tuesday',
-        title: 'Next Week Tuesday Delivery',
-        day: {
-          id: 'tuesday',
-          name: 'Tuesday Delivery',
-          date: 'Sep 16',
-          active: true,
-          options: [
-            {
-              id: 'next-tuesday-option1',
-              name: '泰式青咖喱鸡 + 香米饭 + 炒青菜',
-              tags: ['Thai', 'Spicy'],
-              active: true
-            },
-            {
-              id: 'next-tuesday-option2',
-              name: '红烧牛肉面 + 清炒西兰花',
-              tags: ['Beef', 'Noodles'],
-              active: true
-            },
-            {
-              id: 'next-tuesday-option3',
-              name: '墨西哥牛肉卷 + 鳄梨酱 + 炸玉米片',
-              tags: ['Mexican', 'Beef'],
-              active: true
-            }
-          ]
-        }
+      } catch (error) {
+        console.error("Error fetching weekly subscription data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load weekly subscription data",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
-    ])
-    
-    setIsLoading(false)
+    };
+
+    fetchData();
   }, [])
   
   // No date calculation functions needed with fixed dates
   
   // Toggle day active status
-  const toggleDayActive = (sectionId: string) => {
+  const toggleDayActive = async (sectionId: string) => {
+    const section = deliverySections.find(s => s.id === sectionId);
+    if (!section) return;
+    
+    // Optimistically update UI
     setDeliverySections(sections => 
-      sections.map(section => 
-        section.id === sectionId 
-          ? { ...section, day: { ...section.day, active: !section.day.active } } 
-          : section
+      sections.map(s => 
+        s.id === sectionId 
+          ? { ...s, day: { ...s.day, active: !s.day.active } } 
+          : s
       )
-    )
+    );
+    
+    // Update in database
+    const success = await updateDeliveryDay(section.day.id, { 
+      active: !section.day.active 
+    });
+    
+    if (!success) {
+      // Revert if failed
+      setDeliverySections(sections => 
+        sections.map(s => 
+          s.id === sectionId 
+            ? { ...s, day: { ...s.day, active: section.day.active } } 
+            : s
+        )
+      );
+      
+      toast({
+        title: "Failed to update",
+        description: "Could not update delivery day status",
+        variant: "destructive"
+      });
+    }
   }
   
   // Toggle meal option active status
-  const toggleMealActive = (sectionId: string, mealId: string) => {
+  const toggleMealActive = async (sectionId: string, mealId: string) => {
+    const section = deliverySections.find(s => s.id === sectionId);
+    if (!section) return;
+    
+    const meal = section.day.options.find(o => o.id === mealId);
+    if (!meal) return;
+    
+    // Optimistically update UI
     setDeliverySections(sections => 
-      sections.map(section => 
-        section.id === sectionId 
+      sections.map(s => 
+        s.id === sectionId 
           ? {
-              ...section,
+              ...s,
               day: {
-                ...section.day,
-                options: section.day.options.map(option => 
-                  option.id === mealId 
-                    ? { ...option, active: !option.active }
-                    : option
+                ...s.day,
+                options: s.day.options.map(o => 
+                  o.id === mealId 
+                    ? { ...o, active: !o.active }
+                    : o
                 )
               }
             }
-          : section
+          : s
       )
-    )
+    );
+    
+    // Update in database
+    const updatedMeal = await updateMealOption(mealId, { active: !meal.active });
+    
+    if (!updatedMeal) {
+      // Revert if failed
+      setDeliverySections(sections => 
+        sections.map(s => 
+          s.id === sectionId 
+            ? {
+                ...s,
+                day: {
+                  ...s.day,
+                  options: s.day.options.map(o => 
+                    o.id === mealId 
+                      ? { ...o, active: meal.active }
+                      : o
+                  )
+                }
+              }
+            : s
+        )
+      );
+      
+      toast({
+        title: "Failed to update",
+        description: "Could not update meal option status",
+        variant: "destructive"
+      });
+    }
   }
   
   // Open edit dialog for a meal
@@ -215,9 +169,13 @@ export function WeeklySubscriptionManagement() {
   }
   
   // Save edited meal
-  const handleSaveMeal = () => {
-    if (!editingMeal) return
+  const handleSaveMeal = async () => {
+    if (!editingMeal) return;
     
+    // Store the original meal for rollback if needed
+    const originalSections = [...deliverySections];
+    
+    // Optimistically update UI
     setDeliverySections(sections => 
       sections.map(section => ({
         ...section,
@@ -228,13 +186,32 @@ export function WeeklySubscriptionManagement() {
           )
         }
       }))
-    )
+    );
     
-    setEditDialogOpen(false)
-    toast({
-      title: "Meal updated",
-      description: "The meal option has been updated successfully."
-    })
+    setEditDialogOpen(false);
+    
+    // Update in database
+    const updatedMeal = await updateMealOption(editingMeal.id, {
+      name: editingMeal.name,
+      tags: editingMeal.tags,
+      active: editingMeal.active
+    });
+    
+    if (updatedMeal) {
+      toast({
+        title: "Meal updated",
+        description: "The meal option has been updated successfully."
+      });
+    } else {
+      // Revert if failed
+      setDeliverySections(originalSections);
+      
+      toast({
+        title: "Failed to update",
+        description: "Could not update meal option",
+        variant: "destructive"
+      });
+    }
   }
   
   // Open delete confirmation dialog
@@ -244,9 +221,13 @@ export function WeeklySubscriptionManagement() {
   }
   
   // Confirm delete meal
-  const handleConfirmDelete = () => {
-    if (!mealToDelete) return
+  const handleConfirmDelete = async () => {
+    if (!mealToDelete) return;
     
+    // Store the original sections for rollback if needed
+    const originalSections = [...deliverySections];
+    
+    // Optimistically update UI
     setDeliverySections(sections => 
       sections.map(section => ({
         ...section,
@@ -255,13 +236,28 @@ export function WeeklySubscriptionManagement() {
           options: section.day.options.filter(option => option.id !== mealToDelete.id)
         }
       }))
-    )
+    );
     
-    setConfirmDeleteOpen(false)
-    toast({
-      title: "Meal deleted",
-      description: "The meal option has been deleted successfully."
-    })
+    setConfirmDeleteOpen(false);
+    
+    // Delete from database
+    const success = await deleteMealOption(mealToDelete.id);
+    
+    if (success) {
+      toast({
+        title: "Meal deleted",
+        description: "The meal option has been deleted successfully."
+      });
+    } else {
+      // Revert if failed
+      setDeliverySections(originalSections);
+      
+      toast({
+        title: "Failed to delete",
+        description: "Could not delete meal option",
+        variant: "destructive"
+      });
+    }
   }
   
   // Open add meal dialog
@@ -276,35 +272,54 @@ export function WeeklySubscriptionManagement() {
   }
   
   // Add new meal option after form submission
-  const handleAddMealSubmit = () => {
-    if (!newMealSection || !newMeal.name) return
+  const handleAddMealSubmit = async () => {
+    if (!newMealSection || !newMeal.name) return;
     
-    const mealToAdd: MealOption = {
-      id: `${newMealSection}-option${Date.now()}`,
-      name: newMeal.name,
-      tags: newMeal.tags || [],
-      active: newMeal.active !== undefined ? newMeal.active : true
+    const section = deliverySections.find(s => s.id === newMealSection);
+    if (!section) return;
+    
+    // Close dialog and show loading state
+    setAddMealDialogOpen(false);
+    setIsLoading(true);
+    
+    console.log('Adding meal option to section:', {
+      sectionId: section.id,
+      day: section.day.id,
+      weekOffset: section.day.weekOffset,
+      name: newMeal.name
+    });
+    
+    // Add to database - pass day ID and weekOffset instead of section ID
+    const result = await addMealOption(
+      section.day.id,
+      section.day.weekOffset,
+      {
+        name: newMeal.name,
+        tags: newMeal.tags || [],
+        active: newMeal.active !== undefined ? newMeal.active : true
+      }
+    );
+    
+    if (result && result.mealOption && result.deliveryDay) {
+      // Refresh data from API to get the updated list with proper IDs
+      const updatedData = await getAdminWeeklySubscription();
+      if (updatedData && updatedData.length > 0) {
+        setDeliverySections(updatedData);
+      }
+      
+      toast({
+        title: "Meal added",
+        description: "The new meal option has been added successfully."
+      });
+    } else {
+      toast({
+        title: "Failed to add",
+        description: "Could not add new meal option",
+        variant: "destructive"
+      });
     }
     
-    setDeliverySections(sections => 
-      sections.map(section => 
-        section.id === newMealSection 
-          ? { 
-              ...section, 
-              day: {
-                ...section.day,
-                options: [...section.day.options, mealToAdd]
-              }
-            } 
-          : section
-      )
-    )
-    
-    setAddMealDialogOpen(false)
-    toast({
-      title: "Meal added",
-      description: "The new meal option has been added successfully."
-    })
+    setIsLoading(false);
   }
 
   return (
@@ -312,7 +327,10 @@ export function WeeklySubscriptionManagement() {
       <div className="space-y-6">
         {isLoading ? (
           <div className="flex justify-center items-center h-[300px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Loading subscription data...</p>
+            </div>
           </div>
         ) : deliverySections.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2">
@@ -325,19 +343,69 @@ export function WeeklySubscriptionManagement() {
                       <CardTitle className="text-lg">{section.title}</CardTitle>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Input 
-                        className="w-40 text-sm" 
-                        value={section.day.date} 
-                        onChange={(e) => {
-                          setDeliverySections(sections => 
-                            sections.map(s => 
-                              s.id === section.id 
-                                ? { ...s, day: { ...s.day, date: e.target.value } } 
-                                : s
-                            )
-                          );
-                        }}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          className="w-40 text-sm" 
+                          value={section.day.date} 
+                          onChange={(e) => {
+                            setDeliverySections(sections => 
+                              sections.map(s => 
+                                s.id === section.id 
+                                  ? { ...s, day: { ...s.day, date: e.target.value } } 
+                                  : s
+                              )
+                            );
+                          }}
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          disabled={savingDateId === section.id}
+                          onClick={async () => {
+                            setSavingDateId(section.id);
+                            try {
+                            const success = await updateDeliveryDay(section.day.id, { 
+                              date: section.day.date,
+                              weekOffset: section.day.weekOffset
+                            });
+                              
+                              if (success) {
+                                toast({
+                                  title: "Date updated",
+                                  description: "The delivery date has been updated successfully."
+                                });
+                              } else {
+                                toast({
+                                  title: "Failed to update",
+                                  description: "Could not update the delivery date",
+                                  variant: "destructive"
+                                });
+                              }
+                            } catch (error) {
+                              console.error("Error updating date:", error);
+                              toast({
+                                title: "Error",
+                                description: "An unexpected error occurred",
+                                variant: "destructive"
+                              });
+                            } finally {
+                              setSavingDateId(null);
+                            }
+                          }}
+                        >
+                          {savingDateId === section.id ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Saving...
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <Save className="h-3 w-3" />
+                              Save
+                            </span>
+                          )}
+                        </Button>
+                      </div>
                       <div className="flex items-center space-x-2">
                         <Switch 
                           id={`${section.id}-active`} 
