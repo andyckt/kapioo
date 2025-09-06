@@ -1,8 +1,9 @@
 // Script to update meal descriptions and dates in the database
 const { MongoClient } = require('mongodb');
+require('dotenv').config();
 
-// MongoDB connection string - using the actual connection string from other scripts
-const uri = "mongodb+srv://kamtocheung1104:N7H0LQ9L2bq5qQbo@kapiofood.otsn8px.mongodb.net/kapioo?retryWrites=true&w=majority&appName=kapiofood";
+// MongoDB connection string - using environment variable
+const uri = process.env.MONGODB_URI;
 
 // Weekly meal data with just descriptions and dates
 const weeklyMeals = [
@@ -44,6 +45,11 @@ const weeklyMeals = [
 ];
 
 async function updateMealDescriptionsAndDates() {
+  if (!uri) {
+    console.error('MONGODB_URI environment variable is not set');
+    process.exit(1);
+  }
+
   const client = new MongoClient(uri);
   
   try {
@@ -89,4 +95,4 @@ async function updateMealDescriptionsAndDates() {
 }
 
 // Run the update function
-updateMealDescriptionsAndDates(); 
+updateMealDescriptionsAndDates();

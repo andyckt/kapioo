@@ -1,8 +1,9 @@
 // Script to update meal tags in the database
 const { MongoClient } = require('mongodb');
+require('dotenv').config();
 
-// MongoDB connection string - using the actual connection string from other scripts
-const uri = "mongodb+srv://kamtocheung1104:N7H0LQ9L2bq5qQbo@kapiofood.otsn8px.mongodb.net/kapioo?retryWrites=true&w=majority&appName=kapiofood";
+// MongoDB connection string - using environment variable
+const uri = process.env.MONGODB_URI;
 
 // Weekly meal data with tags from the weekly-menu-section.tsx file
 const weeklyMeals = [
@@ -37,6 +38,11 @@ const weeklyMeals = [
 ];
 
 async function updateMealTags() {
+  if (!uri) {
+    console.error('MONGODB_URI environment variable is not set');
+    process.exit(1);
+  }
+
   const client = new MongoClient(uri);
   
   try {
@@ -81,4 +87,4 @@ async function updateMealTags() {
 }
 
 // Run the update function
-updateMealTags(); 
+updateMealTags();

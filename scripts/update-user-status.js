@@ -1,9 +1,10 @@
 // Script to ensure all users have "Active" status
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+require('dotenv').config();
 
-// Use the Atlas connection string directly - same as in seed-atlas.js
-const MONGODB_URI = "mongodb+srv://kamtocheung1104:N7H0LQ9L2bq5qQbo@kapiofood.otsn8px.mongodb.net/kapioo?retryWrites=true&w=majority&appName=kapiofood";
+// Use environment variable for MongoDB connection
+const MONGODB_URI = process.env.MONGODB_URI;
 
 // Create a simplified user schema for this operation
 const userSchema = new mongoose.Schema({
@@ -16,6 +17,11 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 async function updateAllUserStatus() {
+  if (!MONGODB_URI) {
+    console.error('MONGODB_URI environment variable is not set');
+    process.exit(1);
+  }
+
   try {
     console.log('Connecting to MongoDB Atlas...');
     await mongoose.connect(MONGODB_URI);
@@ -59,4 +65,4 @@ async function updateAllUserStatus() {
 }
 
 // Run the update function
-updateAllUserStatus(); 
+updateAllUserStatus();
