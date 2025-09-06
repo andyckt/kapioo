@@ -511,23 +511,39 @@ export function MealVoucherManagement() {
                   </CardHeader>
                   <CardContent className="pt-3">
                     <div className="border border-[#C2884E]/10 rounded-md p-3 text-center">
-                      {/* In a real application, this would be an actual image preview */}
+                      {/* Display the actual image */}
                       <div className="bg-[#F5EDE4]/50 rounded-md p-4 mb-3">
-                        <div className="flex items-center justify-center">
-                          <ExternalLink className="h-10 w-10 text-[#C2884E]" />
-                        </div>
-                        <p className="mt-2 text-sm text-[#6B5F53]">
-                          {selectedRequest.imageProof}
-                        </p>
+                        {selectedRequest.imageProof && (
+                          <div className="flex flex-col items-center">
+                            <div className="relative w-full max-w-md h-64 mb-3 overflow-hidden rounded-md border border-[#C2884E]/20">
+                              <img 
+                                src={selectedRequest.imageProof} 
+                                alt="Payment Proof" 
+                                className="object-contain w-full h-full"
+                                onError={(e) => {
+                                  // If image fails to load, show a fallback
+                                  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E";
+                                  e.currentTarget.className = "object-contain w-full h-full opacity-30";
+                                }}
+                              />
+                            </div>
+                            <p className="mt-2 text-sm text-[#6B5F53] break-all">
+                              {selectedRequest.imageProof}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="border-[#C2884E]/20 text-[#6B5F53] hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Payment Proof
-                      </Button>
+                      <div className="flex justify-center">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="border-[#C2884E]/20 text-[#6B5F53] hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
+                          onClick={() => window.open(selectedRequest.imageProof, '_blank')}
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Open in New Tab
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
