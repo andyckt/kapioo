@@ -52,6 +52,143 @@ export default function DailyDelivery() {
   const [selectedDay, setSelectedDay] = useState<string>('monday-w1')
   const [dayWarning, setDayWarning] = useState<string | null>(null)
   
+  // Check if a day is in the past or today after ordering cutoff time
+  const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
+    try {
+      // Get current date and time in Toronto timezone
+      const torontoOptions = { timeZone: 'America/Toronto' };
+      const now = new Date();
+      
+      // Format the Toronto time as a string to work with
+      const torontoDateString = now.toLocaleString('en-US', torontoOptions);
+      const torontoDate = new Date(torontoDateString);
+      
+      // Get the current hour and minute in Toronto
+      const currentHour = torontoDate.getHours();
+      const currentMinute = torontoDate.getMinutes();
+      
+      // Check if we have a date for this meal
+      const dayData = days[day];
+      if (!dayData || !dayData.date) {
+        return { 
+          unavailable: true, 
+          reason: "Date not available for this meal" 
+        };
+      }
+      
+      const mealDate = dayData.date;
+      
+      // Debug logging
+      console.log(`Day comparison for ${day}:`, {
+        day,
+        currentHour,
+        mealDate
+      });
+
+      // Parse the date (expected format like "Jan 01" or "Oct 10")
+      try {
+        const parts = mealDate.split(' ');
+        
+        // Handle formats like "Jan 01" or "Oct 10"
+        if (parts.length === 2) {
+          const monthStr = parts[0];
+          const dayStr = parts[1];
+          
+          // Get month index (0-11) using short month names
+          const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const monthIndex = shortMonths.findIndex(m => 
+            monthStr.toLowerCase() === m.toLowerCase());
+          
+          // Parse day number
+          const dayNum = parseInt(dayStr);
+          
+          console.log(`Date parsing for ${mealDate}:`, {
+            monthStr,
+            monthIndex,
+            dayStr,
+            dayNum
+          });
+          
+          if (monthIndex !== -1 && !isNaN(dayNum)) {
+            // Create a date for the meal's specific date (use current year)
+            const mealSpecificDate = new Date(
+              torontoDate.getFullYear(), 
+              monthIndex, 
+              dayNum
+            );
+            
+            // Compare with today's date
+            const todayYMD = new Date(
+              torontoDate.getFullYear(), 
+              torontoDate.getMonth(), 
+              torontoDate.getDate()
+            );
+            
+            // Create tomorrow's date for comparison
+            const tomorrowYMD = new Date(
+              torontoDate.getFullYear(),
+              torontoDate.getMonth(),
+              torontoDate.getDate() + 1
+            );
+            
+            console.log(`Date comparison:`, {
+              mealSpecificDate: mealSpecificDate.toDateString(),
+              todayYMD: todayYMD.toDateString(),
+              tomorrowYMD: tomorrowYMD.toDateString(),
+              isBeforeToday: mealSpecificDate < todayYMD,
+              isTomorrow: mealSpecificDate.getTime() === tomorrowYMD.getTime(),
+              isToday: mealSpecificDate.getTime() === todayYMD.getTime()
+            });
+            
+            // If meal date is before today
+            if (mealSpecificDate < todayYMD) {
+              return { 
+                unavailable: true, 
+                reason: "This specific date has already passed" 
+              };
+            }
+            
+            // If it's for tomorrow and it's past 11:59 AM today (changed to allow orders at exactly 11:59)
+            if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
+                (currentHour > 11 || (currentHour === 11 && currentMinute > 59))) {
+              return { 
+                unavailable: true, 
+                reason: "Orders must be placed by 11:59 AM the day before delivery" 
+              };
+            }
+            
+            // If it's for today (which should not be available for ordering)
+            if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+              return { 
+                unavailable: true, 
+                reason: "Orders must be placed by 11:59 AM the day before delivery"
+              };
+            }
+            
+            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at 11:59 AM, it's available
+            return { unavailable: false, reason: "" };
+          }
+        }
+        
+        // If we couldn't parse the date properly
+        return { 
+          unavailable: true, 
+          reason: "Invalid date format" 
+        };
+      } catch (error) {
+        console.error('Error parsing meal date:', error);
+        return { 
+          unavailable: true, 
+          reason: "Error parsing date" 
+        };
+      }
+    } catch (error) {
+      console.error('Error in isDayUnavailable:', error);
+      return { unavailable: false, reason: "" }; // Default to available on error
+    }
+  };
+  
   // Tag helper functions removed as icons are no longer used
 
   // Load data from API
@@ -94,9 +231,87 @@ export default function DailyDelivery() {
           
           setDays(formattedDays)
           
-          // Set default selected day if available
+          // Find the first available day (not unavailable)
           if (Object.keys(formattedDays).length > 0) {
-            setSelectedDay(Object.keys(formattedDays)[0])
+            // First create a helper function to check availability
+            const checkDayAvailability = (day: string): boolean => {
+              try {
+                // Get current date and time in Toronto timezone
+                const torontoOptions = { timeZone: 'America/Toronto' };
+                const now = new Date();
+                
+                // Format the Toronto time as a string to work with
+                const torontoDateString = now.toLocaleString('en-US', torontoOptions);
+                const torontoDate = new Date(torontoDateString);
+                
+                const dayData = formattedDays[day];
+                if (!dayData || !dayData.date) return false;
+                
+                const mealDate = dayData.date;
+                
+                try {
+                  const parts = mealDate.split(' ');
+                  
+                  if (parts.length === 2) {
+                    const monthStr = parts[0];
+                    const dayStr = parts[1];
+                    
+                    const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const monthIndex = shortMonths.findIndex(m => 
+                      monthStr.toLowerCase() === m.toLowerCase());
+                    
+                    const dayNum = parseInt(dayStr);
+                    
+                    if (monthIndex !== -1 && !isNaN(dayNum)) {
+                      const mealSpecificDate = new Date(
+                        torontoDate.getFullYear(), 
+                        monthIndex, 
+                        dayNum
+                      );
+                      
+                      const todayYMD = new Date(
+                        torontoDate.getFullYear(), 
+                        torontoDate.getMonth(), 
+                        torontoDate.getDate()
+                      );
+                      
+                      const tomorrowYMD = new Date(
+                        torontoDate.getFullYear(),
+                        torontoDate.getMonth(),
+                        torontoDate.getDate() + 1
+                      );
+                      
+                      // If meal date is before today
+                      if (mealSpecificDate < todayYMD) {
+                        return false;
+                      }
+                      
+                      // If it's for today
+                      if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+                        return false;
+                      }
+                      
+                      // If it's available, return true
+                      return true;
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error checking day availability:', error);
+                }
+                
+                return false;
+              } catch (error) {
+                console.error('Error in checkDayAvailability:', error);
+                return false;
+              }
+            };
+            
+            // Try to find the first available day
+            const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
+            
+            // If found, use it; otherwise fall back to the first day
+            setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
           }
         } else {
           throw new Error(daysData.error || 'Failed to fetch days')
@@ -118,6 +333,18 @@ export default function DailyDelivery() {
   
   // Add item to cart
   const addToCart = (day: string, date: string, combo: ComboItem, type: ComboType) => {
+    // Check if the day is unavailable
+    const { unavailable, reason } = isDayUnavailable(day);
+    
+    if (unavailable) {
+      toast({
+        title: "Cannot add to cart",
+        description: reason,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const existingItemIndex = cart.findIndex(
       item => item.day === day && item.comboId === combo.id && item.type === type
     )
@@ -282,6 +509,18 @@ export default function DailyDelivery() {
                 <button
                   key={day}
                   onClick={() => {
+                    // We still want to show the warning but allow selection
+                    const { unavailable, reason } = isDayUnavailable(day);
+                    
+                    if (unavailable) {
+                      toast({
+                        title: "This day is unavailable",
+                        description: reason,
+                        variant: "warning"
+                      });
+                      // Continue with selection instead of returning
+                    }
+                    
                     // Check if current day has at least 2 items selected
                     const currentDayItems = cart.filter(item => item.day === selectedDay);
                     const currentDayTotal = currentDayItems.reduce((total, item) => total + item.quantity, 0);
@@ -303,12 +542,17 @@ export default function DailyDelivery() {
                     "w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2",
                     selectedDay === day 
                       ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" 
-                      : "hover:bg-[#F5EDE4] text-[#6B5F53]"
+                      : isDayUnavailable(day).unavailable
+                        ? "opacity-50 cursor-not-allowed text-[#6B5F53]"
+                        : "hover:bg-[#F5EDE4] text-[#6B5F53]"
                   )}
                 >
                   <div className="w-full">
                     <p className="font-medium capitalize text-sm">{days[day].displayName.substring(0, 3)}</p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
+                    {isDayUnavailable(day).unavailable && (
+                      <p className="text-xs text-red-500 mt-1">Unavailable</p>
+                    )}
                   </div>
                 </button>
               ))}
@@ -323,6 +567,18 @@ export default function DailyDelivery() {
                 <button
                   key={day}
                   onClick={() => {
+                    // We still want to show the warning but allow selection
+                    const { unavailable, reason } = isDayUnavailable(day);
+                    
+                    if (unavailable) {
+                      toast({
+                        title: "This day is unavailable",
+                        description: reason,
+                        variant: "warning"
+                      });
+                      // Continue with selection instead of returning
+                    }
+                    
                     // Check if current day has at least 2 items selected
                     const currentDayItems = cart.filter(item => item.day === selectedDay);
                     const currentDayTotal = currentDayItems.reduce((total, item) => total + item.quantity, 0);
@@ -344,12 +600,17 @@ export default function DailyDelivery() {
                     "w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2",
                     selectedDay === day 
                       ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" 
-                      : "hover:bg-[#F5EDE4] text-[#6B5F53]"
+                      : isDayUnavailable(day).unavailable
+                        ? "opacity-50 cursor-not-allowed text-[#6B5F53]"
+                        : "hover:bg-[#F5EDE4] text-[#6B5F53]"
                   )}
                 >
                   <div className="w-full">
                     <p className="font-medium capitalize text-sm">{days[day].displayName.substring(0, 3)}</p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
+                    {isDayUnavailable(day).unavailable && (
+                      <p className="text-xs text-red-500 mt-1">Unavailable</p>
+                    )}
                   </div>
                 </button>
               ))}
@@ -384,6 +645,16 @@ export default function DailyDelivery() {
                     <p className="text-xs text-red-600 font-medium">{dayWarning}</p>
                   </div>
                 )}
+                
+                {/* Unavailable Day Warning */}
+                {isDayUnavailable(selectedDay).unavailable && (
+                  <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-xs text-red-600 font-medium">
+                      <span className="font-bold">This day is unavailable: </span>
+                      {isDayUnavailable(selectedDay).reason}
+                    </p>
+                  </div>
+                )}
 
                 {/* Combos for this day - Grid layout for desktop */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -393,6 +664,7 @@ export default function DailyDelivery() {
                         relative backdrop-blur-xl bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4]
                         rounded-2xl p-5 border border-[#C2884E]/20 shadow-md
                         transition-all duration-300 ease-out h-full
+                        ${isDayUnavailable(selectedDay).unavailable ? 'opacity-60' : ''}
                       `}>
                         <div className="flex flex-wrap items-center justify-between mb-4">
                           <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{combo.name}</h3>
@@ -413,7 +685,7 @@ export default function DailyDelivery() {
                                 size="icon" 
                                 className="h-7 w-7 bg-white/80"
                                 onClick={() => removeFromCart(selectedDay, combo, 'A')}
-                                disabled={getQuantityInCart(selectedDay, combo.id, 'A') === 0}
+                                disabled={getQuantityInCart(selectedDay, combo.id, 'A') === 0 || isDayUnavailable(selectedDay).unavailable}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
@@ -425,6 +697,7 @@ export default function DailyDelivery() {
                                 size="icon" 
                                 className="h-7 w-7 bg-white/80"
                                 onClick={() => addToCart(selectedDay, days[selectedDay].date, combo, 'A')}
+                                disabled={isDayUnavailable(selectedDay).unavailable}
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
@@ -460,7 +733,7 @@ export default function DailyDelivery() {
                                 size="icon" 
                                 className="h-7 w-7 bg-white/80"
                                 onClick={() => removeFromCart(selectedDay, combo, 'B')}
-                                disabled={getQuantityInCart(selectedDay, combo.id, 'B') === 0}
+                                disabled={getQuantityInCart(selectedDay, combo.id, 'B') === 0 || isDayUnavailable(selectedDay).unavailable}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
@@ -472,6 +745,7 @@ export default function DailyDelivery() {
                                 size="icon" 
                                 className="h-7 w-7 bg-white/80"
                                 onClick={() => addToCart(selectedDay, days[selectedDay].date, combo, 'B')}
+                                disabled={isDayUnavailable(selectedDay).unavailable}
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
