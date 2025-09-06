@@ -28,7 +28,8 @@ import {
   Sparkles,
   Tag,
   Calendar,
-  Utensils
+  Utensils,
+  MessageSquare
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -765,7 +766,8 @@ export default function MealVoucherPurchase() {
             plan: `${request.quantity} × ${request.type === 'twoDish' ? '2-Dish' : '3-Dish'} ${language === 'zh' ? '餐券' : 'Vouchers'}`,
             amount: request.amount,
             date: new Date(request.createdAt).toLocaleDateString(),
-            status: request.status
+            status: request.status,
+            adminNotes: request.adminNotes
           }))
           
           setPurchaseHistory(formattedHistory)
@@ -1129,25 +1131,41 @@ export default function MealVoucherPurchase() {
               {purchaseHistory.map((purchase) => (
                 <Card key={purchase.id} className="overflow-hidden">
                   <CardContent className="p-0">
-                    <div className="p-4 flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{purchase.plan}</p>
-                        <p className="text-sm text-muted-foreground">{purchase.date}</p>
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <p className="font-medium">{purchase.plan}</p>
+                          <p className="text-sm text-muted-foreground">{purchase.date}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${purchase.amount}</p>
+                          <Badge 
+                            variant={purchase.status === 'approved' ? 'default' : purchase.status === 'pending' ? 'outline' : 'destructive'}
+                            className="mt-1"
+                          >
+                            {purchase.status === 'approved' 
+                              ? (language === 'zh' ? '已批准' : 'Approved')
+                              : purchase.status === 'pending'
+                                ? (language === 'zh' ? '待处理' : 'Pending')
+                                : (language === 'zh' ? '已拒绝' : 'Declined')
+                            }
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">${purchase.amount}</p>
-                        <Badge 
-                          variant={purchase.status === 'approved' ? 'default' : purchase.status === 'pending' ? 'outline' : 'destructive'}
-                          className="mt-1"
-                        >
-                          {purchase.status === 'approved' 
-                            ? (language === 'zh' ? '已批准' : 'Approved')
-                            : purchase.status === 'pending'
-                              ? (language === 'zh' ? '待处理' : 'Pending')
-                              : (language === 'zh' ? '已拒绝' : 'Declined')
-                          }
-                        </Badge>
-                      </div>
+                      
+                      {purchase.adminNotes && (
+                        <div className="mt-3 pt-3 border-t border-dashed border-[#C2884E]/10">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <MessageSquare className="h-3.5 w-3.5 text-[#C2884E]" />
+                            <p className="text-sm font-medium text-[#6B5F53]">
+                              {language === 'zh' ? '管理员备注' : 'Admin Notes'}:
+                            </p>
+                          </div>
+                          <p className="text-sm text-muted-foreground pl-5">
+                            "{purchase.adminNotes}"
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
