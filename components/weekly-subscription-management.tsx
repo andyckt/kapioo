@@ -40,6 +40,9 @@ export function WeeklySubscriptionManagement() {
   const [deliverySections, setDeliverySections] = useState<DeliverySection[]>([])
   const [editingMeal, setEditingMeal] = useState<MealOption | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [addMealDialogOpen, setAddMealDialogOpen] = useState(false)
+  const [newMealSection, setNewMealSection] = useState<string>('')
+  const [newMeal, setNewMeal] = useState<Partial<MealOption>>({ name: '', description: '', tags: [], active: true })
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [mealToDelete, setMealToDelete] = useState<MealOption | null>(null)
   
@@ -274,35 +277,49 @@ export function WeeklySubscriptionManagement() {
     })
   }
   
-  // Add new meal option
-  const handleAddMeal = (sectionId: string) => {
-    const section = deliverySections.find(s => s.id === sectionId)
-    if (!section) return
-    
-    const newMeal: MealOption = {
-      id: `${sectionId}-option${Date.now()}`,
-      name: "New Meal Option",
-      description: "Description of the new meal option",
-      tags: ["New"],
+  // Open add meal dialog
+  const handleAddMealClick = (sectionId: string) => {
+    setNewMealSection(sectionId)
+    setNewMeal({
+      name: "",
+      description: "",
+      tags: [],
       active: true
+    })
+    setAddMealDialogOpen(true)
+  }
+  
+  // Add new meal option after form submission
+  const handleAddMealSubmit = () => {
+    if (!newMealSection || !newMeal.name) return
+    
+    const mealToAdd: MealOption = {
+      id: `${newMealSection}-option${Date.now()}`,
+      name: newMeal.name,
+      description: newMeal.description || "",
+      tags: newMeal.tags || [],
+      active: newMeal.active !== undefined ? newMeal.active : true
     }
     
     setDeliverySections(sections => 
       sections.map(section => 
-        section.id === sectionId 
+        section.id === newMealSection 
           ? { 
               ...section, 
               day: {
                 ...section.day,
-                options: [...section.day.options, newMeal]
+                options: [...section.day.options, mealToAdd]
               }
             } 
           : section
       )
     )
     
-    // Open edit dialog for the new meal
-    handleEditMeal(newMeal)
+    setAddMealDialogOpen(false)
+    toast({
+      title: "Meal added",
+      description: "The new meal option has been added successfully."
+    })
   }
 
   return (
@@ -383,7 +400,7 @@ export function WeeklySubscriptionManagement() {
                     <Button 
                       variant="outline" 
                       className="w-full mt-2" 
-                      onClick={() => handleAddMeal(section.id)}
+                      onClick={() => handleAddMealClick(section.id)}
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Meal Option
                     </Button>
@@ -467,6 +484,78 @@ export function WeeklySubscriptionManagement() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveMeal}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Meal Dialog */}
+      <Dialog open={addMealDialogOpen} onOpenChange={setAddMealDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add New Meal Option</DialogTitle>
+            <DialogDescription>
+              Enter the details for the new meal option.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-meal-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="new-meal-name"
+                value={newMeal.name || ''}
+                onChange={(e) => setNewMeal({...newMeal, name: e.target.value})}
+                className="col-span-3"
+                placeholder="Enter meal name"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-meal-description" className="text-right">
+                Description
+              </Label>
+              <Input
+                id="new-meal-description"
+                value={newMeal.description || ''}
+                onChange={(e) => setNewMeal({...newMeal, description: e.target.value})}
+                className="col-span-3"
+                placeholder="Enter meal description"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-meal-tags" className="text-right">
+                Tags
+              </Label>
+              <Input
+                id="new-meal-tags"
+                value={newMeal.tags?.join(', ') || ''}
+                onChange={(e) => setNewMeal({
+                  ...newMeal, 
+                  tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
+                })}
+                placeholder="Enter tags separated by commas"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-meal-active" className="text-right">
+                Active
+              </Label>
+              <div className="col-span-3 flex items-center">
+                <Switch 
+                  id="new-meal-active" 
+                  checked={newMeal.active !== undefined ? newMeal.active : true} 
+                  onCheckedChange={(checked) => setNewMeal({...newMeal, active: checked})} 
+                />
+                <Label htmlFor="new-meal-active" className="ml-2">
+                  {newMeal.active !== undefined ? (newMeal.active ? 'Active' : 'Inactive') : 'Active'}
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddMealDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddMealSubmit} disabled={!newMeal.name}>Add Meal</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
