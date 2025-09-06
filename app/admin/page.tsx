@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -68,6 +68,7 @@ import { Switch } from "@/components/ui/switch"
 import { OrderManagement } from "@/components/order-management"
 import { NotificationType } from '@/lib/services/notifications';
 import { WeekYearDisplay } from "@/components/week-year-display"
+import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 
 export default function AdminDashboardPage() {
@@ -849,6 +850,14 @@ export default function AdminDashboardPage() {
               Daily Delivery Management
             </Button>
             <Button
+              variant={activeTab === "weekly-subscription" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => setActiveTab("weekly-subscription")}
+            >
+              <Gift className="mr-2 h-4 w-4" />
+              Weekly Subscription Management
+            </Button>
+            <Button
               variant={activeTab === "credits" ? "default" : "ghost"}
               className="justify-start"
               onClick={() => setActiveTab("credits")}
@@ -1088,6 +1097,22 @@ export default function AdminDashboardPage() {
                   <h2 className="text-3xl font-bold tracking-tight">Daily Delivery Management</h2>
                 </div>
                 <DailyDeliveryManagement />
+              </motion.div>
+            )}
+            
+            {activeTab === "weekly-subscription" && (
+              <motion.div
+                key="weekly-subscription"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold tracking-tight">Weekly Subscription Management</h2>
+                </div>
+                <WeeklySubscriptionManagement />
               </motion.div>
             )}
 
