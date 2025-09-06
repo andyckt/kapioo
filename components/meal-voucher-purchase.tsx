@@ -884,53 +884,6 @@ export default function MealVoucherPurchase() {
             </div>
           </div>
 
-          <div className="mt-8 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] p-6 rounded-xl border border-[#C2884E]/10 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="bg-white p-3 rounded-full shadow-sm border border-[#C2884E]/10">
-                <Info className="h-6 w-6 text-[#C2884E]" />
-              </div>
-              <div>
-                <h4 className="font-bold text-[#6B5F53] text-lg mb-2">
-                  {language === 'zh' ? '餐券政策' : 'Voucher Policy'}
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '有效期' : 'Validity Period'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {language === 'zh' ? '自购买之日起一年内有效' : 'Valid for one year from purchase date'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '退款政策' : 'Refund Policy'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {language === 'zh' ? '购买后7天内可申请退款（未使用）' : 'Refundable within 7 days of purchase (if unused)'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '灵活使用' : 'Flexible Usage'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {language === 'zh' ? '可在任何可用配送日期使用' : 'Can be used on any available delivery date'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
