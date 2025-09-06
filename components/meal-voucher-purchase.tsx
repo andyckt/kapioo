@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { useRouter } from 'next/navigation'
 import { 
   CreditCard, 
   Upload, 
@@ -55,6 +56,7 @@ export default function MealVoucherPurchase() {
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const router = useRouter()
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
 
   // Define voucher plans
@@ -88,8 +90,27 @@ export default function MealVoucherPurchase() {
     setPurchaseStep('upload')
   }
 
+  // Handle file upload to AWS S3
+  const uploadFileToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to upload file')
+    }
+    
+    const data = await response.json()
+    return data.url
+  }
+
   // Handle payment proof upload and submission
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!paymentProof) {
       toast({
         title: language === 'zh' ? "请上传付款凭证" : "Please upload payment proof",
@@ -99,7 +120,7 @@ export default function MealVoucherPurchase() {
     }
 
     // Submit the purchase directly
-    handleSubmitPurchase()
+    await handleSubmitPurchase()
   }
 
   // Handle purchase submission
@@ -115,16 +136,82 @@ export default function MealVoucherPurchase() {
 
     setIsLoading(true)
 
-    // This is just a placeholder - the actual implementation will be done later
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      // 1. Upload the file to S3
+      const imageProofUrl = await uploadFileToS3(paymentProof)
+      
+      // 2. Get user data from localStorage
+      const userData = localStorage.getItem('user')
+      if (!userData) {
+        throw new Error('User not logged in')
+      }
+      
+      const user = JSON.parse(userData)
+      
+      // 3. Submit the voucher purchase request
+      const response = await fetch('/api/voucher-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: user._id,
+          type: selectedPlan.type,
+          quantity: selectedPlan.quantity,
+          amount: selectedPlan.price,
+          imageProof: imageProofUrl,
+          notes: notes || undefined
+        })
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit purchase request')
+      }
+      
+      // 4. Handle success
       setIsSubmitted(true)
       
       toast({
         title: language === 'zh' ? "购买请求已提交" : "Purchase request submitted",
         description: language === 'zh' ? "我们将尽快审核您的请求" : "We will review your request as soon as possible"
       })
-    }, 1500)
+      
+      // 5. Refresh purchase history
+      fetchPurchaseHistory()
+      
+      // 6. Refresh voucher balance (will update once approved)
+      const fetchVoucherBalance = async () => {
+        const userData = localStorage.getItem('user')
+        if (!userData) return
+        
+        try {
+          const user = JSON.parse(userData)
+          const response = await fetch(`/api/users/${user._id}/vouchers`)
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success) {
+              setCurrentTwoDishVouchers(data.data.twoDishVoucher || 0)
+              setCurrentThreeDishVouchers(data.data.threeDishVoucher || 0)
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing voucher balance:', error)
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error submitting purchase request:', error)
+      toast({
+        title: language === 'zh' ? "提交失败" : "Submission failed",
+        description: error instanceof Error ? error.message : 
+          (language === 'zh' ? "提交请求时出现错误" : "An error occurred while submitting your request"),
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Render the plan cards
@@ -656,20 +743,88 @@ export default function MealVoucherPurchase() {
   // Add a counter effect for the user's current vouchers
   const [currentTwoDishVouchers, setCurrentTwoDishVouchers] = useState(0)
   const [currentThreeDishVouchers, setCurrentThreeDishVouchers] = useState(0)
+  const [isLoadingVouchers, setIsLoadingVouchers] = useState(false)
 
-  // Simulate fetching user's current vouchers
-  useEffect(() => {
-    // This would be replaced with an actual API call
+  // Fetch purchase history from API
+  const fetchPurchaseHistory = async () => {
     const userData = localStorage.getItem('user')
-    if (userData) {
-      try {
-        const user = JSON.parse(userData)
-        setCurrentTwoDishVouchers(user.twoDishVoucher || 0)
-        setCurrentThreeDishVouchers(user.threeDishVoucher || 0)
-      } catch (error) {
-        console.error('Error parsing user data:', error)
+    if (!userData) return
+    
+    try {
+      setHistoryLoading(true)
+      const user = JSON.parse(userData)
+      
+      const response = await fetch(`/api/voucher-requests?userId=${user._id}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          // Format the purchase history data
+          const formattedHistory = data.data.map((request: any) => ({
+            id: request.requestId,
+            plan: `${request.quantity} × ${request.type === 'twoDish' ? '2-Dish' : '3-Dish'} ${language === 'zh' ? '餐券' : 'Vouchers'}`,
+            amount: request.amount,
+            date: new Date(request.createdAt).toLocaleDateString(),
+            status: request.status
+          }))
+          
+          setPurchaseHistory(formattedHistory)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching purchase history:', error)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  // Fetch user's current vouchers and purchase history from API
+  useEffect(() => {
+    const fetchVoucherBalance = async () => {
+      setIsLoadingVouchers(true)
+      const userData = localStorage.getItem('user')
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData)
+          
+          // First try to get from API
+          try {
+            const response = await fetch(`/api/users/${user._id}/vouchers`)
+            
+            if (response.ok) {
+              const data = await response.json()
+              if (data.success) {
+                setCurrentTwoDishVouchers(data.data.twoDishVoucher || 0)
+                setCurrentThreeDishVouchers(data.data.threeDishVoucher || 0)
+              } else {
+                // Fallback to localStorage if API fails
+                setCurrentTwoDishVouchers(user.twoDishVoucher || 0)
+                setCurrentThreeDishVouchers(user.threeDishVoucher || 0)
+              }
+            } else {
+              // Fallback to localStorage if API fails
+              setCurrentTwoDishVouchers(user.twoDishVoucher || 0)
+              setCurrentThreeDishVouchers(user.threeDishVoucher || 0)
+            }
+          } catch (error) {
+            console.error('Error fetching voucher balance:', error)
+            // Fallback to localStorage if API fails
+            setCurrentTwoDishVouchers(user.twoDishVoucher || 0)
+            setCurrentThreeDishVouchers(user.threeDishVoucher || 0)
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+        } finally {
+          setIsLoadingVouchers(false)
+        }
+      } else {
+        setIsLoadingVouchers(false)
       }
     }
+    
+    fetchVoucherBalance()
+    fetchPurchaseHistory()
   }, [])
 
   return (

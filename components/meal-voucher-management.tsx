@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,7 +36,8 @@ interface UserInfo {
 }
 
 interface VoucherPurchaseRequest {
-  id: string;
+  id?: string; // For backward compatibility with mock data
+  requestId: string;
   userId: UserInfo;
   type: 'twoDish' | 'threeDish';
   quantity: number;
@@ -54,6 +55,7 @@ interface VoucherPurchaseRequest {
 const mockRequests: VoucherPurchaseRequest[] = [
   {
     id: 'VPR-001',
+    requestId: 'VPR-001',
     userId: {
       _id: 'user1',
       name: 'John Smith',
@@ -69,6 +71,7 @@ const mockRequests: VoucherPurchaseRequest[] = [
   },
   {
     id: 'VPR-002',
+    requestId: 'VPR-002',
     userId: {
       _id: 'user2',
       name: 'Emily Wong',
@@ -86,6 +89,7 @@ const mockRequests: VoucherPurchaseRequest[] = [
   },
   {
     id: 'VPR-003',
+    requestId: 'VPR-003',
     userId: {
       _id: 'user3',
       name: 'Michael Chen',
@@ -102,6 +106,7 @@ const mockRequests: VoucherPurchaseRequest[] = [
   },
   {
     id: 'VPR-004',
+    requestId: 'VPR-004',
     userId: {
       _id: 'user4',
       name: 'Sarah Johnson',
@@ -117,6 +122,7 @@ const mockRequests: VoucherPurchaseRequest[] = [
   },
   {
     id: 'VPR-005',
+    requestId: 'VPR-005',
     userId: {
       _id: 'user5',
       name: 'David Lee',
@@ -144,20 +150,19 @@ export function MealVoucherManagement() {
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Filter requests based on active tab and search query
+  // Fetch requests when component mounts or active tab changes
+  useEffect(() => {
+    fetchVoucherRequests()
+  }, [activeTab])
+
+  // Filter requests based on search query (tab filtering is done on the server)
   const filteredRequests = requests.filter(request => {
-    const matchesTab = 
-      activeTab === 'all' || 
-      (activeTab === 'pending' && request.status === 'pending') ||
-      (activeTab === 'approved' && request.status === 'approved') ||
-      (activeTab === 'declined' && request.status === 'declined')
-    
     const matchesSearch = 
-      request.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.userId.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.userId.email.toLowerCase().includes(searchQuery.toLowerCase())
+      request.requestId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (request.userId.name && request.userId.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (request.userId.email && request.userId.email.toLowerCase().includes(searchQuery.toLowerCase()))
     
-    return matchesTab && matchesSearch
+    return matchesSearch
   })
 
   // Format date
@@ -172,17 +177,49 @@ export function MealVoucherManagement() {
     })
   }
 
+  // Fetch voucher purchase requests from API
+  const fetchVoucherRequests = async () => {
+    setIsLoading(true)
+    
+    try {
+      // Get query parameters based on active tab
+      let queryParams = '';
+      if (activeTab !== 'all') {
+        queryParams = `?status=${activeTab}`;
+      }
+      
+      const response = await fetch(`/api/voucher-requests${queryParams}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch voucher purchase requests');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setRequests(data.data);
+      } else {
+        throw new Error(data.error || 'Failed to fetch voucher purchase requests');
+      }
+    } catch (error) {
+      console.error('Error fetching voucher purchase requests:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to fetch voucher purchase requests',
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Handle refresh
   const handleRefresh = () => {
-    setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Refreshed",
-        description: "Voucher purchase requests have been refreshed",
-      })
-    }, 1000)
+    fetchVoucherRequests();
+    toast({
+      title: "Refreshing",
+      description: "Fetching the latest voucher purchase requests",
+    });
   }
 
   // Handle view request
@@ -206,63 +243,95 @@ export function MealVoucherManagement() {
   }
 
   // Handle approve request
-  const handleApproveRequest = () => {
+  const handleApproveRequest = async () => {
     if (!selectedRequest) return;
     
     setProcessingRequest(true)
-    // Simulate API call
-    setTimeout(() => {
-      setProcessingRequest(false)
-      setApproveRequestOpen(false)
+    
+    try {
+      // Call the API to approve the request
+      const response = await fetch(`/api/voucher-requests/${selectedRequest.requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'approved',
+          adminNotes: adminNotes || undefined
+        })
+      });
       
-      // Update the request status
-      const updatedRequests = requests.map(req => 
-        req.id === selectedRequest.id 
-          ? { 
-              ...req, 
-              status: 'approved' as const, 
-              approvedAt: new Date().toISOString(),
-              adminNotes: adminNotes || undefined
-            } 
-          : req
-      )
-      setRequests(updatedRequests)
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to approve request');
+      }
+      
+      const data = await response.json();
+      
+      // Close the dialog and refresh the requests
+      setApproveRequestOpen(false);
+      fetchVoucherRequests();
       
       toast({
         title: "Request Approved",
         description: `Vouchers have been added to ${selectedRequest.userId.name}'s account.`,
-      })
-    }, 1500)
+      });
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to approve request',
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRequest(false);
+    }
   }
 
   // Handle decline request
-  const handleDeclineRequest = () => {
+  const handleDeclineRequest = async () => {
     if (!selectedRequest) return;
     
     setProcessingRequest(true)
-    // Simulate API call
-    setTimeout(() => {
-      setProcessingRequest(false)
-      setDeclineRequestOpen(false)
+    
+    try {
+      // Call the API to decline the request
+      const response = await fetch(`/api/voucher-requests/${selectedRequest.requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'declined',
+          adminNotes: adminNotes || undefined
+        })
+      });
       
-      // Update the request status
-      const updatedRequests = requests.map(req => 
-        req.id === selectedRequest.id 
-          ? { 
-              ...req, 
-              status: 'declined' as const, 
-              declinedAt: new Date().toISOString(),
-              adminNotes: adminNotes || undefined
-            } 
-          : req
-      )
-      setRequests(updatedRequests)
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to decline request');
+      }
+      
+      const data = await response.json();
+      
+      // Close the dialog and refresh the requests
+      setDeclineRequestOpen(false);
+      fetchVoucherRequests();
       
       toast({
         title: "Request Declined",
         description: `${selectedRequest.userId.name} has been notified.`,
-      })
-    }, 1500)
+      });
+    } catch (error) {
+      console.error('Error declining request:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to decline request',
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRequest(false);
+    }
   }
 
   // Get status badge
@@ -351,8 +420,8 @@ export function MealVoucherManagement() {
                     </tr>
                   ) : filteredRequests.length > 0 ? (
                     filteredRequests.map((request) => (
-                      <tr key={request.id} className="border-b hover:bg-muted/50">
-                        <td className="p-4 align-middle">{request.id}</td>
+                      <tr key={request.requestId} className="border-b hover:bg-muted/50">
+                        <td className="p-4 align-middle">{request.requestId}</td>
                         <td className="p-4 align-middle">
                           <div>
                             <div className="font-medium">{request.userId.name}</div>
