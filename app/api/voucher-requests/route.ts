@@ -3,7 +3,7 @@ import connectToDatabase from '@/lib/db';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
 import User from '@/models/User';
 import mongoose from 'mongoose';
-import { sendAdminCreditRequestNotification } from '@/lib/services/email';
+import { sendAdminVoucherRequestNotification } from '@/lib/services/email';
 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
@@ -117,13 +117,14 @@ export async function POST(request: NextRequest) {
     // Save the request to the database
     await newRequest.save();
     
-    // Send notification to admin (commented out for now)
-    /*
+    // Send notification to admin
     try {
-      await sendAdminCreditRequestNotification({
+      await sendAdminVoucherRequestNotification({
         userId,
         userName: user.name,
         userEmail: user.email,
+        type,
+        quantity,
         amount,
         imageProofUrl: imageProof,
         notes,
@@ -133,7 +134,6 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send admin notification email:', emailError);
       // Continue even if email fails
     }
-    */
     
     return NextResponse.json({
       success: true,

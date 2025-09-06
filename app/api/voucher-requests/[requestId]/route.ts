@@ -3,7 +3,7 @@ import connectToDatabase from '@/lib/db';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
 import User from '@/models/User';
 import mongoose from 'mongoose';
-import { sendCreditPurchaseStatusEmail } from '@/lib/services/email';
+import { sendVoucherPurchaseStatusEmail } from '@/lib/services/email';
 
 // GET handler - fetch a single voucher purchase request by ID
 export async function GET(
@@ -130,39 +130,40 @@ export async function PUT(
           );
         }
         
-        // Send email notification to user (commented out for now)
-        /*
+        // Send email notification to user
         try {
-          await sendCreditPurchaseStatusEmail(
+          await sendVoucherPurchaseStatusEmail(
             user.email,
             user.name,
             requestId,
             'approved',
-            voucherRequest.quantity
+            voucherRequest.type,
+            voucherRequest.quantity,
+            adminNotes
           );
         } catch (emailError) {
           console.error('Failed to send approval email to user:', emailError);
           // Continue even if email fails
         }
-        */
       } else if (status === 'declined') {
-        // Send decline email notification to user (commented out for now)
-        /*
+        // Send decline email notification to user
         try {
           const user = await User.findById(voucherRequest.userId);
           if (user) {
-            await sendCreditPurchaseStatusEmail(
+            await sendVoucherPurchaseStatusEmail(
               user.email,
               user.name,
               requestId,
-              'declined'
+              'declined',
+              voucherRequest.type,
+              voucherRequest.quantity,
+              adminNotes
             );
           }
         } catch (emailError) {
           console.error('Failed to send decline email to user:', emailError);
           // Continue even if email fails
         }
-        */
       }
       
       // Commit the transaction
