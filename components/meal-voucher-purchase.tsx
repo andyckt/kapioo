@@ -58,15 +58,15 @@ export default function MealVoucherPurchase() {
   const twoDishPlans: VoucherPlan[] = [
     { id: 'two-6', type: 'twoDish', quantity: 6, price: 131, pricePerMeal: 21.83 },
     { id: 'two-10', type: 'twoDish', quantity: 10, price: 195, pricePerMeal: 19.50, isPopular: true, savings: '首次推荐' },
-    { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18, savings: '单价16.18' },
-    { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48, savings: '限时超值' }
+    { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18 },
+    { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48 }
   ]
 
   const threeDishPlans: VoucherPlan[] = [
     { id: 'three-6', type: 'threeDish', quantity: 6, price: 150, pricePerMeal: 25.00 },
     { id: 'three-10', type: 'threeDish', quantity: 10, price: 228, pricePerMeal: 22.80, isPopular: true, savings: '首次推荐' },
-    { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95, savings: '单价18.95' },
-    { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78, savings: '限时超值' }
+    { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95 },
+    { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78 }
   ]
 
   // Available service areas
@@ -144,11 +144,8 @@ export default function MealVoucherPurchase() {
           >
             {/* Popular badge */}
             {plan.isPopular && (
-              <div className="absolute top-0 right-0 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white px-3 py-1 text-xs font-medium rounded-bl-xl z-10 shadow-sm">
-                <div className="flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  {language === 'zh' ? '推荐' : 'Popular'}
-                </div>
+              <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
+                {language === 'zh' ? '推荐' : 'Popular'}
               </div>
             )}
             
@@ -161,11 +158,7 @@ export default function MealVoucherPurchase() {
             
             {/* Card header */}
             <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white p-5 relative overflow-hidden">
-              {/* Decorative circles */}
-              <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white opacity-10"></div>
-              <div className="absolute -left-6 -bottom-6 w-16 h-16 rounded-full bg-white opacity-5"></div>
-              
-              <div className="relative z-10">
+              <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="bg-white/20 p-1.5 rounded-full">
                     <Utensils className="h-3 w-3" />
