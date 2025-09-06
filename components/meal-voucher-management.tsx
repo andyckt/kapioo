@@ -417,8 +417,8 @@ export function MealVoucherManagement() {
 
       {/* View Request Dialog */}
       <Dialog open={viewRequestOpen} onOpenChange={setViewRequestOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <div className="flex items-center gap-2">
               <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-2 rounded-full text-white">
                 <CreditCard className="h-4 w-4" />
@@ -433,182 +433,180 @@ export function MealVoucherManagement() {
           </DialogHeader>
           
           {selectedRequest && (
-            <div className="space-y-6">
-              {/* Status Badge */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    Submitted on {formatDate(selectedRequest.createdAt)}
-                  </p>
-                </div>
-                <div>
-                  {getStatusBadge(selectedRequest.status)}
-                  
-                  {selectedRequest.status === 'approved' && selectedRequest.approvedAt && (
-                    <p className="text-xs text-muted-foreground mt-1 text-right">
-                      Approved on {formatDate(selectedRequest.approvedAt)}
+            <div className="overflow-y-auto pr-1 flex-1">
+              <div className="space-y-4">
+                {/* Status Badge */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      Submitted on {formatDate(selectedRequest.createdAt)}
                     </p>
-                  )}
-                  
-                  {selectedRequest.status === 'declined' && selectedRequest.declinedAt && (
-                    <p className="text-xs text-muted-foreground mt-1 text-right">
-                      Declined on {formatDate(selectedRequest.declinedAt)}
-                    </p>
-                  )}
+                  </div>
+                  <div>
+                    {getStatusBadge(selectedRequest.status)}
+                    
+                    {selectedRequest.status === 'approved' && selectedRequest.approvedAt && (
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                        Approved on {formatDate(selectedRequest.approvedAt)}
+                      </p>
+                    )}
+                    
+                    {selectedRequest.status === 'declined' && selectedRequest.declinedAt && (
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                        Declined on {formatDate(selectedRequest.declinedAt)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-[#C2884E]/10">
-                  <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
-                    <div className="flex items-center gap-2">
-                      <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
-                        <Users className="h-3 w-3" />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="border-[#C2884E]/10">
+                    <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
+                          <Users className="h-3 w-3" />
+                        </div>
+                        <CardTitle className="text-base">User Information</CardTitle>
                       </div>
-                      <CardTitle className="text-base">User Information</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <dt className="font-medium text-[#6B5F53]">Name:</dt>
-                        <dd className="font-medium">{selectedRequest.userId.name}</dd>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <dl className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">Name:</dt>
+                          <dd className="font-medium">{selectedRequest.userId.name}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">Email:</dt>
+                          <dd>{selectedRequest.userId.email}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">User ID:</dt>
+                          <dd className="truncate max-w-[180px] text-muted-foreground">{selectedRequest.userId._id}</dd>
+                        </div>
+                      </dl>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-[#C2884E]/10">
+                    <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
+                          <CreditCard className="h-3 w-3" />
+                        </div>
+                        <CardTitle className="text-base">Purchase Details</CardTitle>
                       </div>
-                      <div className="flex justify-between">
-                        <dt className="font-medium text-[#6B5F53]">Email:</dt>
-                        <dd>{selectedRequest.userId.email}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="font-medium text-[#6B5F53]">User ID:</dt>
-                        <dd className="truncate max-w-[180px] text-muted-foreground">{selectedRequest.userId._id}</dd>
-                      </div>
-                    </dl>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <dl className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">Voucher Type:</dt>
+                          <dd className="font-medium">{selectedRequest.type === 'twoDish' ? '2-Dish' : '3-Dish'}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">Quantity:</dt>
+                          <dd className="font-medium">{selectedRequest.quantity}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">Amount:</dt>
+                          <dd className="font-medium text-[#C2884E]">${selectedRequest.amount}</dd>
+                        </div>
+                      </dl>
+                    </CardContent>
+                  </Card>
+                </div>
                 
                 <Card className="border-[#C2884E]/10">
                   <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
                     <div className="flex items-center gap-2">
                       <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
-                        <CreditCard className="h-3 w-3" />
+                        <Upload className="h-3 w-3" />
                       </div>
-                      <CardTitle className="text-base">Purchase Details</CardTitle>
+                      <CardTitle className="text-base">Payment Proof</CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-4">
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <dt className="font-medium text-[#6B5F53]">Voucher Type:</dt>
-                        <dd className="font-medium">{selectedRequest.type === 'twoDish' ? '2-Dish' : '3-Dish'}</dd>
+                  <CardContent className="pt-3">
+                    <div className="border border-[#C2884E]/10 rounded-md p-3 text-center">
+                      {/* In a real application, this would be an actual image preview */}
+                      <div className="bg-[#F5EDE4]/50 rounded-md p-4 mb-3">
+                        <div className="flex items-center justify-center">
+                          <ExternalLink className="h-10 w-10 text-[#C2884E]" />
+                        </div>
+                        <p className="mt-2 text-sm text-[#6B5F53]">
+                          {selectedRequest.imageProof}
+                        </p>
                       </div>
-                      <div className="flex justify-between">
-                        <dt className="font-medium text-[#6B5F53]">Quantity:</dt>
-                        <dd className="font-medium">{selectedRequest.quantity}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="font-medium text-[#6B5F53]">Amount:</dt>
-                        <dd className="font-medium text-[#C2884E]">${selectedRequest.amount}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="font-medium text-[#6B5F53]">Total Vouchers:</dt>
-                        <dd className="font-medium">{selectedRequest.quantity} × {selectedRequest.type === 'twoDish' ? '2-Dish' : '3-Dish'}</dd>
-                      </div>
-                    </dl>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="border-[#C2884E]/20 text-[#6B5F53] hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Payment Proof
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              </div>
-              
-              <Card className="border-[#C2884E]/10">
-                <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
-                      <Upload className="h-3 w-3" />
-                    </div>
-                    <CardTitle className="text-base">Payment Proof</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="border border-[#C2884E]/10 rounded-md p-4 text-center">
-                    {/* In a real application, this would be an actual image preview */}
-                    <div className="bg-[#F5EDE4]/50 rounded-md p-8 mb-4">
-                      <div className="flex items-center justify-center">
-                        <ExternalLink className="h-12 w-12 text-[#C2884E]" />
-                      </div>
-                      <p className="mt-2 text-sm text-[#6B5F53]">
-                        {selectedRequest.imageProof}
-                      </p>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="border-[#C2884E]/20 text-[#6B5F53] hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedRequest.notes && (
+                    <Card className="border-[#C2884E]/10">
+                      <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
+                            <Info className="h-3 w-3" />
+                          </div>
+                          <CardTitle className="text-base">User Notes</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-3">
+                        <p className="text-sm text-[#6B5F53]">{selectedRequest.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {selectedRequest.adminNotes && (
+                    <Card className="border-[#C2884E]/10">
+                      <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
+                            <MessageSquare className="h-3 w-3" />
+                          </div>
+                          <CardTitle className="text-base">Admin Notes</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-3">
+                        <p className="text-sm text-[#6B5F53]">{selectedRequest.adminNotes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+                
+                {selectedRequest.status === 'pending' && (
+                  <div className="flex justify-end gap-4 pt-2 border-t border-[#C2884E]/10">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setViewRequestOpen(false)
+                        handleDeclineDialog(selectedRequest)
+                      }}
+                      className="border-red-200 text-red-600 hover:bg-red-50"
                     >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Payment Proof
+                      <X className="mr-2 h-4 w-4" />
+                      Decline
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setViewRequestOpen(false)
+                        handleApproveDialog(selectedRequest)
+                      }}
+                      className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      Approve
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {selectedRequest.notes && (
-                  <Card className="border-[#C2884E]/10">
-                    <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
-                          <Info className="h-3 w-3" />
-                        </div>
-                        <CardTitle className="text-base">User Notes</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-[#6B5F53]">{selectedRequest.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-                
-                {selectedRequest.adminNotes && (
-                  <Card className="border-[#C2884E]/10">
-                    <CardHeader className="pb-2 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-[#C2884E] p-1.5 rounded-full text-white">
-                          <MessageSquare className="h-3 w-3" />
-                        </div>
-                        <CardTitle className="text-base">Admin Notes</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-[#6B5F53]">{selectedRequest.adminNotes}</p>
-                    </CardContent>
-                  </Card>
                 )}
               </div>
-              
-              {selectedRequest.status === 'pending' && (
-                <div className="flex justify-end gap-4 pt-2 border-t border-[#C2884E]/10">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setViewRequestOpen(false)
-                      handleDeclineDialog(selectedRequest)
-                    }}
-                    className="border-red-200 text-red-600 hover:bg-red-50"
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Decline
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setViewRequestOpen(false)
-                      handleApproveDialog(selectedRequest)
-                    }}
-                    className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
-                  >
-                    <Check className="mr-2 h-4 w-4" />
-                    Approve
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
@@ -616,8 +614,8 @@ export function MealVoucherManagement() {
 
       {/* Approve Request Dialog */}
       <Dialog open={approveRequestOpen} onOpenChange={setApproveRequestOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <div className="flex items-center gap-2">
               <div className="bg-gradient-to-r from-green-500 to-green-600 p-2 rounded-full text-white">
                 <Check className="h-4 w-4" />
@@ -632,55 +630,57 @@ export function MealVoucherManagement() {
           </DialogHeader>
           
           {selectedRequest && (
-            <div className="space-y-4 py-2">
-              <Card className="border-green-100">
-                <CardHeader className="pb-2 bg-gradient-to-r from-green-50 to-green-100/50 border-b border-green-100">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-green-500 p-1.5 rounded-full text-white">
-                      <CreditCard className="h-3 w-3" />
+            <div className="overflow-y-auto pr-1 flex-1">
+              <div className="space-y-4 py-2">
+                <Card className="border-green-100">
+                  <CardHeader className="pb-2 bg-gradient-to-r from-green-50 to-green-100/50 border-b border-green-100">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-green-500 p-1.5 rounded-full text-white">
+                        <CreditCard className="h-3 w-3" />
+                      </div>
+                      <CardTitle className="text-base text-green-800">Request Summary</CardTitle>
                     </div>
-                    <CardTitle className="text-base text-green-800">Request Summary</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-green-800">Request ID:</dt>
-                      <dd className="font-medium">{selectedRequest.id}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-green-800">User:</dt>
-                      <dd>{selectedRequest.userId.name}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-green-800">Vouchers:</dt>
-                      <dd>{getVoucherTypeDisplay(selectedRequest.type, selectedRequest.quantity)}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-green-800">Amount:</dt>
-                      <dd className="font-medium">${selectedRequest.amount}</dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
-              
-              <div className="space-y-2">
-                <Label htmlFor="admin-notes" className="text-[#6B5F53]">Admin Notes (Optional)</Label>
-                <Textarea
-                  id="admin-notes"
-                  placeholder="Add any notes about this approval..."
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  className="border-green-200 focus-visible:ring-green-500/30 focus-visible:border-green-500"
-                />
-                <p className="text-xs text-muted-foreground">
-                  These notes will be visible to the user in their purchase history.
-                </p>
+                  </CardHeader>
+                  <CardContent className="pt-3">
+                    <dl className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-green-800">Request ID:</dt>
+                        <dd className="font-medium">{selectedRequest.id}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-green-800">User:</dt>
+                        <dd>{selectedRequest.userId.name}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-green-800">Vouchers:</dt>
+                        <dd>{getVoucherTypeDisplay(selectedRequest.type, selectedRequest.quantity)}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-green-800">Amount:</dt>
+                        <dd className="font-medium">${selectedRequest.amount}</dd>
+                      </div>
+                    </dl>
+                  </CardContent>
+                </Card>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="admin-notes" className="text-[#6B5F53]">Admin Notes (Optional)</Label>
+                  <Textarea
+                    id="admin-notes"
+                    placeholder="Add any notes about this approval..."
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    className="border-green-200 focus-visible:ring-green-500/30 focus-visible:border-green-500 min-h-[80px] max-h-[120px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    These notes will be visible to the user in their purchase history.
+                  </p>
+                </div>
               </div>
             </div>
           )}
           
-          <DialogFooter className="pt-2 border-t border-green-100">
+          <DialogFooter className="pt-2 mt-2 border-t border-green-100 flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => setApproveRequestOpen(false)}
@@ -702,7 +702,7 @@ export function MealVoucherManagement() {
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  Confirm Approval
+                  Confirm
                 </>
               )}
             </Button>
@@ -712,8 +712,8 @@ export function MealVoucherManagement() {
 
       {/* Decline Request Dialog */}
       <Dialog open={declineRequestOpen} onOpenChange={setDeclineRequestOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <div className="flex items-center gap-2">
               <div className="bg-gradient-to-r from-red-500 to-red-600 p-2 rounded-full text-white">
                 <X className="h-4 w-4" />
@@ -728,55 +728,57 @@ export function MealVoucherManagement() {
           </DialogHeader>
           
           {selectedRequest && (
-            <div className="space-y-4 py-2">
-              <Card className="border-red-100">
-                <CardHeader className="pb-2 bg-gradient-to-r from-red-50 to-red-100/50 border-b border-red-100">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-red-500 p-1.5 rounded-full text-white">
-                      <CreditCard className="h-3 w-3" />
+            <div className="overflow-y-auto pr-1 flex-1">
+              <div className="space-y-4 py-2">
+                <Card className="border-red-100">
+                  <CardHeader className="pb-2 bg-gradient-to-r from-red-50 to-red-100/50 border-b border-red-100">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-red-500 p-1.5 rounded-full text-white">
+                        <CreditCard className="h-3 w-3" />
+                      </div>
+                      <CardTitle className="text-base text-red-800">Request Summary</CardTitle>
                     </div>
-                    <CardTitle className="text-base text-red-800">Request Summary</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-red-800">Request ID:</dt>
-                      <dd className="font-medium">{selectedRequest.id}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-red-800">User:</dt>
-                      <dd>{selectedRequest.userId.name}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-red-800">Vouchers:</dt>
-                      <dd>{getVoucherTypeDisplay(selectedRequest.type, selectedRequest.quantity)}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="font-medium text-red-800">Amount:</dt>
-                      <dd className="font-medium">${selectedRequest.amount}</dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
-              
-              <div className="space-y-2">
-                <Label htmlFor="decline-reason" className="text-[#6B5F53]">Reason for Declining (Optional)</Label>
-                <Textarea
-                  id="decline-reason"
-                  placeholder="Explain why this request is being declined..."
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  className="border-red-200 focus-visible:ring-red-500/30 focus-visible:border-red-500"
-                />
-                <p className="text-xs text-muted-foreground">
-                  This reason will be included in the notification email sent to the user.
-                </p>
+                  </CardHeader>
+                  <CardContent className="pt-3">
+                    <dl className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-red-800">Request ID:</dt>
+                        <dd className="font-medium">{selectedRequest.id}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-red-800">User:</dt>
+                        <dd>{selectedRequest.userId.name}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-red-800">Vouchers:</dt>
+                        <dd>{getVoucherTypeDisplay(selectedRequest.type, selectedRequest.quantity)}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="font-medium text-red-800">Amount:</dt>
+                        <dd className="font-medium">${selectedRequest.amount}</dd>
+                      </div>
+                    </dl>
+                  </CardContent>
+                </Card>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="decline-reason" className="text-[#6B5F53]">Reason for Declining (Optional)</Label>
+                  <Textarea
+                    id="decline-reason"
+                    placeholder="Explain why this request is being declined..."
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    className="border-red-200 focus-visible:ring-red-500/30 focus-visible:border-red-500 min-h-[80px] max-h-[120px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This reason will be included in the notification email sent to the user.
+                  </p>
+                </div>
               </div>
             </div>
           )}
           
-          <DialogFooter className="pt-2 border-t border-red-100">
+          <DialogFooter className="pt-2 mt-2 border-t border-red-100 flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => setDeclineRequestOpen(false)}
@@ -798,7 +800,7 @@ export function MealVoucherManagement() {
               ) : (
                 <>
                   <X className="mr-2 h-4 w-4" />
-                  Confirm Decline
+                  Confirm
                 </>
               )}
             </Button>
