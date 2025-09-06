@@ -880,7 +880,7 @@ export default function AdminDashboardPage() {
               onClick={() => setActiveTab("meal-vouchers")}
             >
               <CreditCard className="mr-2 h-4 w-4" />
-              Meal Vouchers
+              2Dish 3Dish Voucher
             </Button>
             <Button
               variant={activeTab === "settings" ? "default" : "ghost"}

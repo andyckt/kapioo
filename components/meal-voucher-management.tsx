@@ -287,7 +287,7 @@ export function MealVoucherManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Meal Voucher Requests</h2>
+        <h2 className="text-3xl font-bold tracking-tight">2Dish 3Dish Voucher Requests</h2>
         <Button
           variant="outline"
           size="sm"
@@ -302,9 +302,9 @@ export function MealVoucherManagement() {
       <div className="flex flex-col gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Voucher Purchase Requests</CardTitle>
+            <CardTitle>2Dish 3Dish Voucher Requests</CardTitle>
             <CardDescription>
-              Review and process meal voucher purchase requests from users
+              Review and process voucher purchase requests from users
             </CardDescription>
           </CardHeader>
           <CardContent>
