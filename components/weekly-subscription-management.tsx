@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Calendar, Edit, Plus, Trash2 } from "lucide-react"
-import { format, addWeeks } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -46,9 +45,6 @@ export function WeeklySubscriptionManagement() {
   
   // Initialize with mock data
   useEffect(() => {
-    const today = new Date()
-    const nextWeek = addWeeks(today, 1)
-    
     // Create mock delivery sections
     setDeliverySections([
       {
@@ -57,7 +53,7 @@ export function WeeklySubscriptionManagement() {
         day: {
           id: 'sunday',
           name: 'Sunday Delivery',
-          date: format(getNextSunday(today), 'MMM dd, yyyy'),
+          date: 'Sep 07',
           active: true,
           options: [
             {
@@ -90,7 +86,7 @@ export function WeeklySubscriptionManagement() {
         day: {
           id: 'tuesday',
           name: 'Tuesday Delivery',
-          date: format(getNextTuesday(today), 'MMM dd, yyyy'),
+          date: 'Sep 09',
           active: true,
           options: [
             {
@@ -123,7 +119,7 @@ export function WeeklySubscriptionManagement() {
         day: {
           id: 'sunday',
           name: 'Sunday Delivery',
-          date: format(getNextSunday(nextWeek), 'MMM dd, yyyy'),
+          date: 'Sep 14',
           active: true,
           options: [
             {
@@ -156,7 +152,7 @@ export function WeeklySubscriptionManagement() {
         day: {
           id: 'tuesday',
           name: 'Tuesday Delivery',
-          date: format(getNextTuesday(nextWeek), 'MMM dd, yyyy'),
+          date: 'Sep 16',
           active: true,
           options: [
             {
@@ -188,18 +184,7 @@ export function WeeklySubscriptionManagement() {
     setIsLoading(false)
   }, [])
   
-  // Helper functions for date calculations
-  function getNextSunday(date: Date): Date {
-    const day = date.getDay()
-    const daysUntilSunday = day === 0 ? 7 : 7 - day
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + daysUntilSunday)
-  }
-  
-  function getNextTuesday(date: Date): Date {
-    const day = date.getDay()
-    const daysUntilTuesday = (9 - day) % 7
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + daysUntilTuesday)
-  }
+  // No date calculation functions needed with fixed dates
   
   // Toggle day active status
   const toggleDayActive = (sectionId: string) => {
