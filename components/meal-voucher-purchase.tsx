@@ -765,28 +765,18 @@ export default function MealVoucherPurchase() {
                 value="twoDish" 
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
               >
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-2">
-                    <Utensils className="h-4 w-4" />
-                    {language === 'zh' ? '每餐2菜' : '2-Dish Meal'}
-                  </div>
-                  <span className="text-xs opacity-80">
-                    {language === 'zh' ? '标准套餐' : 'Standard Plan'}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <Utensils className="h-4 w-4" />
+                  {language === 'zh' ? '每餐2菜' : '2-Dish Meal'}
                 </div>
               </TabsTrigger>
               <TabsTrigger 
                 value="threeDish" 
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
               >
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-2">
-                    <Utensils className="h-4 w-4" />
-                    {language === 'zh' ? '每餐3菜' : '3-Dish Meal'}
-                  </div>
-                  <span className="text-xs opacity-80">
-                    {language === 'zh' ? '豪华套餐' : 'Premium Plan'}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <Utensils className="h-4 w-4" />
+                  {language === 'zh' ? '每餐3菜' : '3-Dish Meal'}
                 </div>
               </TabsTrigger>
             </TabsList>
