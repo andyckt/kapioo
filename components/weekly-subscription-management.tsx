@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast"
 type MealOption = {
   id: string
   name: string
-  description?: string
   tags?: string[]
   active: boolean
 }
@@ -42,7 +41,7 @@ export function WeeklySubscriptionManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [addMealDialogOpen, setAddMealDialogOpen] = useState(false)
   const [newMealSection, setNewMealSection] = useState<string>('')
-  const [newMeal, setNewMeal] = useState<Partial<MealOption>>({ name: '', description: '', tags: [], active: true })
+  const [newMeal, setNewMeal] = useState<Partial<MealOption>>({ name: '', tags: [], active: true })
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [mealToDelete, setMealToDelete] = useState<MealOption | null>(null)
   
@@ -62,21 +61,18 @@ export function WeeklySubscriptionManagement() {
             {
               id: 'sunday-option1',
               name: '鲜虾鸡翅焖煲 + 紫米饭 + 蘑菇青菜',
-              description: 'Fresh shrimp and chicken stew with purple rice and mushroom vegetables',
               tags: ['High Protein', 'Low Carb'],
               active: true
             },
             {
               id: 'sunday-option2',
               name: '罗勒青酱意面 + 意式香草烤鸡',
-              description: 'Basil pesto pasta with Italian herb roasted chicken',
               tags: ['Italian', 'Herb'],
               active: true
             },
             {
               id: 'sunday-option3',
               name: '桂侯萝卜慢炖牛腋 + 紫米饭 + 蔑油菜心',
-              description: 'Slow-cooked beef brisket with radish, purple rice and vegetable',
               tags: ['Slow Cooked', 'Beef'],
               active: true
             }
@@ -95,21 +91,18 @@ export function WeeklySubscriptionManagement() {
             {
               id: 'tuesday-option1',
               name: '豌豆/爆炒牛肉粒 + 玉米饭 + 时蔬',
-              description: 'Stir-fried beef with peas, corn rice and seasonal vegetables',
               tags: ['Beef', 'Stir Fry'],
               active: true
             },
             {
               id: 'tuesday-option2',
               name: '西班牙浓郁海鲜烩饭',
-              description: 'Spanish seafood paella',
               tags: ['Seafood', 'Spanish'],
               active: true
             },
             {
               id: 'tuesday-option3',
               name: '泰式柠檬干煎鸡 + 清炒黄瓜条',
-              description: 'Thai lemon grilled chicken with stir-fried cucumber',
               tags: ['Thai', 'Chicken'],
               active: true
             }
@@ -128,21 +121,18 @@ export function WeeklySubscriptionManagement() {
             {
               id: 'next-sunday-option1',
               name: '香煎三文鱼 + 藜麦饭 + 芦笋',
-              description: 'Pan-seared salmon with quinoa and asparagus',
               tags: ['Seafood', 'High Protein'],
               active: true
             },
             {
               id: 'next-sunday-option2',
               name: '日式照烧鸡腿 + 糙米饭 + 炒菠菜',
-              description: 'Japanese teriyaki chicken thigh with brown rice and stir-fried spinach',
               tags: ['Japanese', 'Chicken'],
               active: true
             },
             {
               id: 'next-sunday-option3',
               name: '意式肉酱面 + 帕玛森奶酪 + 烤蔬菜',
-              description: 'Italian meat sauce pasta with parmesan cheese and roasted vegetables',
               tags: ['Italian', 'Pasta'],
               active: true
             }
@@ -161,21 +151,18 @@ export function WeeklySubscriptionManagement() {
             {
               id: 'next-tuesday-option1',
               name: '泰式青咖喱鸡 + 香米饭 + 炒青菜',
-              description: 'Thai green curry chicken with jasmine rice and stir-fried greens',
               tags: ['Thai', 'Spicy'],
               active: true
             },
             {
               id: 'next-tuesday-option2',
               name: '红烧牛肉面 + 清炒西兰花',
-              description: 'Braised beef noodle soup with stir-fried broccoli',
               tags: ['Beef', 'Noodles'],
               active: true
             },
             {
               id: 'next-tuesday-option3',
               name: '墨西哥牛肉卷 + 鳄梨酱 + 炸玉米片',
-              description: 'Mexican beef burrito with guacamole and tortilla chips',
               tags: ['Mexican', 'Beef'],
               active: true
             }
@@ -282,7 +269,6 @@ export function WeeklySubscriptionManagement() {
     setNewMealSection(sectionId)
     setNewMeal({
       name: "",
-      description: "",
       tags: [],
       active: true
     })
@@ -296,7 +282,6 @@ export function WeeklySubscriptionManagement() {
     const mealToAdd: MealOption = {
       id: `${newMealSection}-option${Date.now()}`,
       name: newMeal.name,
-      description: newMeal.description || "",
       tags: newMeal.tags || [],
       active: newMeal.active !== undefined ? newMeal.active : true
     }
@@ -438,32 +423,56 @@ export function WeeklySubscriptionManagement() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="meal-description" className="text-right">
-                  Description
-                </Label>
-                <Input
-                  id="meal-description"
-                  value={editingMeal.description || ''}
-                  onChange={(e) => setEditingMeal({...editingMeal, description: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="meal-tags" className="text-right">
-                  Tags
-                </Label>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="meal-tags" className="text-right pt-2">
+                Tags
+              </Label>
+              <div className="col-span-3 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {editingMeal.tags?.map((tag, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="secondary" 
+                      className="px-2 py-1 flex items-center gap-1"
+                    >
+                      {tag}
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-4 w-4 p-0 hover:bg-transparent" 
+                        onClick={() => {
+                          const newTags = [...(editingMeal.tags || [])];
+                          newTags.splice(index, 1);
+                          setEditingMeal({ ...editingMeal, tags: newTags });
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
                 <Input
                   id="meal-tags"
-                  value={editingMeal.tags?.join(', ') || ''}
-                  onChange={(e) => setEditingMeal({
-                    ...editingMeal, 
-                    tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-                  })}
-                  placeholder="Enter tags separated by commas"
-                  className="col-span-3"
+                  placeholder="Type a tag and press Enter"
+                  className="w-full"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                      e.preventDefault();
+                      const newTag = e.currentTarget.value.trim();
+                      if (newTag && (!editingMeal.tags || !editingMeal.tags.includes(newTag))) {
+                        setEditingMeal({
+                          ...editingMeal,
+                          tags: [...(editingMeal.tags || []), newTag]
+                        });
+                        e.currentTarget.value = '';
+                      }
+                    }
+                  }}
                 />
+                <p className="text-xs text-muted-foreground">Press Enter to add a tag</p>
               </div>
+            </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="meal-active" className="text-right">
                   Active
@@ -510,32 +519,55 @@ export function WeeklySubscriptionManagement() {
                 placeholder="Enter meal name"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-meal-description" className="text-right">
-                Description
-              </Label>
-              <Input
-                id="new-meal-description"
-                value={newMeal.description || ''}
-                onChange={(e) => setNewMeal({...newMeal, description: e.target.value})}
-                className="col-span-3"
-                placeholder="Enter meal description"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-meal-tags" className="text-right">
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="new-meal-tags" className="text-right pt-2">
                 Tags
               </Label>
-              <Input
-                id="new-meal-tags"
-                value={newMeal.tags?.join(', ') || ''}
-                onChange={(e) => setNewMeal({
-                  ...newMeal, 
-                  tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-                })}
-                placeholder="Enter tags separated by commas"
-                className="col-span-3"
-              />
+              <div className="col-span-3 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {newMeal.tags?.map((tag, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="secondary" 
+                      className="px-2 py-1 flex items-center gap-1"
+                    >
+                      {tag}
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-4 w-4 p-0 hover:bg-transparent" 
+                        onClick={() => {
+                          const newTags = [...(newMeal.tags || [])];
+                          newTags.splice(index, 1);
+                          setNewMeal({ ...newMeal, tags: newTags });
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+                <Input
+                  id="new-meal-tags"
+                  placeholder="Type a tag and press Enter"
+                  className="w-full"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                      e.preventDefault();
+                      const newTag = e.currentTarget.value.trim();
+                      if (newTag && (!newMeal.tags || !newMeal.tags.includes(newTag))) {
+                        setNewMeal({
+                          ...newMeal,
+                          tags: [...(newMeal.tags || []), newTag]
+                        });
+                        e.currentTarget.value = '';
+                      }
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">Press Enter to add a tag</p>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-meal-active" className="text-right">
