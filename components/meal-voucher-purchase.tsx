@@ -753,9 +753,9 @@ export default function MealVoucherPurchase() {
                 <Tag className="h-5 w-5 text-[#C2884E]" />
                 {language === 'zh' ? '选择餐券套餐' : 'Choose Your Meal Plan'}
               </h3>
-              <div className="text-sm text-muted-foreground">
+              {/* <div className="text-sm text-muted-foreground">
                 {language === 'zh' ? '餐券有效期：1年' : 'Vouchers valid for: 1 year'}
-              </div>
+              </div> */}
             </div>
           </div>
           
