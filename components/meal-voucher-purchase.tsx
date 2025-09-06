@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { 
   CreditCard, 
   Upload, 
@@ -53,6 +54,7 @@ export default function MealVoucherPurchase() {
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload' | 'confirm'>('select')
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false)
 
   // Define voucher plans
   const twoDishPlans: VoucherPlan[] = [
@@ -655,6 +657,154 @@ export default function MealVoucherPurchase() {
               {currentThreeDishVouchers}
             </span>
           </div>
+          <Dialog open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
+            <DialogTrigger asChild>
+              <button className="flex items-center justify-center w-7 h-7 rounded-full bg-[#F5EDE4] hover:bg-[#F0E5D9] text-[#C2884E] transition-all duration-300 hover:scale-110">
+                <Info className="h-4 w-4" />
+              </button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-w-[92%] overflow-hidden p-0 bg-gradient-to-b from-[#FBF7F2] to-[#F5EDE4] rounded-xl">
+              <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6">
+                <DialogTitle className="text-white text-xl sm:text-2xl flex items-center gap-2">
+                  <Info className="h-5 w-5" />
+                  {language === 'zh' ? '购买流程' : 'How It Works'}
+                </DialogTitle>
+              </DialogHeader>
+              <motion.div 
+                className="p-4 sm:p-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="space-y-6 sm:space-y-8">
+                  <div className="flex items-start gap-4">
+                    <motion.div 
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.1, duration: 0.3 }}
+                    >
+                      1
+                    </motion.div>
+                    <motion.div 
+                      className="flex-1"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1, duration: 0.3 }}
+                    >
+                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
+                        {language === 'zh' ? '选择套餐' : 'Choose Plan'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {language === 'zh' 
+                          ? '浏览可用套餐并选择最适合您需求的餐券数量' 
+                          : 'Browse available plans and select the voucher quantity that best fits your needs'}
+                      </p>
+                    </motion.div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4">
+                    <motion.div 
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, duration: 0.3 }}
+                    >
+                      2
+                    </motion.div>
+                    <motion.div 
+                      className="flex-1"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2, duration: 0.3 }}
+                    >
+                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
+                        {language === 'zh' ? '转账付款' : 'Send Payment'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {language === 'zh' 
+                          ? '通过Interac e-Transfer向指定账户转账付款' 
+                          : 'Send payment via Interac e-Transfer to the designated account'}
+                      </p>
+                      <div className="mt-2 bg-white p-3 rounded-lg border border-[#C2884E]/10 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[#6B5F53]">{language === 'zh' ? '收款邮箱' : 'Recipient Email'}</span>
+                          <span className="font-medium">payments@kapioo.com</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4">
+                    <motion.div 
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.3, duration: 0.3 }}
+                    >
+                      3
+                    </motion.div>
+                    <motion.div 
+                      className="flex-1"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3, duration: 0.3 }}
+                    >
+                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
+                        {language === 'zh' ? '上传凭证' : 'Upload Proof'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {language === 'zh' 
+                          ? '上传付款截图或PDF作为付款证明' 
+                          : 'Upload a screenshot or PDF of your payment confirmation'}
+                      </p>
+                    </motion.div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4">
+                    <motion.div 
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.4, duration: 0.3 }}
+                    >
+                      4
+                    </motion.div>
+                    <motion.div 
+                      className="flex-1"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4, duration: 0.3 }}
+                    >
+                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
+                        {language === 'zh' ? '获得餐券' : 'Receive Vouchers'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {language === 'zh' 
+                          ? '我们确认付款后，会将餐券添加到您的账户' 
+                          : 'After payment verification, vouchers will be added to your account within 1-2 business days'}
+                      </p>
+                      <div className="mt-2 bg-white p-3 rounded-lg border border-[#C2884E]/10 flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-green-600" />
+                        <span className="text-[#6B5F53]">
+                          {language === 'zh' ? '您将收到电子邮件通知' : 'You will receive an email notification'}
+                        </span>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-[#C2884E]/10">
+                  <Button 
+                    className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
+                    onClick={() => setHowItWorksOpen(false)}
+                  >
+                    {language === 'zh' ? '我明白了' : 'Got it'}
+                  </Button>
+                </div>
+              </motion.div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -795,94 +945,6 @@ export default function MealVoucherPurchase() {
             </AnimatePresence>
           </Tabs>
 
-          <div className="mt-12">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-[#C2884E] p-2 rounded-full text-white">
-                <Info className="h-5 w-5" />
-              </div>
-              <h3 className="text-xl font-bold text-[#6B5F53]">
-                {language === 'zh' ? '购买流程' : 'How It Works'}
-              </h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="bg-gradient-to-b from-white to-[#F5EDE4]/30 p-5 rounded-xl border border-[#C2884E]/10 relative">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md">
-                  1
-                </div>
-                <div className="pt-2 text-center">
-                  <h4 className="font-medium text-[#6B5F53] mb-2">
-                    {language === 'zh' ? '选择套餐' : 'Choose Plan'}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'zh' 
-                      ? '选择适合您的餐券套餐' 
-                      : 'Select your preferred meal voucher plan'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="hidden md:flex items-center justify-center text-[#C2884E]">
-                <ChevronRight className="h-6 w-6" />
-              </div>
-              
-              <div className="bg-gradient-to-b from-white to-[#F5EDE4]/30 p-5 rounded-xl border border-[#C2884E]/10 relative">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md">
-                  2
-                </div>
-                <div className="pt-2 text-center">
-                  <h4 className="font-medium text-[#6B5F53] mb-2">
-                    {language === 'zh' ? '转账付款' : 'Send Payment'}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'zh' 
-                      ? '通过Interac e-Transfer转账' 
-                      : 'Pay via Interac e-Transfer'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="hidden md:flex items-center justify-center text-[#C2884E]">
-                <ChevronRight className="h-6 w-6" />
-              </div>
-              
-              <div className="bg-gradient-to-b from-white to-[#F5EDE4]/30 p-5 rounded-xl border border-[#C2884E]/10 relative">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md">
-                  3
-                </div>
-                <div className="pt-2 text-center">
-                  <h4 className="font-medium text-[#6B5F53] mb-2">
-                    {language === 'zh' ? '上传凭证' : 'Upload Proof'}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'zh' 
-                      ? '上传付款截图或PDF' 
-                      : 'Upload payment screenshot or PDF'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="hidden md:flex items-center justify-center text-[#C2884E]">
-                <ChevronRight className="h-6 w-6" />
-              </div>
-              
-              <div className="bg-gradient-to-b from-white to-[#F5EDE4]/30 p-5 rounded-xl border border-[#C2884E]/10 relative">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md">
-                  4
-                </div>
-                <div className="pt-2 text-center">
-                  <h4 className="font-medium text-[#6B5F53] mb-2">
-                    {language === 'zh' ? '获得餐券' : 'Receive Vouchers'}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'zh' 
-                      ? '1-2个工作日内到账' 
-                      : 'Added within 1-2 business days'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
 
         </>
       )}
