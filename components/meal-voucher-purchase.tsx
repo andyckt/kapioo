@@ -47,11 +47,12 @@ export default function MealVoucherPurchase() {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
   const [activeTab, setActiveTab] = useState<'twoDish' | 'threeDish'>('twoDish')
   const [selectedPlan, setSelectedPlan] = useState<VoucherPlan | null>(null)
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
-  const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload' | 'confirm'>('select')
+  const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
@@ -87,7 +88,7 @@ export default function MealVoucherPurchase() {
     setPurchaseStep('upload')
   }
 
-  // Handle payment proof upload
+  // Handle payment proof upload and submission
   const handleUpload = () => {
     if (!paymentProof) {
       toast({
@@ -97,7 +98,8 @@ export default function MealVoucherPurchase() {
       return
     }
 
-    setPurchaseStep('confirm')
+    // Submit the purchase directly
+    handleSubmitPurchase()
   }
 
   // Handle purchase submission
@@ -116,16 +118,12 @@ export default function MealVoucherPurchase() {
     // This is just a placeholder - the actual implementation will be done later
     setTimeout(() => {
       setIsLoading(false)
+      setIsSubmitted(true)
+      
       toast({
         title: language === 'zh' ? "购买请求已提交" : "Purchase request submitted",
         description: language === 'zh' ? "我们将尽快审核您的请求" : "We will review your request as soon as possible"
       })
-      
-      // Reset form
-      setSelectedPlan(null)
-      setPaymentProof(null)
-      setNotes('')
-      setPurchaseStep('select')
     }, 1500)
   }
 
@@ -232,8 +230,48 @@ export default function MealVoucherPurchase() {
     )
   }
 
+  // Render success message
+  const renderSuccessMessage = () => {
+    return (
+      <Card className="w-full max-w-2xl mx-auto shadow-lg border-[#C2884E]/10">
+        <CardContent className="p-6 text-center">
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Check className="h-10 w-10 text-green-600" />
+            </div>
+            <h3 className="text-xl font-medium text-[#6B5F53] mb-2">
+              {language === 'zh' ? '您的购买请求已提交' : 'Your purchase request has been submitted'}
+            </h3>
+            <p className="text-muted-foreground">
+              {language === 'zh' ? '我们将在15分钟内审核您的请求' : 'We will approve your request within 15 minutes'}
+            </p>
+            <p className="text-muted-foreground mt-2">
+              {language === 'zh' ? '审核结果将通过电子邮件通知您' : 'You will receive an email notification'}
+            </p>
+          </div>
+          <Button 
+            className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
+            onClick={() => {
+              setIsSubmitted(false);
+              setSelectedPlan(null);
+              setPaymentProof(null);
+              setNotes('');
+              setPurchaseStep('select');
+            }}
+          >
+            {language === 'zh' ? '返回' : 'Return to Plans'}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
   // Render the upload section
   const renderUploadSection = () => {
+    if (isSubmitted) {
+      return renderSuccessMessage();
+    }
+    
     return (
       <Card className="w-full max-w-2xl mx-auto shadow-lg border-[#C2884E]/10">
         <CardHeader className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
@@ -406,14 +444,22 @@ export default function MealVoucherPurchase() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             {language === 'zh' ? '返回' : 'Back'}
           </Button>
-          <Button 
-            onClick={handleUpload}
-            className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] hover:opacity-90"
-            disabled={!paymentProof}
-          >
-            {language === 'zh' ? '继续' : 'Continue'}
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
+            <Button 
+              onClick={handleUpload}
+              className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] hover:opacity-90"
+              disabled={!paymentProof || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {language === 'zh' ? '提交中...' : 'Submitting...'}
+                </>
+              ) : (
+                <>
+                  {language === 'zh' ? '提交' : 'Submit'}
+                </>
+              )}
+            </Button>
         </CardFooter>
       </Card>
     )
@@ -604,8 +650,7 @@ export default function MealVoucherPurchase() {
   // Define step indicators
   const steps = [
     { id: 'select', label: language === 'zh' ? '选择套餐' : 'Select Plan' },
-    { id: 'upload', label: language === 'zh' ? '上传凭证' : 'Upload Proof' },
-    { id: 'confirm', label: language === 'zh' ? '确认购买' : 'Confirm' }
+    { id: 'upload', label: language === 'zh' ? '上传凭证' : 'Upload Proof' }
   ]
 
   // Add a counter effect for the user's current vouchers
@@ -808,59 +853,6 @@ export default function MealVoucherPurchase() {
         </div>
       </div>
 
-      {/* Step Progress Indicator - Only show when in a purchase flow */}
-      {purchaseStep !== 'select' && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                {/* Step circle */}
-                <div className="flex flex-col items-center relative">
-                  <motion.div 
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      purchaseStep === step.id 
-                        ? 'bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white' 
-                        : steps.findIndex(s => s.id === purchaseStep) > index 
-                          ? 'bg-green-100 text-green-600' 
-                          : 'bg-gray-100 text-gray-400'
-                    }`}
-                    animate={{
-                      scale: purchaseStep === step.id ? [1, 1.1, 1] : 1
-                    }}
-                    transition={{ duration: 0.5, repeat: purchaseStep === step.id ? Infinity : 0, repeatType: "reverse" }}
-                  >
-                    {purchaseStep === step.id ? (
-                      <span className="font-medium">{index + 1}</span>
-                    ) : steps.findIndex(s => s.id === purchaseStep) > index ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <span className="font-medium">{index + 1}</span>
-                    )}
-                  </motion.div>
-                  <span className={`text-xs mt-2 font-medium ${
-                    purchaseStep === step.id ? 'text-[#C2884E]' : 'text-muted-foreground'
-                  }`}>
-                    {step.label}
-                  </span>
-                </div>
-                
-                {/* Connector line */}
-                {index < steps.length - 1 && (
-                  <div className="flex-1 h-px bg-gray-200 mx-2">
-                    <div 
-                      className="h-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]" 
-                      style={{ 
-                        width: purchaseStep === steps[index + 1].id ? '50%' : 
-                              purchaseStep === steps[index].id ? '0%' : '100%' 
-                      }}
-                    ></div>
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Service Area Information */}
       <div className="mb-8">
@@ -950,7 +942,6 @@ export default function MealVoucherPurchase() {
       )}
 
       {purchaseStep === 'upload' && renderUploadSection()}
-      {purchaseStep === 'confirm' && renderConfirmSection()}
 
       {/* Purchase History Section */}
       {purchaseStep === 'select' && (
