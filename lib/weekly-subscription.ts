@@ -259,20 +259,25 @@ export async function getUserWeeklySubscription(): Promise<DeliveryDay[]> {
 }
 
 // Submit user subscription
-export async function submitUserSubscription(items: CartItem[]): Promise<any> {
+export async function submitUserSubscription(data: { items: CartItem[], userId: string }): Promise<any> {
   try {
+    console.log('Submitting subscription with user ID:', data.userId);
+    
     const response = await fetch('/api/weekly-subscription/user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ items }),
+      body: JSON.stringify(data),
     });
     
     const result = await response.json();
     
     if (result.success) {
-      return result.data;
+      return {
+        ...result.data,
+        remainingCredits: result.remainingCredits
+      };
     }
     
     console.error('Failed to submit subscription:', result.error);

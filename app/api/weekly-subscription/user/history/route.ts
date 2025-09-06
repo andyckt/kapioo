@@ -1,42 +1,41 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
+import UserSubscription from '@/models/UserSubscription';
+import User from '@/models/User';
 
-// GET handler - return user's subscription history (simplified for testing)
+// GET handler - return user's subscription history
 export async function GET(request: Request) {
   try {
-    console.log('Fetching user subscription history...');
+    // Get the user ID from the query parameters
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+    
     await connectToDatabase();
     
-    // For testing purposes, return mock subscription history
-    const mockSubscriptions = [
-      {
-        id: 'subscription-001',
-        items: [
-          { dayId: 'sunday', optionId: 'sunday-option1', quantity: 1 },
-          { dayId: 'tuesday', optionId: 'tuesday-option2', quantity: 2 }
-        ],
-        status: 'completed',
-        totalItems: 3,
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days ago
-      },
-      {
-        id: 'subscription-002',
-        items: [
-          { dayId: 'sunday', optionId: 'sunday-option3', quantity: 1 },
-          { dayId: 'tuesday', optionId: 'tuesday-option1', quantity: 1 }
-        ],
-        status: 'active',
-        totalItems: 2,
-        createdAt: new Date().toISOString() // today
-      }
-    ];
+    // Find the user
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Get user's subscription history
+    const subscriptions = await UserSubscription.find({
+      userId: user._id
+    }).sort({ createdAt: -1 }).lean();
     
     return NextResponse.json(
-      { 
-        success: true, 
-        data: mockSubscriptions,
-        message: 'Subscription history retrieved successfully (testing mode)'
-      },
+      { success: true, data: subscriptions },
       { status: 200 }
     );
   } catch (error) {

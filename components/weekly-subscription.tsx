@@ -132,11 +132,30 @@ export default function WeeklySubscription() {
       return
     }
     
+    // Check if user is authenticated
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    const userDataStr = localStorage.getItem('user');
+    
+    if (!isAuthenticated || !userDataStr) {
+      toast({
+        title: language === 'zh' ? '请先登录' : 'Please Log In',
+        description: language === 'zh' ? '您需要登录才能完成订阅' : 'You need to log in to complete your subscription',
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
-      // Submit subscription to API
-      const result = await submitUserSubscription(cart);
+      // Parse user data from localStorage
+      const userData = JSON.parse(userDataStr);
+      
+      // Submit subscription to API with user ID
+      const result = await submitUserSubscription({
+        items: cart,
+        userId: userData._id // Add user ID from localStorage
+      });
       
       if (result.error) {
         // Handle error case
@@ -157,10 +176,16 @@ export default function WeeklySubscription() {
         }
       } else {
         // Success case
-    toast({
-      title: language === 'zh' ? '订阅成功' : 'Subscription Successful',
-      description: language === 'zh' ? '您的每周订阅已成功设置' : 'Your weekly subscription has been set up successfully',
+        toast({
+          title: language === 'zh' ? '订阅成功' : 'Subscription Successful',
+          description: language === 'zh' ? '您的每周订阅已成功设置' : 'Your weekly subscription has been set up successfully',
         });
+        
+        // Update user credits in localStorage if returned by API
+        if (result.remainingCredits !== undefined) {
+          userData.credits = result.remainingCredits;
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
         
         // Clear the cart after successful checkout
         setCart([]);
