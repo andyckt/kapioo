@@ -347,26 +347,21 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             className="space-y-6"
           >
             {/* Meals per week selector */}
-            <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC]">
-              <h3 className="text-lg font-medium text-[#6B5F53] mb-3">
-                {language === 'zh' ? '选择每周餐数' : 'Select meals per week'}
-              </h3>
-              <div className="flex gap-4">
-                <Button
-                  onClick={() => setSelectedMealsPerWeek(6)}
-                  variant={selectedMealsPerWeek === 6 ? "default" : "outline"}
-                  className={`flex-1 rounded-xl ${selectedMealsPerWeek === 6 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
-                >
-                  6 {language === 'zh' ? '餐/周' : 'meals/week'}
-                </Button>
-                <Button
-                  onClick={() => setSelectedMealsPerWeek(10)}
-                  variant={selectedMealsPerWeek === 10 ? "default" : "outline"}
-                  className={`flex-1 rounded-xl ${selectedMealsPerWeek === 10 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
-                >
-                  10 {language === 'zh' ? '餐/周' : 'meals/week'}
-                </Button>
-              </div>
+            <div className="flex gap-4">
+              <Button
+                onClick={() => setSelectedMealsPerWeek(6)}
+                variant={selectedMealsPerWeek === 6 ? "default" : "outline"}
+                className={`flex-1 rounded-xl ${selectedMealsPerWeek === 6 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
+              >
+                6 {language === 'zh' ? '餐/周' : 'meals/week'}
+              </Button>
+              <Button
+                onClick={() => setSelectedMealsPerWeek(10)}
+                variant={selectedMealsPerWeek === 10 ? "default" : "outline"}
+                className={`flex-1 rounded-xl ${selectedMealsPerWeek === 10 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
+              >
+                10 {language === 'zh' ? '餐/周' : 'meals/week'}
+              </Button>
             </div>
             
             {/* Plan options */}
