@@ -51,24 +51,24 @@ export async function POST(request: Request) {
     
     const savedRequest = await newRequest.save();
     
-    // Send notification to admin (temporarily disabled for debugging)
-    console.log('Admin notification temporarily disabled for debugging');
-    // try {
-    //   console.log('Sending admin notification for request:', requestId);
-    //   await sendAdminCreditRequestNotification({
-    //     userId: user._id.toString(),
-    //     userName: user.name || user.userID,
-    //     userEmail: user.email,
-    //     amount: data.amount,
-    //     imageProofUrl: data.imageProof,
-    //     notes: data.notes,
-    //     requestId: requestId
-    //   });
-    //   console.log('Admin notification sent successfully');
-    // } catch (emailError) {
-    //   console.error('Error sending admin notification:', emailError);
-    //   // Continue with the process even if email fails
-    // }
+    // Send notification to admin
+    try {
+      console.log('Sending admin notification for request:', requestId);
+      await sendAdminCreditRequestNotification({
+        userId: user._id.toString(),
+        userName: user.name || user.userID,
+        userEmail: user.email,
+        amount: data.amount,
+        imageProofUrl: data.imageProof,
+        notes: data.notes,
+        planDescription: data.planDescription || '',
+        requestId: requestId
+      });
+      console.log('Admin notification sent successfully');
+    } catch (emailError) {
+      console.error('Error sending admin notification:', emailError);
+      // Continue with the process even if email fails
+    }
     
     return NextResponse.json({
       success: true,

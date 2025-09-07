@@ -222,6 +222,7 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   amount: number;
   imageProofUrl: string;
   notes?: string;
+  planDescription?: string;
   requestId: string;
 }) => {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
@@ -233,13 +234,14 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的餐券购买请求待审核</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的周次餐券购买请求待审核</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
         用户 <strong>${requestDetails.userName}</strong> (${requestDetails.userEmail}) 提交了一个新的餐券购买请求。
       </p>
       <ul style="list-style: none; padding: 0; margin-bottom: 20px; border: 1px solid #eee; border-radius: 8px; background-color: #f9f9f9;">
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款金额:</strong> $${requestDetails.amount}</li>
+        ${requestDetails.planDescription ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
         <li style="padding: 10px 15px;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
       </ul>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
@@ -259,7 +261,7 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
 
   return sendEmail({
     to: adminEmail,
-    subject: `新的餐券购买请求 (#${requestDetails.requestId}) 待审核`,
+    subject: `新的周次餐券购买请求 (#${requestDetails.requestId}) 待审核`,
     html,
   });
 };
@@ -321,7 +323,7 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
 };
 
 // Send notification to user for credit purchase status
-export const sendCreditPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', credits?: number) => {
+export const sendCreditPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', credits?: number, planDescription?: string) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   
   let statusText = '';
@@ -354,6 +356,11 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
         <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
           请求编号: ${requestId}
         </p>
+        ${planDescription ? `
+        <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
+          所选套餐: ${planDescription}
+        </p>
+        ` : ''}
         <p style="color: #333; font-size: 15px; line-height: 1.6;">
           ${statusMessage}
         </p>

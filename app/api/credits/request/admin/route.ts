@@ -147,7 +147,8 @@ export async function POST(request: Request) {
             user.name || user.userID,
             creditRequest.requestId,
             'approved',
-            approvedCredits
+            approvedCredits,
+            creditRequest.planDescription
           );
           
           // Also send the same notification as the "Add Credits" button
@@ -196,7 +197,9 @@ export async function POST(request: Request) {
             user.email,
             user.name || user.userID,
             creditRequest.requestId,
-            'declined'
+            'declined',
+            undefined,
+            creditRequest.planDescription
           );
         } catch (emailError) {
           console.error('Error sending decline email:', emailError);
