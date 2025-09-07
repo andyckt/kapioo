@@ -291,18 +291,41 @@ export default function MealVoucherPurchase() {
               </div>
               
               <div className="space-y-2 mb-4 pt-3 border-t border-[#C2884E]/10">
-                <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                  <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '有效期1年' : 'Valid for 1 year'}
-                  </span>
-                </div>
+                {/* Show 首次推荐 as first tick if available */}
                 {plan.savings && (
                   <div className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
                     <span className="text-[#6B5F53]">{plan.savings}</span>
                   </div>
                 )}
+                
+                {/* Show 可转让 as first tick for plans without savings */}
+                {!plan.savings && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <span className="text-[#6B5F53]">
+                      {language === 'zh' ? '可转让' : 'Transferable'}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Show 可转让 as second tick for plans with savings */}
+                {plan.savings && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <span className="text-[#6B5F53]">
+                      {language === 'zh' ? '可转让' : 'Transferable'}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Show Valid for 1 year as the last tick */}
+                <div className="flex items-start gap-2 text-sm">
+                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                  <span className="text-[#6B5F53]">
+                    {language === 'zh' ? '有效期1年' : 'Valid for 1 year'}
+                  </span>
+                </div>
               </div>
               
               <Button

@@ -27,6 +27,7 @@ import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
 import { CreditPurchaseForm } from "@/components/credit-purchase-form"
 import { CreditPurchaseHistory } from "@/components/credit-purchase-history"
+import { AvailableAreas } from "@/components/available-areas"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
@@ -1153,8 +1154,16 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">{t('credits')}</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">
+                      {language === 'zh' ? '周次订阅' : 'Weekly Meal Box'}
+                    </h2>
                   </div>
+                  
+                  {/* Available Areas Section - First section right below heading */}
+                  <div className="mb-6 mt-4">
+                    <AvailableAreas />
+                  </div>
+                  
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                       <div>
