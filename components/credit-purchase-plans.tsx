@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   CreditCard, 
@@ -60,6 +60,20 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
+  
+  // Listen for the custom event to open the info dialog
+  useEffect(() => {
+    const handleOpenInfoDialog = () => {
+      setHowItWorksOpen(true)
+    }
+    
+    document.addEventListener('openInfoDialog', handleOpenInfoDialog)
+    
+    // Clean up the event listener when component unmounts
+    return () => {
+      document.removeEventListener('openInfoDialog', handleOpenInfoDialog)
+    }
+  }, [])
 
   // Define plan options based on the image provided
   const planOptions: PlanOption[] = [
@@ -117,10 +131,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 6, 
       totalPrice: 360, 
-      pricePerMeal: 15,
-      isPopular: true,
-      tag: 'Best value',
-      tagZh: '最佳优惠'
+      pricePerMeal: 15
     },
     { 
       id: 'week4-10', 
@@ -129,10 +140,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 10, 
       totalPrice: 592, 
-      pricePerMeal: 14.8,
-      isPopular: true,
-      tag: 'Best value',
-      tagZh: '最佳优惠'
+      pricePerMeal: 14.8
     },
   ]
 
@@ -243,98 +251,87 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
 
   return (
     <div className="space-y-6">
-      {/* Header with info button */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#6B5F53]">
-          {language === 'zh' ? '周次订阅' : 'Weekly Meal Box'}
-        </h2>
-        
-        <Dialog open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
-          <DialogTrigger asChild>
-            <button className="flex items-center justify-center w-7 h-7 rounded-full bg-[#F5EDE4] hover:bg-[#F0E5D9] text-[#C2884E] transition-all duration-300 hover:scale-110">
-              <Info className="h-4 w-4" />
-            </button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] p-6 rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl text-[#6B5F53]">
-                {language === 'zh' ? '配送信息' : 'Delivery Information'}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                  <Truck className="h-4 w-4 text-[#C2884E]" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-[#6B5F53]">
-                    {language === 'zh' ? '配送日期' : 'Delivery Days'}
-                  </h4>
-                  <p className="text-sm text-[#8A7968]">
-                    {language === 'zh' ? '周日和周二' : 'Sunday and Tuesday'}
-                  </p>
-                </div>
+      {/* Info dialog - triggered from dashboard */}
+      <Dialog open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
+        <DialogContent className="sm:max-w-[500px] p-6 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-[#6B5F53]">
+              {language === 'zh' ? '配送信息' : 'Delivery Information'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
+                <Truck className="h-4 w-4 text-[#C2884E]" />
               </div>
-              
-              <div className="flex items-start gap-3">
-                <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                  <Clock className="h-4 w-4 text-[#C2884E]" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-[#6B5F53]">
-                    {language === 'zh' ? '配送时间' : 'Delivery Time'}
-                  </h4>
-                  <p className="text-sm text-[#8A7968]">
-                    {language === 'zh' ? '下午6点 - 晚上10点' : '6PM - 10PM'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                  <Calendar className="h-4 w-4 text-[#C2884E]" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-[#6B5F53]">
-                    {language === 'zh' ? '餐券有效期' : 'Credit Validity'}
-                  </h4>
-                  <p className="text-sm text-[#8A7968]">
-                    {language === 'zh' ? '购买后半年内有效，可转让，购买后7天内可退款未用部分' : 'Valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                  <CreditCard className="h-4 w-4 text-[#C2884E]" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-[#6B5F53]">
-                    {language === 'zh' ? '付款方式' : 'Payment Method'}
-                  </h4>
-                  <p className="text-sm text-[#8A7968]">
-                    {language === 'zh' ? 'EMT/微信支付' : 'EMT/WeChat Pay'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                  <Truck className="h-4 w-4 text-[#C2884E]" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-[#6B5F53]">
-                    {language === 'zh' ? '配送费' : 'Delivery Fee'}
-                  </h4>
-                  <p className="text-sm text-[#8A7968]">
-                    {language === 'zh' ? '$11.99/周 (2次配送)' : '$11.99/week (2 deliveries)'}
-                  </p>
-                </div>
+              <div>
+                <h4 className="font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '配送日期' : 'Delivery Days'}
+                </h4>
+                <p className="text-sm text-[#8A7968]">
+                  {language === 'zh' ? '周日和周二' : 'Sunday and Tuesday'}
+                </p>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
+                <Clock className="h-4 w-4 text-[#C2884E]" />
+              </div>
+              <div>
+                <h4 className="font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '配送时间' : 'Delivery Time'}
+                </h4>
+                <p className="text-sm text-[#8A7968]">
+                  {language === 'zh' ? '下午6点 - 晚上10点' : '6PM - 10PM'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
+                <Calendar className="h-4 w-4 text-[#C2884E]" />
+              </div>
+              <div>
+                <h4 className="font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '餐券有效期' : 'Credit Validity'}
+                </h4>
+                <p className="text-sm text-[#8A7968]">
+                  {language === 'zh' ? '购买后半年内有效，可转让，购买后7天内可退款未用部分' : 'Valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
+                <CreditCard className="h-4 w-4 text-[#C2884E]" />
+              </div>
+              <div>
+                <h4 className="font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '付款方式' : 'Payment Method'}
+                </h4>
+                <p className="text-sm text-[#8A7968]">
+                  {language === 'zh' ? 'EMT/微信支付' : 'EMT/WeChat Pay'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
+                <Truck className="h-4 w-4 text-[#C2884E]" />
+              </div>
+              <div>
+                <h4 className="font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '配送费' : 'Delivery Fee'}
+                </h4>
+                <p className="text-sm text-[#8A7968]">
+                  {language === 'zh' ? '$11.99/周 (2次配送)' : '$11.99/week (2 deliveries)'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <AnimatePresence mode="wait">
         {purchaseStep === 'select' ? (

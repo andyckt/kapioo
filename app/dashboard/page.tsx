@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -1168,6 +1168,16 @@ export default function DashboardPage() {
                           {userData?.credits || 0}
                         </span>
                       </div>
+                      <button 
+                        className="flex items-center justify-center w-7 h-7 rounded-full bg-[#F5EDE4] hover:bg-[#F0E5D9] text-[#C2884E] transition-all duration-300 hover:scale-110"
+                        onClick={() => {
+                          // Find the CreditPurchasePlans component and trigger its info dialog
+                          const event = new CustomEvent('openInfoDialog');
+                          document.dispatchEvent(event);
+                        }}
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                   
