@@ -11,6 +11,7 @@ export interface ICreditPurchaseRequest extends Document {
   approvedCredits?: number; // Credits approved by admin (may differ from requested)
   notes?: string; // Additional notes from user or admin
   adminNotes?: string; // Notes from admin (for internal use)
+  planDescription?: string; // Description of the selected plan
   createdAt: Date;
   updatedAt: Date;
   approvedAt?: Date;
@@ -59,6 +60,9 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
     type: String
   },
   adminNotes: {
+    type: String
+  },
+  planDescription: {
     type: String
   },
   approvedAt: {

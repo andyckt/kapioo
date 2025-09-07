@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       amount: data.amount,
       imageProof: data.imageProof,
       notes: data.notes || '',
+      planDescription: data.planDescription || '', // Store plan description
       status: 'pending'
     });
     

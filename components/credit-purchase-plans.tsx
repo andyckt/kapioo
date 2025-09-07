@@ -198,6 +198,9 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       // Upload payment proof to S3
       const imageUrl = await uploadFileToS3(paymentProof)
       
+      // Create plan description for admin view
+      const planDescription = `${selectedPlan.durationLabel} (${selectedPlan.mealsPerWeek} meals/week)`;
+      
       // Submit request to backend
       const response = await fetch('/api/credits/request', {
         method: 'POST',
@@ -209,6 +212,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           amount: selectedPlan.totalPrice,
           mealsPerWeek: selectedPlan.mealsPerWeek,
           duration: selectedPlan.duration,
+          planDescription: planDescription,
           imageProof: imageUrl,
           notes
         }),

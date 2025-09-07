@@ -1507,6 +1507,7 @@ export default function AdminDashboardPage() {
                           <tr className="border-b">
                             <th className="text-left p-4 font-medium">Request ID</th>
                             <th className="text-left p-4 font-medium">User</th>
+                            <th className="text-left p-4 font-medium">Plan</th>
                             <th className="text-left p-4 font-medium">Amount</th>
                             <th className="text-left p-4 font-medium">Date</th>
                             <th className="text-left p-4 font-medium">Status</th>
@@ -1562,6 +1563,13 @@ export default function AdminDashboardPage() {
                                 <tr key={request._id} className="border-b">
                                   <td className="p-4">{request.requestId}</td>
                                   <td className="p-4">{userName}</td>
+                                  <td className="p-4">
+                                    {request.planDescription ? (
+                                      <div className="font-medium">{request.planDescription}</div>
+                                    ) : (
+                                      <div className="text-xs text-muted-foreground">No plan details</div>
+                                    )}
+                                  </td>
                                   <td className="p-4">
                                     <div>${request.amount.toFixed(2)}</div>
                                     <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
@@ -1999,6 +2007,15 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               
+              {selectedRequest.planDescription && (
+                <div>
+                  <Label className="text-sm text-muted-foreground">Selected Plan</Label>
+                  <p className="font-medium">
+                    {selectedRequest.planDescription}
+                  </p>
+                </div>
+              )}
+              
               <div>
                 <Label className="text-sm text-muted-foreground">Amount Paid</Label>
                 <p className="font-medium">
@@ -2158,6 +2175,20 @@ export default function AdminDashboardPage() {
                 />
               </div>
               
+              {selectedRequest.planDescription && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="plan" className="text-right">
+                    Selected Plan
+                  </Label>
+                  <Input
+                    id="plan"
+                    value={selectedRequest.planDescription}
+                    className="col-span-3"
+                    disabled
+                  />
+                </div>
+              )}
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="amount" className="text-right">
                   Amount Paid
@@ -2273,6 +2304,20 @@ export default function AdminDashboardPage() {
                   disabled
                 />
               </div>
+              
+              {selectedRequest.planDescription && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="decline-plan" className="text-right">
+                    Selected Plan
+                  </Label>
+                  <Input
+                    id="decline-plan"
+                    value={selectedRequest.planDescription}
+                    className="col-span-3"
+                    disabled
+                  />
+                </div>
+              )}
               
               <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="decline-notes" className="text-right pt-2">
