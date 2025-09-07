@@ -352,8 +352,34 @@ export default function AdminDashboardPage() {
   // Open approve dialog
   const handleApproveRequest = (request: any) => {
     setSelectedRequest(request);
-    // Default to the amount paid as a starting point
-    setApprovedCredits(request.amount || 0);
+    
+    // Extract meals per week from plan description if available
+    let defaultCredits = 0;
+    if (request.planDescription) {
+      // Look for patterns like "6 meals/week" or "10 meals/week"
+      const mealsMatch = request.planDescription.match(/(\d+)\s*meals\/week/i);
+      if (mealsMatch && mealsMatch[1]) {
+        defaultCredits = parseInt(mealsMatch[1]);
+      } else {
+        // Alternative pattern: try to find "6 meals" or "10 meals"
+        const altMatch = request.planDescription.match(/(\d+)\s*meals/i);
+        if (altMatch && altMatch[1]) {
+          defaultCredits = parseInt(altMatch[1]);
+        }
+      }
+    }
+    
+    // If we couldn't extract from plan description, use mealsPerWeek if available
+    if (defaultCredits === 0 && request.mealsPerWeek) {
+      defaultCredits = request.mealsPerWeek;
+    }
+    
+    // If still no value, use the amount as fallback
+    if (defaultCredits === 0) {
+      defaultCredits = request.amount || 0;
+    }
+    
+    setApprovedCredits(defaultCredits);
     setAdminNotes('');
     setApproveRequestOpen(true);
   };
@@ -2221,7 +2247,7 @@ export default function AdminDashboardPage() {
                   min="1"
                 />
                 <div className="col-span-4 text-sm text-muted-foreground pl-[25%]">
-                  <span>Enter the number of credits to add to the user's account based on the amount paid.</span>
+                  <span>Credits automatically set based on the selected plan ({selectedRequest.planDescription ? 'detected from plan description' : 'fallback to amount paid'}).</span>
                 </div>
               </div>
               
