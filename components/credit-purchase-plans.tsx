@@ -388,14 +388,27 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                         <div className="text-3xl font-bold text-[#C2884E]">
                           ${plan.totalPrice}
                         </div>
-                        <div className="text-sm text-[#8A7968] mt-1">
-                          (${plan.pricePerMeal} {language === 'zh' ? '每餐' : 'per meal'})
-                        </div>
                       </div>
                       
-                      <div className="text-center bg-[#F9F3EC] py-3 px-4 rounded-xl">
-                        <div className="text-sm font-medium text-[#6B5F53]">
-                          {plan.mealsPerWeek} {language === 'zh' ? '餐 / 周' : 'meals / week'}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="h-4 w-4 text-[#C2884E]" />
+                            <span className="text-sm font-medium text-[#6B5F53]">
+                              {language === 'zh' ? '餐数/周' : 'Meals/week'}
+                            </span>
+                          </div>
+                          <span className="font-bold text-[#C2884E]">{plan.mealsPerWeek}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Star className="h-4 w-4 text-[#C2884E]" />
+                            <span className="text-sm font-medium text-[#6B5F53]">
+                              {language === 'zh' ? '单价' : 'Per meal'}
+                            </span>
+                          </div>
+                          <span className="font-bold text-[#C2884E]">${plan.pricePerMeal.toFixed(2)}</span>
                         </div>
                       </div>
                       
@@ -454,26 +467,30 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             {!isSubmitted ? (
               <>
                 {/* Selected plan summary */}
-                <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC]">
-                  <h3 className="text-lg font-medium text-[#6B5F53] mb-3">
+                <div className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] p-5 rounded-xl border border-[#C2884E]/10 shadow-sm">
+                  <h3 className="font-medium mb-3 text-[#6B5F53] flex items-center gap-2">
+                    <Star className="h-4 w-4 text-[#C2884E]" />
                     {language === 'zh' ? '已选套餐' : 'Selected Plan'}
                   </h3>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="font-medium text-[#6B5F53]">
-                        {language === 'zh' ? selectedPlan?.durationLabelZh : selectedPlan?.durationLabel}
+                  <div className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] w-10 h-10 rounded-full flex items-center justify-center text-white">
+                        <Calendar className="h-5 w-5" />
                       </div>
-                      <div className="text-sm text-[#8A7968]">
-                        {selectedPlan?.mealsPerWeek} {language === 'zh' ? '餐/周' : 'meals/week'}
+                      <div>
+                        <p className="font-medium text-[#6B5F53]">
+                          {language === 'zh' ? selectedPlan?.durationLabelZh : selectedPlan?.durationLabel}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedPlan?.mealsPerWeek} {language === 'zh' ? '餐/周' : 'meals/week'}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-[#C2884E]">
-                        ${selectedPlan?.totalPrice}
-                      </div>
-                      <div className="text-xs text-[#8A7968]">
-                        ${selectedPlan?.pricePerMeal} {language === 'zh' ? '每餐' : 'per meal'}
-                      </div>
+                      <p className="text-xl font-bold text-[#C2884E]">${selectedPlan?.totalPrice}</p>
+                      <p className="text-xs text-muted-foreground">
+                        ${selectedPlan?.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                      </p>
                     </div>
                   </div>
                 </div>
