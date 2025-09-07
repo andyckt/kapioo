@@ -359,6 +359,9 @@ export default function MealVoucherPurchase() {
             <p className="text-muted-foreground mt-2">
               {language === 'zh' ? '审核结果将通过电子邮件通知您' : 'You will receive an email notification'}
             </p>
+            <p className="text-muted-foreground mt-2 text-sm">
+              {language === 'zh' ? '通知邮件可能会进入您的垃圾邮件文件夹，请注意查收。' : 'The notification email may be in your spam folder, please check.'}
+            </p>
           </div>
           <Button 
             className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"

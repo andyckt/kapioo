@@ -612,8 +612,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   <div className="border-t border-[#E5D6BC] pt-4 mt-4">
                     <p className="text-sm text-[#9B6B3F]">
                       {language === 'zh'
-                        ? '您可以在"购买历史"部分查看请求状态。'
-                        : 'You can check the status of your request in the "Purchase History" section.'
+                        ? '通知邮件可能会进入您的垃圾邮件文件夹，请注意查收。'
+                        : 'The notification email may be in your spam folder, please check.'
                       }
                     </p>
                   </div>
