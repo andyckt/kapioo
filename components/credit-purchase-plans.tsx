@@ -255,7 +255,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
               <Info className="h-4 w-4" />
             </button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] p-6 rounded-xl">
+          <DialogContent className="sm:max-w-[500px] p-6 rounded-2xl">
             <DialogHeader>
               <DialogTitle className="text-xl text-[#6B5F53]">
                 {language === 'zh' ? '配送信息' : 'Delivery Information'}
@@ -347,7 +347,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             className="space-y-6"
           >
             {/* Meals per week selector */}
-            <div className="bg-[#F9F3EC] p-4 rounded-lg border border-[#E5D6BC]">
+            <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC]">
               <h3 className="text-lg font-medium text-[#6B5F53] mb-3">
                 {language === 'zh' ? '选择每周餐数' : 'Select meals per week'}
               </h3>
@@ -355,14 +355,14 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                 <Button
                   onClick={() => setSelectedMealsPerWeek(6)}
                   variant={selectedMealsPerWeek === 6 ? "default" : "outline"}
-                  className={`flex-1 ${selectedMealsPerWeek === 6 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
+                  className={`flex-1 rounded-xl ${selectedMealsPerWeek === 6 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
                 >
                   6 {language === 'zh' ? '餐/周' : 'meals/week'}
                 </Button>
                 <Button
                   onClick={() => setSelectedMealsPerWeek(10)}
                   variant={selectedMealsPerWeek === 10 ? "default" : "outline"}
-                  className={`flex-1 ${selectedMealsPerWeek === 10 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
+                  className={`flex-1 rounded-xl ${selectedMealsPerWeek === 10 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
                 >
                   10 {language === 'zh' ? '餐/周' : 'meals/week'}
                 </Button>
@@ -374,7 +374,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
               {filteredPlans.map((plan) => (
                 <Card 
                   key={plan.id} 
-                  className={`overflow-hidden transition-all duration-300 hover:shadow-md ${
+                  className={`overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl ${
                     plan.isPopular || plan.isRecommended ? 'border-[#C2884E]' : 'border-[#E5D6BC]'
                   }`}
                 >
@@ -401,7 +401,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                         </div>
                       </div>
                       
-                      <div className="text-center bg-[#F9F3EC] py-3 px-4 rounded-md">
+                      <div className="text-center bg-[#F9F3EC] py-3 px-4 rounded-xl">
                         <div className="text-sm font-medium text-[#6B5F53]">
                           {plan.mealsPerWeek} {language === 'zh' ? '餐 / 周' : 'meals / week'}
                         </div>
@@ -426,7 +426,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     <CardFooter>
                       <Button 
                         onClick={() => handlePlanSelect(plan)}
-                        className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
+                        className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
                       >
                         {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
                       </Button>
@@ -437,7 +437,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             </div>
             
             {/* Delivery fee info */}
-            <div className="bg-[#F9F3EC] p-4 rounded-lg border border-[#E5D6BC] text-center">
+            <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC] text-center">
               <span className="text-[#8A7968]">
                 {language === 'zh' ? '配送费/周 (2次配送)' : 'Delivery fee/week (2 deliveries)'}: 
               </span>
@@ -462,7 +462,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             {!isSubmitted ? (
               <>
                 {/* Selected plan summary */}
-                <div className="bg-[#F9F3EC] p-4 rounded-lg border border-[#E5D6BC]">
+                <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC]">
                   <h3 className="text-lg font-medium text-[#6B5F53] mb-3">
                     {language === 'zh' ? '已选套餐' : 'Selected Plan'}
                   </h3>
@@ -493,7 +493,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       {language === 'zh' ? '上传付款凭证' : 'Upload Payment Proof'}
                     </Label>
                     <div 
-                      className="mt-2 border-2 border-dashed border-[#E5D6BC] rounded-lg p-6 text-center cursor-pointer hover:border-[#C2884E]/50 transition-colors relative" 
+                      className="mt-2 border-2 border-dashed border-[#E5D6BC] rounded-2xl p-6 text-center cursor-pointer hover:border-[#C2884E]/50 transition-colors relative" 
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <input
@@ -560,14 +560,14 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   <Button
                     variant="outline"
                     onClick={handleBackToPlans}
-                    className="border-[#D1A46C] text-[#8A7968]"
+                    className="border-[#D1A46C] text-[#8A7968] rounded-xl"
                   >
                     {language === 'zh' ? '返回' : 'Back'}
                   </Button>
                   <Button
                     onClick={handleSubmit}
                     disabled={isLoading || !paymentProof}
-                    className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
+                    className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
                   >
                     {isLoading ? (
                       <>
@@ -583,7 +583,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             ) : (
               // Success message
               <div className="py-6">
-                <div className="bg-[#F9F3EC] border border-[#D1A46C] rounded-lg p-6 text-center">
+                <div className="bg-[#F9F3EC] border border-[#D1A46C] rounded-2xl p-6 text-center">
                   <div className="mx-auto w-16 h-16 rounded-full bg-[#F2E8D9] flex items-center justify-center mb-4">
                     <Check className="h-8 w-8 text-[#C2884E]" />
                   </div>
@@ -609,7 +609,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                 <div className="flex justify-center mt-6">
                   <Button
                     onClick={handleBackToPlans}
-                    className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
+                    className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
                   >
                     {language === 'zh' ? '返回套餐选择' : 'Back to Plans'}
                   </Button>
