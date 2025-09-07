@@ -1157,6 +1157,18 @@ export default function DashboardPage() {
                     <h2 className="text-3xl font-bold tracking-tight">
                       {language === 'zh' ? '周次订阅' : 'Weekly Meal Box'}
                     </h2>
+                    
+                    {/* Credits display at top right */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                        <span className="text-sm font-medium text-[#6B5F53]">
+                          {language === 'zh' ? '可用餐券' : 'Available Credits'}: 
+                        </span>
+                        <span className="text-sm font-bold text-[#C2884E]">
+                          {userData?.credits || 0}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   
                   {/* Available Areas Section - First section right below heading */}
@@ -1164,44 +1176,31 @@ export default function DashboardPage() {
                     <AvailableAreas />
                   </div>
                   
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle>{t('creditsAvailable')}</CardTitle>
-                        <CardDescription>{t('currentAvailableCredits')}</CardDescription>
-                      </div>
-                      {userData && userData._id && (
-                        <div className="flex-shrink-0">
-                          <CreditPurchaseForm 
-                            userId={userData._id} 
-                            onSuccess={() => {
-                              // Refresh user data to get updated credits
-                              if (userData?._id) {
-                                getUserById(userData._id).then(user => {
-                                  if (user) {
-                                    setUserData(user);
-                                    setCredits(user.credits || 0);
-                                  }
-                                });
+                  {/* Credit Purchase Form */}
+                  {userData && userData._id && (
+                    <div className="flex justify-end mb-6">
+                      <CreditPurchaseForm 
+                        userId={userData._id} 
+                        onSuccess={() => {
+                          // Refresh user data to get updated credits
+                          if (userData?._id) {
+                            getUserById(userData._id).then(user => {
+                              if (user) {
+                                setUserData(user);
+                                setCredits(user.credits || 0);
                               }
-                              
-                              // Refresh transaction history
-                              fetchTransactions();
-                              
-                              // Force refresh of credit purchase history component
-                              setPurchaseHistoryKey(prev => prev + 1);
-                            }} 
-                          />
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col items-center justify-center p-6 rounded-lg">
-                        <div className="text-4xl font-bold mb-2">{userData?.credits || 0}</div>
-                        <div className="text-muted-foreground text-center">{t('creditsAvailable')}</div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                            });
+                          }
+                          
+                          // Refresh transaction history
+                          fetchTransactions();
+                          
+                          // Force refresh of credit purchase history component
+                          setPurchaseHistoryKey(prev => prev + 1);
+                        }} 
+                      />
+                    </div>
+                  )}
                   
                   {/* Credit Purchase History */}
                   {userData && userData._id && (
