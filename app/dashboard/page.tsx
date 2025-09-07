@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
-import { CreditPurchaseForm } from "@/components/credit-purchase-form"
+import { CreditPurchasePlans } from "@/components/credit-purchase-plans"
 import { CreditPurchaseHistory } from "@/components/credit-purchase-history"
 import { AvailableAreas } from "@/components/available-areas"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
@@ -1176,10 +1176,10 @@ export default function DashboardPage() {
                     <AvailableAreas />
                   </div>
                   
-                  {/* Credit Purchase Form */}
+                  {/* Credit Purchase Plans */}
                   {userData && userData._id && (
-                    <div className="flex justify-end mb-6">
-                      <CreditPurchaseForm 
+                    <div className="mb-6">
+                      <CreditPurchasePlans 
                         userId={userData._id} 
                         onSuccess={() => {
                           // Refresh user data to get updated credits
