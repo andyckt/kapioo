@@ -1946,7 +1946,7 @@ export default function AdminDashboardPage() {
 
       {/* View Credit Request Dialog */}
       <Dialog open={viewRequestOpen} onOpenChange={setViewRequestOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Credit Purchase Request Details</DialogTitle>
             <DialogDescription>Request ID: {selectedRequest?.requestId}</DialogDescription>
@@ -1980,7 +1980,7 @@ export default function AdminDashboardPage() {
                   <p className="font-medium">
                     {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', { 
                       year: 'numeric', 
-                      month: 'long', 
+                      month: 'short', 
                       day: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
@@ -2037,7 +2037,7 @@ export default function AdminDashboardPage() {
                     <p className="font-medium">
                       {selectedRequest.approvedAt ? new Date(selectedRequest.approvedAt).toLocaleDateString('en-US', { 
                         year: 'numeric', 
-                        month: 'long', 
+                        month: 'short', 
                         day: 'numeric' 
                       }) : 'N/A'}
                     </p>
@@ -2051,39 +2051,42 @@ export default function AdminDashboardPage() {
                   <p className="font-medium">
                     {selectedRequest.declinedAt ? new Date(selectedRequest.declinedAt).toLocaleDateString('en-US', { 
                       year: 'numeric', 
-                      month: 'long', 
+                      month: 'short', 
                       day: 'numeric' 
                     }) : 'N/A'}
                   </p>
                 </div>
               )}
               
-              {selectedRequest.notes && (
-                <div>
-                  <Label className="text-sm text-muted-foreground">User Notes</Label>
-                  <p className="font-medium bg-muted p-3 rounded-md">
-                    {selectedRequest.notes}
-                  </p>
-                </div>
-              )}
-              
-              {selectedRequest.adminNotes && (
-                <div>
-                  <Label className="text-sm text-muted-foreground">Admin Notes</Label>
-                  <p className="font-medium bg-muted p-3 rounded-md">
-                    {selectedRequest.adminNotes}
-                  </p>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedRequest.notes && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">User Notes</Label>
+                    <p className="font-medium bg-muted p-3 rounded-md text-sm max-h-24 overflow-y-auto">
+                      {selectedRequest.notes}
+                    </p>
+                  </div>
+                )}
+                
+                {selectedRequest.adminNotes && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Admin Notes</Label>
+                    <p className="font-medium bg-muted p-3 rounded-md text-sm max-h-24 overflow-y-auto">
+                      {selectedRequest.adminNotes}
+                    </p>
+                  </div>
+                )}
+              </div>
               
               <div>
                 <Label className="text-sm text-muted-foreground">Payment Proof</Label>
                 <div className="mt-2 border rounded-md overflow-hidden">
-                  <div className="relative aspect-video bg-muted">
+                  <div className="relative bg-muted" style={{ maxHeight: "200px", overflow: "hidden" }}>
                     <img 
                       src={selectedRequest.imageProof} 
                       alt="Payment proof" 
                       className="object-contain w-full h-full"
+                      style={{ maxHeight: "200px" }}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.onerror = null;

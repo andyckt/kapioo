@@ -190,31 +190,26 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                     </div>
                     <div>
                       <p className="font-medium">
-                        {language === 'en' ? 'Status' : '状态'}
+                        {language === 'en' ? 'Plan' : '套餐'}
                       </p>
-                      <RequestStatusBadge status={request.status} />
-                      {request.status === 'approved' && request.approvedCredits && (
-                        <p className="text-xs text-green-600 font-medium mt-1">
-                          {request.approvedCredits} {language === 'en' ? 'credits added' : '餐券已添加'}
-                        </p>
+                      {request.planDescription ? (
+                        <p className="text-muted-foreground">{request.planDescription}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">{language === 'en' ? 'No plan details' : '无套餐详情'}</p>
                       )}
                     </div>
                     <div>
                       <p className="font-medium">
                         {language === 'en' ? 'Status' : '状态'}
                       </p>
-                      <p className="text-muted-foreground">
-                        {request.status === 'pending' && (language === 'en' ? 'Awaiting approval' : '等待批准')}
-                        {request.status === 'approved' && (
-                          <>
-                            {language === 'en' ? 'Approved: ' : '已批准：'}
-                            <span className="text-green-600 font-medium">
-                              {request.approvedCredits} {language === 'en' ? 'credits' : '餐券'}
-                            </span>
-                          </>
-                        )}
-                        {request.status === 'declined' && (language === 'en' ? 'Request declined' : '请求被拒绝')}
-                      </p>
+                      <div className="mt-1">
+                        <RequestStatusBadge status={request.status} />
+                      </div>
+                      {request.status === 'approved' && request.approvedCredits && (
+                        <p className="text-xs text-green-600 font-medium mt-1">
+                          {request.approvedCredits} {language === 'en' ? 'credits added' : '餐券已添加'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -375,6 +370,17 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       )}
                     </div>
                   </div>
+                  
+                  {selectedRequest.planDescription && (
+                    <div>
+                      <p className="text-sm font-medium">
+                        {language === 'en' ? 'Selected Plan' : '所选套餐'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedRequest.planDescription}
+                      </p>
+                    </div>
+                  )}
                   
                   {selectedRequest.status === 'approved' && (
                     <div>
