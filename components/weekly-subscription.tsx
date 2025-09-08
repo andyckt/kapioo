@@ -375,6 +375,7 @@ export default function WeeklySubscription() {
             <div className="grid gap-8 md:grid-cols-2">
               {deliveryDays
                 .filter(day => !isDayUnavailable(day).unavailable)
+                .slice(0, 2) // Limit to only the first two available days
                 .map((day) => (
                 <motion.div 
                   key={`${day.id}-${day.weekOffset}`}
