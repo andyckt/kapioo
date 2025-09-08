@@ -1,51 +1,65 @@
-# Database Migration Scripts
+# User Province/Area Migration Scripts
 
-This directory contains scripts for database migrations and data seeding.
+These scripts help you check and migrate user province/area values after changing the input field from a free text field to a dropdown with predefined options.
 
-## Weekly Subscription Migration
+## Prerequisites
 
-The `migrate-weekly-subscription.ts` script populates the database with initial data for the weekly subscription feature.
-
-### What it does:
-
-1. Creates meal options for both current and next week's Sunday and Tuesday deliveries
-2. Creates delivery day entries with references to the meal options
-3. Sets up the proper relationships between delivery days and meal options
-
-### How to run:
-
-Make sure you have a `.env.local` file in the root directory with your MongoDB connection string:
-
-```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/kapioo?retryWrites=true&w=majority
-MONGODB_DB=kapioo
-```
-
-Then run the migration script:
+Make sure you have installed the required dependencies:
 
 ```bash
-pnpm migrate:weekly
+pnpm install mongoose dotenv
 ```
 
-### Expected output:
+Also ensure you have a `.env` file in the root directory with your MongoDB connection string:
 
 ```
-Connected to MongoDB
-Clearing existing data...
-Inserting meal options...
-12 meal options inserted
-Inserting delivery days...
-4 delivery days inserted
-Migration completed successfully
-MongoDB connection closed
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
 ```
 
-## Troubleshooting
+## Scripts
 
-If you encounter any issues:
+### 1. Check User Provinces
 
-1. Make sure your MongoDB connection string is correct
-2. Check that you have the necessary permissions to access the database
-3. Ensure the collections don't have any conflicting unique indexes
+This script checks all users in the database and shows what values they currently have in the province/area field.
 
-For any errors, check the console output for detailed information.
+```bash
+node scripts/check-user-provinces.js
+```
+
+The output will show:
+- A count of each unique province value
+- A list of users with their province values
+- A list of users without province values
+
+Use this information to understand your existing data before migration.
+
+### 2. Migrate User Provinces
+
+This script updates user province/area values to match the new dropdown options.
+
+```bash
+# Run in dry-run mode (no changes made)
+node scripts/migrate-user-provinces.js
+
+# Run in live mode (changes saved to database)
+# Edit the script and change the function call at the bottom to:
+# migrateUserProvinces(false)
+```
+
+The script includes:
+- A list of valid areas from the dropdown
+- A mapping of common variations to standardized values
+- A default area to use if no mapping is found
+
+## How It Works
+
+1. First run the check script to see what values exist in your database
+2. Update the `areaMapping` object in the migration script based on your findings
+3. Run the migration script in dry-run mode to see what changes would be made
+4. When satisfied, run the migration script in live mode to apply the changes
+
+## Notes
+
+- The migration script uses a default area ("Downtown") for unmappable values
+- You may need to update the mapping based on your specific data
+- Always backup your database before running migrations in live mode
