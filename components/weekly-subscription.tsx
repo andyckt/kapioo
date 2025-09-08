@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Plus, Minus, ShoppingCart, Calendar, Info, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Calendar, Info, ChevronRight, ChevronLeft, Loader2, MapPin } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -412,6 +412,26 @@ export default function WeeklySubscription() {
                 ? '重要提示：订单必须为6份或10份餐点。' 
                 : 'Important: Orders must be for either 6 or 10 meals.'}
             </p>
+          </div>
+          
+          {/* Service Area Information */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin className="h-4 w-4 text-[#C2884E]" />
+              <p className="text-sm font-medium text-[#6B5F53]">
+                {language === 'zh' ? '配送区域' : 'Available Areas'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {['Downtown', 'Midtown', 'North York', 'Markham', 'Richmond Hill', 'Vaughan', 'Mississauga', 'Oakville', 'Aurora', 'Newmarket'].map((area) => (
+                <div 
+                  key={area} 
+                  className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"
+                >
+                  {area}
+                </div>
+              ))}
+            </div>
           </div>
           
           {/* All Available Days */}
