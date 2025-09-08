@@ -370,81 +370,10 @@ export default function WeeklySubscription() {
             </p>
           </div>
           
-          {/* Week Headers */}
-          <div className="space-y-8">
-            
-            {/* Current Week Content */}
-            <div className="grid gap-8 md:grid-cols-2 mb-10">
-              {deliveryDays
-                .filter(day => day.weekOffset === 0)
-                .filter(day => !isDayUnavailable(day).unavailable)
-                .map((day) => (
-                <motion.div 
-                  key={`${day.id}-${day.weekOffset}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex flex-col"
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <Calendar className="h-5 w-5 text-[#C2884E]" />
-                    <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
-                    <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {day.options.map((option) => (
-                      <Card 
-                        key={option.id}
-                        className="overflow-hidden transition-all duration-300 hover:shadow-md border-[#C2884E]/10 hover:border-[#C2884E]/30 bg-white rounded-lg hover:rounded-xl"
-                      >
-                        <CardContent className="p-0">
-                          <div className="p-4">
-                                <div className="flex items-start justify-between">
-                                  <h4 className="font-medium text-[#6B5F53]">{option.name}</h4>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-end mt-4">
-                                <div className="flex items-center gap-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    className="h-7 w-7 bg-white/80"
-                                    onClick={() => removeFromCart(day.id, option.id)}
-                                    disabled={getQuantityInCart(day.id, option.id) === 0}
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className="w-5 text-center text-sm">
-                                    {getQuantityInCart(day.id, option.id)}
-                                  </span>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    className="h-7 w-7 bg-white/80"
-                                    onClick={() => addToCart(day.id, option.id)}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            
-            {/* Visual separator between weeks */}
-            <div className="my-12 border-t border-[#C2884E]/10"></div>
-            
-            
-            {/* Next Week Content */}
+          {/* All Available Days */}
+          <div>
             <div className="grid gap-8 md:grid-cols-2">
               {deliveryDays
-                .filter(day => day.weekOffset === 1)
                 .filter(day => !isDayUnavailable(day).unavailable)
                 .map((day) => (
                 <motion.div 
