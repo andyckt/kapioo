@@ -21,6 +21,7 @@ export default function WeeklySubscription() {
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
   const [deliveryDays, setDeliveryDays] = useState<DeliveryDay[]>([])
+  const [userCredits, setUserCredits] = useState<number>(0)
   // No longer need activeTab state
   
   // Function to check if a day is unavailable for ordering
@@ -136,6 +137,19 @@ export default function WeeklySubscription() {
     }
   };
   
+  // Load user credits from localStorage
+  useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    if (userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        setUserCredits(userData.credits || 0);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
+
   // Fetch delivery days and meal options from API
   useEffect(() => {
     const fetchData = async () => {
@@ -315,6 +329,7 @@ export default function WeeklySubscription() {
         if (result.remainingCredits !== undefined) {
           userData.credits = result.remainingCredits;
           localStorage.setItem('user', JSON.stringify(userData));
+          setUserCredits(result.remainingCredits);
         }
         
         // Clear the cart after successful checkout
@@ -339,14 +354,24 @@ export default function WeeklySubscription() {
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">{language === 'zh' ? '每周订阅' : 'Weekly Subscription'}</h2>
           <div className="h-1 w-20 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] rounded-full mt-1"></div>
         </div>
-        <Button 
-          variant="outline" 
-          className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
-          onClick={handleCheckout}
-        >
-          <ShoppingCart className="h-4 w-4" />
-          <span>{getTotalItems()}</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+            <span className="text-sm font-medium text-[#6B5F53]">
+              {language === 'zh' ? '积分' : 'Credits'}: 
+            </span>
+            <span className="text-sm font-bold text-[#C2884E]">
+              {userCredits}
+            </span>
+          </div>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
+            onClick={handleCheckout}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            <span>{getTotalItems()}</span>
+          </Button>
+        </div>
       </div>
       
       {isLoading ? (
