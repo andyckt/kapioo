@@ -265,12 +265,26 @@ export default function WeeklySubscription() {
     return getTotalItems()
   }
   
+  
   // Handle checkout
   const handleCheckout = async () => {
     if (cart.length === 0) {
       toast({
         title: language === 'zh' ? '购物车为空' : 'Cart is Empty',
         description: language === 'zh' ? '请添加餐点到购物车' : 'Please add items to your cart',
+        variant: "destructive"
+      })
+      return
+    }
+    
+    // Check if total items is either 6 or 10
+    const totalItems = getTotalItems();
+    if (totalItems !== 6 && totalItems !== 10) {
+      toast({
+        title: language === 'zh' ? '订单数量无效' : 'Invalid Order Quantity',
+        description: language === 'zh' 
+          ? '订单必须为6份或10份餐点，当前数量：' + totalItems 
+          : 'Orders must be for either 6 or 10 meals. Current quantity: ' + totalItems,
         variant: "destructive"
       })
       return
@@ -392,6 +406,11 @@ export default function WeeklySubscription() {
               {language === 'zh' 
                 ? '每周有两天配送选项：周日和周二。您可以选择一天或两天都配送。' 
                 : 'We offer two delivery days per week: Sunday and Tuesday. You can choose either or both days.'}
+            </p>
+            <p className="text-[10px] font-medium text-[#C2884E] mt-1">
+              {language === 'zh' 
+                ? '重要提示：订单必须为6份或10份餐点。' 
+                : 'Important: Orders must be for either 6 or 10 meals.'}
             </p>
           </div>
           
