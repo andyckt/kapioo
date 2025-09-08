@@ -188,7 +188,7 @@ export default function WeeklySubscription() {
         toast({
           title: language === 'zh' ? "此日期不可用" : "This day is unavailable",
           description: reason,
-          variant: "warning"
+          variant: "destructive"
         });
       }
     }
@@ -372,47 +372,25 @@ export default function WeeklySubscription() {
           
           {/* Week Headers */}
           <div className="space-y-8">
-            {/* Current Week Header */}
-            <div className="border-b pb-2 mb-6">
-              <h3 className="text-lg font-semibold text-[#C2884E]">
-                {language === 'zh' ? '本周' : 'Current Week'}
-              </h3>
-            </div>
             
             {/* Current Week Content */}
             <div className="grid gap-8 md:grid-cols-2 mb-10">
               {deliveryDays
                 .filter(day => day.weekOffset === 0)
-                .length === 0 && (
-                  <div className="col-span-2 text-center py-8 text-gray-500">
-                    {language === 'zh' ? '本周没有可用的配送日期' : 'No delivery days available for this week'}
-                  </div>
-                )}
-              {deliveryDays
-                .filter(day => day.weekOffset === 0)
+                .filter(day => !isDayUnavailable(day).unavailable)
                 .map((day) => (
                 <motion.div 
                   key={`${day.id}-${day.weekOffset}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`flex flex-col ${isDayUnavailable(day).unavailable ? 'opacity-60' : ''}`}
+                  className="flex flex-col"
                 >
                   <div className="flex items-center gap-2 mb-4">
                     <Calendar className="h-5 w-5 text-[#C2884E]" />
                     <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
                     <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
-                    {isDayUnavailable(day).unavailable && (
-                      <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">
-                        {language === 'zh' ? '不可用' : 'Unavailable'}
-                      </span>
-                    )}
                   </div>
-                  {isDayUnavailable(day).unavailable && (
-                    <div className="text-sm text-amber-600 mb-2 bg-amber-50 p-2 rounded-md">
-                      {isDayUnavailable(day).reason}
-                    </div>
-                  )}
                   
                   <div className="space-y-4">
                     {day.options.map((option) => (
@@ -462,47 +440,25 @@ export default function WeeklySubscription() {
             {/* Visual separator between weeks */}
             <div className="my-12 border-t border-[#C2884E]/10"></div>
             
-            {/* Next Week Header */}
-            <div className="border-b pb-2 mb-6">
-              <h3 className="text-lg font-semibold text-[#C2884E]">
-                {language === 'zh' ? '下周' : 'Next Week'}
-              </h3>
-            </div>
             
             {/* Next Week Content */}
             <div className="grid gap-8 md:grid-cols-2">
               {deliveryDays
                 .filter(day => day.weekOffset === 1)
-                .length === 0 && (
-                  <div className="col-span-2 text-center py-8 text-gray-500">
-                    {language === 'zh' ? '下周没有可用的配送日期' : 'No delivery days available for next week'}
-                  </div>
-                )}
-              {deliveryDays
-                .filter(day => day.weekOffset === 1)
+                .filter(day => !isDayUnavailable(day).unavailable)
                 .map((day) => (
                 <motion.div 
                   key={`${day.id}-${day.weekOffset}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`flex flex-col ${isDayUnavailable(day).unavailable ? 'opacity-60' : ''}`}
+                  className="flex flex-col"
                 >
                   <div className="flex items-center gap-2 mb-4">
                     <Calendar className="h-5 w-5 text-[#C2884E]" />
                     <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
                     <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
-                    {isDayUnavailable(day).unavailable && (
-                      <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">
-                        {language === 'zh' ? '不可用' : 'Unavailable'}
-                      </span>
-                    )}
                   </div>
-                  {isDayUnavailable(day).unavailable && (
-                    <div className="text-sm text-amber-600 mb-2 bg-amber-50 p-2 rounded-md">
-                      {isDayUnavailable(day).reason}
-                    </div>
-                  )}
                   
                   <div className="space-y-4">
                     {day.options.map((option) => (
