@@ -8,11 +8,14 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info, Check, ChevronsUpDown, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
 import { useToast } from "@/hooks/use-toast"
@@ -1489,7 +1492,48 @@ export default function DashboardPage() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="state">{t('state')}</Label>
-                              <Input id="state" value={addressInfo.province} onChange={handleAddressInfoChange} />
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className="w-full justify-between"
+                                  >
+                                    {addressInfo.province || "Select an area..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0 w-full">
+                                  <Command>
+                                    <CommandInput placeholder="Search area..." />
+                                    <CommandList>
+                                      <CommandEmpty>No area found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {["Downtown", "Midtown", "NorthYork", "Markham", "Richmond Hill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket"].map((area) => (
+                                          <CommandItem
+                                            key={area}
+                                            value={area}
+                                            onSelect={() => {
+                                              setAddressInfo(prev => ({
+                                                ...prev,
+                                                province: area
+                                              }));
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                addressInfo.province === area ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            {area}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="zip">{t('zipCode')}</Label>
