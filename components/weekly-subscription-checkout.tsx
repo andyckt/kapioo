@@ -308,51 +308,72 @@ export function WeeklySubscriptionCheckout({
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <h3 className="font-medium">{language === 'zh' ? '已选餐点' : 'Selected Meals'}</h3>
-            <div className="rounded-md border p-4">
-              <ul className="space-y-3">
-                {Object.entries(cartByDay).map(([dayId, items]) => (
-                  <li key={dayId} className="border-b pb-3 last:border-b-0 last:pb-0">
-                    <div className="font-medium capitalize mb-2">
-                      {dayId === 'sunday' ? (language === 'zh' ? '周日配送' : 'Sunday Delivery') : 
-                       dayId === 'tuesday' ? (language === 'zh' ? '周二配送' : 'Tuesday Delivery') : dayId}
+            <h3 className="font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '已选餐点' : 'Selected Meals'}</h3>
+            <Card className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-[#C2884E]/20">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {Object.entries(cartByDay).map(([dayId, items]) => (
+                    <div key={dayId} className="pb-3 last:pb-0">
+                      <div className="font-medium capitalize mb-2 flex items-center">
+                        <span className="text-[#6B5F53]">
+                          {dayId === 'sunday' ? (language === 'zh' ? '周日' : 'Sunday') : 
+                           dayId === 'tuesday' ? (language === 'zh' ? '周二' : 'Tuesday') : dayId}
+                        </span>
+                        {(() => {
+                          // Find the date for this day
+                          for (const day of deliveryDays) {
+                            if (day.id === dayId && day.date) {
+                              return (
+                                <span className="text-[#6B5F53]/60 text-sm ml-2">
+                                  ({day.date})
+                                </span>
+                              );
+                            }
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      <div className="space-y-2">
+                        {items.map((item, index) => {
+                          // Find the option in all delivery days
+                          let optionName = item.optionId;
+                          for (const day of deliveryDays) {
+                            if (day.id === item.dayId) {
+                              const option = day.options.find(opt => opt.id === item.optionId);
+                              if (option) {
+                                optionName = option.name;
+                                break;
+                              }
+                            }
+                          }
+                          
+                          return (
+                            <div key={index} className="flex justify-between text-sm">
+                              <div className="flex items-center flex-1 mr-4">
+                                <CheckCircle2 className="h-4 w-4 text-[#C2884E] mr-2 flex-shrink-0" />
+                                <span>{optionName}</span>
+                              </div>
+                              <span className="font-medium flex-shrink-0">
+                                {item.quantity} {language === 'zh' ? '积分' : 'credits'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {Object.keys(cartByDay).length > 1 && 
+                       Object.keys(cartByDay).indexOf(dayId) < Object.keys(cartByDay).length - 1 && (
+                        <div className="border-b border-[#C2884E]/20 mt-3"></div>
+                      )}
                     </div>
-                    <ul className="space-y-2 pl-4">
-                      {items.map((item, index) => (
-                        <li key={index} className="flex justify-between">
-                          <div className="flex items-center flex-1 mr-4">
-                            <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                            <span className="text-sm">
-                              {/* Find the meal option by matching ID */}
-                              {(() => {
-                                // Try to find the option in all delivery days
-                                for (const day of deliveryDays) {
-                                  if (day.id === item.dayId) {
-                                    const option = day.options.find(opt => opt.id === item.optionId);
-                                    if (option) {
-                                      return option.name;
-                                    }
-                                  }
-                                }
-                                // Fallback to ID if not found
-                                return item.optionId;
-                              })()}
-                            </span>
-                          </div>
-                          <span className="text-sm font-medium flex-shrink-0">
-                            {item.quantity}x
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 pt-4 border-t flex justify-between font-medium">
-                <span className="text-sm">{language === 'zh' ? '总计' : 'Total'}</span>
-                <span className="text-sm">{totalItems} {language === 'zh' ? '积分' : 'credits'}</span>
-              </div>
-            </div>
+                  ))}
+                  
+                  <div className="border-t border-[#C2884E]/20 pt-2 mt-2 flex justify-between font-medium">
+                    <span>{language === 'zh' ? '总计' : 'Total'}</span>
+                    <span>{totalItems} {language === 'zh' ? '积分' : 'credits'}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="space-y-4">
