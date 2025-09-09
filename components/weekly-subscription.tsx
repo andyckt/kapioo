@@ -465,7 +465,7 @@ export default function WeeklySubscription() {
             </div>
           </div>
           
-          {/* Cart Summary */}
+          {/* Cart Summary - Commented out as requested
           {getTotalItems() > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -523,6 +523,7 @@ export default function WeeklySubscription() {
               </Card>
             </motion.div>
           )}
+          */}
         </div>
       )}
     </div>
