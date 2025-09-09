@@ -6,6 +6,7 @@ import UserSubscription from '@/models/UserSubscription';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import User from '@/models/User';
 import { nanoid } from 'nanoid';
+import { sendWeeklyOrderConfirmationEmail, sendAdminWeeklyOrderNotification } from '@/lib/services/email';
 
 // GET handler - return active delivery days and options for users
 export async function GET(request: Request) {
@@ -207,6 +208,47 @@ export async function POST(request: Request) {
       },
       { new: true }
     );
+    
+    // Send order confirmation email to user
+    try {
+      await sendWeeklyOrderConfirmationEmail(
+        user.email,
+        user.name,
+        {
+          orderId,
+          items: orderItems,
+          totalCredits: totalItems,
+          deliveryAddress: data.deliveryAddress,
+          area: data.area,
+          phoneNumber: data.phoneNumber,
+          specialInstructions: data.specialInstructions
+        }
+      );
+      console.log(`Order confirmation email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error('Error sending order confirmation email:', emailError);
+      // Don't fail the API call if email sending fails
+    }
+    
+    // Send notification to admin
+    try {
+      await sendAdminWeeklyOrderNotification({
+        orderId,
+        userId: user._id.toString(),
+        userName: user.name,
+        userEmail: user.email,
+        items: orderItems,
+        totalCredits: totalItems,
+        area: data.area,
+        phoneNumber: data.phoneNumber,
+        deliveryAddress: data.deliveryAddress,
+        specialInstructions: data.specialInstructions
+      });
+      console.log('Admin notification email sent');
+    } catch (emailError) {
+      console.error('Error sending admin notification email:', emailError);
+      // Don't fail the API call if email sending fails
+    }
     
     return NextResponse.json(
       { 
