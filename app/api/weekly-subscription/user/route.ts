@@ -141,7 +141,8 @@ export async function POST(request: Request) {
         status: 'active',
         specialInstructions: data.specialInstructions || '',
         deliveryAddress: data.deliveryAddress || {},
-        phoneNumber: data.phoneNumber || ''
+        phoneNumber: data.phoneNumber || '',
+        area: data.area || ''
       });
       
       // Deduct credits from user

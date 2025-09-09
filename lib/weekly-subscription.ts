@@ -264,7 +264,8 @@ export async function submitUserSubscription(data: {
   userId: string,
   specialInstructions?: string,
   deliveryAddress?: any,
-  phoneNumber?: string
+  phoneNumber?: string,
+  area?: string
 }): Promise<any> {
   try {
     console.log('Submitting subscription with user ID:', data.userId);

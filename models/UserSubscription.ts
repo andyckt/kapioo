@@ -26,6 +26,7 @@ export interface IUserSubscription extends Document {
   specialInstructions?: string;
   deliveryAddress?: IAddress;
   phoneNumber?: string;
+  area?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -99,6 +100,10 @@ const UserSubscriptionSchema: Schema = new Schema(
     phoneNumber: {
       type: String,
       default: '',
+    },
+    area: {
+      type: String,
+      required: true,
     },
   },
   { 

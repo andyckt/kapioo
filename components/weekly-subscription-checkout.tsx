@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
@@ -37,6 +38,7 @@ export function WeeklySubscriptionCheckout({
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    area: '',
     specialInstructions: ''
   })
   const [addressFormData, setAddressFormData] = useState({
@@ -65,6 +67,7 @@ export function WeeklySubscriptionCheckout({
       setFormData({
         name: user.name || "",
         phone: user.phone || "",
+        area: user.area || "",
         specialInstructions: ''
       })
       
@@ -165,10 +168,10 @@ export function WeeklySubscriptionCheckout({
 
   const handleCheckout = async () => {
     // Validate delivery information
-    if (!formData.name || !formData.phone) {
+    if (!formData.name || !formData.phone || !formData.area) {
       toast({
         title: language === 'zh' ? '出错了' : 'Error Occurred',
-        description: language === 'zh' ? '请填写配送信息' : 'Please fill in delivery information',
+        description: language === 'zh' ? '请填写所有必填的配送信息' : 'Please fill in all required delivery information',
         variant: "destructive"
       })
       return
@@ -220,7 +223,8 @@ export function WeeklySubscriptionCheckout({
         userId: userData._id,
         specialInstructions: formData.specialInstructions,
         deliveryAddress: deliveryAddress,
-        phoneNumber: formData.phone
+        phoneNumber: formData.phone,
+        area: formData.area
       })
       
       if (result.error) {
@@ -386,6 +390,32 @@ export function WeeklySubscriptionCheckout({
               <div className="space-y-2">
                 <Label htmlFor="phone">{language === 'zh' ? '电话号码' : 'Phone Number'}</Label>
                 <Input id="phone" value={formData.phone} onChange={handleInputChange} />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="area">
+                  {language === 'zh' ? '区域' : 'Area'} <span className="text-red-500">*</span>
+                </Label>
+                <Select 
+                  value={formData.area} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, area: value }))}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={language === 'zh' ? '选择区域' : 'Select area'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Downtown">Downtown</SelectItem>
+                    <SelectItem value="Midtown">Midtown</SelectItem>
+                    <SelectItem value="NorthYork">North York</SelectItem>
+                    <SelectItem value="Markham">Markham</SelectItem>
+                    <SelectItem value="RichmondHill">Richmond Hill</SelectItem>
+                    <SelectItem value="Vaughan">Vaughan</SelectItem>
+                    <SelectItem value="Mississauga">Mississauga</SelectItem>
+                    <SelectItem value="Oakville">Oakville</SelectItem>
+                    <SelectItem value="Aurora">Aurora</SelectItem>
+                    <SelectItem value="Newmarket">Newmarket</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
