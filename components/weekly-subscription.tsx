@@ -16,13 +16,17 @@ import { getUserWeeklySubscription } from '@/lib/weekly-subscription'
 import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
 import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
 
-export default function WeeklySubscription() {
+interface WeeklySubscriptionProps {
+  userCredits?: number;
+}
+
+export default function WeeklySubscription({ userCredits: propCredits }: WeeklySubscriptionProps) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
   const [deliveryDays, setDeliveryDays] = useState<DeliveryDay[]>([])
-  const [userCredits, setUserCredits] = useState<number>(0)
+  const [userCredits, setUserCredits] = useState<number>(propCredits || 0)
   // No longer need activeTab state
   
   // Function to check if a day is unavailable for ordering
@@ -138,18 +142,12 @@ export default function WeeklySubscription() {
     }
   };
   
-  // Load user credits from localStorage
+  // Update credits when prop changes
   useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      try {
-        const userData = JSON.parse(userDataStr);
-        setUserCredits(userData.credits || 0);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
+    if (propCredits !== undefined) {
+      setUserCredits(propCredits);
     }
-  }, []);
+  }, [propCredits]);
 
   // Fetch delivery days and meal options from API
   useEffect(() => {
