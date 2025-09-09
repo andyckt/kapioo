@@ -134,11 +134,14 @@ export async function POST(request: Request) {
         { new: true }
       );
     } else {
-      // Create new subscription
+      // Create new subscription with additional delivery information
       subscription = await UserSubscription.create({
         userId: user._id,
         items: data.items,
-        status: 'active'
+        status: 'active',
+        specialInstructions: data.specialInstructions || '',
+        deliveryAddress: data.deliveryAddress || {},
+        phoneNumber: data.phoneNumber || ''
       });
       
       // Deduct credits from user

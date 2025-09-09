@@ -12,8 +12,9 @@ import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 // Removed tabs imports as we're now using a single interface
-import { getUserWeeklySubscription, submitUserSubscription } from '@/lib/weekly-subscription'
+import { getUserWeeklySubscription } from '@/lib/weekly-subscription'
 import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
+import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
 
 export default function WeeklySubscription() {
   const { t, language } = useLanguage()
@@ -266,8 +267,11 @@ export default function WeeklySubscription() {
   }
   
   
-  // Handle checkout
-  const handleCheckout = async () => {
+  // State for checkout
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  
+  // Handle checkout button click
+  const handleCheckout = () => {
     if (cart.length === 0) {
       toast({
         title: language === 'zh' ? '购物车为空' : 'Cart is Empty',
@@ -303,58 +307,14 @@ export default function WeeklySubscription() {
       return;
     }
     
-    setIsLoading(true);
-    
-    try {
-      // Parse user data from localStorage
-      const userData = JSON.parse(userDataStr);
-      
-      // Submit subscription to API with user ID
-      const result = await submitUserSubscription({
-        items: cart,
-        userId: userData._id // Add user ID from localStorage
-      });
-      
-      if (result.error) {
-        // Handle error case
-        if (result.requiredCredits && result.availableCredits) {
-          toast({
-            title: language === 'zh' ? '积分不足' : 'Not Enough Credits',
-            description: language === 'zh' 
-              ? `需要 ${result.requiredCredits} 积分，但您只有 ${result.availableCredits} 积分` 
-              : `You need ${result.requiredCredits} credits, but only have ${result.availableCredits}`,
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: language === 'zh' ? '订阅失败' : 'Subscription Failed',
-            description: language === 'zh' ? '处理您的订阅时出错' : 'Error processing your subscription',
-            variant: "destructive"
-          });
-        }
-      } else {
-        // Success case - no toast message
-        
-        // Update user credits in localStorage if returned by API
-        if (result.remainingCredits !== undefined) {
-          userData.credits = result.remainingCredits;
-          localStorage.setItem('user', JSON.stringify(userData));
-          setUserCredits(result.remainingCredits);
-        }
-        
-        // Clear the cart after successful checkout
-        setCart([]);
-      }
-    } catch (error) {
-      console.error("Error during checkout:", error);
-      toast({
-        title: language === 'zh' ? '订阅失败' : 'Subscription Failed',
-        description: language === 'zh' ? '处理您的订阅时出错' : 'Error processing your subscription',
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Open checkout form
+    setCheckoutOpen(true);
+  }
+  
+  // Handle checkout success
+  const handleCheckoutSuccess = () => {
+    setCart([]);
+    setCheckoutOpen(false);
   }
 
   return (
@@ -384,7 +344,16 @@ export default function WeeklySubscription() {
         </div>
       </div>
       
-      {isLoading ? (
+      {checkoutOpen ? (
+        <WeeklySubscriptionCheckout 
+          cart={cart}
+          onClose={() => setCheckoutOpen(false)}
+          onSuccess={handleCheckoutSuccess}
+          userCredits={userCredits}
+          setUserCredits={setUserCredits}
+          deliveryDays={deliveryDays}
+        />
+      ) : isLoading ? (
         <div className="flex justify-center items-center h-[300px]">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
@@ -496,8 +465,8 @@ export default function WeeklySubscription() {
             </div>
           </div>
           
-          {/* Subscription Summary - Commented out for now */}
-          {/* {getTotalItems() > 0 && (
+          {/* Cart Summary */}
+          {getTotalItems() > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -507,21 +476,32 @@ export default function WeeklySubscription() {
               <Card className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-[#C2884E]/20">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-[#6B5F53] mb-4">
-                    {language === 'zh' ? '订阅摘要' : 'Subscription Summary'}
+                    {language === 'zh' ? '购物车摘要' : 'Cart Summary'}
                   </h3>
                   
                   <div className="space-y-2">
                     {cart.map((item, index) => {
                       const day = deliveryDays.find(d => d.id === item.dayId)
-                      const option = day?.options.find(o => o.id === item.optionId)
                       
-                      return option && (
+                      // Find the option in all delivery days
+                      let optionName = item.optionId;
+                      for (const d of deliveryDays) {
+                        if (d.id === item.dayId) {
+                          const option = d.options.find(opt => opt.id === item.optionId);
+                          if (option) {
+                            optionName = option.name;
+                            break;
+                          }
+                        }
+                      }
+                      
+                      return (
                         <div key={index} className="flex justify-between text-sm">
-                          <span>
-                            {day?.name} - {option.name} x{item.quantity}
+                          <span className="mr-2 flex-1">
+                            {day?.name} - {optionName} x{item.quantity}
                           </span>
-                          <span className="font-medium">
-                            {item.quantity} {language === 'zh' ? '餐券' : 'credits'}
+                          <span className="font-medium flex-shrink-0">
+                            {item.quantity} {language === 'zh' ? '积分' : 'credits'}
                           </span>
                         </div>
                       )
@@ -529,7 +509,7 @@ export default function WeeklySubscription() {
                     
                     <div className="border-t border-[#C2884E]/20 pt-2 mt-2 flex justify-between font-medium">
                       <span>{language === 'zh' ? '总计' : 'Total'}</span>
-                      <span>{getTotalCredits()} {language === 'zh' ? '餐券' : 'credits'}</span>
+                      <span>{getTotalCredits()} {language === 'zh' ? '积分' : 'credits'}</span>
                     </div>
                   </div>
                   
@@ -537,12 +517,12 @@ export default function WeeklySubscription() {
                     className="w-full mt-4 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C]"
                     onClick={handleCheckout}
                   >
-                    {language === 'zh' ? '确认订阅' : 'Confirm Subscription'}
+                    {language === 'zh' ? '结账' : 'Checkout'}
                   </Button>
                 </CardContent>
               </Card>
             </motion.div>
-          )} */}
+          )}
         </div>
       )}
     </div>

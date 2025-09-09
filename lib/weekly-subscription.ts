@@ -259,7 +259,13 @@ export async function getUserWeeklySubscription(): Promise<DeliveryDay[]> {
 }
 
 // Submit user subscription
-export async function submitUserSubscription(data: { items: CartItem[], userId: string }): Promise<any> {
+export async function submitUserSubscription(data: { 
+  items: CartItem[], 
+  userId: string,
+  specialInstructions?: string,
+  deliveryAddress?: any,
+  phoneNumber?: string
+}): Promise<any> {
   try {
     console.log('Submitting subscription with user ID:', data.userId);
     
