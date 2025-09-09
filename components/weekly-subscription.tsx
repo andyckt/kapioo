@@ -333,11 +333,7 @@ export default function WeeklySubscription() {
           });
         }
       } else {
-        // Success case
-        toast({
-          title: language === 'zh' ? '订阅成功' : 'Subscription Successful',
-          description: language === 'zh' ? '您的每周订阅已成功设置' : 'Your weekly subscription has been set up successfully',
-        });
+        // Success case - no toast message
         
         // Update user credits in localStorage if returned by API
         if (result.remainingCredits !== undefined) {
