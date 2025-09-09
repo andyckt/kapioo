@@ -333,14 +333,16 @@ export default function WeeklySubscription() {
               {userCredits}
             </span>
           </div>
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
-            onClick={handleCheckout}
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span>{getTotalItems()}</span>
-          </Button>
+          {!checkoutOpen && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
+              onClick={handleCheckout}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>{getTotalItems()}</span>
+            </Button>
+          )}
         </div>
       </div>
       
