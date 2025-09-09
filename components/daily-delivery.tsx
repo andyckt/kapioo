@@ -516,7 +516,7 @@ export default function DailyDelivery() {
                       toast({
                         title: "This day is unavailable",
                         description: reason,
-                        variant: "warning"
+                        variant: "destructive"
                       });
                       // Continue with selection instead of returning
                     }
@@ -557,9 +557,9 @@ export default function DailyDelivery() {
                 </button>
               ))}
               
-              {/* Next Week Header */}
-              <div className="mt-4 mb-2 px-3 py-1">
-                <p className="text-xs font-bold text-[#C2884E]">Next Week</p>
+              {/* Week Separator Line */}
+              <div className="mt-4 mb-2 px-3">
+                <div className="h-px bg-[#C2884E]/50 w-full"></div>
               </div>
               
               {/* Week 2 Days */}
@@ -574,7 +574,7 @@ export default function DailyDelivery() {
                       toast({
                         title: "This day is unavailable",
                         description: reason,
-                        variant: "warning"
+                        variant: "destructive"
                       });
                       // Continue with selection instead of returning
                     }
@@ -624,9 +624,8 @@ export default function DailyDelivery() {
                 {/* Day Header - Hidden on mobile */}
                 <div className="hidden md:block text-center mb-6 relative">
                   <div className="inline-block">
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center">
                       <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{days[selectedDay].displayName}</h3>
-                      <span className="text-sm bg-[#C2884E]/10 text-[#C2884E] px-2 py-0.5 rounded-full">{days[selectedDay].week === 1 ? 'This Week' : 'Next Week'}</span>
                     </div>
                     <div className={`w-8 h-px ${accentTypes.brown1.bg} mx-auto mb-2`}></div>
                     <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[selectedDay].date}</p>
