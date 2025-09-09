@@ -3,7 +3,9 @@ import connectToDatabase from '@/lib/db';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import UserSubscription from '@/models/UserSubscription';
+import WeeklyOrder from '@/models/WeeklyOrder';
 import User from '@/models/User';
+import { nanoid } from 'nanoid';
 
 // GET handler - return active delivery days and options for users
 export async function GET(request: Request) {
@@ -65,7 +67,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST handler - create or update user subscription
+// POST handler - create or update user subscription and create weekly order
 export async function POST(request: Request) {
   try {
     const data = await request.json();
@@ -120,6 +122,57 @@ export async function POST(request: Request) {
       status: 'active'
     });
     
+    // Load meal option names for the order
+    const mealOptionIds = data.items.map((item: any) => item.optionId);
+    const mealOptions = await WeeklyMealOption.find({
+      _id: { $in: mealOptionIds }
+    });
+    
+    // Create a map of option IDs to names
+    const optionNameMap: Record<string, string> = {};
+    mealOptions.forEach((option: any) => {
+      optionNameMap[option._id.toString()] = option.name;
+    });
+    
+    // Load delivery day dates
+    const deliveryDayIds = data.items.map((item: any) => item.dayId);
+    const deliveryDays = await WeeklyDeliveryDay.find({
+      day: { $in: deliveryDayIds },
+      active: true
+    });
+    
+    // Create a map of day IDs to dates
+    const dayDateMap: Record<string, string> = {};
+    deliveryDays.forEach((day: any) => {
+      dayDateMap[day.day] = day.date;
+    });
+    
+    // Generate a unique order ID with only numbers
+    const randomNumbers = Math.floor(10000000 + Math.random() * 90000000); // 8-digit number
+    const orderId = `WS-${randomNumbers}`;
+    
+    // Create order items with names and dates
+    const orderItems = data.items.map((item: any) => ({
+      dayId: item.dayId,
+      optionId: item.optionId,
+      optionName: optionNameMap[item.optionId] || 'Unknown Meal Option',
+      quantity: item.quantity,
+      date: dayDateMap[item.dayId] || 'Unknown Date'
+    }));
+    
+    // Create a new weekly order
+    const weeklyOrder = await WeeklyOrder.create({
+      userId: user._id,
+      orderId,
+      items: orderItems,
+      status: 'pending',
+      creditCost: totalItems,
+      specialInstructions: data.specialInstructions || '',
+      deliveryAddress: data.deliveryAddress || {},
+      phoneNumber: data.phoneNumber || '',
+      area: data.area || ''
+    });
+    
     let subscription;
     
     if (existingSubscription) {
@@ -144,21 +197,25 @@ export async function POST(request: Request) {
         phoneNumber: data.phoneNumber || '',
         area: data.area || ''
       });
-      
-      // Deduct credits from user
-      await User.findByIdAndUpdate(
-        user._id,
-        {
-          $inc: { credits: -totalItems }
-        }
-      );
     }
+    
+    // Deduct credits from user
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        $inc: { credits: -totalItems }
+      },
+      { new: true }
+    );
     
     return NextResponse.json(
       { 
         success: true, 
-        data: subscription,
-        remainingCredits: user.credits - totalItems
+        data: {
+          subscription,
+          order: weeklyOrder
+        },
+        remainingCredits: updatedUser.credits
       },
       { status: 200 }
     );

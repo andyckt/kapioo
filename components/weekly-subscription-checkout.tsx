@@ -254,8 +254,8 @@ export function WeeklySubscriptionCheckout({
         }
         
         toast({
-          title: language === 'zh' ? '订阅成功' : 'Subscription Successful',
-          description: language === 'zh' ? '您的每周订阅已成功设置' : 'Your weekly subscription has been set up successfully',
+          title: language === 'zh' ? '订单完成' : 'Order Completed',
+          description: language === 'zh' ? '您的订单已成功提交' : 'Your order has been successfully placed',
         })
         
         // Call onSuccess callback to clear the cart and close the checkout

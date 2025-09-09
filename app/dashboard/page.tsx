@@ -39,6 +39,7 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 import Image from "next/image"
 import DailyDelivery from "@/components/daily-delivery"
 import WeeklySubscription from "@/components/weekly-subscription"
+import { WeeklySubscriptionHistory } from "@/components/weekly-subscription-history"
 import MealVoucherPurchase from "@/components/meal-voucher-purchase"
 
 export default function DashboardPage() {
@@ -984,9 +985,14 @@ export default function DashboardPage() {
                     <h2 className="text-3xl font-bold tracking-tight">{t('myOrders')}</h2>
                   </div>
 
-                  {/* Order History */}
+                  {/* Regular Order History */}
                   {userData && (
-                    <OrderHistory userId={userData._id} />
+                    <div className="space-y-6">
+                      <OrderHistory userId={userData._id} />
+                      
+                      {/* Weekly Subscription Orders */}
+                      <WeeklySubscriptionHistory userId={userData._id} />
+                    </div>
                   )}
 
                   {/* Commented out Upcoming Meals section

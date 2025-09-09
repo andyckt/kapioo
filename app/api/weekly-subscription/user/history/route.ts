@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
-import UserSubscription from '@/models/UserSubscription';
+import WeeklyOrder from '@/models/WeeklyOrder';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 
-// GET handler - return user's subscription history
+// GET handler - get user's weekly subscription order history
 export async function GET(request: Request) {
   try {
-    // Get the user ID from the query parameters
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
     
-    if (!userId) {
+    // Get user ID from session or query parameter
+    const userIdParam = url.searchParams.get('userId');
+    
+    if (!userIdParam) {
       return NextResponse.json(
         { success: false, error: 'User ID is required' },
         { status: 400 }
@@ -19,8 +24,8 @@ export async function GET(request: Request) {
     
     await connectToDatabase();
     
-    // Find the user
-    const user = await User.findById(userId);
+    // Check if user exists
+    const user = await User.findById(userIdParam);
     
     if (!user) {
       return NextResponse.json(
@@ -29,29 +34,33 @@ export async function GET(request: Request) {
       );
     }
     
-    // Get user's subscription history
-    const subscriptions = await UserSubscription.find({
-      userId: user._id
-    }).sort({ createdAt: -1 }).lean();
+    // Find orders for this user with pagination
+    const orders = await WeeklyOrder.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
     
-    return NextResponse.json(
-      { success: true, data: subscriptions },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Error fetching user subscription history:', error);
+    // Get total count for pagination
+    const totalOrders = await WeeklyOrder.countDocuments({ userId: user._id });
     
-    // Log more detailed information for debugging
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+    return NextResponse.json({
+      success: true,
+      data: {
+        orders,
+        page,
+        limit,
+        total: totalOrders,
+        pages: Math.ceil(totalOrders / limit)
+      }
     });
+  } catch (error: any) {
+    console.error('Error fetching weekly subscription history:', error);
     
     return NextResponse.json(
       { 
         success: false, 
         error: 'Failed to fetch subscription history',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error.message
       },
       { status: 500 }
     );
