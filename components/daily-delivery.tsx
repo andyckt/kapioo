@@ -5,9 +5,18 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Plus, Minus, ShoppingCart } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Plus, Minus, ShoppingCart, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { DailyDeliveryCheckout } from './daily-delivery-checkout'
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 // Type definitions
 type ComboType = 'A' | 'B'
@@ -44,13 +53,15 @@ type CartItem = {
 }
 
 export default function DailyDelivery() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { toast } = useToast()
   const [days, setDays] = useState<Record<string, DayData>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedDay, setSelectedDay] = useState<string>('monday-w1')
   const [dayWarning, setDayWarning] = useState<string | null>(null)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [userCredits, setUserCredits] = useState(0)
   
   // Check if a day is in the past or today after ordering cutoff time
   const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
@@ -316,6 +327,13 @@ export default function DailyDelivery() {
         } else {
           throw new Error(daysData.error || 'Failed to fetch days')
         }
+        
+        // Load user data and credits
+        const storedUser = localStorage.getItem('user')
+        if (storedUser) {
+          const user = JSON.parse(storedUser)
+          setUserCredits(user.credits || 0)
+        }
       } catch (error) {
         console.error('Error fetching data:', error)
         toast({
@@ -460,38 +478,60 @@ export default function DailyDelivery() {
     <div className="flex flex-col h-full space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
-        <Button 
-          variant="outline" 
-          className="flex items-center gap-2"
-          onClick={() => {
-            if (cart.length > 0) {
-              toast({
-                title: t('checkoutNotImplemented'),
-                description: t('featureComingSoon'),
-              })
-            } else {
-              toast({
-                title: t('cartEmpty'),
-                description: t('addItemsToCart'),
-                variant: "destructive"
-              })
-            }
-          }}
-        >
-          <ShoppingCart className="h-4 w-4" />
-          <span>{getTotalItems()}</span>
-          <div className="ml-2 flex items-center gap-2">
-            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-              2D: {getTotalVouchers().twoDish}
-            </span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-              3D: {getTotalVouchers().threeDish}
-            </span>
+        <div className="flex items-center gap-2">
+          <div className="text-sm mr-2">
+            <span className="font-medium">{t('creditsAvailable')}:</span>
+            <span className="ml-1 font-bold">{userCredits}</span>
           </div>
-        </Button>
+          {!checkoutOpen && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => {
+                if (cart.length > 0) {
+                  setCheckoutOpen(true)
+                } else {
+                  toast({
+                    title: t('cartEmpty'),
+                    description: t('addItemsToCart'),
+                    variant: "destructive"
+                  })
+                }
+              }}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>{getTotalItems()}</span>
+              <div className="ml-2 flex items-center gap-2">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                  2D: {getTotalVouchers().twoDish}
+                </span>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                  3D: {getTotalVouchers().threeDish}
+                </span>
+              </div>
+            </Button>
+          )}
+        </div>
       </div>
       
-      {isLoading ? (
+      {checkoutOpen ? (
+        <div className="mt-4">
+          <div className="mb-6">
+            <h3 className="text-2xl font-semibold text-[#6B5F53]">{language === 'zh' ? '结账' : 'Checkout'}</h3>
+          </div>
+          <DailyDeliveryCheckout
+            cart={cart}
+            onClose={() => setCheckoutOpen(false)}
+            onSuccess={() => {
+              setCheckoutOpen(false)
+              setCart([])
+            }}
+            userCredits={userCredits}
+            setUserCredits={setUserCredits}
+            days={days}
+          />
+        </div>
+      ) : isLoading ? (
         <div className="flex justify-center items-center h-[300px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -797,7 +837,6 @@ export default function DailyDelivery() {
         </div>
       )}
       
-      {/* Cart Summary removed as requested */}
     </div>
   )
 }
