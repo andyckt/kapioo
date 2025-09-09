@@ -61,7 +61,10 @@ export default function DailyDelivery() {
   const [selectedDay, setSelectedDay] = useState<string>('monday-w1')
   const [dayWarning, setDayWarning] = useState<string | null>(null)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [userCredits, setUserCredits] = useState(0)
+  const [userVouchers, setUserVouchers] = useState({
+    twoDish: 0,
+    threeDish: 0
+  })
   
   // Check if a day is in the past or today after ordering cutoff time
   const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
@@ -328,11 +331,14 @@ export default function DailyDelivery() {
           throw new Error(daysData.error || 'Failed to fetch days')
         }
         
-        // Load user data and credits
+        // Load user data and vouchers
         const storedUser = localStorage.getItem('user')
         if (storedUser) {
           const user = JSON.parse(storedUser)
-          setUserCredits(user.credits || 0)
+          setUserVouchers({
+            twoDish: user.twoDishVoucher || 0,
+            threeDish: user.threeDishVoucher || 0
+          })
         }
       } catch (error) {
         console.error('Error fetching data:', error)
@@ -479,9 +485,15 @@ export default function DailyDelivery() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
         <div className="flex items-center gap-2">
-          <div className="text-sm mr-2">
-            <span className="font-medium">{t('creditsAvailable')}:</span>
-            <span className="ml-1 font-bold">{userCredits}</span>
+          <div className="flex items-center gap-3 mr-2">
+            <div className="text-sm">
+              <span className="font-medium">2菜餐券:</span>
+              <span className="ml-1 font-bold">{userVouchers.twoDish}</span>
+            </div>
+            <div className="text-sm">
+              <span className="font-medium">3菜餐券:</span>
+              <span className="ml-1 font-bold">{userVouchers.threeDish}</span>
+            </div>
           </div>
           {!checkoutOpen && (
             <Button 
@@ -516,9 +528,6 @@ export default function DailyDelivery() {
       
       {checkoutOpen ? (
         <div className="mt-4">
-          <div className="mb-6">
-            <h3 className="text-2xl font-semibold text-[#6B5F53]">{language === 'zh' ? '结账' : 'Checkout'}</h3>
-          </div>
           <DailyDeliveryCheckout
             cart={cart}
             onClose={() => setCheckoutOpen(false)}
@@ -526,8 +535,8 @@ export default function DailyDelivery() {
               setCheckoutOpen(false)
               setCart([])
             }}
-            userCredits={userCredits}
-            setUserCredits={setUserCredits}
+            userVouchers={userVouchers}
+            setUserVouchers={setUserVouchers}
             days={days}
           />
         </div>

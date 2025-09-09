@@ -125,15 +125,15 @@ export async function submitDailyOrder(data: DailyOrderData): Promise<any> {
     if (result.success) {
       return {
         ...result.data,
-        remainingCredits: result.remainingCredits
+        remainingVouchers: result.remainingVouchers
       }
     }
     
     console.error('Failed to submit daily order:', result.error)
     return { 
       error: result.error, 
-      requiredCredits: result.requiredCredits, 
-      availableCredits: result.availableCredits 
+      required: result.required, 
+      available: result.available 
     }
   } catch (error) {
     console.error('Error submitting daily order:', error)

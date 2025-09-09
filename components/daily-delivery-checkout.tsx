@@ -18,8 +18,11 @@ interface DailyDeliveryCheckoutProps {
   cart: CartItem[]
   onClose: () => void
   onSuccess: () => void
-  userCredits: number
-  setUserCredits: (credits: number) => void
+  userVouchers: {
+    twoDish: number
+    threeDish: number
+  }
+  setUserVouchers: (vouchers: { twoDish: number, threeDish: number }) => void
   days: Record<string, DayData>
 }
 
@@ -27,8 +30,8 @@ export function DailyDeliveryCheckout({
   cart,
   onClose,
   onSuccess,
-  userCredits,
-  setUserCredits,
+  userVouchers,
+  setUserVouchers,
   days
 }: DailyDeliveryCheckoutProps) {
   const { t, language } = useLanguage()
@@ -53,8 +56,18 @@ export function DailyDeliveryCheckout({
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
 
-  // Calculate total items and cost
-  const totalItems = cart.reduce((total, item) => total + item.quantity, 0)
+  // Calculate total vouchers needed by type
+  const vouchersNeeded = cart.reduce(
+    (totals, item) => {
+      if (item.voucherType === 'twoDish') {
+        totals.twoDish += item.quantity;
+      } else if (item.voucherType === 'threeDish') {
+        totals.threeDish += item.quantity;
+      }
+      return totals;
+    },
+    { twoDish: 0, threeDish: 0 }
+  )
   
   // Load user data from localStorage on component mount
   useEffect(() => {
@@ -192,13 +205,13 @@ export function DailyDeliveryCheckout({
       return
     }
     
-    // Check if user has enough credits
-    if (userCredits < totalItems) {
+    // Check if user has enough vouchers
+    if (userVouchers.twoDish < vouchersNeeded.twoDish || userVouchers.threeDish < vouchersNeeded.threeDish) {
       toast({
-        title: language === 'zh' ? '餐券不足' : 'Insufficient Credits',
+        title: language === 'zh' ? '餐券不足' : 'Insufficient Vouchers',
         description: language === 'zh' 
-          ? `您需要${totalItems}个餐券，但只有${userCredits}个餐券` 
-          : `You need ${totalItems} credits, but only have ${userCredits}`,
+          ? `您需要${vouchersNeeded.twoDish}个2菜餐券和${vouchersNeeded.threeDish}个3菜餐券` 
+          : `You need ${vouchersNeeded.twoDish} two-dish vouchers and ${vouchersNeeded.threeDish} three-dish vouchers`,
         variant: "destructive"
       })
       return
@@ -224,10 +237,10 @@ export function DailyDeliveryCheckout({
         let errorMessage = result.error
         
         // Handle specific error cases
-        if (result.requiredCredits && result.availableCredits !== undefined) {
+        if (result.required && result.available) {
           errorMessage = language === 'zh'
-            ? `餐券不足。需要 ${result.requiredCredits} 个餐券，但只有 ${result.availableCredits} 个。`
-            : `Insufficient credits. You need ${result.requiredCredits} credits, but only have ${result.availableCredits}.`
+            ? `餐券不足。需要 ${result.required.twoDish} 个2菜餐券和 ${result.required.threeDish} 个3菜餐券。`
+            : `Insufficient vouchers. You need ${result.required.twoDish} two-dish vouchers and ${result.required.threeDish} three-dish vouchers.`
         }
         
         toast({
@@ -236,11 +249,15 @@ export function DailyDeliveryCheckout({
           variant: "destructive"
         })
       } else {
-        // Update user credits in localStorage
-        if (userData && result.remainingCredits !== undefined) {
-          userData.credits = result.remainingCredits
+        // Update user vouchers in localStorage
+        if (userData && result.remainingVouchers) {
+          userData.twoDishVoucher = result.remainingVouchers.twoDish
+          userData.threeDishVoucher = result.remainingVouchers.threeDish
           localStorage.setItem('user', JSON.stringify(userData))
-          setUserCredits(result.remainingCredits)
+          setUserVouchers({
+            twoDish: result.remainingVouchers.twoDish,
+            threeDish: result.remainingVouchers.threeDish
+          })
         }
         
         toast({
@@ -317,7 +334,7 @@ export function DailyDeliveryCheckout({
                             </div>
                             <div className="flex items-center">
                               <span className="text-[#6B5F53] font-medium">
-                                {item.quantity} x 1 {language === 'zh' ? '餐券' : 'credit'}
+                                x{item.quantity}
                               </span>
                             </div>
                           </div>
@@ -327,9 +344,10 @@ export function DailyDeliveryCheckout({
                   ))}
                   <div className="border-t border-[#C2884E]/20 pt-3 flex justify-between font-medium">
                     <span className="text-[#6B5F53]">{language === 'zh' ? '总计' : 'Total'}</span>
-                    <span className="text-[#C2884E]">
-                      {totalItems} {language === 'zh' ? '餐券' : 'credits'}
-                    </span>
+                    <div className="text-[#C2884E] flex gap-2">
+                      <span>2菜: {vouchersNeeded.twoDish}</span>
+                      <span>3菜: {vouchersNeeded.threeDish}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>

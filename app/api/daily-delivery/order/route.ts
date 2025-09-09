@@ -102,17 +102,30 @@ export async function POST(request: Request) {
       );
     }
     
-    // Calculate total items/credits needed
-    const totalItems = data.items.reduce((total: number, item: any) => total + item.quantity, 0);
+    // Calculate total vouchers needed by type
+    const vouchersNeeded = data.items.reduce(
+      (totals: { twoDish: number, threeDish: number }, item: any) => {
+        if (item.voucherType === 'twoDish') {
+          totals.twoDish += item.quantity;
+        } else if (item.voucherType === 'threeDish') {
+          totals.threeDish += item.quantity;
+        }
+        return totals;
+      },
+      { twoDish: 0, threeDish: 0 }
+    );
     
-    // Check if user has enough credits
-    if (user.credits < totalItems) {
+    // Check if user has enough vouchers
+    if (user.twoDishVoucher < vouchersNeeded.twoDish || user.threeDishVoucher < vouchersNeeded.threeDish) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Insufficient credits', 
-          requiredCredits: totalItems, 
-          availableCredits: user.credits 
+          error: 'Insufficient vouchers', 
+          required: vouchersNeeded,
+          available: {
+            twoDish: user.twoDishVoucher,
+            threeDish: user.threeDishVoucher
+          }
         },
         { status: 400 }
       );
@@ -135,11 +148,14 @@ export async function POST(request: Request) {
       area: data.area || ''
     });
     
-    // Deduct credits from user
+    // Deduct vouchers from user
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
       {
-        $inc: { credits: -totalItems }
+        $inc: { 
+          twoDishVoucher: -vouchersNeeded.twoDish,
+          threeDishVoucher: -vouchersNeeded.threeDish
+        }
       },
       { new: true }
     );
@@ -148,7 +164,10 @@ export async function POST(request: Request) {
       { 
         success: true, 
         data: dailyOrder,
-        remainingCredits: updatedUser.credits
+        remainingVouchers: {
+          twoDish: updatedUser.twoDishVoucher,
+          threeDish: updatedUser.threeDishVoucher
+        }
       },
       { status: 200 }
     );
