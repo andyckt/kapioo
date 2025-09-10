@@ -233,7 +233,7 @@ export function ViewAllOrders() {
         
         toast({
           title: "Status Updated",
-          description: `Order ${orderId} status changed to ${newStatus}`,
+          description: `Order ${orderId} status changed to ${newStatus}. Email notification sent to customer.`,
         })
       } else {
         toast({

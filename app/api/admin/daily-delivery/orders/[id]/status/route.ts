@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
-import { sendOrderStatusUpdateNotification } from '@/lib/services/notifications';
+import { sendDailyOrderStatusUpdateNotification } from '@/lib/services/notifications';
 import User from '@/models/User';
 
 // Define route params interface
@@ -168,12 +168,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     try {
       const user = await User.findById(order.userId);
       if (user && user.email) {
-        await sendOrderStatusUpdateNotification(
+        await sendDailyOrderStatusUpdateNotification(
           user.email,
           user.name,
           id,
           status,
-          order.items
+          order.items,
+          order.status // Previous status
         );
       }
     } catch (notificationError) {

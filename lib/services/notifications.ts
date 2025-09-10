@@ -492,6 +492,163 @@ export type NotificationUser = {
 };
 
 // Main function to handle order notifications
+// Send notification when daily delivery order status changes
+export const sendDailyOrderStatusUpdateNotification = async (
+  email: string,
+  name: string,
+  orderId: string,
+  status: string,
+  items: any[],
+  previousStatus: string = 'pending'
+): Promise<void> => {
+  try {
+    let subject = '';
+    let statusText = '';
+    let statusDescription = '';
+    let statusColor = '#000000';
+    
+    // Set appropriate subject and content based on order status
+    switch (status) {
+      case 'confirmed':
+        subject = `订单已确认 - Kapioo #${orderId}`;
+        statusText = '已确认';
+        statusDescription = '您的订单已确认，我们正在准备您的餐点。';
+        statusColor = '#007bff';
+        break;
+      
+      case 'delivery':
+        subject = `订单配送中 - Kapioo #${orderId}`;
+        statusText = '配送中';
+        statusDescription = '您的餐点正在配送中，请确保您的地址信息准确，保持电话畅通。';
+        statusColor = '#6610f2';
+        break;
+      
+      case 'delivered':
+        subject = `订单已送达 - Kapioo #${orderId}`;
+        statusText = '已送达';
+        statusDescription = '您的订单已送达。祝您用餐愉快！';
+        statusColor = '#198754';
+        break;
+      
+      case 'cancelled':
+        subject = `订单已取消 - Kapioo #${orderId}`;
+        statusText = '已取消';
+        statusDescription = '您的订单已取消。';
+        statusColor = '#dc3545';
+        break;
+      
+      case 'refunded':
+        subject = `订单已退款 - Kapioo #${orderId}`;
+        statusText = '已退款';
+        statusDescription = '您的订单已退款，餐卷已返还到您的账户。';
+        statusColor = '#fd7e14';
+        break;
+        
+      default:
+        return; // Don't send for other statuses
+    }
+    
+    // Translate previous status to Chinese
+    let previousStatusText = previousStatus;
+    switch (previousStatus) {
+      case 'pending':
+        previousStatusText = '待确认';
+        break;
+      case 'confirmed':
+        previousStatusText = '已确认';
+        break;
+      case 'delivery':
+        previousStatusText = '配送中';
+        break;
+      case 'delivered':
+        previousStatusText = '已送达';
+        break;
+      case 'cancelled':
+        previousStatusText = '已取消';
+        break;
+      case 'refunded':
+        previousStatusText = '已退款';
+        break;
+    }
+    
+    // Format items for display
+    const formattedItems = items.map(item => {
+      return `<li>
+        <span style="font-weight: bold;">${item.day} (${item.date})</span>: ${item.comboName} 
+        <span style="color: #666;">
+          (${item.type === 'A' ? '2菜' : '3菜'}) x${item.quantity}
+        </span>
+      </li>`;
+    }).join('');
+    
+    const html = `
+      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        </div>
+        <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">订单状态更新</h2>
+        <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
+          亲爱的 ${name}，您的每日配送订单状态已更新。
+        </p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <div style="display: inline-block; background-color: #F8F0E5; border-radius: 8px; padding: 20px 40px;">
+            <p style="margin: 0; color: #666;">订单状态已从</p>
+            <p style="margin: 10px 0; color: #666; font-size: 16px;">
+              <span style="color: #888; text-decoration: line-through;">${previousStatusText}</span>
+              &nbsp;&rarr;&nbsp;
+              <span style="color: ${statusColor}; font-weight: bold; font-size: 20px;">${statusText}</span>
+            </p>
+            <p style="margin: 0; color: #333;">${statusDescription}</p>
+          </div>
+        </div>
+        
+        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #C2884E; margin-top: 0;">订单详情</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">订单号:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; font-weight: bold; text-align: right;">${orderId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">订单日期:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString('zh-CN')}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #C2884E; margin-top: 0;">已选择的餐点</h3>
+          <ul style="color: #333; line-height: 1.6;">
+            ${formattedItems}
+          </ul>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
+          您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中查看订单详情。
+        </p>
+        
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
+          <p style="color: #999; font-size: 14px;">
+            如有任何问题，请随时联系我们: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
+          </p>
+          <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        </div>
+      </div>
+    `;
+    
+    await sendEmail({
+      to: email,
+      subject,
+      html
+    });
+    
+    console.log(`Daily order status update notification sent to ${email} for order ${orderId}`);
+  } catch (error) {
+    console.error('Error sending daily order status update notification:', error);
+  }
+};
+
 export const handleOrderNotification = async (
   notificationType: NotificationType,
   order: IOrder | null,
