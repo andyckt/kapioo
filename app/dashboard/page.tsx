@@ -41,6 +41,7 @@ import Image from "next/image"
 import DailyDelivery from "@/components/daily-delivery"
 import WeeklySubscription from "@/components/weekly-subscription"
 import { WeeklySubscriptionHistory } from "@/components/weekly-subscription-history"
+import { DailyDeliveryHistory } from "@/components/daily-delivery-history"
 import MealVoucherPurchase from "@/components/meal-voucher-purchase"
 
 export default function DashboardPage() {
@@ -1255,10 +1256,14 @@ export default function DashboardPage() {
                     <h2 className="text-3xl font-bold tracking-tight">{t('myOrders')}</h2>
                   </div>
 
-                  {/* Regular Order History */}
+                  {/* Order History */}
                   {userData && (
                     <div className="space-y-6">
+                      {/* Regular Order History */}
                       <OrderHistory userId={userData._id} />
+                      
+                      {/* Daily Delivery Orders */}
+                      <DailyDeliveryHistory userId={userData._id} />
                       
                       {/* Weekly Subscription Orders */}
                       <WeeklySubscriptionHistory userId={userData._id} />

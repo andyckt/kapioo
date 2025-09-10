@@ -387,6 +387,10 @@ export async function GET(request: Request) {
     // Get query parameters
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
+    const status = url.searchParams.get('status');
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
     
     if (!userId) {
       return NextResponse.json(
@@ -395,19 +399,38 @@ export async function GET(request: Request) {
       );
     }
     
-    // Find orders for the user
-    const orders = await DailyDeliveryOrder.find({ userId })
-      .sort({ createdAt: -1 });
+    // Build query
+    const query: any = { userId };
+    
+    // Filter by status if provided
+    if (status) {
+      query.status = status;
+    }
+    
+    // Find orders for the user with pagination
+    const orders = await DailyDeliveryOrder.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    // Get total count for pagination
+    const totalOrders = await DailyDeliveryOrder.countDocuments(query);
     
     return NextResponse.json({
       success: true,
-      data: orders
+      data: {
+        orders,
+        page,
+        limit,
+        total: totalOrders,
+        pages: Math.ceil(totalOrders / limit)
+      }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching daily orders:', error);
     
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch orders' },
+      { success: false, error: 'Failed to fetch orders', details: error.message },
       { status: 500 }
     );
   }

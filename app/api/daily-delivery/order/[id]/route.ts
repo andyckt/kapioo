@@ -1,77 +1,126 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from '@/lib/api-utils';
 
-// Get the DailyOrder model
-let DailyOrder;
-try {
-  DailyOrder = mongoose.model('DailyOrder');
-} catch {
-  // If model doesn't exist yet, we'll need to define the schema
-  // This is a simplified version of the schema since the full one is in the main route.ts
-  const DailyOrderSchema = new mongoose.Schema({
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    orderId: {
-      type: String,
-      required: true,
-      unique: true
-    },
-    items: [{
-      day: String,
-      date: String,
-      comboId: String,
-      comboName: String,
-      type: String,
-      quantity: Number,
-      voucherType: String
-    }],
-    status: {
-      type: String,
-      enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'],
-      default: 'pending'
-    },
-    creditCost: Number,
-    specialInstructions: String,
-    deliveryAddress: Object,
-    phoneNumber: String,
-    area: String,
-    confirmedAt: Date,
-    deliveredAt: Date,
-    refundedAt: Date,
-    createdAt: Date,
-    updatedAt: Date
-  });
-  
-  DailyOrder = mongoose.model('DailyOrder', DailyOrderSchema);
+// Interface for route params
+interface RouteParams {
+  params: {
+    id: string;
+  };
 }
 
-// GET handler - get a specific order by ID
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    // Check if user is authenticated
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+// Define the interface for the DailyOrder document
+interface DailyOrderDocument extends mongoose.Document {
+  userId: mongoose.Types.ObjectId;
+  orderId: string;
+  items: Array<{
+    day: string;
+    date: string;
+    comboId: string;
+    comboName: string;
+    type: string;
+    quantity: number;
+    voucherType: string;
+  }>;
+  status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
+  voucherCost: {
+    twoDish: number;
+    threeDish: number;
+  };
+  specialInstructions?: string;
+  deliveryAddress: {
+    unitNumber?: string;
+    streetAddress: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    country: string;
+    buzzCode?: string;
+  };
+  phoneNumber: string;
+  area: string;
+  confirmedAt?: Date;
+  deliveredAt?: Date;
+  refundedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
+// Create a schema for daily orders
+const DailyDeliveryOrderSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  orderId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  items: {
+    type: mongoose.Schema.Types.Mixed,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'],
+    default: 'pending'
+  },
+  voucherCost: {
+    twoDish: {
+      type: Number,
+      default: 0
+    },
+    threeDish: {
+      type: Number,
+      default: 0
+    }
+  },
+  specialInstructions: String,
+  deliveryAddress: {
+    unitNumber: String,
+    streetAddress: String,
+    city: String,
+    province: String,
+    postalCode: String,
+    country: String,
+    buzzCode: String
+  },
+  phoneNumber: String,
+  area: String,
+  confirmedAt: Date,
+  deliveredAt: Date,
+  refundedAt: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Create or get the model
+let DailyDeliveryOrder: mongoose.Model<DailyOrderDocument>;
+
+// GET handler - get a specific order by ID
+export async function GET(request: Request, { params }: RouteParams) {
+  try {
+    const { id } = params;
+    
     await connectToDatabase();
     
-    const orderId = params.id;
+    // Initialize the model if it doesn't exist
+    if (!mongoose.models.DailyDeliveryOrder) {
+      DailyDeliveryOrder = mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
+    } else {
+      DailyDeliveryOrder = mongoose.model<DailyOrderDocument>('DailyDeliveryOrder');
+    }
     
-    // Find the order
-    const order = await DailyOrder.findOne({ orderId }).populate('userId', 'name email userID');
+    // Find the order by orderId
+    const order = await DailyDeliveryOrder.findOne({ orderId: id });
     
     if (!order) {
       return NextResponse.json(
@@ -84,81 +133,10 @@ export async function GET(
       success: true,
       data: order
     });
-  } catch (error) {
-    console.error('Error fetching order:', error);
-    
+  } catch (error: any) {
+    console.error(`Error fetching order ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch order' },
-      { status: 500 }
-    );
-  }
-}
-
-// PATCH handler - update order status
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    // Check if user is authenticated and is an admin
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    await connectToDatabase();
-    
-    const orderId = params.id;
-    const { status } = await request.json();
-    
-    if (!status) {
-      return NextResponse.json(
-        { success: false, error: 'Status is required' },
-        { status: 400 }
-      );
-    }
-    
-    // Find the order
-    const order = await DailyOrder.findOne({ orderId });
-    
-    if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Prepare update data
-    const updateData: any = { status };
-    
-    // Add timestamps based on status
-    if (status === 'confirmed' && !order.confirmedAt) {
-      updateData.confirmedAt = new Date();
-    } else if (status === 'delivered' && !order.deliveredAt) {
-      updateData.deliveredAt = new Date();
-    } else if (status === 'refunded' && !order.refundedAt) {
-      updateData.refundedAt = new Date();
-    }
-    
-    // Update the order
-    const updatedOrder = await DailyOrder.findByIdAndUpdate(
-      order._id,
-      { $set: updateData },
-      { new: true }
-    ).populate('userId', 'name email userID');
-    
-    return NextResponse.json({
-      success: true,
-      data: updatedOrder
-    });
-  } catch (error) {
-    console.error('Error updating order:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to update order' },
+      { success: false, error: 'Failed to fetch order', details: error.message },
       { status: 500 }
     );
   }
