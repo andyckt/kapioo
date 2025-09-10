@@ -446,16 +446,28 @@ export default function DashboardPage() {
   const menuItems = [
     { id: "overview", label: t('overview'), icon: <User className="h-4 w-4" /> },
     { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
-    { id: "daily-delivery", label: t('dailyDelivery'), icon: <Calendar className="h-4 w-4" /> },
-    { id: "meal-vouchers", label: language === 'zh' ? '餐券购买' : 'Meal Vouchers', icon: <CreditCard className="h-4 w-4" /> },
-    { id: "weekly-subscription", label: t('weeklySubscription'), icon: <Gift className="h-4 w-4" /> },
+    { 
+      id: "daily-delivery", 
+      label: t('dailyDelivery'), 
+      icon: <Calendar className="h-4 w-4" />,
+      children: [
+        { id: "meal-vouchers", label: t('viewPlans'), icon: <CreditCard className="h-4 w-4" /> }
+      ]
+    },
+    { 
+      id: "weekly-subscription", 
+      label: t('weeklySubscription'), 
+      icon: <Gift className="h-4 w-4" />,
+      children: [
+        { id: "credits", label: t('viewPlans'), icon: <CreditCard className="h-4 w-4" /> }
+      ]
+    },
     /* Commented out for now
     { id: "nutrition", label: "Nutrition", icon: <BarChart2 className="h-4 w-4" /> },
     */
     /* Commented out Community tab 
     { id: "community", label: "Community", icon: <Users className="h-4 w-4" /> },
     */
-    { id: "credits", label: t('credits'), icon: <CreditCard className="h-4 w-4" /> },
     /* Commented out Referral tab
     { id: "refer", label: "Refer a Friend", icon: <Gift className="h-4 w-4" /> },
     */
@@ -804,8 +816,11 @@ export default function DashboardPage() {
                       }`}
                       onClick={() => {
                         setActiveTab(item.id);
-                        // Add a slight delay before closing to show the selection animation
-                        setTimeout(() => setIsMobileMenuOpen(false), 150);
+                        // Don't close menu if item has children
+                        if (!item.children || item.children.length === 0) {
+                          // Add a slight delay before closing to show the selection animation
+                          setTimeout(() => setIsMobileMenuOpen(false), 150);
+                        }
                       }}
                     >
                       <motion.span
@@ -822,6 +837,52 @@ export default function DashboardPage() {
                         />
                       )}
                     </Button>
+                    
+                    {/* Render children if they exist */}
+                    {item.children && item.children.length > 0 && (
+                      <div className="pl-6 mt-2 border-l-2 border-muted/50 ml-3">
+                        {item.children.map((child, childIndex) => (
+                          <motion.div
+                            key={child.id}
+                            initial={{ opacity: 0, x: -10, filter: "blur(4px)" }}
+                            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                            transition={{ 
+                              duration: 0.25, 
+                              delay: 0.05 + (index + 1) * 0.05 + childIndex * 0.05, 
+                              ease: [0.25, 1, 0.5, 1]
+                            }}
+                          >
+                            <Button
+                              variant={activeTab === child.id ? "default" : "ghost"}
+                              className={`justify-start gap-2 text-sm w-full mt-1 ${
+                                activeTab === child.id 
+                                  ? "relative overflow-hidden group bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                setActiveTab(child.id);
+                                // Add a slight delay before closing to show the selection animation
+                                setTimeout(() => setIsMobileMenuOpen(false), 150);
+                              }}
+                            >
+                              <motion.span
+                                initial={{ scale: 1 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                {child.icon}
+                              </motion.span>
+                              {child.label}
+                              {activeTab === child.id && (
+                                <motion.div 
+                                  className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full"
+                                  layoutId="activeChildTabIndicator"
+                                />
+                              )}
+                            </Button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 ))}
                 <motion.div
@@ -910,17 +971,37 @@ export default function DashboardPage() {
         <aside className="w-full md:w-64 border-r bg-background p-4 hidden md:block">
           <nav className="grid gap-2">
             {menuItems.map((item) => (
-              <Button
-                key={item.id}
-                variant={activeTab === item.id ? "default" : "ghost"}
-                className={`justify-start gap-2 ${
-                  activeTab === item.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
-                }`}
-                onClick={() => setActiveTab(item.id)}
-              >
-                {item.icon}
-                {item.label}
-              </Button>
+              <div key={item.id}>
+                <Button
+                  variant={activeTab === item.id ? "default" : "ghost"}
+                  className={`justify-start gap-2 w-full ${
+                    activeTab === item.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
+                  }`}
+                  onClick={() => setActiveTab(item.id)}
+                >
+                  {item.icon}
+                  {item.label}
+                </Button>
+                
+                {/* Render children if they exist */}
+                {item.children && item.children.length > 0 && (
+                  <div className="pl-6 mt-1 border-l-2 border-muted ml-2">
+                    {item.children.map((child) => (
+                      <Button
+                        key={child.id}
+                        variant={activeTab === child.id ? "default" : "ghost"}
+                        className={`justify-start gap-2 w-full text-sm ${
+                          activeTab === child.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
+                        }`}
+                        onClick={() => setActiveTab(child.id)}
+                      >
+                        {child.icon}
+                        {child.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
         </aside>
