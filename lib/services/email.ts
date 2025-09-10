@@ -693,3 +693,266 @@ export const sendAdminWeeklyOrderNotification = async (orderDetails: {
     html,
   });
 };
+
+// Daily delivery email functions
+export const sendDailyOrderConfirmationEmail = async (to: string, name: string, orderDetails: {
+  orderId: string;
+  items: Array<{
+    day: string;
+    date: string;
+    comboId: string;
+    comboName: string;
+    type: string;
+    quantity: number;
+    voucherType: string;
+  }>;
+  voucherCost: {
+    twoDish: number;
+    threeDish: number;
+  };
+  deliveryAddress: any;
+  area: string;
+  phoneNumber: string;
+  specialInstructions?: string;
+}) => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  // Format delivery days and items
+  const deliveryDays = orderDetails.items.reduce((acc: any, item) => {
+    const dayKey = `${item.day}-${item.date}`;
+    if (!acc[dayKey]) {
+      acc[dayKey] = {
+        day: item.day,
+        date: item.date,
+        items: []
+      };
+    }
+    acc[dayKey].items.push(item);
+    return acc;
+  }, {});
+
+  // Generate HTML for each delivery day and its items
+  let deliveryItemsHtml = '';
+  Object.values(deliveryDays).forEach((day: any) => {
+    // Extract day name from the day ID (e.g., "monday-w1" -> "Monday")
+    const dayParts = day.day.split('-');
+    const dayName = dayParts[0].charAt(0).toUpperCase() + dayParts[0].slice(1);
+    
+    deliveryItemsHtml += `
+      <div style="margin-bottom: 15px;">
+        <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${dayName} (${day.date})</h4>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          ${day.items.map((item: any) => `
+            <li style="padding: 8px 0; border-bottom: 1px dashed #eaeaea;">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #333;">${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'})</span>
+                <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  });
+
+  // Format address
+  const addr = orderDetails.deliveryAddress;
+  let formattedAddress = '';
+  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
+  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
+  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">订单确认</h2>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
+        ${name}，感谢您的订购！您的每日配送订单已成功提交。
+      </p>
+      
+      <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px;">订单详情</h3>
+        <p style="color: #333; margin-bottom: 15px; font-size: 15px;">
+          <strong>订单号:</strong> ${orderDetails.orderId}
+        </p>
+        
+        <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 15px; margin: 20px 0;">
+          <h4 style="color: #C2884E; margin-top: 0; font-size: 16px;">已选餐点</h4>
+          ${deliveryItemsHtml}
+          <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
+            <span style="font-weight: bold; color: #333;">总计:</span>
+            <span style="font-weight: bold; color: #C2884E;">
+              2菜餐券: ${orderDetails.voucherCost.twoDish}, 
+              3菜餐券: ${orderDetails.voucherCost.threeDish}
+            </span>
+          </div>
+        </div>
+        
+        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">配送信息</h4>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>区域:</strong> ${orderDetails.area}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>电话:</strong> ${orderDetails.phoneNumber}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>地址:</strong> ${formattedAddress}
+        </p>
+        ${orderDetails.specialInstructions ? `
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>特别说明:</strong> ${orderDetails.specialInstructions}
+        </p>
+        ` : ''}
+      </div>
+      
+      <div style="text-align: center; margin-top: 20px; padding: 15px; background-color: #F5EDE4; border-radius: 8px;">
+        <p style="color: #6B5F53; font-size: 14px; margin: 0;">
+          如有任何问题，请联系我们的客服团队。
+        </p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to,
+    subject: `每日配送订单确认 (#${orderDetails.orderId})`,
+    html,
+  });
+};
+
+export const sendAdminDailyOrderNotification = async (orderDetails: {
+  orderId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  items: Array<{
+    day: string;
+    date: string;
+    comboId: string;
+    comboName: string;
+    type: string;
+    quantity: number;
+    voucherType: string;
+  }>;
+  voucherCost: {
+    twoDish: number;
+    threeDish: number;
+  };
+  area: string;
+  phoneNumber: string;
+  deliveryAddress: any;
+  specialInstructions?: string;
+}) => {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const adminDashboardLink = `${baseUrl}/admin?tab=daily-orders`;
+
+  // Format delivery days and items
+  const deliveryDays = orderDetails.items.reduce((acc: any, item) => {
+    const dayKey = `${item.day}-${item.date}`;
+    if (!acc[dayKey]) {
+      acc[dayKey] = {
+        day: item.day,
+        date: item.date,
+        items: []
+      };
+    }
+    acc[dayKey].items.push(item);
+    return acc;
+  }, {});
+
+  // Generate HTML for each delivery day and its items
+  let deliveryItemsHtml = '';
+  Object.values(deliveryDays).forEach((day: any) => {
+    // Extract day name from the day ID (e.g., "monday-w1" -> "Monday")
+    const dayParts = day.day.split('-');
+    const dayName = dayParts[0].charAt(0).toUpperCase() + dayParts[0].slice(1);
+    
+    deliveryItemsHtml += `
+      <div style="margin-bottom: 15px;">
+        <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${dayName} (${day.date})</h4>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          ${day.items.map((item: any) => `
+            <li style="padding: 8px 0; border-bottom: 1px dashed #eaeaea;">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #333;">${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'})</span>
+                <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  });
+
+  // Format address
+  const addr = orderDetails.deliveryAddress;
+  let formattedAddress = '';
+  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
+  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
+  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的每日配送订单</h2>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        用户 <strong>${orderDetails.userName}</strong> (${orderDetails.userEmail}) 提交了一个新的每日配送订单。
+      </p>
+      
+      <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px;">订单详情</h3>
+        <p style="color: #333; margin-bottom: 15px; font-size: 15px;">
+          <strong>订单号:</strong> ${orderDetails.orderId}
+        </p>
+        <p style="color: #333; margin-bottom: 15px; font-size: 15px;">
+          <strong>用户ID:</strong> ${orderDetails.userId}
+        </p>
+        
+        <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 15px; margin: 20px 0;">
+          <h4 style="color: #C2884E; margin-top: 0; font-size: 16px;">订单内容</h4>
+          ${deliveryItemsHtml}
+          <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
+            <span style="font-weight: bold; color: #333;">总计:</span>
+            <span style="font-weight: bold; color: #C2884E;">
+              2菜餐券: ${orderDetails.voucherCost.twoDish}, 
+              3菜餐券: ${orderDetails.voucherCost.threeDish}
+            </span>
+          </div>
+        </div>
+        
+        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">配送信息</h4>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>区域:</strong> ${orderDetails.area}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>电话:</strong> ${orderDetails.phoneNumber}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>地址:</strong> ${formattedAddress}
+        </p>
+        ${orderDetails.specialInstructions ? `
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>特别说明:</strong> ${orderDetails.specialInstructions}
+        </p>
+        ` : ''}
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px;">
+        <a href="${adminDashboardLink}" style="display: inline-block; background: linear-gradient(to right, #C2884E, #D1A46C); color: white; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: 500; letter-spacing: 0.5px;">
+          查看管理后台
+        </a>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to: adminEmail,
+    subject: `新的每日配送订单 (#${orderDetails.orderId}) 已提交`,
+    html,
+  });
+};
