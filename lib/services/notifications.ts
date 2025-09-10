@@ -588,7 +588,7 @@ export const sendDailyOrderStatusUpdateNotification = async (
         </div>
         <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">订单状态更新</h2>
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-          亲爱的 ${name}，您的每日配送订单状态已更新。
+          亲爱的 ${name}，您的订单状态已更新。
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
@@ -617,12 +617,6 @@ export const sendDailyOrderStatusUpdateNotification = async (
           </table>
         </div>
         
-        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-          <h3 style="color: #C2884E; margin-top: 0;">已选择的餐点</h3>
-          <ul style="color: #333; line-height: 1.6;">
-            ${formattedItems}
-          </ul>
-        </div>
         
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
           您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中查看订单详情。
