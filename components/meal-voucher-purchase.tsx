@@ -17,6 +17,7 @@ import {
   CreditCard, 
   Upload, 
   Check, 
+  CheckCircle,
   Clock, 
   AlertCircle, 
   Info, 
@@ -435,6 +436,21 @@ export default function MealVoucherPurchase() {
             </div>
           )}
 
+          {/* Payment Method and Tax Information */}
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
+            <div className="space-y-2 text-sm text-amber-700">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 mt-0.5 text-amber-600" />
+                <p>{language === 'zh' ? '通过微信转账支付无需缴纳额外税费' : 'No additional tax when paying via WeChat transfer'}</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600" />
+                <p>{language === 'zh' ? '通过EMT电子转账支付需额外缴纳13%税费' : 'Additional 13% tax applies when paying via EMT'}</p>
+              </div>
+            </div>
+          </div>
+          
           {/* E-Transfer Information */}
           <div className="space-y-3">
             <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
@@ -1111,6 +1127,21 @@ export default function MealVoucherPurchase() {
                     transition={{ duration: 0.3 }}
                   >
                     {renderPlanCards(twoDishPlans)}
+                    
+                    {/* Payment method and tax information */}
+                    <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
+                      <ul className="space-y-2 text-sm text-amber-700">
+                        <li className="flex items-start gap-2">
+                          <div className="min-w-[20px] mt-0.5">•</div>
+                          <div>{language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}</div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="min-w-[20px] mt-0.5">•</div>
+                          <div>{language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}</div>
+                        </li>
+                      </ul>
+                    </div>
                   </motion.div>
                 </TabsContent>
                 
@@ -1122,6 +1153,21 @@ export default function MealVoucherPurchase() {
                     transition={{ duration: 0.3 }}
                   >
                     {renderPlanCards(threeDishPlans)}
+                    
+                    {/* Payment method and tax information */}
+                    <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
+                      <ul className="space-y-2 text-sm text-amber-700">
+                        <li className="flex items-start gap-2">
+                          <div className="min-w-[20px] mt-0.5">•</div>
+                          <div>{language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}</div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="min-w-[20px] mt-0.5">•</div>
+                          <div>{language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}</div>
+                        </li>
+                      </ul>
+                    </div>
                   </motion.div>
                 </TabsContent>
               </AnimatePresence>

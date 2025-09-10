@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
+  AlertCircle,
+  CheckCircle,
   CreditCard, 
   Upload, 
   X, 
@@ -458,6 +460,21 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
               <p>* {language === 'zh' ? '餐券卡有效期为半年，可转赠亲友，购买后7天内可退款未用部分' : 'Credits valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}</p>
               <p>* {language === 'zh' ? '以上均为税前价格，支付方式：EMT/微信' : 'All prices before tax, payment methods: EMT/WeChat Pay'}</p>
             </div>
+            
+            {/* Payment method and tax information */}
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
+              <ul className="space-y-2 text-sm text-amber-700">
+                <li className="flex items-start gap-2">
+                  <div className="min-w-[20px] mt-0.5">•</div>
+                  <div>{language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}</div>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="min-w-[20px] mt-0.5">•</div>
+                  <div>{language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}</div>
+                </li>
+              </ul>
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -500,6 +517,21 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                 </div>
                 
                 {/* Payment proof upload */}
+                {/* Payment method and tax information */}
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                  <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
+                  <div className="space-y-2 text-sm text-amber-700">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 mt-0.5 text-amber-600" />
+                      <p>{language === 'zh' ? '通过微信转账支付无需缴纳额外税费' : 'No additional tax when paying via WeChat transfer'}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600" />
+                      <p>{language === 'zh' ? '通过EMT电子转账支付需额外缴纳13%税费' : 'Additional 13% tax applies when paying via EMT'}</p>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="payment-proof" className="text-[#6B5F53] font-medium">
