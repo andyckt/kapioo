@@ -1259,9 +1259,6 @@ export default function DashboardPage() {
                   {/* Order History */}
                   {userData && (
                     <div className="space-y-6">
-                      {/* Regular Order History */}
-                      <OrderHistory userId={userData._id} />
-                      
                       {/* Daily Delivery Orders */}
                       <DailyDeliveryHistory userId={userData._id} />
                       
