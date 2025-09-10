@@ -71,6 +71,7 @@ import { WeekYearDisplay } from "@/components/week-year-display"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { MealVoucherManagement } from "@/components/meal-voucher-management"
+import { ViewAllOrders } from "@/components/view-all-orders"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -909,6 +910,14 @@ export default function AdminDashboardPage() {
               2Dish 3Dish Voucher
             </Button>
             <Button
+              variant={activeTab === "view-all-orders" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => setActiveTab("view-all-orders")}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View All Orders
+            </Button>
+            <Button
               variant={activeTab === "settings" ? "default" : "ghost"}
               className="justify-start"
               onClick={() => setActiveTab("settings")}
@@ -1499,6 +1508,26 @@ export default function AdminDashboardPage() {
                 <MealVoucherManagement />
               </motion.div>
             )}
+            
+            {activeTab === "view-all-orders" && (
+              <motion.div
+                key="view-all-orders"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold tracking-tight">View All Orders</h2>
+                </div>
+                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+                  <div className="p-6">
+                    <p className="text-center text-muted-foreground">Content will be added later.</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {activeTab === "credit-requests" && (
               <motion.div
@@ -1705,6 +1734,18 @@ export default function AdminDashboardPage() {
                     </div>
                   </CardFooter>
                 </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "view-all-orders" && (
+              <motion.div
+                key="view-all-orders"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ViewAllOrders />
               </motion.div>
             )}
             
