@@ -879,6 +879,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between mt-4">
                     <h2 className="text-3xl font-bold tracking-tight">{language === 'en' ? `Welcome, ${userData?.name?.split(' ')[0] || ''}` : `欢迎, ${userData?.name?.split(' ')[0] || ''}`}</h2>
                   </div>
+                  {/* Commented out three squares (credits, upcoming delivery, total order)
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <Card 
                       className="transform transition-all duration-300 hover:scale-105 hover:shadow-md cursor-pointer relative group overflow-hidden" 
@@ -959,6 +960,7 @@ export default function DashboardPage() {
                       </CardContent>
                     </Card>
                   </div>
+                  */}
 
                   <div className="grid gap-6 md:grid-cols-2">
                     <ThisWeekMeals

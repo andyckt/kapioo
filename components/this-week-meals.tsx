@@ -568,32 +568,6 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
 
   return (
     <div className="space-y-6 w-full">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <Button 
-          onClick={() => onSelectMeal()}
-          className="w-full py-7 text-base font-medium bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden relative group"
-        >
-          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
-          <div className="absolute -inset-full h-full w-1/3 block transform -skew-x-12 bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:animate-shine" />
-          <div className="flex items-center justify-center relative z-10">
-            <motion.div
-              initial={{ rotate: 0 }}
-              whileHover={{ rotate: 15 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="mr-3"
-            >
-              <CalendarDays className="h-5 w-5" />
-            </motion.div>
-            <span>{language === 'en' ? 'Select Meals' : '选择餐点'}</span>
-          </div>
-        </Button>
-      </motion.div>
 
       {/* Commented out Enhanced Calendar Day Selector and meal display
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
