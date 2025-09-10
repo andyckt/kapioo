@@ -553,66 +553,8 @@ export default function DailyDelivery() {
           <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 pr-2">
             <div className="sticky top-4 space-y-1">
               
-              {/* Week 1 Days */}
+              {/* Only show Week 1 Days */}
               {dayOrder.filter(day => day.endsWith('-w1')).map((day, index) => days[day] && (
-                <button
-                  key={day}
-                  onClick={() => {
-                    // We still want to show the warning but allow selection
-                    const { unavailable, reason } = isDayUnavailable(day);
-                    
-                    if (unavailable) {
-                      toast({
-                        title: "This day is unavailable",
-                        description: reason,
-                        variant: "destructive"
-                      });
-                      // Continue with selection instead of returning
-                    }
-                    
-                    // Check if current day has at least 2 items selected
-                    const currentDayItems = cart.filter(item => item.day === selectedDay);
-                    const currentDayTotal = currentDayItems.reduce((total, item) => total + item.quantity, 0);
-                    
-                    if (currentDayTotal === 1) {
-                      // Show warning if only 1 item is selected
-                      // Capitalize the first letter of the day
-                      const displayName = days[selectedDay].displayName;
-                      const capitalizedDay = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-                      setDayWarning(`请至少选择两餐 for ${capitalizedDay}`);
-                      setTimeout(() => setDayWarning(null), 5000); // Clear warning after 5 seconds
-                    } else {
-                      // Clear any existing warning and change day
-                      setDayWarning(null);
-                      setSelectedDay(day);
-                    }
-                  }}
-                  className={cn(
-                    "w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2",
-                    selectedDay === day 
-                      ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" 
-                      : isDayUnavailable(day).unavailable
-                        ? "opacity-50 cursor-not-allowed text-[#6B5F53]"
-                        : "hover:bg-[#F5EDE4] text-[#6B5F53]"
-                  )}
-                >
-                  <div className="w-full">
-                    <p className="font-medium capitalize text-sm">{days[day].displayName.substring(0, 3)}</p>
-                    <p className="text-xs opacity-80">{days[day].date}</p>
-                    {isDayUnavailable(day).unavailable && (
-                      <p className="text-xs text-red-500 mt-1">Unavailable</p>
-                    )}
-                  </div>
-                </button>
-              ))}
-              
-              {/* Week Separator Line */}
-              <div className="mt-4 mb-2 px-3">
-                <div className="h-px bg-[#C2884E]/50 w-full"></div>
-              </div>
-              
-              {/* Week 2 Days */}
-              {dayOrder.filter(day => day.endsWith('-w2')).map((day, index) => days[day] && (
                 <button
                   key={day}
                   onClick={() => {
