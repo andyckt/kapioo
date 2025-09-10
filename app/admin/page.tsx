@@ -915,7 +915,7 @@ export default function AdminDashboardPage() {
               onClick={() => setActiveTab("view-all-orders")}
             >
               <Eye className="mr-2 h-4 w-4" />
-              View All Orders
+              View Daily Delivery Orders
             </Button>
             <Button
               variant={activeTab === "settings" ? "default" : "ghost"}
@@ -1516,16 +1516,8 @@ export default function AdminDashboardPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-6"
               >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">View All Orders</h2>
-                </div>
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-6">
-                    <p className="text-center text-muted-foreground">Content will be added later.</p>
-                  </div>
-                </div>
+                <ViewAllOrders />
               </motion.div>
             )}
 
