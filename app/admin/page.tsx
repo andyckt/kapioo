@@ -72,6 +72,7 @@ import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-m
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { MealVoucherManagement } from "@/components/meal-voucher-management"
 import { ViewAllOrders } from "@/components/view-all-orders"
+import { ViewWeeklyOrders } from "@/components/view-weekly-orders"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -918,6 +919,14 @@ export default function AdminDashboardPage() {
               View Daily Delivery Orders
             </Button>
             <Button
+              variant={activeTab === "view-weekly-orders" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => setActiveTab("view-weekly-orders")}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              View Weekly Orders
+            </Button>
+            <Button
               variant={activeTab === "settings" ? "default" : "ghost"}
               className="justify-start"
               onClick={() => setActiveTab("settings")}
@@ -1518,6 +1527,18 @@ export default function AdminDashboardPage() {
                 transition={{ duration: 0.3 }}
               >
                 <ViewAllOrders />
+              </motion.div>
+            )}
+            
+            {activeTab === "view-weekly-orders" && (
+              <motion.div
+                key="view-weekly-orders"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ViewWeeklyOrders />
               </motion.div>
             )}
 
