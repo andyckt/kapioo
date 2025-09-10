@@ -252,7 +252,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
-                  <div className="grid md:grid-cols-3 gap-4 text-sm">
+                  <div className="grid md:grid-cols-4 gap-4 text-sm">
                     <div className="md:col-span-2">
                       <p className="font-medium">{language === 'en' ? 'Items' : '餐点'}</p>
                       <p className="text-muted-foreground truncate max-w-[400px]">
@@ -266,12 +266,22 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                         3菜: {order.voucherCost?.threeDish || 0}
                       </p>
                     </div>
+                    <div>
+                      <p className="font-medium">{language === 'zh' ? '区域' : 'Area'}</p>
+                      <p className="text-muted-foreground">{order.area || '-'}</p>
+                    </div>
                   </div>
-                  <div className="mt-2">
-                    <p className="font-medium">{t('deliveryAddress')}</p>
+                  <div className="mt-2 grid md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-medium">{t('deliveryAddress')}</p>
                       <p className="text-muted-foreground truncate max-w-full">
                         {formatAddress(order.deliveryAddress, language)}
                       </p>
+                    </div>
+                    <div>
+                      <p className="font-medium">{language === 'zh' ? '电话' : 'Phone'}</p>
+                      <p className="text-muted-foreground">{order.phoneNumber || '-'}</p>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0 flex justify-end">
@@ -371,6 +381,22 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                                     </li>
                                   ))}
                                 </ul>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <h3 className="font-semibold mb-1">{language === 'zh' ? '区域' : 'Area'}</h3>
+                                  <p className="text-muted-foreground">
+                                    {selectedOrder.area || '-'}
+                                  </p>
+                                </div>
+                                
+                                <div>
+                                  <h3 className="font-semibold mb-1">{language === 'zh' ? '电话' : 'Phone Number'}</h3>
+                                  <p className="text-muted-foreground">
+                                    {selectedOrder.phoneNumber || '-'}
+                                  </p>
+                                </div>
                               </div>
                               
                               <div>
