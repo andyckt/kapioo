@@ -1729,18 +1729,6 @@ export default function AdminDashboardPage() {
               </motion.div>
             )}
 
-            {activeTab === "view-all-orders" && (
-              <motion.div
-                key="view-all-orders"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ViewAllOrders />
-              </motion.div>
-            )}
-            
             {activeTab === "settings" && (
               <motion.div
                 key="settings"
