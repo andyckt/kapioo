@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info, Check, ChevronsUpDown, Search } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info, Check, ChevronsUpDown, Search, ChevronDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
@@ -66,6 +67,66 @@ export default function DashboardPage() {
   const [upcomingDeliveries, setUpcomingDeliveries] = useState(0)
   const [totalOrders, setTotalOrders] = useState(0)
   const [orderStatsLoading, setOrderStatsLoading] = useState(true)
+  const [selectedLocation, setSelectedLocation] = useState("Downtown")
+  
+  // Define location types
+  type Location = 
+    | "Downtown" 
+    | "Midtown" 
+    | "NorthYork" 
+    | "Markham" 
+    | "RichmondHill"
+    | "Vaughan" 
+    | "Mississauga" 
+    | "Oakville" 
+    | "Aurora" 
+    | "Newmarket"
+    | "Hamilton"
+    | "Burlington"
+  
+  // Group locations by service availability
+  const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown", "Midtown", "NorthYork", "Markham", "RichmondHill"]
+  const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
+  
+  // All locations
+  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
+  
+  // Location display names
+  const getLocationDisplayName = (location: Location): string => {
+    return location
+  }
+  
+  // Get available plans based on location
+  const getAvailablePlans = () => {
+    if (FULL_SERVICE_LOCATIONS.includes(selectedLocation as Location)) {
+      return [
+        {
+          id: "weekly",
+          title: language === 'en' ? t('weeklySubscriptionTitle') : t('weeklySubscriptionTitle'),
+          description: language === 'en' ? t('weeklySubscriptionDesc') : t('weeklySubscriptionDesc'),
+          imagePath: "/food-gallery/westernfood.JPG",
+          tabId: "weekly-subscription"
+        },
+        {
+          id: "daily",
+          title: language === 'en' ? t('dailyDeliveryTitle') : t('dailyDeliveryTitle'),
+          description: language === 'en' ? t('dailyDeliveryDesc') : t('dailyDeliveryDesc'),
+          imagePath: "/food-gallery/Chinese style meal.jpg",
+          tabId: "daily-delivery"
+        }
+      ]
+    } else {
+      return [
+        {
+          id: "weekly",
+          title: language === 'en' ? t('weeklySubscriptionTitle') : t('weeklySubscriptionTitle'),
+          description: language === 'en' ? t('weeklySubscriptionDesc') : t('weeklySubscriptionDesc'),
+          imagePath: "/food-gallery/westernfood.JPG",
+          tabId: "weekly-subscription"
+        }
+      ]
+    }
+  }
   
   // Add state for meal selection and checkout
   const [selectedMeals, setSelectedMeals] = useState({
@@ -961,6 +1022,133 @@ export default function DashboardPage() {
                     </Card>
                   </div>
                   */}
+
+                  <div className="relative mb-12 overflow-hidden pt-8 pb-16 px-4">
+                    <div className="max-w-7xl mx-auto">
+                      
+                      {/* Location Selector */}
+                      <motion.div 
+                        className="relative w-full max-w-md mx-auto mb-16 z-20"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.5 }}
+                      >
+                        <div 
+                          className="relative cursor-pointer"
+                          onClick={() => {
+                            const dropdown = document.getElementById('location-dropdown');
+                            if (dropdown) {
+                              dropdown.classList.toggle('hidden');
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-center py-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#6B5F53] font-medium text-xl md:text-2xl">
+                                {language === 'en' ? 'I am based in' : '我位于'}
+                              </span>
+                              <span className="text-[#C2884E] font-medium border-b-2 border-[#C2884E]/30 px-2 min-w-[120px] text-center text-xl md:text-2xl">
+                                {getLocationDisplayName(selectedLocation as Location)}
+                              </span>
+                              <ChevronDown 
+                                className="h-5 w-5 ml-1 text-[#C2884E] transition-transform duration-300" 
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Dropdown */}
+                          <div 
+                            id="location-dropdown"
+                            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-[#C2884E]/20 shadow-xl overflow-hidden z-30 w-full hidden"
+                          >
+                            <div className="max-h-64 overflow-y-auto py-2">
+                              {allLocations.map((location) => (
+                                <div 
+                                  key={location}
+                                  className={`px-6 py-3 hover:bg-[#C2884E]/5 transition-colors cursor-pointer flex items-center gap-3 ${
+                                    selectedLocation === location ? 'bg-[#C2884E]/10 font-medium' : ''
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLocation(location);
+                                    const dropdown = document.getElementById('location-dropdown');
+                                    if (dropdown) {
+                                      dropdown.classList.add('hidden');
+                                    }
+                                  }}
+                                >
+                                  {selectedLocation === location && (
+                                    <div className="w-2 h-2 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"></div>
+                                  )}
+                                  <span className={`${selectedLocation === location ? 'text-[#C2884E]' : 'text-[#6B5F53]'}`}>
+                                    {getLocationDisplayName(location)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                      
+                      {/* Meal Plan Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                        {getAvailablePlans().map((plan, index) => (
+                          <motion.div 
+                            key={plan.id}
+                            className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700"
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.7, delay: 0.7 + index * 0.2 }}
+                            whileHover={{ 
+                              y: -5,
+                              boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
+                            }}
+                            onClick={() => setActiveTab(plan.tabId)}
+                          >
+                            <motion.div 
+                              className="relative h-full w-full overflow-hidden cursor-pointer"
+                              whileHover={{ scale: 1.05 }}
+                              transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
+                            >
+                              <Image 
+                                src={plan.imagePath} 
+                                alt={plan.title} 
+                                fill
+                                className="object-cover transition-transform duration-[1.5s]"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+                            </motion.div>
+                            
+                            <div className="absolute inset-x-0 bottom-0 z-20 p-8">
+                              <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, delay: 0.9 + index * 0.2 }}
+                                className="space-y-4"
+                              >
+                                <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                                  {plan.title}
+                                </h3>
+                                <p className="text-white/90 text-sm sm:text-base max-w-md">
+                                  {plan.description}
+                                </p>
+                                <div className="overflow-hidden h-px w-full opacity-0 group-hover:opacity-100 transition-all duration-500">
+                                  <motion.div 
+                                    className="h-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                                    initial={{ x: "-100%" }}
+                                    whileInView={{ x: "0%" }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.7 }}
+                                  ></motion.div>
+                                </div>
+                              </motion.div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
                     <ThisWeekMeals
