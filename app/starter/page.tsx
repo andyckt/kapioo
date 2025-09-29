@@ -153,7 +153,7 @@ export default function StarterPage() {
                   {/* Daily Delivery Option */}
                   {hasDailyDelivery(selectedLocation) && (
                     <motion.div 
-                      className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700 before:absolute before:inset-0 before:border-2 before:border-transparent before:rounded-2xl before:z-10 hover:before:border-[#C2884E]/40 before:transition-all before:duration-300"
+                      className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700 before:absolute before:inset-0 before:border-2 before:border-transparent before:rounded-2xl before:z-10 hover:before:border-[#C2884E]/40 before:transition-all before:duration-300 cursor-pointer"
                       initial={{ opacity: 0, y: 40 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.7 }}
@@ -215,7 +215,7 @@ export default function StarterPage() {
                   {/* Weekly Delivery Option */}
                   {hasWeeklyDelivery(selectedLocation) && (
                     <motion.div 
-                      className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700 before:absolute before:inset-0 before:border-2 before:border-transparent before:rounded-2xl before:z-10 hover:before:border-[#C2884E]/40 before:transition-all before:duration-300"
+                      className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700 before:absolute before:inset-0 before:border-2 before:border-transparent before:rounded-2xl before:z-10 hover:before:border-[#C2884E]/40 before:transition-all before:duration-300 cursor-pointer"
                       initial={{ opacity: 0, y: 40 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.7, delay: 0.2 }}
