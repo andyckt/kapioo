@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { ArrowRight, MapPin, Check } from "lucide-react"
+import { MapPin, Check, ArrowRight } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { Button } from "@/components/ui/button"
 
@@ -149,7 +149,7 @@ export default function StarterPage() {
           >
             {selectedLocation && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto px-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
                   {/* Daily Delivery Option */}
                   {hasDailyDelivery(selectedLocation) && (
                     <motion.div 
@@ -158,8 +158,6 @@ export default function StarterPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.7 }}
                       whileHover={{ 
-                        y: -5,
-                        scale: 0.98,
                         boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
                       }}
                     >
@@ -192,20 +190,10 @@ export default function StarterPage() {
                             {language === 'zh' ? '每日新鲜现做，直送上门，满分新鲜度' : 'Freshly made daily, delivered to your door, maximum freshness'}
                           </p>
                           
-                          <div className="flex flex-wrap gap-2 pt-2">
-                            <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
-                              {language === 'zh' ? '每日配送' : 'Daily delivery'}
-                            </span>
-                            <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
-                              {language === 'zh' ? '午间送达' : 'Afternoon delivery'}
-                            </span>
-                          </div>
-                          
-                          <div className="pt-2">
+                          <div className="pt-4">
                             <Button className="bg-white hover:bg-white/90 text-[#C2884E] hover:text-[#C2884E] hover:scale-105 transition-transform">
                               <Link href="/login" className="flex items-center justify-center w-full">
                                 {language === 'zh' ? '选择此计划' : 'Select This Plan'}
-                                <ArrowRight className="ml-2 h-4 w-4" />
                               </Link>
                             </Button>
                           </div>
@@ -232,8 +220,6 @@ export default function StarterPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.7, delay: 0.2 }}
                       whileHover={{ 
-                        y: -5,
-                        scale: 0.98,
                         boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
                       }}
                     >
@@ -244,7 +230,7 @@ export default function StarterPage() {
                       >
                         <Image 
                           src="/food-gallery/westernfood.JPG" 
-                          alt={language === 'zh' ? '周次MealBox' : 'Weekly MealBox'} 
+                          alt={language === 'zh' ? '周次 MealBox' : 'Weekly MealBox'} 
                           fill
                           className="object-cover transition-transform duration-[1.5s]"
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -260,26 +246,16 @@ export default function StarterPage() {
                           className="space-y-4"
                         >
                           <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                            {language === 'zh' ? '周次MealBox' : 'Weekly MealBox'}
+                            {language === 'zh' ? '周次 MealBox' : 'Weekly MealBox'}
                           </h3>
                           <p className="text-white/90 text-sm sm:text-base max-w-md">
                             {language === 'zh' ? '每周配送2次，一次配送多餐，轻松覆盖整周' : 'Delivered twice a week, multiple meals per delivery, easily covers the entire week'}
                           </p>
                           
-                          <div className="flex flex-wrap gap-2 pt-2">
-                            <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
-                              {language === 'zh' ? '周日&周二配送' : 'Sunday & Tuesday delivery'}
-                            </span>
-                            <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
-                              {language === 'zh' ? '晚间送达' : 'Evening delivery'}
-                            </span>
-                          </div>
-                          
-                          <div className="pt-2">
+                          <div className="pt-4">
                             <Button className="bg-white hover:bg-white/90 text-[#C2884E] hover:text-[#C2884E] hover:scale-105 transition-transform">
                               <Link href="/login" className="flex items-center justify-center w-full">
                                 {language === 'zh' ? '选择此计划' : 'Select This Plan'}
-                                <ArrowRight className="ml-2 h-4 w-4" />
                               </Link>
                             </Button>
                           </div>
