@@ -37,7 +37,8 @@ interface PlanOption {
 export default function WeeklyMealPage() {
   const { t, language } = useLanguage()
   const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 10>(6)
-  const [howItWorksOpen, setHowItWorksOpen] = useState(false)
+  // We don't need the dialog state anymore
+  // const [howItWorksOpen, setHowItWorksOpen] = useState(false)
 
   // Define plan options based on the credit-purchase-plans component
   const planOptions: PlanOption[] = [
@@ -114,18 +115,18 @@ export default function WeeklyMealPage() {
   // Define features for the hero section
   const features = [
     {
-      title: language === 'zh' ? "周套餐" : "Weekly Plan",
-      description: language === 'zh' ? "一次订购，全周安排" : "Order once for the entire week",
+      title: language === 'zh' ? "周次MealBox" : "Weekly MealBox",
+      description: language === 'zh' ? "每周配送2次，轻松覆盖整周" : "Two deliveries per week, covering the entire week",
       icon: <Calendar className="h-6 w-6" />
     },
     {
-      title: language === 'zh' ? "灵活配送" : "Flexible Delivery",
-      description: language === 'zh' ? "周日和周二两次配送" : "Sunday and Tuesday deliveries",
+      title: language === 'zh' ? "晚间配送" : "Evening Delivery",
+      description: language === 'zh' ? "6PM-10PM送达，方便省心" : "Delivered 6PM-10PM, convenient and worry-free",
       icon: <Clock className="h-6 w-6" />
     },
     {
-      title: language === 'zh' ? "经济实惠" : "Cost Effective",
-      description: language === 'zh' ? "批量订购更省钱" : "Save more with bulk ordering",
+      title: language === 'zh' ? "冷藏保存" : "Refrigerate & Enjoy",
+      description: language === 'zh' ? "储存于冰箱，随取随享" : "Store in refrigerator, enjoy anytime",
       icon: <Star className="h-6 w-6" />
     }
   ]
@@ -171,25 +172,143 @@ export default function WeeklyMealPage() {
                 <div className="inline-flex items-center mb-4">
                   <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
                     <span className="text-sm font-medium text-[#C2884E]">
-                      {language === 'zh' ? '周套餐计划' : 'Weekly Meal Plan'}
+                      {language === 'zh' ? '周次餐盒订阅' : 'Weekly Meal Subscription'}
                     </span>
                   </div>
                 </div>
                 
                 <h1 className="text-3xl md:text-5xl font-bold mb-6 text-[#6B5F53]">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    {language === 'zh' ? '一次订购' : 'Order Once'}
+                    {language === 'zh' ? '周次MealBox' : 'Weekly MealBox'}
                   </span>
                   <span className="block mt-2">
-                    {language === 'zh' ? '全周安排' : 'Plan Your Week'}
+                    {language === 'zh' ? '餐盒订阅' : 'Meal Subscription'}
                   </span>
                 </h1>
                 
                 <p className="text-lg md:text-xl text-[#6B5F53]/80 mb-6 max-w-lg">
                   {language === 'zh' 
-                    ? '适合想要提前规划一周餐食，追求便利与经济实惠的你' 
-                    : 'Perfect for those who want to plan their meals in advance, seeking convenience and cost-effectiveness'}
+                    ? '适合把餐食储存于冰箱，随取随享，注重极度便利的你' 
+                    : 'Perfect for those who prefer to store meals in the refrigerator and enjoy maximum convenience'}
                 </p>
+                
+                <div className="mt-6">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-sm"
+                      >
+                        {language === 'zh' ? '知道更多' : 'Learn More'}
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[550px] p-0 rounded-2xl overflow-hidden border-[#C2884E]/10">
+                      <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
+                        <DialogTitle className="text-xl font-bold">
+                          {language === 'zh' ? '周次MealBox餐盒订阅详情' : 'Weekly MealBox Subscription Details'}
+                        </DialogTitle>
+                        <DialogDescription className="text-white/80 mt-2">
+                          {language === 'zh' ? '了解我们的周次餐盒订阅服务' : 'Learn about our weekly meal subscription service'}
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="p-6 max-h-[70vh] overflow-y-auto">
+                        {/* How it works section */}
+                        <div className="space-y-6">
+                          <div>
+                            <h4 className="text-lg font-medium text-[#6B5F53] mb-3 flex items-center gap-2">
+                              <div className="p-1.5 rounded-full bg-[#F5EDE4]">
+                                <Calendar className="h-4 w-4 text-[#C2884E]" />
+                              </div>
+                              {language === 'zh' ? '订阅流程' : 'Subscription Process'}
+                            </h4>
+                            
+                            <div className="space-y-4 ml-2">
+                              <div className="flex items-start gap-3 border-l-2 border-[#C2884E]/20 pl-4 pb-4">
+                                <div className="min-w-[24px] h-6 flex items-center justify-center rounded-full bg-[#C2884E] text-white text-xs font-medium">1</div>
+                                <div>
+                                  <h5 className="font-medium text-[#6B5F53]">{language === 'zh' ? '选择适合你的周次卡券' : 'Choose your weekly vouchers'}</h5>
+                                  <p className="text-sm text-[#8A7968] mt-1">{language === 'zh' ? '无需连周使用，可以根据自己的需求灵活安排' : 'No need to use consecutive weeks, flexible scheduling based on your needs'}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-start gap-3 border-l-2 border-[#C2884E]/20 pl-4 pb-4">
+                                <div className="min-w-[24px] h-6 flex items-center justify-center rounded-full bg-[#C2884E] text-white text-xs font-medium">2</div>
+                                <div>
+                                  <h5 className="font-medium text-[#6B5F53]">{language === 'zh' ? '完成在线付款' : 'Complete online payment'}</h5>
+                                  <p className="text-sm text-[#8A7968] mt-1">{language === 'zh' ? '支持微信支付和电子转账，快速便捷' : 'Support for WeChat Pay and e-Transfer, quick and convenient'}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-start gap-3 border-l-2 border-[#C2884E]/20 pl-4 pb-4">
+                                <div className="min-w-[24px] h-6 flex items-center justify-center rounded-full bg-[#C2884E] text-white text-xs font-medium">3</div>
+                                <div>
+                                  <h5 className="font-medium text-[#6B5F53]">{language === 'zh' ? '使用卡券下单订餐' : 'Use vouchers to order meals'}</h5>
+                                  <p className="text-sm text-[#8A7968] mt-1">{language === 'zh' ? '每周更新菜单，自由挑选餐食，满足不同口味需求' : 'Weekly updated menu, freely choose meals to satisfy different taste preferences'}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-start gap-3 border-l-2 border-[#C2884E]/20 pl-4">
+                                <div className="min-w-[24px] h-6 flex items-center justify-center rounded-full bg-[#C2884E] text-white text-xs font-medium">4</div>
+                                <div>
+                                  <h5 className="font-medium text-[#6B5F53]">{language === 'zh' ? '晚间送达与享用' : 'Evening delivery and enjoyment'}</h5>
+                                  <p className="text-sm text-[#8A7968] mt-1">{language === 'zh' ? '晚间6PM-10PM送达，冷藏保存，按最佳日期享用' : 'Delivered between 6PM-10PM, refrigerate and enjoy on your preferred date'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Highlights section */}
+                          <div className="mt-6">
+                            <h4 className="text-lg font-medium text-[#6B5F53] mb-3 flex items-center gap-2">
+                              <div className="p-1.5 rounded-full bg-[#F5EDE4]">
+                                <Star className="h-4 w-4 text-[#C2884E]" />
+                              </div>
+                              {language === 'zh' ? '服务亮点' : 'Service Highlights'}
+                            </h4>
+                            
+                            <div className="bg-[#FFF6EF] rounded-xl p-4">
+                              <ul className="space-y-3">
+                                <li className="flex items-start gap-2">
+                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                                  <span className="text-[#6B5F53]">{language === 'zh' ? '每周配送2次，一次配送多餐，轻松覆盖整周' : 'Two deliveries per week, multiple meals per delivery, easily covering the entire week'}</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                                  <span className="text-[#6B5F53]">{language === 'zh' ? '方便省心，满分便捷度' : 'Convenient and worry-free, maximum convenience'}</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                                  <span className="text-[#6B5F53]">{language === 'zh' ? '晚间时段送达：6PM-10PM' : 'Evening delivery: 6PM-10PM'}</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                                  <span className="text-[#6B5F53]">{language === 'zh' ? '餐食可冷藏保存48小时，保持新鲜口感' : 'Meals can be refrigerated for 48 hours, maintaining fresh taste'}</span>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+                          
+                          {/* Suitable for section */}
+                          <div className="mt-4">
+                            <h4 className="text-lg font-medium text-[#6B5F53] mb-3 flex items-center gap-2">
+                              <div className="p-1.5 rounded-full bg-[#F5EDE4]">
+                                <Check className="h-4 w-4 text-[#C2884E]" />
+                              </div>
+                              {language === 'zh' ? '适合人群' : 'Suitable For'}
+                            </h4>
+                            
+                            <p className="text-[#8A7968] mb-3">
+                              {language === 'zh' 
+                                ? '偏向把餐食储存于冰箱，随取随享，注重极度便利的你' 
+                                : 'Those who prefer to store meals in the refrigerator, enjoy anytime, and prioritize extreme convenience'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
               
               {/* Right column - Feature tags */}
@@ -224,103 +343,7 @@ export default function WeeklyMealPage() {
       {/* Main Content */}
       <section className="container mx-auto py-10 px-4 md:px-6">
         <div className="max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold text-[#6B5F53]">
-              {language === 'zh' ? '周餐计划' : 'Weekly Meal Plans'}
-            </h2>
-            <p className="text-[#8A7968] max-w-2xl mx-auto">
-              {language === 'zh' 
-                ? '选择适合您的周餐计划，享受健康美味的餐食配送服务' 
-                : 'Choose the weekly meal plan that works for you and enjoy delicious, healthy meals delivered to your door'}
-            </p>
-          </div>
-          
           <div className="space-y-6">
-            {/* Info dialog - triggered from dashboard */}
-            <Dialog open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
-              <DialogContent className="sm:max-w-[500px] p-6 rounded-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-xl text-[#6B5F53]">
-                    {language === 'zh' ? '配送信息' : 'Delivery Information'}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                      <Truck className="h-4 w-4 text-[#C2884E]" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '配送日期' : 'Delivery Days'}
-                      </h4>
-                      <p className="text-sm text-[#8A7968]">
-                        {language === 'zh' ? '周日和周二' : 'Sunday and Tuesday'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                      <Clock className="h-4 w-4 text-[#C2884E]" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '配送时间' : 'Delivery Time'}
-                      </h4>
-                      <p className="text-sm text-[#8A7968]">
-                        {language === 'zh' ? '下午6点 - 晚上10点' : '6PM - 10PM'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                      <Calendar className="h-4 w-4 text-[#C2884E]" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '餐券有效期' : 'Plan Validity'}
-                      </h4>
-                      <p className="text-sm text-[#8A7968]">
-                        {language === 'zh' ? '购买后半年内有效，可转让，购买后7天内可退款未用部分' : 'Valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                      <Truck className="h-4 w-4 text-[#C2884E]" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-[#6B5F53]">
-                        {language === 'zh' ? '配送费' : 'Delivery Fee'}
-                      </h4>
-                      <p className="text-sm text-[#8A7968]">
-                        {language === 'zh' ? '$11.99/周 (2次配送)' : '$11.99/week (2 deliveries)'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            
-            <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-[#C2884E]" />
-                <span className="text-[#8A7968]">
-                  {language === 'zh' ? '查看配送详情' : 'View delivery information'}
-                </span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setHowItWorksOpen(true)}
-                className="text-[#C2884E] hover:text-[#B27A40] hover:bg-[#F5EDE4]"
-              >
-                <span>{language === 'zh' ? '查看' : 'View'}</span>
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
             
             {/* Meals per week selector */}
             <div className="flex gap-4">
