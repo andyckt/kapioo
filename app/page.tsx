@@ -41,7 +41,7 @@ export default function Home() {
                 {t('login')}
               </Link>
               <Button asChild size="sm" className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-105 transition-transform sm:size-default">
-                <Link href="/login">
+                <Link href="/starter">
                   <span className="sm:block">{t('getStarted')}</span> <ArrowRight className="ml-1 h-4 w-4 hidden sm:inline-block" />
                 </Link>
               </Button>
@@ -153,7 +153,7 @@ export default function Home() {
                       
                       <div className="flex-shrink-0 self-start sm:self-auto">
                         <Button asChild size="sm" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-sm px-4">
-                          <Link href="/login">
+                          <Link href="/starter">
                             {t('getStartedBtn')} <ArrowRight className="ml-1 h-3 w-3" />
                           </Link>
                         </Button>
