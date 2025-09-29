@@ -86,21 +86,35 @@ export default function DailyDeliveryPage() {
     {
       title: "每日新鲜现做",
       description: "直送上门，满分新鲜度",
-      icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#C2884E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
+      icon: <Image 
+        src="/未命名設計.png" 
+        alt="Kapioo Logo" 
+        width={24} 
+        height={24} 
+        className="h-6 w-6" 
+      />
     },
     {
       title: "餐券制",
       description: "灵活选择每周所需天数",
-      icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M16.5 6L12 9L7.5 6M3 6L12 12L21 6M3 18L12 12L21 18" stroke="#C2884E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
+      icon: <Image 
+        src="/未命名設計.png" 
+        alt="Kapioo Logo" 
+        width={24} 
+        height={24}
+        className="h-6 w-6" 
+      />
     },
     {
       title: "午间时段送达",
       description: "11AM-1PM，享受当日鲜美",
-      icon: <Clock className="w-6 h-6 text-[#C2884E]" />
+      icon: <Image 
+        src="/未命名設計.png" 
+        alt="Kapioo Logo" 
+        width={24} 
+        height={24}
+        className="h-6 w-6" 
+      />
     }
   ]
   
@@ -278,7 +292,7 @@ export default function DailyDeliveryPage() {
                       {language === 'zh' ? '知道更多' : 'Learn More'}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden border-[#C2884E]/10">
+                  <DialogContent className="sm:max-w-[900px] w-[90vw] p-0 rounded-[32px] overflow-hidden border-[#C2884E]/10">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
                       <DialogTitle className="text-2xl font-bold">
                         {language === 'zh' ? '每日配送计划详情' : 'Daily Delivery Plan Details'}
@@ -290,20 +304,26 @@ export default function DailyDeliveryPage() {
                     
                     <div className="p-6">
                       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid grid-cols-2 w-full mb-6 bg-[#F5EDE4]/30 p-1 rounded-xl">
+                        <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6 bg-[#F5EDE4]/30 p-1 rounded-[20px]">
                           <TabsTrigger 
                             value="description" 
-                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-[14px] py-3 transition-all duration-300"
                           >
                             {language === 'zh' ? '产品介绍' : 'Product Description'}
                           </TabsTrigger>
                           <TabsTrigger 
                             value="howItWorks" 
-                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-[14px] py-3 transition-all duration-300"
                           >
                             {language === 'zh' ? '如何运作' : 'How It Works'}
                           </TabsTrigger>
                         </TabsList>
+                        <div className="max-h-[50vh] overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                          <style jsx>{`
+                            div::-webkit-scrollbar {
+                              display: none;
+                            }
+                          `}</style>
                         
                         <TabsContent value="description" className="mt-0 space-y-4">
                           <div className="space-y-4">
@@ -464,6 +484,7 @@ export default function DailyDeliveryPage() {
                             <p className="text-sm text-[#6B5F53]/80 mt-2">我们提供多样化的菜单选择，满足您对不同口味的需求。每周更新菜单，让您的味蕾永远充满惊喜。</p>
                           </div>
                         </TabsContent>
+                        </div>
                       </Tabs>
                     </div>
                   </DialogContent>
@@ -482,16 +503,13 @@ export default function DailyDeliveryPage() {
                       className="group flex items-center gap-4 p-1"
                     >
                       <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center shadow-sm border border-[#C2884E]/10 group-hover:border-[#C2884E]/30 transition-all duration-300">
-                        <div className="text-[#C2884E] transform group-hover:scale-110 transition-transform duration-300">
+                        <div className="transform group-hover:scale-110 transition-transform duration-300">
                           {feature.icon}
                         </div>
                       </div>
                       <div className="flex-1">
                         <p className="text-base font-medium text-[#6B5F53] group-hover:text-[#C2884E] transition-colors duration-300">{feature.title}</p>
                         <p className="text-sm text-[#6B5F53]/80">{feature.description}</p>
-                      </div>
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#FBF7F2] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <ArrowRight className="w-3 h-3 text-[#C2884E]" />
                       </div>
                     </motion.div>
                   ))}
