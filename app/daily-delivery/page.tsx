@@ -421,7 +421,7 @@ export default function DailyDeliveryPage() {
                         {language === 'zh' ? '知道更多' : 'Learn More'}
                       </Button>
                     </DialogTrigger>
-                  <DialogContent className="sm:max-w-[900px] w-[90vw] p-0 rounded-[32px] overflow-hidden border-[#C2884E]/10">
+                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-[24px] overflow-hidden border-[#C2884E]/10">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
                       <DialogTitle className="text-2xl font-bold">
                         {language === 'zh' ? '每日配送计划详情' : 'Daily Delivery Plan Details'}
@@ -629,7 +629,7 @@ export default function DailyDeliveryPage() {
                       {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[900px] w-[90vw] p-0 rounded-[32px] overflow-hidden border-[#C2884E]/10">
+                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-[24px] overflow-hidden border-[#C2884E]/10">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
                       <DialogTitle className="text-2xl font-bold">
                         {language === 'zh' ? '本周菜单' : 'This Week\'s Menu'}
@@ -649,7 +649,7 @@ export default function DailyDeliveryPage() {
                     ) : (
                       <div className="flex flex-row h-full">
                         {/* Sidebar Day Navigation */}
-                        <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 p-4">
+                        <div className="w-1/6 min-w-[80px] border-r border-[#C2884E]/20 p-4">
                           <div className="sticky top-4 space-y-1">
                             {/* Week 1 Heading */}
                             <div className="px-3 py-2 mb-2">
@@ -733,7 +733,7 @@ export default function DailyDeliveryPage() {
                         </div>
                         
                         {/* Content Area */}
-                        <div className="w-4/5 p-6">
+                        <div className="w-5/6 p-6">
                           {/* Week Content */}
                           <div className="min-h-[400px]">
                             {selectedMenuDay && weeklyMenu[selectedMenuDay] ? (
@@ -748,7 +748,7 @@ export default function DailyDeliveryPage() {
                                   </p>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                   {weeklyMenu[selectedMenuDay].combos.map((combo, index) => (
                                   <div key={combo.id}>
                                     <div className="relative backdrop-blur-xl bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4] rounded-2xl p-5 border border-[#C2884E]/20 shadow-md transition-all duration-300 ease-out h-full">
@@ -781,7 +781,7 @@ export default function DailyDeliveryPage() {
                                             </TabsList>
                                             <TabsContent value="twoDish" className="mt-2 mb-0">
                                               <div className="mt-3">
-                                                <ul className="grid grid-cols-1 gap-2">
+                                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                   {combo.typeA.dishes.map((dish, i) => (
                                                     <li key={i} className="flex items-center">
                                                       <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{dish}</span>
@@ -793,7 +793,7 @@ export default function DailyDeliveryPage() {
                                             <TabsContent value="threeDish" className="mt-2 mb-0">
                                               <div className="mt-3">
                                                 {/* First show the 2-dish meals */}
-                                                <ul className="grid grid-cols-1 gap-2">
+                                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                   {combo.typeA.dishes.map((dish, i) => (
                                                     <li key={i} className="flex items-center">
                                                       <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{dish}</span>
@@ -805,7 +805,7 @@ export default function DailyDeliveryPage() {
                                                 <div className="text-xs font-medium mt-3 mb-2 text-[#6B5F53]/80 italic">
                                                   包含以上的所有菜品，再加:
                                                 </div>
-                                                <ul className="grid grid-cols-1 gap-2">
+                                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                   {combo.typeB.dishes
                                                     .filter(dish => !combo.typeA.dishes.includes(dish))
                                                     .map((dish, i) => (
