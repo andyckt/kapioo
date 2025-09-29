@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { 
@@ -10,7 +10,9 @@ import {
   Info, 
   Tag, 
   Utensils,
-  ChevronRight
+  ChevronRight,
+  CalendarDays,
+  Menu
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -42,11 +44,39 @@ interface VoucherPlan {
   savings?: string;
 }
 
+// Define types for the weekly menu
+interface ComboItem {
+  id: string;
+  name: string;
+  calories: number;
+  tags: string[];
+  typeA: {
+    dishes: string[];
+    voucherType: 'twoDish';
+  };
+  typeB: {
+    dishes: string[];
+    voucherType: 'threeDish';
+  };
+}
+
+interface DayData {
+  date: string;
+  displayName: string;
+  week: number;
+  combos: ComboItem[];
+}
+
 export default function DailyDeliveryPage() {
   const { t, language } = useLanguage()
   const [activeTab, setActiveTab] = useState('description')
   const [pricingTab, setPricingTab] = useState<'twoDish' | 'threeDish'>('twoDish')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [menuDialogOpen, setMenuDialogOpen] = useState(false)
+  const [weeklyMenu, setWeeklyMenu] = useState<Record<string, DayData>>({})
+  const [isMenuLoading, setIsMenuLoading] = useState(false)
+  const [activeWeek, setActiveWeek] = useState<number>(1)
+  const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
   
   // Define voucher plans
   const twoDishPlans: VoucherPlan[] = [
@@ -81,6 +111,104 @@ export default function DailyDeliveryPage() {
       }
     }
   }
+  
+  // Function to fetch weekly menu data
+  const fetchWeeklyMenu = async () => {
+    setIsMenuLoading(true)
+    try {
+      // Fetch active days
+      const daysResponse = await fetch('/api/days?isActive=true')
+      const daysData = await daysResponse.json()
+      
+      if (daysData.success) {
+        const formattedDays: Record<string, DayData> = {}
+        
+        // Process each day
+        for (const day of daysData.data) {
+          // Only include week 1 and 2 days
+          if (day.week <= 2) {
+            // Fetch combos for this day
+            const combosResponse = await fetch(`/api/days/${day.dayId}/combos`)
+            const combosData = await combosResponse.json()
+            
+            if (combosData.success) {
+              // Format combo data to match our component's expected structure
+              const formattedCombos = combosData.data.map((combo: any) => ({
+                id: combo.comboId,
+                name: combo.name,
+                calories: combo.calories,
+                tags: combo.tags,
+                typeA: combo.typeA,
+                typeB: combo.typeB
+              }))
+              
+              formattedDays[day.dayId] = {
+                date: day.date,
+                displayName: day.displayName,
+                week: day.week,
+                combos: formattedCombos
+              }
+            }
+          }
+        }
+        
+        setWeeklyMenu(formattedDays)
+      }
+    } catch (error) {
+      console.error('Error fetching weekly menu:', error)
+    } finally {
+      setIsMenuLoading(false)
+    }
+  }
+  
+  // Load menu data when dialog opens and initialize selected day
+  useEffect(() => {
+    if (menuDialogOpen) {
+      if (Object.keys(weeklyMenu).length === 0) {
+        fetchWeeklyMenu().then(() => {
+          // This will run after fetchWeeklyMenu completes
+          if (Object.keys(weeklyMenu).length > 0) {
+            // Find the first day of the active week
+            const firstDayOfWeek = Object.keys(weeklyMenu)
+              .filter(dayId => weeklyMenu[dayId].week === activeWeek)
+              .sort((a, b) => {
+                const dayOrder: Record<string, number> = { 
+                  'monday': 1, 'tuesday': 2, 'wednesday': 3, 
+                  'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7 
+                };
+                const dayA = weeklyMenu[a].displayName.toLowerCase();
+                const dayB = weeklyMenu[b].displayName.toLowerCase();
+                return (dayOrder[dayA] || 0) - (dayOrder[dayB] || 0);
+              })[0];
+              
+            if (firstDayOfWeek) {
+              setSelectedMenuDay(firstDayOfWeek);
+            }
+          }
+        });
+      } else {
+        // Menu data already loaded, just set selected day
+        const firstDayOfWeek = Object.keys(weeklyMenu)
+          .filter(dayId => weeklyMenu[dayId].week === activeWeek)
+          .sort((a, b) => {
+            const dayOrder: Record<string, number> = { 
+              'monday': 1, 'tuesday': 2, 'wednesday': 3, 
+              'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7 
+            };
+            const dayA = weeklyMenu[a].displayName.toLowerCase();
+            const dayB = weeklyMenu[b].displayName.toLowerCase();
+            return (dayOrder[dayA] || 0) - (dayOrder[dayB] || 0);
+          })[0];
+          
+        if (firstDayOfWeek) {
+          setSelectedMenuDay(firstDayOfWeek);
+        }
+      }
+    } else {
+      // Reset selected day when dialog closes
+      setSelectedMenuDay(null);
+    }
+  }, [menuDialogOpen, activeWeek, weeklyMenu])
 
   const features = [
     {
@@ -284,14 +412,15 @@ export default function DailyDeliveryPage() {
                     : 'Perfect for: Those who value freshness and daily prepared quality meals'}
                 </p>
                 
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-md"
-                    >
-                      {language === 'zh' ? '知道更多' : 'Learn More'}
-                    </Button>
-                  </DialogTrigger>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-md"
+                      >
+                        {language === 'zh' ? '知道更多' : 'Learn More'}
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent className="sm:max-w-[900px] w-[90vw] p-0 rounded-[32px] overflow-hidden border-[#C2884E]/10">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
                       <DialogTitle className="text-2xl font-bold">
@@ -489,6 +618,269 @@ export default function DailyDeliveryPage() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                
+                <Dialog open={menuDialogOpen} onOpenChange={setMenuDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline"
+                      className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 transition-all duration-300 flex items-center gap-2"
+                    >
+                      <Menu className="h-4 w-4" />
+                      {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[900px] w-[90vw] p-0 rounded-[32px] overflow-hidden border-[#C2884E]/10">
+                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
+                      <DialogTitle className="text-2xl font-bold">
+                        {language === 'zh' ? '本周菜单' : 'This Week\'s Menu'}
+                      </DialogTitle>
+                      <DialogDescription className="text-white/80 mt-2">
+                        {language === 'zh' ? '浏览我们本周的精选菜品' : 'Browse our selected dishes for this week'}
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    {isMenuLoading ? (
+                      <div className="flex justify-center items-center h-[300px]">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C2884E] mx-auto mb-4"></div>
+                          <p>{language === 'zh' ? '加载中...' : 'Loading...'}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-row h-full">
+                        {/* Sidebar Day Navigation */}
+                        <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 p-4">
+                          <div className="sticky top-4 space-y-1">
+                            {/* Week 1 Heading */}
+                            <div className="px-3 py-2 mb-2">
+                              <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4" />
+                                {language === 'zh' ? '第一周' : 'Week 1'}
+                              </h3>
+                            </div>
+                            
+                            {/* Week 1 Days */}
+                            {Object.keys(weeklyMenu)
+                              .filter(dayId => weeklyMenu[dayId].week === 1)
+                              .sort((a, b) => {
+                                const dayOrder: Record<string, number> = { 
+                                  'monday': 1, 'tuesday': 2, 'wednesday': 3, 
+                                  'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7 
+                                };
+                                const dayA = weeklyMenu[a].displayName.toLowerCase();
+                                const dayB = weeklyMenu[b].displayName.toLowerCase();
+                                return (dayOrder[dayA] || 0) - (dayOrder[dayB] || 0);
+                              })
+                              .map(dayId => (
+                                <button
+                                  key={dayId}
+                                  onClick={() => {
+                                    setActiveWeek(1);
+                                    setSelectedMenuDay(dayId);
+                                  }}
+                                  className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
+                                    ${selectedMenuDay === dayId ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
+                                >
+                                  <div className="w-full">
+                                    <p className="font-medium capitalize text-sm">{weeklyMenu[dayId].displayName.substring(0, 3)}</p>
+                                    <p className="text-xs opacity-80">{weeklyMenu[dayId].date}</p>
+                                  </div>
+                                </button>
+                              ))}
+                              
+                            {/* Week Separator */}
+                            <div className="mt-4 mb-2 px-3">
+                              <div className="h-px bg-[#C2884E]/50 w-full"></div>
+                            </div>
+                            
+                            {/* Week 2 Heading */}
+                            <div className="px-3 py-2 mb-2">
+                              <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4" />
+                                {language === 'zh' ? '第二周' : 'Week 2'}
+                              </h3>
+                            </div>
+                            
+                            {/* Week 2 Days */}
+                            {Object.keys(weeklyMenu)
+                              .filter(dayId => weeklyMenu[dayId].week === 2)
+                              .sort((a, b) => {
+                                const dayOrder: Record<string, number> = { 
+                                  'monday': 1, 'tuesday': 2, 'wednesday': 3, 
+                                  'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7 
+                                };
+                                const dayA = weeklyMenu[a].displayName.toLowerCase();
+                                const dayB = weeklyMenu[b].displayName.toLowerCase();
+                                return (dayOrder[dayA] || 0) - (dayOrder[dayB] || 0);
+                              })
+                              .map(dayId => (
+                                <button
+                                  key={dayId}
+                                  onClick={() => {
+                                    setActiveWeek(2);
+                                    setSelectedMenuDay(dayId);
+                                  }}
+                                  className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
+                                    ${selectedMenuDay === dayId ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
+                                >
+                                  <div className="w-full">
+                                    <p className="font-medium capitalize text-sm">{weeklyMenu[dayId].displayName.substring(0, 3)}</p>
+                                    <p className="text-xs opacity-80">{weeklyMenu[dayId].date}</p>
+                                  </div>
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                        
+                        {/* Content Area */}
+                        <div className="w-4/5 p-6">
+                          {/* Week Content */}
+                          <div className="min-h-[400px]">
+                            {selectedMenuDay && weeklyMenu[selectedMenuDay] ? (
+                              <div>
+                                {/* Day Header */}
+                                <div className="text-center mb-6">
+                                  <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1">
+                                    {weeklyMenu[selectedMenuDay].displayName}
+                                  </h3>
+                                  <p className="text-sm text-[#C2884E] font-medium">
+                                    {weeklyMenu[selectedMenuDay].date}
+                                  </p>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 gap-4">
+                                  {weeklyMenu[selectedMenuDay].combos.map((combo, index) => (
+                                  <div key={combo.id}>
+                                    <div className="relative backdrop-blur-xl bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4] rounded-2xl p-5 border border-[#C2884E]/20 shadow-md transition-all duration-300 ease-out h-full">
+                                      {/* Combo header */}
+                                      <div className="flex flex-wrap items-center justify-between mb-4">
+                                        <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{combo.name}</h3>
+                                        <div className="text-sm font-medium bg-[#C2884E]/5 px-2 py-1 rounded-md text-[#C2884E]">
+                                          {combo.calories} KCAL
+                                        </div>
+                                      </div>
+                                    
+                                      {/* Combo content */}
+                                      <div className="space-y-4">
+                                        {/* 2-Dish Voucher Option */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐2菜</span>
+                                            </div>
+                                          </div>
+                                          
+                                          <Tabs defaultValue="twoDish" className="w-full">
+                                            <TabsList className="hidden">
+                                              <TabsTrigger value="twoDish">
+                                                {language === 'zh' ? '2菜套餐' : '2-Dish Meal'}
+                                              </TabsTrigger>
+                                              <TabsTrigger value="threeDish">
+                                                {language === 'zh' ? '3菜套餐' : '3-Dish Meal'}
+                                              </TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="twoDish" className="mt-2 mb-0">
+                                              <div className="mt-3">
+                                                <ul className="grid grid-cols-1 gap-2">
+                                                  {combo.typeA.dishes.map((dish, i) => (
+                                                    <li key={i} className="flex items-center">
+                                                      <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{dish}</span>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            </TabsContent>
+                                            <TabsContent value="threeDish" className="mt-2 mb-0">
+                                              <div className="mt-3">
+                                                {/* First show the 2-dish meals */}
+                                                <ul className="grid grid-cols-1 gap-2">
+                                                  {combo.typeA.dishes.map((dish, i) => (
+                                                    <li key={i} className="flex items-center">
+                                                      <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{dish}</span>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                                
+                                                {/* Then show the additional dish for 3-dish meal */}
+                                                <div className="text-xs font-medium mt-3 mb-2 text-[#6B5F53]/80 italic">
+                                                  包含以上的所有菜品，再加:
+                                                </div>
+                                                <ul className="grid grid-cols-1 gap-2">
+                                                  {combo.typeB.dishes
+                                                    .filter(dish => !combo.typeA.dishes.includes(dish))
+                                                    .map((dish, i) => (
+                                                      <li key={i} className="flex items-center">
+                                                        <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{dish}</span>
+                                                      </li>
+                                                    ))}
+                                                </ul>
+                                              </div>
+                                            </TabsContent>
+                                          </Tabs>
+                                        </div>
+                                        
+                                        {/* Divider */}
+                                        <div className="my-3">
+                                          <div className="w-full border-t border-dashed border-[#6B5F53]/20"></div>
+                                        </div>
+                                        
+                                        {/* 3-Dish Voucher Option */}
+                                        <div>
+                                          <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐3菜</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Tags */}
+                                        <div className="flex flex-wrap gap-1 mt-3">
+                                          {combo.tags.map((tag, tagIndex) => (
+                                            <div
+                                              key={tagIndex}
+                                              className="transition-all duration-300"
+                                            >
+                                              <div className="px-2 py-1 rounded-full flex items-center bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-sm">
+                                                <span className="text-xs font-medium">{tag}</span>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex justify-center items-center h-[300px]">
+                                <div className="text-center">
+                                  <p className="text-[#6B5F53]">{language === 'zh' ? '请选择一天查看菜单' : 'Please select a day to view the menu'}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Note at the bottom */}
+                          <div className="mt-6 p-4 bg-[#FFF6EF] rounded-xl">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Info className="h-5 w-5 text-[#C2884E]" />
+                              <h3 className="font-medium text-[#C2884E]">
+                                {language === 'zh' ? '菜单说明' : 'Menu Information'}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-[#6B5F53]">
+                              {language === 'zh' 
+                                ? '菜单每周更新，以上为本周菜单。购买餐券后，您可以灵活选择每日配送的菜品和日期。' 
+                                : 'Menu is updated weekly. After purchasing vouchers, you can flexibly choose dishes and delivery dates.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+                </div>
               </div>
               
               {/* Right column - Feature tags */}
