@@ -3,9 +3,19 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { ArrowRight, Clock, Check, Info } from 'lucide-react'
+import { 
+  ArrowRight, 
+  Clock, 
+  Check, 
+  Info, 
+  Tag, 
+  Utensils,
+  ChevronRight
+} from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useLanguage } from '@/lib/language-context'
 import {
   Tooltip,
   TooltipContent,
@@ -13,8 +23,36 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+// Define types for voucher plans
+interface VoucherPlan {
+  id: string;
+  type: 'twoDish' | 'threeDish';
+  quantity: number;
+  price: number;
+  isPopular?: boolean;
+  pricePerMeal: number;
+  savings?: string;
+}
+
 export default function DailyDeliveryPage() {
+  const { t, language } = useLanguage()
   const [activeTab, setActiveTab] = useState('description')
+  const [pricingTab, setPricingTab] = useState<'twoDish' | 'threeDish'>('twoDish')
+  
+  // Define voucher plans
+  const twoDishPlans: VoucherPlan[] = [
+    { id: 'two-6', type: 'twoDish', quantity: 6, price: 131, pricePerMeal: 21.83 },
+    { id: 'two-10', type: 'twoDish', quantity: 10, price: 195, pricePerMeal: 19.50, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
+    { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18 },
+    { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48 }
+  ]
+
+  const threeDishPlans: VoucherPlan[] = [
+    { id: 'three-6', type: 'threeDish', quantity: 6, price: 150, pricePerMeal: 25.00 },
+    { id: 'three-10', type: 'threeDish', quantity: 10, price: 228, pricePerMeal: 22.80, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
+    { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95 },
+    { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78 }
+  ]
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -56,6 +94,130 @@ export default function DailyDeliveryPage() {
       icon: <Clock className="w-6 h-6 text-[#C2884E]" />
     }
   ]
+  
+  // Render the plan cards
+  const renderPlanCards = (plans: VoucherPlan[]) => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {plans.map((plan) => (
+          <motion.div
+            key={plan.id}
+            whileHover={{ y: -8, boxShadow: "0 10px 25px -5px rgba(194, 136, 78, 0.1), 0 8px 10px -6px rgba(194, 136, 78, 0.1)" }}
+            transition={{ duration: 0.3 }}
+            className="relative rounded-xl border overflow-hidden group border-[#C2884E]/10 hover:border-[#C2884E]/30"
+          >
+            {/* Popular badge */}
+            {plan.isPopular && (
+              <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
+                  {language === 'zh' ? '推荐' : 'Most Popular'}
+              </div>
+            )}
+            
+            {/* Savings badge */}
+            {plan.savings && !plan.isPopular && (
+              <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
+                {plan.savings}
+              </div>
+            )}
+            
+            {/* Card header */}
+            <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white p-5 relative overflow-hidden">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-white/20 p-1.5 rounded-full">
+                    <Utensils className="h-3 w-3" />
+                  </div>
+                  <span className="text-sm font-medium opacity-90">
+                    {plan.type === 'twoDish' 
+                      ? (language === 'zh' ? '每餐2菜' : '2-Dish Meal') 
+                      : (language === 'zh' ? '每餐3菜' : '3-Dish Meal')}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold">${plan.price}</span>
+                  <span className="text-sm opacity-80">
+                    / {plan.quantity} {language === 'zh' ? '餐券' : 'vouchers'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Card content */}
+            <div className="p-5 bg-gradient-to-b from-white to-[#F5EDE4]/20">
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Tag className="h-4 w-4 text-[#C2884E]" />
+                    <span className="text-sm font-medium text-[#6B5F53]">
+                      {language === 'zh' ? '餐券数量' : 'Vouchers'}
+                    </span>
+                  </div>
+                  <span className="font-bold text-[#C2884E]">{plan.quantity}</span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Tag className="h-4 w-4 text-[#C2884E]" />
+                    <span className="text-sm font-medium text-[#6B5F53]">
+                      {language === 'zh' ? '单价' : 'Per meal'}
+                    </span>
+                  </div>
+                  <span className="font-bold text-[#C2884E]">${plan.pricePerMeal.toFixed(2)}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2 mb-4 pt-3 border-t border-[#C2884E]/10">
+                {/* Show 首次推荐 as first tick if available */}
+                {plan.savings && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <span className="text-[#6B5F53]">{plan.savings}</span>
+                  </div>
+                )}
+                
+                {/* Show 可转让 as first tick for plans without savings */}
+                {!plan.savings && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <span className="text-[#6B5F53]">
+                      {language === 'zh' ? '可转让' : 'Transferable'}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Show 可转让 as second tick for plans with savings */}
+                {plan.savings && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <span className="text-[#6B5F53]">
+                      {language === 'zh' ? '可转让' : 'Transferable'}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Show Valid for 1 year as the last tick */}
+                <div className="flex items-start gap-2 text-sm">
+                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                  <span className="text-[#6B5F53]">
+                    {language === 'zh' ? '有效期1年' : 'Valid for 1 year'}
+                  </span>
+                </div>
+              </div>
+              
+              <Button
+                className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
+                asChild
+              >
+                <Link href="/starter">
+                  {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
+                </Link>
+              </Button>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
@@ -67,31 +229,37 @@ export default function DailyDeliveryPage() {
         
         <div className="container max-w-6xl mx-auto px-4">
           <motion.div 
-            className="flex flex-col md:flex-row items-center gap-8 md:gap-12"
+            className="flex flex-col items-center gap-8"
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
           >
-            {/* Left content */}
-            <motion.div className="flex-1 text-center md:text-left" variants={fadeIn}>
+            {/* Header content */}
+            <motion.div className="text-center max-w-3xl mx-auto" variants={fadeIn}>
               <div className="inline-flex items-center justify-center mb-4">
                 <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
-                  <span className="text-sm font-medium text-[#C2884E]">每日配送计划</span>
+                  <span className="text-sm font-medium text-[#C2884E]">
+                    {language === 'zh' ? '每日配送计划' : 'Daily Delivery Plan'}
+                  </span>
                 </div>
               </div>
               
               <h1 className="text-3xl md:text-5xl font-bold mb-6 text-[#6B5F53]">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                  每日新鲜
+                  {language === 'zh' ? '每日新鲜' : 'Daily Fresh'}
                 </span>
-                <span className="block mt-2">直送到家</span>
+                <span className="block mt-2">
+                  {language === 'zh' ? '直送到家' : 'Delivered to Your Door'}
+                </span>
               </h1>
               
-              <p className="text-lg md:text-xl text-[#6B5F53]/80 mb-8 max-w-lg">
-                适合：注重新鲜度，追求每日现做品质的你
+              <p className="text-lg md:text-xl text-[#6B5F53]/80 mb-8 max-w-lg mx-auto">
+                {language === 'zh' 
+                  ? '适合：注重新鲜度，追求每日现做品质的你' 
+                  : 'Perfect for: Those who value freshness and daily prepared quality meals'}
               </p>
               
-              <div className="flex flex-wrap gap-3 mb-8 justify-center md:justify-start">
+              <div className="flex flex-wrap gap-3 mb-8 justify-center">
                 {features.map((feature, index) => (
                   <div 
                     key={index} 
@@ -107,52 +275,106 @@ export default function DailyDeliveryPage() {
                   </div>
                 ))}
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                <Button 
-                  size="lg" 
-                  className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-105 transition-transform text-white shadow-md"
-                >
-                  立即订购 <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5"
-                >
-                  了解更多
-                </Button>
-              </div>
             </motion.div>
             
-            {/* Right content - Image */}
+            {/* Pricing Section */}
             <motion.div 
-              className="flex-1 mt-8 md:mt-0"
+              className="w-full mt-8"
               variants={fadeIn}
             >
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-[#C2884E]/10">
-                <div className="aspect-[4/3] relative">
-                  <Image 
-                    src="/Chinese style meal.jpg" 
-                    alt="Daily Fresh Meal" 
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    priority
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-[#C2884E]/10">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center">
-                        <Check className="w-5 h-5 text-[#C2884E]" />
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 md:p-8 shadow-xl border border-[#C2884E]/10">
+                <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center text-[#6B5F53]">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
+                    {language === 'zh' ? '餐券套餐' : 'Meal Voucher Plans'}
+                  </span>
+                </h2>
+                
+                <Tabs defaultValue={pricingTab} onValueChange={(v) => setPricingTab(v as 'twoDish' | 'threeDish')} className="w-full">
+                  <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-8 bg-[#F5EDE4]/30 p-1 rounded-xl">
+                    <TabsTrigger 
+                      value="twoDish" 
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Utensils className="h-4 w-4" />
+                        {language === 'zh' ? '每餐2菜' : '2-Dish Meal'}
                       </div>
-                      <p className="font-medium text-[#6B5F53]">新鲜送达</p>
-                    </div>
-                    <p className="text-sm text-[#6B5F53]/80">每日新鲜现做，直送上门，满分新鲜度</p>
-                  </div>
-                </div>
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="threeDish" 
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-lg py-3 transition-all duration-300"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Utensils className="h-4 w-4" />
+                        {language === 'zh' ? '每餐3菜' : '3-Dish Meal'}
+                      </div>
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="twoDish" className="mt-0">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {renderPlanCards(twoDishPlans)}
+                      
+                      {/* Payment method and tax information */}
+                      <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <h4 className="font-medium text-amber-800 mb-2">
+                          {language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}
+                        </h4>
+                        <ul className="space-y-2 text-sm text-amber-700">
+                          <li className="flex items-start gap-2">
+                            <div className="min-w-[20px] mt-0.5">•</div>
+                            <div>
+                              {language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <div className="min-w-[20px] mt-0.5">•</div>
+                            <div>
+                              {language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                    </motion.div>
+                  </TabsContent>
+                  
+                  <TabsContent value="threeDish" className="mt-0">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {renderPlanCards(threeDishPlans)}
+                      
+                      {/* Payment method and tax information */}
+                      <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <h4 className="font-medium text-amber-800 mb-2">
+                          {language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}
+                        </h4>
+                        <ul className="space-y-2 text-sm text-amber-700">
+                          <li className="flex items-start gap-2">
+                            <div className="min-w-[20px] mt-0.5">•</div>
+                            <div>
+                              {language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <div className="min-w-[20px] mt-0.5">•</div>
+                            <div>
+                              {language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                    </motion.div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </motion.div>
           </motion.div>
