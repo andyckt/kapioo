@@ -192,7 +192,7 @@ export default function StarterPage() {
                           
                           <div className="pt-4">
                             <Button className="bg-white hover:bg-white/90 text-[#C2884E] hover:text-[#C2884E] hover:scale-105 transition-transform">
-                              <Link href="/login" className="flex items-center justify-center w-full">
+                              <Link href="/daily-plan" className="flex items-center justify-center w-full">
                                 {language === 'zh' ? '选择此计划' : 'Select This Plan'}
                               </Link>
                             </Button>
