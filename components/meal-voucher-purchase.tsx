@@ -88,8 +88,10 @@ export default function MealVoucherPurchase() {
 
   // Handle plan selection
   const handlePlanSelect = (plan: VoucherPlan) => {
+    console.log('MealVoucherPurchase - Plan selected:', plan)
     setSelectedPlan(plan)
     setPurchaseStep('upload')
+    console.log('MealVoucherPurchase - Purchase step set to upload')
   }
 
   // Handle file upload to AWS S3
@@ -869,7 +871,67 @@ export default function MealVoucherPurchase() {
     
     fetchVoucherBalance()
     fetchPurchaseHistory()
-  }, [])
+    
+    // Check URL parameters for plan selection
+    const urlParams = new URLSearchParams(window.location.search)
+    const shouldSelectPlan = urlParams.get('selectPlan') === 'true'
+    const urlPlanId = urlParams.get('plan')
+    
+    // Debug logging
+    console.log('MealVoucherPurchase - URL Parameters:', {
+      search: window.location.search,
+      shouldSelectPlan,
+      urlPlanId,
+      allPlans: [...twoDishPlans, ...threeDishPlans].map(p => p.id)
+    })
+    
+    if (shouldSelectPlan) {
+      // First check if there's a plan ID in the URL
+      if (urlPlanId) {
+        // Find the matching plan in our available plans
+        const allPlans = [...twoDishPlans, ...threeDishPlans]
+        const matchingPlan = allPlans.find(p => p.id === urlPlanId)
+        
+        if (matchingPlan) {
+          // Set the active tab based on the plan type
+          setActiveTab(matchingPlan.type)
+          
+          // Auto-select the plan and move to upload step
+          setTimeout(() => {
+            handlePlanSelect(matchingPlan)
+          }, 500)
+        }
+      }
+      // If no plan ID in URL, check localStorage as fallback
+      else {
+        const storedPlanData = localStorage.getItem('selectedMealPlan')
+        if (storedPlanData) {
+          try {
+            const planData = JSON.parse(storedPlanData)
+            
+            // Find the matching plan in our available plans
+            const planType = planData.type as 'twoDish' | 'threeDish'
+            setActiveTab(planType)
+            
+            // Find the specific plan by ID
+            const plans = planType === 'twoDish' ? twoDishPlans : threeDishPlans
+            const matchingPlan = plans.find(p => p.id === planData.id)
+            
+            if (matchingPlan) {
+              // Auto-select the plan and move to upload step
+              setTimeout(() => {
+                handlePlanSelect(matchingPlan)
+                // Clear the stored plan to prevent auto-selection on future visits
+                localStorage.removeItem('selectedMealPlan')
+              }, 500)
+            }
+          } catch (error) {
+            console.error('Error parsing stored plan data:', error)
+          }
+        }
+      }
+    }
+  }, [twoDishPlans, threeDishPlans])
 
   return (
     <div className="flex flex-col h-full space-y-6">

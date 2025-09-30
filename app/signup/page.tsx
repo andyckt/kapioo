@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -21,6 +21,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [fromPage, setFromPage] = useState<string | null>(null)
   const [errors, setErrors] = useState({
     name: "",
     email: "",
@@ -31,6 +32,20 @@ export default function SignupPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { t } = useLanguage()
+  
+  // State to store the plan identifier
+  const [planIdentifier, setPlanIdentifier] = useState<string | null>(null)
+
+  // Check for URL parameters on component mount
+  useEffect(() => {
+    // Get parameters from the URL
+    const params = new URLSearchParams(window.location.search)
+    const fromParam = params.get('from')
+    const planParam = params.get('plan')
+    
+    setFromPage(fromParam)
+    setPlanIdentifier(planParam)
+  }, [])
 
   const validateForm = () => {
     let isValid = true
@@ -110,8 +125,23 @@ export default function SignupPage() {
           userId: result.data.userID
         }));
         
-        // Redirect to verification page without toast
-        router.push('/verify-email-sent');
+        // Build the redirect URL with parameters
+        let redirectUrl = '/verify-email-sent';
+        const params = [];
+        
+        if (fromPage) {
+          params.push(`from=${fromPage}`);
+        }
+        
+        if (planIdentifier) {
+          params.push(`plan=${planIdentifier}`);
+        }
+        
+        if (params.length > 0) {
+          redirectUrl += '?' + params.join('&');
+        }
+        
+        router.push(redirectUrl);
       } else {
         // Show error toast only for failures
         toast({

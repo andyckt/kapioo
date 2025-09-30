@@ -20,7 +20,22 @@ export default function VerifyEmailSentPage() {
   const [isVerifying, setIsVerifying] = useState(false)
   const [verificationStatus, setVerificationStatus] = useState<"idle" | "success" | "error">("idle")
   const [errorMessage, setErrorMessage] = useState("")
+  const [fromPage, setFromPage] = useState<string | null>(null)
   const { toast } = useToast()
+  
+  // State to store the plan identifier
+  const [planIdentifier, setPlanIdentifier] = useState<string | null>(null)
+  
+  // Check for URL parameters on component mount
+  useEffect(() => {
+    // Get parameters from the URL
+    const params = new URLSearchParams(window.location.search)
+    const fromParam = params.get('from')
+    const planParam = params.get('plan')
+    
+    setFromPage(fromParam)
+    setPlanIdentifier(planParam)
+  }, [])
   
   useEffect(() => {
     // Get pending user email from localStorage
@@ -112,6 +127,13 @@ export default function VerifyEmailSentPage() {
           
           // Store authentication state
           localStorage.setItem('isAuthenticated', 'true')
+          
+          // Check if there was a meal plan selection before signup
+          const selectedMealPlan = localStorage.getItem('selectedMealPlan')
+          if (selectedMealPlan) {
+            // We'll handle the redirection to meal purchase in the success UI
+            // This allows us to show the success message first
+          }
         }
         
         // Clear any pending user data
@@ -147,6 +169,10 @@ export default function VerifyEmailSentPage() {
   const renderContent = () => {
     switch (verificationStatus) {
       case "success":
+        // Check if there was a meal plan selection before signup
+        const selectedMealPlan = localStorage.getItem('selectedMealPlan')
+        const hasMealPlan = !!selectedMealPlan || fromPage === 'daily-delivery'
+        
         return (
           <>
             <CardHeader className="pb-4">
@@ -157,23 +183,34 @@ export default function VerifyEmailSentPage() {
             </CardHeader>
             <CardContent className="text-center pb-6">
               <p className="text-muted-foreground mb-4">
-                您的邮箱已成功验证。您现在可以进入您的账户或设置您的配送地址。
+                {hasMealPlan 
+                  ? "您的邮箱已成功验证。您可以继续购买您之前选择的餐券计划。" 
+                  : "您的邮箱已成功验证。您现在可以进入您的账户或设置您的配送地址。"
+                }
               </p>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
-              <Button 
-                onClick={() => router.push('/address')} 
-                className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
-              >
-                继续设置地址
-              </Button>
-              <Button 
-                onClick={() => router.push('/dashboard')} 
-                variant="outline" 
-                className="w-full"
-              >
-                进入 Kapioo
-              </Button>
+              {hasMealPlan ? (
+                <Button 
+                  onClick={() => {
+                    // Build URL with plan parameter if available
+                    const url = planIdentifier 
+                      ? `/dashboard?tab=meal-vouchers&selectPlan=true&plan=${planIdentifier}`
+                      : '/dashboard?tab=meal-vouchers&selectPlan=true';
+                    router.push(url);
+                  }}
+                  className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                >
+                  继续购买餐券
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => router.push('/address')} 
+                  className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                >
+                  继续设置地址
+                </Button>
+              )}
             </CardFooter>
           </>
         )

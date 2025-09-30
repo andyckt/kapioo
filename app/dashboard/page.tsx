@@ -147,7 +147,18 @@ export default function DashboardPage() {
     nickname: '',
     email: '',
     phone: ''
-  });
+  })
+  
+  // Initialize activeTab from URL parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const tabParam = urlParams.get('tab')
+      if (tabParam) {
+        setActiveTab(tabParam)
+      }
+    }
+  }, []);
 
   const [addressInfo, setAddressInfo] = useState({
     unitNumber: '',

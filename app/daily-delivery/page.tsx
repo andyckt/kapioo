@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import { 
   ArrowRight, 
   Clock, 
@@ -68,6 +69,7 @@ interface DayData {
 }
 
 export default function DailyDeliveryPage() {
+  const router = useRouter()
   const { t, language } = useLanguage()
   const [activeTab, setActiveTab] = useState('description')
   const [pricingTab, setPricingTab] = useState<'twoDish' | 'threeDish'>('twoDish')
@@ -77,6 +79,14 @@ export default function DailyDeliveryPage() {
   const [isMenuLoading, setIsMenuLoading] = useState(false)
   const [activeWeek, setActiveWeek] = useState<number>(1)
   const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  
+  // Check if user is authenticated on component mount
+  useEffect(() => {
+    const authStatus = localStorage.getItem('isAuthenticated')
+    const userData = localStorage.getItem('user')
+    setIsAuthenticated(authStatus === 'true' && !!userData)
+  }, [])
   
   // Define voucher plans
   const twoDishPlans: VoucherPlan[] = [
@@ -112,6 +122,35 @@ export default function DailyDeliveryPage() {
     }
   }
   
+  // Handle plan selection and redirection
+  const handlePlanSelect = (plan: VoucherPlan) => {
+    // Create a plan identifier
+    const planIdentifier = `plan=${plan.id}`
+    
+    // Store the selected plan in localStorage
+    localStorage.setItem('selectedMealPlan', JSON.stringify({
+      id: plan.id,
+      type: plan.type,
+      quantity: plan.quantity,
+      price: plan.price,
+      pricePerMeal: plan.pricePerMeal,
+      isPopular: plan.isPopular || false,
+      savings: plan.savings || null
+    }))
+    
+    // Check if user is authenticated by directly checking localStorage
+    const authStatus = localStorage.getItem('isAuthenticated')
+    const userData = localStorage.getItem('user')
+    
+    if (authStatus === 'true' && userData) {
+      // If authenticated and user data exists, redirect to dashboard meal-vouchers tab with plan selection
+      router.push(`/dashboard?tab=meal-vouchers&selectPlan=true&${planIdentifier}`)
+    } else {
+      // If not authenticated or no user data, redirect to signup with plan identifier
+      router.push(`/signup?from=daily-delivery&${planIdentifier}`)
+    }
+  }
+
   // Function to fetch weekly menu data
   const fetchWeeklyMenu = async () => {
     setIsMenuLoading(true)
@@ -357,11 +396,9 @@ export default function DailyDeliveryPage() {
               
               <Button
                 className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
-                asChild
+                onClick={() => handlePlanSelect(plan)}
               >
-                <Link href="/starter">
-                  {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
-                </Link>
+                {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
               </Button>
             </div>
           </motion.div>
