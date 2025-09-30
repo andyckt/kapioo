@@ -63,20 +63,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [notes, setNotes] = useState('')
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   
-  // Listen for the custom event to open the info dialog
-  useEffect(() => {
-    const handleOpenInfoDialog = () => {
-      setHowItWorksOpen(true)
-    }
-    
-    document.addEventListener('openInfoDialog', handleOpenInfoDialog)
-    
-    // Clean up the event listener when component unmounts
-    return () => {
-      document.removeEventListener('openInfoDialog', handleOpenInfoDialog)
-    }
-  }, [])
-
   // Define plan options based on the image provided
   const planOptions: PlanOption[] = [
     // 1 week options
@@ -148,6 +134,83 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
 
   // Get filtered plans based on selected meals per week
   const filteredPlans = planOptions.filter(plan => plan.mealsPerWeek === selectedMealsPerWeek)
+  
+  // Listen for the custom event to open the info dialog
+  useEffect(() => {
+    const handleOpenInfoDialog = () => {
+      setHowItWorksOpen(true)
+    }
+    
+    document.addEventListener('openInfoDialog', handleOpenInfoDialog)
+    
+    // Clean up the event listener when component unmounts
+    return () => {
+      document.removeEventListener('openInfoDialog', handleOpenInfoDialog)
+    }
+  }, [])
+  
+  // Check URL parameters for plan selection
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const shouldSelectPlan = urlParams.get('selectPlan') === 'true'
+      const urlPlanId = urlParams.get('plan')
+      
+      // Debug logging
+      console.log('CreditPurchasePlans - URL Parameters:', {
+        search: window.location.search,
+        shouldSelectPlan,
+        urlPlanId,
+        allPlans: planOptions.map(p => p.id)
+      })
+      
+      if (shouldSelectPlan) {
+        // First check if there's a plan ID in the URL
+        if (urlPlanId) {
+          // Find the matching plan in our available plans
+          const matchingPlan = planOptions.find(p => p.id === urlPlanId)
+          
+          if (matchingPlan) {
+            // Set the meals per week based on the plan
+            setSelectedMealsPerWeek(matchingPlan.mealsPerWeek as 6 | 10)
+            
+            // Auto-select the plan and move to upload step
+            setTimeout(() => {
+              handlePlanSelect(matchingPlan)
+            }, 500)
+          }
+        }
+        // If no plan ID in URL, check localStorage as fallback
+        else {
+          const storedPlanData = localStorage.getItem('selectedMealPlan')
+          if (storedPlanData) {
+            try {
+              const planData = JSON.parse(storedPlanData)
+              
+              // Set the meals per week based on the stored plan
+              if (planData.mealsPerWeek) {
+                setSelectedMealsPerWeek(planData.mealsPerWeek as 6 | 10)
+              }
+              
+              // Find the specific plan by ID
+              const matchingPlan = planOptions.find(p => p.id === planData.id)
+              
+              if (matchingPlan) {
+                // Auto-select the plan and move to upload step
+                setTimeout(() => {
+                  handlePlanSelect(matchingPlan)
+                  // Clear the stored plan to prevent auto-selection on future visits
+                  localStorage.removeItem('selectedMealPlan')
+                }, 500)
+              }
+            } catch (error) {
+              console.error('Error parsing stored plan data:', error)
+            }
+          }
+        }
+      }
+    }
+  }, [])
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

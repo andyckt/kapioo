@@ -171,7 +171,10 @@ export default function VerifyEmailSentPage() {
       case "success":
         // Check if there was a meal plan selection before signup
         const selectedMealPlan = localStorage.getItem('selectedMealPlan')
-        const hasMealPlan = !!selectedMealPlan || fromPage === 'daily-delivery'
+        const hasMealPlan = !!selectedMealPlan || fromPage === 'daily-delivery' || fromPage === 'weekly-meal'
+        
+        // Determine which tab to redirect to based on the source page
+        const targetTab = fromPage === 'daily-delivery' ? 'meal-vouchers' : 'credits'
         
         return (
           <>
@@ -195,8 +198,8 @@ export default function VerifyEmailSentPage() {
                   onClick={() => {
                     // Build URL with plan parameter if available
                     const url = planIdentifier 
-                      ? `/dashboard?tab=meal-vouchers&selectPlan=true&plan=${planIdentifier}`
-                      : '/dashboard?tab=meal-vouchers&selectPlan=true';
+                      ? `/dashboard?tab=${targetTab}&selectPlan=true&plan=${planIdentifier}`
+                      : `/dashboard?tab=${targetTab}&selectPlan=true`;
                     router.push(url);
                   }}
                   className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"

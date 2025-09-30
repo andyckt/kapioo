@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 import { 
   Calendar,
   Star,
@@ -35,9 +36,17 @@ interface PlanOption {
 }
 
 export default function WeeklyMealPage() {
+  const router = useRouter()
   const { t, language } = useLanguage()
   const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 10>(6)
-  // No dialog state needed
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  
+  // Check if user is authenticated on component mount
+  useEffect(() => {
+    const authStatus = localStorage.getItem('isAuthenticated')
+    const userData = localStorage.getItem('user')
+    setIsAuthenticated(authStatus === 'true' && !!userData)
+  }, [])
 
   // Define plan options based on the credit-purchase-plans component
   const planOptions: PlanOption[] = [
@@ -111,6 +120,36 @@ export default function WeeklyMealPage() {
   // Get filtered plans based on selected meals per week
   const filteredPlans = planOptions.filter(plan => plan.mealsPerWeek === selectedMealsPerWeek)
 
+  // Handle plan selection and redirection
+  const handlePlanSelect = (plan: PlanOption) => {
+    // Create a plan identifier
+    const planIdentifier = `plan=${plan.id}`
+    
+    // Store the selected plan in localStorage
+    localStorage.setItem('selectedMealPlan', JSON.stringify({
+      id: plan.id,
+      duration: plan.duration,
+      mealsPerWeek: plan.mealsPerWeek,
+      totalPrice: plan.totalPrice,
+      pricePerMeal: plan.pricePerMeal,
+      isRecommended: plan.isRecommended || false,
+      tag: plan.tag || null,
+      tagZh: plan.tagZh || null
+    }))
+    
+    // Check if user is authenticated by directly checking localStorage
+    const authStatus = localStorage.getItem('isAuthenticated')
+    const userData = localStorage.getItem('user')
+    
+    if (authStatus === 'true' && userData) {
+      // If authenticated and user data exists, redirect to dashboard credits tab with plan selection
+      router.push(`/dashboard?tab=credits&selectPlan=true&${planIdentifier}`)
+    } else {
+      // If not authenticated or no user data, redirect to signup with plan identifier
+      router.push(`/signup?from=weekly-meal&${planIdentifier}`)
+    }
+  }
+  
   // Define features for the hero section
   const features = [
     {
@@ -327,6 +366,7 @@ export default function WeeklyMealPage() {
                         <CardFooter>
                           <Button 
                             className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
+                            onClick={() => handlePlanSelect(plan)}
                           >
                             {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
                           </Button>
