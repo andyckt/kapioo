@@ -5,6 +5,7 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { ChevronDown } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
+import { useRouter } from "next/navigation"
 
 // Location types
 type Location = 
@@ -42,6 +43,7 @@ interface MealPlan {
 }
 
 export default function LocationMealPlans() {
+  const router = useRouter()
   const [selectedLocation, setSelectedLocation] = useState<Location>("Downtown")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -226,13 +228,17 @@ export default function LocationMealPlans() {
           {getAvailablePlans().map((plan, index) => (
             <motion.div 
               key={plan.id}
-              className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700"
+              className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700 cursor-pointer"
               initial={{ opacity: 0, y: 40 }}
               animate={isVisible ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.7, delay: 0.7 + index * 0.2 }}
               whileHover={{ 
                 y: -5,
                 boxShadow: "0 25px 50px -12px rgba(194, 136, 78, 0.25)"
+              }}
+              onClick={() => {
+                // Redirect to the appropriate page based on plan.id
+                router.push(plan.id === "weekly" ? "/weekly-meal" : "/daily-delivery");
               }}
             >
               <motion.div 
@@ -271,6 +277,14 @@ export default function LocationMealPlans() {
                       viewport={{ once: true }}
                       transition={{ duration: 0.7 }}
                     ></motion.div>
+                  </div>
+                  <div className="pt-2">
+                    <span className="inline-flex items-center text-white text-sm font-medium">
+                      {language === 'en' ? 'Select this plan' : '选择此计划'} 
+                      <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </span>
                   </div>
                 </motion.div>
               </div>
