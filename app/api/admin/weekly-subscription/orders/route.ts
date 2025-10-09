@@ -80,14 +80,8 @@ const WeeklyOrderSchema = new mongoose.Schema({
 });
 
 // Create the model
-let WeeklyOrder: mongoose.Model<WeeklyOrderDocument>;
-try {
-  // Check if the model already exists
-  WeeklyOrder = mongoose.models.WeeklyOrder as mongoose.Model<WeeklyOrderDocument>;
-} catch (error) {
-  // Create the model if it doesn't exist
-  WeeklyOrder = mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
-}
+const WeeklyOrder = mongoose.models.WeeklyOrder || 
+  mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
 
 // GET handler - get all weekly subscription orders with pagination and filtering
 export async function GET(request: Request) {
