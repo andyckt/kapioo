@@ -89,14 +89,8 @@ const DailyDeliveryOrderSchema = new mongoose.Schema({
 });
 
 // Create the model
-let DailyDeliveryOrder: mongoose.Model<DailyOrderDocument>;
-try {
-  // Check if the model already exists
-  DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder as mongoose.Model<DailyOrderDocument>;
-} catch (error) {
-  // Create the model if it doesn't exist
-  DailyDeliveryOrder = mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
-}
+const DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder || 
+  mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
 
 // GET handler - get all orders with pagination and filtering
 export async function GET(request: Request) {
