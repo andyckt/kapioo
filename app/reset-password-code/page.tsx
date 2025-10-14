@@ -409,13 +409,6 @@ export default function ResetPasswordCodePage() {
               <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
             </Link>
             <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
-            <p className="text-muted-foreground">
-              {step === 'code' 
-                ? "Enter the verification code sent to your email" 
-                : resetSuccess 
-                  ? "Your password has been reset successfully"
-                  : "Create a new password for your account"}
-            </p>
           </div>
           
           <div className="grid gap-7">
@@ -427,13 +420,6 @@ export default function ResetPasswordCodePage() {
                   : renderPasswordForm()}
             </div>
             
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                Remember your password? <Link href="/login" className="font-medium hover:underline text-primary">
-                  Login here
-                </Link>
-              </p>
-            </div>
           </div>
         </motion.div>
       </div>

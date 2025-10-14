@@ -127,11 +127,6 @@ export default function ForgotPasswordPage() {
               <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
             </Link>
             <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
-            <p className="text-muted-foreground">
-              {isSubmitted 
-                ? "Check your email for the verification code"
-                : "Enter your email address to receive a password reset code"}
-            </p>
           </div>
           
           <div className="grid gap-7">
@@ -197,13 +192,6 @@ export default function ForgotPasswordPage() {
               </form>
             )}
             
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                Remember your password? <Link href="/login" className="font-medium hover:underline text-primary">
-                  Login here
-                </Link>
-              </p>
-            </div>
           </div>
         </motion.div>
       </div>
