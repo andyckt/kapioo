@@ -33,13 +33,6 @@ export default function SectionNavigation() {
       }
     },
     {
-      id: "weekly-menu",
-      label: {
-        en: "Weekly Menu",
-        zh: "本周菜单"
-      }
-    },
-    {
       id: "reviews",
       label: {
         en: "Reviews",

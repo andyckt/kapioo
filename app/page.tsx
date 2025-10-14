@@ -11,7 +11,6 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import CustomerReviewsSection from "@/components/customer-reviews-section"
 import HowItWorksSection from "@/components/how-it-works-section"
-import WeeklyMenuSection from "@/components/weekly-menu-section"
 import LocationMealPlans from "@/components/location-meal-plans"
 import SectionNavigation from "@/components/section-navigation"
 import { MaintenanceNotification } from "@/components/maintenance-notification"
@@ -475,11 +474,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-        
-        {/* Weekly Menu Section - MOVED */}
-        <div id="weekly-menu">
-          <WeeklyMenuSection />
-        </div>
         
         {/* Customer Reviews Section */}
         <div id="reviews">
