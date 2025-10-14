@@ -44,7 +44,7 @@ interface MealPlan {
 
 export default function LocationMealPlans() {
   const router = useRouter()
-  const [selectedLocation, setSelectedLocation] = useState<Location>("Downtown")
+  const [selectedLocation, setSelectedLocation] = useState<Location | "">("")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const { language, t } = useLanguage()
@@ -85,7 +85,9 @@ export default function LocationMealPlans() {
   
   // Get available plans based on location
   const getAvailablePlans = (): MealPlan[] => {
-    if (FULL_SERVICE_LOCATIONS.includes(selectedLocation)) {
+    if (selectedLocation === "") {
+      return [weeklyPlan]
+    } else if (FULL_SERVICE_LOCATIONS.includes(selectedLocation as Location)) {
       return [weeklyPlan, dailyPlan]
     } else {
       return [weeklyPlan]
@@ -93,7 +95,7 @@ export default function LocationMealPlans() {
   }
   
   // Location display names
-  const getLocationDisplayName = (location: Location): string => {
+  const getLocationDisplayName = (location: Location | ""): string => {
     return location
   }
   
@@ -184,7 +186,7 @@ export default function LocationMealPlans() {
                   {language === 'en' ? 'I am based in' : '我位于'}
                 </span>
                 <span className="text-[#C2884E] font-medium border-b-2 border-[#C2884E]/30 px-2 min-w-[120px] text-center text-xl md:text-2xl">
-                  {getLocationDisplayName(selectedLocation)}
+                  {getLocationDisplayName(selectedLocation) || "___________"}
                 </span>
                 <ChevronDown 
                   className={`h-5 w-5 ml-1 text-[#C2884E] transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} 
@@ -224,8 +226,8 @@ export default function LocationMealPlans() {
 
         
         {/* Meal Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {getAvailablePlans().map((plan, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto min-h-[400px]">
+          {selectedLocation ? getAvailablePlans().map((plan, index) => (
             <motion.div 
               key={plan.id}
               className="group relative rounded-2xl overflow-hidden shadow-xl h-[400px] transform transition-all duration-700 cursor-pointer"
@@ -289,7 +291,13 @@ export default function LocationMealPlans() {
                 </motion.div>
               </div>
             </motion.div>
-          ))}
+          )) : (
+            <div className="col-span-1 md:col-span-2 flex items-center justify-center h-[400px]">
+              <div className="text-center text-[#6B5F53] text-lg md:text-xl opacity-70">
+                {language === 'en' ? 'Please select a location to view available meal plans' : '请选择位置以查看可用的餐饮计划'}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
