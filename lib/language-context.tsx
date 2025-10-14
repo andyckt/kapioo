@@ -48,7 +48,9 @@ type TranslationKey =
   | 'loginSuccess' | 'welcomeBack' | 'loginFailed' | 'invalidCredentials' | 'loginError'
   // Signup page translations
   | 'createAccount' | 'enterDetails' | 'fullName' | 'phoneNumber' | 'enterPhoneNumber'
-  | 'confirmPassword' | 'continueBtn' | 'alreadyHaveAccount'
+  | 'confirmPassword' | 'continueBtn' | 'alreadyHaveAccount' | 'loginHere'
+  | 'nameRequired' | 'emailRequired' | 'validEmailRequired' | 'passwordRequired' | 'passwordLength'
+  | 'passwordsDoNotMatch' | 'registrationFailed' | 'somethingWentWrong' | 'registrationError' | 'creatingAccount'
   // Address page translations
   | 'deliveryAddress' | 'whereDeliver' | 'unitNumber' | 'streetAddress' | 'city'
   | 'postalCode' | 'province' | 'country' | 'buzzCode' | 'completeRegistration'
@@ -276,6 +278,17 @@ const translations: TranslationsType = {
     confirmPassword: "确认密码",
     continueBtn: "继续",
     alreadyHaveAccount: "已经有账户？",
+    loginHere: "登录",
+    nameRequired: "请输入姓名",
+    emailRequired: "请输入电子邮箱",
+    validEmailRequired: "请输入有效的电子邮箱",
+    passwordRequired: "请输入密码",
+    passwordLength: "密码长度至少为6个字符",
+    passwordsDoNotMatch: "两次输入的密码不一致",
+    registrationFailed: "注册失败",
+    somethingWentWrong: "出现了问题",
+    registrationError: "注册过程中发生错误",
+    creatingAccount: "创建账户中...",
     
     // Address page
     deliveryAddress: "送货地址",
@@ -613,6 +626,17 @@ const translations: TranslationsType = {
     confirmPassword: "Confirm Password",
     continueBtn: "Continue",
     alreadyHaveAccount: "Already have an account?",
+    loginHere: "Sign in",
+    nameRequired: "Name is required",
+    emailRequired: "Email address is required",
+    validEmailRequired: "Please enter a valid email address",
+    passwordRequired: "Password is required",
+    passwordLength: "Password must be at least 6 characters",
+    passwordsDoNotMatch: "Passwords do not match",
+    registrationFailed: "Registration failed",
+    somethingWentWrong: "Something went wrong",
+    registrationError: "An error occurred during registration",
+    creatingAccount: "Creating account...",
     
     // Address page
     deliveryAddress: "Delivery Address",

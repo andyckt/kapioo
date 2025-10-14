@@ -198,7 +198,6 @@ export default function SignupPage() {
               <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
             </Link>
             <h1 className="text-2xl font-bold">{t('createAccount')}</h1>
-            <p className="text-muted-foreground">{t('enterDetails')}</p>
           </div>
           
           <div className="grid gap-7">
@@ -297,9 +296,8 @@ export default function SignupPage() {
             
             <div className="text-center space-y-3">
               <p className="text-base">
-                <span className="text-muted-foreground">{t('alreadyHaveAccount')} </span>
-                <Link href="/login" className="font-medium hover:underline text-primary">
-                  {t('loginHere')}
+                <Link href="/login" className="text-muted-foreground hover:text-primary transition-colors">
+                  {t('alreadyHaveAccount')} <span className="font-medium text-primary hover:underline">{t('loginHere')}</span>
                 </Link>
               </p>
             </div>
