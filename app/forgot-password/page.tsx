@@ -65,11 +65,15 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (result.success) {
-        setIsSubmitted(true)
+        // Store the email in localStorage for the reset code page
+        localStorage.setItem('resetPasswordEmail', email.trim());
+        
+        // Redirect to the reset code page
+        router.push('/reset-password-code');
         
         toast({
-          title: "Reset link sent",
-          description: "Check your email for the password reset link",
+          title: "Verification code sent",
+          description: "Check your email for the 6-digit verification code",
         });
       } else {
         toast({
@@ -125,8 +129,8 @@ export default function ForgotPasswordPage() {
             <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
             <p className="text-muted-foreground">
               {isSubmitted 
-                ? "Check your email for the reset link"
-                : "Enter your email address to receive a password reset link"}
+                ? "Check your email for the verification code"
+                : "Enter your email address to receive a password reset code"}
             </p>
           </div>
           
@@ -154,7 +158,7 @@ export default function ForgotPasswordPage() {
                         Resending...
                       </>
                     ) : (
-                      "Resend reset link"
+                      "Resend reset code"
                     )}
                   </Button>
                   <Button 
@@ -187,7 +191,7 @@ export default function ForgotPasswordPage() {
                     className="w-full h-11 mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base" 
                     disabled={isLoading}
                   >
-                    {isLoading ? "Sending..." : "Send Reset Link"}
+                    {isLoading ? "Sending..." : "Send Reset Code"}
                   </Button>
                 </div>
               </form>
