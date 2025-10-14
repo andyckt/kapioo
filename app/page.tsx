@@ -86,82 +86,87 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="flex flex-col justify-center space-y-6 order-2 lg:w-1/2 lg:pl-12"
             >
-              {/* Card container with preserved styling */}
+              {/* Redesigned card container with modern styling */}
               <motion.div 
-                className="relative z-10 bg-white/80 backdrop-blur-sm p-5 sm:p-8 rounded-xl border border-[#C2884E]/20 shadow-lg">
-                {/* Logo positioned on top right of card with automatic animation */}
+                className="relative z-10 bg-white/90 backdrop-blur-md p-6 sm:p-10 rounded-2xl border-0 shadow-xl ring-1 ring-[#C2884E]/10">
+                {/* Logo positioned with improved animation */}
                 <motion.div 
-                  className="absolute -top-14 sm:-top-16 right-4 sm:right-8"
+                  className="absolute -top-16 sm:-top-20 right-6 sm:right-10"
                   animate={{ 
-                    y: [0, -8, 0],
-                    rotate: [0, 6, 0]
+                    y: [0, -10, 0],
+                    rotate: [0, 8, 0]
                   }}
                   transition={{ 
                     repeat: Infinity,
-                    duration: 2,
+                    duration: 3,
                     ease: "easeInOut" 
                   }}
                 >
-                  <Image 
-                    src="/bobe.png" 
-                    alt="Kapioo Logo" 
-                    width={70} 
-                    height={70}
-                    className="h-20 w-20 sm:h-24 sm:w-24 drop-shadow-lg" 
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full blur-md bg-gradient-to-br from-[#C2884E]/30 to-[#D1A46C]/30"></div>
+                    <Image 
+                      src="/bobe.png" 
+                      alt="Kapioo Logo" 
+                      width={80} 
+                      height={80}
+                      className="h-24 w-24 sm:h-28 sm:w-28 relative drop-shadow-xl" 
+                    />
+                  </div>
                 </motion.div>
                 
-                <div className="space-y-4 sm:space-y-6">
-                  <div className="relative mb-4 sm:mb-8">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tighter sm:text-4xl xl:text-5xl/none bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]/80 mb-4 sm:mb-5 leading-tight">
+                <div className="space-y-6 sm:space-y-8">
+                  {/* Main heading section with enhanced styling */}
+                  <div className="relative">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 1, delay: 0.5 }}
+                      className="absolute -top-3 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#C2884E]/30 to-transparent"
+                    ></motion.div>
+                    
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-5 sm:mb-6 leading-tight">
                       {t('mainSlogan')}
                     </h1>
-                    <div className="w-16 sm:w-20 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-4 sm:mb-5"></div>
-                    <p className="text-base sm:text-xl md:text-2xl text-[#6B5F53] font-medium leading-relaxed">
+                    
+                    <div className="w-20 sm:w-24 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-5 sm:mb-6"></div>
+                    
+                    <p className="text-lg sm:text-xl md:text-2xl text-[#6B5F53] font-medium leading-relaxed">
                       {t('subSlogan')}
                     </p>
                   </div>
                   
-                  <div className="space-y-4 sm:space-y-6">
-                    {/* Tagline section - removed background container */}
-                    <div className="p-1">
-                      <div className="text-sm sm:text-base md:text-lg font-medium text-[#C2884E] mb-2 sm:mb-3">
-                        {t('tagline')}
-                      </div>
-                      
-                      {/* Tags in a more elegant layout */}
-                      <div className="flex flex-wrap gap-2 sm:gap-3 mb-3 sm:mb-4">
-                        {t('healthyTags').split('|').map((tag, index) => (
-                          <span 
-                            key={index}
-                            className="px-2 sm:px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-xs sm:text-sm text-[#C2884E] shadow-sm flex items-center"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1.5 inline-block"></span>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                  {/* Enhanced tagline and tags section */}
+                  <div className="bg-[#FBF7F2] rounded-xl p-4 sm:p-6 border border-[#C2884E]/5">
+                    <div className="text-base sm:text-lg md:text-xl font-medium text-[#C2884E] mb-3 sm:mb-4 flex items-center">
+                      <span className="inline-block w-2 h-2 rounded-full bg-[#C2884E] mr-2"></span>
+                      {t('tagline')}
                     </div>
                     
-                    {/* Motto section with buttons - stacked on mobile, row on larger screens */}
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-1 gap-4 sm:gap-0">
-                      <div className="space-y-1 sm:space-y-2">
-                        <p className="text-xs sm:text-sm md:text-base italic text-[#6B5F53]">
-                          {t('mottoFirstLine')}
-                        </p>
-                        <p className="text-xs sm:text-sm md:text-base font-medium text-[#C2884E]">
-                          {t('mottoSecondLine')}
-                        </p>
-                      </div>
-                      
-                      <div className="flex-shrink-0 self-start sm:self-auto">
-                        <Button asChild size="sm" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-sm px-4">
-                          <Link href="/starter">
-                            {t('getStartedBtn')} <ArrowRight className="ml-1 h-3 w-3" />
-                          </Link>
-                        </Button>
-                      </div>
+                    {/* Enhanced tags layout */}
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                      {t('healthyTags').split('|').map((tag, index) => (
+                        <motion.span 
+                          key={index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 * index }}
+                          className="px-3 sm:px-4 py-1.5 bg-white rounded-full text-sm sm:text-base text-[#6B5F53] shadow-sm border border-[#C2884E]/10 flex items-center"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-2 inline-block"></span>
+                          {tag}
+                        </motion.span>
+                      ))}
                     </div>
+                  </div>
+                  
+                  {/* Button section with enhanced styling */}
+                  <div className="flex justify-end mt-4">
+                    <Button asChild size="lg" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md px-6 py-6 rounded-xl">
+                      <Link href="/starter" className="flex items-center">
+                        <span className="text-base">{t('getStartedBtn')}</span>
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               </motion.div>

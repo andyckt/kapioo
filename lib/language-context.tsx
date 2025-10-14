@@ -131,7 +131,7 @@ const translations: TranslationsType = {
     dailyDeliveryDesc: "每天新鲜制作，每天直送 | 午间送达",
     // Hero section
     heroTitle: "北美健康餐食订阅品牌 <br/><span style=\"white-space: nowrap;\">让你每天拥有「被好好对待」的时刻</span>",
-    heroDescription: "每日现做 每日配送<br/>健康｜高质｜舒服｜幸福<br/><br/>一顿饭的时间 给生活松一口气<br/>Kapioo，你每天的松弛美好时刻",
+    heroDescription: "每日现做 每日配送<br/>健康｜高质｜舒服｜幸福",
     getStartedBtn: "立即开始",
     howItWorksBtn: "如何运作",
     // Homepage additional translations
@@ -479,7 +479,7 @@ const translations: TranslationsType = {
     dailyDeliveryDesc: "Freshly made every day, delivered daily | Afternoon delivery",
     // Hero section
     heroTitle: "Premium Meal Subscription in North America <br/><span style=\"white-space: nowrap;\">Bringing care to your everyday moments</span>",
-    heroDescription: "Freshly made, daily delivery<br/>Healthy | Quality | Comfort | Happiness<br/><br/>Take a moment to relax with a good meal<br/>Kapioo, your daily moment of comfort and joy",
+    heroDescription: "Freshly made, daily delivery<br/>Healthy | Quality | Comfort | Happiness",
     getStartedBtn: "Get Started",
     howItWorksBtn: "How It Works",
     // Homepage additional translations
