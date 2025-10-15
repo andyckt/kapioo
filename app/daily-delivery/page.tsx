@@ -580,96 +580,88 @@ export default function DailyDeliveryPage() {
                         
                         <TabsContent value="howItWorks" className="mt-0 space-y-4">
                           <div className="space-y-8">
+                            <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">如何运作</h3>
+                            
                             {/* Step 1 */}
-                            <div className="flex flex-row gap-4 items-start">
-                              <div className="flex items-center gap-2">
-                                <div className="text-2xl font-light text-[#C2884E]/30">
-                                  1
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                  <Image src="/未命名設計.png" alt="Choose meal voucher" width={24} height={24} />
+                            <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                  <Ticket className="w-5 h-5 text-[#C2884E]" />
                                 </div>
                               </div>
                               <div className="flex-1">
-                                <h3 className="text-lg font-medium text-[#6B5F53]">选择适合你的餐券</h3>
-                                <p className="text-sm text-[#6B5F53]/80 mt-1">根据您的用餐需求选择合适的餐券套餐，灵活安排每周用餐计划。</p>
+                                <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">1</span>
+                                  购买餐劵
+                                </h3>
+                                <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                  通过官网使用 电子转账（EMT）充值餐劵，餐劵会自动记录到您的账户中。
+                                </p>
                               </div>
                             </div>
                             
                             {/* Step 2 */}
-                            <div className="flex flex-row gap-4 items-start">
-                              <div className="flex items-center gap-2">
-                                <div className="text-2xl font-light text-[#C2884E]/30">
-                                  2
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#C2884E" strokeWidth="1.5"/>
-                                    <path d="M12 8V12L14 14" stroke="#C2884E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
+                            <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                  <CalendarDays className="w-5 h-5 text-[#C2884E]" />
                                 </div>
                               </div>
                               <div className="flex-1">
-                                <h3 className="text-lg font-medium text-[#6B5F53]">完成在线付款</h3>
-                                <p className="text-sm text-[#6B5F53]/80 mt-1">通过线上支付方式完成餐券购买，系统自动记录您的餐券余额。</p>
+                                <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">2</span>
+                                  使用餐劵下单
+                                </h3>
+                                <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                  每周菜单定期更新，选择喜欢的餐点与配送日期，使用账户内餐劵下单即可，无需重复支付。
+                                </p>
+                                <div className="mt-2 flex items-center">
+                                  <Clock className="h-4 w-4 text-[#C2884E] mr-1.5" />
+                                  <span className="text-xs font-medium text-[#C2884E]">下单截止时间：配送日前一天上午 11:59。</span>
+                                </div>
                               </div>
                             </div>
                             
                             {/* Step 3 */}
-                            <div className="flex flex-row gap-4 items-start">
-                              <div className="flex items-center gap-2">
-                                <div className="text-2xl font-light text-[#C2884E]/30">
-                                  3
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="#C2884E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
+                            <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                  <Utensils className="w-5 h-5 text-[#C2884E]" />
                                 </div>
                               </div>
                               <div className="flex-1">
-                                <h3 className="text-lg font-medium text-[#6B5F53]">每周更新菜单，订购你需要餐食的日期</h3>
-                                <p className="text-sm text-[#6B5F53]/80 mt-1">我们每周更新菜单，您可以提前选择喜欢的菜品和配送日期。</p>
-                              </div>
-                            </div>
-                            
-                            {/* Step 4 */}
-                            <div className="flex flex-row gap-4 items-start">
-                              <div className="flex items-center gap-2">
-                                <div className="text-2xl font-light text-[#C2884E]/30">
-                                  4
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="#C2884E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-lg font-medium text-[#6B5F53]">美味餐食按时送达</h3>
-                                <p className="text-sm text-[#6B5F53]/80 mt-1">我们会在11AM-1PM之间将新鲜制作的餐食送达您指定的地址，确保最佳品质。</p>
+                                <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">3</span>
+                                  每日新鲜中央厨房新鲜现做，中午配送～
+                                </h3>
+                                <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                  上午 11 点至下午 1 点 之间准时送达，确保新鲜与美味。
+                                </p>
                               </div>
                             </div>
                           </div>
                           
-                          <div className="bg-[#FFF6EF] rounded-xl p-6 mt-4">
-                            <div className="flex items-center gap-3 mb-3">
+                          <div className="bg-[#FFF6EF] rounded-xl p-6 mt-8">
+                            <div className="flex items-center gap-3 mb-4">
                               <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center">
                                 <Info className="w-5 h-5 text-[#C2884E]" />
                               </div>
                               <h3 className="text-lg font-medium text-[#C2884E]">配送要求</h3>
                             </div>
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 mb-3">
                               <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
                               <div className="flex items-center">
-                                <span className="text-[#6B5F53]">每次配送至少2份餐食</span>
+                                <span className="text-[#6B5F53] font-medium">每次配送至少2份餐食</span>
                                 <TooltipProvider>
                                   <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="w-4 h-4 text-[#C2884E]/70 ml-1 cursor-help" />
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1.5 rounded-full">
+                                        <Info className="w-4 h-4 text-[#C2884E]" />
+                                        <span className="sr-only">更多信息</span>
+                                      </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs bg-white border border-[#C2884E]/20">
-                                      <div className="text-sm text-[#6B5F53]">
+                                    <TooltipContent className="max-w-xs bg-white border border-[#C2884E]/20 p-3 shadow-lg">
+                                      <div className="text-sm text-[#6B5F53] leading-relaxed">
                                         每次配送至少2份餐食，午餐+晚餐一站解决；<br/>
                                         只需要一餐怎么办？餐食可冷藏保鲜 48 小时，第二天享用也10分新鲜
                                       </div>
