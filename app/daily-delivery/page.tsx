@@ -458,7 +458,7 @@ export default function DailyDeliveryPage() {
                         {language === 'zh' ? '知道更多' : 'Learn More'}
                       </Button>
                     </DialogTrigger>
-                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[92vh] shadow-xl">
+                    <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] shadow-xl">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white">
                       <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                         {language === 'zh' ? '每日配送计划详情' : 'Daily Delivery Plan Details'}
@@ -666,7 +666,7 @@ export default function DailyDeliveryPage() {
                       {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[92vh] shadow-xl">
+                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] shadow-xl">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white">
                       <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                         {language === 'zh' ? '本周菜单' : 'This Week\'s Menu'}
@@ -684,7 +684,23 @@ export default function DailyDeliveryPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col md:flex-row h-full">
+                      <div className="flex flex-col md:flex-row h-full overflow-y-auto scrollbar-thin">
+                        <style jsx global>{`
+                          .scrollbar-thin::-webkit-scrollbar {
+                            width: 4px;
+                            height: 4px;
+                          }
+                          .scrollbar-thin::-webkit-scrollbar-track {
+                            background: transparent;
+                          }
+                          .scrollbar-thin::-webkit-scrollbar-thumb {
+                            background: #C2884E40;
+                            border-radius: 20px;
+                          }
+                          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+                            background: #C2884E80;
+                          }
+                        `}</style>
                         {/* Sidebar Day Navigation - Horizontal scrolling tabs on mobile */}
                         <div className="md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 p-2 md:p-4">
                           {/* Mobile Week Selector - Elegant Pills */}
@@ -715,7 +731,7 @@ export default function DailyDeliveryPage() {
                           
                           {/* Mobile Day Selector - Elegant Cards */}
                           <div className="block md:hidden mb-4">
-                            <div className="overflow-x-auto scrollbar-hide pb-2">
+                            <div className="overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                               <div className="flex space-x-2 min-w-max px-1">
                                 {Object.keys(weeklyMenu)
                                   .filter(dayId => weeklyMenu[dayId].week === activeWeek)
@@ -750,7 +766,7 @@ export default function DailyDeliveryPage() {
                           </div>
                           
                           {/* Desktop Sidebar Navigation - Hidden on mobile */}
-                          <div className="hidden md:block sticky top-4 space-y-1">
+                          <div className="hidden md:block sticky top-0 space-y-1 max-h-[80vh] overflow-y-auto pr-1">
                             {/* Week 1 Heading */}
                             <div className="px-3 py-2 mb-2">
                               <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
@@ -833,9 +849,9 @@ export default function DailyDeliveryPage() {
                         </div>
                         
                         {/* Content Area */}
-                        <div className="w-full md:w-5/6 p-3 md:p-6">
+                        <div className="w-full md:w-5/6 p-3 md:p-6 overflow-y-auto">
                           {/* Week Content */}
-                          <div className="min-h-[300px] md:min-h-[400px]">
+                          <div className="min-h-[300px] md:min-h-[400px] overflow-y-auto">
                             {selectedMenuDay && weeklyMenu[selectedMenuDay] ? (
                               <div>
                                 {/* Day Header - Elegant Design */}
