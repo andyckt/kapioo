@@ -948,6 +948,23 @@ export default function DailyDeliveryPage() {
                                               <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐3菜</span>
                                             </div>
                                           </div>
+                                          
+                                          {/* 3-Dish Voucher Additional Dishes */}
+                                          <div className="mt-3">
+                                            <div className="text-xs font-medium mb-2 text-[#6B5F53]/80 italic">
+                                              包含以上的所有菜品，再加:
+                                            </div>
+                                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                              {combo.typeB.dishes
+                                                .filter(dish => !combo.typeA.dishes.includes(dish))
+                                                .map((dish, idx) => (
+                                                  <li key={idx} className="flex items-center">
+                                                    <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{dish}</span>
+                                                  </li>
+                                                ))
+                                              }
+                                            </ul>
+                                          </div>
                                         </div>
                                         
                                         {/* Tags */}
