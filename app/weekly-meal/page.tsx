@@ -10,7 +10,10 @@ import {
   Clock,
   Truck,
   Info,
-  ChevronRight
+  ChevronRight,
+  CreditCard,
+  CalendarCheck,
+  UtensilsCrossed
 } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 
@@ -229,6 +232,124 @@ export default function WeeklyMealPage() {
                     ? '适合把餐食储存于冰箱，随取随享，注重极度便利的你' 
                     : 'Perfect for those who prefer to store meals in the refrigerator and enjoy maximum convenience'}
                 </p>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-md relative z-20"
+                      >
+                        {language === 'zh' ? '如何运作' : 'How It Works'}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
+                      <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white">
+                        <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+                          {language === 'zh' ? '如何运作' : 'How It Works'}
+                        </DialogTitle>
+                        <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
+                          {language === 'zh' ? '了解我们的周次餐盒订阅服务' : 'Learn about our weekly meal subscription service'}
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-brand">
+                        <div className="space-y-8">
+                          <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">订阅方式</h3>
+                          
+                          {/* Step 1 */}
+                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                <Calendar className="w-5 h-5 text-[#C2884E]" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">1</span>
+                                选择适合你的周卡
+                              </h3>
+                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                根据您的用餐需求选择合适的周卡套餐，灵活安排每周用餐计划。
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Step 2 */}
+                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                <CreditCard className="w-5 h-5 text-[#C2884E]" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">2</span>
+                                完成在线付款
+                              </h3>
+                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                通过线上支付方式完成周卡购买，系统自动记录您的周卡余额。
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Step 3 */}
+                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                <CalendarCheck className="w-5 h-5 text-[#C2884E]" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">3</span>
+                                使用周卡下单订餐
+                              </h3>
+                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                登录账户，使用周卡下单订餐，无需重复支付。
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Step 4 */}
+                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                <UtensilsCrossed className="w-5 h-5 text-[#C2884E]" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">4</span>
+                                每周更新菜单，自由挑选餐食
+                              </h3>
+                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                我们每周更新菜单，您可以提前选择喜欢的菜品和配送日期。
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Step 5 */}
+                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                <Truck className="w-5 h-5 text-[#C2884E]" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">5</span>
+                                晚间送达 → 冷藏保存 → 按最佳日期享用
+                              </h3>
+                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                我们会在晚间将餐食送达您指定的地址，您可以将餐食冷藏保存，按照标注的最佳食用日期享用。
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 
               </div>
               
