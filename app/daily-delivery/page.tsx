@@ -660,7 +660,7 @@ export default function DailyDeliveryPage() {
                   <DialogTrigger asChild>
                     <Button 
                       variant="outline"
-                      className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 transition-all duration-300 flex items-center gap-2"
+                      className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 transition-all duration-300 flex items-center gap-2 relative z-20"
                     >
                       <Menu className="h-4 w-4" />
                       {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
