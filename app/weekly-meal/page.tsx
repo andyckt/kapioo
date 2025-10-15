@@ -406,21 +406,22 @@ export default function WeeklyMealPage() {
                         {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] max-h-[600px] sm:max-h-none shadow-xl">
-                      <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-3 sm:p-6 text-white h-[70px] sm:h-[90px] flex flex-col justify-center">
-                        <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+                    <DialogContent className="sm:max-w-[1100px] w-[92vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] max-h-[600px] sm:max-h-none shadow-xl">
+                      <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-3 sm:p-6 text-white h-[70px] sm:h-[90px] flex flex-col justify-center relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-white/0 via-white/20 to-white/0"></div>
+                        <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">
                           {language === 'zh' ? '本周菜单' : 'This Week\'s Menu'}
                         </DialogTitle>
-                        <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
+                        <DialogDescription className="text-white/90 mt-0.5 sm:mt-2 text-xs sm:text-sm md:text-base font-light">
                           {language === 'zh' ? '浏览我们本周的精选菜品' : 'Browse our selected dishes for this week'}
                         </DialogDescription>
                       </DialogHeader>
                       
                       {isMenuLoading ? (
-                        <div className="flex justify-center items-center h-[300px]">
-                          <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C2884E] mx-auto mb-4"></div>
-                            <p>{language === 'zh' ? '加载中...' : 'Loading...'}</p>
+                        <div className="flex justify-center items-center h-[200px] sm:h-[300px]">
+                          <div className="text-center bg-white/80 rounded-xl p-4 sm:p-6 shadow-sm border border-[#F5EDE4] w-[80%] sm:w-auto">
+                            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-[#C2884E] mx-auto mb-3 sm:mb-4"></div>
+                            <p className="text-sm sm:text-base text-[#6B5F53]">{language === 'zh' ? '加载中...' : 'Loading...'}</p>
                           </div>
                         </div>
                       ) : (
@@ -472,7 +473,7 @@ export default function WeeklyMealPage() {
                             }
                           `}</style>
                           {/* Sidebar Day Navigation - Horizontal scrolling tabs on mobile */}
-                          <div className="md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 p-2 md:p-4 md:sticky md:top-0 md:max-h-[80vh] md:overflow-y-auto md:pr-1 scrollbar-brand">
+                          <div className="md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 px-2 py-1 sm:p-2 md:p-4 md:sticky md:top-0 md:max-h-[80vh] md:overflow-y-auto md:pr-1 scrollbar-brand">
                             {/* Mobile Week Selector - Elegant Pills */}
                             <div className="block md:hidden mb-4">
                               <div className="flex justify-center">
@@ -516,9 +517,9 @@ export default function WeeklyMealPage() {
                             </div>
                             
                             {/* Mobile Day Selector - Elegant Cards */}
-                            <div className="block md:hidden mb-5">
-                              <div className="overflow-x-auto pb-2 no-scrollbar">
-                                <div className="flex space-x-3 min-w-max px-2 py-1">
+                            <div className="block md:hidden mb-3 sm:mb-5">
+                              <div className="overflow-x-auto pb-2 no-scrollbar text-center">
+                                <div className="inline-flex justify-center space-x-2.5 px-1 py-1">
                                   {weeklyMenu
                                     .filter(day => day.week === activeWeek)
                                     .map((day) => (
@@ -529,7 +530,7 @@ export default function WeeklyMealPage() {
                                           ${selectedMenuDay === day.id 
                                             ? "bg-white border-[#C2884E] text-[#C2884E] shadow-md" 
                                             : "bg-white/60 border-[#F5EDE4] text-[#6B5F53]/80 hover:border-[#C2884E]/30"}
-                                          px-5 py-2.5 rounded-xl min-w-[80px]`}
+                                          px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl min-w-[70px] sm:min-w-[80px]`}
                                       >
                                         <div className="text-center">
                                           <p className="font-medium capitalize text-sm">{day.name}</p>
@@ -607,28 +608,30 @@ export default function WeeklyMealPage() {
                           </div>
                           
                           {/* Main Content Area */}
-                          <div className="flex-1 p-3 sm:p-4 md:p-6 menu-content overflow-y-auto scrollbar-brand">
+                          <div className="flex-1 px-3 py-2 sm:p-4 md:p-6 menu-content overflow-y-auto scrollbar-brand">
                             {selectedMenuDay ? (
                               (() => {
                                 const selectedDay = weeklyMenu.find(day => day.id === selectedMenuDay)
                                 
                                 if (!selectedDay) {
                                   return (
-                                    <div className="h-[300px] flex items-center justify-center">
-                                      <p className="text-[#6B5F53] text-center px-4">
-                                        {language === 'zh' ? '请选择一个日期查看菜单' : 'Please select a day to view the menu'}
-                                      </p>
+                                    <div className="h-auto sm:h-[300px] py-10 sm:py-0 flex items-center justify-center">
+                                      <div className="bg-white/80 rounded-xl p-4 sm:p-6 shadow-sm border border-[#F5EDE4] max-w-[90%] sm:max-w-[80%] text-center">
+                                        <p className="text-[#6B5F53] text-sm sm:text-base">
+                                          {language === 'zh' ? '请选择一个日期查看菜单' : 'Please select a day to view the menu'}
+                                        </p>
+                                      </div>
                                     </div>
                                   )
                                 }
                                 
                                 return (
                                   <div>
-                                    <div className="mb-5 sm:mb-6">
+                                    <div className="mb-4 sm:mb-6">
                                       <div className="flex items-center justify-center sm:justify-start">
-                                        <div className="bg-[#F5EDE4]/50 px-4 py-1.5 rounded-full">
-                                          <h3 className="text-lg sm:text-xl font-bold text-[#C2884E]">
-                                            {selectedDay.name} <span className="font-normal text-[#C2884E]/80 ml-1">{selectedDay.date}</span>
+                                        <div className="bg-[#F5EDE4]/60 px-4 py-1.5 rounded-full shadow-sm">
+                                          <h3 className="text-base sm:text-lg md:text-xl font-bold text-[#C2884E]">
+                                            {selectedDay.name} <span className="font-normal text-[#C2884E]/80 ml-1 text-sm sm:text-base">{selectedDay.date}</span>
                                           </h3>
                                         </div>
                                       </div>
@@ -638,9 +641,10 @@ export default function WeeklyMealPage() {
                                       {selectedDay.options.map((option, index) => (
                                         <div 
                                           key={option.id}
-                                          className="bg-white/95 rounded-2xl p-4 sm:p-5 border border-[#F5EDE4] shadow-sm hover:shadow-md transition-shadow duration-300"
+                                          className="bg-white/95 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-[#F5EDE4] shadow-sm hover:shadow-md transition-shadow duration-300 mobile-menu-animation"
+                                          style={{animationDelay: `${index * 0.05}s`}}
                                         >
-                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-3 leading-tight">{option.name}</h4>
+                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-2.5 sm:mb-3 leading-tight">{option.name}</h4>
                                           
                                           {option.tags && option.tags.length > 0 && (
                                             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
@@ -661,15 +665,19 @@ export default function WeeklyMealPage() {
                                 )
                               })()
                             ) : (
-                              <div className="h-[300px] flex items-center justify-center">
+                              <div className="h-auto sm:h-[300px] py-10 sm:py-0 flex items-center justify-center">
                                 {activeWeek === 2 ? (
-                                  <p className="text-[#6B5F53] text-center px-6 text-sm sm:text-base">
-                                    {language === 'zh' ? '下周菜单将于周五更新，敬请期待～' : 'Next week\'s menu will be updated on Friday, stay tuned~'}
-                                  </p>
+                                  <div className="bg-white/80 rounded-xl p-4 sm:p-6 shadow-sm border border-[#F5EDE4] max-w-[90%] sm:max-w-[80%] text-center">
+                                    <p className="text-[#6B5F53] text-sm sm:text-base">
+                                      {language === 'zh' ? '下周菜单将于周五更新，敬请期待～' : 'Next week\'s menu will be updated on Friday, stay tuned~'}
+                                    </p>
+                                  </div>
                                 ) : (
-                                  <p className="text-[#6B5F53] text-center px-6 text-sm sm:text-base">
-                                    {language === 'zh' ? '请选择一个日期查看菜单' : 'Please select a day to view the menu'}
-                                  </p>
+                                  <div className="bg-white/80 rounded-xl p-4 sm:p-6 shadow-sm border border-[#F5EDE4] max-w-[90%] sm:max-w-[80%] text-center">
+                                    <p className="text-[#6B5F53] text-sm sm:text-base">
+                                      {language === 'zh' ? '请选择一个日期查看菜单' : 'Please select a day to view the menu'}
+                                    </p>
+                                  </div>
                                 )}
                               </div>
                             )}
