@@ -856,7 +856,6 @@ export default function DailyDeliveryPage() {
                               <div>
                                 {/* Day Header - Elegant Design */}
                                 <div className="mb-5 md:mb-6">
-                                  <div className="w-16 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mx-auto mb-4 rounded-full"></div>
                                   <h3 className="text-center text-lg md:text-2xl font-medium capitalize text-[#6B5F53] tracking-tight">
                                     {weeklyMenu[selectedMenuDay].displayName}
                                   </h3>
