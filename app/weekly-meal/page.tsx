@@ -406,8 +406,8 @@ export default function WeeklyMealPage() {
                         {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] shadow-xl">
-                      <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
+                    <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] max-h-[600px] sm:max-h-none shadow-xl">
+                      <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-3 sm:p-6 text-white h-[70px] sm:h-[90px] flex flex-col justify-center">
                         <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                           {language === 'zh' ? '本周菜单' : 'This Week\'s Menu'}
                         </DialogTitle>
@@ -438,8 +438,15 @@ export default function WeeklyMealPage() {
                               border-radius: 20px;
                             }
                             .menu-content {
-                              height: calc(85vh - 90px);
+                              height: calc(85vh - 70px);
+                              max-height: 530px;
                               overflow-y: auto;
+                            }
+                            @media (min-width: 640px) {
+                              .menu-content {
+                                height: calc(85vh - 90px);
+                                max-height: none;
+                              }
                             }
                             .no-scrollbar::-webkit-scrollbar {
                               display: none;
@@ -448,147 +455,159 @@ export default function WeeklyMealPage() {
                               -ms-overflow-style: none;
                               scrollbar-width: none;
                             }
+                            @media (max-width: 639px) {
+                              .mobile-menu-animation {
+                                animation: fadeInUp 0.3s ease-out;
+                              }
+                              @keyframes fadeInUp {
+                                from {
+                                  opacity: 0;
+                                  transform: translateY(10px);
+                                }
+                                to {
+                                  opacity: 1;
+                                  transform: translateY(0);
+                                }
+                              }
+                            }
                           `}</style>
                           {/* Sidebar Day Navigation - Horizontal scrolling tabs on mobile */}
                           <div className="md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 p-2 md:p-4 md:sticky md:top-0 md:max-h-[80vh] md:overflow-y-auto md:pr-1 scrollbar-brand">
                             {/* Mobile Week Selector - Elegant Pills */}
                             <div className="block md:hidden mb-4">
-                              <div className="inline-flex p-0.5 bg-[#F5EDE4]/70 rounded-full">
-                                <button
-                                  onClick={() => {
-                                    setActiveWeek(1)
-                                    const firstDayOfWeek = weeklyMenu.find(day => day.week === 1)
-                                    if (firstDayOfWeek) {
-                                      setSelectedMenuDay(firstDayOfWeek.id)
-                                    } else {
-                                      setSelectedMenuDay(null)
-                                    }
-                                  }}
-                                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                                    activeWeek === 1 
-                                      ? 'bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white' 
-                                      : 'text-[#6B5F53] hover:bg-[#F5EDE4]'
-                                  }`}
-                                >
+                              <div className="flex justify-center">
+                                <div className="inline-flex p-0.5 bg-[#F5EDE4] rounded-full shadow-sm w-[85%] max-w-[280px]">
+                                  <button
+                                    onClick={() => {
+                                      setActiveWeek(1);
+                                      const firstDayOfWeek = weeklyMenu.find(day => day.week === 1);
+                                      if (firstDayOfWeek) {
+                                        setSelectedMenuDay(firstDayOfWeek.id);
+                                      } else {
+                                        setSelectedMenuDay(null);
+                                      }
+                                    }}
+                                    className={`flex-1 py-2 rounded-full text-sm font-medium tracking-wide transition-all duration-300
+                                      ${activeWeek === 1 
+                                        ? "bg-white text-[#C2884E] shadow-sm" 
+                                        : "bg-transparent text-[#6B5F53]/70 hover:bg-white/30"}`}
+                                  >
+                                    {language === 'zh' ? '本周' : 'This Week'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveWeek(2);
+                                      const firstDayOfWeek = weeklyMenu.find(day => day.week === 2);
+                                      if (firstDayOfWeek) {
+                                        setSelectedMenuDay(firstDayOfWeek.id);
+                                      } else {
+                                        setSelectedMenuDay(null);
+                                      }
+                                    }}
+                                    className={`flex-1 py-2 rounded-full text-sm font-medium tracking-wide transition-all duration-300
+                                      ${activeWeek === 2 
+                                        ? "bg-white text-[#C2884E] shadow-sm" 
+                                        : "bg-transparent text-[#6B5F53]/70 hover:bg-white/30"}`}
+                                  >
+                                    {language === 'zh' ? '下周' : 'Next Week'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Mobile Day Selector - Elegant Cards */}
+                            <div className="block md:hidden mb-5">
+                              <div className="overflow-x-auto pb-2 no-scrollbar">
+                                <div className="flex space-x-3 min-w-max px-2 py-1">
+                                  {weeklyMenu
+                                    .filter(day => day.week === activeWeek)
+                                    .map((day) => (
+                                      <button
+                                        key={day.id}
+                                        onClick={() => setSelectedMenuDay(day.id)}
+                                        className={`flex-shrink-0 transition-all duration-300 border
+                                          ${selectedMenuDay === day.id 
+                                            ? "bg-white border-[#C2884E] text-[#C2884E] shadow-md" 
+                                            : "bg-white/60 border-[#F5EDE4] text-[#6B5F53]/80 hover:border-[#C2884E]/30"}
+                                          px-5 py-2.5 rounded-xl min-w-[80px]`}
+                                      >
+                                        <div className="text-center">
+                                          <p className="font-medium capitalize text-sm">{day.name}</p>
+                                          <p className="text-xs opacity-80 mt-1">{day.date}</p>
+                                        </div>
+                                      </button>
+                                    ))}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Desktop Sidebar Navigation - Hidden on mobile */}
+                            <div className="hidden md:block sticky top-0 space-y-1 max-h-[80vh] overflow-y-auto pr-1">
+                              {/* Week 1 Heading */}
+                              <div className="px-3 py-2 mb-2">
+                                <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
                                   {language === 'zh' ? '本周' : 'This Week'}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveWeek(2)
-                                    const firstDayOfWeek = weeklyMenu.find(day => day.week === 2)
-                                    if (firstDayOfWeek) {
-                                      setSelectedMenuDay(firstDayOfWeek.id)
-                                    } else {
-                                      setSelectedMenuDay(null)
-                                    }
-                                  }}
-                                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                                    activeWeek === 2 
-                                      ? 'bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white' 
-                                      : 'text-[#6B5F53] hover:bg-[#F5EDE4]'
-                                  }`}
-                                >
+                                </h3>
+                              </div>
+                              
+                              {/* Week 1 Days */}
+                              {weeklyMenu
+                                .filter(day => day.week === 1)
+                                .map((day) => (
+                                  <button
+                                    key={day.id}
+                                    onClick={() => {
+                                      setActiveWeek(1);
+                                      setSelectedMenuDay(day.id);
+                                    }}
+                                    className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
+                                      ${selectedMenuDay === day.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
+                                  >
+                                    <div className="w-full">
+                                      <p className="font-medium capitalize text-sm">{day.name}</p>
+                                      <p className="text-xs opacity-80">{day.date}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                                
+                              {/* Week Separator */}
+                              <div className="mt-4 mb-2 px-3">
+                                <div className="h-px bg-[#C2884E]/50 w-full"></div>
+                              </div>
+                              
+                              {/* Week 2 Heading */}
+                              <div className="px-3 py-2 mb-2">
+                                <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
                                   {language === 'zh' ? '下周' : 'Next Week'}
-                                </button>
+                                </h3>
                               </div>
-                            </div>
-                            
-                            {/* Mobile Day Selector - Horizontal Scrolling */}
-                            <div className="flex md:hidden overflow-x-auto pb-2 no-scrollbar">
-                              <div className="flex gap-2">
-                                {weeklyMenu
-                                  .filter(day => day.week === activeWeek)
-                                  .map((day) => (
-                                    <button
-                                      key={day.id}
-                                      onClick={() => setSelectedMenuDay(day.id)}
-                                      className={`border px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                                        selectedMenuDay === day.id
-                                          ? 'border-[#C2884E] bg-[#C2884E]/5 text-[#C2884E]'
-                                          : 'border-[#F5EDE4] text-[#6B5F53] hover:border-[#C2884E]/30'
-                                      }`}
-                                    >
-                                      {day.name} {day.date}
-                                    </button>
-                                  ))
-                                }
-                              </div>
-                            </div>
-                            
-                            {/* Desktop Week Tabs */}
-                            <div className="hidden md:block mb-6">
-                              <h4 className="text-sm font-medium text-[#6B5F53] mb-2">
-                                {language === 'zh' ? '选择周次' : 'Select Week'}
-                              </h4>
-                              <div className="space-y-1">
-                                <button
-                                  onClick={() => {
-                                    setActiveWeek(1)
-                                    const firstDayOfWeek = weeklyMenu.find(day => day.week === 1)
-                                    if (firstDayOfWeek) {
-                                      setSelectedMenuDay(firstDayOfWeek.id)
-                                    }
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    activeWeek === 1
-                                      ? 'bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/20 text-[#C2884E]'
-                                      : 'hover:bg-[#F5EDE4] text-[#6B5F53]'
-                                  }`}
-                                >
-                                  {language === 'zh' ? '本周' : 'This Week'}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveWeek(2)
-                                    const firstDayOfWeek = weeklyMenu.find(day => day.week === 2)
-                                    if (firstDayOfWeek) {
-                                      setSelectedMenuDay(firstDayOfWeek.id)
-                                    } else {
-                                      setSelectedMenuDay(null)
-                                    }
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    activeWeek === 2
-                                      ? 'bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/20 text-[#C2884E]'
-                                      : 'hover:bg-[#F5EDE4] text-[#6B5F53]'
-                                  }`}
-                                >
-                                  {language === 'zh' ? '下周' : 'Next Week'}
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {/* Desktop Day Tabs */}
-                            <div className="hidden md:block">
-                              <h4 className="text-sm font-medium text-[#6B5F53] mb-2">
-                                {language === 'zh' ? '选择日期' : 'Select Day'}
-                              </h4>
-                              <div className="space-y-1">
-                                {weeklyMenu
-                                  .filter(day => day.week === activeWeek)
-                                  .map((day) => (
-                                    <button
-                                      key={day.id}
-                                      onClick={() => setSelectedMenuDay(day.id)}
-                                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                        selectedMenuDay === day.id
-                                          ? 'bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/20 font-medium text-[#C2884E]'
-                                          : 'hover:bg-[#F5EDE4] text-[#6B5F53]'
-                                      }`}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span>{day.name}</span>
-                                        <span className="text-xs opacity-70">{day.date}</span>
-                                      </div>
-                                    </button>
-                                  ))
-                                }
-                              </div>
+                              
+                              {/* Week 2 Days */}
+                              {weeklyMenu
+                                .filter(day => day.week === 2)
+                                .map((day) => (
+                                  <button
+                                    key={day.id}
+                                    onClick={() => {
+                                      setActiveWeek(2);
+                                      setSelectedMenuDay(day.id);
+                                    }}
+                                    className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
+                                      ${selectedMenuDay === day.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
+                                  >
+                                    <div className="w-full">
+                                      <p className="font-medium capitalize text-sm">{day.name}</p>
+                                      <p className="text-xs opacity-80">{day.date}</p>
+                                    </div>
+                                  </button>
+                                ))}
                             </div>
                           </div>
                           
                           {/* Main Content Area */}
-                          <div className="flex-1 p-4 md:p-6 menu-content overflow-y-auto scrollbar-brand">
+                          <div className="flex-1 p-3 sm:p-4 md:p-6 menu-content overflow-y-auto scrollbar-brand">
                             {selectedMenuDay ? (
                               (() => {
                                 const selectedDay = weeklyMenu.find(day => day.id === selectedMenuDay)
@@ -596,7 +615,7 @@ export default function WeeklyMealPage() {
                                 if (!selectedDay) {
                                   return (
                                     <div className="h-[300px] flex items-center justify-center">
-                                      <p className="text-[#6B5F53]">
+                                      <p className="text-[#6B5F53] text-center px-4">
                                         {language === 'zh' ? '请选择一个日期查看菜单' : 'Please select a day to view the menu'}
                                       </p>
                                     </div>
@@ -605,26 +624,30 @@ export default function WeeklyMealPage() {
                                 
                                 return (
                                   <div>
-                                    <div className="mb-6">
-                                      <h3 className="text-xl font-bold text-[#6B5F53]">
-                                        {selectedDay.name} <span className="font-normal text-[#6B5F53]/70">{selectedDay.date}</span>
-                                      </h3>
+                                    <div className="mb-5 sm:mb-6">
+                                      <div className="flex items-center justify-center sm:justify-start">
+                                        <div className="bg-[#F5EDE4]/50 px-4 py-1.5 rounded-full">
+                                          <h3 className="text-lg sm:text-xl font-bold text-[#C2884E]">
+                                            {selectedDay.name} <span className="font-normal text-[#C2884E]/80 ml-1">{selectedDay.date}</span>
+                                          </h3>
+                                        </div>
+                                      </div>
                                     </div>
                                     
-                                    <div className="space-y-6">
+                                    <div className="space-y-4 sm:space-y-6">
                                       {selectedDay.options.map((option, index) => (
                                         <div 
                                           key={option.id}
-                                          className="bg-white/90 rounded-2xl p-4 sm:p-5 border border-[#F5EDE4] shadow-sm"
+                                          className="bg-white/95 rounded-2xl p-4 sm:p-5 border border-[#F5EDE4] shadow-sm hover:shadow-md transition-shadow duration-300"
                                         >
-                                          <h4 className="text-lg font-medium text-[#6B5F53] mb-3">{option.name}</h4>
+                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-3 leading-tight">{option.name}</h4>
                                           
                                           {option.tags && option.tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mt-2">
+                                            <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
                                               {option.tags.map((tag, tagIndex) => (
                                                 <span 
                                                   key={tagIndex}
-                                                  className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-[#F5EDE4]/50 text-[#6B5F53] rounded-full text-[10px] sm:text-xs"
+                                                  className="px-2 py-0.5 sm:py-1 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] sm:text-xs font-medium"
                                                 >
                                                   {tag}
                                                 </span>
@@ -640,11 +663,11 @@ export default function WeeklyMealPage() {
                             ) : (
                               <div className="h-[300px] flex items-center justify-center">
                                 {activeWeek === 2 ? (
-                                  <p className="text-[#6B5F53]">
+                                  <p className="text-[#6B5F53] text-center px-6 text-sm sm:text-base">
                                     {language === 'zh' ? '下周菜单将于周五更新，敬请期待～' : 'Next week\'s menu will be updated on Friday, stay tuned~'}
                                   </p>
                                 ) : (
-                                  <p className="text-[#6B5F53] text-center">
+                                  <p className="text-[#6B5F53] text-center px-6 text-sm sm:text-base">
                                     {language === 'zh' ? '请选择一个日期查看菜单' : 'Please select a day to view the menu'}
                                   </p>
                                 )}
