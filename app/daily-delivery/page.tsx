@@ -12,6 +12,7 @@ import {
   Tag, 
   Utensils,
   ChevronRight,
+  ChevronLeft,
   CalendarDays,
   Menu
 } from 'lucide-react'
@@ -435,8 +436,23 @@ export default function DailyDeliveryPage() {
 
   return (
     <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
+      {/* Back Button - Top Left */}
+      <div className="absolute top-6 left-6 z-10">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors bg-white/80 backdrop-blur-sm rounded-full shadow-sm p-2 h-auto"
+          asChild
+        >
+          <Link href="/">
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">{language === 'zh' ? '返回首页' : 'Back to Home'}</span>
+          </Link>
+        </Button>
+      </div>
+      
       {/* Hero Section */}
-      <section className="relative w-full overflow-hidden bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2] pt-16 pb-24">
+      <section className="relative w-full overflow-hidden bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2] pt-8 pb-24">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
@@ -1120,7 +1136,7 @@ export default function DailyDeliveryPage() {
                           <li className="flex items-start gap-2">
                             <div className="min-w-[20px] mt-0.5">•</div>
                             <div>
-                              {language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}
+                              {language === 'zh' ? '微信支付：无需支付额外税费，可享受10%折扣～' : 'WeChat Pay: No additional tax required, enjoy 10% discount~'}
                             </div>
                           </li>
                           <li className="flex items-start gap-2">
@@ -1152,7 +1168,7 @@ export default function DailyDeliveryPage() {
                           <li className="flex items-start gap-2">
                             <div className="min-w-[20px] mt-0.5">•</div>
                             <div>
-                              {language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}
+                              {language === 'zh' ? '微信支付：无需支付额外税费，可享受10%折扣～' : 'WeChat Pay: No additional tax required, enjoy 10% discount~'}
                             </div>
                           </li>
                           <li className="flex items-start gap-2">
