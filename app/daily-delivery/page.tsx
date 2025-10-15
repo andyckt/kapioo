@@ -43,6 +43,10 @@ interface VoucherPlan {
   isPopular?: boolean;
   pricePerMeal: number;
   savings?: string;
+  displayQuantity?: string;
+  originalQuantity?: string;
+  displayPricePerMeal?: string;
+  originalPricePerMeal?: string;
 }
 
 // Define types for the weekly menu
@@ -92,15 +96,15 @@ export default function DailyDeliveryPage() {
   const twoDishPlans: VoucherPlan[] = [
     { id: 'two-6', type: 'twoDish', quantity: 6, price: 131, pricePerMeal: 21.83 },
     { id: 'two-10', type: 'twoDish', quantity: 10, price: 195, pricePerMeal: 19.50, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
-    { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18 },
-    { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48 }
+    { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18, displayQuantity: '20', originalQuantity: '22', displayPricePerMeal: '17.8', originalPricePerMeal: '16.18' },
+    { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48, displayQuantity: '40', originalQuantity: '46', displayPricePerMeal: '17.8', originalPricePerMeal: '15.48' }
   ]
 
   const threeDishPlans: VoucherPlan[] = [
     { id: 'three-6', type: 'threeDish', quantity: 6, price: 150, pricePerMeal: 25.00 },
     { id: 'three-10', type: 'threeDish', quantity: 10, price: 228, pricePerMeal: 22.80, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
-    { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95 },
-    { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78 }
+    { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95, displayQuantity: '20', originalQuantity: '22', displayPricePerMeal: '20.85', originalPricePerMeal: '18.95' },
+    { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78, displayQuantity: '40', originalQuantity: '46', displayPricePerMeal: '20.45', originalPricePerMeal: '17.78' }
   ]
 
   const fadeIn = {
@@ -342,7 +346,14 @@ export default function DailyDeliveryPage() {
                       {language === 'zh' ? '餐券数量' : 'Vouchers'}
                     </span>
                   </div>
-                  <span className="font-bold text-[#C2884E]">{plan.quantity}</span>
+                  <span className="font-bold text-[#C2884E]">
+                    {plan.displayQuantity && plan.originalQuantity ? (
+                      <>
+                        <span className="line-through text-[#C2884E]/70 mr-1">{plan.displayQuantity}</span>
+                        {plan.originalQuantity}
+                      </>
+                    ) : plan.quantity}
+                  </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -352,7 +363,14 @@ export default function DailyDeliveryPage() {
                       {language === 'zh' ? '单价' : 'Per meal'}
                     </span>
                   </div>
-                  <span className="font-bold text-[#C2884E]">${plan.pricePerMeal.toFixed(2)}</span>
+                  <span className="font-bold text-[#C2884E]">
+                    {plan.displayPricePerMeal && plan.originalPricePerMeal ? (
+                      <>
+                        <span className="line-through text-[#C2884E]/70 mr-1">${plan.displayPricePerMeal}</span>
+                        ${plan.originalPricePerMeal}
+                      </>
+                    ) : `$${plan.pricePerMeal.toFixed(2)}`}
+                  </span>
                 </div>
               </div>
               
@@ -385,11 +403,19 @@ export default function DailyDeliveryPage() {
                   </div>
                 )}
                 
-                {/* Show Valid for 1 year as the last tick */}
+                {/* Show Valid for 6 months as a tick */}
                 <div className="flex items-start gap-2 text-sm">
                   <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
                   <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '有效期1年' : 'Valid for 1 year'}
+                    {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
+                  </span>
+                </div>
+                
+                {/* Show refund policy */}
+                <div className="flex items-start gap-2 text-sm">
+                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                  <span className="text-[#6B5F53]">
+                    {language === 'zh' ? '购买后7天内可退款未用部分' : 'Unused portion refundable within 7 days of purchase'}
                   </span>
                 </div>
               </div>
