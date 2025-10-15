@@ -419,7 +419,7 @@ export default function WeeklyMealPage() {
                       
                       {isMenuLoading ? (
                         <div className="flex justify-center items-center h-[200px] sm:h-[300px]">
-                          <div className="text-center bg-white/80 rounded-xl p-4 sm:p-6 shadow-sm border border-[#F5EDE4] w-[80%] sm:w-auto">
+                          <div className="text-center">
                             <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-[#C2884E] mx-auto mb-3 sm:mb-4"></div>
                             <p className="text-sm sm:text-base text-[#6B5F53]">{language === 'zh' ? '加载中...' : 'Loading...'}</p>
                           </div>
