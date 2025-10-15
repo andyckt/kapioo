@@ -11,10 +11,12 @@ import {
   Truck,
   Info,
   ChevronRight,
+  ChevronLeft,
   CreditCard,
   CalendarCheck,
   UtensilsCrossed
 } from "lucide-react"
+import Link from "next/link"
 import { useLanguage } from "@/lib/language-context"
 
 import { Button } from "@/components/ui/button"
@@ -107,7 +109,10 @@ export default function WeeklyMealPage() {
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 6, 
       totalPrice: 360, 
-      pricePerMeal: 15
+      pricePerMeal: 15,
+      isPopular: true,
+      tag: 'Best long-term choice',
+      tagZh: '长期最佳选择'
     },
     { 
       id: 'week4-10', 
@@ -116,7 +121,10 @@ export default function WeeklyMealPage() {
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 10, 
       totalPrice: 592, 
-      pricePerMeal: 14.8
+      pricePerMeal: 14.8,
+      isPopular: true,
+      tag: 'Best long-term choice',
+      tagZh: '长期最佳选择'
     },
   ]
 
@@ -193,6 +201,21 @@ export default function WeeklyMealPage() {
 
   return (
     <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
+      {/* Back Button - Top Left */}
+      <div className="absolute top-6 left-6 z-10">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors bg-white/80 backdrop-blur-sm rounded-full shadow-sm p-2 h-auto"
+          asChild
+        >
+          <Link href="/">
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">{language === 'zh' ? '返回首页' : 'Back to Home'}</span>
+          </Link>
+        </Button>
+      </div>
+      
       {/* Hero Section */}
       <section className="relative w-full overflow-hidden bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2] pt-16 pb-24">
         {/* Decorative elements */}
@@ -481,6 +504,12 @@ export default function WeeklyMealPage() {
                                 {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
                               </span>
                             </div>
+                            <div className="flex items-start gap-2 text-sm">
+                              <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                              <span className="text-[#6B5F53]">
+                                {language === 'zh' ? '购买后7天内可退款未用部分' : 'Unused portion refundable within 7 days of purchase'}
+                              </span>
+                            </div>
                           </div>
                         </CardContent>
                         
@@ -505,11 +534,6 @@ export default function WeeklyMealPage() {
                   <span className="font-medium text-[#6B5F53] ml-2">$11.99</span>
                 </div>
                 
-                {/* Additional information */}
-                <div className="text-xs text-[#8A7968] space-y-1">
-                  <p>* {language === 'zh' ? '餐券卡有效期为半年，可转赠亲友，购买后7天内可退款未用部分' : 'Plans valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}</p>
-                  <p>* {language === 'zh' ? '以上均为税前价格，支付方式：EMT/微信' : 'All prices before tax, payment methods: EMT/WeChat Pay'}</p>
-                </div>
                 
                 {/* Payment method and tax information */}
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -517,7 +541,7 @@ export default function WeeklyMealPage() {
                   <ul className="space-y-2 text-sm text-amber-700">
                     <li className="flex items-start gap-2">
                       <div className="min-w-[20px] mt-0.5">•</div>
-                      <div>{language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}</div>
+                      <div>{language === 'zh' ? '微信支付：无需支付额外税费，可享受10%折扣～' : 'WeChat Pay: No additional tax required, enjoy 10% discount'}</div>
                     </li>
                     <li className="flex items-start gap-2">
                       <div className="min-w-[20px] mt-0.5">•</div>
