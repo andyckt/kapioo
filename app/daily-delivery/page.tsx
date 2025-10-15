@@ -458,12 +458,12 @@ export default function DailyDeliveryPage() {
                         {language === 'zh' ? '知道更多' : 'Learn More'}
                       </Button>
                     </DialogTrigger>
-                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-[24px] overflow-hidden border-[#C2884E]/10">
-                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
-                      <DialogTitle className="text-2xl font-bold">
+                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[92vh] shadow-xl">
+                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white">
+                      <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                         {language === 'zh' ? '每日配送计划详情' : 'Daily Delivery Plan Details'}
                       </DialogTitle>
-                      <DialogDescription className="text-white/80 mt-2">
+                      <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
                         {language === 'zh' ? '了解我们的每日新鲜配送服务' : 'Learn about our daily fresh delivery service'}
                       </DialogDescription>
                     </DialogHeader>
@@ -666,12 +666,12 @@ export default function DailyDeliveryPage() {
                       {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-[24px] overflow-hidden border-[#C2884E]/10">
-                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-6 text-white">
-                      <DialogTitle className="text-2xl font-bold">
+                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[92vh] shadow-xl">
+                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white">
+                      <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                         {language === 'zh' ? '本周菜单' : 'This Week\'s Menu'}
                       </DialogTitle>
-                      <DialogDescription className="text-white/80 mt-2">
+                      <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
                         {language === 'zh' ? '浏览我们本周的精选菜品' : 'Browse our selected dishes for this week'}
                       </DialogDescription>
                     </DialogHeader>
@@ -684,15 +684,78 @@ export default function DailyDeliveryPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-row h-full">
-                        {/* Sidebar Day Navigation */}
-                        <div className="w-1/6 min-w-[80px] border-r border-[#C2884E]/20 p-4">
-                          <div className="sticky top-4 space-y-1">
+                      <div className="flex flex-col md:flex-row h-full">
+                        {/* Sidebar Day Navigation - Horizontal scrolling tabs on mobile */}
+                        <div className="md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 p-2 md:p-4">
+                          {/* Mobile Week Selector - Elegant Pills */}
+                          <div className="block md:hidden mb-3">
+                            <div className="flex justify-center">
+                              <div className="inline-flex p-0.5 bg-[#F5EDE4]/70 rounded-full">
+                                <button
+                                  onClick={() => setActiveWeek(1)}
+                                  className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all duration-300
+                                    ${activeWeek === 1 
+                                      ? "bg-white text-[#C2884E] shadow-sm" 
+                                      : "bg-transparent text-[#6B5F53]/70"}`}
+                                >
+                                  {language === 'zh' ? '本周' : 'This Week'}
+                                </button>
+                                <button
+                                  onClick={() => setActiveWeek(2)}
+                                  className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all duration-300
+                                    ${activeWeek === 2 
+                                      ? "bg-white text-[#C2884E] shadow-sm" 
+                                      : "bg-transparent text-[#6B5F53]/70"}`}
+                                >
+                                  {language === 'zh' ? '下周' : 'Next Week'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Mobile Day Selector - Elegant Cards */}
+                          <div className="block md:hidden mb-4">
+                            <div className="overflow-x-auto scrollbar-hide pb-2">
+                              <div className="flex space-x-2 min-w-max px-1">
+                                {Object.keys(weeklyMenu)
+                                  .filter(dayId => weeklyMenu[dayId].week === activeWeek)
+                                  .sort((a, b) => {
+                                    const dayOrder: Record<string, number> = { 
+                                      'monday': 1, 'tuesday': 2, 'wednesday': 3, 
+                                      'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7 
+                                    };
+                                    const dayA = weeklyMenu[a].displayName.toLowerCase();
+                                    const dayB = weeklyMenu[b].displayName.toLowerCase();
+                                    return (dayOrder[dayA] || 0) - (dayOrder[dayB] || 0);
+                                  })
+                                  .map(dayId => (
+                                    <button
+                                      key={dayId}
+                                      onClick={() => setSelectedMenuDay(dayId)}
+                                      className={`flex-shrink-0 transition-all duration-300 border
+                                        ${selectedMenuDay === dayId 
+                                          ? "bg-white border-[#C2884E] text-[#C2884E] shadow-sm" 
+                                          : "bg-[#F5EDE4]/30 border-transparent text-[#6B5F53]/80"}
+                                        px-3 py-1.5 rounded-xl`}
+                                    >
+                                      <div className="text-center">
+                                        <p className="font-medium capitalize text-xs">{weeklyMenu[dayId].displayName.substring(0, 3)}</p>
+                                        <p className="text-[10px] opacity-80 mt-0.5">{weeklyMenu[dayId].date}</p>
+                                      </div>
+                                    </button>
+                                  ))}
+                              </div>
+                            </div>
+                            <div className="h-px bg-[#F5EDE4] w-full mt-2"></div>
+                          </div>
+                          
+                          {/* Desktop Sidebar Navigation - Hidden on mobile */}
+                          <div className="hidden md:block sticky top-4 space-y-1">
                             {/* Week 1 Heading */}
                             <div className="px-3 py-2 mb-2">
                               <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
                                 <CalendarDays className="h-4 w-4" />
-                                {language === 'zh' ? '第一周' : 'Week 1'}
+                                {language === 'zh' ? '本周' : 'This Week'}
                               </h3>
                             </div>
                             
@@ -734,7 +797,7 @@ export default function DailyDeliveryPage() {
                             <div className="px-3 py-2 mb-2">
                               <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
                                 <CalendarDays className="h-4 w-4" />
-                                {language === 'zh' ? '第二周' : 'Week 2'}
+                                {language === 'zh' ? '下周' : 'Next Week'}
                               </h3>
                             </div>
                             
@@ -770,29 +833,30 @@ export default function DailyDeliveryPage() {
                         </div>
                         
                         {/* Content Area */}
-                        <div className="w-5/6 p-6">
+                        <div className="w-full md:w-5/6 p-3 md:p-6">
                           {/* Week Content */}
-                          <div className="min-h-[400px]">
+                          <div className="min-h-[300px] md:min-h-[400px]">
                             {selectedMenuDay && weeklyMenu[selectedMenuDay] ? (
                               <div>
-                                {/* Day Header */}
-                                <div className="text-center mb-6">
-                                  <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1">
+                                {/* Day Header - Elegant Design */}
+                                <div className="mb-5 md:mb-6">
+                                  <div className="w-16 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mx-auto mb-4 rounded-full"></div>
+                                  <h3 className="text-center text-lg md:text-2xl font-medium capitalize text-[#6B5F53] tracking-tight">
                                     {weeklyMenu[selectedMenuDay].displayName}
                                   </h3>
-                                  <p className="text-sm text-[#C2884E] font-medium">
+                                  <p className="text-center text-xs md:text-sm text-[#C2884E] font-medium mt-1">
                                     {weeklyMenu[selectedMenuDay].date}
                                   </p>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                                   {weeklyMenu[selectedMenuDay].combos.map((combo, index) => (
                                   <div key={combo.id}>
-                                    <div className="relative backdrop-blur-xl bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4] rounded-2xl p-5 border border-[#C2884E]/20 shadow-md transition-all duration-300 ease-out h-full">
-                                      {/* Combo header */}
+                                    <div className="relative backdrop-blur-xl bg-white/90 rounded-2xl p-4 sm:p-5 border border-[#F5EDE4] shadow-sm transition-all duration-300 ease-out h-full">
+                                      {/* Combo header - Minimalist Design */}
                                       <div className="flex flex-wrap items-center justify-between mb-4">
-                                        <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{combo.name}</h3>
-                                        <div className="text-sm font-medium bg-[#C2884E]/5 px-2 py-1 rounded-md text-[#C2884E]">
+                                        <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">{combo.name}</h3>
+                                        <div className="text-xs font-medium bg-[#F5EDE4] px-2 py-1 rounded-full text-[#C2884E]">
                                           {combo.calories} KCAL
                                         </div>
                                       </div>
@@ -899,7 +963,7 @@ export default function DailyDeliveryPage() {
                           </div>
                           
                           {/* Note at the bottom */}
-                          <div className="mt-6 p-4 bg-[#FFF6EF] rounded-xl">
+                          <div className="mt-4 md:mt-6 p-3 md:p-4 bg-[#FFF6EF] rounded-xl">
                             <div className="flex items-center gap-3 mb-2">
                               <Info className="h-5 w-5 text-[#C2884E]" />
                               <h3 className="font-medium text-[#C2884E]">
