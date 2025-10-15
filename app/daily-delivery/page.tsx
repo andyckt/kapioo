@@ -746,7 +746,7 @@ export default function DailyDeliveryPage() {
                                   ))}
                               </div>
                             </div>
-                            <div className="h-px bg-[#F5EDE4] w-full mt-2"></div>
+                            
                           </div>
                           
                           {/* Desktop Sidebar Navigation - Hidden on mobile */}
