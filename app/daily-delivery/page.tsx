@@ -14,7 +14,8 @@ import {
   ChevronRight,
   ChevronLeft,
   CalendarDays,
-  Menu
+  Menu,
+  Ticket
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -258,35 +259,23 @@ export default function DailyDeliveryPage() {
     {
       title: "每日新鲜现做",
       description: "直送上门，满分新鲜度",
-      icon: <Image 
-        src="/未命名設計.png" 
-        alt="Kapioo Logo" 
-        width={24} 
-        height={24} 
-        className="h-6 w-6" 
-      />
+      icon: <div className="h-6 w-6 text-[#C2884E] flex items-center justify-center">
+        <Utensils className="h-5 w-5" />
+      </div>
     },
     {
       title: "餐券制",
-      description: "灵活选择每周所需天数",
-      icon: <Image 
-        src="/未命名設計.png" 
-        alt="Kapioo Logo" 
-        width={24} 
-        height={24}
-        className="h-6 w-6" 
-      />
+      description: "需要哪天就点哪天，灵活不浪费～",
+      icon: <div className="h-6 w-6 text-[#C2884E] flex items-center justify-center">
+        <Ticket className="h-5 w-5" />
+      </div>
     },
     {
       title: "午间时段送达",
       description: "11AM-1PM，享受当日鲜美",
-      icon: <Image 
-        src="/未命名設計.png" 
-        alt="Kapioo Logo" 
-        width={24} 
-        height={24}
-        className="h-6 w-6" 
-      />
+      icon: <div className="h-6 w-6 text-[#C2884E] flex items-center justify-center">
+        <Clock className="h-5 w-5" />
+      </div>
     }
   ]
   
