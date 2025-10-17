@@ -224,7 +224,7 @@ const translations: TranslationsType = {
     step1MainTitle: "充值餐券",
     step1Subtitle: "Top up meal vouchers",
     step1Desc: "Kapioo采用【先购餐券，送一餐扣一餐】的灵活订阅模式",
-    step1SubDesc: "请通过以下任一客服渠道进行餐券购买",
+    step1SubDesc: "请通过以下任一客服渠道进行充值",
     step2Number: "02",
     step2MainTitle: "安排你的送餐日程",
     step2Subtitle: "Schedule your delivery",
@@ -399,7 +399,7 @@ const translations: TranslationsType = {
     errorOccurred: "发生错误",
     // Credits tab
     currentAvailableCredits: "您当前可用的餐券",
-    creditsUsageHistory: "您的餐券购买和使用历史",
+    creditsUsageHistory: "您的充值和使用历史",
     // Orders tab
     orderHistory: "订单历史",
     viewOrdersAndStatus: "查看您的餐点订单和配送状态",

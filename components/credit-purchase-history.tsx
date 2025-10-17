@@ -58,7 +58,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
         console.error("Error fetching credit requests:", data.error);
         toast({
           title: language === 'en' ? "Error" : "错误",
-          description: language === 'en' ? "Failed to load credit requests" : "加载餐券请求失败",
+          description: language === 'en' ? "Failed to load credit requests" : "加载充值请求失败",
           variant: "destructive"
         });
       }
@@ -66,7 +66,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
       console.error("Error fetching credit requests:", error);
       toast({
         title: language === 'en' ? "Error" : "错误",
-        description: language === 'en' ? "Failed to load credit requests" : "加载餐券请求失败",
+        description: language === 'en' ? "Failed to load credit requests" : "加载充值请求失败",
         variant: "destructive"
       });
     } finally {
@@ -146,7 +146,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{language === 'en' ? 'Credit Purchase Requests' : '餐券购买请求'}</CardTitle>
+        <CardTitle>{language === 'en' ? 'Credit Purchase Requests' : '充值请求'}</CardTitle>
         <CardDescription>
           {language === 'en' 
             ? 'View your credit purchase request history and status' 
@@ -279,7 +279,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
             <p className="text-muted-foreground mt-1">
               {language === 'en' 
                 ? 'Your credit purchase requests will appear here' 
-                : '您的餐券购买请求将显示在这里'
+                : '您的充值请求将显示在这里'
               }
             </p>
           </div>
