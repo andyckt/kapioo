@@ -459,19 +459,23 @@ export default function DashboardPage() {
     { id: "overview", label: t('overview'), icon: <User className="h-4 w-4" /> },
     { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
     { 
-      id: "daily-delivery", 
-      label: t('dailyDelivery'), 
+      id: "daily-delivery-group", 
+      label: "每日直送", 
       icon: <Calendar className="h-4 w-4" />,
+      isHeading: true,
       children: [
-        { id: "meal-vouchers", label: t('viewPlans'), icon: <CreditCard className="h-4 w-4" /> }
+        { id: "daily-delivery", label: "订餐", icon: <ShoppingCart className="h-4 w-4" /> },
+        { id: "meal-vouchers", label: "充值", icon: <CreditCard className="h-4 w-4" /> }
       ]
     },
     { 
-      id: "weekly-subscription", 
-      label: t('weeklySubscription'), 
+      id: "weekly-subscription-group", 
+      label: "周次Meal Box", 
       icon: <Gift className="h-4 w-4" />,
+      isHeading: true,
       children: [
-        { id: "credits", label: t('viewPlans'), icon: <CreditCard className="h-4 w-4" /> }
+        { id: "weekly-subscription", label: "订餐", icon: <ShoppingCart className="h-4 w-4" /> },
+        { id: "credits", label: "充值", icon: <CreditCard className="h-4 w-4" /> }
       ]
     },
     /* Commented out for now
@@ -819,36 +823,47 @@ export default function DashboardPage() {
                       ease: [0.25, 1, 0.5, 1]
                     }}
                   >
-                    <Button
-                      variant={activeTab === item.id ? "default" : "ghost"}
-                      className={`justify-start gap-2 text-base w-full ${
-                        activeTab === item.id 
-                          ? "relative overflow-hidden group bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white"
-                          : ""
-                      }`}
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        // Don't close menu if item has children
-                        if (!item.children || item.children.length === 0) {
-                          // Add a slight delay before closing to show the selection animation
-                          setTimeout(() => setIsMobileMenuOpen(false), 150);
-                        }
-                      }}
-                    >
-                      <motion.span
-                        initial={{ scale: 1 }}
-                        whileTap={{ scale: 0.9 }}
+                    {item.isHeading ? (
+                      <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
+                        <motion.span
+                          initial={{ scale: 1 }}
+                        >
+                          {item.icon}
+                        </motion.span>
+                        {item.label}
+                      </div>
+                    ) : (
+                      <Button
+                        variant={activeTab === item.id ? "default" : "ghost"}
+                        className={`justify-start gap-2 text-base w-full ${
+                          activeTab === item.id 
+                            ? "relative overflow-hidden group bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          // Don't close menu if item has children
+                          if (!item.children || item.children.length === 0) {
+                            // Add a slight delay before closing to show the selection animation
+                            setTimeout(() => setIsMobileMenuOpen(false), 150);
+                          }
+                        }}
                       >
-                        {item.icon}
-                      </motion.span>
-                      {item.label}
-                      {activeTab === item.id && (
-                        <motion.div 
-                          className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full"
-                          layoutId="activeTabIndicator"
-                        />
-                      )}
-                    </Button>
+                        <motion.span
+                          initial={{ scale: 1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          {item.icon}
+                        </motion.span>
+                        {item.label}
+                        {activeTab === item.id && (
+                          <motion.div 
+                            className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full"
+                            layoutId="activeTabIndicator"
+                          />
+                        )}
+                      </Button>
+                    )}
                     
                     {/* Render children if they exist */}
                     {item.children && item.children.length > 0 && (
@@ -984,16 +999,23 @@ export default function DashboardPage() {
           <nav className="grid gap-2">
             {menuItems.map((item) => (
               <div key={item.id}>
-                <Button
-                  variant={activeTab === item.id ? "default" : "ghost"}
-                  className={`justify-start gap-2 w-full ${
-                    activeTab === item.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
-                  }`}
-                  onClick={() => setActiveTab(item.id)}
-                >
-                  {item.icon}
-                  {item.label}
-                </Button>
+                {item.isHeading ? (
+                  <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
+                    {item.icon}
+                    {item.label}
+                  </div>
+                ) : (
+                  <Button
+                    variant={activeTab === item.id ? "default" : "ghost"}
+                    className={`justify-start gap-2 w-full ${
+                      activeTab === item.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
+                    }`}
+                    onClick={() => setActiveTab(item.id)}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Button>
+                )}
                 
                 {/* Render children if they exist */}
                 {item.children && item.children.length > 0 && (
