@@ -347,14 +347,14 @@ const translations: TranslationsType = {
     orderTotal: "订单总额",
     orderStatus: "订单状态",
     viewOrderDetails: "查看订单详情",
-    transactionHistory: "交易历史",
-    transactionDate: "交易日期",
-    transactionType: "交易类型",
+    transactionHistory: "充值记录",
+    transactionDate: "充值日期",
+    transactionType: "充值类型",
     transactionAmount: "数量",
     transactionDesc: "说明",
     previous: "上一页",
     next: "下一页",
-    noTransactionHistory: "没有交易历史",
+    noTransactionHistory: "没有充值记录",
     pageOf: "第 X 页，共 Y 页",
     
     // Settings tab translations
