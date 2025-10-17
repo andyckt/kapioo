@@ -1061,7 +1061,39 @@ export default function DashboardPage() {
                   
                   {/* User Summary Cards - Premium Design */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
-                    {/* Credits Card - Only show if credits > 0 */}
+                    {/* Daily Delivery Vouchers Card - Combines 2-Dish and 3-Dish vouchers */}
+                    {userData && ((userData.twoDishVoucher !== undefined && userData.twoDishVoucher > 0) || 
+                                 (userData.threeDishVoucher !== undefined && userData.threeDishVoucher > 0)) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: 0.2 }}
+                      >
+                        <Card className="overflow-hidden border-0 bg-white shadow-md hover:shadow-lg transition-all duration-300 group">
+                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base flex items-center text-[#6B5F53]">
+                              <Ticket className="h-4 w-4 mr-2 text-[#C2884E]" />
+                              {language === 'en' ? 'Daily Delivery Vouchers' : '每日直送系列'}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-[#6B5F53]">2菜餐券 剩余：</span>
+                                <span className="text-lg font-medium text-[#C2884E]">{userData?.twoDishVoucher || 0} 张</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-[#6B5F53]">3菜餐券 剩余：</span>
+                                <span className="text-lg font-medium text-[#C2884E]">{userData?.threeDishVoucher || 0} 张</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    )}
+                    
+                    {/* Weekly Delivery Vouchers Card */}
                     {userData && userData.credits !== undefined && userData.credits > 0 && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -1073,61 +1105,16 @@ export default function DashboardPage() {
                           <CardHeader className="pb-2">
                             <CardTitle className="text-base flex items-center text-[#6B5F53]">
                               <Gem className="h-4 w-4 mr-2 text-[#C2884E]" />
-                              {t('credits')}
+                              {language === 'en' ? 'Weekly Delivery Vouchers' : '周次Meal Box订阅系列'}
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="pt-0">
-                            <p className="text-4xl font-light tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                              {userData?.credits}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )}
-                    
-                    {/* 2-Dish Vouchers Card - Only show if twoDishVoucher > 0 */}
-                    {userData && userData.twoDishVoucher !== undefined && userData.twoDishVoucher > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
-                      >
-                        <Card className="overflow-hidden border-0 bg-white shadow-md hover:shadow-lg transition-all duration-300 group">
-                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <Ticket className="h-4 w-4 mr-2 text-[#C2884E]" />
-                              {language === 'en' ? '2-Dish Vouchers' : '双菜券'}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <p className="text-4xl font-light tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                              {userData?.twoDishVoucher}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )}
-                    
-                    {/* 3-Dish Vouchers Card - Only show if threeDishVoucher > 0 */}
-                    {userData && userData.threeDishVoucher !== undefined && userData.threeDishVoucher > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.3 }}
-                      >
-                        <Card className="overflow-hidden border-0 bg-white shadow-md hover:shadow-lg transition-all duration-300 group">
-                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <Ticket className="h-4 w-4 mr-2 text-[#C2884E]" />
-                              {language === 'en' ? '3-Dish Vouchers' : '三菜券'}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <p className="text-4xl font-light tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                              {userData?.threeDishVoucher}
-                            </p>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-[#6B5F53]">6/10餐一周餐券 剩余：</span>
+                                <span className="text-lg font-medium text-[#C2884E]">{userData?.credits} 张</span>
+                              </div>
+                            </div>
                           </CardContent>
                         </Card>
                       </motion.div>
