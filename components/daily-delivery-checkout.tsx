@@ -371,24 +371,47 @@ export function DailyDeliveryCheckout({
                         )}
                       </div>
                       <div className="space-y-2">
-                        {items.map((item, index) => (
-                          <div key={index} className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <CheckCircle2 className="h-4 w-4 text-[#C2884E] mr-2" />
-                              <div>
-                                <span className="text-[#6B5F53]">{item.comboName}</span>
-                                <span className="text-[#6B5F53]/60 text-xs ml-2">
-                                  ({item.type === 'A' ? '2菜' : '3菜'})
-                                </span>
+                        {items.map((item, index) => {
+                          // Find the combo details to get dishes
+                          const dayData = days[item.day];
+                          const combo = dayData?.combos?.find(c => c.id === item.comboId);
+                          const dishes = combo ? (item.type === 'A' ? combo.typeA.dishes : combo.typeB.dishes) : [];
+                          
+                          return (
+                            <div key={index} className="bg-white rounded-lg border border-[#C2884E]/10 p-3 mb-2 shadow-sm">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center">
+                                  <div className="bg-[#F5EDE4] p-1.5 rounded-full mr-2">
+                                    <CheckCircle2 className="h-4 w-4 text-[#C2884E]" />
+                                  </div>
+                                  <div>
+                                    <span className="text-[#6B5F53] font-medium">{item.comboName}</span>
+                                    <span className="text-[#6B5F53]/60 text-xs ml-2">
+                                      ({item.type === 'A' ? '2菜' : '3菜'})
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="text-[#C2884E] font-medium bg-[#F5EDE4] px-2 py-0.5 rounded-full text-sm">
+                                    x{item.quantity}
+                                  </span>
+                                </div>
                               </div>
+                              
+                              {/* Display dish details */}
+                              {dishes.length > 0 && (
+                                <div className="pl-8 mt-1 space-y-1">
+                                  {dishes.map((dish, dishIdx) => (
+                                    <div key={dishIdx} className="flex items-center gap-2">
+                                      <div className="w-1 h-1 rounded-full bg-[#C2884E]/40"></div>
+                                      <span className="text-xs text-[#6B5F53]">{dish}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center">
-                              <span className="text-[#6B5F53] font-medium">
-                                x{item.quantity}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
