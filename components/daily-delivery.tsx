@@ -500,15 +500,45 @@ export default function DailyDelivery() {
               variant="outline" 
               className="flex items-center gap-2"
               onClick={() => {
-                if (cart.length > 0) {
-                  setCheckoutOpen(true)
-                } else {
+                if (cart.length === 0) {
                   toast({
                     title: t('cartEmpty'),
                     description: t('addItemsToCart'),
                     variant: "destructive"
                   })
+                  return
                 }
+                
+                // Check if there are at least 2 meals per day
+                const mealsPerDay: Record<string, number> = {};
+                
+                // Count meals for each day
+                cart.forEach(item => {
+                  if (!mealsPerDay[item.day]) {
+                    mealsPerDay[item.day] = 0;
+                  }
+                  mealsPerDay[item.day] += item.quantity;
+                });
+                
+                // Check if any day has fewer than 2 meals
+                const daysWithInsufficientMeals = Object.entries(mealsPerDay)
+                  .filter(([_, count]) => count < 2)
+                  .map(([day, _]) => days[day]?.displayName || day);
+                
+                if (daysWithInsufficientMeals.length > 0) {
+                  const daysList = daysWithInsufficientMeals.join(', ');
+                  toast({
+                    title: language === 'en' ? 'Order Requirements Not Met' : '订单不满足最低要求',
+                    description: language === 'en'
+                      ? `Minimum 2 meals per day required. Please add more meals for: ${daysList}`
+                      : `每天至少选购两餐起送。请为以下日期增加餐点: ${daysList}`,
+                    variant: "destructive"
+                  })
+                  return
+                }
+                
+                // If all validations pass, proceed to checkout
+                setCheckoutOpen(true)
               }}
             >
               <ShoppingCart className="h-4 w-4" />

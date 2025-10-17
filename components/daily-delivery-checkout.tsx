@@ -205,6 +205,34 @@ export function DailyDeliveryCheckout({
       return
     }
     
+    // Check if there are at least 2 meals per day
+    const mealsPerDay: Record<string, number> = {};
+    
+    // Count meals for each day
+    cart.forEach(item => {
+      if (!mealsPerDay[item.day]) {
+        mealsPerDay[item.day] = 0;
+      }
+      mealsPerDay[item.day] += item.quantity;
+    });
+    
+    // Check if any day has fewer than 2 meals
+    const daysWithInsufficientMeals = Object.entries(mealsPerDay)
+      .filter(([_, count]) => count < 2)
+      .map(([day, _]) => days[day]?.displayName || day);
+    
+    if (daysWithInsufficientMeals.length > 0) {
+      const daysList = daysWithInsufficientMeals.join(', ');
+      toast({
+        title: language === 'zh' ? '订单不满足最低要求' : 'Order Requirements Not Met',
+        description: language === 'zh' 
+          ? `每天至少选购两餐起送。请为以下日期增加餐点: ${daysList}` 
+          : `Minimum 2 meals per day required. Please add more meals for: ${daysList}`,
+        variant: "destructive"
+      })
+      return
+    }
+    
     // Check if user has enough vouchers
     if (userVouchers.twoDish < vouchersNeeded.twoDish || userVouchers.threeDish < vouchersNeeded.threeDish) {
       toast({
