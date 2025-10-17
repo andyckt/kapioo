@@ -1,6 +1,23 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+
+// Helper function to convert English day names to Chinese
+const getChineseDayName = (englishDayName: string): string => {
+  const dayMap: Record<string, string> = {
+    'monday': '周一',
+    'tuesday': '周二',
+    'wednesday': '周三',
+    'thursday': '周四',
+    'friday': '周五',
+    'saturday': '周六',
+    'sunday': '周日'
+  };
+  
+  // Convert to lowercase and remove any week suffix (e.g., "-w1")
+  const baseDayName = englishDayName?.toLowerCase()?.split('-')[0];
+  return dayMap[baseDayName] || englishDayName || '';
+};
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -219,7 +236,10 @@ export function DailyDeliveryCheckout({
     // Check if any day has fewer than 2 meals
     const daysWithInsufficientMeals = Object.entries(mealsPerDay)
       .filter(([_, count]) => count < 2)
-      .map(([day, _]) => days[day]?.displayName || day);
+      .map(([day, _]) => {
+        const displayName = days[day]?.displayName || day;
+        return language === 'zh' ? getChineseDayName(displayName) : displayName;
+      });
     
     if (daysWithInsufficientMeals.length > 0) {
       const daysList = daysWithInsufficientMeals.join(', ');
@@ -340,7 +360,9 @@ export function DailyDeliveryCheckout({
                     <div key={dayId} className="pb-3 last:pb-0">
                       <div className="font-medium capitalize mb-2 flex items-center">
                         <span className="text-[#6B5F53]">
-                          {days[dayId]?.displayName || dayId}
+                          {language === 'zh' 
+                            ? getChineseDayName(days[dayId]?.displayName || dayId)
+                            : days[dayId]?.displayName || dayId}
                         </span>
                         {days[dayId]?.date && (
                           <span className="text-[#6B5F53]/60 text-sm ml-2">
