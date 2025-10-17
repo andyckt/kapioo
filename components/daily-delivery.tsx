@@ -52,6 +52,23 @@ type CartItem = {
   voucherType: 'twoDish' | 'threeDish'
 }
 
+// Helper function to convert English day names to Chinese
+const getChineseDayName = (englishDayName: string): string => {
+  const dayMap: Record<string, string> = {
+    'monday': '周一',
+    'tuesday': '周二',
+    'wednesday': '周三',
+    'thursday': '周四',
+    'friday': '周五',
+    'saturday': '周六',
+    'sunday': '周日'
+  };
+  
+  // Convert to lowercase and remove any week suffix (e.g., "-w1")
+  const baseDayName = englishDayName.toLowerCase().split('-')[0];
+  return dayMap[baseDayName] || englishDayName;
+};
+
 export default function DailyDelivery() {
   const { t, language } = useLanguage()
   const { toast } = useToast()
@@ -611,7 +628,9 @@ export default function DailyDelivery() {
                       // Capitalize the first letter of the day
                       const displayName = days[selectedDay].displayName;
                       const capitalizedDay = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-                      setDayWarning(`请至少选择两餐 for ${capitalizedDay}`);
+                      setDayWarning(language === 'zh' 
+                        ? `请为${getChineseDayName(displayName)}至少选择两餐` 
+                        : `请至少选择两餐 for ${capitalizedDay}`);
                       setTimeout(() => setDayWarning(null), 5000); // Clear warning after 5 seconds
                     } else {
                       // Clear any existing warning and change day
@@ -629,7 +648,11 @@ export default function DailyDelivery() {
                   )}
                 >
                   <div className="w-full">
-                    <p className="font-medium capitalize text-sm">{days[day].displayName.substring(0, 3)}</p>
+                    <p className="font-medium capitalize text-sm">
+                      {language === 'zh' 
+                        ? getChineseDayName(days[day].displayName)
+                        : days[day].displayName.substring(0, 3)}
+                    </p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
                     {isDayUnavailable(day).unavailable && (
                       <p className="text-xs text-red-500 mt-1">Unavailable</p>
@@ -669,7 +692,9 @@ export default function DailyDelivery() {
                       // Capitalize the first letter of the day
                       const displayName = days[selectedDay].displayName;
                       const capitalizedDay = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-                      setDayWarning(`请至少选择两餐 for ${capitalizedDay}`);
+                      setDayWarning(language === 'zh' 
+                        ? `请为${getChineseDayName(displayName)}至少选择两餐` 
+                        : `请至少选择两餐 for ${capitalizedDay}`);
                       setTimeout(() => setDayWarning(null), 5000); // Clear warning after 5 seconds
                     } else {
                       // Clear any existing warning and change day
@@ -687,7 +712,11 @@ export default function DailyDelivery() {
                   )}
                 >
                   <div className="w-full">
-                    <p className="font-medium capitalize text-sm">{days[day].displayName.substring(0, 3)}</p>
+                    <p className="font-medium capitalize text-sm">
+                      {language === 'zh' 
+                        ? getChineseDayName(days[day].displayName)
+                        : days[day].displayName.substring(0, 3)}
+                    </p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
                     {isDayUnavailable(day).unavailable && (
                       <p className="text-xs text-red-500 mt-1">Unavailable</p>
@@ -706,7 +735,11 @@ export default function DailyDelivery() {
                 <div className="hidden md:block text-center mb-6 relative">
                   <div className="inline-block">
                     <div className="flex items-center justify-center">
-                      <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">{days[selectedDay].displayName}</h3>
+                      <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">
+                        {language === 'zh' 
+                          ? getChineseDayName(days[selectedDay].displayName)
+                          : days[selectedDay].displayName}
+                      </h3>
                     </div>
                     <div className={`w-8 h-px ${accentTypes.brown1.bg} mx-auto mb-2`}></div>
                     <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[selectedDay].date}</p>
