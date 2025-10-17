@@ -269,9 +269,21 @@ export function DailyDeliveryCheckout({
     
     try {
       // Prepare data for API
+      // Enhance cart items with dish details
+      const enhancedCart = cart.map(item => {
+        const dayData = days[item.day];
+        const combo = dayData?.combos?.find(c => c.id === item.comboId);
+        const dishes = combo ? (item.type === 'A' ? combo.typeA.dishes : combo.typeB.dishes) : [];
+        
+        return {
+          ...item,
+          dishes: dishes // Add dishes to each cart item
+        };
+      });
+      
       const orderData = {
         userId: userData._id,
-        items: cart,
+        items: enhancedCart,
         specialInstructions: formData.specialInstructions,
         deliveryAddress: editingAddress ? addressFormData : userData.address,
         phoneNumber: formData.phone,

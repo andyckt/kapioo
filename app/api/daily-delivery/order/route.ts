@@ -33,6 +33,7 @@ interface RequestItem {
   type?: string;
   quantity?: number;
   voucherType?: string;
+  dishes?: string[];
   [key: string]: any;
 }
 
@@ -250,7 +251,8 @@ export async function POST(request: Request) {
         comboName: String(item.comboName || ''),
         type: String(item.type || ''),
         quantity: Number(item.quantity || 0),
-        voucherType: String(item.voucherType || '')
+        voucherType: String(item.voucherType || ''),
+        dishes: Array.isArray(item.dishes) ? item.dishes : [] // Include dishes in the saved order
       }));
       
       console.log('Processed items array:', itemsToSave.length, 'items');

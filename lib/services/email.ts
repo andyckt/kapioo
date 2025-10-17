@@ -748,6 +748,16 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
                 <span style="color: #333;">${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'})</span>
                 <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
               </div>
+              ${item.dishes && item.dishes.length > 0 ? `
+              <div style="margin-top: 5px; padding-left: 15px;">
+                ${item.dishes.map((dish: string) => `
+                  <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                    <div style="width: 4px; height: 4px; border-radius: 50%; background-color: #C2884E; opacity: 0.6; margin-right: 8px;"></div>
+                    <span style="color: #6B5F53; font-size: 13px;">${dish}</span>
+                  </div>
+                `).join('')}
+              </div>
+              ` : ''}
             </li>
           `).join('')}
         </ul>
@@ -880,6 +890,16 @@ export const sendAdminDailyOrderNotification = async (orderDetails: {
                 <span style="color: #333;">${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'})</span>
                 <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
               </div>
+              ${item.dishes && item.dishes.length > 0 ? `
+              <div style="margin-top: 5px; padding-left: 15px;">
+                ${item.dishes.map((dish: string) => `
+                  <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                    <div style="width: 4px; height: 4px; border-radius: 50%; background-color: #C2884E; opacity: 0.6; margin-right: 8px;"></div>
+                    <span style="color: #6B5F53; font-size: 13px;">${dish}</span>
+                  </div>
+                `).join('')}
+              </div>
+              ` : ''}
             </li>
           `).join('')}
         </ul>
