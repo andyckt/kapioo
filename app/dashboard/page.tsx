@@ -1069,22 +1069,30 @@ export default function DashboardPage() {
                           </p>
                         </div>
                         <div className="flex items-center space-x-3">
-                          <Button 
-                            variant="outline"
-                            className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
-                            onClick={() => setActiveTab("daily-delivery")}
-                          >
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            每日直送
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
-                            onClick={() => setActiveTab("weekly-subscription")}
-                          >
-                            <Gift className="h-4 w-4 mr-2" />
-                            周次订阅
-                          </Button>
+                          {/* Only show Daily Delivery button if user has at least one 2-dish or 3-dish voucher */}
+                          {userData && ((userData.twoDishVoucher !== undefined && userData.twoDishVoucher > 0) || 
+                                      (userData.threeDishVoucher !== undefined && userData.threeDishVoucher > 0)) && (
+                            <Button 
+                              variant="outline"
+                              className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
+                              onClick={() => setActiveTab("daily-delivery")}
+                            >
+                              <ShoppingCart className="h-4 w-4 mr-2" />
+                              每日直送
+                            </Button>
+                          )}
+                          
+                          {/* Only show Weekly Subscription button if user has at least one credit */}
+                          {userData && userData.credits !== undefined && userData.credits > 0 && (
+                            <Button 
+                              variant="outline"
+                              className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
+                              onClick={() => setActiveTab("weekly-subscription")}
+                            >
+                              <Gift className="h-4 w-4 mr-2" />
+                              周次订阅
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
