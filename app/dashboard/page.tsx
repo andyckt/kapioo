@@ -1053,14 +1053,45 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex flex-col mt-4">
-                    <h2 className="text-3xl font-light tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                      {language === 'en' ? `Welcome, ${userData?.name?.split(' ')[0] || ''}` : `欢迎, ${userData?.name?.split(' ')[0] || ''}`}
-                    </h2>
-                    <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mt-2"></div>
+                    <div className="bg-gradient-to-r from-[#F8F0E5] to-[#FFF6EF] p-6 rounded-3xl shadow-sm border border-[#C2884E]/10">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-col mb-4 md:mb-0">
+                          <h2 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
+                            {language === 'en' ? `Welcome, ${userData?.name?.split(' ')[0] || ''}` : `欢迎, ${userData?.name?.split(' ')[0] || ''}`}
+                          </h2>
+                          <p className="text-[#6B5F53] text-sm mt-1">
+                            {new Date().toLocaleDateString(language === 'en' ? 'en-US' : 'zh-CN', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <Button 
+                            variant="outline"
+                            className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
+                            onClick={() => setActiveTab("daily-delivery")}
+                          >
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            每日直送
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
+                            onClick={() => setActiveTab("weekly-subscription")}
+                          >
+                            <Gift className="h-4 w-4 mr-2" />
+                            周次订阅
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   
                   {/* User Summary Cards - Premium Design */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
                     {/* Daily Delivery Vouchers Card - Combines 2-Dish and 3-Dish vouchers */}
                     {userData && ((userData.twoDishVoucher !== undefined && userData.twoDishVoucher > 0) || 
                                  (userData.threeDishVoucher !== undefined && userData.threeDishVoucher > 0)) && (
@@ -1069,24 +1100,42 @@ export default function DashboardPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.2 }}
                       >
-                        <Card className="overflow-hidden border-0 bg-white shadow-md hover:shadow-lg transition-all duration-300 group">
+                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md hover:shadow-lg transition-all duration-300 group rounded-3xl">
                           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
                           <CardHeader className="pb-2">
                             <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <Ticket className="h-4 w-4 mr-2 text-[#C2884E]" />
+                              <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
+                                <Ticket className="h-4 w-4 text-[#C2884E]" />
+                              </div>
                               {language === 'en' ? 'Daily Delivery Vouchers' : '每日直送系列'}
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="pt-0">
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-[#6B5F53]">2菜餐券 剩余：</span>
-                                <span className="text-lg font-medium text-[#C2884E]">{userData?.twoDishVoucher || 0} 张</span>
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                <span className="text-sm font-medium text-[#6B5F53]">2菜餐券 剩余：</span>
+                                <div className="flex items-center">
+                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.twoDishVoucher || 0}</span>
+                                  <span className="ml-1 text-sm text-[#6B5F53]">张</span>
+                                </div>
                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-[#6B5F53]">3菜餐券 剩余：</span>
-                                <span className="text-lg font-medium text-[#C2884E]">{userData?.threeDishVoucher || 0} 张</span>
+                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                <span className="text-sm font-medium text-[#6B5F53]">3菜餐券 剩余：</span>
+                                <div className="flex items-center">
+                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.threeDishVoucher || 0}</span>
+                                  <span className="ml-1 text-sm text-[#6B5F53]">张</span>
+                                </div>
                               </div>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
+                              <Button 
+                                variant="ghost" 
+                                className="w-full text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                onClick={() => setActiveTab("daily-delivery")}
+                              >
+                                <ShoppingCart className="h-4 w-4 mr-2" />
+                                去订餐
+                              </Button>
                             </div>
                           </CardContent>
                         </Card>
@@ -1100,20 +1149,35 @@ export default function DashboardPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.1 }}
                       >
-                        <Card className="overflow-hidden border-0 bg-white shadow-md hover:shadow-lg transition-all duration-300 group">
+                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md hover:shadow-lg transition-all duration-300 group rounded-3xl">
                           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
                           <CardHeader className="pb-2">
                             <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <Gem className="h-4 w-4 mr-2 text-[#C2884E]" />
+                              <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
+                                <Gem className="h-4 w-4 text-[#C2884E]" />
+                              </div>
                               {language === 'en' ? 'Weekly Delivery Vouchers' : '周次Meal Box订阅系列'}
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="pt-0">
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-[#6B5F53]">6/10餐一周餐券 剩余：</span>
-                                <span className="text-lg font-medium text-[#C2884E]">{userData?.credits} 张</span>
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                <span className="text-sm font-medium text-[#6B5F53]">6/10餐一周餐券 剩余：</span>
+                                <div className="flex items-center">
+                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.credits}</span>
+                                  <span className="ml-1 text-sm text-[#6B5F53]">张</span>
+                                </div>
                               </div>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
+                              <Button 
+                                variant="ghost" 
+                                className="w-full text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                onClick={() => setActiveTab("weekly-subscription")}
+                              >
+                                <ShoppingCart className="h-4 w-4 mr-2" />
+                                去订餐
+                              </Button>
                             </div>
                           </CardContent>
                         </Card>
@@ -1127,18 +1191,36 @@ export default function DashboardPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.4 }}
                       >
-                        <Card className="overflow-hidden border-0 bg-white shadow-md hover:shadow-lg transition-all duration-300 group">
+                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md hover:shadow-lg transition-all duration-300 group rounded-3xl">
                           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <ShoppingCart className="h-4 w-4 mr-2 text-[#C2884E]" />
-                              {language === 'en' ? 'Upcoming Orders' : '即将到来的订单'}
-                            </CardTitle>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-base flex items-center text-[#6B5F53]">
+                                <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
+                                  <ShoppingCart className="h-4 w-4 text-[#C2884E]" />
+                                </div>
+                                {language === 'en' ? 'Upcoming Orders' : '即将到来的订单'}
+                              </CardTitle>
+                            </div>
                           </CardHeader>
                           <CardContent className="pt-0">
-                            <p className="text-4xl font-light tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                              {upcomingDeliveries}
-                            </p>
+                            <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#C2884E]/10">
+                              <span className="text-sm font-medium text-[#6B5F53]">待配送订单：</span>
+                              <div className="flex items-center">
+                                <span className="text-xl font-bold text-[#C2884E]">{upcomingDeliveries}</span>
+                                <span className="ml-1 text-sm text-[#6B5F53]">个</span>
+                              </div>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
+                              <Button 
+                                variant="ghost" 
+                                className="w-full text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                onClick={() => setActiveTab("orders")}
+                              >
+                                <History className="h-4 w-4 mr-2" />
+                                查看订单
+                              </Button>
+                            </div>
                           </CardContent>
                         </Card>
                       </motion.div>
