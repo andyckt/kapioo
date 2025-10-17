@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Plus, Minus, ShoppingCart, X } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, X, Utensils } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
@@ -485,14 +485,24 @@ export default function DailyDelivery() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-3 mr-2">
-            <div className="text-sm">
-              <span className="font-medium">2菜餐券:</span>
-              <span className="ml-1 font-bold">{userVouchers.twoDish}</span>
+          <div className="flex items-center gap-4 mr-2">
+            <div className="flex items-center gap-2 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+              <Utensils className="h-4 w-4 text-[#C2884E]" />
+              <span className="text-sm font-medium text-[#6B5F53]">
+                2菜餐券:
+              </span>
+              <span className="text-sm font-bold text-[#C2884E]">
+                {userVouchers.twoDish}
+              </span>
             </div>
-            <div className="text-sm">
-              <span className="font-medium">3菜餐券:</span>
-              <span className="ml-1 font-bold">{userVouchers.threeDish}</span>
+            <div className="flex items-center gap-2 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+              <Utensils className="h-4 w-4 text-[#C2884E]" />
+              <span className="text-sm font-medium text-[#6B5F53]">
+                3菜餐券:
+              </span>
+              <span className="text-sm font-bold text-[#C2884E]">
+                {userVouchers.threeDish}
+              </span>
             </div>
           </div>
           {!checkoutOpen && (
