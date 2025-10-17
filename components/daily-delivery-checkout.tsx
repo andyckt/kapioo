@@ -566,7 +566,7 @@ export function DailyDeliveryCheckout({
               
               <div className="space-y-2">
                 <Label htmlFor="specialInstructions">
-                  {language === 'zh' ? '特别说明' : 'Special Instructions'}
+                  {language === 'zh' ? '订餐特殊备注' : 'Special Instructions'}
                   <span className="text-muted-foreground text-xs ml-1">
                     {language === 'zh' ? '（可选）' : '(Optional)'}
                   </span>

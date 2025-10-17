@@ -421,7 +421,7 @@ export function WeeklySubscriptionCheckout({
             
             <div className="space-y-2">
               <Label htmlFor="specialInstructions">
-                {language === 'zh' ? '特别说明' : 'Special Instructions'} {language === 'en' ? '(if any)' : '（可选）'}
+                {language === 'zh' ? '订餐特殊备注' : 'Special Instructions'} {language === 'en' ? '(if any)' : '（可选）'}
               </Label>
               <Textarea 
                 id="specialInstructions" 
