@@ -373,11 +373,25 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                                 <h3 className="font-semibold mb-1">{language === 'en' ? 'Ordered Items' : '订购的餐点'}</h3>
                                 <ul className="ml-5 list-disc space-y-1">
                                   {selectedOrder.items.map((item: any, index: number) => (
-                                    <li key={index}>
-                                      <span className="font-medium">{item.day} ({item.date})</span>: {item.comboName} 
-                                      <span className="text-muted-foreground ml-1">
-                                        ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
-                                      </span>
+                                    <li key={index} className="mb-2">
+                                      <div>
+                                        <span className="font-medium">{item.day} ({item.date})</span>: {item.comboName} 
+                                        <span className="text-muted-foreground ml-1">
+                                          ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
+                                        </span>
+                                      </div>
+                                      
+                                      {/* Display dish details if available */}
+                                      {item.dishes && item.dishes.length > 0 && (
+                                        <div className="mt-1 pl-4 space-y-1">
+                                          {item.dishes.map((dish: string, dishIndex: number) => (
+                                            <div key={dishIndex} className="flex items-center gap-1.5">
+                                              <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]/40"></div>
+                                              <span className="text-xs text-[#6B5F53]">{dish}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </li>
                                   ))}
                                 </ul>
