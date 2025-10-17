@@ -372,11 +372,6 @@ export default function WeeklySubscription({ userCredits: propCredits }: WeeklyS
                 ? '每周有两天配送选项：周日和周二。您可以选择一天或两天都配送。' 
                 : 'We offer two delivery days per week: Sunday and Tuesday. You can choose either or both days.'}
             </p>
-            <p className="text-[10px] font-medium text-[#C2884E] mt-1">
-              {language === 'zh' 
-                ? '重要提示：订单必须为6份或10份餐点。' 
-                : 'Important: Orders must be for either 6 or 10 meals.'}
-            </p>
           </div>
           
           {/* Service Area Information */}
