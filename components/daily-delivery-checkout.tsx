@@ -210,7 +210,7 @@ export function DailyDeliveryCheckout({
       toast({
         title: language === 'zh' ? '餐券不足' : 'Insufficient Vouchers',
         description: language === 'zh' 
-          ? `您需要${vouchersNeeded.twoDish}个2菜餐券和${vouchersNeeded.threeDish}个3菜餐券` 
+          ? `您需要${vouchersNeeded.twoDish}张2菜餐券和${vouchersNeeded.threeDish}张3菜餐券` 
           : `You need ${vouchersNeeded.twoDish} two-dish vouchers and ${vouchersNeeded.threeDish} three-dish vouchers`,
         variant: "destructive"
       })
@@ -239,7 +239,7 @@ export function DailyDeliveryCheckout({
         // Handle specific error cases
         if (result.required && result.available) {
           errorMessage = language === 'zh'
-            ? `餐券不足。需要 ${result.required.twoDish} 个2菜餐券和 ${result.required.threeDish} 个3菜餐券。`
+            ? `餐券不足。需要 ${result.required.twoDish} 张2菜餐券和 ${result.required.threeDish} 张3菜餐券。`
             : `Insufficient vouchers. You need ${result.required.twoDish} two-dish vouchers and ${result.required.threeDish} three-dish vouchers.`
         }
         

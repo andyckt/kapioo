@@ -513,14 +513,6 @@ export default function DailyDelivery() {
             >
               <ShoppingCart className="h-4 w-4" />
               <span>{getTotalItems()}</span>
-              <div className="ml-2 flex items-center gap-2">
-                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-                  2D: {getTotalVouchers().twoDish}
-                </span>
-                <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-                  3D: {getTotalVouchers().threeDish}
-                </span>
-              </div>
             </Button>
           )}
         </div>
@@ -684,7 +676,7 @@ export default function DailyDelivery() {
                 {/* Order Notice - Visible on all devices */}
                 <div className="text-left mb-6 pl-3 border-l-2 border-[#C2884E]">
                   <h4 className="text-xs font-bold text-[#C2884E] mb-1">下单须知</h4>
-                  <p className="text-[10px] text-[#6B5F53]">每天至少选购两餐，即可享受免费派送</p>
+                  <p className="text-[10px] text-[#6B5F53]">每天至少选购两餐起送</p>
                 </div>
                 
                 {/* Day Warning - Shows when trying to switch days with only 1 item */}
