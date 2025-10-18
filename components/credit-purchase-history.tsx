@@ -150,7 +150,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
         <CardDescription>
           {language === 'en' 
             ? 'View your credit purchase request history and status' 
-            : '查看您的餐券购买请求历史和状态'
+            : '查看您的充值请求历史和状态'
           }
         </CardDescription>
       </CardHeader>
@@ -205,9 +205,9 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       <div className="mt-1">
                         <RequestStatusBadge status={request.status} />
                       </div>
-                      {request.status === 'approved' && request.approvedCredits && (
+                      {request.status === 'approved' && (
                         <p className="text-xs text-green-600 font-medium mt-1">
-                          {request.approvedCredits} {language === 'en' ? 'credits added' : '餐券已添加'}
+                          {language === 'en' ? 'Plan approved' : '套餐已批准'}
                         </p>
                       )}
                     </div>
@@ -363,9 +363,9 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       <div className="mt-1">
                         <RequestStatusBadge status={selectedRequest.status} />
                       </div>
-                      {selectedRequest.status === 'approved' && selectedRequest.approvedCredits && (
+                      {selectedRequest.status === 'approved' && (
                         <p className="text-xs text-green-600 font-medium mt-2">
-                          {selectedRequest.approvedCredits} {language === 'en' ? 'credits added to your account' : '餐券已添加到您的账户'}
+                          {language === 'en' ? 'Plan approved and added to your account' : '套餐已批准并添加到您的账户'}
                         </p>
                       )}
                     </div>
@@ -385,10 +385,23 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                   {selectedRequest.status === 'approved' && (
                     <div>
                       <p className="text-sm font-medium">
-                        {language === 'en' ? 'Approved Credits' : '批准餐券'}
+                        {language === 'en' ? 'Approved Plan' : '批准套餐'}
                       </p>
                       <p className="text-sm text-green-600 font-medium">
-                        {selectedRequest.approvedCredits}
+                        {selectedRequest.mealPlanType && selectedRequest.mealPlanQuantity ? (
+                          <>
+                            {selectedRequest.mealPlanQuantity} × {' '}
+                            {selectedRequest.mealPlanType === '6aweek' ? '6' : 
+                             selectedRequest.mealPlanType === '8aweek' ? '8' : 
+                             selectedRequest.mealPlanType === '10aweek' ? '10' : 
+                             selectedRequest.mealPlanType === '12aweek' ? '12' : ''} {language === 'en' ? 'Meals/Week' : '餐/周'}
+                          </>
+                        ) : selectedRequest.approvedCredits ? (
+                          // Legacy display
+                          selectedRequest.approvedCredits
+                        ) : (
+                          language === 'en' ? 'Plan Approved' : '套餐已批准'
+                        )}
                       </p>
                     </div>
                   )}
