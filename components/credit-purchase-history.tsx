@@ -185,7 +185,13 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       </p>
                       <p className="text-muted-foreground">${request.amount.toFixed(2)}</p>
                       <p className="text-xs text-muted-foreground">
-                        {language === 'en' ? 'via e-Transfer' : '通过电子转账'}
+                        {language === 'en' 
+                          ? request.paymentMethod === 'wechat' 
+                            ? 'via WeChat' 
+                            : 'via e-Transfer' 
+                          : request.paymentMethod === 'wechat' 
+                            ? '通过微信转账' 
+                            : '通过EMT转账'}
                       </p>
                     </div>
                     <div>
@@ -371,7 +377,13 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                         ${selectedRequest.amount.toFixed(2)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {language === 'en' ? 'Amount transferred via e-Transfer' : '通过电子转账支付的金额'}
+                        {language === 'en' 
+                          ? selectedRequest.paymentMethod === 'wechat' 
+                            ? 'Amount transferred via WeChat' 
+                            : 'Amount transferred via e-Transfer' 
+                          : selectedRequest.paymentMethod === 'wechat' 
+                            ? '通过微信转账支付的金额' 
+                            : '通过EMT转账支付的金额'}
                       </p>
                     </div>
                     <div>
