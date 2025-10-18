@@ -965,20 +965,17 @@ export default function WeeklyMealPage() {
                 </div>
                 
                 
-                {/* Payment method and tax information */}
+                {/* Payment method and tax information - commented out
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                   <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
                   <ul className="space-y-2 text-sm text-amber-700">
-                    <li className="flex items-start gap-2">
-                      <div className="min-w-[20px] mt-0.5">•</div>
-                      <div>{language === 'zh' ? '微信支付：无需支付额外税费，可享受10%折扣～' : 'WeChat Pay: No additional tax required, enjoy 10% discount'}</div>
-                    </li>
                     <li className="flex items-start gap-2">
                       <div className="min-w-[20px] mt-0.5">•</div>
                       <div>{language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}</div>
                     </li>
                   </ul>
                 </div>
+                */}
               </div>
             </div>
           </motion.div>
