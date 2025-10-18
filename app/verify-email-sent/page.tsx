@@ -5,19 +5,40 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { Check, ArrowLeft, RefreshCw, Loader2, X } from "lucide-react"
+import { Check, ArrowLeft, RefreshCw, Loader2, X, ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
+
+// Define available service areas
+const serviceAreas = [
+  'Downtown', 
+  'Midtown', 
+  'NorthYork', 
+  'Markham', 
+  'Richmond Hill',
+  'Vaughan', 
+  'Mississauga', 
+  'Oakville', 
+  'Aurora', 
+  'Newmarket'
+]
 
 export default function VerifyEmailSentPage() {
   const router = useRouter()
   const [userEmail, setUserEmail] = useState<string>("")
+  const [userId, setUserId] = useState<string>("")
   const [verificationCode, setVerificationCode] = useState<string>("")
+  const [area, setArea] = useState<string>("")
+  const [areaError, setAreaError] = useState<string>("")
   const [isResending, setIsResending] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [isSavingArea, setIsSavingArea] = useState(false)
   const [verificationStatus, setVerificationStatus] = useState<"idle" | "success" | "error">("idle")
   const [errorMessage, setErrorMessage] = useState("")
   const [fromPage, setFromPage] = useState<string | null>(null)
@@ -44,6 +65,7 @@ export default function VerifyEmailSentPage() {
       try {
         const userData = JSON.parse(pendingUser)
         setUserEmail(userData.email || "")
+        setUserId(userData.userId || "")
       } catch (error) {
         console.error('Error parsing pendingUser data:', error)
       }
@@ -141,7 +163,7 @@ export default function VerifyEmailSentPage() {
         
         toast({
           title: "验证成功",
-          description: "您的邮箱已成功验证",
+          description: "请选择您的区域",
         })
       } else {
         setVerificationStatus("error")
@@ -165,6 +187,104 @@ export default function VerifyEmailSentPage() {
       setIsVerifying(false)
     }
   }
+  
+  // Function to handle saving the area
+  const handleSaveArea = async () => {
+    // Clear any previous error
+    setAreaError("")
+    
+    // Validate area is selected
+    if (!area) {
+      setAreaError("Please select your area")
+      toast({
+        title: "区域未选择",
+        description: "请选择您的区域",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    // Get the user ID from localStorage
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) {
+      toast({
+        title: "保存失败",
+        description: "用户信息不存在",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    const userData = JSON.parse(storedUser)
+    const userId = userData._id
+    
+    if (!userId) {
+      toast({
+        title: "保存失败",
+        description: "用户ID不存在",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setIsSavingArea(true)
+    
+    try {
+      // Call API to update user address
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: {
+            province: area
+          }
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Update user data in localStorage
+        userData.address = userData.address || {}
+        userData.address.province = area
+        localStorage.setItem('user', JSON.stringify(userData))
+        
+        // Determine which tab to redirect to based on the source page
+        const targetTab = fromPage === 'daily-delivery' ? 'meal-vouchers' : 'credits'
+        
+        // Check if there was a meal plan selection before signup
+        const hasMealPlan = fromPage === 'daily-delivery' || fromPage === 'weekly-meal'
+        
+        // Redirect to appropriate page
+        if (hasMealPlan) {
+          // Build URL with plan parameter if available
+          const url = planIdentifier 
+            ? `/dashboard?tab=${targetTab}&selectPlan=true&plan=${planIdentifier}`
+            : `/dashboard?tab=${targetTab}&selectPlan=true`
+          router.push(url)
+        } else {
+          router.push('/dashboard')
+        }
+      } else {
+        toast({
+          title: "保存失败",
+          description: data.error || "发生错误，请重试",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error saving area:', error)
+      toast({
+        title: "保存失败",
+        description: "发生错误，请重试",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingArea(false)
+    }
+  }
 
   const renderContent = () => {
     switch (verificationStatus) {
@@ -173,47 +293,77 @@ export default function VerifyEmailSentPage() {
         const selectedMealPlan = localStorage.getItem('selectedMealPlan')
         const hasMealPlan = !!selectedMealPlan || fromPage === 'daily-delivery' || fromPage === 'weekly-meal'
         
-        // Determine which tab to redirect to based on the source page
-        const targetTab = fromPage === 'daily-delivery' ? 'meal-vouchers' : 'credits'
-        
         return (
           <>
-            <CardHeader className="pb-4">
-              <div className="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
-                <Check className="h-6 w-6 text-green-600" />
+            <CardHeader className="pb-2">
+              <div className="mx-auto h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <Check className="h-5 w-5 text-green-600" />
               </div>
-              <CardTitle className="text-xl text-center">邮箱验证成功！</CardTitle>
+              <CardTitle className="text-base text-center mt-1">Verified</CardTitle>
             </CardHeader>
-            <CardContent className="text-center pb-6">
-              <p className="text-muted-foreground mb-4">
-                {hasMealPlan 
-                  ? "您的邮箱已成功验证。您可以继续购买您之前选择的餐券计划。" 
-                  : "您的邮箱已成功验证。您现在可以进入您的账户或设置您的配送地址。"
-                }
-              </p>
+            <CardContent className="pb-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="area" className="text-sm font-medium">Your Area</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="area"
+                        variant="outline"
+                        role="combobox"
+                        className="h-10 w-full justify-between text-left font-normal"
+                      >
+                        {area || "Select your area..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-full">
+                      <Command>
+                        <CommandInput placeholder="Search area..." />
+                        <CommandList>
+                          <CommandEmpty>No area found.</CommandEmpty>
+                          <CommandGroup>
+                            {serviceAreas.map((areaOption) => (
+                              <CommandItem
+                                key={areaOption}
+                                value={areaOption}
+                                onSelect={() => setArea(areaOption)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    area === areaOption ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {areaOption}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {areaError && <p className="text-destructive text-xs">{areaError}</p>}
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
-              {hasMealPlan ? (
-                <Button 
-                  onClick={() => {
-                    // Build URL with plan parameter if available
-                    const url = planIdentifier 
-                      ? `/dashboard?tab=${targetTab}&selectPlan=true&plan=${planIdentifier}`
-                      : `/dashboard?tab=${targetTab}&selectPlan=true`;
-                    router.push(url);
-                  }}
-                  className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
-                >
-                  继续购买餐券
-                </Button>
-              ) : (
-                <Button 
-                  onClick={() => router.push('/address')} 
-                  className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
-                >
-                  继续设置地址
-                </Button>
-              )}
+              <Button 
+                onClick={handleSaveArea}
+                className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
+                disabled={isSavingArea}
+              >
+                {isSavingArea ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    处理中...
+                  </>
+                ) : hasMealPlan ? (
+                  "继续购买餐券"
+                ) : (
+                  "进入我的账户"
+                )}
+              </Button>
             </CardFooter>
           </>
         )

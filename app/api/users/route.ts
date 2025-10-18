@@ -118,9 +118,8 @@ export async function POST(request: Request) {
       status: data.status || 'Active',
       credits: data.credits || 0,
       phone: data.phone || '',
-      // Address will use the default empty object from the schema
-      // We've updated the schema to make address fields optional during registration
-      // Users can update their address details after registration
+      // Handle address data if provided
+      address: data.address || {},
       isVerified: false
     });
     

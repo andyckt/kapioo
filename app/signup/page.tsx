@@ -5,13 +5,18 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, Check, ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
+
+// No longer needed here as area selection has been moved to verification page
 
 export default function SignupPage() {
   const [name, setName] = useState("")
@@ -275,6 +280,7 @@ export default function SignupPage() {
                   </div>
                   {errors.confirmPassword && <p className="text-destructive text-xs">{errors.confirmPassword}</p>}
                 </div>
+
 
                 <Button 
                   type="submit" 
