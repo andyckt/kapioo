@@ -211,29 +211,6 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                           </span>
                         )}
                       </p>
-                      {request.status === 'approved' && (
-                        <p className="text-xs text-green-600 font-medium mt-2">
-                          {request.mealPlanType && request.mealPlanQuantity ? (
-                            language === 'zh' ? (
-                              <>
-                                {request.mealPlanType === '6aweek' ? '6' : 
-                                 request.mealPlanType === '8aweek' ? '8' : 
-                                 request.mealPlanType === '10aweek' ? '10' : 
-                                 request.mealPlanType === '12aweek' ? '12' : ''}餐一周: {request.mealPlanQuantity}星期
-                              </>
-                            ) : (
-                              <>
-                                {request.mealPlanType === '6aweek' ? '6' : 
-                                 request.mealPlanType === '8aweek' ? '8' : 
-                                 request.mealPlanType === '10aweek' ? '10' : 
-                                 request.mealPlanType === '12aweek' ? '12' : ''} meals/week: {request.mealPlanQuantity} {request.mealPlanQuantity === 1 ? 'week' : 'weeks'}
-                              </>
-                            )
-                          ) : (
-                            language === 'en' ? 'Plan approved' : '套餐已批准'
-                          )}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </CardContent>
