@@ -9,6 +9,7 @@ import { Plus, Minus, ShoppingCart, X, Utensils } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
+import { RegionCheckDialog } from './region-check-dialog'
 import { 
   Dialog,
   DialogContent,
@@ -82,6 +83,17 @@ export default function DailyDelivery() {
     twoDish: 0,
     threeDish: 0
   })
+  const [showRegionDialog, setShowRegionDialog] = useState(false)
+  const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
+  
+  // Define the supported regions for daily delivery
+  const DAILY_DELIVERY_REGIONS = [
+    "Downtown",
+    "Midtown", 
+    "NorthYork", 
+    "Markham", 
+    "RichmondHill"
+  ]
   
   // Check if a day is in the past or today after ordering cutoff time
   const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
@@ -348,7 +360,7 @@ export default function DailyDelivery() {
           throw new Error(daysData.error || 'Failed to fetch days')
         }
         
-        // Load user data and vouchers
+        // Load user data, vouchers, and region
         const storedUser = localStorage.getItem('user')
         if (storedUser) {
           const user = JSON.parse(storedUser)
@@ -356,6 +368,16 @@ export default function DailyDelivery() {
             twoDish: user.twoDishVoucher || 0,
             threeDish: user.threeDishVoucher || 0
           })
+          
+          // Check user's region
+          if (user.address && user.address.province) {
+            setUserRegion(user.address.province)
+            
+            // If user's region is not in the supported list, show the dialog
+            if (!DAILY_DELIVERY_REGIONS.includes(user.address.province)) {
+              setShowRegionDialog(true)
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error)
@@ -499,6 +521,13 @@ export default function DailyDelivery() {
 
   return (
     <div className="flex flex-col h-full space-y-6">
+      {/* Region Check Dialog */}
+      <RegionCheckDialog 
+        open={showRegionDialog} 
+        onClose={() => setShowRegionDialog(false)} 
+        currentRegion={userRegion}
+      />
+      
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
         <div className="flex items-center gap-2">
