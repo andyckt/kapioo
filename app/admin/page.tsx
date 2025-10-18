@@ -35,7 +35,8 @@ import {
   updateUser,
   type User,
   setDayActiveStatus,
-  getAdminWeeklyMeals
+  getAdminWeeklyMeals,
+  deleteUser
 } from "@/lib/utils"
 import {
   Select,
@@ -121,6 +122,7 @@ export default function AdminDashboardPage() {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [deductCreditsOpen, setDeductCreditsOpen] = useState(false)
   const [deductAmount, setDeductAmount] = useState(1)
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false)
   const [deductDescription, setDeductDescription] = useState("Admin deduction")
   const [userTransactions, setUserTransactions] = useState<any[]>([])
   const [userTransactionsLoading, setUserTransactionsLoading] = useState(false)
@@ -697,6 +699,52 @@ export default function AdminDashboardPage() {
     setDeductDescription("Admin deduction") // Reset to default
     setDeductCreditsOpen(true)
   }
+  
+  // Handle delete user button click
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user)
+    setDeleteUserOpen(true)
+  }
+  
+  // Confirm delete user
+  const confirmDeleteUser = async () => {
+    if (!selectedUser) return
+    
+    try {
+      setIsLoading(true)
+      
+      // Call the deleteUser function from utils
+      const success = await deleteUser(selectedUser._id)
+      
+      if (success) {
+        toast({
+          title: "User deleted",
+          description: `${selectedUser.name}'s account has been successfully deleted.`,
+        })
+        
+        // Close the dialog
+        setDeleteUserOpen(false)
+        
+        // Refresh the users list
+        fetchUsers(usersPagination.page, usersPagination.limit)
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete user. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Confirm deduct credits
   const confirmDeductCredits = async () => {
@@ -1134,6 +1182,9 @@ export default function AdminDashboardPage() {
                                     </Button>
                                     <Button variant="outline" size="sm" onClick={() => handleViewUser(user)}>
                                       View
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-500 border-red-200 hover:bg-red-50">
+                                      Delete
                                     </Button>
                                   </div>
                                 </td>
@@ -2761,6 +2812,53 @@ export default function AdminDashboardPage() {
               variant="destructive"
             >
               Deduct Credits
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-500">Delete User Account</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedUser?.name}'s account? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {selectedUser && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">User ID</Label>
+                    <p className="font-medium">{selectedUser.userID}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Email</Label>
+                    <p className="font-medium">{selectedUser.email}</p>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <Label className="text-sm text-muted-foreground">Warning</Label>
+                  <p className="text-sm text-red-500 font-medium">
+                    This will permanently delete all user data including order history, credits, and account information.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteUser}
+              className="gap-1"
+            >
+              {isLoading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
+              Delete User
             </Button>
           </DialogFooter>
         </DialogContent>
