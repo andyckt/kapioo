@@ -1116,7 +1116,7 @@ export default function DailyDeliveryPage() {
                     >
                       {renderPlanCards(twoDishPlans)}
                       
-                      {/* Payment method and tax information */}
+                      {/* Payment method and tax information - commented out
                       <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                         <h4 className="font-medium text-amber-800 mb-2">
                           {language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}
@@ -1136,6 +1136,7 @@ export default function DailyDeliveryPage() {
                           </li>
                         </ul>
                       </div>
+                      */}
                     </motion.div>
                   </TabsContent>
                   
@@ -1148,7 +1149,7 @@ export default function DailyDeliveryPage() {
                     >
                       {renderPlanCards(threeDishPlans)}
                       
-                      {/* Payment method and tax information */}
+                      {/* Payment method and tax information - commented out
                       <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                         <h4 className="font-medium text-amber-800 mb-2">
                           {language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}
@@ -1168,6 +1169,7 @@ export default function DailyDeliveryPage() {
                           </li>
                         </ul>
                       </div>
+                      */}
                     </motion.div>
                   </TabsContent>
                 </Tabs>
