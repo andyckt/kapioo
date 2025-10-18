@@ -1069,30 +1069,14 @@ export default function DashboardPage() {
                           </p>
                         </div>
                         <div className="flex items-center space-x-3">
-                          {/* Only show Daily Delivery button if user has at least one 2-dish or 3-dish voucher */}
-                          {userData && ((userData.twoDishVoucher !== undefined && userData.twoDishVoucher > 0) || 
-                                      (userData.threeDishVoucher !== undefined && userData.threeDishVoucher > 0)) && (
-                            <Button 
-                              variant="outline"
-                              className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
-                              onClick={() => setActiveTab("daily-delivery")}
-                            >
-                              <ShoppingCart className="h-4 w-4 mr-2" />
-                              每日直送
-                            </Button>
-                          )}
-                          
-                          {/* Only show Weekly Subscription button if user has at least one credit */}
-                          {userData && userData.credits !== undefined && userData.credits > 0 && (
-                            <Button 
-                              variant="outline"
-                              className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
-                              onClick={() => setActiveTab("weekly-subscription")}
-                            >
-                              <Gift className="h-4 w-4 mr-2" />
-                              周次订阅
-                            </Button>
-                          )}
+                          <Button 
+                            variant="outline"
+                            className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
+                            onClick={() => setActiveTab("orders")}
+                          >
+                            <History className="h-4 w-4 mr-2" />
+                            {language === 'en' ? 'My Orders' : '我的订单'}
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -1136,22 +1120,32 @@ export default function DashboardPage() {
                               </div>
                             </div>
                             <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                              <Button 
-                                variant="ghost" 
-                                className="w-full text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
-                                onClick={() => setActiveTab("daily-delivery")}
-                              >
-                                <ShoppingCart className="h-4 w-4 mr-2" />
-                                去订餐
-                              </Button>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  onClick={() => setActiveTab("daily-delivery")}
+                                >
+                                  <ShoppingCart className="h-4 w-4 mr-2" />
+                                  去订餐
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  onClick={() => setActiveTab("meal-vouchers")}
+                                >
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  去充值
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
                       </motion.div>
                     )}
                     
-                    {/* Weekly Delivery Vouchers Card */}
-                    {userData && userData.credits !== undefined && userData.credits > 0 && (
+                    {/* Weekly Delivery Vouchers Card - Always show */}
+                    {userData && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1172,20 +1166,30 @@ export default function DashboardPage() {
                               <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
                                 <span className="text-sm font-medium text-[#6B5F53]">6/10餐一周餐券 剩余：</span>
                                 <div className="flex items-center">
-                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.credits}</span>
+                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.credits || 0}</span>
                                   <span className="ml-1 text-sm text-[#6B5F53]">张</span>
                                 </div>
                               </div>
                             </div>
                             <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                              <Button 
-                                variant="ghost" 
-                                className="w-full text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
-                                onClick={() => setActiveTab("weekly-subscription")}
-                              >
-                                <ShoppingCart className="h-4 w-4 mr-2" />
-                                去订餐
-                              </Button>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  onClick={() => setActiveTab("weekly-subscription")}
+                                >
+                                  <ShoppingCart className="h-4 w-4 mr-2" />
+                                  去订餐
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  onClick={() => setActiveTab("credits")}
+                                >
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  去充值
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
