@@ -467,19 +467,11 @@ export default function MealVoucherPurchase() {
               <div className="p-4 space-y-3">
                 <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
                   <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '收款人邮箱' : 'Recipient Email'}</p>
-                  <p className="font-medium text-[#6B5F53]">payments@kapioo.com</p>
-                </div>
-                <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '金额' : 'Amount'}</p>
-                  <p className="font-medium text-[#C2884E]">${selectedPlan?.price}</p>
-                </div>
-                <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '安全问题' : 'Security Question'}</p>
-                  <p className="font-medium text-[#6B5F53]">What is the name of our company?</p>
+                  <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
                 </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '答案' : 'Answer'}</p>
-                  <p className="font-medium text-[#6B5F53]">kapioo</p>
+                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '金额' : 'Amount'}</p>
+                  <p className="font-medium text-[#C2884E]">${selectedPlan?.price}</p>
                 </div>
               </div>
             </div>
@@ -653,7 +645,7 @@ export default function MealVoucherPurchase() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <p className="text-[#6B5F53]">{language === 'zh' ? '收款人邮箱' : 'Recipient Email'}</p>
-                  <p className="font-medium text-[#6B5F53]">payments@kapioo.com</p>
+                  <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <p className="text-[#6B5F53]">{language === 'zh' ? '付款凭证' : 'Payment Proof'}</p>
@@ -1035,7 +1027,7 @@ export default function MealVoucherPurchase() {
                       <div className="mt-2 bg-white p-3 rounded-lg border border-[#C2884E]/10 text-sm">
                         <div className="flex justify-between items-center">
                           <span className="text-[#6B5F53]">{language === 'zh' ? '收款邮箱' : 'Recipient Email'}</span>
-                          <span className="font-medium">payments@kapioo.com</span>
+                          <span className="font-medium">kapioomeal@gmail.com</span>
                         </div>
                       </div>
                     </motion.div>
