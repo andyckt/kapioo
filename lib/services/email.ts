@@ -337,7 +337,9 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
   if (status === 'approved') {
     statusText = '已批准';
     statusColor = '#4CAF50';
-    statusMessage = `您的充值请求已获批准，${credits} 餐券已添加到您的账户。`;
+    statusMessage = planDescription 
+      ? `您的充值请求已获批准，${planDescription}已添加到您的账户。`
+      : `您的充值请求已获批准，套餐已添加到您的账户。`;
   } else {
     statusText = '已拒绝';
     statusColor = '#F44336';
@@ -349,9 +351,9 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">餐券充值状态更新</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">充值状态更新</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        ${name}，您的餐券充值请求状态已更新：
+        ${name}，您的充值请求状态已更新：
       </p>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto; text-align: center;">
         <div style="display: inline-block; padding: 8px 16px; background-color: ${statusColor}; color: white; border-radius: 20px; font-weight: bold; margin-bottom: 15px;">
@@ -370,7 +372,7 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
         </p>
       </div>
       <div style="text-align: center; margin-top: 30px;">
-        <a href="${baseUrl}/dashboard?tab=credits" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">查看我的餐券</a>
+        <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">查看我的套餐</a>
       </div>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
         <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
