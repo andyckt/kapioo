@@ -263,6 +263,7 @@ export default function WeeklySubscription({
       // Check if the day is unavailable
       const { unavailable, reason } = isDayUnavailable(day);
       
+      /* Commented out the red warning
       if (unavailable) {
         // Show warning toast but still allow adding to cart
         toast({
@@ -271,6 +272,7 @@ export default function WeeklySubscription({
           variant: "destructive"
         });
       }
+      */
     }
     
     const existingItemIndex = cart.findIndex(
@@ -597,65 +599,7 @@ export default function WeeklySubscription({
             </div>
           </div>
           
-          {/* Cart Summary - Commented out as requested
-          {getTotalItems() > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-8"
-            >
-              <Card className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-[#C2884E]/20">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-[#6B5F53] mb-4">
-                    {language === 'zh' ? '购物车摘要' : 'Cart Summary'}
-                  </h3>
-                  
-                  <div className="space-y-2">
-                    {cart.map((item, index) => {
-                      const day = deliveryDays.find(d => d.id === item.dayId)
-                      
-                      // Find the option in all delivery days
-                      let optionName = item.optionId;
-                      for (const d of deliveryDays) {
-                        if (d.id === item.dayId) {
-                          const option = d.options.find(opt => opt.id === item.optionId);
-                          if (option) {
-                            optionName = option.name;
-                            break;
-                          }
-                        }
-                      }
-                      
-                      return (
-                        <div key={index} className="flex justify-between text-sm">
-                          <span className="mr-2 flex-1">
-                            {day?.name} - {optionName} x{item.quantity}
-                          </span>
-                          <span className="font-medium flex-shrink-0">
-                            {item.quantity} {language === 'zh' ? '积分' : 'credits'}
-                          </span>
-                        </div>
-                      )
-                    })}
-                    
-                    <div className="border-t border-[#C2884E]/20 pt-2 mt-2 flex justify-between font-medium">
-                      <span>{language === 'zh' ? '总计' : 'Total'}</span>
-                      <span>{getTotalCredits()} {language === 'zh' ? '积分' : 'credits'}</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    className="w-full mt-4 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C]"
-                    onClick={handleCheckout}
-                  >
-                    {language === 'zh' ? '结账' : 'Checkout'}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-          */}
+          {/* Cart Summary removed as requested */}
         </div>
       )}
     </div>

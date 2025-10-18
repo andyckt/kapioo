@@ -420,13 +420,10 @@ export function WeeklySubscriptionCheckout({
                           
                           return (
                             <div key={index} className="flex justify-between text-sm">
-                              <div className="flex items-center flex-1 mr-4">
+                              <div className="flex items-center flex-1">
                                 <CheckCircle2 className="h-4 w-4 text-[#C2884E] mr-2 flex-shrink-0" />
-                                <span>{optionName}</span>
+                                <span>{optionName}{item.quantity > 1 ? ` x${item.quantity}` : ''}</span>
                               </div>
-                              <span className="font-medium flex-shrink-0">
-                                {item.quantity} {language === 'zh' ? '积分' : 'credits'}
-                              </span>
                             </div>
                           );
                         })}
@@ -440,7 +437,21 @@ export function WeeklySubscriptionCheckout({
                   
                   <div className="border-t border-[#C2884E]/20 pt-2 mt-2 flex justify-between font-medium">
                     <span>{language === 'zh' ? '总计' : 'Total'}</span>
-                    <span>{totalItems} {language === 'zh' ? '积分' : 'credits'}</span>
+                    <span>
+                      {(() => {
+                        if (totalItems === 6) {
+                          return language === 'zh' ? '6餐一周: 1张' : '6 meals/week: 1 voucher';
+                        } else if (totalItems === 8) {
+                          return language === 'zh' ? '8餐一周: 1张' : '8 meals/week: 1 voucher';
+                        } else if (totalItems === 10) {
+                          return language === 'zh' ? '10餐一周: 1张' : '10 meals/week: 1 voucher';
+                        } else if (totalItems === 12) {
+                          return language === 'zh' ? '12餐一周: 1张' : '12 meals/week: 1 voucher';
+                        } else {
+                          return `${totalItems} ${language === 'zh' ? '餐' : 'meals'}`;
+                        }
+                      })()}
+                    </span>
                   </div>
                 </div>
               </CardContent>
