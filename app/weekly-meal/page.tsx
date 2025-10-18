@@ -36,7 +36,7 @@ interface PlanOption {
   duration: 1 | 2 | 4;
   durationLabel: string;
   durationLabelZh: string;
-  mealsPerWeek: 6 | 10;
+  mealsPerWeek: 6 | 8 | 10 | 12;
   totalPrice: number;
   pricePerMeal: number;
   isPopular?: boolean;
@@ -48,7 +48,8 @@ interface PlanOption {
 export default function WeeklyMealPage() {
   const router = useRouter()
   const { t, language } = useLanguage()
-  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 10>(6)
+  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12>(6)
+  const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect'>('mealSelect')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
   const [isMenuLoading, setIsMenuLoading] = useState(false)
@@ -194,7 +195,7 @@ export default function WeeklyMealPage() {
 
   // Define plan options based on the credit-purchase-plans component
   const planOptions: PlanOption[] = [
-    // 1 week options
+    // 1 week options - 6 meals/week
     { 
       id: 'week1-6', 
       duration: 1, 
@@ -204,6 +205,17 @@ export default function WeeklyMealPage() {
       totalPrice: 103, 
       pricePerMeal: 17.16 
     },
+    // 1 week options - 8 meals/week
+    { 
+      id: 'week1-8', 
+      duration: 1, 
+      durationLabel: 'One week plan', 
+      durationLabelZh: '1周次卡券', 
+      mealsPerWeek: 8, 
+      totalPrice: 137, 
+      pricePerMeal: 17.13
+    },
+    // 1 week options - 10 meals/week
     { 
       id: 'week1-10', 
       duration: 1, 
@@ -211,10 +223,20 @@ export default function WeeklyMealPage() {
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 10, 
       totalPrice: 170, 
-      pricePerMeal: 17 
+      pricePerMeal: 17.00 
+    },
+    // 1 week options - 12 meals/week
+    { 
+      id: 'week1-12', 
+      duration: 1, 
+      durationLabel: 'One week plan', 
+      durationLabelZh: '1周次卡券', 
+      mealsPerWeek: 12, 
+      totalPrice: 203, 
+      pricePerMeal: 16.92 
     },
     
-    // 2 week options
+    // 2 week options - 6 meals/week
     { 
       id: 'week2-6', 
       duration: 2, 
@@ -222,11 +244,25 @@ export default function WeeklyMealPage() {
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 6, 
       totalPrice: 186, 
-      pricePerMeal: 15.5,
+      pricePerMeal: 15.50,
       isRecommended: true,
       tag: 'Best value',
       tagZh: '首次推荐'
     },
+    // 2 week options - 8 meals/week
+    { 
+      id: 'week2-8', 
+      duration: 2, 
+      durationLabel: 'Two weeks plan', 
+      durationLabelZh: '2周次卡券', 
+      mealsPerWeek: 8, 
+      totalPrice: 246, 
+      pricePerMeal: 15.38,
+      isRecommended: true,
+      tag: 'First Time Recommended',
+      tagZh: '首次推荐'
+    },
+    // 2 week options - 10 meals/week
     { 
       id: 'week2-10', 
       duration: 2, 
@@ -234,13 +270,26 @@ export default function WeeklyMealPage() {
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 10, 
       totalPrice: 304, 
-      pricePerMeal: 15.2,
+      pricePerMeal: 15.20,
       isRecommended: true,
       tag: 'Most popular',
       tagZh: '首次推荐'
     },
+    // 2 week options - 12 meals/week
+    { 
+      id: 'week2-12', 
+      duration: 2, 
+      durationLabel: 'Two weeks plan', 
+      durationLabelZh: '2周次卡券', 
+      mealsPerWeek: 12, 
+      totalPrice: 364, 
+      pricePerMeal: 15.17,
+      isRecommended: true,
+      tag: 'First Time Recommended',
+      tagZh: '首次推荐'
+    },
     
-    // 4 week options
+    // 4 week options - 6 meals/week
     { 
       id: 'week4-6', 
       duration: 4, 
@@ -248,11 +297,25 @@ export default function WeeklyMealPage() {
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 6, 
       totalPrice: 360, 
-      pricePerMeal: 15,
+      pricePerMeal: 15.00,
       isPopular: true,
       tag: 'Best long-term choice',
       tagZh: '长期最佳选择'
     },
+    // 4 week options - 8 meals/week
+    { 
+      id: 'week4-8', 
+      duration: 4, 
+      durationLabel: 'Four weeks plan', 
+      durationLabelZh: '4周次卡券', 
+      mealsPerWeek: 8, 
+      totalPrice: 477, 
+      pricePerMeal: 14.91,
+      isPopular: true,
+      tag: 'Best long-term choice',
+      tagZh: '长期最佳选择'
+    },
+    // 4 week options - 10 meals/week
     { 
       id: 'week4-10', 
       duration: 4, 
@@ -260,7 +323,20 @@ export default function WeeklyMealPage() {
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 10, 
       totalPrice: 592, 
-      pricePerMeal: 14.8,
+      pricePerMeal: 14.80,
+      isPopular: true,
+      tag: 'Best long-term choice',
+      tagZh: '长期最佳选择'
+    },
+    // 4 week options - 12 meals/week
+    { 
+      id: 'week4-12', 
+      duration: 4, 
+      durationLabel: 'Four weeks plan', 
+      durationLabelZh: '4周次卡券', 
+      mealsPerWeek: 12, 
+      totalPrice: 709, 
+      pricePerMeal: 14.77,
       isPopular: true,
       tag: 'Best long-term choice',
       tagZh: '长期最佳选择'
@@ -270,6 +346,17 @@ export default function WeeklyMealPage() {
   // Get filtered plans based on selected meals per week
   const filteredPlans = planOptions.filter(plan => plan.mealsPerWeek === selectedMealsPerWeek)
 
+  // Handle meal count selection
+  const handleMealCountSelect = (mealCount: 6 | 8 | 10 | 12) => {
+    setSelectedMealsPerWeek(mealCount)
+    setPurchaseStep('planSelect')
+  }
+  
+  // Go back to meal count selection
+  const handleBackToMealSelect = () => {
+    setPurchaseStep('mealSelect')
+  }
+  
   // Handle plan selection and redirection
   const handlePlanSelect = (plan: PlanOption) => {
     // Create a plan identifier
@@ -852,130 +939,175 @@ export default function WeeklyMealPage() {
               </h2>
               
               <div className="space-y-6">
-                {/* Meals per week selector */}
-                <div className="flex gap-4">
-                  <Button
-                    onClick={() => setSelectedMealsPerWeek(6)}
-                    variant={selectedMealsPerWeek === 6 ? "default" : "outline"}
-                    className={`flex-1 rounded-xl ${selectedMealsPerWeek === 6 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
-                  >
-                    6 {language === 'zh' ? '餐/周' : 'meals/week'}
-                  </Button>
-                  <Button
-                    onClick={() => setSelectedMealsPerWeek(10)}
-                    variant={selectedMealsPerWeek === 10 ? "default" : "outline"}
-                    className={`flex-1 rounded-xl ${selectedMealsPerWeek === 10 ? 'bg-[#C2884E] hover:bg-[#B27A40]' : 'border-[#D1A46C] text-[#8A7968]'}`}
-                  >
-                    10 {language === 'zh' ? '餐/周' : 'meals/week'}
-                  </Button>
-                </div>
-                
-                {/* Plan options */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {filteredPlans.map((plan) => (
-                    <Card 
-                      key={plan.id} 
-                      className={`overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl ${
-                        plan.isPopular || plan.isRecommended ? 'border-[#C2884E]' : 'border-[#E5D6BC]'
-                      }`}
-                    >
-                      <div className="relative">
-                        {(plan.isPopular || plan.isRecommended) && (
-                          <div className="absolute top-0 right-0 left-0 bg-[#C2884E] text-white text-center py-1.5 text-sm font-medium">
-                            {language === 'zh' ? plan.tagZh : plan.tag}
-                          </div>
-                        )}
-                        
-                        <CardHeader className={`${(plan.isPopular || plan.isRecommended) ? 'pt-10' : 'pt-6'}`}>
-                          <CardTitle className="text-center text-xl text-[#6B5F53]">
-                            {language === 'zh' ? plan.durationLabelZh : plan.durationLabel}
-                          </CardTitle>
-                        </CardHeader>
-                        
-                        <CardContent className="space-y-4">
-                          <div className="text-center">
-                            <div className="text-3xl font-bold text-[#C2884E]">
-                              ${plan.totalPrice}
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <Calendar className="h-4 w-4 text-[#C2884E]" />
-                                <span className="text-sm font-medium text-[#6B5F53]">
-                                  {language === 'zh' ? '餐数/周' : 'Meals/week'}
-                                </span>
-                              </div>
-                              <span className="font-bold text-[#C2884E]">{plan.mealsPerWeek}</span>
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <Star className="h-4 w-4 text-[#C2884E]" />
-                                <span className="text-sm font-medium text-[#6B5F53]">
-                                  {language === 'zh' ? '单价' : 'Per meal'}
-                                </span>
-                              </div>
-                              <span className="font-bold text-[#C2884E]">${plan.pricePerMeal.toFixed(2)}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2 pt-3 border-t border-[#C2884E]/10">
-                            <div className="flex items-start gap-2 text-sm">
-                              <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                              <span className="text-[#6B5F53]">
-                                {language === 'zh' ? '可转让' : 'Transferable'}
-                              </span>
-                            </div>
-                            <div className="flex items-start gap-2 text-sm">
-                              <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                              <span className="text-[#6B5F53]">
-                                {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
-                              </span>
-                            </div>
-                            <div className="flex items-start gap-2 text-sm">
-                              <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                              <span className="text-[#6B5F53]">
-                                {language === 'zh' ? '购买后7天内可退款未用部分' : 'Unused portion refundable within 7 days of purchase'}
-                              </span>
-                            </div>
-                          </div>
+                {purchaseStep === 'mealSelect' ? (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-medium text-[#6B5F53] text-center mb-4">
+                      {language === 'zh' ? '请选择每周餐数' : 'Please select meals per week'}
+                    </h3>
+                    
+                    {/* Meals per week selector */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <Card 
+                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
+                        onClick={() => handleMealCountSelect(6)}
+                      >
+                        <CardContent className="p-6 text-center">
+                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">6</h3>
+                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
                         </CardContent>
-                        
-                        <CardFooter>
-                          <Button 
-                            className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
-                            onClick={() => handlePlanSelect(plan)}
-                          >
-                            {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
-                          </Button>
-                        </CardFooter>
+                      </Card>
+                      
+                      <div className="relative">
+                        <Card 
+                          className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#C2884E] cursor-pointer"
+                          onClick={() => handleMealCountSelect(8)}
+                        >
+                          <CardContent className="p-6 text-center">
+                            <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">8</h3>
+                            <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
+                          </CardContent>
+                        </Card>
+                        <div className="absolute -top-3 left-0 right-0 flex justify-center">
+                          <span className="bg-[#C2884E] text-white text-xs px-3 py-1 rounded-full shadow-sm">
+                            {language === 'zh' ? '最推荐' : 'Most Recommended'}
+                          </span>
+                        </div>
                       </div>
-                    </Card>
-                  ))}
-                </div>
-                
-                {/* Delivery fee info */}
-                <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC] text-center">
-                  <span className="text-[#8A7968]">
-                    {language === 'zh' ? '配送费/周 (2次配送)' : 'Delivery fee/week (2 deliveries)'}: 
-                  </span>
-                  <span className="font-medium text-[#6B5F53] ml-2">$11.99</span>
-                </div>
-                
-                
-                {/* Payment method and tax information - commented out
-                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
-                  <ul className="space-y-2 text-sm text-amber-700">
-                    <li className="flex items-start gap-2">
-                      <div className="min-w-[20px] mt-0.5">•</div>
-                      <div>{language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}</div>
-                    </li>
-                  </ul>
-                </div>
-                */}
+                      
+                      <Card 
+                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
+                        onClick={() => handleMealCountSelect(10)}
+                      >
+                        <CardContent className="p-6 text-center">
+                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">10</h3>
+                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card 
+                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
+                        onClick={() => handleMealCountSelect(12)}
+                      >
+                        <CardContent className="p-6 text-center">
+                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">12</h3>
+                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    {/* Additional information */}
+                    <div className="text-xs text-[#8A7968] space-y-1 mt-6">
+                      <p>* {language === 'zh' ? '餐券卡有效期为半年，可转赠亲友，购买后7天内可退款未用部分' : 'Credits valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}</p>
+                      <p>* {language === 'zh' ? '以上均为税前价格，支付方式：EMT' : 'All prices before tax, payment method: EMT'}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-1 text-[#8A7968] hover:text-[#6B5F53] hover:bg-transparent p-0"
+                        onClick={handleBackToMealSelect}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        {language === 'zh' ? '返回选择餐数' : 'Back to meal selection'}
+                      </Button>
+                      
+                      <h3 className="text-lg font-medium text-[#6B5F53]">
+                        {selectedMealsPerWeek} {language === 'zh' ? '餐/周' : 'meals/week'}
+                      </h3>
+                    </div>
+                    
+                    {/* Plan options */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {filteredPlans.map((plan) => (
+                        <Card 
+                          key={plan.id} 
+                          className={`overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl ${
+                            plan.isPopular || plan.isRecommended ? 'border-[#C2884E]' : 'border-[#E5D6BC]'
+                          }`}
+                        >
+                          <div className="relative">
+                            {(plan.isPopular || plan.isRecommended) && (
+                              <div className="absolute top-0 right-0 left-0 bg-[#C2884E] text-white text-center py-1.5 text-sm font-medium">
+                                {language === 'zh' ? plan.tagZh : plan.tag}
+                              </div>
+                            )}
+                            
+                            <CardHeader className={`${(plan.isPopular || plan.isRecommended) ? 'pt-10' : 'pt-6'}`}>
+                              <CardTitle className="text-center text-xl text-[#6B5F53]">
+                                {language === 'zh' ? plan.durationLabelZh : plan.durationLabel}
+                              </CardTitle>
+                            </CardHeader>
+                            
+                            <CardContent className="space-y-4">
+                              <div className="text-center">
+                                <div className="text-3xl font-bold text-[#C2884E]">
+                                  ${plan.totalPrice}
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <Calendar className="h-4 w-4 text-[#C2884E]" />
+                                    <span className="text-sm font-medium text-[#6B5F53]">
+                                      {language === 'zh' ? '餐数/周' : 'Meals/week'}
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-[#C2884E]">{plan.mealsPerWeek}</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <Star className="h-4 w-4 text-[#C2884E]" />
+                                    <span className="text-sm font-medium text-[#6B5F53]">
+                                      {language === 'zh' ? '单价' : 'Per meal'}
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-[#C2884E]">${plan.pricePerMeal.toFixed(2)}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2 pt-3 border-t border-[#C2884E]/10">
+                                <div className="flex items-start gap-2 text-sm">
+                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                                  <span className="text-[#6B5F53]">
+                                    {language === 'zh' ? '可转让' : 'Transferable'}
+                                  </span>
+                                </div>
+                                <div className="flex items-start gap-2 text-sm">
+                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                                  <span className="text-[#6B5F53]">
+                                    {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
+                                  </span>
+                                </div>
+                              </div>
+                            </CardContent>
+                            
+                            <CardFooter>
+                              <Button 
+                                className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
+                                onClick={() => handlePlanSelect(plan)}
+                              >
+                                {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
+                              </Button>
+                            </CardFooter>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    {/* Delivery fee info */}
+                    <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC] text-center">
+                      <span className="text-[#8A7968]">
+                        {language === 'zh' ? '配送费/周 (2次配送)' : 'Delivery fee/week (2 deliveries)'}: 
+                      </span>
+                      <span className="font-medium text-[#6B5F53] ml-2">$11.99</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
