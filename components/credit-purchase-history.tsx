@@ -184,15 +184,6 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                         {language === 'en' ? 'Amount Paid' : '支付金额'}
                       </p>
                       <p className="text-muted-foreground">${request.amount.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {language === 'en' 
-                          ? request.paymentMethod === 'wechat' 
-                            ? 'via WeChat' 
-                            : 'via e-Transfer' 
-                          : request.paymentMethod === 'wechat' 
-                            ? '通过微信转账' 
-                            : '通过EMT转账'}
-                      </p>
                     </div>
                     <div>
                       <p className="font-medium">
@@ -206,13 +197,22 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                     </div>
                     <div>
                       <p className="font-medium">
-                        {language === 'en' ? 'Status' : '状态'}
+                        {language === 'en' ? 'Payment Method' : '支付方式'}
                       </p>
-                      <div className="mt-1">
-                        <RequestStatusBadge status={request.status} />
-                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {request.paymentMethod === 'wechat' ? (
+                          <span className="flex items-center gap-1">
+                            <img src="/wechatsmallicon.png" alt="WeChat" className="h-4 w-4" />
+                            {language === 'en' ? 'WeChat Transfer' : '微信转账'}
+                          </span>
+                        ) : (
+                          <span>
+                            {language === 'en' ? 'Interac e-Transfer' : 'EMT转账'}
+                          </span>
+                        )}
+                      </p>
                       {request.status === 'approved' && (
-                        <p className="text-xs text-green-600 font-medium mt-1">
+                        <p className="text-xs text-green-600 font-medium mt-2">
                           {request.mealPlanType && request.mealPlanQuantity ? (
                             language === 'zh' ? (
                               <>
@@ -376,23 +376,23 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       <p className="text-sm text-muted-foreground">
                         ${selectedRequest.amount.toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {language === 'en' 
-                          ? selectedRequest.paymentMethod === 'wechat' 
-                            ? 'Amount transferred via WeChat' 
-                            : 'Amount transferred via e-Transfer' 
-                          : selectedRequest.paymentMethod === 'wechat' 
-                            ? '通过微信转账支付的金额' 
-                            : '通过EMT转账支付的金额'}
-                      </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium">
-                        {language === 'en' ? 'Status' : '状态'}
+                        {language === 'en' ? 'Payment Method' : '支付方式'}
                       </p>
-                      <div className="mt-1">
-                        <RequestStatusBadge status={selectedRequest.status} />
-                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedRequest.paymentMethod === 'wechat' ? (
+                          <span className="flex items-center gap-1">
+                            <img src="/wechatsmallicon.png" alt="WeChat" className="h-4 w-4" />
+                            {language === 'en' ? 'WeChat Transfer' : '微信转账'}
+                          </span>
+                        ) : (
+                          <span>
+                            {language === 'en' ? 'Interac e-Transfer' : 'EMT转账'}
+                          </span>
+                        )}
+                      </p>
                       {selectedRequest.status === 'approved' && (
                         <p className="text-xs text-green-600 font-medium mt-2">
                           {language === 'en' ? 'Plan approved and added to your account' : '套餐已批准并添加到您的账户'}
