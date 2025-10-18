@@ -725,13 +725,13 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     {/* Delivery fee */}
                     <div className="px-3 py-2">
                       <div className="flex justify-between items-center">
-                        <div className="text-sm text-[#6B5F53]">
+                        <div className="text-[13px] text-[#8A7968]">
                           {language === 'zh' ? '配送费' : 'Delivery fee'} 
-                          <span className="text-xs text-[#8A7968] ml-1">
+                          <span className="ml-1">
                             ($11.99 × {selectedPlan?.duration} {language === 'zh' ? '周' : 'weeks'})
                           </span>
                         </div>
-                        <div className="font-medium text-[#6B5F53]">
+                        <div className="text-[13px] text-[#8A7968]">
                           ${(11.99 * (selectedPlan?.duration || 0)).toFixed(2)}
                         </div>
                       </div>
@@ -741,13 +741,13 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     {/* Tax (HST) */}
                     <div className="px-3 py-2">
                       <div className="flex justify-between items-center">
-                        <div className="text-sm text-[#6B5F53]">
+                        <div className="text-[13px] text-[#8A7968]">
                           {language === 'zh' ? '税费 (HST 13%)' : 'Tax (HST 13%)'}
-                          <span className="text-xs text-[#8A7968] ml-1">
+                          <span className="ml-1">
                             {language === 'zh' ? '(仅适用于EMT付款)' : '(EMT payment only)'}
                           </span>
                         </div>
-                        <div className="font-medium text-[#6B5F53]">
+                        <div className="text-[13px] text-[#8A7968]">
                           ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.13).toFixed(2)}
                         </div>
                       </div>
