@@ -1960,7 +1960,13 @@ export default function DashboardPage() {
                   transition={{ duration: 0.2 }}
                   className="space-y-6"
                 >
-                  <WeeklySubscription userCredits={credits} />
+                  <WeeklySubscription 
+                    userCredits={credits}
+                    weeklySIXmeals={userData?.weeklySIXmeals} 
+                    weeklyEIGHTmeals={(userData as any)?.weeklyEIGHTmeals}
+                    weeklyTENmeals={userData?.weeklyTENmeals}
+                    weeklyTWELVEmeals={(userData as any)?.weeklyTWELVEmeals}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

@@ -390,13 +390,50 @@ export default function WeeklySubscription({
           <div className="h-1 w-20 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] rounded-full mt-1"></div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-            <span className="text-sm font-medium text-[#6B5F53]">
-              {language === 'zh' ? '积分' : 'Credits'}: 
-            </span>
-            <span className="text-sm font-bold text-[#C2884E]">
-              {userCredits}
-            </span>
+          <div className="flex flex-wrap gap-2">
+            {weeklySIXmeals > 0 && (
+              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                <span className="text-sm font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '6餐一周' : '6 Meals/Week'}: 
+                </span>
+                <span className="text-sm font-bold text-[#C2884E]">
+                  {weeklySIXmeals}{language === 'zh' ? '张' : ''}
+                </span>
+              </div>
+            )}
+            
+            {weeklyEIGHTmeals > 0 && (
+              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                <span className="text-sm font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '8餐一周' : '8 Meals/Week'}: 
+                </span>
+                <span className="text-sm font-bold text-[#C2884E]">
+                  {weeklyEIGHTmeals}{language === 'zh' ? '张' : ''}
+                </span>
+              </div>
+            )}
+            
+            {weeklyTENmeals > 0 && (
+              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                <span className="text-sm font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '10餐一周' : '10 Meals/Week'}: 
+                </span>
+                <span className="text-sm font-bold text-[#C2884E]">
+                  {weeklyTENmeals}{language === 'zh' ? '张' : ''}
+                </span>
+              </div>
+            )}
+            
+            {weeklyTWELVEmeals > 0 && (
+              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                <span className="text-sm font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '12餐一周' : '12 Meals/Week'}: 
+                </span>
+                <span className="text-sm font-bold text-[#C2884E]">
+                  {weeklyTWELVEmeals}{language === 'zh' ? '张' : ''}
+                </span>
+              </div>
+            )}
           </div>
           {!checkoutOpen && (
             <Button 
