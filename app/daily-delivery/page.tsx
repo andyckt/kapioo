@@ -481,16 +481,16 @@ export default function DailyDeliveryPage() {
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-md"
-                      >
-                        {language === 'zh' ? '知道更多' : 'Learn More'}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] shadow-xl">
-                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-md relative z-20"
+                    >
+                      {language === 'zh' ? '知道更多' : 'Learn More'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
+                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
                       <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                         {language === 'zh' ? '每日配送计划详情' : 'Daily Delivery Plan Details'}
                       </DialogTitle>
@@ -499,7 +499,7 @@ export default function DailyDeliveryPage() {
                       </DialogDescription>
                     </DialogHeader>
                     
-                    <div className="p-6">
+                    <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-brand">
                       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6 bg-[#F5EDE4]/30 p-1 rounded-[20px]">
                           <TabsTrigger 
@@ -515,12 +515,20 @@ export default function DailyDeliveryPage() {
                             {language === 'zh' ? '如何运作' : 'How It Works'}
                           </TabsTrigger>
                         </TabsList>
-                        <div className="max-h-[50vh] overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                          <style jsx>{`
-                            div::-webkit-scrollbar {
-                              display: none;
-                            }
-                          `}</style>
+                        
+                        <style jsx global>{`
+                          .scrollbar-brand::-webkit-scrollbar {
+                            width: 5px;
+                            height: 5px;
+                          }
+                          .scrollbar-brand::-webkit-scrollbar-track {
+                            background: #F5EDE4;
+                          }
+                          .scrollbar-brand::-webkit-scrollbar-thumb {
+                            background: linear-gradient(to bottom, #C2884E, #D1A46C);
+                            border-radius: 20px;
+                          }
+                        `}</style>
                         
                         <TabsContent value="description" className="mt-0 space-y-4">
                           <div className="space-y-4">
@@ -673,7 +681,6 @@ export default function DailyDeliveryPage() {
                             <p className="text-sm text-[#6B5F53]/80 mt-2">我们提供多样化的菜单选择，满足您对不同口味的需求。每周更新菜单，让您的味蕾永远充满惊喜。</p>
                           </div>
                         </TabsContent>
-                        </div>
                       </Tabs>
                     </div>
                   </DialogContent>
@@ -739,6 +746,7 @@ export default function DailyDeliveryPage() {
                                 >
                                   {language === 'zh' ? '本周' : 'This Week'}
                                 </button>
+                                {/* Commenting out Next Week button
                                 <button
                                   onClick={() => setActiveWeek(2)}
                                   className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all duration-300
@@ -748,6 +756,7 @@ export default function DailyDeliveryPage() {
                                 >
                                   {language === 'zh' ? '下周' : 'Next Week'}
                                 </button>
+                                */}
                               </div>
                             </div>
                           </div>
@@ -827,12 +836,11 @@ export default function DailyDeliveryPage() {
                                 </button>
                               ))}
                               
-                            {/* Week Separator */}
+                            {/* Commenting out Week 2 section
                             <div className="mt-4 mb-2 px-3">
                               <div className="h-px bg-[#C2884E]/50 w-full"></div>
                             </div>
                             
-                            {/* Week 2 Heading */}
                             <div className="px-3 py-2 mb-2">
                               <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
                                 <CalendarDays className="h-4 w-4" />
@@ -840,7 +848,6 @@ export default function DailyDeliveryPage() {
                               </h3>
                             </div>
                             
-                            {/* Week 2 Days */}
                             {Object.keys(weeklyMenu)
                               .filter(dayId => weeklyMenu[dayId].week === 2)
                               .sort((a, b) => {
@@ -868,6 +875,7 @@ export default function DailyDeliveryPage() {
                                   </div>
                                 </button>
                               ))}
+                            */}
                           </div>
                         </div>
                         
@@ -1168,6 +1176,7 @@ export default function DailyDeliveryPage() {
           </motion.div>
         </div>
       </section>
+      
       
       {/* No tabs in main content anymore, just pricing section */}
     </div>
