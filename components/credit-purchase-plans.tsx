@@ -330,14 +330,12 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedPlan || !paymentProof || !paymentMethod) {
+    if (!selectedPlan || !paymentProof) {
       let errorTitle = language === 'zh' ? '请完成所有必填项' : 'Please complete all required fields'
       let errorDescription = ''
       
       if (!selectedPlan) {
         errorDescription = language === 'zh' ? '请选择一个套餐' : 'Please select a plan'
-      } else if (!paymentMethod) {
-        errorDescription = language === 'zh' ? '请选择付款方式' : 'Please select a payment method'
       } else if (!paymentProof) {
         errorDescription = language === 'zh' ? '请上传付款凭证' : 'Please upload your payment proof'
       }
@@ -372,10 +370,13 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       const originalPrice = selectedPlan.totalPrice + (11.99 * selectedPlan.duration); // Plan price + delivery fee
       let finalAmount = originalPrice;
       
-      if (paymentMethod === 'wechat') {
+      // If no payment method is selected, default to 'emt'
+      const effectivePaymentMethod = paymentMethod || 'emt';
+      
+      if (effectivePaymentMethod === 'wechat') {
         // WeChat gets 10% discount
         finalAmount = originalPrice * 0.9;
-      } else if (paymentMethod === 'emt') {
+      } else if (effectivePaymentMethod === 'emt') {
         // EMT has 13% tax
         finalAmount = originalPrice * 1.13;
       }
@@ -390,7 +391,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           userId,
           amount: finalAmount,
           originalPrice: originalPrice,
-          paymentMethod: paymentMethod,
+          paymentMethod: effectivePaymentMethod,
           mealsPerWeek: selectedPlan.mealsPerWeek,
           duration: selectedPlan.duration,
           planDescription: planDescription,
@@ -587,7 +588,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             {/* Additional information */}
             <div className="text-xs text-[#8A7968] space-y-1 mt-6">
               <p>* {language === 'zh' ? '餐券卡有效期为半年，可转赠亲友，购买后7天内可退款未用部分' : 'Credits valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}</p>
-              <p>* {language === 'zh' ? '以上均为税前价格，支付方式：EMT/微信' : 'All prices before tax, payment methods: EMT/WeChat Pay'}</p>
+              <p>* {language === 'zh' ? '以上均为税前价格，支付方式：EMT' : 'All prices before tax, payment method: EMT'}</p>
             </div>
           </motion.div>
         ) : purchaseStep === 'planSelect' ? (
@@ -707,10 +708,12 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
               <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
               <ul className="space-y-2 text-sm text-amber-700">
+                {/* WeChat payment option commented out
                 <li className="flex items-start gap-2">
                   <div className="min-w-[20px] mt-0.5">•</div>
                   <div>{language === 'zh' ? '微信支付：无需支付额外税费' : 'WeChat Pay: No additional tax required'}</div>
                 </li>
+                */}
                 <li className="flex items-start gap-2">
                   <div className="min-w-[20px] mt-0.5">•</div>
                   <div>{language === 'zh' ? 'Interac e-Transfer：需额外支付13%税费' : 'Interac e-Transfer: Additional 13% tax required'}</div>
@@ -790,7 +793,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       </div>
                     </div>
                     
-                    {/* WeChat Discount */}
+                    {/* WeChat Discount - commented out 
                     <div className="px-3 py-2">
                       <div className="flex justify-between items-center">
                         <div className="text-sm font-medium text-green-600">
@@ -801,6 +804,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                         </div>
                       </div>
                     </div>
+                    */}
                     
                     {/* Total - with border above */}
                     <div className="mt-2 pt-3 border-t border-[#F5EDE4]">
@@ -813,6 +817,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                             ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 1.13).toFixed(2)}
                           </div>
                         </div>
+                        {/* WeChat payment total - commented out 
                         <div className="flex justify-between items-center mt-1">
                           <div className="font-medium text-[#6B5F53] flex items-center">
                             <img src="/wechatsmallicon.png" alt="WeChat" className="h-6 w-6 mr-2" />
@@ -822,6 +827,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                             ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.9).toFixed(2)}
                           </div>
                         </div>
+                        */}
                       </div>
                     </div>
                   </div>
@@ -831,13 +837,39 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                   <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
                   <div className="space-y-2 text-sm text-amber-700">
+                    {/* WeChat payment option commented out
                     <div className="flex items-start gap-2">
                       <div className="min-w-[20px] mt-0.5">•</div>
                       <p>{language === 'zh' ? '微信转账：无需支付额外税费，可享受10%折扣～' : 'WeChat Pay: No additional tax, enjoy 10% discount'}</p>
                     </div>
+                    */}
                     <div className="flex items-start gap-2">
                       <div className="min-w-[20px] mt-0.5">•</div>
                       <p>{language === 'zh' ? '通过EMT电子转账：需额外支付13%税费' : 'Additional 13% tax applies when paying via EMT'}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* E-Transfer Information */}
+                <div className="space-y-3 mb-6">
+                  <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-[#C2884E]" />
+                    {language === 'zh' ? 'Interac e-Transfer 信息' : 'Interac e-Transfer Information'}
+                  </h3>
+                  
+                  <div className="bg-white border border-[#C2884E]/10 rounded-xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] px-4 py-2 text-white text-sm font-medium">
+                      {language === 'zh' ? '付款详情' : 'Payment Details'}
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
+                        <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '收款人邮箱' : 'Recipient Email'}</p>
+                        <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '金额' : 'Amount'}</p>
+                        <p className="font-medium text-[#C2884E]">${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 1.13).toFixed(2)}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -903,7 +935,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     </Label>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-                      {/* WeChat payment option */}
+                      {/* WeChat payment option - commented out 
                       <div 
                         className={`border rounded-xl p-4 cursor-pointer transition-all ${
                           paymentMethod === 'wechat' 
@@ -929,6 +961,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                           {language === 'zh' ? '优惠: 10% 折扣' : 'Discount: 10% off'}
                         </div>
                       </div>
+                      */}
                       
                       {/* EMT payment option */}
                       <div 
@@ -982,7 +1015,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   </Button>
                   <Button
                     onClick={handleSubmit}
-                    disabled={isLoading || !paymentProof || !paymentMethod}
+                    disabled={isLoading || !paymentProof}
                     className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
                   >
                     {isLoading ? (
