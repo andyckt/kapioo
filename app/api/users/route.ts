@@ -25,7 +25,7 @@ async function generateUniqueUserID() {
   return userId;
 }
 
-// GET handler - return all users (with pagination)
+// GET handler - return all users (with pagination and search)
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -34,17 +34,49 @@ export async function GET(request: Request) {
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     
+    // Get search parameters
+    const search = url.searchParams.get('search') || '';
+    const searchType = url.searchParams.get('searchType') || 'all';
+    
     await connectToDatabase();
     
-    // Find users with pagination, excluding password and salt fields
-    const users = await User.find({})
+    // Build query based on search parameters
+    let query = {};
+    
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive search
+      
+      switch (searchType) {
+        case 'name':
+          query = { name: searchRegex };
+          break;
+        case 'email':
+          query = { email: searchRegex };
+          break;
+        case 'userID':
+          query = { userID: searchRegex };
+          break;
+        default: // 'all'
+          query = {
+            $or: [
+              { name: searchRegex },
+              { email: searchRegex },
+              { userID: searchRegex }
+            ]
+          };
+          break;
+      }
+    }
+    
+    // Find users with pagination and search, excluding password and salt fields
+    const users = await User.find(query)
       .select('-password -salt -verificationCode -resetPasswordCode -verificationExpires -resetPasswordExpires')
       .sort({ joined: -1 })
       .skip(skip)
       .limit(limit);
     
-    // Get total count for pagination
-    const totalUsers = await User.countDocuments({});
+    // Get total count for pagination with the same search query
+    const totalUsers = await User.countDocuments(query);
     
     return NextResponse.json({ 
       success: true, 

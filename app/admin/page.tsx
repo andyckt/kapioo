@@ -119,6 +119,7 @@ export default function AdminDashboardPage() {
     pages: 1
   })
   const [userSearchQuery, setUserSearchQuery] = useState("")
+  const [userSearchType, setUserSearchType] = useState<"all" | "name" | "email" | "userID">("all")
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [deductCreditsOpen, setDeductCreditsOpen] = useState(false)
   const [deductAmount, setDeductAmount] = useState(1)
@@ -154,13 +155,18 @@ export default function AdminDashboardPage() {
     }
   }, [activeTab, usersPagination.page, usersPagination.limit])
 
-  const fetchUsers = async (page = 1, limit = 10) => {
+  const fetchUsers = async (
+    page = 1, 
+    limit = 10, 
+    search?: string, 
+    searchType?: 'all' | 'name' | 'email' | 'userID'
+  ) => {
     try {
-      console.log(`Fetching users, page: ${page}, limit: ${limit}`);
+      console.log(`Fetching users, page: ${page}, limit: ${limit}, search: ${search || 'none'}, searchType: ${searchType || 'all'}`);
       setUsersLoading(true)
       setUsersError(null)
       
-      const result = await getUsers(page, limit)
+      const result = await getUsers(page, limit, search, searchType)
       console.log(`Fetched ${result.users?.length || 0} users`);
       
       if (result.users) {
@@ -188,6 +194,21 @@ export default function AdminDashboardPage() {
         setUsers(usersWithOrderCounts)
         setFilteredUsers(usersWithOrderCounts)
         setUsersPagination(result.pagination)
+        
+        // If this was a search, show toast with results
+        if (search && search.trim()) {
+          if (result.users.length === 0) {
+            toast({
+              title: "No matches",
+              description: `No users found matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
+            });
+          } else {
+            toast({
+              title: "Search results",
+              description: `Found ${result.pagination.total} users matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
+            });
+          }
+        }
       } else {
         console.error('Failed to fetch users, result:', result);
         setUsersError('Failed to fetch users')
@@ -660,36 +681,27 @@ export default function AdminDashboardPage() {
   // Add a handler for search
   const handleUserSearch = () => {
     if (!userSearchQuery.trim()) {
-      setFilteredUsers(users);
+      // Reset to normal view without search
+      fetchUsers(1, usersPagination.limit);
       return;
     }
     
-    const query = userSearchQuery.toLowerCase();
-    const filtered = users.filter(user => 
-      user.name?.toLowerCase().includes(query) || 
-      user.userID?.toLowerCase().includes(query) || 
-      user.email?.toLowerCase().includes(query)
-    );
+    // Reset to first page when searching
+    setUsersPagination(prev => ({
+      ...prev,
+      page: 1
+    }));
     
-    setFilteredUsers(filtered);
-    
-    if (filtered.length === 0) {
-      toast({
-        title: "No matches",
-        description: `No users found matching "${userSearchQuery}"`,
-      });
-    } else {
-      toast({
-        title: "Search results",
-        description: `Found ${filtered.length} users matching "${userSearchQuery}"`,
-      });
-    }
+    // Use the backend search API
+    fetchUsers(1, usersPagination.limit, userSearchQuery, userSearchType);
   }
 
   // Add a reset search function
   const resetUserSearch = () => {
     setUserSearchQuery("");
-    setFilteredUsers(users);
+    setUserSearchType("all");
+    // Reset to first page and fetch without search parameters
+    fetchUsers(1, usersPagination.limit);
   }
 
   // Handle deduct credits button click
@@ -1130,17 +1142,36 @@ export default function AdminDashboardPage() {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex items-center space-x-2">
-                        <Input 
-                          placeholder="Search users..." 
-                          className="max-w-sm" 
-                          value={userSearchQuery}
-                          onChange={(e) => setUserSearchQuery(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleUserSearch();
-                            }
-                          }}
-                        />
+                        <div className="flex items-center space-x-2">
+                          <Select
+                            value={userSearchType}
+                            onValueChange={(value: "all" | "name" | "email" | "userID") => setUserSearchType(value)}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue placeholder="Search by" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Fields</SelectItem>
+                              <SelectItem value="name">Name</SelectItem>
+                              <SelectItem value="email">Email</SelectItem>
+                              <SelectItem value="userID">User ID</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input 
+                            placeholder={userSearchType === "email" ? "Search by email..." : 
+                                         userSearchType === "name" ? "Search by name..." :
+                                         userSearchType === "userID" ? "Search by user ID..." :
+                                         "Search users..."}
+                            className="w-[300px]" 
+                            value={userSearchQuery}
+                            onChange={(e) => setUserSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleUserSearch();
+                              }
+                            }}
+                          />
+                        </div>
                         <Button variant="outline" onClick={handleUserSearch}>Search</Button>
                         {userSearchQuery && (
                           <Button variant="ghost" size="sm" onClick={resetUserSearch}>
@@ -1154,11 +1185,11 @@ export default function AdminDashboardPage() {
                             <tr className="border-b">
                               <th className="text-left p-4 font-medium">User ID</th>
                               <th className="text-left p-4 font-medium">Name</th>
+                              <th className="text-left p-4 font-medium w-[150px]">Email</th>
                               <th className="text-left p-4 font-medium">Phone</th>
                               <th className="text-left p-4 font-medium">City</th>
                               <th className="text-left p-4 font-medium">Created</th>
                               <th className="text-left p-4 font-medium">Orders</th>
-                              <th className="text-left p-4 font-medium">Credits</th>
                               <th className="text-center p-4 font-medium">Actions</th>
                             </tr>
                           </thead>
@@ -1167,19 +1198,39 @@ export default function AdminDashboardPage() {
                               <tr key={user._id} className="border-b">
                                 <td className="p-4">{user.userID}</td>
                                 <td className="p-4">{user.name}</td>
+                                <td className="p-4 w-[150px]">
+                                  <div className="flex items-center space-x-1">
+                                    <div className="break-words max-w-[120px]" title={user.email || "-"}>
+                                      {user.email || "-"}
+                                    </div>
+                                    {user.email && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-5 w-5 ml-1"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(user.email);
+                                          toast({
+                                            title: "Copied",
+                                            description: "Email copied to clipboard",
+                                            duration: 2000,
+                                          });
+                                        }}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                      </Button>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="p-4">{user.phone || "-"}</td>
                                 <td className="p-4">{user.address?.city || "-"}</td>
                                 <td className="p-4">{user.joined ? formatDate(user.joined) : "-"}</td>
                                 <td className="p-4">{user.totalOrders || 0}</td>
-                                <td className="p-4">{user.credits}</td>
                                 <td className="p-4">
                                   <div className="flex justify-center gap-1">
-                                    <Button variant="outline" size="sm" onClick={() => handleAddCredits(user)}>
-                                      Add Credits
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => handleDeductCredits(user)} className="text-red-500 border-red-200 hover:bg-red-50">
-                                      Deduct
-                                    </Button>
                                     <Button variant="outline" size="sm" onClick={() => handleViewUser(user)}>
                                       View
                                     </Button>

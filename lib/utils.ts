@@ -437,10 +437,25 @@ export interface User {
   totalOrders?: number;
 }
 
-// Get all users with pagination
-export async function getUsers(page = 1, limit = 10): Promise<{ users: User[], pagination: any }> {
+// Get all users with pagination and search
+export async function getUsers(
+  page = 1, 
+  limit = 10, 
+  search?: string, 
+  searchType?: 'all' | 'name' | 'email' | 'userID'
+): Promise<{ users: User[], pagination: any }> {
   try {
-    const response = await fetch(`/api/users?page=${page}&limit=${limit}`);
+    let url = `/api/users?page=${page}&limit=${limit}`;
+    
+    // Add search parameters if provided
+    if (search && search.trim()) {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+      if (searchType && searchType !== 'all') {
+        url += `&searchType=${searchType}`;
+      }
+    }
+    
+    const response = await fetch(url);
     const result = await response.json();
     
     if (result.success && result.data) {
