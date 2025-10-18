@@ -186,7 +186,7 @@ export default function LocationMealPlans() {
                   {language === 'en' ? 'I am based in' : '我位于'}
                 </span>
                 <span className="text-[#C2884E] font-medium border-b-2 border-[#C2884E]/30 px-2 min-w-[120px] text-center text-xl md:text-2xl">
-                  {getLocationDisplayName(selectedLocation) || "___________"}
+                  {getLocationDisplayName(selectedLocation) || <span className="text-transparent">___________</span>}
                 </span>
                 <ChevronDown 
                   className={`h-5 w-5 ml-1 text-[#C2884E] transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} 

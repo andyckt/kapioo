@@ -137,8 +137,7 @@ export default function Home() {
                   
                   {/* Enhanced tagline and tags section */}
                   <div className="bg-[#FBF7F2] rounded-xl p-4 sm:p-6 border border-[#C2884E]/5">
-                    <div className="text-base sm:text-lg md:text-xl font-medium text-[#C2884E] mb-3 sm:mb-4 flex items-center">
-                      <span className="inline-block w-2 h-2 rounded-full bg-[#C2884E] mr-2"></span>
+                    <div className="text-base sm:text-lg md:text-xl font-medium text-[#C2884E] mb-3 sm:mb-4">
                       {t('tagline')}
                     </div>
                     
