@@ -1437,27 +1437,16 @@ export default function DashboardPage() {
                       {language === 'zh' ? '周次订阅' : 'Weekly Meal Box'}
                     </h2>
                     
-                    {/* Credits display at top right */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                        <span className="text-sm font-medium text-[#6B5F53]">
-                          {language === 'zh' ? '可用餐券' : 'Available Credits'}: 
-                        </span>
-                        <span className="text-sm font-bold text-[#C2884E]">
-                          {userData?.credits || 0}
-                        </span>
-                      </div>
-                      <button 
-                        className="flex items-center justify-center w-7 h-7 rounded-full bg-[#F5EDE4] hover:bg-[#F0E5D9] text-[#C2884E] transition-all duration-300 hover:scale-110"
-                        onClick={() => {
-                          // Find the CreditPurchasePlans component and trigger its info dialog
-                          const event = new CustomEvent('openInfoDialog');
-                          document.dispatchEvent(event);
-                        }}
-                      >
-                        <Info className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <button 
+                      className="flex items-center justify-center w-7 h-7 rounded-full bg-[#F5EDE4] hover:bg-[#F0E5D9] text-[#C2884E] transition-all duration-300 hover:scale-110"
+                      onClick={() => {
+                        // Find the CreditPurchasePlans component and trigger its info dialog
+                        const event = new CustomEvent('openInfoDialog');
+                        document.dispatchEvent(event);
+                      }}
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
                   </div>
                   
                   {/* Available Areas Section - First section right below heading */}
