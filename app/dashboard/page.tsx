@@ -1163,13 +1163,55 @@ export default function DashboardPage() {
                           </CardHeader>
                           <CardContent className="pt-0">
                             <div className="space-y-3">
-                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                <span className="text-sm font-medium text-[#6B5F53]">6/10餐一周餐券 剩余：</span>
-                                <div className="flex items-center">
-                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.credits || 0}</span>
-                                  <span className="ml-1 text-sm text-[#6B5F53]">张</span>
+                              {/* Display individual meal plan counts */}
+                              {(userData?.weeklySIXmeals > 0 || (userData as any)?.weeklyEIGHTmeals > 0 || 
+                                userData?.weeklyTENmeals > 0 || (userData as any)?.weeklyTWELVEmeals > 0) ? (
+                                <div className="space-y-2">
+                                  {userData?.weeklySIXmeals > 0 && (
+                                    <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                      <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '6 meals/week' : '6餐一周'}:</span>
+                                      <div className="flex items-center">
+                                        <span className="text-xl font-bold text-[#C2884E]">{userData?.weeklySIXmeals}</span>
+                                        <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {(userData as any)?.weeklyEIGHTmeals > 0 && (
+                                    <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                      <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '8 meals/week' : '8餐一周'}:</span>
+                                      <div className="flex items-center">
+                                        <span className="text-xl font-bold text-[#C2884E]">{(userData as any)?.weeklyEIGHTmeals}</span>
+                                        <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {userData?.weeklyTENmeals > 0 && (
+                                    <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                      <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '10 meals/week' : '10餐一周'}:</span>
+                                      <div className="flex items-center">
+                                        <span className="text-xl font-bold text-[#C2884E]">{userData?.weeklyTENmeals}</span>
+                                        <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {(userData as any)?.weeklyTWELVEmeals > 0 && (
+                                    <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                      <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '12 meals/week' : '12餐一周'}:</span>
+                                      <div className="flex items-center">
+                                        <span className="text-xl font-bold text-[#C2884E]">{(userData as any)?.weeklyTWELVEmeals}</span>
+                                        <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
+                              ) : (
+                                <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                  <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? 'No meal plans available' : '无可用餐券'}</span>
+                                </div>
+                              )}
                             </div>
                             <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
                               <div className="grid grid-cols-2 gap-2">

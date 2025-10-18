@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge"
 export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const router = useRouter()
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [userData, setUserData] = useState<{ 
     name?: string; 
     email?: string; 
@@ -137,15 +137,51 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
         
         {/* User Stats Section */}
         <div className="px-2 py-1.5 space-y-1.5">
-          {/* Weekly Subscription Credits */}
-          {userData?.credits !== undefined && userData.credits > 0 && (
+          {/* Weekly meal plans */}
+          {(userData as any)?.weeklySIXmeals > 0 && (
             <div className="flex items-center justify-between">
               <div className="flex items-center text-sm">
                 <Gem className="mr-2 h-4 w-4 text-amber-500" />
-                <span>周次餐券</span>
+                <span>{language === 'en' ? '6 meals/week' : '6餐一周'}</span>
               </div>
               <Badge variant="outline" className="ml-auto font-medium">
-                {userData.credits}
+                {(userData as any)?.weeklySIXmeals}{language === 'en' ? '' : '张'}
+              </Badge>
+            </div>
+          )}
+          
+          {(userData as any)?.weeklyEIGHTmeals > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center text-sm">
+                <Gem className="mr-2 h-4 w-4 text-amber-500" />
+                <span>{language === 'en' ? '8 meals/week' : '8餐一周'}</span>
+              </div>
+              <Badge variant="outline" className="ml-auto font-medium">
+                {(userData as any)?.weeklyEIGHTmeals}{language === 'en' ? '' : '张'}
+              </Badge>
+            </div>
+          )}
+          
+          {(userData as any)?.weeklyTENmeals > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center text-sm">
+                <Gem className="mr-2 h-4 w-4 text-amber-500" />
+                <span>{language === 'en' ? '10 meals/week' : '10餐一周'}</span>
+              </div>
+              <Badge variant="outline" className="ml-auto font-medium">
+                {(userData as any)?.weeklyTENmeals}{language === 'en' ? '' : '张'}
+              </Badge>
+            </div>
+          )}
+          
+          {(userData as any)?.weeklyTWELVEmeals > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center text-sm">
+                <Gem className="mr-2 h-4 w-4 text-amber-500" />
+                <span>{language === 'en' ? '12 meals/week' : '12餐一周'}</span>
+              </div>
+              <Badge variant="outline" className="ml-auto font-medium">
+                {(userData as any)?.weeklyTWELVEmeals}{language === 'en' ? '' : '张'}
               </Badge>
             </div>
           )}
