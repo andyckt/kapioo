@@ -207,7 +207,25 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       </div>
                       {request.status === 'approved' && (
                         <p className="text-xs text-green-600 font-medium mt-1">
-                          {language === 'en' ? 'Plan approved' : '套餐已批准'}
+                          {request.mealPlanType && request.mealPlanQuantity ? (
+                            language === 'zh' ? (
+                              <>
+                                {request.mealPlanType === '6aweek' ? '6' : 
+                                 request.mealPlanType === '8aweek' ? '8' : 
+                                 request.mealPlanType === '10aweek' ? '10' : 
+                                 request.mealPlanType === '12aweek' ? '12' : ''}餐一周: {request.mealPlanQuantity}星期
+                              </>
+                            ) : (
+                              <>
+                                {request.mealPlanType === '6aweek' ? '6' : 
+                                 request.mealPlanType === '8aweek' ? '8' : 
+                                 request.mealPlanType === '10aweek' ? '10' : 
+                                 request.mealPlanType === '12aweek' ? '12' : ''} meals/week: {request.mealPlanQuantity} {request.mealPlanQuantity === 1 ? 'week' : 'weeks'}
+                              </>
+                            )
+                          ) : (
+                            language === 'en' ? 'Plan approved' : '套餐已批准'
+                          )}
                         </p>
                       )}
                     </div>
@@ -389,13 +407,21 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       </p>
                       <p className="text-sm text-green-600 font-medium">
                         {selectedRequest.mealPlanType && selectedRequest.mealPlanQuantity ? (
-                          <>
-                            {selectedRequest.mealPlanQuantity} × {' '}
-                            {selectedRequest.mealPlanType === '6aweek' ? '6' : 
-                             selectedRequest.mealPlanType === '8aweek' ? '8' : 
-                             selectedRequest.mealPlanType === '10aweek' ? '10' : 
-                             selectedRequest.mealPlanType === '12aweek' ? '12' : ''} {language === 'en' ? 'Meals/Week' : '餐/周'}
-                          </>
+                          language === 'zh' ? (
+                            <>
+                              {selectedRequest.mealPlanType === '6aweek' ? '6' : 
+                               selectedRequest.mealPlanType === '8aweek' ? '8' : 
+                               selectedRequest.mealPlanType === '10aweek' ? '10' : 
+                               selectedRequest.mealPlanType === '12aweek' ? '12' : ''}餐一周: {selectedRequest.mealPlanQuantity}星期
+                            </>
+                          ) : (
+                            <>
+                              {selectedRequest.mealPlanType === '6aweek' ? '6' : 
+                               selectedRequest.mealPlanType === '8aweek' ? '8' : 
+                               selectedRequest.mealPlanType === '10aweek' ? '10' : 
+                               selectedRequest.mealPlanType === '12aweek' ? '12' : ''} meals/week: {selectedRequest.mealPlanQuantity} {selectedRequest.mealPlanQuantity === 1 ? 'week' : 'weeks'}
+                            </>
+                          )
                         ) : selectedRequest.approvedCredits ? (
                           // Legacy display
                           selectedRequest.approvedCredits

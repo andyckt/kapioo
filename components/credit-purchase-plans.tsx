@@ -357,7 +357,9 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       const imageUrl = await uploadFileToS3(paymentProof)
       
       // Create plan description for admin view
-      const planDescription = `${selectedPlan.durationLabel} (${selectedPlan.mealsPerWeek} meals/week)`;
+      const planDescription = language === 'zh' 
+        ? `${selectedPlan.mealsPerWeek}餐一周: ${selectedPlan.duration}星期` 
+        : `${selectedPlan.mealsPerWeek} meals/week: ${selectedPlan.duration} ${selectedPlan.duration === 1 ? 'week' : 'weeks'}`;
       
       // Determine meal plan type based on selected plan
       let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek';
