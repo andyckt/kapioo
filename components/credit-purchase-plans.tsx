@@ -698,25 +698,94 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     <Star className="h-4 w-4 text-[#C2884E]" />
                     {language === 'zh' ? '已选套餐' : 'Selected Plan'}
                   </h3>
-                  <div className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] w-10 h-10 rounded-full flex items-center justify-center text-white">
-                        <Calendar className="h-5 w-5" />
+                  <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                    {/* Plan details */}
+                    <div className="flex justify-between items-center p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] w-10 h-10 rounded-full flex items-center justify-center text-white">
+                          <Calendar className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#6B5F53]">
+                            {language === 'zh' ? selectedPlan?.durationLabelZh : selectedPlan?.durationLabel}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedPlan?.mealsPerWeek} {language === 'zh' ? '餐/周' : 'meals/week'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-[#6B5F53]">
-                          {language === 'zh' ? selectedPlan?.durationLabelZh : selectedPlan?.durationLabel}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedPlan?.mealsPerWeek} {language === 'zh' ? '餐/周' : 'meals/week'}
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-[#C2884E]">${selectedPlan?.totalPrice}</p>
+                        <p className="text-xs text-muted-foreground">
+                          ${selectedPlan?.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-[#C2884E]">${selectedPlan?.totalPrice}</p>
-                      <p className="text-xs text-muted-foreground">
-                        ${selectedPlan?.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
-                      </p>
+                    
+                    {/* Delivery fee */}
+                    <div className="px-3 py-2">
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-[#6B5F53]">
+                          {language === 'zh' ? '配送费' : 'Delivery fee'} 
+                          <span className="text-xs text-[#8A7968] ml-1">
+                            ($11.99 × {selectedPlan?.duration} {language === 'zh' ? '周' : 'weeks'})
+                          </span>
+                        </div>
+                        <div className="font-medium text-[#6B5F53]">
+                          ${(11.99 * (selectedPlan?.duration || 0)).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    
+                    {/* Tax (HST) */}
+                    <div className="px-3 py-2">
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-[#6B5F53]">
+                          {language === 'zh' ? '税费 (HST 13%)' : 'Tax (HST 13%)'}
+                          <span className="text-xs text-[#8A7968] ml-1">
+                            {language === 'zh' ? '(仅适用于EMT付款)' : '(EMT payment only)'}
+                          </span>
+                        </div>
+                        <div className="font-medium text-[#6B5F53]">
+                          ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.13).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* WeChat Discount */}
+                    <div className="px-3 py-2">
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm font-medium text-green-600">
+                          {language === 'zh' ? '微信转账折扣 (10%)' : 'WeChat Payment Discount (10%)'}
+                        </div>
+                        <div className="font-medium text-green-600">
+                          -${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.1).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Total - with border above */}
+                    <div className="mt-2 pt-3 border-t border-[#F5EDE4]">
+                      <div className="px-3 py-2">
+                        <div className="flex justify-between items-center">
+                          <div className="font-medium text-[#6B5F53]">
+                            {language === 'zh' ? '总计 (EMT付款)' : 'Total (EMT payment)'}
+                          </div>
+                          <div className="font-bold text-lg text-[#C2884E]">
+                            ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 1.13).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-1">
+                          <div className="font-medium text-[#6B5F53] flex items-center">
+                            <img src="/wechatsmallicon.png" alt="WeChat" className="h-6 w-6 mr-2" />
+                            {language === 'zh' ? '总计 (微信转账)(10%折扣)' : 'Total (WeChat payment)(10% discount)'}
+                          </div>
+                          <div className="font-bold text-lg text-[#C2884E]">
+                            ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.9).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -727,12 +796,12 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
                   <div className="space-y-2 text-sm text-amber-700">
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 mt-0.5 text-amber-600" />
-                      <p>{language === 'zh' ? '通过微信转账支付无需缴纳额外税费' : 'No additional tax when paying via WeChat transfer'}</p>
+                      <div className="min-w-[20px] mt-0.5">•</div>
+                      <p>{language === 'zh' ? '微信转账：无需支付额外税费，可享受10%折扣～' : 'WeChat Pay: No additional tax, enjoy 10% discount'}</p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600" />
-                      <p>{language === 'zh' ? '通过EMT电子转账支付需额外缴纳13%税费' : 'Additional 13% tax applies when paying via EMT'}</p>
+                      <div className="min-w-[20px] mt-0.5">•</div>
+                      <p>{language === 'zh' ? '通过EMT电子转账：需额外支付13%税费' : 'Additional 13% tax applies when paying via EMT'}</p>
                     </div>
                   </div>
                 </div>
