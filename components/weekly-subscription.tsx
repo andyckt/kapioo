@@ -413,7 +413,7 @@ export default function WeeklySubscription({ userCredits: propCredits }: WeeklyS
             </p>
             <p className="text-[10px] text-[#6B5F53] mt-1">
               {language === 'zh' 
-                ? '订单截止时间：周日配送 - 周五晚上7点前；周二配送 - 周日晚上7点前。' 
+                ? '订单截止时间：如周日配送 - 需周五晚上7点前下单；如周二配送 - 需周日晚上7点前下单。' 
                 : 'Order cutoff times: Sunday delivery - Friday 7:00 PM; Tuesday delivery - Sunday 7:00 PM.'}
             </p>
           </div>
@@ -443,6 +443,7 @@ export default function WeeklySubscription({ userCredits: propCredits }: WeeklyS
             <div className="grid gap-8 md:grid-cols-2">
               {deliveryDays
                 .filter(day => !isDayUnavailable(day).unavailable)
+                .slice(0, 2) // Only show the first two available days
                 .map((day) => (
                 <motion.div 
                   key={`${day.id}-${day.weekOffset}`}
