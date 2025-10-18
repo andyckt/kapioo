@@ -101,39 +101,69 @@ export async function POST(request: Request) {
     
     try {
       if (data.action === 'approve') {
-        // Set approved credits from admin input
-        const approvedCredits = data.approvedCredits;
+        // Get approved meal plan quantities from admin input
+        const approvedSixMeals = data.approvedSixMeals || 0;
+        const approvedEightMeals = data.approvedEightMeals || 0;
+        const approvedTenMeals = data.approvedTenMeals || 0;
+        const approvedTwelveMeals = data.approvedTwelveMeals || 0;
         
-        // Validate that approvedCredits is provided
-        if (!approvedCredits || approvedCredits <= 0) {
+        // For backward compatibility, also get approvedCredits
+        const approvedCredits = data.approvedCredits || 0;
+        
+        // Check if at least one meal plan type has a value or approvedCredits is provided
+        if (approvedSixMeals <= 0 && approvedEightMeals <= 0 && 
+            approvedTenMeals <= 0 && approvedTwelveMeals <= 0 && approvedCredits <= 0) {
           return NextResponse.json(
-            { success: false, error: 'Invalid approved credits amount' },
+            { success: false, error: 'At least one meal plan type must have a value' },
             { status: 400 }
           );
         }
         
         // Update request status
         creditRequest.status = 'approved';
-        creditRequest.approvedCredits = approvedCredits;
+        creditRequest.approvedSixMeals = approvedSixMeals;
+        creditRequest.approvedEightMeals = approvedEightMeals;
+        creditRequest.approvedTenMeals = approvedTenMeals;
+        creditRequest.approvedTwelveMeals = approvedTwelveMeals;
+        creditRequest.approvedCredits = approvedCredits; // For backward compatibility
         creditRequest.adminNotes = data.adminNotes || '';
         creditRequest.approvedAt = new Date();
         await creditRequest.save({ session });
         
         // Create transaction
-                  // Generate transaction ID with the correct type
-          const transactionId = await Transaction.generateTransactionId('Add');
-          
-          const transaction = new Transaction({
-            userId: user._id,
-            type: 'Add', // Using 'Add' instead of 'credit' to match the enum
-            amount: approvedCredits,
-            description: `Credit purchase approved (Request ID: ${creditRequest.requestId})`,
-            transactionId: transactionId
-          });
+        const transactionId = await Transaction.generateTransactionId('Add');
+        
+        // Calculate total plans for transaction amount
+        const totalPlans = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedCredits;
+        
+        const transaction = new Transaction({
+          userId: user._id,
+          type: 'Add',
+          amount: totalPlans,
+          description: `Meal plan purchase approved (Request ID: ${creditRequest.requestId})`,
+          transactionId: transactionId
+        });
         await transaction.save({ session });
         
-        // Add credits to user
-        user.credits = (user.credits || 0) + approvedCredits;
+        // Update user's meal plan counts
+        if (approvedSixMeals > 0) {
+          user.weeklySIXmeals = (user.weeklySIXmeals || 0) + approvedSixMeals;
+        }
+        if (approvedEightMeals > 0) {
+          user.weeklyEIGHTmeals = (user.weeklyEIGHTmeals || 0) + approvedEightMeals;
+        }
+        if (approvedTenMeals > 0) {
+          user.weeklyTENmeals = (user.weeklyTENmeals || 0) + approvedTenMeals;
+        }
+        if (approvedTwelveMeals > 0) {
+          user.weeklyTWELVEmeals = (user.weeklyTWELVEmeals || 0) + approvedTwelveMeals;
+        }
+        
+        // For backward compatibility, also update credits field if approvedCredits is provided
+        if (approvedCredits > 0) {
+          user.credits = (user.credits || 0) + approvedCredits;
+        }
+        
         await user.save({ session });
         
         // Commit the transaction
@@ -177,7 +207,11 @@ export async function POST(request: Request) {
               _id: user._id,
               name: user.name,
               email: user.email,
-              credits: user.credits
+              credits: user.credits,
+              weeklySIXmeals: user.weeklySIXmeals,
+              weeklyEIGHTmeals: user.weeklyEIGHTmeals,
+              weeklyTENmeals: user.weeklyTENmeals,
+              weeklyTWELVEmeals: user.weeklyTWELVEmeals
             }
           }
         });

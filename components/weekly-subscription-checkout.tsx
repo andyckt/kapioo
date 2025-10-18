@@ -20,6 +20,14 @@ interface WeeklySubscriptionCheckoutProps {
   onSuccess: () => void
   userCredits: number
   setUserCredits: (credits: number) => void
+  weeklySIXmeals: number
+  setWeeklySIXmeals: (value: number) => void
+  weeklyEIGHTmeals: number
+  setWeeklyEIGHTmeals: (value: number) => void
+  weeklyTENmeals: number
+  setWeeklyTENmeals: (value: number) => void
+  weeklyTWELVEmeals: number
+  setWeeklyTWELVEmeals: (value: number) => void
   deliveryDays: DeliveryDay[]
 }
 
@@ -29,6 +37,14 @@ export function WeeklySubscriptionCheckout({
   onSuccess,
   userCredits,
   setUserCredits,
+  weeklySIXmeals,
+  setWeeklySIXmeals,
+  weeklyEIGHTmeals,
+  setWeeklyEIGHTmeals,
+  weeklyTENmeals,
+  setWeeklyTENmeals,
+  weeklyTWELVEmeals,
+  setWeeklyTWELVEmeals,
   deliveryDays
 }: WeeklySubscriptionCheckoutProps) {
   const { t, language } = useLanguage()
@@ -217,6 +233,21 @@ export function WeeklySubscriptionCheckout({
       
       const userData = JSON.parse(userDataStr)
       
+      // Determine the meal plan type based on total items
+      const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+      let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
+      
+      // Choose the meal plan type based on availability
+      if (weeklyEIGHTmeals > 0) {
+        mealPlanType = '8aweek';
+      } else if (weeklyTENmeals > 0) {
+        mealPlanType = '10aweek';
+      } else if (weeklySIXmeals > 0) {
+        mealPlanType = '6aweek';
+      } else if (weeklyTWELVEmeals > 0) {
+        mealPlanType = '12aweek';
+      }
+      
       // Submit subscription to API with user ID and additional details
       const result = await submitUserSubscription({
         items: cart,
@@ -224,7 +255,8 @@ export function WeeklySubscriptionCheckout({
         specialInstructions: formData.specialInstructions,
         deliveryAddress: deliveryAddress,
         phoneNumber: formData.phone,
-        area: formData.area
+        area: formData.area,
+        mealPlanType // Pass the meal plan type to the API
       })
       
       if (result.error) {
@@ -246,11 +278,34 @@ export function WeeklySubscriptionCheckout({
         }
       } else {
         // Success case
-        // Update user credits in localStorage if returned by API
-        if (result.remainingCredits !== undefined) {
-          userData.credits = result.remainingCredits
-          localStorage.setItem('user', JSON.stringify(userData))
-          setUserCredits(result.remainingCredits)
+        // Update user data in localStorage based on which meal plan type was used
+        if (result.updatedUser) {
+          // Update the specific meal plan field that was used
+          if (result.usedMealPlanType === '6aweek') {
+            userData.weeklySIXmeals = result.updatedUser.weeklySIXmeals;
+            setWeeklySIXmeals(result.updatedUser.weeklySIXmeals);
+          } else if (result.usedMealPlanType === '8aweek') {
+            userData.weeklyEIGHTmeals = result.updatedUser.weeklyEIGHTmeals;
+            setWeeklyEIGHTmeals(result.updatedUser.weeklyEIGHTmeals);
+          } else if (result.usedMealPlanType === '10aweek') {
+            userData.weeklyTENmeals = result.updatedUser.weeklyTENmeals;
+            setWeeklyTENmeals(result.updatedUser.weeklyTENmeals);
+          } else if (result.usedMealPlanType === '12aweek') {
+            userData.weeklyTWELVEmeals = result.updatedUser.weeklyTWELVEmeals;
+            setWeeklyTWELVEmeals(result.updatedUser.weeklyTWELVEmeals);
+          } else {
+            // Fallback to legacy credits if no specific meal plan type was used
+            userData.credits = result.updatedUser.credits;
+            setUserCredits(result.updatedUser.credits);
+          }
+          
+          // Update localStorage with all updated user data
+          localStorage.setItem('user', JSON.stringify(userData));
+        } else if (result.remainingCredits !== undefined) {
+          // Legacy support for old API response format
+          userData.credits = result.remainingCredits;
+          localStorage.setItem('user', JSON.stringify(userData));
+          setUserCredits(result.remainingCredits);
         }
         
         toast({

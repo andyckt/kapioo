@@ -220,6 +220,8 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   userName: string;
   userEmail: string;
   amount: number;
+  paymentMethod: 'wechat' | 'emt';
+  originalPrice: number;
   imageProofUrl: string;
   notes?: string;
   planDescription?: string;
@@ -240,7 +242,9 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
       </p>
       <ul style="list-style: none; padding: 0; margin-bottom: 20px; border: 1px solid #eee; border-radius: 8px; background-color: #f9f9f9;">
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
-        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款金额:</strong> $${requestDetails.amount}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>原始价格:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>实际付款:</strong> $${requestDetails.amount.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
         ${requestDetails.planDescription ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
         <li style="padding: 10px 15px;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
       </ul>

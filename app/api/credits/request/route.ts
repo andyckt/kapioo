@@ -12,14 +12,24 @@ export async function POST(request: Request) {
     console.log('Credit request data:', JSON.stringify(data));
     
     // Validate required fields
-    if (!data.userId || !data.amount || !data.imageProof) {
+    if (!data.userId || !data.amount || !data.imageProof || !data.paymentMethod || !data.originalPrice) {
       console.log('Missing required fields:', { 
         userId: !!data.userId, 
         amount: !!data.amount, 
-        imageProof: !!data.imageProof 
+        imageProof: !!data.imageProof,
+        paymentMethod: !!data.paymentMethod,
+        originalPrice: !!data.originalPrice
       });
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate payment method
+    if (data.paymentMethod !== 'wechat' && data.paymentMethod !== 'emt') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid payment method' },
         { status: 400 }
       );
     }
@@ -43,9 +53,13 @@ export async function POST(request: Request) {
       requestId,
       userId: data.userId,
       amount: data.amount,
+      paymentMethod: data.paymentMethod,
+      originalPrice: data.originalPrice,
       imageProof: data.imageProof,
       notes: data.notes || '',
       planDescription: data.planDescription || '', // Store plan description
+      mealPlanType: data.mealPlanType, // Store meal plan type (6aweek, 8aweek, etc.)
+      mealPlanQuantity: data.mealPlanQuantity, // Store number of plans (1, 2, or 4 weeks)
       status: 'pending'
     });
     
@@ -59,6 +73,8 @@ export async function POST(request: Request) {
         userName: user.name || user.userID,
         userEmail: user.email,
         amount: data.amount,
+        paymentMethod: data.paymentMethod,
+        originalPrice: data.originalPrice,
         imageProofUrl: data.imageProof,
         notes: data.notes,
         planDescription: data.planDescription || '',

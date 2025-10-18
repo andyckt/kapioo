@@ -18,15 +18,31 @@ import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-che
 
 interface WeeklySubscriptionProps {
   userCredits?: number;
+  weeklySIXmeals?: number;
+  weeklyEIGHTmeals?: number;
+  weeklyTENmeals?: number;
+  weeklyTWELVEmeals?: number;
 }
 
-export default function WeeklySubscription({ userCredits: propCredits }: WeeklySubscriptionProps) {
+export default function WeeklySubscription({ 
+  userCredits: propCredits,
+  weeklySIXmeals: propSixMeals,
+  weeklyEIGHTmeals: propEightMeals,
+  weeklyTENmeals: propTenMeals,
+  weeklyTWELVEmeals: propTwelveMeals
+}: WeeklySubscriptionProps) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
   const [deliveryDays, setDeliveryDays] = useState<DeliveryDay[]>([])
+  
+  // State for all meal plan types
   const [userCredits, setUserCredits] = useState<number>(propCredits || 0)
+  const [weeklySIXmeals, setWeeklySIXmeals] = useState<number>(propSixMeals || 0)
+  const [weeklyEIGHTmeals, setWeeklyEIGHTmeals] = useState<number>(propEightMeals || 0)
+  const [weeklyTENmeals, setWeeklyTENmeals] = useState<number>(propTenMeals || 0)
+  const [weeklyTWELVEmeals, setWeeklyTWELVEmeals] = useState<number>(propTwelveMeals || 0)
   // No longer need activeTab state
   
   // Function to check if a day is unavailable for ordering
@@ -181,12 +197,24 @@ export default function WeeklySubscription({ userCredits: propCredits }: WeeklyS
     }
   };
   
-  // Update credits when prop changes
+  // Update meal plan values when props change
   useEffect(() => {
     if (propCredits !== undefined) {
       setUserCredits(propCredits);
     }
-  }, [propCredits]);
+    if (propSixMeals !== undefined) {
+      setWeeklySIXmeals(propSixMeals);
+    }
+    if (propEightMeals !== undefined) {
+      setWeeklyEIGHTmeals(propEightMeals);
+    }
+    if (propTenMeals !== undefined) {
+      setWeeklyTENmeals(propTenMeals);
+    }
+    if (propTwelveMeals !== undefined) {
+      setWeeklyTWELVEmeals(propTwelveMeals);
+    }
+  }, [propCredits, propSixMeals, propEightMeals, propTenMeals, propTwelveMeals]);
 
   // Fetch delivery days and meal options from API
   useEffect(() => {
@@ -390,6 +418,14 @@ export default function WeeklySubscription({ userCredits: propCredits }: WeeklyS
           onSuccess={handleCheckoutSuccess}
           userCredits={userCredits}
           setUserCredits={setUserCredits}
+          weeklySIXmeals={weeklySIXmeals}
+          setWeeklySIXmeals={setWeeklySIXmeals}
+          weeklyEIGHTmeals={weeklyEIGHTmeals}
+          setWeeklyEIGHTmeals={setWeeklyEIGHTmeals}
+          weeklyTENmeals={weeklyTENmeals}
+          setWeeklyTENmeals={setWeeklyTENmeals}
+          weeklyTWELVEmeals={weeklyTWELVEmeals}
+          setWeeklyTWELVEmeals={setWeeklyTWELVEmeals}
           deliveryDays={deliveryDays}
         />
       ) : isLoading ? (

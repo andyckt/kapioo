@@ -104,14 +104,39 @@ export async function POST(request: Request) {
     // Calculate total items
     const totalItems = data.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
     
-    // Check if user has enough credits
-    if (user.credits < totalItems) {
+    // Determine which meal plan type to use
+    const mealPlanType = data.mealPlanType || 'legacy';
+    let hasEnoughMeals = false;
+    let availableMeals = 0;
+    
+    // Check if user has enough of the specified meal plan type
+    if (mealPlanType === '6aweek') {
+      hasEnoughMeals = user.weeklySIXmeals >= 1;
+      availableMeals = user.weeklySIXmeals;
+    } else if (mealPlanType === '8aweek') {
+      hasEnoughMeals = user.weeklyEIGHTmeals >= 1;
+      availableMeals = user.weeklyEIGHTmeals;
+    } else if (mealPlanType === '10aweek') {
+      hasEnoughMeals = user.weeklyTENmeals >= 1;
+      availableMeals = user.weeklyTENmeals;
+    } else if (mealPlanType === '12aweek') {
+      hasEnoughMeals = user.weeklyTWELVEmeals >= 1;
+      availableMeals = user.weeklyTWELVEmeals;
+    } else {
+      // Legacy fallback to credits
+      hasEnoughMeals = user.credits >= totalItems;
+      availableMeals = user.credits;
+    }
+    
+    // Check if user has enough of the specified meal plan
+    if (!hasEnoughMeals) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Not enough credits', 
-          requiredCredits: totalItems, 
-          availableCredits: user.credits 
+          error: 'Not enough meal plans', 
+          requiredCredits: mealPlanType === 'legacy' ? totalItems : 1, 
+          availableCredits: availableMeals,
+          mealPlanType
         },
         { status: 400 }
       );
@@ -200,12 +225,20 @@ export async function POST(request: Request) {
       });
     }
     
-    // Deduct credits from user
+    // Prepare the update object based on meal plan type
+    const updateField = mealPlanType === '6aweek' ? 'weeklySIXmeals' :
+                       mealPlanType === '8aweek' ? 'weeklyEIGHTmeals' :
+                       mealPlanType === '10aweek' ? 'weeklyTENmeals' :
+                       mealPlanType === '12aweek' ? 'weeklyTWELVEmeals' :
+                       'credits';
+    
+    const updateObj: any = {};
+    updateObj[updateField] = mealPlanType === 'legacy' ? -totalItems : -1;
+    
+    // Deduct from the appropriate meal plan field
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
-      {
-        $inc: { credits: -totalItems }
-      },
+      { $inc: updateObj },
       { new: true }
     );
     
@@ -257,7 +290,15 @@ export async function POST(request: Request) {
           subscription,
           order: weeklyOrder
         },
-        remainingCredits: updatedUser.credits
+        remainingCredits: updatedUser.credits, // For backward compatibility
+        updatedUser: {
+          credits: updatedUser.credits,
+          weeklySIXmeals: updatedUser.weeklySIXmeals,
+          weeklyEIGHTmeals: updatedUser.weeklyEIGHTmeals,
+          weeklyTENmeals: updatedUser.weeklyTENmeals,
+          weeklyTWELVEmeals: updatedUser.weeklyTWELVEmeals
+        },
+        usedMealPlanType: mealPlanType
       },
       { status: 200 }
     );

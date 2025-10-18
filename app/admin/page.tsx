@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -91,6 +91,10 @@ export default function AdminDashboardPage() {
   const [approveRequestOpen, setApproveRequestOpen] = useState(false)
   const [declineRequestOpen, setDeclineRequestOpen] = useState(false)
   const [approvedCredits, setApprovedCredits] = useState(0)
+  const [approvedSixMeals, setApprovedSixMeals] = useState(0)
+  const [approvedEightMeals, setApprovedEightMeals] = useState(0)
+  const [approvedTenMeals, setApprovedTenMeals] = useState(0)
+  const [approvedTwelveMeals, setApprovedTwelveMeals] = useState(0)
   const [adminNotes, setAdminNotes] = useState('')
   const [processingRequest, setProcessingRequest] = useState(false)
   const [addCreditsOpen, setAddCreditsOpen] = useState(false)
@@ -355,33 +359,62 @@ export default function AdminDashboardPage() {
   const handleApproveRequest = (request: any) => {
     setSelectedRequest(request);
     
-    // Extract meals per week from plan description if available
-    let defaultCredits = 0;
-    if (request.planDescription) {
-      // Look for patterns like "6 meals/week" or "10 meals/week"
-      const mealsMatch = request.planDescription.match(/(\d+)\s*meals\/week/i);
-      if (mealsMatch && mealsMatch[1]) {
-        defaultCredits = parseInt(mealsMatch[1]);
-      } else {
-        // Alternative pattern: try to find "6 meals" or "10 meals"
-        const altMatch = request.planDescription.match(/(\d+)\s*meals/i);
-        if (altMatch && altMatch[1]) {
-          defaultCredits = parseInt(altMatch[1]);
+    // Reset all values first
+    setApprovedCredits(0);
+    setApprovedSixMeals(0);
+    setApprovedEightMeals(0);
+    setApprovedTenMeals(0);
+    setApprovedTwelveMeals(0);
+    
+    // Determine suggested values based on meal plan type and quantity
+    if (request.mealPlanType && request.mealPlanQuantity) {
+      const quantity = request.mealPlanQuantity;
+      
+      switch(request.mealPlanType) {
+        case '6aweek':
+          setApprovedSixMeals(quantity);
+          break;
+        case '8aweek':
+          setApprovedEightMeals(quantity);
+          break;
+        case '10aweek':
+          setApprovedTenMeals(quantity);
+          break;
+        case '12aweek':
+          setApprovedTwelveMeals(quantity);
+          break;
+      }
+    } else {
+      // Legacy approach for backward compatibility
+      // Extract meals per week from plan description if available
+      let defaultCredits = 0;
+      if (request.planDescription) {
+        // Look for patterns like "6 meals/week" or "10 meals/week"
+        const mealsMatch = request.planDescription.match(/(\d+)\s*meals\/week/i);
+        if (mealsMatch && mealsMatch[1]) {
+          defaultCredits = parseInt(mealsMatch[1]);
+        } else {
+          // Alternative pattern: try to find "6 meals" or "10 meals"
+          const altMatch = request.planDescription.match(/(\d+)\s*meals/i);
+          if (altMatch && altMatch[1]) {
+            defaultCredits = parseInt(altMatch[1]);
+          }
         }
       }
+      
+      // If we couldn't extract from plan description, use mealsPerWeek if available
+      if (defaultCredits === 0 && request.mealsPerWeek) {
+        defaultCredits = request.mealsPerWeek;
+      }
+      
+      // If still no value, use the amount as fallback
+      if (defaultCredits === 0) {
+        defaultCredits = request.amount || 0;
+      }
+      
+      setApprovedCredits(defaultCredits);
     }
     
-    // If we couldn't extract from plan description, use mealsPerWeek if available
-    if (defaultCredits === 0 && request.mealsPerWeek) {
-      defaultCredits = request.mealsPerWeek;
-    }
-    
-    // If still no value, use the amount as fallback
-    if (defaultCredits === 0) {
-      defaultCredits = request.amount || 0;
-    }
-    
-    setApprovedCredits(defaultCredits);
     setAdminNotes('');
     setApproveRequestOpen(true);
   };
@@ -399,6 +432,20 @@ export default function AdminDashboardPage() {
     
     setProcessingRequest(true);
     try {
+      // Calculate total approved plans for display
+      const totalApproved = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedCredits;
+      
+      // Check if at least one plan type has a value
+      if (totalApproved <= 0) {
+        toast({
+          title: "Error",
+          description: "Please enter at least one meal plan quantity",
+          variant: "destructive"
+        });
+        setProcessingRequest(false);
+        return;
+      }
+      
       const response = await fetch('/api/credits/request/admin', {
         method: 'POST',
         headers: {
@@ -408,6 +455,10 @@ export default function AdminDashboardPage() {
           requestId: selectedRequest.requestId,
           action: 'approve',
           approvedCredits,
+          approvedSixMeals,
+          approvedEightMeals,
+          approvedTenMeals,
+          approvedTwelveMeals,
           adminNotes
         })
       });
@@ -415,9 +466,20 @@ export default function AdminDashboardPage() {
       const result = await response.json();
       
       if (result.success) {
+        // Create description of what was approved
+        let description = '';
+        if (approvedSixMeals > 0) description += `${approvedSixMeals} x 6-meal plans, `;
+        if (approvedEightMeals > 0) description += `${approvedEightMeals} x 8-meal plans, `;
+        if (approvedTenMeals > 0) description += `${approvedTenMeals} x 10-meal plans, `;
+        if (approvedTwelveMeals > 0) description += `${approvedTwelveMeals} x 12-meal plans, `;
+        if (approvedCredits > 0) description += `${approvedCredits} credits, `;
+        
+        // Remove trailing comma and space
+        description = description.replace(/, $/, '');
+        
         toast({
           title: "Request approved",
-          description: `Approved ${approvedCredits} credits for user`
+          description: `Approved ${description} for user`
         });
         
         // Refresh credit requests
@@ -2014,328 +2076,541 @@ export default function AdminDashboardPage() {
 
       {/* View Credit Request Dialog */}
       <Dialog open={viewRequestOpen} onOpenChange={setViewRequestOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Credit Purchase Request Details</DialogTitle>
-            <DialogDescription>Request ID: {selectedRequest?.requestId}</DialogDescription>
+        <DialogContent className="sm:max-w-[700px] md:max-w-[800px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="sticky top-0 z-10 bg-background pb-3 pt-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-semibold">Credit Purchase Request</DialogTitle>
+                <DialogDescription className="text-sm mt-1">
+                  Request ID: <span className="font-medium">{selectedRequest?.requestId}</span>
+                </DialogDescription>
+              </div>
+              {selectedRequest && (
+                <div className="flex items-center">
+                  {selectedRequest.status === 'pending' && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Pending
+                    </span>
+                  )}
+                  {selectedRequest.status === 'approved' && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Approved
+                    </span>
+                  )}
+                  {selectedRequest.status === 'declined' && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      Declined
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </DialogHeader>
           
           {selectedRequest && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">Status</Label>
-                  <p className="font-medium">
-                    {selectedRequest.status === 'pending' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        Pending
-                      </span>
-                    )}
-                    {selectedRequest.status === 'approved' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Approved
-                      </span>
-                    )}
-                    {selectedRequest.status === 'declined' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Declined
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">Date Submitted</Label>
-                  <p className="font-medium">
-                    {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">User</Label>
-                  <p className="font-medium">
-                    {selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedRequest.userId?.email || ''}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">User ID</Label>
-                  <p className="font-medium truncate">
-                    {selectedRequest.userId?._id || 'Unknown'}
-                  </p>
-                </div>
-              </div>
-              
-              {selectedRequest.planDescription && (
-                <div>
-                  <Label className="text-sm text-muted-foreground">Selected Plan</Label>
-                  <p className="font-medium">
-                    {selectedRequest.planDescription}
-                  </p>
-                </div>
-              )}
-              
-              <div>
-                <Label className="text-sm text-muted-foreground">Amount Paid</Label>
-                <p className="font-medium">
-                  ${selectedRequest.amount.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">Amount transferred by user via e-Transfer</p>
-              </div>
-              
-              {selectedRequest.status === 'approved' && (
-                <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6 py-2">
+              {/* User & Date Info - Top Section */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-muted-foreground">Approved Credits</Label>
-                    <p className="font-medium">
-                      {selectedRequest.approvedCredits || selectedRequest.requestedCredits}
+                    <Label className="text-xs text-muted-foreground">Submitted By</Label>
+                    <p className="font-medium text-base">
+                      {selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRequest.userId?.email || ''}
                     </p>
                   </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Approved Date</Label>
-                    <p className="font-medium">
-                      {selectedRequest.approvedAt ? new Date(selectedRequest.approvedAt).toLocaleDateString('en-US', { 
+                  <div className="text-right">
+                    <Label className="text-xs text-muted-foreground">Date Submitted</Label>
+                    <p className="font-medium text-base">
+                      {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', { 
                         year: 'numeric', 
                         month: 'short', 
-                        day: 'numeric' 
-                      }) : 'N/A'}
+                        day: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(selectedRequest.createdAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
                   </div>
                 </div>
-              )}
-              
-              {selectedRequest.status === 'declined' && (
-                <div>
-                  <Label className="text-sm text-muted-foreground">Declined Date</Label>
-                  <p className="font-medium">
-                    {selectedRequest.declinedAt ? new Date(selectedRequest.declinedAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric' 
-                    }) : 'N/A'}
-                  </p>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {selectedRequest.notes && (
-                  <div>
-                    <Label className="text-sm text-muted-foreground">User Notes</Label>
-                    <p className="font-medium bg-muted p-3 rounded-md text-sm max-h-24 overflow-y-auto">
-                      {selectedRequest.notes}
-                    </p>
-                  </div>
-                )}
-                
-                {selectedRequest.adminNotes && (
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Admin Notes</Label>
-                    <p className="font-medium bg-muted p-3 rounded-md text-sm max-h-24 overflow-y-auto">
-                      {selectedRequest.adminNotes}
-                    </p>
-                  </div>
-                )}
               </div>
               
-              <div>
-                <Label className="text-sm text-muted-foreground">Payment Proof</Label>
-                <div className="mt-2 border rounded-md overflow-hidden">
-                  <div className="relative bg-muted" style={{ maxHeight: "200px", overflow: "hidden" }}>
-                    <img 
-                      src={selectedRequest.imageProof} 
-                      alt="Payment proof" 
-                      className="object-contain w-full h-full"
-                      style={{ maxHeight: "200px" }}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.onerror = null;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
+              {/* Plan & Payment Info */}
+              <div className="bg-white border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 border-b border-border">
+                  <h3 className="font-medium">Plan & Payment Details</h3>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                    {selectedRequest.planDescription && (
+                      <div className="col-span-1 sm:col-span-2">
+                        <Label className="text-xs text-muted-foreground">Selected Plan</Label>
+                        <p className="font-medium text-base">
+                          {selectedRequest.planDescription}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Payment Method</Label>
+                      <p className="font-medium text-base mt-1">
+                        {selectedRequest.paymentMethod === 'wechat' ? (
+                          <span className="flex items-center">
+                            <img src="/wechatsmallicon.png" alt="WeChat" className="h-5 w-5 mr-2" />
+                            微信转账
+                          </span>
+                        ) : (
+                          <span className="flex items-center">
+                            <span className="h-5 w-5 mr-2 flex items-center justify-center bg-blue-100 text-blue-800 rounded-full text-xs font-bold">E</span>
+                            Interac e-Transfer
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs text-muted-foreground">User ID</Label>
+                      <p className="font-medium text-sm mt-1 text-muted-foreground truncate">
+                        {selectedRequest.userId?._id || 'Unknown'}
+                      </p>
+                    </div>
+                    
+                    <div className="border-t pt-4 col-span-1 sm:col-span-2 mt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Original Price</Label>
+                          <p className="font-medium text-base">
+                            ${selectedRequest.originalPrice ? selectedRequest.originalPrice.toFixed(2) : '0.00'}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs text-muted-foreground">
+                            {selectedRequest.paymentMethod === 'wechat' ? 'Discount' : 'Tax'}
+                          </Label>
+                          <p className="font-medium text-base">
+                            {selectedRequest.paymentMethod === 'wechat' ? (
+                              <span className="text-green-600">-10%</span>
+                            ) : (
+                              <span className="text-amber-600">+13%</span>
+                            )}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Final Amount</Label>
+                          <p className="font-medium text-base">
+                            <span className="text-lg">${selectedRequest.amount.toFixed(2)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-2 bg-muted flex justify-end">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      asChild
-                      className="gap-1"
-                    >
-                      <a href={selectedRequest.imageProof} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                        Open in New Tab
-                      </a>
-                    </Button>
+                </div>
+              </div>
+              
+              {/* Status Information */}
+              {(selectedRequest.status === 'approved' || selectedRequest.status === 'declined') && (
+                <div className={`bg-white border rounded-lg overflow-hidden ${
+                  selectedRequest.status === 'approved' ? 'border-green-200' : 'border-red-200'
+                }`}>
+                  <div className={`px-4 py-2 border-b ${
+                    selectedRequest.status === 'approved' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                  }`}>
+                    <h3 className="font-medium">
+                      {selectedRequest.status === 'approved' ? 'Approval Details' : 'Decline Details'}
+                    </h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                      {selectedRequest.status === 'approved' && (
+                        <>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Approved Credits</Label>
+                            <p className="font-medium text-base">
+                              {selectedRequest.approvedCredits || selectedRequest.requestedCredits}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Approved Date</Label>
+                            <p className="font-medium text-base">
+                              {selectedRequest.approvedAt ? new Date(selectedRequest.approvedAt).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              }) : 'N/A'}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                      
+                      {selectedRequest.status === 'declined' && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Declined Date</Label>
+                          <p className="font-medium text-base">
+                            {selectedRequest.declinedAt ? new Date(selectedRequest.declinedAt).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            }) : 'N/A'}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {selectedRequest.adminNotes && (
+                        <div className={selectedRequest.status === 'declined' ? "col-span-1 sm:col-span-2" : ""}>
+                          <Label className="text-xs text-muted-foreground">Admin Notes</Label>
+                          <p className="font-medium p-3 bg-muted/50 rounded-md text-sm mt-1 max-h-24 overflow-y-auto">
+                            {selectedRequest.adminNotes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Notes & Payment Proof */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* User Notes */}
+                <div className="col-span-1">
+                  {selectedRequest.notes ? (
+                    <div className="bg-white border border-border rounded-lg overflow-hidden h-full">
+                      <div className="bg-muted/50 px-4 py-2 border-b border-border">
+                        <h3 className="font-medium">User Notes</h3>
+                      </div>
+                      <div className="p-4">
+                        <p className="text-sm">
+                          {selectedRequest.notes}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-border rounded-lg overflow-hidden h-full flex items-center justify-center p-6">
+                      <p className="text-sm text-muted-foreground">No notes provided</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Payment Proof */}
+                <div className="col-span-1">
+                  <div className="bg-white border border-border rounded-lg overflow-hidden h-full">
+                    <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center justify-between">
+                      <h3 className="font-medium">Payment Proof</h3>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        asChild
+                        className="gap-1 h-8"
+                      >
+                        <a href={selectedRequest.imageProof} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          <span className="text-xs">View Full Size</span>
+                        </a>
+                      </Button>
+                    </div>
+                    <div className="p-4 flex items-center justify-center">
+                      <img 
+                        src={selectedRequest.imageProof} 
+                        alt="Payment proof" 
+                        className="object-contain max-h-[250px] max-w-full rounded-md border border-border/50"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           )}
           
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setViewRequestOpen(false)}>
-              Close
-            </Button>
-            
-            {selectedRequest && selectedRequest.status === 'pending' && (
-              <div className="flex gap-2">
-                <Button 
-                  variant="destructive" 
-                  onClick={() => {
-                    setViewRequestOpen(false);
-                    handleDeclineRequest(selectedRequest);
-                  }}
-                >
-                  Decline
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setViewRequestOpen(false);
-                    handleApproveRequest(selectedRequest);
-                  }}
-                >
-                  Approve
-                </Button>
-              </div>
-            )}
+          <DialogFooter className="sticky bottom-0 pt-4 pb-1 bg-background z-10 border-t mt-6">
+            <div className="flex justify-between w-full items-center">
+              <Button variant="outline" onClick={() => setViewRequestOpen(false)}>
+                Close
+              </Button>
+              
+              {selectedRequest && selectedRequest.status === 'pending' && (
+                <div className="flex gap-2">
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => {
+                      setViewRequestOpen(false);
+                      handleDeclineRequest(selectedRequest);
+                    }}
+                    className="px-5"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Decline
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setViewRequestOpen(false);
+                      handleApproveRequest(selectedRequest);
+                    }}
+                    className="bg-green-600 hover:bg-green-700 px-5"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    Approve
+                  </Button>
+                </div>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
       {/* Approve Credit Request Dialog */}
       <Dialog open={approveRequestOpen} onOpenChange={setApproveRequestOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Approve Credit Purchase</DialogTitle>
-            <DialogDescription>
-              Review and approve the credit purchase request.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[550px] md:max-w-[650px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="sticky top-0 z-10 bg-background pb-3 pt-1">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-100 p-2 rounded-full">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold">Approve Credit Purchase</DialogTitle>
+                <DialogDescription className="text-sm mt-1">
+                  Review and approve the credit purchase request.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
           {selectedRequest && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="request-id" className="text-right">
-                  Request ID
-                </Label>
-                <Input
-                  id="request-id"
-                  value={selectedRequest.requestId}
-                  className="col-span-3"
-                  disabled
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="user" className="text-right">
-                  User
-                </Label>
-                <Input
-                  id="user"
-                  value={selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
-                  className="col-span-3"
-                  disabled
-                />
-              </div>
-              
-              {selectedRequest.planDescription && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="plan" className="text-right">
-                    Selected Plan
-                  </Label>
-                  <Input
-                    id="plan"
-                    value={selectedRequest.planDescription}
-                    className="col-span-3"
-                    disabled
-                  />
-                </div>
-              )}
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">
-                  Amount Paid
-                </Label>
-                <div className="col-span-3">
-                  <Input
-                    id="amount"
-                    value={`$${selectedRequest.amount.toFixed(2)}`}
-                    disabled
-                  />
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Amount transferred via e-Transfer
+            <div className="space-y-6 py-2">
+              {/* Request Info */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Request ID</Label>
+                    <p className="font-medium">
+                      {selectedRequest.requestId}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">User</Label>
+                    <p className="font-medium">
+                      {selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedRequest.userId?.email || ''}
+                    </p>
                   </div>
                 </div>
               </div>
               
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="approved-credits" className="text-right">
-                  Credits to Add
-                </Label>
-                <Input
-                  id="approved-credits"
-                  type="number"
-                  value={approvedCredits}
-                  onChange={(e) => setApprovedCredits(parseInt(e.target.value) || 0)}
-                  className="col-span-3"
-                  min="1"
-                />
-                <div className="col-span-4 text-sm text-muted-foreground pl-[25%]">
-                  <span>Credits automatically set based on the selected plan ({selectedRequest.planDescription ? 'detected from plan description' : 'fallback to amount paid'}).</span>
+              {/* Plan & Payment Details */}
+              <div className="bg-white border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 border-b border-border">
+                  <h3 className="font-medium">Plan & Payment Details</h3>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                    {selectedRequest.planDescription && (
+                      <div className="col-span-1 sm:col-span-2">
+                        <Label className="text-xs text-muted-foreground">Selected Plan</Label>
+                        <p className="font-medium">
+                          {selectedRequest.planDescription}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Payment Method</Label>
+                      <p className="font-medium flex items-center mt-1">
+                        {selectedRequest.paymentMethod === 'wechat' ? (
+                          <>
+                            <img src="/wechatsmallicon.png" alt="WeChat" className="h-5 w-5 mr-2" />
+                            微信转账
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-5 w-5 mr-2 flex items-center justify-center bg-blue-100 text-blue-800 rounded-full text-xs font-bold">E</span>
+                            Interac e-Transfer
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Amount Paid</Label>
+                      <p className="font-medium">
+                        ${selectedRequest.amount.toFixed(2)}
+                        {selectedRequest.paymentMethod === 'wechat' && (
+                          <span className="ml-2 text-xs text-green-600">(10% discount applied)</span>
+                        )}
+                        {selectedRequest.paymentMethod === 'emt' && (
+                          <span className="ml-2 text-xs text-amber-600">(13% tax included)</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="admin-notes" className="text-right pt-2">
-                  Notes
-                </Label>
-                <textarea
-                  id="admin-notes"
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  className="col-span-3 min-h-[80px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
-                  placeholder="Optional admin notes"
-                />
+              {/* Meal Plans to Add */}
+              <div className="bg-white border border-border rounded-lg overflow-hidden">
+                <div className="bg-green-50 px-4 py-2 border-b border-green-200">
+                  <h3 className="font-medium text-green-800">Meal Plans to Add</h3>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <Label htmlFor="approved-six-meals" className="text-sm font-medium">
+                        6 Meals/Week
+                      </Label>
+                      <Input
+                        id="approved-six-meals"
+                        type="number"
+                        value={approvedSixMeals}
+                        onChange={(e) => setApprovedSixMeals(parseInt(e.target.value) || 0)}
+                        className="mt-1"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="approved-eight-meals" className="text-sm font-medium">
+                        8 Meals/Week
+                      </Label>
+                      <Input
+                        id="approved-eight-meals"
+                        type="number"
+                        value={approvedEightMeals}
+                        onChange={(e) => setApprovedEightMeals(parseInt(e.target.value) || 0)}
+                        className="mt-1"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="approved-ten-meals" className="text-sm font-medium">
+                        10 Meals/Week
+                      </Label>
+                      <Input
+                        id="approved-ten-meals"
+                        type="number"
+                        value={approvedTenMeals}
+                        onChange={(e) => setApprovedTenMeals(parseInt(e.target.value) || 0)}
+                        className="mt-1"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="approved-twelve-meals" className="text-sm font-medium">
+                        12 Meals/Week
+                      </Label>
+                      <Input
+                        id="approved-twelve-meals"
+                        type="number"
+                        value={approvedTwelveMeals}
+                        onChange={(e) => setApprovedTwelveMeals(parseInt(e.target.value) || 0)}
+                        className="mt-1"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 pt-4 border-t border-border">
+                    <Label htmlFor="approved-credits" className="text-sm font-medium">
+                      Legacy Credits
+                    </Label>
+                    <div className="flex items-center gap-3 mt-1">
+                      <Input
+                        id="approved-credits"
+                        type="number"
+                        value={approvedCredits}
+                        onChange={(e) => setApprovedCredits(parseInt(e.target.value) || 0)}
+                        min="0"
+                        className="max-w-[120px]"
+                      />
+                      <div className="text-xs text-muted-foreground">
+                        For backward compatibility only
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               
-              <div className="col-span-full">
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    asChild
-                    className="gap-1"
-                  >
-                    <a href={selectedRequest.imageProof} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                      View Payment Proof
-                    </a>
-                  </Button>
+              {/* Admin Notes & Payment Proof */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="admin-notes" className="text-sm font-medium">
+                    Admin Notes
+                  </Label>
+                  <textarea
+                    id="admin-notes"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm mt-1"
+                    placeholder="Optional admin notes"
+                  />
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Payment Proof</Label>
+                  <div className="mt-1 border rounded-md overflow-hidden">
+                    <div className="p-3 flex items-center justify-center bg-muted/30">
+                      <img 
+                        src={selectedRequest.imageProof} 
+                        alt="Payment proof" 
+                        className="object-contain max-h-[120px]"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                    <div className="p-2 bg-muted/50 flex justify-end">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        asChild
+                        className="gap-1 h-7"
+                      >
+                        <a href={selectedRequest.imageProof} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3" />
+                          <span className="text-xs">View Full Size</span>
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveRequestOpen(false)} disabled={processingRequest}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={confirmApproveRequest} 
-              disabled={processingRequest || approvedCredits <= 0}
-              className="gap-1"
-            >
-              {processingRequest && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
-              Approve Credits
-            </Button>
+          <DialogFooter className="sticky bottom-0 pt-4 pb-1 bg-background z-10 border-t mt-6">
+            <div className="flex justify-between w-full items-center">
+              <Button variant="outline" onClick={() => setApproveRequestOpen(false)} disabled={processingRequest}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={confirmApproveRequest} 
+                disabled={processingRequest || (approvedCredits <= 0 && approvedSixMeals <= 0 && approvedEightMeals <= 0 && approvedTenMeals <= 0 && approvedTwelveMeals <= 0)}
+                className="bg-green-600 hover:bg-green-700 px-6 gap-2"
+              >
+                {processingRequest ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Confirm Approval
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

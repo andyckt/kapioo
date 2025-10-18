@@ -265,7 +265,8 @@ export async function submitUserSubscription(data: {
   specialInstructions?: string,
   deliveryAddress?: any,
   phoneNumber?: string,
-  area?: string
+  area?: string,
+  mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek'
 }): Promise<any> {
   try {
     console.log('Submitting subscription with user ID:', data.userId);

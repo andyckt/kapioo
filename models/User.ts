@@ -33,11 +33,13 @@ export interface IUser extends Document {
   salt: string;       // For password hashing
   joined: Date;
   status: string;
-  credits: number;
+  credits: number;    // Legacy field, kept for backward compatibility
   twoDishVoucher: number;  // Voucher for two-dish meals
   threeDishVoucher: number; // Voucher for three-dish meals
   weeklySIXmeals: number;  // Weekly subscription for 6 meals
+  weeklyEIGHTmeals: number; // Weekly subscription for 8 meals
   weeklyTENmeals: number;  // Weekly subscription for 10 meals
+  weeklyTWELVEmeals: number; // Weekly subscription for 12 meals
   phone?: string;
   address?: IAddress;
   verificationCode?: string;
@@ -109,7 +111,15 @@ const UserSchema: Schema = new Schema(
       type: Number,
       default: 0
     },
+    weeklyEIGHTmeals: {
+      type: Number,
+      default: 0
+    },
     weeklyTENmeals: {
+      type: Number,
+      default: 0
+    },
+    weeklyTWELVEmeals: {
       type: Number,
       default: 0
     },

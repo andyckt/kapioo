@@ -62,6 +62,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect' | 'upload'>('mealSelect')
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'wechat' | 'emt' | null>(null) // No default selection
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   
   // Define plan options based on the image provided
@@ -329,10 +330,21 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedPlan || !paymentProof) {
+    if (!selectedPlan || !paymentProof || !paymentMethod) {
+      let errorTitle = language === 'zh' ? '请完成所有必填项' : 'Please complete all required fields'
+      let errorDescription = ''
+      
+      if (!selectedPlan) {
+        errorDescription = language === 'zh' ? '请选择一个套餐' : 'Please select a plan'
+      } else if (!paymentMethod) {
+        errorDescription = language === 'zh' ? '请选择付款方式' : 'Please select a payment method'
+      } else if (!paymentProof) {
+        errorDescription = language === 'zh' ? '请上传付款凭证' : 'Please upload your payment proof'
+      }
+      
       toast({
-        title: language === 'zh' ? '请上传付款凭证' : 'Please upload payment proof',
-        description: language === 'zh' ? '请上传您的电子转账付款凭证' : 'Please upload your e-Transfer payment proof',
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive"
       })
       return
@@ -347,6 +359,25 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       // Create plan description for admin view
       const planDescription = `${selectedPlan.durationLabel} (${selectedPlan.mealsPerWeek} meals/week)`;
       
+      // Determine meal plan type based on selected plan
+      let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek';
+      if (selectedPlan.mealsPerWeek === 6) mealPlanType = '6aweek';
+      else if (selectedPlan.mealsPerWeek === 8) mealPlanType = '8aweek';
+      else if (selectedPlan.mealsPerWeek === 10) mealPlanType = '10aweek';
+      else mealPlanType = '12aweek';
+      
+      // Calculate the final amount based on payment method
+      const originalPrice = selectedPlan.totalPrice + (11.99 * selectedPlan.duration); // Plan price + delivery fee
+      let finalAmount = originalPrice;
+      
+      if (paymentMethod === 'wechat') {
+        // WeChat gets 10% discount
+        finalAmount = originalPrice * 0.9;
+      } else if (paymentMethod === 'emt') {
+        // EMT has 13% tax
+        finalAmount = originalPrice * 1.13;
+      }
+      
       // Submit request to backend
       const response = await fetch('/api/credits/request', {
         method: 'POST',
@@ -355,12 +386,16 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         },
         body: JSON.stringify({
           userId,
-          amount: selectedPlan.totalPrice,
+          amount: finalAmount,
+          originalPrice: originalPrice,
+          paymentMethod: paymentMethod,
           mealsPerWeek: selectedPlan.mealsPerWeek,
           duration: selectedPlan.duration,
           planDescription: planDescription,
           imageProof: imageUrl,
-          notes
+          notes,
+          mealPlanType,
+          mealPlanQuantity: selectedPlan.duration, // 1, 2, or 4 weeks
         }),
       })
       
@@ -790,7 +825,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   </div>
                 </div>
                 
-                {/* Payment proof upload */}
                 {/* Payment method and tax information */}
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                   <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
@@ -860,6 +894,67 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     </div>
                   </div>
                   
+                  {/* Payment method selection */}
+                  <div className="mb-6">
+                    <Label className="text-[#6B5F53] font-medium mb-2 block">
+                      {language === 'zh' ? '选择付款方式' : 'Select Payment Method'}
+                    </Label>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                      {/* WeChat payment option */}
+                      <div 
+                        className={`border rounded-xl p-4 cursor-pointer transition-all ${
+                          paymentMethod === 'wechat' 
+                            ? 'border-[#C2884E] bg-[#F9F3EC]' 
+                            : 'border-gray-200 hover:border-[#C2884E]/50'
+                        }`}
+                        onClick={() => setPaymentMethod('wechat')}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                            paymentMethod === 'wechat' ? 'border-[#C2884E]' : 'border-gray-300'
+                          }`}>
+                            {paymentMethod === 'wechat' && (
+                              <div className="w-3 h-3 rounded-full bg-[#C2884E]" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <img src="/wechatsmallicon.png" alt="WeChat" className="h-6 w-6" />
+                            <span className="font-medium">{language === 'zh' ? '微信转账' : 'WeChat Transfer'}</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 ml-8 text-sm text-green-600">
+                          {language === 'zh' ? '优惠: 10% 折扣' : 'Discount: 10% off'}
+                        </div>
+                      </div>
+                      
+                      {/* EMT payment option */}
+                      <div 
+                        className={`border rounded-xl p-4 cursor-pointer transition-all ${
+                          paymentMethod === 'emt' 
+                            ? 'border-[#C2884E] bg-[#F9F3EC]' 
+                            : 'border-gray-200 hover:border-[#C2884E]/50'
+                        }`}
+                        onClick={() => setPaymentMethod('emt')}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                            paymentMethod === 'emt' ? 'border-[#C2884E]' : 'border-gray-300'
+                          }`}>
+                            {paymentMethod === 'emt' && (
+                              <div className="w-3 h-3 rounded-full bg-[#C2884E]" />
+                            )}
+                          </div>
+                          <span className="font-medium">Interac e-Transfer</span>
+                        </div>
+                        <div className="mt-2 ml-8 text-sm text-amber-600">
+                          {language === 'zh' ? '税费: +13% HST' : 'Tax: +13% HST'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  
                   <div>
                     <Label htmlFor="notes" className="text-[#6B5F53] font-medium">
                       {language === 'zh' ? '备注（可选）' : 'Notes (Optional)'}
@@ -885,7 +980,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   </Button>
                   <Button
                     onClick={handleSubmit}
-                    disabled={isLoading || !paymentProof}
+                    disabled={isLoading || !paymentProof || !paymentMethod}
                     className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
                   >
                     {isLoading ? (

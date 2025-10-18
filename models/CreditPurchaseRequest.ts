@@ -4,11 +4,20 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface ICreditPurchaseRequest extends Document {
   requestId: string;
   userId: mongoose.Types.ObjectId;
-  amount: number; // Amount transferred via e-Transfer
+  amount: number; // Amount transferred
+  paymentMethod: 'wechat' | 'emt'; // Payment method used: WeChat or EMT
+  originalPrice: number; // Original price before any discount/tax
   imageProof: string; // URL to the uploaded proof image
   status: 'pending' | 'approved' | 'declined';
   requestedCredits?: number; // Credits requested by the user (legacy field)
-  approvedCredits?: number; // Credits approved by admin (may differ from requested)
+  approvedCredits?: number; // Credits approved by admin (legacy field)
+  // New meal plan fields
+  approvedSixMeals?: number;
+  approvedEightMeals?: number;
+  approvedTenMeals?: number;
+  approvedTwelveMeals?: number;
+  mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek'; // Type of meal plan
+  mealPlanQuantity?: number; // Number of plans (e.g., 1, 2, 4 weeks)
   notes?: string; // Additional notes from user or admin
   adminNotes?: string; // Notes from admin (for internal use)
   planDescription?: string; // Description of the selected plan
@@ -39,6 +48,15 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
     type: Number,
     required: true
   },
+  paymentMethod: {
+    type: String,
+    enum: ['wechat', 'emt'],
+    required: true
+  },
+  originalPrice: {
+    type: Number,
+    required: true
+  },
   imageProof: {
     type: String,
     required: true
@@ -54,6 +72,25 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
     required: false
   },
   approvedCredits: {
+    type: Number
+  },
+  approvedSixMeals: {
+    type: Number
+  },
+  approvedEightMeals: {
+    type: Number
+  },
+  approvedTenMeals: {
+    type: Number
+  },
+  approvedTwelveMeals: {
+    type: Number
+  },
+  mealPlanType: {
+    type: String,
+    enum: ['6aweek', '8aweek', '10aweek', '12aweek']
+  },
+  mealPlanQuantity: {
     type: Number
   },
   notes: {
