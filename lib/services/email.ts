@@ -535,7 +535,21 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
           ${deliveryItemsHtml}
           <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
             <span style="font-weight: bold; color: #333;">总计:</span>
-            <span style="font-weight: bold; color: #C2884E;">${orderDetails.totalCredits} 积分</span>
+            <span style="font-weight: bold; color: #C2884E;">
+              ${(() => {
+                if (orderDetails.totalCredits === 6) {
+                  return '6餐一周: 1张';
+                } else if (orderDetails.totalCredits === 8) {
+                  return '8餐一周: 1张';
+                } else if (orderDetails.totalCredits === 10) {
+                  return '10餐一周: 1张';
+                } else if (orderDetails.totalCredits === 12) {
+                  return '12餐一周: 1张';
+                } else {
+                  return `${orderDetails.totalCredits} 餐`;
+                }
+              })()}
+            </span>
           </div>
         </div>
         
@@ -662,7 +676,21 @@ export const sendAdminWeeklyOrderNotification = async (orderDetails: {
           ${deliveryItemsHtml}
           <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
             <span style="font-weight: bold; color: #333;">总计:</span>
-            <span style="font-weight: bold; color: #C2884E;">${orderDetails.totalCredits} 积分</span>
+            <span style="font-weight: bold; color: #C2884E;">
+              ${(() => {
+                if (orderDetails.totalCredits === 6) {
+                  return '6餐一周: 1张';
+                } else if (orderDetails.totalCredits === 8) {
+                  return '8餐一周: 1张';
+                } else if (orderDetails.totalCredits === 10) {
+                  return '10餐一周: 1张';
+                } else if (orderDetails.totalCredits === 12) {
+                  return '12餐一周: 1张';
+                } else {
+                  return `${orderDetails.totalCredits} 餐`;
+                }
+              })()}
+            </span>
           </div>
         </div>
         

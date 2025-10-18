@@ -83,7 +83,7 @@ export function WeeklySubscriptionCheckout({
       setFormData({
         name: user.name || "",
         phone: user.phone || "",
-        area: user.area || "",
+        area: user.address?.province || "",
         specialInstructions: ''
       })
       
@@ -275,10 +275,10 @@ export function WeeklySubscriptionCheckout({
         // Handle error case
         if (result.requiredCredits && result.availableCredits) {
           toast({
-            title: language === 'zh' ? '积分不足' : 'Not Enough Credits',
+            title: language === 'zh' ? '餐券不足' : 'Not Enough Meal Plans',
             description: language === 'zh' 
-              ? `需要 ${result.requiredCredits} 积分，但您只有 ${result.availableCredits} 积分` 
-              : `You need ${result.requiredCredits} credits, but only have ${result.availableCredits}`,
+              ? `您没有足够的餐券来完成此订单` 
+              : `You don't have enough meal plans to complete this order`,
             variant: "destructive"
           })
         } else {

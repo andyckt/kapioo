@@ -251,8 +251,22 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                       </p>
                     </div>
                     <div>
-                      <p className="font-medium">{language === 'zh' ? '使用积分' : 'Credits Used'}</p>
-                      <p className="text-muted-foreground">{order.creditCost} {language === 'zh' ? '积分' : 'credits'}</p>
+                      <p className="font-medium">{language === 'zh' ? '使用餐券' : 'Meal Plan Used'}</p>
+                      <p className="text-muted-foreground">
+                        {(() => {
+                          if (order.creditCost === 6) {
+                            return language === 'zh' ? '6餐一周: 1张' : '6 meals/week: 1 voucher';
+                          } else if (order.creditCost === 8) {
+                            return language === 'zh' ? '8餐一周: 1张' : '8 meals/week: 1 voucher';
+                          } else if (order.creditCost === 10) {
+                            return language === 'zh' ? '10餐一周: 1张' : '10 meals/week: 1 voucher';
+                          } else if (order.creditCost === 12) {
+                            return language === 'zh' ? '12餐一周: 1张' : '12 meals/week: 1 voucher';
+                          } else {
+                            return `${order.creditCost} ${language === 'zh' ? '餐' : 'meals'}`;
+                          }
+                        })()}
+                      </p>
                     </div>
                     <div>
                       <p className="font-medium">{language === 'zh' ? '区域' : 'Area'}</p>
@@ -340,8 +354,8 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                               {selectedOrder.status === 'refunded' && (
                                 <div className="bg-orange-50 border border-orange-200 rounded-md p-3 text-sm text-orange-700 my-3">
                                   {language === 'zh' 
-                                    ? `已退还 ${selectedOrder.creditCost} 积分` 
-                                    : `${selectedOrder.creditCost} credits have been refunded`}
+                                    ? `已退还餐券` 
+                                    : `Your meal plan has been refunded`}
                                   {selectedOrder.refundedAt && (
                                     <div className="mt-1">
                                       {language === 'zh' ? '退款日期：' : 'Refunded on: '} {new Date(selectedOrder.refundedAt).toLocaleDateString(
@@ -406,9 +420,21 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                               )}
                               
                               <div>
-                                <h3 className="font-semibold mb-1">{language === 'zh' ? '使用积分' : 'Credits Used'}</h3>
+                                <h3 className="font-semibold mb-1">{language === 'zh' ? '使用餐券' : 'Meal Plan Used'}</h3>
                                 <p className="text-muted-foreground">
-                                  {selectedOrder.creditCost} {language === 'zh' ? '积分' : 'credits'}
+                                  {(() => {
+                                    if (selectedOrder.creditCost === 6) {
+                                      return language === 'zh' ? '6餐一周: 1张' : '6 meals/week: 1 voucher';
+                                    } else if (selectedOrder.creditCost === 8) {
+                                      return language === 'zh' ? '8餐一周: 1张' : '8 meals/week: 1 voucher';
+                                    } else if (selectedOrder.creditCost === 10) {
+                                      return language === 'zh' ? '10餐一周: 1张' : '10 meals/week: 1 voucher';
+                                    } else if (selectedOrder.creditCost === 12) {
+                                      return language === 'zh' ? '12餐一周: 1张' : '12 meals/week: 1 voucher';
+                                    } else {
+                                      return `${selectedOrder.creditCost} ${language === 'zh' ? '餐' : 'meals'}`;
+                                    }
+                                  })()}
                                 </p>
                               </div>
                             </div>
