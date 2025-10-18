@@ -90,7 +90,6 @@ export default function AdminDashboardPage() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null)
   const [approveRequestOpen, setApproveRequestOpen] = useState(false)
   const [declineRequestOpen, setDeclineRequestOpen] = useState(false)
-  const [approvedCredits, setApprovedCredits] = useState(0)
   const [approvedSixMeals, setApprovedSixMeals] = useState(0)
   const [approvedEightMeals, setApprovedEightMeals] = useState(0)
   const [approvedTenMeals, setApprovedTenMeals] = useState(0)
@@ -360,7 +359,6 @@ export default function AdminDashboardPage() {
     setSelectedRequest(request);
     
     // Reset all values first
-    setApprovedCredits(0);
     setApprovedSixMeals(0);
     setApprovedEightMeals(0);
     setApprovedTenMeals(0);
@@ -384,35 +382,69 @@ export default function AdminDashboardPage() {
           setApprovedTwelveMeals(quantity);
           break;
       }
-    } else {
-      // Legacy approach for backward compatibility
-      // Extract meals per week from plan description if available
-      let defaultCredits = 0;
-      if (request.planDescription) {
-        // Look for patterns like "6 meals/week" or "10 meals/week"
-        const mealsMatch = request.planDescription.match(/(\d+)\s*meals\/week/i);
-        if (mealsMatch && mealsMatch[1]) {
-          defaultCredits = parseInt(mealsMatch[1]);
-        } else {
-          // Alternative pattern: try to find "6 meals" or "10 meals"
-          const altMatch = request.planDescription.match(/(\d+)\s*meals/i);
-          if (altMatch && altMatch[1]) {
-            defaultCredits = parseInt(altMatch[1]);
-          }
+    } else if (request.planDescription) {
+      // Try to determine meal plan type from description for older requests
+      const mealsMatch = request.planDescription.match(/(\d+)\s*meals\/week/i);
+      let mealsPerWeek = 0;
+      
+      if (mealsMatch && mealsMatch[1]) {
+        mealsPerWeek = parseInt(mealsMatch[1]);
+      } else {
+        const altMatch = request.planDescription.match(/(\d+)\s*meals/i);
+        if (altMatch && altMatch[1]) {
+          mealsPerWeek = parseInt(altMatch[1]);
         }
       }
       
-      // If we couldn't extract from plan description, use mealsPerWeek if available
-      if (defaultCredits === 0 && request.mealsPerWeek) {
-        defaultCredits = request.mealsPerWeek;
+      // If we found meals per week, set the appropriate field
+      if (mealsPerWeek > 0) {
+        // Try to extract duration from plan description
+        let quantity = request.mealPlanQuantity;
+        
+        if (!quantity && request.planDescription) {
+          // Look for patterns like "2 weeks" or "4-week"
+          const durationMatch = request.planDescription.match(/(\d+)[\s-]*(weeks?|周)/i);
+          if (durationMatch && durationMatch[1]) {
+            quantity = parseInt(durationMatch[1]);
+          }
+        }
+        
+        // If we still don't have a quantity, check if we can determine from the amount
+        if (!quantity && request.amount && mealsPerWeek) {
+          // Rough estimation based on price ranges
+          if (mealsPerWeek === 6) {
+            if (request.amount < 150) quantity = 1;
+            else if (request.amount < 300) quantity = 2;
+            else quantity = 4;
+          } else if (mealsPerWeek === 8) {
+            if (request.amount < 200) quantity = 1;
+            else if (request.amount < 350) quantity = 2;
+            else quantity = 4;
+          } else if (mealsPerWeek === 10) {
+            if (request.amount < 250) quantity = 1;
+            else if (request.amount < 450) quantity = 2;
+            else quantity = 4;
+          } else if (mealsPerWeek === 12) {
+            if (request.amount < 300) quantity = 1;
+            else if (request.amount < 500) quantity = 2;
+            else quantity = 4;
+          }
+        }
+        
+        // Fallback to 1 if we still couldn't determine
+        quantity = quantity || 1;
+        
+        if (mealsPerWeek === 6) {
+          setApprovedSixMeals(quantity);
+        } else if (mealsPerWeek === 8) {
+          setApprovedEightMeals(quantity);
+        } else if (mealsPerWeek === 10) {
+          setApprovedTenMeals(quantity);
+        } else if (mealsPerWeek === 12) {
+          setApprovedTwelveMeals(quantity);
+        }
       }
       
-      // If still no value, use the amount as fallback
-      if (defaultCredits === 0) {
-        defaultCredits = request.amount || 0;
-      }
-      
-      setApprovedCredits(defaultCredits);
     }
     
     setAdminNotes('');
@@ -433,7 +465,7 @@ export default function AdminDashboardPage() {
     setProcessingRequest(true);
     try {
       // Calculate total approved plans for display
-      const totalApproved = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedCredits;
+      const totalApproved = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals;
       
       // Check if at least one plan type has a value
       if (totalApproved <= 0) {
@@ -454,7 +486,6 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           requestId: selectedRequest.requestId,
           action: 'approve',
-          approvedCredits,
           approvedSixMeals,
           approvedEightMeals,
           approvedTenMeals,
@@ -472,7 +503,6 @@ export default function AdminDashboardPage() {
         if (approvedEightMeals > 0) description += `${approvedEightMeals} x 8-meal plans, `;
         if (approvedTenMeals > 0) description += `${approvedTenMeals} x 10-meal plans, `;
         if (approvedTwelveMeals > 0) description += `${approvedTwelveMeals} x 12-meal plans, `;
-        if (approvedCredits > 0) description += `${approvedCredits} credits, `;
         
         // Remove trailing comma and space
         description = description.replace(/, $/, '');
@@ -1703,9 +1733,9 @@ export default function AdminDashboardPage() {
                                   <td className="p-4">
                                     <div>${request.amount.toFixed(2)}</div>
                                     <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
-                                    {request.status === 'approved' && request.approvedCredits && (
+                                    {request.status === 'approved' && (
                                       <div className="text-xs text-green-600 font-medium mt-1">
-                                        {request.approvedCredits} credits approved
+                                        Plan approved
                                       </div>
                                     )}
                                   </td>
@@ -2231,9 +2261,9 @@ export default function AdminDashboardPage() {
                       {selectedRequest.status === 'approved' && (
                         <>
                           <div>
-                            <Label className="text-xs text-muted-foreground">Approved Credits</Label>
+                            <Label className="text-xs text-muted-foreground">Approved Plan</Label>
                             <p className="font-medium text-base">
-                              {selectedRequest.approvedCredits || selectedRequest.requestedCredits}
+                              {selectedRequest.planDescription || "Meal Plan"}
                             </p>
                           </div>
                           <div>
@@ -2518,24 +2548,6 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                   
-                  <div className="mt-6 pt-4 border-t border-border">
-                    <Label htmlFor="approved-credits" className="text-sm font-medium">
-                      Legacy Credits
-                    </Label>
-                    <div className="flex items-center gap-3 mt-1">
-                      <Input
-                        id="approved-credits"
-                        type="number"
-                        value={approvedCredits}
-                        onChange={(e) => setApprovedCredits(parseInt(e.target.value) || 0)}
-                        min="0"
-                        className="max-w-[120px]"
-                      />
-                      <div className="text-xs text-muted-foreground">
-                        For backward compatibility only
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
               
@@ -2595,7 +2607,7 @@ export default function AdminDashboardPage() {
               </Button>
               <Button 
                 onClick={confirmApproveRequest} 
-                disabled={processingRequest || (approvedCredits <= 0 && approvedSixMeals <= 0 && approvedEightMeals <= 0 && approvedTenMeals <= 0 && approvedTwelveMeals <= 0)}
+                disabled={processingRequest || (approvedSixMeals <= 0 && approvedEightMeals <= 0 && approvedTenMeals <= 0 && approvedTwelveMeals <= 0)}
                 className="bg-green-600 hover:bg-green-700 px-6 gap-2"
               >
                 {processingRequest ? (
