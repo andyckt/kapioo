@@ -338,8 +338,8 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
     statusText = '已批准';
     statusColor = '#4CAF50';
     statusMessage = planDescription 
-      ? `您的充值请求已获批准，${planDescription}已添加到您的账户。`
-      : `您的充值请求已获批准，套餐已添加到您的账户。`;
+      ? `请求已获批准，${planDescription.replace(/星期$/, '张 ')}已添加到您的账户。`
+      : `请求已获批准，套餐已添加到您的账户。`;
   } else {
     statusText = '已拒绝';
     statusColor = '#F44336';
@@ -353,7 +353,7 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">充值状态更新</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        ${name}，您的充值请求状态已更新：
+        ${name}，您的请求状态已更新：
       </p>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto; text-align: center;">
         <div style="display: inline-block; padding: 8px 16px; background-color: ${statusColor}; color: white; border-radius: 20px; font-weight: bold; margin-bottom: 15px;">
