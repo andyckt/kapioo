@@ -346,14 +346,32 @@ export default function WeeklySubscription({
       return
     }
     
-    // Check if total items is either 6 or 10
+    // Check if total items matches one of the user's available meal plans
     const totalItems = getTotalItems();
-    if (totalItems !== 6 && totalItems !== 10) {
+    
+    // Create an array of available meal plan sizes
+    const availableMealPlans = [];
+    if (weeklySIXmeals > 0) availableMealPlans.push(6);
+    if (weeklyEIGHTmeals > 0) availableMealPlans.push(8);
+    if (weeklyTENmeals > 0) availableMealPlans.push(10);
+    if (weeklyTWELVEmeals > 0) availableMealPlans.push(12);
+    
+    // Check if the total items matches any available meal plan
+    if (availableMealPlans.length === 0) {
+      toast({
+        title: language === 'zh' ? '没有可用餐券' : 'No Available Meal Plans',
+        description: language === 'zh' 
+          ? '您需要先购买餐券才能订餐' 
+          : 'You need to purchase meal plans before ordering',
+        variant: "destructive"
+      })
+      return
+    } else if (!availableMealPlans.includes(totalItems)) {
       toast({
         title: language === 'zh' ? '订单数量无效' : 'Invalid Order Quantity',
         description: language === 'zh' 
-          ? '订单必须为6份或10份餐点，当前数量：' + totalItems 
-          : 'Orders must be for either 6 or 10 meals. Current quantity: ' + totalItems,
+          ? `订单必须为${availableMealPlans.join('份或')}份餐点，当前数量：${totalItems}` 
+          : `Orders must be for ${availableMealPlans.join(' or ')} meals. Current quantity: ${totalItems}`,
         variant: "destructive"
       })
       return

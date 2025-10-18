@@ -237,15 +237,27 @@ export function WeeklySubscriptionCheckout({
       const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
       let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
       
-      // Choose the meal plan type based on availability
-      if (weeklyEIGHTmeals > 0) {
-        mealPlanType = '8aweek';
-      } else if (weeklyTENmeals > 0) {
-        mealPlanType = '10aweek';
-      } else if (weeklySIXmeals > 0) {
+      // Choose the meal plan type based on the total items in the cart
+      if (totalItems === 6 && weeklySIXmeals > 0) {
         mealPlanType = '6aweek';
-      } else if (weeklyTWELVEmeals > 0) {
+      } else if (totalItems === 8 && weeklyEIGHTmeals > 0) {
+        mealPlanType = '8aweek';
+      } else if (totalItems === 10 && weeklyTENmeals > 0) {
+        mealPlanType = '10aweek';
+      } else if (totalItems === 12 && weeklyTWELVEmeals > 0) {
         mealPlanType = '12aweek';
+      } else {
+        // This shouldn't happen because we validate in the previous screen,
+        // but just in case, set a fallback based on what's available
+        if (weeklySIXmeals > 0) {
+          mealPlanType = '6aweek';
+        } else if (weeklyEIGHTmeals > 0) {
+          mealPlanType = '8aweek';
+        } else if (weeklyTENmeals > 0) {
+          mealPlanType = '10aweek';
+        } else if (weeklyTWELVEmeals > 0) {
+          mealPlanType = '12aweek';
+        }
       }
       
       // Submit subscription to API with user ID and additional details
