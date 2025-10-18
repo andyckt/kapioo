@@ -243,7 +243,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           
           if (matchingPlan) {
             // Set the meals per week based on the plan
-            setSelectedMealsPerWeek(matchingPlan.mealsPerWeek as 6 | 10)
+            setSelectedMealsPerWeek(matchingPlan.mealsPerWeek as 6 | 8 | 10 | 12)
             
             // Auto-select the plan and move to upload step
             setTimeout(() => {
@@ -260,7 +260,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
               
               // Set the meals per week based on the stored plan
               if (planData.mealsPerWeek) {
-                setSelectedMealsPerWeek(planData.mealsPerWeek as 6 | 10)
+                setSelectedMealsPerWeek(planData.mealsPerWeek as 6 | 8 | 10 | 12)
               }
               
               // Find the specific plan by ID
