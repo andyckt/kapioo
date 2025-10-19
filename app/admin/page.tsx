@@ -1006,6 +1006,7 @@ export default function AdminDashboardPage() {
               <Users className="mr-2 h-4 w-4" />
               Users
             </Button>
+            {/* Commented out Meal Management tab
             <Button
               variant={activeTab === "meals" ? "default" : "ghost"}
               className="justify-start"
@@ -1014,6 +1015,8 @@ export default function AdminDashboardPage() {
               <Calendar className="mr-2 h-4 w-4" />
               Meal Management
             </Button>
+            */}
+            {/* Commented out Orders tab
             <Button
               variant={activeTab === "orders" ? "default" : "ghost"}
               className="justify-start"
@@ -1022,6 +1025,7 @@ export default function AdminDashboardPage() {
               <ShoppingCart className="mr-2 h-4 w-4" />
               Orders
             </Button>
+            */}
             <Button
               variant={activeTab === "daily-delivery" ? "default" : "ghost"}
               className="justify-start"
@@ -1299,6 +1303,7 @@ export default function AdminDashboardPage() {
               </motion.div>
             )}
 
+            {/* Commented out Meal Management tab content 
             {activeTab === "meals" && (
               <motion.div
                 key="meals"
@@ -1314,7 +1319,9 @@ export default function AdminDashboardPage() {
                 <MealManagement />
               </motion.div>
             )}
+            */}
 
+            {/* Commented out Orders tab content
             {activeTab === "orders" && (
               <motion.div
                 key="orders"
@@ -1330,6 +1337,7 @@ export default function AdminDashboardPage() {
                 <OrderManagement />
               </motion.div>
             )}
+            */}
 
             {activeTab === "daily-delivery" && (
               <motion.div
