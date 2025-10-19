@@ -75,8 +75,8 @@ export function MealVoucherManagement() {
   const filteredRequests = requests.filter(request => {
     const matchesSearch = 
       request.requestId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (request.userId.name && request.userId.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (request.userId.email && request.userId.email.toLowerCase().includes(searchQuery.toLowerCase()))
+      (request.userId?.name && request.userId.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (request.userId?.email && request.userId.email.toLowerCase().includes(searchQuery.toLowerCase()))
     
     return matchesSearch
   })
@@ -190,7 +190,7 @@ export function MealVoucherManagement() {
       
       toast({
         title: "Request Approved",
-        description: `Vouchers have been added to ${selectedRequest.userId.name}'s account.`,
+        description: `Vouchers have been added to ${selectedRequest.userId?.name || "user"}'s account.`,
       });
     } catch (error) {
       console.error('Error approving request:', error);
@@ -236,7 +236,7 @@ export function MealVoucherManagement() {
       
       toast({
         title: "Request Declined",
-        description: `${selectedRequest.userId.name} has been notified.`,
+        description: `${selectedRequest.userId?.name || "User"} has been notified.`,
       });
     } catch (error) {
       console.error('Error declining request:', error);
@@ -340,8 +340,8 @@ export function MealVoucherManagement() {
                         <td className="p-4 align-middle">{request.requestId}</td>
                         <td className="p-4 align-middle">
                           <div>
-                            <div className="font-medium">{request.userId.name}</div>
-                            <div className="text-sm text-muted-foreground">{request.userId.email}</div>
+                            <div className="font-medium">{request.userId?.name || "Unknown"}</div>
+                            <div className="text-sm text-muted-foreground">{request.userId?.email || "Unknown"}</div>
                           </div>
                         </td>
                         <td className="p-4 align-middle hidden md:table-cell">
@@ -458,15 +458,15 @@ export function MealVoucherManagement() {
                       <dl className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <dt className="font-medium text-[#6B5F53]">Name:</dt>
-                          <dd className="font-medium">{selectedRequest.userId.name}</dd>
+                          <dd className="font-medium">{selectedRequest.userId?.name || "Unknown"}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="font-medium text-[#6B5F53]">Email:</dt>
-                          <dd>{selectedRequest.userId.email}</dd>
+                          <dd>{selectedRequest.userId?.email || "Unknown"}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="font-medium text-[#6B5F53]">User ID:</dt>
-                          <dd className="truncate max-w-[180px] text-muted-foreground">{selectedRequest.userId._id}</dd>
+                          <dd className="truncate max-w-[180px] text-muted-foreground">{selectedRequest.userId?._id || "Unknown"}</dd>
                         </div>
                       </dl>
                     </CardContent>
@@ -650,7 +650,7 @@ export function MealVoucherManagement() {
                       </div>
                       <div className="flex justify-between">
                         <dt className="font-medium text-green-800">User:</dt>
-                        <dd>{selectedRequest.userId.name}</dd>
+                        <dd>{selectedRequest.userId?.name || "Unknown"}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="font-medium text-green-800">Vouchers:</dt>
@@ -748,7 +748,7 @@ export function MealVoucherManagement() {
                       </div>
                       <div className="flex justify-between">
                         <dt className="font-medium text-red-800">User:</dt>
-                        <dd>{selectedRequest.userId.name}</dd>
+                        <dd>{selectedRequest.userId?.name || "Unknown"}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="font-medium text-red-800">Vouchers:</dt>
