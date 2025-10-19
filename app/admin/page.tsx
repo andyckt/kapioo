@@ -79,6 +79,44 @@ export default function AdminDashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("dashboard")
+  
+  // Define sidebar menu items with groups and submenus
+  const sidebarMenuItems = [
+    { id: "dashboard", label: "Dashboard", icon: <BarChart className="h-4 w-4" /> },
+    { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
+    { 
+      id: "food-management-group", 
+      label: "Food Management", 
+      icon: <Calendar className="h-4 w-4" />,
+      isHeading: true,
+      children: [
+        { id: "daily-delivery", label: "Daily Delivery Management", icon: <Truck className="h-4 w-4" /> },
+        { id: "weekly-subscription", label: "Weekly Delivery Management", icon: <Gift className="h-4 w-4" /> }
+      ]
+    },
+    { 
+      id: "credit-request-group", 
+      label: "Credit Request", 
+      icon: <CreditCard className="h-4 w-4" />,
+      isHeading: true,
+      children: [
+        { id: "credit-requests", label: "Weekly Request", icon: <DollarSign className="h-4 w-4" /> },
+        { id: "meal-vouchers", label: "2Dish 3Dish Voucher", icon: <CreditCard className="h-4 w-4" /> },
+        { id: "credits", label: "Manual +/- credit", icon: <CreditCard className="h-4 w-4" /> }
+      ]
+    },
+    { 
+      id: "orders-group", 
+      label: "Orders", 
+      icon: <ShoppingCart className="h-4 w-4" />,
+      isHeading: true,
+      children: [
+        { id: "view-all-orders", label: "View Daily Delivery Orders", icon: <Eye className="h-4 w-4" /> },
+        { id: "view-weekly-orders", label: "View Weekly Orders", icon: <Calendar className="h-4 w-4" /> }
+      ]
+    },
+    { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
+  ]
   const [creditRequestsLoading, setCreditRequestsLoading] = useState(false)
   const [creditRequests, setCreditRequests] = useState<any[]>([])
   const [creditRequestsPagination, setCreditRequestsPagination] = useState({
@@ -1022,106 +1060,42 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Button
-              variant={activeTab === "dashboard" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("dashboard")}
-            >
-              <BarChart className="mr-2 h-4 w-4" />
-              Dashboard
-            </Button>
-            <Button
-              variant={activeTab === "users" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("users")}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Users
-            </Button>
-            {/* Commented out Meal Management tab
-            <Button
-              variant={activeTab === "meals" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("meals")}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              Meal Management
-            </Button>
-            */}
-            {/* Commented out Orders tab
-            <Button
-              variant={activeTab === "orders" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("orders")}
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Orders
-            </Button>
-            */}
-            <Button
-              variant={activeTab === "daily-delivery" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("daily-delivery")}
-            >
-              <Truck className="mr-2 h-4 w-4" />
-              Daily Delivery Management
-            </Button>
-            <Button
-              variant={activeTab === "weekly-subscription" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("weekly-subscription")}
-            >
-              <Gift className="mr-2 h-4 w-4" />
-              Weekly Subscription Management
-            </Button>
-            <Button
-              variant={activeTab === "credits" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("credits")}
-            >
-              <CreditCard className="mr-2 h-4 w-4" />
-              Manual +/- credit
-            </Button>
-            <Button
-              variant={activeTab === "credit-requests" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("credit-requests")}
-            >
-              <DollarSign className="mr-2 h-4 w-4" />
-              Credit Requests
-            </Button>
-            <Button
-              variant={activeTab === "meal-vouchers" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("meal-vouchers")}
-            >
-              <CreditCard className="mr-2 h-4 w-4" />
-              2Dish 3Dish Voucher
-            </Button>
-            <Button
-              variant={activeTab === "view-all-orders" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("view-all-orders")}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              View Daily Delivery Orders
-            </Button>
-            <Button
-              variant={activeTab === "view-weekly-orders" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("view-weekly-orders")}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              View Weekly Orders
-            </Button>
-            <Button
-              variant={activeTab === "settings" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => setActiveTab("settings")}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
+            {sidebarMenuItems.map((item) => (
+              <div key={item.id}>
+                {item.isHeading ? (
+                  <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
+                    {item.icon}
+                    <span className="ml-2">{item.label}</span>
+                  </div>
+                ) : (
+                  <Button
+                    variant={activeTab === item.id ? "default" : "ghost"}
+                    className="justify-start"
+                    onClick={() => setActiveTab(item.id)}
+                  >
+                    {item.icon}
+                    <span className="ml-2">{item.label}</span>
+                  </Button>
+                )}
+                
+                {/* Render children if they exist */}
+                {item.children && item.children.length > 0 && (
+                  <div className="pl-6 mt-1 border-l-2 border-muted ml-2">
+                    {item.children.map((child) => (
+                      <Button
+                        key={child.id}
+                        variant={activeTab === child.id ? "default" : "ghost"}
+                        className="justify-start w-full text-sm"
+                        onClick={() => setActiveTab(child.id)}
+                      >
+                        {child.icon}
+                        <span className="ml-2">{child.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </motion.nav>
         </aside>
         <main className="flex w-full flex-1 flex-col overflow-hidden">
@@ -2039,7 +2013,7 @@ export default function AdminDashboardPage() {
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Credit Purchase Requests</h2>
+                  <h2 className="text-3xl font-bold tracking-tight">Weekly Purchase Requests</h2>
                   <Button
                     variant="outline"
                     size="sm"
