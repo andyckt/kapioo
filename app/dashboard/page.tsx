@@ -1583,6 +1583,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   
+                  {/* Transaction History section commented out as it's redundant with the Recharge Requests section
                   <Card>
                     <CardHeader>
                       <CardTitle>{t('transactionHistory')}</CardTitle>
@@ -1671,6 +1672,7 @@ export default function DashboardPage() {
                       </div>
                     </CardContent>
                   </Card>
+                  */}
                 </motion.div>
               )}
 
