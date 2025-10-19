@@ -466,7 +466,9 @@ export function WeeklySubscriptionCheckout({
                 <Input id="name" value={formData.name} onChange={handleInputChange} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">{language === 'zh' ? '电话号码' : 'Phone Number'}</Label>
+                <Label htmlFor="phone">
+                  {language === 'zh' ? '电话号码' : 'Phone Number'} <span className="text-red-500">*</span>
+                </Label>
                 <Input id="phone" value={formData.phone} onChange={handleInputChange} />
               </div>
               <div className="space-y-2 sm:col-span-2">
