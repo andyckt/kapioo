@@ -1299,11 +1299,11 @@ export default function DashboardPage() {
                   {/* Order History */}
                   {userData && (
                     <div className="space-y-6">
-                      {/* Daily Delivery Orders */}
-                      <DailyDeliveryHistory userId={userData._id} />
-                      
                       {/* Weekly Subscription Orders */}
                       <WeeklySubscriptionHistory userId={userData._id} />
+                      
+                      {/* Daily Delivery Orders */}
+                      <DailyDeliveryHistory userId={userData._id} />
                     </div>
                   )}
 
