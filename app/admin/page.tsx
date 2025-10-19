@@ -103,6 +103,8 @@ export default function AdminDashboardPage() {
   const [creditAmount, setCreditAmount] = useState(10)
   const [searchResults, setSearchResults] = useState<User[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
+  const [serviceType, setServiceType] = useState<"daily" | "weekly">("daily")
+  const [voucherType, setVoucherType] = useState<string>("twoDishVoucher")
   const [users, setUsers] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersPagination, setUsersPagination] = useState({
@@ -1078,7 +1080,7 @@ export default function AdminDashboardPage() {
               onClick={() => setActiveTab("credits")}
             >
               <CreditCard className="mr-2 h-4 w-4" />
-              Credits
+              Manual +/- credit
             </Button>
             <Button
               variant={activeTab === "credit-requests" ? "default" : "ghost"}
@@ -1411,17 +1413,18 @@ export default function AdminDashboardPage() {
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Credit Management</h2>
+                  <h2 className="text-3xl font-bold tracking-tight">Manual Credit Management</h2>
                 </div>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Add Credits to User</CardTitle>
-                    <CardDescription>Manually add credits to a user's account</CardDescription>
+                    <CardTitle>Manage User Balance</CardTitle>
+                    <CardDescription>Manually add or deduct credits and vouchers</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr]">
+                    <div className="space-y-6">
+                      {/* Step 1: Select User */}
                       <div className="space-y-2">
-                        <Label htmlFor="user-select">Select User</Label>
+                        <Label htmlFor="user-select">Step 1: Select User</Label>
                         {usersLoading ? (
                           <div className="flex items-center space-x-2 h-10 px-3 rounded-md border border-input">
                             <span className="text-muted-foreground">Loading users...</span>
@@ -1470,6 +1473,9 @@ export default function AdminDashboardPage() {
                                           value={`${user.name} ${user.userID} ${user.email}`}
                                           onSelect={() => {
                                             setSelectedUser(user);
+                                            // Reset service and voucher type when selecting a new user
+                                            setServiceType("daily");
+                                            setVoucherType("twoDishVoucher");
                                           }}
                                         >
                                           <Check
@@ -1492,131 +1498,348 @@ export default function AdminDashboardPage() {
                           </Popover>
                         )}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="credits-amount">Credits to Add</Label>
-                        <Input 
-                          id="credits-amount" 
-                          type="number" 
-                          min="1"
-                          defaultValue="10" 
-                          onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <Button
-                          className="w-full"
-                          onClick={async () => {
-                            if (!selectedUser) {
-                              toast({
-                                title: "Error",
-                                description: "Please select a user first",
-                                variant: "destructive"
-                              });
-                              return;
-                            }
+                      
+                      {selectedUser && (
+                        <>
+                          {/* Step 2: Select Service Type */}
+                          <div className="space-y-2">
+                            <Label>Step 2: Select Service Type</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Button 
+                                variant={serviceType === "daily" ? "default" : "outline"}
+                                onClick={() => {
+                                  setServiceType("daily");
+                                  setVoucherType("twoDishVoucher");
+                                }}
+                                className="w-full"
+                              >
+                                Daily Delivery
+                              </Button>
+                              <Button 
+                                variant={serviceType === "weekly" ? "default" : "outline"}
+                                onClick={() => {
+                                  setServiceType("weekly");
+                                  setVoucherType("weeklySIXmeals");
+                                }}
+                                className="w-full"
+                              >
+                                Weekly Subscription
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {/* Step 3: Select Voucher Type (if applicable) */}
+                          {serviceType === "daily" && (
+                            <div className="space-y-2">
+                              <Label>Step 3: Select Voucher Type</Label>
+                              <div className="grid grid-cols-2 gap-4">
+                                <Button 
+                                  variant={voucherType === "twoDishVoucher" ? "default" : "outline"}
+                                  onClick={() => setVoucherType("twoDishVoucher")}
+                                  className="w-full"
+                                >
+                                  2-Dish Voucher
+                                </Button>
+                                <Button 
+                                  variant={voucherType === "threeDishVoucher" ? "default" : "outline"}
+                                  onClick={() => setVoucherType("threeDishVoucher")}
+                                  className="w-full"
+                                >
+                                  3-Dish Voucher
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {serviceType === "weekly" && (
+                            <div className="space-y-2">
+                              <Label>Step 3: Select Meal Plan</Label>
+                              <div className="grid grid-cols-2 gap-4">
+                                <Button 
+                                  variant={voucherType === "weeklySIXmeals" ? "default" : "outline"}
+                                  onClick={() => setVoucherType("weeklySIXmeals")}
+                                  className="w-full"
+                                >
+                                  6 Meals/Week
+                                </Button>
+                                <Button 
+                                  variant={voucherType === "weeklyEIGHTmeals" ? "default" : "outline"}
+                                  onClick={() => setVoucherType("weeklyEIGHTmeals")}
+                                  className="w-full"
+                                >
+                                  8 Meals/Week
+                                </Button>
+                                <Button 
+                                  variant={voucherType === "weeklyTENmeals" ? "default" : "outline"}
+                                  onClick={() => setVoucherType("weeklyTENmeals")}
+                                  className="w-full"
+                                >
+                                  10 Meals/Week
+                                </Button>
+                                <Button 
+                                  variant={voucherType === "weeklyTWELVEmeals" ? "default" : "outline"}
+                                  onClick={() => setVoucherType("weeklyTWELVEmeals")}
+                                  className="w-full"
+                                >
+                                  12 Meals/Week
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Step 4: Enter Amount */}
+                          <div className="space-y-2">
+                            <Label htmlFor="amount">
+                              Step 4: Enter Amount
+                            </Label>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Input 
+                                id="amount" 
+                                type="number" 
+                                min="1"
+                                defaultValue="10" 
+                                onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                  className="w-full"
+                                  onClick={async () => {
+                                    if (!selectedUser) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Please select a user first",
+                                        variant: "destructive"
+                                      });
+                                      return;
+                                    }
+                                    
+                                    if (creditAmount <= 0) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Please enter a valid amount",
+                                        variant: "destructive"
+                                      });
+                                      return;
+                                    }
+                                    
+                                    try {
+                                      let response;
+                                      let fieldToUpdate = voucherType;
+                                      let endpoint = `/api/users/${selectedUser._id}/update-balance`;
+                                      
+                                      response = await fetch(endpoint, {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                          field: fieldToUpdate,
+                                          amount: creditAmount,
+                                          operation: "add",
+                                          description: `Added ${creditAmount} ${fieldToUpdate}`
+                                        })
+                                      });
+                                      
+                                      const result = await response.json();
+                                      
+                                      if (result.success) {
+                                        // Update user data
+                                        const updatedUser = result.data;
+                                        
+                                        // Update all users list
+                                        const updatedUsers = users.map(user => 
+                                          user._id === selectedUser._id ? updatedUser : user
+                                        );
+                                        setUsers(updatedUsers);
+                                        
+                                        // Update filtered users list
+                                        setFilteredUsers(filteredUsers.map(user => 
+                                          user._id === selectedUser._id ? updatedUser : user
+                                        ));
+                                        
+                                        // Update selectedUser
+                                        setSelectedUser(updatedUser);
+                                        
+                                        // No need to refresh transactions as we're not handling credits
+                                        
+                                        toast({
+                                          title: "Balance updated",
+                                          description: `Added ${creditAmount} ${
+                                                      fieldToUpdate === "twoDishVoucher" ? "2-Dish vouchers" : 
+                                                      fieldToUpdate === "threeDishVoucher" ? "3-Dish vouchers" : 
+                                                      fieldToUpdate === "weeklySIXmeals" ? "6-meal vouchers" :
+                                                      fieldToUpdate === "weeklyEIGHTmeals" ? "8-meal vouchers" :
+                                                      fieldToUpdate === "weeklyTENmeals" ? "10-meal vouchers" :
+                                                      "12-meal vouchers"} to ${selectedUser.name}'s account`,
+                                        });
+                                      } else {
+                                        toast({
+                                          title: "Error",
+                                          description: result.error || "Failed to update balance",
+                                          variant: "destructive"
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error('Error updating balance:', error);
+                                      toast({
+                                        title: "Error",
+                                        description: "An unexpected error occurred",
+                                        variant: "destructive"
+                                      });
+                                    }
+                                  }}
+                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType}
+                                >
+                                  Add
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  className="w-full"
+                                  onClick={async () => {
+                                    if (!selectedUser) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Please select a user first",
+                                        variant: "destructive"
+                                      });
+                                      return;
+                                    }
+                                    
+                                    if (creditAmount <= 0) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Please enter a valid amount",
+                                        variant: "destructive"
+                                      });
+                                      return;
+                                    }
+                                    
+                                    // Check if user has enough balance to deduct
+                                    const fieldToCheck = voucherType;
+                                    const currentBalance = selectedUser[fieldToCheck as keyof User] as number || 0;
+                                    if (currentBalance < creditAmount) {
+                                      toast({
+                                        title: "Error",
+                                        description: `User does not have enough vouchers to deduct`,
+                                        variant: "destructive"
+                                      });
+                                      return;
+                                    }
+                                    
+                                    try {
+                                      let response;
+                                      let fieldToUpdate = voucherType;
+                                      let endpoint = `/api/users/${selectedUser._id}/update-balance`;
+                                      
+                                      response = await fetch(endpoint, {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                          field: fieldToUpdate,
+                                          amount: creditAmount,
+                                          operation: "deduct",
+                                          description: `Deducted ${creditAmount} ${fieldToUpdate}`
+                                        })
+                                      });
+                                      
+                                      const result = await response.json();
+                                      
+                                      if (result.success) {
+                                        // Update user data
+                                        const updatedUser = result.data;
+                                        
+                                        // Update all users list
+                                        const updatedUsers = users.map(user => 
+                                          user._id === selectedUser._id ? updatedUser : user
+                                        );
+                                        setUsers(updatedUsers);
+                                        
+                                        // Update filtered users list
+                                        setFilteredUsers(filteredUsers.map(user => 
+                                          user._id === selectedUser._id ? updatedUser : user
+                                        ));
+                                        
+                                        // Update selectedUser
+                                        setSelectedUser(updatedUser);
+                                        
+                                        // No need to refresh transactions as we're not handling credits
+                                        
+                                        toast({
+                                          title: "Balance updated",
+                                          description: `Deducted ${creditAmount} ${
+                                                      fieldToUpdate === "twoDishVoucher" ? "2-Dish vouchers" : 
+                                                      fieldToUpdate === "threeDishVoucher" ? "3-Dish vouchers" : 
+                                                      fieldToUpdate === "weeklySIXmeals" ? "6-meal vouchers" :
+                                                      fieldToUpdate === "weeklyEIGHTmeals" ? "8-meal vouchers" :
+                                                      fieldToUpdate === "weeklyTENmeals" ? "10-meal vouchers" :
+                                                      "12-meal vouchers"} from ${selectedUser.name}'s account`,
+                                        });
+                                      } else {
+                                        toast({
+                                          title: "Error",
+                                          description: result.error || "Failed to update balance",
+                                          variant: "destructive"
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error('Error updating balance:', error);
+                                      toast({
+                                        title: "Error",
+                                        description: "An unexpected error occurred",
+                                        variant: "destructive"
+                                      });
+                                    }
+                                  }}
+                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType}
+                                >
+                                  Deduct
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* User Information */}
+                      {selectedUser && (
+                        <div className="mt-4 p-4 bg-muted rounded-md">
+                          <h3 className="font-medium text-lg mb-2">User Balance:</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="p-2 bg-background rounded border">
+                              <p className="text-sm text-muted-foreground">2-Dish Vouchers</p>
+                              <p className="font-medium text-lg">{selectedUser.twoDishVoucher || 0}</p>
+                            </div>
                             
-                            if (creditAmount <= 0) {
-                              toast({
-                                title: "Error",
-                                description: "Please enter a valid credit amount",
-                                variant: "destructive"
-                              });
-                              return;
-                            }
+                            <div className="p-2 bg-background rounded border">
+                              <p className="text-sm text-muted-foreground">3-Dish Vouchers</p>
+                              <p className="font-medium text-lg">{selectedUser.threeDishVoucher || 0}</p>
+                            </div>
                             
-                            try {
-                              const response = await fetch(`/api/users/${selectedUser._id}/add-credits`, {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                  credits: creditAmount,
-                                  description: 'Added Credits'
-                                })
-                              });
-                              
-                              const result = await response.json();
-                              
-                              if (result.success) {
-                                // Update all users list with new credit balance
-                                const updatedUsers = users.map(user => 
-                                  user._id === selectedUser._id 
-                                    ? { ...user, credits: result.data.credits } 
-                                    : user
-                                );
-                                setUsers(updatedUsers);
-                                
-                                // Update filtered users list
-                                setFilteredUsers(filteredUsers.map(user => 
-                                  user._id === selectedUser._id 
-                                    ? { ...user, credits: result.data.credits } 
-                                    : user
-                                ));
-                                
-                                // Update selectedUser if needed
-                                setSelectedUser({...selectedUser, credits: result.data.credits});
-                                
-                                // Send notification to user about added credits
-                                try {
-                                  await fetch('/api/notifications', {
-                                    method: 'POST',
-                                    headers: {
-                                      'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                      notificationType: NotificationType.CREDITS_ADDED,
-                                      userId: selectedUser._id,
-                                      transactionId: result.data.transaction.transactionId,
-                                      amount: creditAmount
-                                    }),
-                                  });
-                                } catch (notificationError) {
-                                  console.error('Error sending credit notification:', notificationError);
-                                  // Continue even if notification fails
-                                }
-                                
-                                // Refresh transactions list
-                                fetchTransactions();
-                                
-                                toast({
-                                  title: "Credits added",
-                                  description: `${creditAmount} credits added to ${selectedUser.name || selectedUser.userID}'s account`,
-                                });
-                                
-                                // Reset selection
-                                setSelectedUser(null);
-                              } else {
-                                toast({
-                                  title: "Error",
-                                  description: result.error || "Failed to add credits",
-                                  variant: "destructive"
-                                });
-                              }
-                            } catch (error) {
-                              console.error('Error adding credits:', error);
-                              toast({
-                                title: "Error",
-                                description: "An unexpected error occurred while adding credits",
-                                variant: "destructive"
-                              });
-                            }
-                          }}
-                          disabled={!selectedUser || creditAmount <= 0}
-                        >
-                          Add Credits
-                        </Button>
-                      </div>
+                            <div className="p-2 bg-background rounded border">
+                              <p className="text-sm text-muted-foreground">6-Meal Weekly</p>
+                              <p className="font-medium text-lg">{selectedUser.weeklySIXmeals || 0}</p>
+                            </div>
+                            
+                            <div className="p-2 bg-background rounded border">
+                              <p className="text-sm text-muted-foreground">8-Meal Weekly</p>
+                              <p className="font-medium text-lg">{(selectedUser as any).weeklyEIGHTmeals || 0}</p>
+                            </div>
+                            
+                            <div className="p-2 bg-background rounded border">
+                              <p className="text-sm text-muted-foreground">10-Meal Weekly</p>
+                              <p className="font-medium text-lg">{selectedUser.weeklyTENmeals || 0}</p>
+                            </div>
+                            
+                            <div className="p-2 bg-background rounded border">
+                              <p className="text-sm text-muted-foreground">12-Meal Weekly</p>
+                              <p className="font-medium text-lg">{(selectedUser as any).weeklyTWELVEmeals || 0}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {selectedUser && (
-                      <div className="mt-4 p-3 bg-muted rounded-md">
-                        <p className="font-medium">Selected User:</p>
-                        <p>{selectedUser.name} ({selectedUser.userID})</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Current Credits: {selectedUser.credits || 0}
-                        </p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
                 <Card>
