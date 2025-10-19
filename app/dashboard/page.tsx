@@ -43,6 +43,7 @@ import WeeklySubscription from "@/components/weekly-subscription"
 import { WeeklySubscriptionHistory } from "@/components/weekly-subscription-history"
 import { DailyDeliveryHistory } from "@/components/daily-delivery-history"
 import MealVoucherPurchase from "@/components/meal-voucher-purchase"
+import { VoucherPurchaseHistory } from "@/components/voucher-purchase-history"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -2007,7 +2008,16 @@ export default function DashboardPage() {
                   transition={{ duration: 0.2 }}
                   className="space-y-6"
                 >
-                  <MealVoucherPurchase />
+                  <div className="space-y-6">
+                    <MealVoucherPurchase />
+                    
+                    {/* Voucher Purchase History */}
+                    {userData && userData._id && (
+                      <div className="mt-8">
+                        <VoucherPurchaseHistory userId={userData._id} />
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
               
