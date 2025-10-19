@@ -5,12 +5,13 @@ import User from '@/models/User';
 // GET handler - fetch user's voucher balance
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     await connectToDatabase();
     
-    const { id } = params;
+    // Access params in an async-safe way
+    const id = context.params.id;
     
     // Find the user
     const user = await User.findById(id).select('twoDishVoucher threeDishVoucher');

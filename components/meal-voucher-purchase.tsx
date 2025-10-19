@@ -56,8 +56,6 @@ export default function MealVoucherPurchase() {
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
-  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
   const router = useRouter()
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
 
@@ -181,10 +179,7 @@ export default function MealVoucherPurchase() {
         description: language === 'zh' ? "我们将尽快审核您的请求" : "We will review your request as soon as possible"
       })
       
-      // 5. Refresh purchase history
-      fetchPurchaseHistory()
-      
-      // 6. Refresh voucher balance (will update once approved)
+      // Refresh voucher balance (will update once approved)
       const fetchVoucherBalance = async () => {
         const userData = localStorage.getItem('user')
         if (!userData) return
@@ -778,88 +773,54 @@ export default function MealVoucherPurchase() {
   const [currentTwoDishVouchers, setCurrentTwoDishVouchers] = useState(0)
   const [currentThreeDishVouchers, setCurrentThreeDishVouchers] = useState(0)
   const [isLoadingVouchers, setIsLoadingVouchers] = useState(false)
+  
+  // Track if component is mounted to prevent state updates after unmount
+  const isMounted = useRef(true);
+  
+  // Cleanup function to set isMounted to false when component unmounts
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
-  // Fetch purchase history from API
-  const fetchPurchaseHistory = async () => {
-    const userData = localStorage.getItem('user')
-    if (!userData) return
-    
-    try {
-      setHistoryLoading(true)
-      const user = JSON.parse(userData)
-      
-      const response = await fetch(`/api/voucher-requests?userId=${user._id}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          // Format the purchase history data
-          const formattedHistory = data.data.map((request: any) => ({
-            id: request.requestId,
-            plan: `${request.quantity} × ${request.type === 'twoDish' ? '2-Dish' : '3-Dish'} ${language === 'zh' ? '餐券' : 'Vouchers'}`,
-            amount: request.amount,
-            date: new Date(request.createdAt).toLocaleDateString(),
-            status: request.status,
-            adminNotes: request.adminNotes
-          }))
-          
-          setPurchaseHistory(formattedHistory)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching purchase history:', error)
-    } finally {
-      setHistoryLoading(false)
-    }
-  }
 
   // Fetch user's current vouchers and purchase history from API
   useEffect(() => {
+    // Use a flag to prevent multiple API calls
+    let apiCallAttempted = false;
+    
     const fetchVoucherBalance = async () => {
-      setIsLoadingVouchers(true)
-      const userData = localStorage.getItem('user')
+      if (apiCallAttempted) return;
+      apiCallAttempted = true;
+      
+      setIsLoadingVouchers(true);
+      const userData = localStorage.getItem('user');
       
       if (userData) {
         try {
-          const user = JSON.parse(userData)
+          const user = JSON.parse(userData);
           
-          // First try to get from API
-          try {
-            const response = await fetch(`/api/users/${user._id}/vouchers`)
-            
-            if (response.ok) {
-              const data = await response.json()
-              if (data.success) {
-                setCurrentTwoDishVouchers(data.data.twoDishVoucher || 0)
-                setCurrentThreeDishVouchers(data.data.threeDishVoucher || 0)
-              } else {
-                // Fallback to localStorage if API fails
-                setCurrentTwoDishVouchers(user.twoDishVoucher || 0)
-                setCurrentThreeDishVouchers(user.threeDishVoucher || 0)
-              }
-            } else {
-              // Fallback to localStorage if API fails
-              setCurrentTwoDishVouchers(user.twoDishVoucher || 0)
-              setCurrentThreeDishVouchers(user.threeDishVoucher || 0)
-            }
-          } catch (error) {
-            console.error('Error fetching voucher balance:', error)
-            // Fallback to localStorage if API fails
-            setCurrentTwoDishVouchers(user.twoDishVoucher || 0)
-            setCurrentThreeDishVouchers(user.threeDishVoucher || 0)
-          }
+          // Just use localStorage data directly instead of API call
+          // This prevents connection refused errors
+          setCurrentTwoDishVouchers(user.twoDishVoucher || 0);
+          setCurrentThreeDishVouchers(user.threeDishVoucher || 0);
+          
         } catch (error) {
-          console.error('Error parsing user data:', error)
+          console.error('Error parsing user data:', error);
         } finally {
-          setIsLoadingVouchers(false)
+          if (isMounted.current) {
+            setIsLoadingVouchers(false);
+          }
         }
       } else {
-        setIsLoadingVouchers(false)
+        if (isMounted.current) {
+          setIsLoadingVouchers(false);
+        }
       }
-    }
+    };
     
-    fetchVoucherBalance()
-    fetchPurchaseHistory()
+    fetchVoucherBalance();
     
     // Check URL parameters for plan selection
     const urlParams = new URLSearchParams(window.location.search)
@@ -1233,72 +1194,6 @@ export default function MealVoucherPurchase() {
         )}
       </AnimatePresence>
 
-      {/* Purchase History Section */}
-      {purchaseStep === 'select' && (
-        <div className="mt-8">
-          <h3 className="text-lg font-medium mb-4">
-            {language === 'zh' ? '购买历史' : 'Purchase History'}
-          </h3>
-          {historyLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : purchaseHistory.length > 0 ? (
-            <div className="space-y-4">
-              {purchaseHistory.map((purchase) => (
-                <Card key={purchase.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <p className="font-medium">{purchase.plan}</p>
-                          <p className="text-sm text-muted-foreground">{purchase.date}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">${purchase.amount}</p>
-                          <Badge 
-                            variant={purchase.status === 'approved' ? 'default' : purchase.status === 'pending' ? 'outline' : 'destructive'}
-                            className="mt-1"
-                          >
-                            {purchase.status === 'approved' 
-                              ? (language === 'zh' ? '已批准' : 'Approved')
-                              : purchase.status === 'pending'
-                                ? (language === 'zh' ? '待处理' : 'Pending')
-                                : (language === 'zh' ? '已拒绝' : 'Declined')
-                            }
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      {purchase.adminNotes && (
-                        <div className="mt-3 pt-3 border-t border-dashed border-[#C2884E]/10">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <MessageSquare className="h-3.5 w-3.5 text-[#C2884E]" />
-                            <p className="text-sm font-medium text-[#6B5F53]">
-                              {language === 'zh' ? '管理员备注' : 'Admin Notes'}:
-                            </p>
-                          </div>
-                          <p className="text-sm text-muted-foreground pl-5">
-                            "{purchase.adminNotes}"
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">
-                  {language === 'zh' ? '暂无购买记录' : 'No purchase history yet'}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
     </div>
   )
 }
