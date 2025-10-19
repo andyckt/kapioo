@@ -21,9 +21,10 @@ import {
 
 interface VoucherPurchaseHistoryProps {
   userId: string;
+  refreshKey?: number; // Add a key prop to trigger refresh
 }
 
-export function VoucherPurchaseHistory({ userId }: VoucherPurchaseHistoryProps) {
+export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurchaseHistoryProps) {
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const [requests, setRequests] = useState<any[]>([]);
@@ -74,13 +75,13 @@ export function VoucherPurchaseHistory({ userId }: VoucherPurchaseHistoryProps) 
     }
   };
 
-  // Load requests when component mounts
+  // Load requests when component mounts or refreshKey changes
   useEffect(() => {
     if (userId) {
-      console.log('VoucherPurchaseHistory: Fetching requests');
+      console.log('VoucherPurchaseHistory: Fetching requests', { refreshKey });
       fetchRequests();
     }
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   // Handle pagination
   const handlePagination = (direction: 'prev' | 'next') => {

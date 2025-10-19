@@ -45,7 +45,11 @@ interface VoucherPlan {
   savings?: string;
 }
 
-export default function MealVoucherPurchase() {
+interface MealVoucherPurchaseProps {
+  onSuccess?: () => void;
+}
+
+export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchaseProps = {}) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -178,6 +182,11 @@ export default function MealVoucherPurchase() {
         title: language === 'zh' ? "购买请求已提交" : "Purchase request submitted",
         description: language === 'zh' ? "我们将尽快审核您的请求" : "We will review your request as soon as possible"
       })
+      
+      // Call onSuccess callback if provided to refresh the purchase history
+      if (onSuccess) {
+        onSuccess()
+      }
       
       // Refresh voucher balance (will update once approved)
       const fetchVoucherBalance = async () => {

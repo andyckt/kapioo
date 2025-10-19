@@ -60,6 +60,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [purchaseHistoryKey, setPurchaseHistoryKey] = useState(0)
+  const [voucherHistoryKey, setVoucherHistoryKey] = useState(0)
   const [transactionsPagination, setTransactionsPagination] = useState({
     page: 1,
     limit: 5,
@@ -2009,12 +2010,20 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="space-y-6">
-                    <MealVoucherPurchase />
+                    <MealVoucherPurchase 
+                      onSuccess={() => {
+                        // Increment the voucher history key to trigger a refresh
+                        setVoucherHistoryKey(prev => prev + 1);
+                      }}
+                    />
                     
                     {/* Voucher Purchase History */}
                     {userData && userData._id && (
                       <div className="mt-8">
-                        <VoucherPurchaseHistory userId={userData._id} />
+                        <VoucherPurchaseHistory 
+                          userId={userData._id} 
+                          refreshKey={voucherHistoryKey}
+                        />
                       </div>
                     )}
                   </div>
