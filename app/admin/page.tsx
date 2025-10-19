@@ -101,6 +101,8 @@ export default function AdminDashboardPage() {
   const [viewUserOpen, setViewUserOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [creditAmount, setCreditAmount] = useState(10)
+  const [searchResults, setSearchResults] = useState<User[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersPagination, setUsersPagination] = useState({
@@ -152,6 +154,9 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (activeTab === 'users' || activeTab === 'credits') {
       fetchUsers(usersPagination.page, usersPagination.limit)
+      
+      // Reset search results when tab changes
+      setSearchResults([])
     }
   }, [activeTab, usersPagination.page, usersPagination.limit])
 
@@ -237,6 +242,31 @@ export default function AdminDashboardPage() {
     setSelectedUser(currentUser);
     setCreditAmount(10); // Reset to default
     setAddCreditsOpen(true);
+  }
+
+  // Search users for dropdown selection
+  const searchUsers = async (query: string) => {
+    try {
+      setSearchLoading(true);
+      const result = await getUsers(1, 20, query, 'all');
+      
+      if (result.users) {
+        // Update the search results state
+        setSearchResults(result.users);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to search users",
+        variant: "destructive"
+      });
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
   }
 
   const handleViewUser = (user: User) => {
@@ -1415,30 +1445,46 @@ export default function AdminDashboardPage() {
                             </PopoverTrigger>
                             <PopoverContent className="p-0 w-full min-w-[300px]">
                               <Command>
-                                <CommandInput placeholder="Search users..." className="h-9" />
+                                <CommandInput 
+                                  placeholder="Search users..." 
+                                  className="h-9" 
+                                  onValueChange={(value) => {
+                                    if (value.trim().length >= 2) {
+                                      searchUsers(value);
+                                    }
+                                  }}
+                                />
                                 <CommandList>
-                                  <CommandEmpty>No users found.</CommandEmpty>
+                                  <CommandEmpty>
+                                    {searchLoading ? 'Searching...' : 'No users found.'}
+                                  </CommandEmpty>
                                   <CommandGroup>
-                                    {users.map((user) => (
-                                      <CommandItem
-                                        key={user._id}
-                                        value={`${user.name} ${user.userID} ${user.email}`}
-                                        onSelect={() => {
-                                          setSelectedUser(user);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            selectedUser?._id === user._id ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <div className="flex flex-col">
-                                          <span>{user.name}</span>
-                                          <span className="text-xs text-muted-foreground">{user.userID} - {user.email}</span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
+                                    {searchLoading ? (
+                                      <div className="flex items-center justify-center py-6">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                      </div>
+                                    ) : (
+                                      (searchResults.length > 0 ? searchResults : users).map((user) => (
+                                        <CommandItem
+                                          key={user._id}
+                                          value={`${user.name} ${user.userID} ${user.email}`}
+                                          onSelect={() => {
+                                            setSelectedUser(user);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              selectedUser?._id === user._id ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          <div className="flex flex-col">
+                                            <span>{user.name}</span>
+                                            <span className="text-xs text-muted-foreground">{user.userID} - {user.email}</span>
+                                          </div>
+                                        </CommandItem>
+                                      ))
+                                    )}
                                   </CommandGroup>
                                 </CommandList>
                               </Command>
