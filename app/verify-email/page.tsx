@@ -44,14 +44,36 @@ export default function VerifyEmailPage() {
     setVerificationState('loading')
     
     try {
-      const response = await fetch('/api/auth/verify-email', {
+      // Get the pending user data from localStorage
+      const pendingUserStr = localStorage.getItem('pendingUser')
+      if (!pendingUserStr) {
+        setErrorMessage("无法找到注册信息，请重新注册")
+        setVerificationState('error')
+        return
+      }
+      
+      const pendingUser = JSON.parse(pendingUserStr)
+      
+      // Verify that the entered code matches the stored code
+      if (pendingUser.email !== email || pendingUser.verificationCode !== code) {
+        setVerificationState('error')
+        setErrorMessage("验证码无效或邮箱地址不匹配")
+        return
+      }
+      
+      // Now create the user account since verification is successful
+      const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          email,
-          code 
+        body: JSON.stringify({
+          name: pendingUser.name,
+          email: pendingUser.email,
+          password: pendingUser.password,
+          credits: pendingUser.credits || 0,
+          status: pendingUser.status || 'Active',
+          isVerified: true // Mark as verified immediately
         }),
       })
       
@@ -60,27 +82,17 @@ export default function VerifyEmailPage() {
       if (data.success) {
         setVerificationState('success')
         
-        // If there's user data in the response, store it
-        if (data.user) {
-          // Make sure user data includes the _id field before storing
-          if (data.user._id) {
-            localStorage.setItem('user', JSON.stringify(data.user))
-            
-            // Store authentication state
-            localStorage.setItem('isAuthenticated', 'true')
-          } else {
-            console.error('Verification response missing user _id:', data.user);
-            setErrorMessage("User data is incomplete. Please try logging in instead.");
-            setVerificationState('error');
-            return;
-          }
-        }
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(data.data))
         
-        // Clear any pending user data
+        // Store authentication state
+        localStorage.setItem('isAuthenticated', 'true')
+        
+        // Clear pending user data
         localStorage.removeItem('pendingUser')
       } else {
         setVerificationState('error')
-        setErrorMessage(data.error || "验证码无效或已过期")
+        setErrorMessage(data.error || "账户创建失败")
       }
     } catch (error) {
       console.error('Error verifying email:', error)

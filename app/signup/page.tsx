@@ -105,8 +105,14 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      // Call the user creation API
-      const response = await fetch('/api/users', {
+      // Instead of creating a user in the database, we'll generate a verification code
+      // and store the user data temporarily in localStorage
+      
+      // Generate a random verification code (6 digits)
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Call the API to send verification email
+      const response = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,20 +120,23 @@ export default function SignupPage() {
         body: JSON.stringify({
           name,
           email,
-          password,
-          credits: 0, // Start with 0 credits
-          status: 'Active'
+          code: verificationCode
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        // Store user data in localStorage
+        // Store user data and verification code in localStorage
         localStorage.setItem('pendingUser', JSON.stringify({
           email: email,
           name: name,
-          userId: result.data.userID
+          password: password, // This will be used to create the account after verification
+          verificationCode: verificationCode,
+          credits: 0,
+          status: 'Active',
+          fromPage,
+          planIdentifier
         }));
         
         // Build the redirect URL with parameters

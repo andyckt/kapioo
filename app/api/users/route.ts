@@ -152,7 +152,8 @@ export async function POST(request: Request) {
       phone: data.phone || '',
       // Handle address data if provided
       address: data.address || {},
-      isVerified: false
+      // If isVerified is provided (from the verification flow), use it; otherwise, default to false
+      isVerified: data.isVerified === true ? true : false
     });
     
     // Set hashed password
@@ -160,28 +161,32 @@ export async function POST(request: Request) {
     await user.setPassword(data.password);
     console.log('Password set successfully');
     
-    // Generate verification code
-    console.log('Generating verification code');
-    const { code } = user.generateVerificationCode();
-    console.log('Verification code generated');
+    // Only generate verification code if the user is not already verified
+    if (!data.isVerified) {
+      console.log('Generating verification code');
+      const { code } = user.generateVerificationCode();
+      console.log('Verification code generated');
+    }
     
     // Save user
     console.log('Saving user to database');
     await user.save();
     console.log('User saved successfully with ID:', user._id);
     
-    // Send verification email with code
-    try {
-      console.log('Sending verification email to:', user.email);
-      await sendVerificationEmail(user.email, code);
-      console.log('Verification email sent successfully');
-    } catch (emailError) {
-      console.error('Error sending verification email:', emailError);
-      // Continue with the registration process even if the email fails
-      // We can implement a resend verification email feature later
+    // Only send verification email if the user is not already verified
+    if (!data.isVerified) {
+      try {
+        console.log('Sending verification email to:', user.email);
+        await sendVerificationEmail(user.email, user.verificationCode || '');
+        console.log('Verification email sent successfully');
+      } catch (emailError) {
+        console.error('Error sending verification email:', emailError);
+        // Continue with the registration process even if the email fails
+        // We can implement a resend verification email feature later
+      }
     }
     
-    // Send welcome email
+    // Send welcome email (always send this)
     try {
       console.log('Sending welcome email to:', user.email);
       await sendWelcomeEmail(user.email, user.name);

@@ -78,12 +78,38 @@ export default function VerifyEmailSentPage() {
     setIsResending(true)
     
     try {
-      const response = await fetch('/api/auth/resend-verification', {
+      // Get the pending user data from localStorage
+      const pendingUserStr = localStorage.getItem('pendingUser')
+      if (!pendingUserStr) {
+        toast({
+          title: "重新发送失败",
+          description: "无法找到注册信息，请重新注册",
+          variant: "destructive",
+        })
+        setIsResending(false)
+        return
+      }
+      
+      const pendingUser = JSON.parse(pendingUserStr)
+      
+      // Generate a new verification code
+      const newVerificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+      
+      // Update the verification code in localStorage
+      pendingUser.verificationCode = newVerificationCode
+      localStorage.setItem('pendingUser', JSON.stringify(pendingUser))
+      
+      // Send the new verification code
+      const response = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: userEmail }),
+        body: JSON.stringify({
+          name: pendingUser.name,
+          email: pendingUser.email,
+          code: newVerificationCode
+        }),
       })
       
       const data = await response.json()
@@ -127,14 +153,48 @@ export default function VerifyEmailSentPage() {
     setIsVerifying(true)
     
     try {
-      const response = await fetch('/api/auth/verify-email', {
+      // Get the pending user data from localStorage
+      const pendingUserStr = localStorage.getItem('pendingUser')
+      if (!pendingUserStr) {
+        setErrorMessage("无法找到注册信息，请重新注册")
+        setVerificationStatus("error")
+        toast({
+          title: "验证失败",
+          description: "无法找到注册信息，请重新注册",
+          variant: "destructive",
+        })
+        setIsVerifying(false)
+        return
+      }
+      
+      const pendingUser = JSON.parse(pendingUserStr)
+      
+      // Verify that the entered code matches the stored code
+      if (pendingUser.email !== userEmail || pendingUser.verificationCode !== verificationCode) {
+        setVerificationStatus("error")
+        setErrorMessage("验证码无效或邮箱地址不匹配")
+        toast({
+          title: "验证失败",
+          description: "验证码无效或邮箱地址不匹配",
+          variant: "destructive",
+        })
+        setIsVerifying(false)
+        return
+      }
+      
+      // Now create the user account since verification is successful
+      const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          email: userEmail,
-          code: verificationCode
+        body: JSON.stringify({
+          name: pendingUser.name,
+          email: pendingUser.email,
+          password: pendingUser.password,
+          credits: pendingUser.credits || 0,
+          status: pendingUser.status || 'Active',
+          isVerified: true // Mark as verified immediately
         }),
       })
       
@@ -143,19 +203,17 @@ export default function VerifyEmailSentPage() {
       if (data.success) {
         setVerificationStatus("success")
         
-        // If there's user data in the response, store it
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user))
-          
-          // Store authentication state
-          localStorage.setItem('isAuthenticated', 'true')
-          
-          // Check if there was a meal plan selection before signup
-          const selectedMealPlan = localStorage.getItem('selectedMealPlan')
-          if (selectedMealPlan) {
-            // We'll handle the redirection to meal purchase in the success UI
-            // This allows us to show the success message first
-          }
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(data.data))
+        
+        // Store authentication state
+        localStorage.setItem('isAuthenticated', 'true')
+        
+        // Check if there was a meal plan selection before signup
+        const selectedMealPlan = localStorage.getItem('selectedMealPlan')
+        if (selectedMealPlan) {
+          // We'll handle the redirection to meal purchase in the success UI
+          // This allows us to show the success message first
         }
         
         // Clear any pending user data
@@ -167,10 +225,10 @@ export default function VerifyEmailSentPage() {
         })
       } else {
         setVerificationStatus("error")
-        setErrorMessage(data.error || "验证码无效或已过期")
+        setErrorMessage(data.error || "账户创建失败")
         toast({
           title: "验证失败",
-          description: data.error || "验证码无效或已过期",
+          description: data.error || "账户创建失败",
           variant: "destructive",
         })
       }
