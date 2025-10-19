@@ -1844,8 +1844,8 @@ export default function AdminDashboardPage() {
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Credit Transactions</CardTitle>
-                    <CardDescription>Recent credit transactions</CardDescription>
+                    <CardTitle>All Transactions</CardTitle>
+                    <CardDescription>Recent transactions (credits and vouchers)</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="rounded-md border">
@@ -1900,7 +1900,24 @@ export default function AdminDashboardPage() {
                                       {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
                                         ? '+' 
                                         : '-'
-                                      }{transaction.amount}
+                                      }{transaction.amount} 
+                                      {/* Extract voucher type from description */}
+                                      {transaction.description ? (
+                                        // Handle different transaction description formats
+                                        transaction.description.includes('2dish') ? '2dish' :
+                                        transaction.description.includes('3dish') ? '3dish' :
+                                        transaction.description.includes('6weekly') ? '6weekly' :
+                                        transaction.description.includes('8weekly') ? '8weekly' :
+                                        transaction.description.includes('10weekly') ? '10weekly' :
+                                        transaction.description.includes('12weekly') ? '12weekly' :
+                                        transaction.description.includes('twoDishVoucher') ? '2dish' :
+                                        transaction.description.includes('threeDishVoucher') ? '3dish' :
+                                        transaction.description.includes('weeklySIXmeals') ? '6weekly' :
+                                        transaction.description.includes('weeklyEIGHTmeals') ? '8weekly' :
+                                        transaction.description.includes('weeklyTENmeals') ? '10weekly' :
+                                        transaction.description.includes('weeklyTWELVEmeals') ? '12weekly' :
+                                        'Credits'
+                                      ) : 'Credits'}
                                     </span>
                                   </td>
                                   <td className="p-4">{new Date(transaction.createdAt).toLocaleDateString('en-US', { 

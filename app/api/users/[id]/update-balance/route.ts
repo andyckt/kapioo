@@ -86,19 +86,54 @@ export async function POST(request: Request, { params }: RouteParams) {
     user[field] = newBalance;
     await user.save();
     
-    // Create a transaction record if it's a credit operation
-    if (field === 'credits') {
-      const transaction = new Transaction({
-        userId: user._id,
-        type: operation === 'add' ? 'credit' : 'debit',
-        amount: amount,
-        description: description || `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} credits`,
-        status: 'completed',
-        transactionId: `${operation === 'add' ? 'CR' : 'DB'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      });
-      
-      await transaction.save();
+    // Create a transaction record for all balance operations
+    // Get voucher type display name for the description
+    let voucherTypeName = '';
+    let shortVoucherName = '';
+    switch (field) {
+      case 'credits':
+        voucherTypeName = 'Credits';
+        shortVoucherName = 'Credits';
+        break;
+      case 'twoDishVoucher':
+        voucherTypeName = '2-Dish Vouchers';
+        shortVoucherName = '2dish';
+        break;
+      case 'threeDishVoucher':
+        voucherTypeName = '3-Dish Vouchers';
+        shortVoucherName = '3dish';
+        break;
+      case 'weeklySIXmeals':
+        voucherTypeName = '6-Meal Weekly Subscription';
+        shortVoucherName = '6weekly';
+        break;
+      case 'weeklyEIGHTmeals':
+        voucherTypeName = '8-Meal Weekly Subscription';
+        shortVoucherName = '8weekly';
+        break;
+      case 'weeklyTENmeals':
+        voucherTypeName = '10-Meal Weekly Subscription';
+        shortVoucherName = '10weekly';
+        break;
+      case 'weeklyTWELVEmeals':
+        voucherTypeName = '12-Meal Weekly Subscription';
+        shortVoucherName = '12weekly';
+        break;
+      default:
+        voucherTypeName = field;
+        shortVoucherName = field;
     }
+    
+    const transaction = new Transaction({
+      userId: user._id,
+      type: operation === 'add' ? 'Add' : 'Deduct',
+      amount: amount,
+      description: description || `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${shortVoucherName}`,
+      status: 'completed',
+      transactionId: `${operation === 'add' ? 'CR' : 'DB'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    });
+    
+    await transaction.save();
     
     // Send email notification when vouchers are added (not when deducted)
     if (operation === 'add' && field !== 'credits') {

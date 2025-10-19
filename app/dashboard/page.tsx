@@ -1618,7 +1618,24 @@ export default function DashboardPage() {
                                   {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
                                     ? '+' 
                                     : '-'
-                                  }{transaction.amount} {t('credits')}
+                                  }{transaction.amount} 
+                                  {/* Extract voucher type from description */}
+                                  {transaction.description ? (
+                                    // Handle different transaction description formats
+                                    transaction.description.includes('2dish') ? '2dish' :
+                                    transaction.description.includes('3dish') ? '3dish' :
+                                    transaction.description.includes('6weekly') ? '6weekly' :
+                                    transaction.description.includes('8weekly') ? '8weekly' :
+                                    transaction.description.includes('10weekly') ? '10weekly' :
+                                    transaction.description.includes('12weekly') ? '12weekly' :
+                                    transaction.description.includes('twoDishVoucher') ? '2dish' :
+                                    transaction.description.includes('threeDishVoucher') ? '3dish' :
+                                    transaction.description.includes('weeklySIXmeals') ? '6weekly' :
+                                    transaction.description.includes('weeklyEIGHTmeals') ? '8weekly' :
+                                    transaction.description.includes('weeklyTENmeals') ? '10weekly' :
+                                    transaction.description.includes('weeklyTWELVEmeals') ? '12weekly' :
+                                    t('credits')
+                                  ) : t('credits')}
                                 </div>
                               </div>
                             ))}
