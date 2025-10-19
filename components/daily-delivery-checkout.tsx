@@ -430,8 +430,9 @@ export function DailyDeliveryCheckout({
                   <div className="border-t border-[#C2884E]/20 pt-3 flex justify-between font-medium">
                     <span className="text-[#6B5F53]">{language === 'zh' ? '总计' : 'Total'}</span>
                     <div className="text-[#C2884E] flex gap-2">
-                      <span>2菜: {vouchersNeeded.twoDish}</span>
-                      <span>3菜: {vouchersNeeded.threeDish}</span>
+                      {vouchersNeeded.twoDish > 0 && <span>2菜: {vouchersNeeded.twoDish}</span>}
+                      {vouchersNeeded.threeDish > 0 && <span>3菜: {vouchersNeeded.threeDish}</span>}
+                      {vouchersNeeded.twoDish === 0 && vouchersNeeded.threeDish === 0 && <span>0</span>}
                     </div>
                   </div>
                 </div>

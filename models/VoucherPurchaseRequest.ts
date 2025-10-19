@@ -6,7 +6,9 @@ export interface IVoucherPurchaseRequest extends Document {
   userId: mongoose.Types.ObjectId;
   type: 'twoDish' | 'threeDish';
   quantity: number;
-  amount: number; // Amount transferred via e-Transfer
+  amount: number; // Final amount transferred via e-Transfer (including tax)
+  originalPrice?: number; // Original price before tax
+  taxRate?: number; // Tax rate (e.g., 0.13 for 13%)
   imageProof: string; // URL to the uploaded proof image
   status: 'pending' | 'approved' | 'declined';
   notes?: string; // Additional notes from user
@@ -46,6 +48,12 @@ const VoucherPurchaseRequestSchema = new Schema<IVoucherPurchaseRequest>({
   amount: {
     type: Number,
     required: true
+  },
+  originalPrice: {
+    type: Number
+  },
+  taxRate: {
+    type: Number
   },
   imageProof: {
     type: String,

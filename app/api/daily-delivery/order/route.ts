@@ -46,6 +46,8 @@ interface DailyOrderDocument extends mongoose.Document {
     twoDish: number;
     threeDish: number;
   };
+  taxIncluded: boolean;
+  taxRate: number;
   specialInstructions?: string;
   deliveryAddress: {
     unitNumber?: string;
@@ -96,6 +98,14 @@ const DailyDeliveryOrderSchema = new mongoose.Schema({
       type: Number,
       default: 0
     }
+  },
+  taxIncluded: {
+    type: Boolean,
+    default: true
+  },
+  taxRate: {
+    type: Number,
+    default: 0.13 // 13% tax rate
   },
   specialInstructions: String,
   deliveryAddress: {
@@ -280,6 +290,8 @@ export async function POST(request: Request) {
         items: itemsToSave,
         status: 'pending',
         voucherCost: totalVouchers,
+        taxIncluded: data.taxIncluded || true,
+        taxRate: data.taxRate || 0.13, // 13% tax rate
         specialInstructions: data.specialInstructions || '',
         deliveryAddress: data.deliveryAddress || {},
         phoneNumber: data.phoneNumber || '',

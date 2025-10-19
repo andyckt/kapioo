@@ -164,7 +164,9 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           userId: user._id,
           type: selectedPlan.type,
           quantity: selectedPlan.quantity,
-          amount: selectedPlan.price,
+          amount: selectedPlan.price * 1.13, // Add 13% tax for EMT payment
+          originalPrice: selectedPlan.price, // Store original price before tax
+          taxRate: 0.13, // 13% tax rate
           imageProof: imageProofUrl,
           notes: notes || undefined
         })
@@ -470,9 +472,17 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                   <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '收款人邮箱' : 'Recipient Email'}</p>
                   <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
                 </div>
+                <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
+                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '小计' : 'Subtotal'}</p>
+                  <p className="font-medium text-[#6B5F53]">${selectedPlan?.price}</p>
+                </div>
+                <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
+                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? 'EMT付款税费 (13%)' : 'EMT Payment Tax (13%)'}</p>
+                  <p className="font-medium text-[#6B5F53]">${selectedPlan ? (selectedPlan.price * 0.13).toFixed(2) : '0.00'}</p>
+                </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '金额' : 'Amount'}</p>
-                  <p className="font-medium text-[#C2884E]">${selectedPlan?.price}</p>
+                  <p className="text-sm font-medium text-[#6B5F53]">{language === 'zh' ? '总金额' : 'Total Amount'}</p>
+                  <p className="font-medium text-[#C2884E]">${selectedPlan ? (selectedPlan.price * 1.13).toFixed(2) : '0.00'}</p>
                 </div>
               </div>
             </div>

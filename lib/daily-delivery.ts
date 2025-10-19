@@ -112,12 +112,21 @@ export async function getActiveDays(): Promise<Record<string, DayData>> {
 // Submit daily delivery order
 export async function submitDailyOrder(data: DailyOrderData): Promise<any> {
   try {
+    // Apply 13% tax to the order
+    // For daily delivery, we don't have a monetary price but we indicate that tax is included
+    const taxRate = 0.13; // 13% tax rate
+    const dataWithTax = {
+      ...data,
+      taxIncluded: true,
+      taxRate: taxRate
+    };
+    
     const response = await fetch('/api/daily-delivery/order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(dataWithTax),
     })
     
     const result = await response.json()
