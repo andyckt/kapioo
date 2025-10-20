@@ -255,11 +255,28 @@ export function DailyDeliveryCheckout({
     
     // Check if user has enough vouchers
     if (userVouchers.twoDish < vouchersNeeded.twoDish || userVouchers.threeDish < vouchersNeeded.threeDish) {
+      // Calculate how many vouchers are missing
+      const missingTwoDish = Math.max(0, vouchersNeeded.twoDish - userVouchers.twoDish);
+      const missingThreeDish = Math.max(0, vouchersNeeded.threeDish - userVouchers.threeDish);
+      
+      // Build the message only including voucher types that are missing
+      let zhMessage = '';
+      let enMessage = '';
+      
+      if (missingTwoDish > 0 && missingThreeDish > 0) {
+        zhMessage = `还需要${missingTwoDish}张2菜餐券和${missingThreeDish}张3菜餐券`;
+        enMessage = `You need ${missingTwoDish} more two-dish vouchers and ${missingThreeDish} more three-dish vouchers`;
+      } else if (missingTwoDish > 0) {
+        zhMessage = `还需要${missingTwoDish}张2菜餐券`;
+        enMessage = `You need ${missingTwoDish} more two-dish vouchers`;
+      } else if (missingThreeDish > 0) {
+        zhMessage = `还需要${missingThreeDish}张3菜餐券`;
+        enMessage = `You need ${missingThreeDish} more three-dish vouchers`;
+      }
+      
       toast({
         title: language === 'zh' ? '餐券不足' : 'Insufficient Vouchers',
-        description: language === 'zh' 
-          ? `您需要${vouchersNeeded.twoDish}张2菜餐券和${vouchersNeeded.threeDish}张3菜餐券` 
-          : `You need ${vouchersNeeded.twoDish} two-dish vouchers and ${vouchersNeeded.threeDish} three-dish vouchers`,
+        description: language === 'zh' ? zhMessage : enMessage,
         variant: "destructive"
       })
       return
@@ -298,9 +315,26 @@ export function DailyDeliveryCheckout({
         
         // Handle specific error cases
         if (result.required && result.available) {
-          errorMessage = language === 'zh'
-            ? `餐券不足。需要 ${result.required.twoDish} 张2菜餐券和 ${result.required.threeDish} 张3菜餐券。`
-            : `Insufficient vouchers. You need ${result.required.twoDish} two-dish vouchers and ${result.required.threeDish} three-dish vouchers.`
+          // Calculate how many vouchers are missing
+          const missingTwoDish = Math.max(0, result.required.twoDish - result.available.twoDish);
+          const missingThreeDish = Math.max(0, result.required.threeDish - result.available.threeDish);
+          
+          // Build the message only including voucher types that are missing
+          let zhMessage = '餐券不足。';
+          let enMessage = 'Insufficient vouchers. ';
+          
+          if (missingTwoDish > 0 && missingThreeDish > 0) {
+            zhMessage += `还需要${missingTwoDish}张2菜餐券和${missingThreeDish}张3菜餐券。`;
+            enMessage += `You need ${missingTwoDish} more two-dish vouchers and ${missingThreeDish} more three-dish vouchers.`;
+          } else if (missingTwoDish > 0) {
+            zhMessage += `还需要${missingTwoDish}张2菜餐券。`;
+            enMessage += `You need ${missingTwoDish} more two-dish vouchers.`;
+          } else if (missingThreeDish > 0) {
+            zhMessage += `还需要${missingThreeDish}张3菜餐券。`;
+            enMessage += `You need ${missingThreeDish} more three-dish vouchers.`;
+          }
+          
+          errorMessage = language === 'zh' ? zhMessage : enMessage;
         }
         
         toast({
