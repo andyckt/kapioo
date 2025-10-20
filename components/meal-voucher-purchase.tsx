@@ -570,7 +570,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                   <p className="font-medium text-[#6B5F53]">${selectedPlan?.price}</p>
                 </div>
                 <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? 'EMT付款税费 (13%)' : 'EMT Payment Tax (13%)'}</p>
+                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '税费 (13%)' : 'Tax (13%)'}</p>
                   <p className="font-medium text-[#6B5F53]">${selectedPlan ? (selectedPlan.price * 0.13).toFixed(2) : '0.00'}</p>
                 </div>
                 <div className="flex justify-between items-center">

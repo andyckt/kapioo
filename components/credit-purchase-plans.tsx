@@ -778,9 +778,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       <div className="flex justify-between items-center">
                         <div className="text-[13px] text-[#8A7968]">
                           {language === 'zh' ? '税费 (HST 13%)' : 'Tax (HST 13%)'}
-                          <span className="ml-1">
-                            {language === 'zh' ? '(仅适用于EMT付款)' : '(EMT payment only)'}
-                          </span>
                         </div>
                         <div className="text-[13px] text-[#8A7968]">
                           ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.13).toFixed(2)}
