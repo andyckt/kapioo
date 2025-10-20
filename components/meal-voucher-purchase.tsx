@@ -454,7 +454,9 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               {language === 'zh' ? '您的购买请求已提交' : 'Your purchase request has been submitted'}
             </h3>
             <p className="text-muted-foreground">
-              {language === 'zh' ? '我们将在15分钟内审核您的请求' : 'We will approve your request within 15 minutes'}
+              {language === 'zh' 
+                ? '我们将在营业时间内（周一至周五上午11点至晚上8点）30-60分钟内处理您的请求' 
+                : 'We process in 30-60 mins during business hours Monday to Friday 11am to 8pm'}
             </p>
             <p className="text-muted-foreground mt-2">
               {language === 'zh' ? '审核结果将通过电子邮件通知您' : 'You will receive an email notification'}

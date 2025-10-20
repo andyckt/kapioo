@@ -360,8 +360,8 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
                 </h3>
                 <p className="text-[#9B6B3F] mb-4">
                   {language === 'en'
-                    ? 'Your request is now pending approval. We will notify you once it\'s processed.'
-                    : '您的请求正在等待批准。处理完成后，我们会通知您。'
+                    ? 'Your request is now pending approval. We process in 30-60 mins during business hours Monday to Friday 11am to 8pm.'
+                    : '您的请求正在等待批准。我们将在营业时间内（周一至周五上午11点至晚上8点）30-60分钟内处理。'
                   }
                 </p>
                 <div className="border-t border-[#E5D6BC] pt-4 mt-4">

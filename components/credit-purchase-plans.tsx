@@ -1028,8 +1028,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   </h3>
                   <p className="text-[#9B6B3F] mb-4">
                     {language === 'zh'
-                      ? '您的请求已提交，我们将在15分钟内审核。'
-                      : 'Your request has been submitted. We will review it within 15 minutes.'
+                      ? '您的请求已提交，我们将在营业时间内（周一至周五上午11点至晚上8点）30-60分钟内处理。'
+                      : 'Your request has been submitted. We process in 30-60 mins during business hours Monday to Friday 11am to 8pm.'
                     }
                   </p>
                   <div className="border-t border-[#E5D6BC] pt-4 mt-4">
