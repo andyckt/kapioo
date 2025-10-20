@@ -372,6 +372,20 @@ export function WeeklySubscriptionCheckout({
       exit={{ y: -10 }}
       transition={{ duration: 0.2 }}
     >
+      <div className="mb-4 flex">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onClose}
+          disabled={isLoading}
+          className="h-10 w-10 rounded-full border-[#C2884E]/30 bg-white shadow-sm hover:bg-[#F5EDE4]"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#6B5F53]">
+            <path d="m12 19-7-7 7-7"/>
+            <path d="M19 12H5"/>
+          </svg>
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>{language === 'zh' ? '结账' : 'Checkout'}</CardTitle>
@@ -670,10 +684,23 @@ export function WeeklySubscriptionCheckout({
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            {language === 'zh' ? '返回' : 'Back'}
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left">
+              <path d="m12 19-7-7 7-7"/>
+              <path d="M19 12H5"/>
+            </svg>
+            {language === 'zh' ? '返回购物车' : 'Back to Cart'}
           </Button>
-          <Button onClick={handleCheckout} disabled={isLoading}>
+          <Button 
+            onClick={handleCheckout} 
+            disabled={isLoading}
+            className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#B67A45] hover:to-[#C29960] text-white"
+          >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
