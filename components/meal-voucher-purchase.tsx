@@ -33,6 +33,7 @@ import {
   MessageSquare
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
 
 // Define types for voucher plans
 interface VoucherPlan {
@@ -62,6 +63,10 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
   const router = useRouter()
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
+  const [showRegionDialog, setShowRegionDialog] = useState(false)
+  const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
+  const [selectedRegion, setSelectedRegion] = useState<string>("")
+  const [popoverOpen, setPopoverOpen] = useState(false)
 
   // Define voucher plans
   const twoDishPlans: VoucherPlan[] = [
@@ -79,7 +84,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   ]
 
   // Available service areas
-  const serviceAreas = ['Downtown', 'Midtown', 'North York', 'Markham', 'Richmond Hill']
+  const DAILY_DELIVERY_REGIONS = ['Downtown', 'Midtown', 'NorthYork', 'Markham', 'RichmondHill']
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,10 +93,96 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     }
   }
 
+  // Load user data and check region on component mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      
+      // Check user's region
+      if (user.address && user.address.province) {
+        setUserRegion(user.address.province)
+      }
+    }
+  }, [])
+
+  // Handle region change
+  const handleRegionChange = async (region: string): Promise<void> => {
+    try {
+      // Get user data from localStorage
+      const userData = localStorage.getItem('user')
+      if (!userData) {
+        throw new Error('User not logged in')
+      }
+      
+      const user = JSON.parse(userData)
+      
+      // Update user's address with the new region
+      const updatedAddress = {
+        ...user.address,
+        province: region
+      }
+      
+      // Update user data in the database
+      const response = await fetch(`/api/users/${user._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: updatedAddress
+        }),
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update localStorage
+        user.address = updatedAddress
+        localStorage.setItem('user', JSON.stringify(user))
+        
+        // Update state
+        setUserRegion(region)
+        
+        toast({
+          title: language === 'zh' ? "区域已更新" : "Region Updated",
+          description: language === 'zh' ? "您的区域已成功更新" : "Your region has been successfully updated"
+        })
+      } else {
+        throw new Error(result.error || 'Failed to update region')
+      }
+    } catch (error) {
+      console.error('Error updating region:', error)
+      toast({
+        title: language === 'zh' ? "更新失败" : "Update Failed",
+        description: error instanceof Error ? error.message : 
+          (language === 'zh' ? "更新区域时出现错误" : "An error occurred while updating your region"),
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
+
   // Handle plan selection
   const handlePlanSelect = (plan: VoucherPlan) => {
     console.log('MealVoucherPurchase - Plan selected:', plan)
     setSelectedPlan(plan)
+    
+    // Check if user's region is in the supported list
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      if (user.address && user.address.province) {
+        const userProvince = user.address.province
+        if (!DAILY_DELIVERY_REGIONS.includes(userProvince)) {
+          setUserRegion(userProvince)
+          setShowRegionDialog(true)
+          return
+        }
+      }
+    }
+    
+    // If region is supported or no region is set, proceed to upload step
     setPurchaseStep('upload')
     console.log('MealVoucherPurchase - Purchase step set to upload')
   }
@@ -904,6 +995,14 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
 
   return (
     <div className="flex flex-col h-full space-y-6">
+      {/* Region Check Dialog */}
+      <RegionCheckDialogRecharge
+        open={showRegionDialog}
+        onClose={() => setShowRegionDialog(false)}
+        currentRegion={userRegion}
+        onRegionChange={handleRegionChange}
+        onProceed={() => setPurchaseStep('upload')}
+      />
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">
@@ -1093,12 +1192,12 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {serviceAreas.map((area) => (
+          {DAILY_DELIVERY_REGIONS.map((area) => (
             <div 
               key={area} 
               className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"
             >
-              {area}
+              {area === 'NorthYork' ? 'North York' : area}
             </div>
           ))}
         </div>
