@@ -3,7 +3,7 @@ import connectToDatabase from '@/lib/db';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
 import User from '@/models/User';
 import mongoose from 'mongoose';
-import { sendAdminVoucherRequestNotification } from '@/lib/services/email';
+import { sendAdminVoucherRequestNotification, sendUserVoucherRequestConfirmation } from '@/lib/services/email';
 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
@@ -130,8 +130,28 @@ export async function POST(request: NextRequest) {
         notes,
         requestId
       });
+      console.log('Admin notification sent successfully for voucher request:', requestId);
     } catch (emailError) {
       console.error('Failed to send admin notification email:', emailError);
+      // Continue even if email fails
+    }
+    
+    // Send confirmation email to user
+    try {
+      console.log('Sending confirmation email to user:', user.email);
+      await sendUserVoucherRequestConfirmation({
+        userId,
+        userName: user.name,
+        userEmail: user.email,
+        type,
+        quantity,
+        amount,
+        notes,
+        requestId
+      });
+      console.log('User confirmation email sent successfully for voucher request:', requestId);
+    } catch (emailError) {
+      console.error('Failed to send user confirmation email:', emailError);
       // Continue even if email fails
     }
     

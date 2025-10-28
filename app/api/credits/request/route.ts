@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
 import User from '@/models/User';
-import { sendAdminCreditRequestNotification } from '@/lib/services/email';
+import { sendAdminCreditRequestNotification, sendUserCreditRequestConfirmation } from '@/lib/services/email';
 
 // POST handler - create a new credit purchase request
 export async function POST(request: Request) {
@@ -83,6 +83,25 @@ export async function POST(request: Request) {
       console.log('Admin notification sent successfully');
     } catch (emailError) {
       console.error('Error sending admin notification:', emailError);
+      // Continue with the process even if email fails
+    }
+    
+    // Send confirmation email to user
+    try {
+      console.log('Sending confirmation email to user:', user.email);
+      await sendUserCreditRequestConfirmation({
+        userId: user._id.toString(),
+        userName: user.name || user.userID,
+        userEmail: user.email,
+        amount: data.amount,
+        paymentMethod: data.paymentMethod,
+        originalPrice: data.originalPrice,
+        planDescription: data.planDescription || '',
+        requestId: requestId
+      });
+      console.log('User confirmation email sent successfully');
+    } catch (emailError) {
+      console.error('Error sending user confirmation email:', emailError);
       // Continue with the process even if email fails
     }
     

@@ -270,6 +270,64 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   });
 };
 
+// Send confirmation email to user after submitting a credit purchase request
+export const sendUserCreditRequestConfirmation = async (requestDetails: {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  paymentMethod: 'wechat' | 'emt';
+  originalPrice: number;
+  requestId: string;
+  planDescription?: string;
+}) => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">充值请求已提交</h2>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        亲爱的 <strong>${requestDetails.userName}</strong>，
+      </p>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+        感谢您提交充值请求。我们已收到您的请求，并将尽快处理。以下是您的请求详情：
+      </p>
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>原始价格:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>实际付款:</strong> $${requestDetails.amount.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
+          ${requestDetails.planDescription ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
+          <li style="padding: 10px 0;"><strong>状态:</strong> <span style="color: #F59E0B; font-weight: 500;">待审核</span></li>
+        </ul>
+      </div>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        我们的管理员将尽快审核您的请求。一旦审核通过，您的账户将立即充值，您将收到确认邮件。
+      </p>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+        如有任何问题，请随时联系我们的客服团队。
+      </p>
+      <div style="text-align: center;">
+        <a href="${baseUrl}/dashboard?tab=credits" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">查看我的充值记录</a>
+      </div>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
+        <p>此邮件由系统自动发送，请勿回复。</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: requestDetails.userEmail,
+    subject: `充值请求已提交 (#${requestDetails.requestId})`,
+    html,
+  });
+};
+
 // Send notification to admin about new voucher purchase request
 export const sendAdminVoucherRequestNotification = async (requestDetails: {
   userId: string;
@@ -322,6 +380,65 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   return sendEmail({
     to: adminEmail,
     subject: `新的${voucherTypeText}购买请求 (#${requestDetails.requestId}) 待审核`,
+    html,
+  });
+};
+
+// Send confirmation email to user after submitting a voucher purchase request
+export const sendUserVoucherRequestConfirmation = async (requestDetails: {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  type: 'twoDish' | 'threeDish';
+  quantity: number;
+  amount: number;
+  requestId: string;
+  notes?: string;
+}) => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const voucherTypeText = requestDetails.type === 'twoDish' ? '2菜餐券' : '3菜餐券';
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">餐券购买请求已提交</h2>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        亲爱的 <strong>${requestDetails.userName}</strong>，
+      </p>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+        感谢您提交餐券购买请求。我们已收到您的请求，并将尽快处理。以下是您的请求详情：
+      </p>
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>餐券类型:</strong> ${voucherTypeText}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>餐券数量:</strong> ${requestDetails.quantity}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>付款金额:</strong> $${requestDetails.amount.toFixed(2)}</li>
+          ${requestDetails.notes ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>备注:</strong> ${requestDetails.notes}</li>` : ''}
+          <li style="padding: 10px 0;"><strong>状态:</strong> <span style="color: #F59E0B; font-weight: 500;">待审核</span></li>
+        </ul>
+      </div>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        我们的管理员将尽快审核您的请求。一旦审核通过，餐券将立即添加到您的账户中，您将收到确认邮件。
+      </p>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+        如有任何问题，请随时联系我们的客服团队。
+      </p>
+      <div style="text-align: center;">
+        <a href="${baseUrl}/dashboard?tab=meal-vouchers" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">查看我的餐券记录</a>
+      </div>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
+        <p>此邮件由系统自动发送，请勿回复。</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: requestDetails.userEmail,
+    subject: `餐券购买请求已提交 (#${requestDetails.requestId})`,
     html,
   });
 };
