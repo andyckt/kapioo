@@ -575,7 +575,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium text-[#6B5F53]">{language === 'zh' ? '总金额' : 'Total Amount'}</p>
-                  <p className="font-medium text-[#C2884E]">${selectedPlan ? (selectedPlan.price * 1.13).toFixed(2) : '0.00'}</p>
+                  <p className="font-bold text-[#C2884E]">${selectedPlan ? (selectedPlan.price * 1.13).toFixed(2) : '0.00'}</p>
                 </div>
               </div>
             </div>

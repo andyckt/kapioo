@@ -750,7 +750,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-[#C2884E]">${selectedPlan?.totalPrice}</p>
+                        <p className="text-base text-[#C2884E]">${selectedPlan?.totalPrice}</p>
                         <p className="text-xs text-muted-foreground">
                           ${selectedPlan?.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
                         </p>
