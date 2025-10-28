@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/language-context"
 
 // Define available service areas
 const serviceAreas = [
@@ -31,6 +32,7 @@ const serviceAreas = [
 
 export default function VerifyEmailSentPage() {
   const router = useRouter()
+  const { language } = useLanguage()
   const [userEmail, setUserEmail] = useState<string>("")
   const [userId, setUserId] = useState<string>("")
   const [verificationCode, setVerificationCode] = useState<string>("")
@@ -417,7 +419,7 @@ export default function VerifyEmailSentPage() {
                     处理中...
                   </>
                 ) : hasMealPlan ? (
-                  "继续购买餐券"
+                  language === 'en' ? "Let's get started!" : "进入"
                 ) : (
                   "进入我的账户"
                 )}
