@@ -548,7 +548,7 @@ export function DailyDeliveryCheckout({
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>{language === 'zh' ? '配送地址' : 'Delivery Address'}</Label>
+                  <Label>Delivery Address</Label>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -564,12 +564,12 @@ export function DailyDeliveryCheckout({
                 {editingAddress ? (
                   <div className="mt-2 space-y-4 p-4 rounded-md border border-primary/30 bg-primary/5 shadow-sm">
                     <div className="text-sm font-medium text-primary mb-2">
-                      {language === 'zh' ? '编辑配送详情' : 'Edit Delivery Details'}
+                      Edit Delivery Details
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="unitNumber" className="text-sm">
-                          {language === 'zh' ? '单元/公寓号码' : 'Unit/Apt Number'}
+                          Unit/Apt Number
                         </Label>
                         <Input 
                           id="unitNumber" 
@@ -579,7 +579,7 @@ export function DailyDeliveryCheckout({
                       </div>
                       <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="streetAddress" className="text-sm">
-                          {language === 'zh' ? '街道地址' : 'Street Address'} <span className="text-red-500">*</span>
+                          Street name <span className="text-red-500">*</span>
                         </Label>
                         <Input 
                           id="streetAddress" 
@@ -590,7 +590,7 @@ export function DailyDeliveryCheckout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="city" className="text-sm">
-                          {language === 'zh' ? '城市' : 'City'} <span className="text-red-500">*</span>
+                          City <span className="text-red-500">*</span>
                         </Label>
                         <Input 
                           id="city" 
@@ -601,7 +601,7 @@ export function DailyDeliveryCheckout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="state" className="text-sm">
-                          {language === 'zh' ? '省/州' : 'Province/State'} <span className="text-red-500">*</span>
+                          Province/State <span className="text-red-500">*</span>
                         </Label>
                         <Input 
                           id="state" 
@@ -612,7 +612,7 @@ export function DailyDeliveryCheckout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="zip" className="text-sm">
-                          {language === 'zh' ? '邮政编码' : 'Postal/ZIP Code'} <span className="text-red-500">*</span>
+                          Postal/ZIP Code <span className="text-red-500">*</span>
                         </Label>
                         <Input 
                           id="zip" 
@@ -623,7 +623,7 @@ export function DailyDeliveryCheckout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="country" className="text-sm">
-                          {language === 'zh' ? '国家' : 'Country'} <span className="text-red-500">*</span>
+                          Country <span className="text-red-500">*</span>
                         </Label>
                         <Input 
                           id="country" 
@@ -634,9 +634,9 @@ export function DailyDeliveryCheckout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="buzzCode" className="text-sm">
-                          {language === 'zh' ? '门禁密码' : 'Buzz Code'} 
+                          Buzz Code 
                           <span className="text-muted-foreground text-xs ml-1">
-                            {language === 'zh' ? '（可选）' : '(Optional)'}
+                            (Optional)
                           </span>
                         </Label>
                         <Input 
