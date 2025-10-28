@@ -75,6 +75,8 @@ export function DailyDeliveryManagement() {
   
   // State for managing the data
   const [days, setDays] = useState<Record<string, DayData>>({})
+  // State for filtering days by week
+  const [activeWeekFilter, setActiveWeekFilter] = useState<number | null>(null)
   
   // State for managing tags
   const [availableTags, setAvailableTags] = useState<string[]>([])
@@ -554,6 +556,175 @@ export function DailyDeliveryManagement() {
   const cancelEditingDay = () => {
     setEditingDay(null)
   }
+  
+  // Function to initialize Next Week days based on This Week
+  const initializeNextWeek = async () => {
+    try {
+      // Get all days from week 1
+      const week1Days = Object.entries(days).filter(([_, day]) => day.week === 1);
+      
+      if (week1Days.length === 0) {
+        toast({
+          title: "Error",
+          description: "No days found for This Week to duplicate",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check if there are already days in week 2
+      const existingWeek2Days = Object.entries(days).filter(([_, day]) => day.week === 2);
+      if (existingWeek2Days.length > 0) {
+        if (!confirm("Next Week already has some days. Do you want to add more days from This Week?")) {
+          return;
+        }
+      } else {
+        // Show confirmation dialog
+        if (!confirm("This will create Next Week days based on This Week. Continue?")) {
+          return;
+        }
+      }
+      
+      // Track created days to update state at the end
+      const createdDays: Record<string, DayData> = {};
+      
+      // Process each day from week 1
+      for (const [dayId, day] of week1Days) {
+        // Skip if a day with the same displayName already exists in week 2
+        const existingDay = Object.values(days).find(d => 
+          d.week === 2 && d.displayName === day.displayName
+        );
+        
+        if (existingDay) {
+          console.log(`Skipping ${day.displayName} as it already exists in Next Week`);
+          continue;
+        }
+        
+        // Create a new day ID for week 2
+        const newDayId = `${day.displayName}-w2-${Date.now()}`;
+        
+        // Calculate date for next week (add 7 days)
+        const dateMatch = day.date.match(/(\w+)\s+(\d+)/);
+        let nextWeekDate = day.date;
+        
+        if (dateMatch && dateMatch.length >= 3) {
+          const month = dateMatch[1];
+          const dayNum = parseInt(dateMatch[2], 10);
+          nextWeekDate = `${month} ${dayNum + 7}`;
+        }
+        
+        // Create new day via API
+        const dayResponse = await fetch('/api/days', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            dayId: newDayId,
+            date: nextWeekDate,
+            displayName: day.displayName,
+            week: 2,
+            isActive: true
+          }),
+        });
+        
+        const dayData = await dayResponse.json();
+        
+        if (!dayData.success) {
+          throw new Error(dayData.error || 'Failed to create day');
+        }
+        
+        // Create combos for the new day
+        for (const combo of day.combos) {
+          const newComboId = `${newDayId}-combo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          
+          const comboResponse = await fetch('/api/combos', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              comboId: newComboId,
+              dayId: newDayId,
+              name: combo.name,
+              calories: combo.calories,
+              tags: combo.tags,
+              typeA: combo.typeA,
+              typeB: combo.typeB
+            }),
+          });
+          
+          const comboData = await comboResponse.json();
+          
+          if (!comboData.success) {
+            throw new Error(comboData.error || 'Failed to create combo');
+          }
+        }
+        
+        // Add to created days
+        createdDays[newDayId] = {
+          date: nextWeekDate,
+          displayName: day.displayName,
+          week: 2,
+          combos: day.combos.map(combo => ({
+            ...combo,
+            id: `${newDayId}-combo-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+          }))
+        };
+      }
+      
+      // Refresh data to show new days
+      const daysResponse = await fetch('/api/days');
+      const daysData = await daysResponse.json();
+      
+      if (daysData.success) {
+        const formattedDays: Record<string, DayData> = {};
+        
+        // Process each day
+        for (const day of daysData.data) {
+          // Fetch combos for this day
+          const combosResponse = await fetch(`/api/days/${day.dayId}/combos`);
+          const combosData = await combosResponse.json();
+          
+          if (combosData.success) {
+            // Format combo data to match our component's expected structure
+            const formattedCombos = combosData.data.map((combo: any) => ({
+              id: combo.comboId,
+              name: combo.name,
+              calories: combo.calories,
+              tags: combo.tags,
+              typeA: combo.typeA,
+              typeB: combo.typeB
+            }));
+            
+            formattedDays[day.dayId] = {
+              date: day.date,
+              displayName: day.displayName,
+              week: day.week,
+              combos: formattedCombos
+            };
+          }
+        }
+        
+        setDays(formattedDays);
+        
+        // Switch to Next Week view
+        setActiveWeekFilter(2);
+        
+        toast({
+          title: "Success",
+          description: `Created ${Object.keys(createdDays).length} days for Next Week (6 days total, no Saturday)`,
+        });
+      }
+    } catch (error) {
+      console.error('Error initializing next week:', error);
+      toast({
+        title: "Error",
+        description: `Failed to initialize Next Week: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
+  }
 
   return (
     <div className="flex-1 space-y-6">
@@ -587,7 +758,32 @@ export function DailyDeliveryManagement() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Current Delivery Schedule</h3>
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-lg font-medium">Current Delivery Schedule</h3>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant={activeWeekFilter === null ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setActiveWeekFilter(null)}
+                      >
+                        All
+                      </Button>
+                      <Button 
+                        variant={activeWeekFilter === 1 ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setActiveWeekFilter(1)}
+                      >
+                        This Week
+                      </Button>
+                      <Button 
+                        variant={activeWeekFilter === 2 ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setActiveWeekFilter(2)}
+                      >
+                        Next Week
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <Button 
                       size="sm"
@@ -706,7 +902,9 @@ export function DailyDeliveryManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Object.entries(days).map(([dayId, day]) => (
+                      {Object.entries(days)
+                        .filter(([_, day]) => activeWeekFilter === null || day.week === activeWeekFilter)
+                        .map(([dayId, day]) => (
                         <TableRow key={dayId}>
                           {editingDay === dayId ? (
                             <>
@@ -731,8 +929,8 @@ export function DailyDeliveryManagement() {
                                     <SelectValue placeholder="Select week" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="1">Week 1</SelectItem>
-                                    <SelectItem value="2">Week 2</SelectItem>
+                                    <SelectItem value="1">This Week</SelectItem>
+                                    <SelectItem value="2">Next Week</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </TableCell>
@@ -754,7 +952,7 @@ export function DailyDeliveryManagement() {
                             <>
                               <TableCell className="font-medium capitalize">{day.displayName}</TableCell>
                               <TableCell>{day.date}</TableCell>
-                              <TableCell>Week {day.week}</TableCell>
+                              <TableCell>{day.week === 1 ? 'This Week' : 'Next Week'}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
                                   Active
@@ -836,12 +1034,21 @@ export function DailyDeliveryManagement() {
                       <SelectTrigger id="day-select" className="w-[250px] mt-1">
                         <SelectValue placeholder="Select day" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(days).map(([dayId, day]) => (
-                          <SelectItem key={dayId} value={dayId}>
-                            {day.displayName.charAt(0).toUpperCase() + day.displayName.slice(1)} (Week {day.week}) - {day.date}
-                          </SelectItem>
-                        ))}
+                      <SelectContent className="max-h-[300px] overflow-y-auto">
+                        {Object.entries(days)
+                          .sort(([_, a], [__, b]) => (a.week === b.week ? 0 : a.week < b.week ? -1 : 1))
+                          .map(([dayId, day]) => (
+                            <SelectItem key={dayId} value={dayId} className="py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium capitalize">{day.displayName}</span>
+                                <Badge variant="outline" className={day.week === 1 ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}>
+                                  {day.week === 1 ? 'This Week' : 'Next Week'}
+                                </Badge>
+                                <span className="text-muted-foreground text-xs">{day.date}</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        }
                       </SelectContent>
                     </Select>
                   </div>
