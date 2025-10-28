@@ -44,6 +44,8 @@ import { WeeklySubscriptionHistory } from "@/components/weekly-subscription-hist
 import { DailyDeliveryHistory } from "@/components/daily-delivery-history"
 import MealVoucherPurchase from "@/components/meal-voucher-purchase"
 import { VoucherPurchaseHistory } from "@/components/voucher-purchase-history"
+import { UnifiedRechargeHistory } from "@/components/unified-recharge-history"
+import { OrderSectionNavigation } from "@/components/order-section-navigation"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -61,6 +63,7 @@ export default function DashboardPage() {
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [purchaseHistoryKey, setPurchaseHistoryKey] = useState(0)
   const [voucherHistoryKey, setVoucherHistoryKey] = useState(0)
+  const [orderActiveSection, setOrderActiveSection] = useState<'orders' | 'recharges'>('orders')
   const [transactionsPagination, setTransactionsPagination] = useState({
     page: 1,
     limit: 5,
@@ -1297,16 +1300,46 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between mt-4">
                     <h2 className="text-3xl font-bold tracking-tight">{t('myOrders')}</h2>
                   </div>
+                  
+                  {/* Section Navigation */}
+                  <OrderSectionNavigation 
+                    activeSection={orderActiveSection} 
+                    onSectionChange={setOrderActiveSection} 
+                  />
 
-                  {/* Order History */}
-                  {userData && (
-                    <div className="space-y-6">
+                  {/* Order History Section */}
+                  {userData && orderActiveSection === 'orders' && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-6"
+                    >
                       {/* Weekly Subscription Orders */}
                       <WeeklySubscriptionHistory userId={userData._id} />
                       
                       {/* Daily Delivery Orders */}
                       <DailyDeliveryHistory userId={userData._id} />
-                    </div>
+                    </motion.div>
+                  )}
+                  
+                  {/* Recharge History Section */}
+                  {userData && orderActiveSection === 'recharges' && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-6"
+                    >
+                      {/* Unified Recharge History */}
+                      <UnifiedRechargeHistory 
+                        userId={userData._id} 
+                        weeklyRefreshKey={purchaseHistoryKey}
+                        dailyRefreshKey={voucherHistoryKey}
+                      />
+                    </motion.div>
                   )}
 
                   {/* Commented out Upcoming Meals section
