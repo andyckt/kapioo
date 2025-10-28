@@ -2346,7 +2346,7 @@ export default function AdminDashboardPage() {
 
       {/* View User Dialog */}
       <Dialog open={viewUserOpen} onOpenChange={setViewUserOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
             <DialogDescription>Information about {selectedUser?.name}</DialogDescription>
@@ -2354,106 +2354,167 @@ export default function AdminDashboardPage() {
           
           {selectedUser && (
             <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="details">User Details</TabsTrigger>
                 <TabsTrigger value="activity">Recent Activity</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="details" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm text-muted-foreground">User ID</Label>
-                    <p className="font-medium">{selectedUser.userID}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Status</Label>
-                    <p className="font-medium">{selectedUser.status}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Name</Label>
-                    <p className="font-medium">{selectedUser.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Email</Label>
-                    <p className="font-medium">{selectedUser.email}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Phone</Label>
-                    <p className="font-medium">{selectedUser.phone}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Joined</Label>
-                    <p className="font-medium">{selectedUser.joined instanceof Date 
-                      ? selectedUser.joined.toLocaleDateString() 
-                      : String(selectedUser.joined)}</p>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">Address</Label>
-                  {selectedUser?.address ? (
-                    <div className="font-medium space-y-1 mt-1">
-                      {selectedUser.address.unitNumber && (
-                        <p>Unit: {selectedUser.address.unitNumber}</p>
-                      )}
-                      <p>{selectedUser.address.streetAddress}</p>
-                      <p>
-                        {selectedUser.address.city}
-                        {selectedUser.address.province && `, ${selectedUser.address.province}`}
-                        {selectedUser.address.postalCode && ` ${selectedUser.address.postalCode}`}
-                      </p>
-                      <p>{selectedUser.address.country}</p>
-                      {selectedUser.address.buzzCode && (
-                        <p>Buzz Code: {selectedUser.address.buzzCode}</p>
-                      )}
+              <TabsContent value="details" className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">User ID</Label>
+                      <p className="font-medium">{selectedUser.userID}</p>
                     </div>
-                  ) : (
-                    <p className="font-medium">No address provided</p>
-                  )}
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Status</Label>
+                      <p className="font-medium">{selectedUser.status}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Name</Label>
+                      <p className="font-medium">{selectedUser.name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Email</Label>
+                      <div className="flex items-center gap-1">
+                        <p className="font-medium break-all">{selectedUser.email}</p>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6" 
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedUser.email);
+                            toast({
+                              title: "Copied",
+                              description: "Email copied to clipboard",
+                              duration: 2000,
+                            });
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Phone</Label>
+                      <p className="font-medium">{selectedUser.phone}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Joined</Label>
+                      <p className="font-medium">{selectedUser.joined instanceof Date 
+                        ? selectedUser.joined.toLocaleDateString() 
+                        : String(selectedUser.joined)}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Address</Label>
+                    {selectedUser?.address ? (
+                      <div className="font-medium mt-1">
+                        <p>
+                          {selectedUser.address.unitNumber ? `Unit ${selectedUser.address.unitNumber}, ` : ''}
+                          {selectedUser.address.streetAddress || ''}
+                        </p>
+                        <p>
+                          {selectedUser.address.city || ''}
+                          {selectedUser.address.province ? `, ${selectedUser.address.province}` : ''}
+                          {selectedUser.address.postalCode ? ` ${selectedUser.address.postalCode}` : ''}
+                        </p>
+                        <p>{selectedUser.address.country || ''}</p>
+                        {selectedUser.address.buzzCode && (
+                          <p>Buzz Code: {selectedUser.address.buzzCode}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="font-medium">No address provided</p>
+                    )}
+                  </div>
                 </div>
+                
                 <div>
-                  <Label className="text-sm text-muted-foreground">Credits</Label>
-                  <p className="font-medium">{selectedUser.credits}</p>
+                  <Label className="text-sm text-muted-foreground font-medium">Vouchers & Subscriptions</Label>
+                  <div className="mt-2 space-y-4">
+                    <div className="rounded-md border p-3 bg-slate-50">
+                      <h4 className="text-sm font-medium">Meal Vouchers</h4>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-sm">2-Dish Vouchers:</span>
+                          <span className="font-medium">{selectedUser.twoDishVoucher || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">3-Dish Vouchers:</span>
+                          <span className="font-medium">{selectedUser.threeDishVoucher || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-md border p-3 bg-slate-50">
+                      <h4 className="text-sm font-medium">Weekly Subscriptions</h4>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-sm">6 Meals:</span>
+                          <span className="font-medium">{selectedUser.weeklySIXmeals || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">8 Meals:</span>
+                          <span className="font-medium">{selectedUser.weeklyEIGHTmeals || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">10 Meals:</span>
+                          <span className="font-medium">{selectedUser.weeklyTENmeals || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">12 Meals:</span>
+                          <span className="font-medium">{selectedUser.weeklyTWELVEmeals || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
               
-              <TabsContent value="activity" className="space-y-4 mt-4">
-                <div className="space-y-2">
+              <TabsContent value="activity">
+                <div>
                   <Label className="font-medium">User Activity</Label>
-                  <div className="space-y-2">
+                  <div className="mt-2 max-h-[400px] overflow-y-auto pr-2">
                     {userTransactionsLoading ? (
                       <div className="flex justify-center p-4">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                       </div>
                     ) : userTransactions.length > 0 ? (
-                      userTransactions.map((transaction) => (
-                        <div key={transaction._id} className="rounded-md border p-3">
-                          <div className="flex justify-between">
-                            <p className="text-sm font-medium">
-                              {transaction.type === 'credit' ? 'Add' : 
-                               transaction.type === 'debit' ? 'Deduct' : 
-                               transaction.type === 'refund' ? 'Refund' : 
-                               transaction.type} 
-                              <span className={transaction.type === 'credit' || transaction.type === 'refund' ? "text-green-600" : "text-red-600"}>
-                                {' '}{transaction.type === 'credit' || transaction.type === 'refund' ? '+' : '-'}{transaction.amount}
-                              </span> credits
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(transaction.createdAt).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {userTransactions.map((transaction) => (
+                          <div key={transaction._id} className="rounded-md border p-3">
+                            <div className="flex justify-between">
+                              <p className="text-sm font-medium">
+                                {transaction.type === 'credit' ? 'Add' : 
+                                 transaction.type === 'debit' ? 'Deduct' : 
+                                 transaction.type === 'refund' ? 'Refund' : 
+                                 transaction.type} 
+                                <span className={transaction.type === 'credit' || transaction.type === 'refund' ? "text-green-600" : "text-red-600"}>
+                                  {' '}{transaction.type === 'credit' || transaction.type === 'refund' ? '+' : '-'}{transaction.amount}
+                                </span> credits
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                            </div>
+                            {transaction.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{transaction.description}</p>
+                            )}
                           </div>
-                          {transaction.description && (
-                            <p className="text-xs text-muted-foreground mt-1">{transaction.description}</p>
-                          )}
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     ) : (
                       <div className="rounded-md border p-3 text-center text-muted-foreground">
                         No transaction history found
