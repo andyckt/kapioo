@@ -183,7 +183,7 @@ export default function LocationMealPlans() {
             <div className="flex items-center justify-center py-4">
               <div className="flex items-center gap-2">
                 <span className="text-[#6B5F53] font-medium text-xl md:text-2xl">
-                  {language === 'en' ? 'I am based in' : '我位于'}
+                  {language === 'en' ? 'Deliver to' : '配送地址'}
                 </span>
                 <span className="text-[#C2884E] font-medium border-b-2 border-[#C2884E]/30 px-2 min-w-[120px] text-center text-xl md:text-2xl">
                   {getLocationDisplayName(selectedLocation) || <span className="text-transparent">___________</span>}
