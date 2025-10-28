@@ -2064,6 +2064,7 @@ export default function AdminDashboardPage() {
                             <th className="text-left p-4 font-medium">User</th>
                             <th className="text-left p-4 font-medium">Plan</th>
                             <th className="text-left p-4 font-medium">Amount</th>
+                            <th className="text-left p-4 font-medium hidden">Reference</th>
                             <th className="text-left p-4 font-medium">Date</th>
                             <th className="text-left p-4 font-medium">Status</th>
                             <th className="text-center p-4 font-medium">Actions</th>
@@ -2128,10 +2129,22 @@ export default function AdminDashboardPage() {
                                   <td className="p-4">
                                     <div>${request.amount.toFixed(2)}</div>
                                     <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
+                                    {request.referenceNumber && (
+                                      <div className="text-xs text-blue-600 font-medium mt-1">
+                                        Ref No: {request.referenceNumber}
+                                      </div>
+                                    )}
                                     {request.status === 'approved' && (
                                       <div className="text-xs text-green-600 font-medium mt-1">
                                         Plan approved
                                       </div>
+                                    )}
+                                  </td>
+                                  <td className="p-4 hidden">
+                                    {request.referenceNumber ? (
+                                      <div className="font-medium">{request.referenceNumber}</div>
+                                    ) : (
+                                      <div className="text-xs text-muted-foreground">No reference number</div>
                                     )}
                                   </td>
                                   <td className="p-4">{new Date(request.createdAt).toLocaleDateString('en-US', { 
@@ -3039,6 +3052,13 @@ export default function AdminDashboardPage() {
                         {selectedRequest.paymentMethod === 'emt' && (
                           <span className="ml-2 text-xs text-amber-600">(13% tax included)</span>
                         )}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Reference Number</Label>
+                      <p className="font-medium">
+                        {selectedRequest.referenceNumber || 'No reference number provided'}
                       </p>
                     </div>
                   </div>

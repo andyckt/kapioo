@@ -322,6 +322,7 @@ export function MealVoucherManagement() {
                     <th className="text-left p-4 font-medium">User</th>
                     <th className="text-left p-4 font-medium hidden md:table-cell">Vouchers</th>
                     <th className="text-left p-4 font-medium hidden md:table-cell">Amount</th>
+                    <th className="text-left p-4 font-medium hidden">Reference</th>
                     <th className="text-left p-4 font-medium hidden lg:table-cell">Date</th>
                     <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-center p-4 font-medium">Actions</th>
@@ -347,7 +348,17 @@ export function MealVoucherManagement() {
                         <td className="p-4 align-middle hidden md:table-cell">
                           {getVoucherTypeDisplay(request.type, request.quantity)}
                         </td>
-                        <td className="p-4 align-middle hidden md:table-cell">${request.amount}</td>
+                        <td className="p-4 align-middle hidden md:table-cell">
+                          <div>${request.amount}</div>
+                          {request.referenceNumber && (
+                            <div className="text-xs text-blue-600 font-medium mt-1">
+                              Ref No: {request.referenceNumber}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4 align-middle hidden">
+                          {request.referenceNumber || <span className="text-muted-foreground text-sm">No reference</span>}
+                        </td>
                         <td className="p-4 align-middle hidden lg:table-cell">{formatDate(request.createdAt)}</td>
                         <td className="p-4 align-middle">{getStatusBadge(request.status)}</td>
                         <td className="p-4 align-middle text-center">
@@ -494,6 +505,10 @@ export function MealVoucherManagement() {
                         <div className="flex justify-between">
                           <dt className="font-medium text-[#6B5F53]">Amount:</dt>
                           <dd className="font-medium text-[#C2884E]">${selectedRequest.amount}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">Reference Number:</dt>
+                          <dd className="font-medium">{selectedRequest.referenceNumber || 'No reference number'}</dd>
                         </div>
                       </dl>
                     </CardContent>
