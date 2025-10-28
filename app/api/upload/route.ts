@@ -17,10 +17,15 @@ function getFileExtension(mimeType: string): string {
     'image/jpeg': 'jpg',
     'image/jpg': 'jpg',
     'image/png': 'png',
+    'image/webp': 'webp',
+    'image/heic': 'heic',
+    'image/heif': 'heif',
+    'image/tiff': 'tiff',
+    'image/bmp': 'bmp',
     'application/pdf': 'pdf'
   };
   
-  return extensions[mimeType] || 'unknown';
+  return extensions[mimeType] || 'jpg'; // Default to jpg for converted files
 }
 
 // POST handler for file uploads
@@ -50,10 +55,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Check file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'application/pdf'];
+    
+    // For files with no recognized type, check the file extension
+    let isValidType = allowedTypes.includes(file.type);
+    
+    if (!isValidType && (!file.type || file.type === '')) {
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      isValidType = fileExt === 'jpg' || fileExt === 'jpeg' || fileExt === 'png' || fileExt === 'webp' || 
+                  fileExt === 'heic' || fileExt === 'heif' || fileExt === 'tiff' || fileExt === 'tif' || 
+                  fileExt === 'bmp' || fileExt === 'pdf';
+    }
+    
+    if (!isValidType) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Only JPEG, PNG, and PDF files are allowed.' },
+        { success: false, error: 'Invalid file type. Only JPEG, PNG, WebP, HEIC, HEIF, TIFF, BMP, and PDF files are allowed.' },
         { status: 400 }
       );
     }
@@ -68,7 +84,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a unique filename
-    const fileExtension = getFileExtension(file.type);
+    let fileExtension;
+    if (!file.type || file.type === '') {
+      // If file type is empty, try to get extension from filename
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (fileExt === 'jpg' || fileExt === 'jpeg') {
+        fileExtension = 'jpg';
+      } else if (fileExt === 'png') {
+        fileExtension = 'png';
+      } else if (fileExt === 'webp') {
+        fileExtension = 'webp';
+      } else if (fileExt === 'heic' || fileExt === 'heif') {
+        fileExtension = 'jpg'; // Convert HEIC/HEIF to JPG
+      } else if (fileExt === 'tiff' || fileExt === 'tif') {
+        fileExtension = 'tiff';
+      } else if (fileExt === 'bmp') {
+        fileExtension = 'bmp';
+      } else if (fileExt === 'pdf') {
+        fileExtension = 'pdf';
+      } else {
+        fileExtension = 'jpg'; // Default to jpg
+      }
+    } else {
+      fileExtension = getFileExtension(file.type);
+    }
+    
     const fileName = `voucher-proofs/${uuidv4()}.${fileExtension}`;
     
     // Convert file to buffer

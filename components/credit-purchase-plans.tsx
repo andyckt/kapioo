@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import heic2any from "heic2any"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   AlertCircle,
@@ -285,9 +286,94 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   }, [])
 
   // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setPaymentProof(e.target.files[0])
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    
+    const file = e.target.files[0];
+    
+    // Set loading state
+    setIsLoading(true);
+    
+    try {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp'];
+      
+      // Check if file is HEIC/HEIF
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || 
+                    (file.type === '' && (file.name.endsWith('.heic') || file.name.endsWith('.heif')));
+      
+      if (!validTypes.includes(file.type) && !isHeic) {
+        toast({
+          title: language === 'zh' ? "无效的文件类型" : "Invalid file type",
+          description: language === 'zh' ? "请上传有效的图片格式" : "Please upload a valid image format",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate file size (10MB max)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast({
+          title: language === 'zh' ? "文件过大" : "File too large",
+          description: language === 'zh' ? "文件大小必须小于10MB" : "File size must be less than 10MB",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      let processedFile = file;
+      
+      // Convert HEIC/HEIF to JPEG if needed
+      if (isHeic) {
+        toast({
+          title: language === 'zh' ? "正在转换图片" : "Converting image",
+          description: language === 'zh' ? "正在将HEIC转换为JPEG格式..." : "Converting HEIC to JPEG format..."
+        });
+        
+        try {
+          // Convert HEIC to JPEG using heic2any
+          const jpegBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8
+          }) as Blob;
+          
+          // Create a new file from the JPEG blob
+          processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
+            type: 'image/jpeg',
+            lastModified: new Date().getTime()
+          });
+          
+          toast({
+            title: language === 'zh' ? "转换完成" : "Conversion complete",
+            description: language === 'zh' ? "图片转换成功" : "Image converted successfully"
+          });
+        } catch (conversionError) {
+          console.error('Error converting HEIC to JPEG:', conversionError);
+          toast({
+            title: language === 'zh' ? "转换失败" : "Conversion failed",
+            description: language === 'zh' ? "无法转换HEIC图片。请尝试其他格式。" : "Failed to convert HEIC image. Please try another format.",
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Set the processed file
+      setPaymentProof(processedFile);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      toast({
+        title: language === 'zh' ? "错误" : "Error",
+        description: language === 'zh' ? "处理图片失败" : "Failed to process the image",
+        variant: "destructive"
+      });
+      setIsLoading(false);
     }
   }
 

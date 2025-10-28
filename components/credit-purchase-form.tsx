@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Upload, X, Loader2, CreditCard, Check } from "lucide-react"
+import heic2any from "heic2any"
 import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
@@ -57,42 +58,102 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
   };
 
   // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp'];
-    if (!validTypes.includes(file.type)) {
+    // Set loading state
+    setIsLoading(true);
+    
+    try {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp'];
+      
+      // Check if file is HEIC/HEIF
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || 
+                    (file.type === '' && (file.name.endsWith('.heic') || file.name.endsWith('.heif')));
+      
+      if (!validTypes.includes(file.type) && !isHeic) {
+        toast({
+          title: language === 'en' ? "Invalid file type" : "无效的文件类型",
+          description: language === 'en' ? "Please upload a valid image format" : "请上传有效的图片格式",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate file size (10MB max)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast({
+          title: language === 'en' ? "File too large" : "文件过大",
+          description: language === 'en' ? "File size must be less than 10MB" : "文件大小必须小于10MB",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      let processedFile = file;
+      
+      // Convert HEIC/HEIF to JPEG if needed
+      if (isHeic) {
+        toast({
+          title: language === 'en' ? "Converting image" : "正在转换图片",
+          description: language === 'en' ? "Converting HEIC to JPEG format..." : "正在将HEIC转换为JPEG格式..."
+        });
+        
+        try {
+          // Convert HEIC to JPEG using heic2any
+          const jpegBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8
+          }) as Blob;
+          
+          // Create a new file from the JPEG blob
+          processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
+            type: 'image/jpeg',
+            lastModified: new Date().getTime()
+          });
+          
+          toast({
+            title: language === 'en' ? "Conversion complete" : "转换完成",
+            description: language === 'en' ? "Image converted successfully" : "图片转换成功"
+          });
+        } catch (conversionError) {
+          console.error('Error converting HEIC to JPEG:', conversionError);
+          toast({
+            title: language === 'en' ? "Conversion failed" : "转换失败",
+            description: language === 'en' ? "Failed to convert HEIC image. Please try another format." : "无法转换HEIC图片。请尝试其他格式。",
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = () => {
+        setUploadedImage({
+          file: processedFile,
+          preview: reader.result as string,
+          url: null
+        });
+        setIsLoading(false);
+      };
+      reader.readAsDataURL(processedFile);
+    } catch (error) {
+      console.error('Error processing file:', error);
       toast({
-        title: language === 'en' ? "Invalid file type" : "无效的文件类型",
-        description: language === 'en' ? "Please upload a valid image format" : "请上传有效的图片格式",
+        title: language === 'en' ? "Error" : "错误",
+        description: language === 'en' ? "Failed to process the image" : "处理图片失败",
         variant: "destructive"
       });
-      return;
+      setIsLoading(false);
     }
-
-    // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      toast({
-        title: language === 'en' ? "File too large" : "文件过大",
-        description: language === 'en' ? "File size must be less than 10MB" : "文件大小必须小于10MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = () => {
-      setUploadedImage({
-        file,
-        preview: reader.result as string,
-        url: null
-      });
-    };
-    reader.readAsDataURL(file);
   };
 
   // Handle file upload
