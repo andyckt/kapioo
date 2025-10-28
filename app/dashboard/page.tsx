@@ -1,8 +1,10 @@
 "use client"
 
 // This ensures the page only runs on the client side
-export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+// Note: These export configurations are commented out because they're causing conflicts
+// with the "use client" directive. The client directive is sufficient for this page.
+// export const dynamic = 'force-dynamic';
+// export const runtime = 'edge';
 
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input"
