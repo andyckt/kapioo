@@ -17,7 +17,11 @@ export function middleware(request) {
   return response;
 }
 
-// Only apply this middleware to the upload API route
+// Apply this middleware to specific routes
 export const config = {
-  matcher: '/api/upload',
+  matcher: [
+    '/api/upload',
+    // Exclude dashboard from middleware processing to avoid SSR issues
+    '/((?!dashboard).*)',
+  ],
 }; 

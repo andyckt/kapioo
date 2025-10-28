@@ -35,6 +35,12 @@ const nextConfig = {
     // Will only be available on the server side
     bodyParserSizeLimit: '10mb',
   },
+  // Disable server-side rendering for pages that use client-side only libraries
+  // This prevents errors with libraries like heic2any
+  unstable_rsc: {
+    // Skip RSC (React Server Components) for specific routes
+    skipExport: ['/dashboard'],
+  },
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
