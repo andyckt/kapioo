@@ -636,8 +636,8 @@ export default function DailyDelivery() {
       ) : (
         <div className="flex flex-row h-full">
           {/* Sidebar Day Tabs - Always visible on all devices */}
-          <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 pr-2">
-            <div className="sticky top-4 space-y-1">
+          <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 pr-2 overflow-y-auto max-h-[calc(100vh-120px)] md:max-h-none">
+            <div className="space-y-1">
               
               {/* This Week Days */}
               <div className="mb-2 px-3">
