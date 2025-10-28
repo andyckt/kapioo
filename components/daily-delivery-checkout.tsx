@@ -684,14 +684,14 @@ export function DailyDeliveryCheckout({
                         <p className="text-sm">{formatAddress(userData.address)}</p>
                         {userData.address.buzzCode && (
                           <p className="text-sm mt-1">
-                            <span className="font-medium">{language === 'zh' ? '门禁密码: ' : 'Door Access Code: '}</span>
+                            <span className="font-medium">Door Access Code: </span>
                             {userData.address.buzzCode}
                           </p>
                         )}
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
-                        {language === 'zh' ? '请添加配送地址' : 'Please add a delivery address'}
+                        Please add a delivery address
                       </p>
                     )}
                   </div>

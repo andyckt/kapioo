@@ -659,7 +659,7 @@ export function WeeklySubscriptionCheckout({
                 <div className="mt-2 p-4 rounded-md border">
                   <div className="space-y-1">
                     {userData.address.unitNumber && (
-                      <p>{language === 'zh' ? '单元：' : 'Unit: '}{userData.address.unitNumber}</p>
+                      <p>Unit: {userData.address.unitNumber}</p>
                     )}
                     <p>{userData.address.streetAddress}</p>
                     <p>
@@ -669,7 +669,7 @@ export function WeeklySubscriptionCheckout({
                     </p>
                     <p>{userData.address.country}</p>
                     {userData.address.buzzCode && (
-                      <p>{language === 'zh' ? '门禁密码：' : 'Buzz Code: '}{userData.address.buzzCode}</p>
+                      <p>Buzz Code: {userData.address.buzzCode}</p>
                     )}
                   </div>
                 </div>
