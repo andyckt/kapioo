@@ -11,11 +11,11 @@ export default function CustomerReviewsSection() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const { t } = useLanguage();
 
-  // Array of review images
-  const reviewImages = Array.from({ length: 9 }, (_, i) => ({
-    id: i + 1,
-    src: `/reviews/${i + 1}.png`,
-    alt: `Customer review screenshot ${i + 1}`,
+  // Array of review images - using only images 4-14
+  const reviewImages = Array.from({ length: 11 }, (_, i) => ({
+    id: i + 4, // Start from image 4
+    src: `/reviews/${i + 4}.png`,
+    alt: `Customer review screenshot ${i + 4}`,
   }))
 
   const nextImage = () => {
