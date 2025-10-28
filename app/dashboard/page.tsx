@@ -1,12 +1,11 @@
 "use client"
 
 // This ensures the page only runs on the client side
-// Note: These export configurations are commented out because they're causing conflicts
-// with the "use client" directive. The client directive is sufficient for this page.
-// export const dynamic = 'force-dynamic';
-// export const runtime = 'edge';
+// We're using the "use client" directive to ensure this page is only rendered on the client
+// where window and other browser APIs are available
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -35,8 +34,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
-import { CreditPurchasePlans } from "@/components/credit-purchase-plans"
-import { CreditPurchaseHistory } from "@/components/credit-purchase-history"
+// These components are dynamically imported above
 import { AvailableAreas } from "@/components/available-areas"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -44,13 +42,16 @@ import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import Image from "next/image"
-import DailyDelivery from "@/components/daily-delivery"
-import WeeklySubscription from "@/components/weekly-subscription"
-import { WeeklySubscriptionHistory } from "@/components/weekly-subscription-history"
-import { DailyDeliveryHistory } from "@/components/daily-delivery-history"
-import MealVoucherPurchase from "@/components/meal-voucher-purchase"
-import { VoucherPurchaseHistory } from "@/components/voucher-purchase-history"
-import { UnifiedRechargeHistory } from "@/components/unified-recharge-history"
+// Dynamically import components that might use client-side libraries like heic2any
+const DailyDelivery = dynamic(() => import("@/components/daily-delivery"), { ssr: false })
+const WeeklySubscription = dynamic(() => import("@/components/weekly-subscription"), { ssr: false })
+const WeeklySubscriptionHistory = dynamic(() => import("@/components/weekly-subscription-history").then(mod => ({ default: mod.WeeklySubscriptionHistory })), { ssr: false })
+const DailyDeliveryHistory = dynamic(() => import("@/components/daily-delivery-history").then(mod => ({ default: mod.DailyDeliveryHistory })), { ssr: false })
+const MealVoucherPurchase = dynamic(() => import("@/components/meal-voucher-purchase"), { ssr: false })
+const VoucherPurchaseHistory = dynamic(() => import("@/components/voucher-purchase-history").then(mod => ({ default: mod.VoucherPurchaseHistory })), { ssr: false })
+const UnifiedRechargeHistory = dynamic(() => import("@/components/unified-recharge-history").then(mod => ({ default: mod.UnifiedRechargeHistory })), { ssr: false })
+const CreditPurchasePlans = dynamic(() => import("@/components/credit-purchase-plans").then(mod => ({ default: mod.CreditPurchasePlans })), { ssr: false })
+const CreditPurchaseHistory = dynamic(() => import("@/components/credit-purchase-history").then(mod => ({ default: mod.CreditPurchaseHistory })), { ssr: false })
 import { OrderSectionNavigation } from "@/components/order-section-navigation"
 
 export default function DashboardPage() {

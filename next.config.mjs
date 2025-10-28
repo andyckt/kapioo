@@ -35,12 +35,17 @@ const nextConfig = {
     // Will only be available on the server side
     bodyParserSizeLimit: '10mb',
   },
-  // Disable server-side rendering for pages that use client-side only libraries
-  // This prevents errors with libraries like heic2any
+  // Completely disable SSR for the dashboard page
+  // This prevents errors with client-side only libraries like heic2any
   reactStrictMode: true,
   compiler: {
     // Enables the styled-components SWC transform
     styledComponents: true
+  },
+  // This is the key configuration to disable SSR for specific paths
+  experimental: {
+    // Disable server components for specific paths
+    serverComponentsExternalPackages: ['heic2any'],
   },
   experimental: {
     webpackBuildWorker: true,
