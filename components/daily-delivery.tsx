@@ -554,7 +554,7 @@ export default function DailyDelivery() {
           {!checkoutOpen && (
             <Button 
               variant="outline" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E] rounded-xl"
               onClick={() => {
                 if (cart.length === 0) {
                   toast({
@@ -599,6 +599,9 @@ export default function DailyDelivery() {
             >
               <ShoppingCart className="h-4 w-4" />
               <span>{getTotalItems()}</span>
+              <span className="ml-1 border-l border-[#C2884E]/20 pl-2">
+                {language === 'zh' ? '结账' : 'Checkout'}
+              </span>
             </Button>
           )}
         </div>
