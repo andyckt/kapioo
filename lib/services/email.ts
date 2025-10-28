@@ -223,6 +223,7 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   paymentMethod: 'wechat' | 'emt';
   originalPrice: number;
   imageProofUrl: string;
+  referenceNumber?: string;
   notes?: string;
   planDescription?: string;
   requestId: string;
@@ -243,6 +244,7 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
       <ul style="list-style: none; padding: 0; margin-bottom: 20px; border: 1px solid #eee; border-radius: 8px; background-color: #f9f9f9;">
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
+        ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>原始价格:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>实际付款:</strong> $${requestDetails.amount.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
         ${requestDetails.planDescription ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
@@ -279,6 +281,7 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   paymentMethod: 'wechat' | 'emt';
   originalPrice: number;
   requestId: string;
+  referenceNumber?: string;
   planDescription?: string;
 }) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -299,6 +302,7 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
         <ul style="list-style: none; padding: 0; margin: 0;">
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
+          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>原始价格:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>实际付款:</strong> $${requestDetails.amount.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
           ${requestDetails.planDescription ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
@@ -337,6 +341,7 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   quantity: number;
   amount: number;
   imageProofUrl: string;
+  referenceNumber?: string;
   notes?: string;
   requestId: string;
 }) => {
@@ -359,6 +364,7 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>餐券类型:</strong> ${voucherTypeText}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>餐券数量:</strong> ${requestDetails.quantity}</li>
+        ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款金额:</strong> $${requestDetails.amount}</li>
         <li style="padding: 10px 15px;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
       </ul>
@@ -393,6 +399,7 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   quantity: number;
   amount: number;
   requestId: string;
+  referenceNumber?: string;
   notes?: string;
 }) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -415,6 +422,7 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>餐券类型:</strong> ${voucherTypeText}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>餐券数量:</strong> ${requestDetails.quantity}</li>
+          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>付款金额:</strong> $${requestDetails.amount.toFixed(2)}</li>
           ${requestDetails.notes ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>备注:</strong> ${requestDetails.notes}</li>` : ''}
           <li style="padding: 10px 0;"><strong>状态:</strong> <span style="color: #F59E0B; font-weight: 500;">待审核</span></li>

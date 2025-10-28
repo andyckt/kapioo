@@ -78,6 +78,7 @@ export async function POST(request: Request) {
         paymentMethod: data.paymentMethod,
         originalPrice: data.originalPrice,
         imageProofUrl: data.imageProof,
+        referenceNumber: data.referenceNumber,
         notes: data.notes,
         planDescription: data.planDescription || '',
         requestId: requestId
@@ -98,6 +99,7 @@ export async function POST(request: Request) {
         amount: data.amount,
         paymentMethod: data.paymentMethod,
         originalPrice: data.originalPrice,
+        referenceNumber: data.referenceNumber,
         planDescription: data.planDescription || '',
         requestId: requestId
       });

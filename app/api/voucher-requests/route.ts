@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
         quantity,
         amount,
         imageProofUrl: imageProof,
+        referenceNumber,
         notes,
         requestId
       });
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
         type,
         quantity,
         amount,
+        referenceNumber,
         notes,
         requestId
       });
