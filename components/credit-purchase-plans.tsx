@@ -62,6 +62,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect' | 'upload'>('mealSelect')
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
+  const [referenceNumber, setReferenceNumber] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'wechat' | 'emt' | null>('emt') // Default to EMT
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   
@@ -330,7 +331,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedPlan || !paymentProof) {
+    if (!selectedPlan || !paymentProof || !referenceNumber) {
       let errorTitle = language === 'zh' ? '请完成所有必填项' : 'Please complete all required fields'
       let errorDescription = ''
       
@@ -338,6 +339,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         errorDescription = language === 'zh' ? '请选择一个套餐' : 'Please select a plan'
       } else if (!paymentProof) {
         errorDescription = language === 'zh' ? '请上传付款凭证' : 'Please upload your payment proof'
+      } else if (!referenceNumber) {
+        errorDescription = language === 'zh' ? '请输入电子转账参考号码' : 'Please enter the e-Transfer reference number'
       }
       
       toast({
@@ -396,6 +399,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           duration: selectedPlan.duration,
           planDescription: planDescription,
           imageProof: imageUrl,
+          referenceNumber: referenceNumber,
           notes,
           mealPlanType,
           mealPlanQuantity: selectedPlan.duration, // 1, 2, or 4 weeks
@@ -434,6 +438,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     setPurchaseStep('planSelect')
     setSelectedPlan(null)
     setPaymentProof(null)
+    setReferenceNumber('')
     setNotes('')
   }
 
@@ -973,6 +978,21 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     </div>
                   </div>
                   
+                  
+                  <div>
+                    <Label htmlFor="referenceNumber" className="text-[#6B5F53] font-medium">
+                      {language === 'zh' ? '参考号码' : 'Reference Number'}
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <Input
+                      id="referenceNumber"
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
+                      placeholder={language === 'zh' ? '输入电子转账参考号码' : 'Enter e-Transfer reference number'}
+                      className="mt-2"
+                      required
+                    />
+                  </div>
                   
                   <div>
                     <Label htmlFor="notes" className="text-[#6B5F53] font-medium">
