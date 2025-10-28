@@ -4,6 +4,11 @@ import { NextResponse } from 'next/server';
 // particularly useful for file uploads
 
 export function middleware(request) {
+  // Skip middleware processing for dashboard routes
+  if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    return NextResponse.next();
+  }
+  
   const response = NextResponse.next({
     request: {
       // Clone the request headers and set a higher limit for body size

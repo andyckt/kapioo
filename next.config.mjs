@@ -37,9 +37,10 @@ const nextConfig = {
   },
   // Disable server-side rendering for pages that use client-side only libraries
   // This prevents errors with libraries like heic2any
-  unstable_rsc: {
-    // Skip RSC (React Server Components) for specific routes
-    skipExport: ['/dashboard'],
+  reactStrictMode: true,
+  compiler: {
+    // Enables the styled-components SWC transform
+    styledComponents: true
   },
   experimental: {
     webpackBuildWorker: true,
