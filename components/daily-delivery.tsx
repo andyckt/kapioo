@@ -639,8 +639,17 @@ export default function DailyDelivery() {
           <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 pr-2">
             <div className="sticky top-4 space-y-1">
               
-              {/* Week 1 Days */}
-              {dayOrder.filter(day => day.endsWith('-w1')).map((day, index) => days[day] && (
+              {/* This Week Days */}
+              <div className="mb-2 px-3">
+                <div className="relative flex items-center">
+                  <div className="h-px bg-[#C2884E]/50 flex-grow"></div>
+                  <span className="px-2 text-xs font-medium text-[#C2884E] whitespace-nowrap">
+                    {language === 'zh' ? '本周' : 'This Week'}
+                  </span>
+                  <div className="h-px bg-[#C2884E]/50 flex-grow"></div>
+                </div>
+              </div>
+              {dayOrder.filter(day => days[day].week === 1).map((day, index) => days[day] && (
                 <button
                   key={day}
                   onClick={() => {
@@ -698,13 +707,24 @@ export default function DailyDelivery() {
                 </button>
               ))}
               
-              {/* Week Separator Line */}
+              {/* Week Separator with Labels */}
               <div className="mt-4 mb-2 px-3">
-                <div className="h-px bg-[#C2884E]/50 w-full"></div>
+                <div className="relative flex items-center">
+                  <div className="h-px bg-[#C2884E]/50 flex-grow"></div>
+                  <span className="px-2 text-xs font-medium text-[#C2884E] whitespace-nowrap">
+                    {language === 'zh' ? '下周' : 'Next Week'}
+                  </span>
+                  <div className="h-px bg-[#C2884E]/50 flex-grow"></div>
+                </div>
               </div>
               
-              {/* Week 2 Days */}
-              {dayOrder.filter(day => day.endsWith('-w2')).map((day, index) => days[day] && (
+              {/* Next Week Days */}
+              {dayOrder.filter(day => days[day].week === 2).length === 0 && (
+                <div className="px-3 py-2 text-center text-sm text-[#6B5F53]">
+                  {language === 'zh' ? '暂无下周菜单' : 'No Next Week menu available yet'}
+                </div>
+              )}
+              {dayOrder.filter(day => days[day].week === 2).map((day, index) => days[day] && (
                 <button
                   key={day}
                   onClick={() => {
@@ -771,12 +791,17 @@ export default function DailyDelivery() {
                 {/* Day Header - Hidden on mobile */}
                 <div className="hidden md:block text-center mb-6 relative">
                   <div className="inline-block">
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-center gap-2">
                       <h3 className="text-2xl font-medium capitalize text-[#6B5F53] mb-1 tracking-wide">
                         {language === 'zh' 
                           ? getChineseDayName(days[selectedDay].displayName)
                           : days[selectedDay].displayName}
                       </h3>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${days[selectedDay].week === 1 ? 'bg-[#F5EDE4] text-[#C2884E]' : 'bg-[#E4F0F5] text-[#4E88C2]'}`}>
+                        {days[selectedDay].week === 1 
+                          ? (language === 'zh' ? '本周' : 'This Week')
+                          : (language === 'zh' ? '下周' : 'Next Week')}
+                      </span>
                     </div>
                     <div className={`w-8 h-px ${accentTypes.brown1.bg} mx-auto mb-2`}></div>
                     <p className="text-xs text-[#6B5F53]/60 font-light tracking-wider">{days[selectedDay].date}</p>
