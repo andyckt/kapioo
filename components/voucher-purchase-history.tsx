@@ -187,6 +187,11 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
                         {language === 'en' ? 'Amount Paid' : '支付金额'}
                       </p>
                       <p className="text-muted-foreground">${request.amount?.toFixed(2)}</p>
+                      {request.referenceNumber && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <span className="font-medium">{language === 'en' ? 'Ref:' : '参考号:'}</span> {request.referenceNumber}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="font-medium">
@@ -362,6 +367,17 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
                       ${selectedRequest.amount?.toFixed(2)}
                     </p>
                   </div>
+                  
+                  {selectedRequest.referenceNumber && (
+                    <div>
+                      <p className="text-sm font-medium">
+                        {language === 'en' ? 'Reference Number' : '参考号码'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedRequest.referenceNumber}
+                      </p>
+                    </div>
+                  )}
                   
                   {selectedRequest.status === 'approved' && (
                     <div>
