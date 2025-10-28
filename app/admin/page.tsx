@@ -167,8 +167,15 @@ export default function AdminDashboardPage() {
   const [deductAmount, setDeductAmount] = useState(1)
   const [deleteUserOpen, setDeleteUserOpen] = useState(false)
   const [deductDescription, setDeductDescription] = useState("Admin deduction")
-  const [userTransactions, setUserTransactions] = useState<any[]>([])
-  const [userTransactionsLoading, setUserTransactionsLoading] = useState(false)
+  const [userActivities, setUserActivities] = useState<any[]>([])
+  const [userActivitiesLoading, setUserActivitiesLoading] = useState(false)
+  const [activityType, setActivityType] = useState<string>('all')
+  const [activityPagination, setActivityPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1
+  })
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
@@ -312,7 +319,7 @@ export default function AdminDashboardPage() {
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
     setViewUserOpen(true)
-    fetchUserTransactions(user._id)
+    fetchUserActivities(user._id)
   }
 
   const confirmAddCredits = async () => {
@@ -890,11 +897,11 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Add function to fetch transactions for a specific user
-  const fetchUserTransactions = async (userId: string) => {
-    setUserTransactionsLoading(true)
+  // Add function to fetch all activities for a specific user
+  const fetchUserActivities = async (userId: string, page = 1, type = 'all') => {
+    setUserActivitiesLoading(true)
     try {
-      const response = await fetch(`/api/transactions?userId=${userId}&limit=10`)
+      const response = await fetch(`/api/users/${userId}/activity?page=${page}&limit=${activityPagination.limit}&type=${type}`)
       
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`)
@@ -903,16 +910,35 @@ export default function AdminDashboardPage() {
       const data = await response.json()
       
       if (data.success) {
-        setUserTransactions(data.data.transactions || [])
+        setUserActivities(data.data.activities || [])
+        setActivityPagination({
+          page: data.data.pagination.page,
+          limit: data.data.pagination.limit,
+          total: data.data.pagination.total,
+          pages: data.data.pagination.pages
+        })
       } else {
         console.error("API returned error:", data.error)
-        setUserTransactions([])
+        setUserActivities([])
       }
     } catch (error) {
-      console.error("Error fetching user transactions:", error)
-      setUserTransactions([])
+      console.error("Error fetching user activities:", error)
+      setUserActivities([])
     } finally {
-      setUserTransactionsLoading(false)
+      setUserActivitiesLoading(false)
+    }
+  }
+  
+  // Handle activity pagination
+  const handleActivityPagination = (direction: 'prev' | 'next') => {
+    if (!selectedUser) return
+    
+    const newPage = direction === 'prev' 
+      ? Math.max(1, activityPagination.page - 1)
+      : Math.min(activityPagination.pages, activityPagination.page + 1)
+      
+    if (newPage !== activityPagination.page) {
+      fetchUserActivities(selectedUser._id, newPage, activityType)
     }
   }
 
@@ -2480,47 +2506,149 @@ export default function AdminDashboardPage() {
               </TabsContent>
               
               <TabsContent value="activity">
-                <div>
-                  <Label className="font-medium">User Activity</Label>
-                  <div className="mt-2 max-h-[400px] overflow-y-auto pr-2">
-                    {userTransactionsLoading ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">User Activity</Label>
+                    <Select
+                      value={activityType}
+                      onValueChange={(value) => {
+                        setActivityType(value);
+                        if (selectedUser) {
+                          fetchUserActivities(selectedUser._id, 1, value);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Activities</SelectItem>
+                        <SelectItem value="transaction">Credit Transactions</SelectItem>
+                        <SelectItem value="credit-request">Weekly Meal Requests</SelectItem>
+                        <SelectItem value="voucher-request">Voucher Requests</SelectItem>
+                        <SelectItem value="order">Daily Orders</SelectItem>
+                        <SelectItem value="weekly-order">Weekly Orders</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="max-h-[400px] overflow-y-auto pr-2">
+                    {userActivitiesLoading ? (
                       <div className="flex justify-center p-4">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                       </div>
-                    ) : userTransactions.length > 0 ? (
+                    ) : userActivities.length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
-                        {userTransactions.map((transaction) => (
-                          <div key={transaction._id} className="rounded-md border p-3">
-                            <div className="flex justify-between">
-                              <p className="text-sm font-medium">
-                                {transaction.type === 'credit' ? 'Add' : 
-                                 transaction.type === 'debit' ? 'Deduct' : 
-                                 transaction.type === 'refund' ? 'Refund' : 
-                                 transaction.type} 
-                                <span className={transaction.type === 'credit' || transaction.type === 'refund' ? "text-green-600" : "text-red-600"}>
-                                  {' '}{transaction.type === 'credit' || transaction.type === 'refund' ? '+' : '-'}{transaction.amount}
-                                </span> credits
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(transaction.createdAt).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                              </p>
+                        {userActivities.map((activity) => {
+                          let icon;
+                          let colorClass;
+                          
+                          // Determine icon and color based on activity type
+                          switch (activity.activityType) {
+                            case 'transaction':
+                              icon = activity.type === 'Add' || activity.type === 'credit' || activity.type === 'refund' ? 
+                                <DollarSign className="h-4 w-4 text-green-500" /> : 
+                                <DollarSign className="h-4 w-4 text-red-500" />;
+                              colorClass = activity.type === 'Add' || activity.type === 'credit' || activity.type === 'refund' ? 
+                                "border-l-4 border-green-500" : "border-l-4 border-red-500";
+                              break;
+                            case 'credit-request':
+                              icon = <CreditCard className="h-4 w-4 text-blue-500" />;
+                              colorClass = activity.status === 'approved' ? "border-l-4 border-green-500" : 
+                                         activity.status === 'declined' ? "border-l-4 border-red-500" : 
+                                         "border-l-4 border-yellow-500";
+                              break;
+                            case 'voucher-request':
+                              icon = <Gift className="h-4 w-4 text-purple-500" />;
+                              colorClass = activity.status === 'approved' ? "border-l-4 border-green-500" : 
+                                         activity.status === 'declined' ? "border-l-4 border-red-500" : 
+                                         "border-l-4 border-yellow-500";
+                              break;
+                            case 'order':
+                              icon = <ShoppingCart className="h-4 w-4 text-orange-500" />;
+                              colorClass = "border-l-4 border-orange-500";
+                              break;
+                            case 'weekly-order':
+                              icon = <Calendar className="h-4 w-4 text-indigo-500" />;
+                              colorClass = "border-l-4 border-indigo-500";
+                              break;
+                            default:
+                              icon = <ChevronsUpDown className="h-4 w-4" />;
+                              colorClass = "border-l-4 border-gray-300";
+                          }
+                          
+                          return (
+                            <div key={activity._id} className={`rounded-md border p-3 ${colorClass}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {icon}
+                                  <p className="text-sm font-medium truncate max-w-[180px]" title={activity.title}>
+                                    {activity.title}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(activity.date).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                              {activity.details && (
+                                <p className="text-xs text-muted-foreground mt-2 truncate" title={activity.details}>
+                                  {activity.details}
+                                </p>
+                              )}
+                              
+                              {/* Show status badge for requests */}
+                              {(activity.activityType === 'credit-request' || activity.activityType === 'voucher-request') && (
+                                <div className="mt-2">
+                                  <span className={
+                                    `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                      activity.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                      activity.status === 'declined' ? 'bg-red-100 text-red-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                    }`
+                                  }>
+                                    {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            {transaction.description && (
-                              <p className="text-xs text-muted-foreground mt-1">{transaction.description}</p>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="rounded-md border p-3 text-center text-muted-foreground">
-                        No transaction history found
+                        No activity found
                       </div>
                     )}
                   </div>
+                  
+                  {/* Pagination controls */}
+                  {userActivities.length > 0 && activityPagination.pages > 1 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleActivityPagination('prev')}
+                        disabled={activityPagination.page <= 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className="text-sm text-muted-foreground">
+                        Page {activityPagination.page} of {activityPagination.pages}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleActivityPagination('next')}
+                        disabled={activityPagination.page >= activityPagination.pages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
