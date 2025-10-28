@@ -465,22 +465,22 @@ export default function DashboardPage() {
     { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
     { 
       id: "weekly-subscription-group", 
-      label: "周次Meal Box", 
+      label: language === 'zh' ? "周次Meal Box" : "Weekly Meal Box", 
       icon: <Gift className="h-4 w-4" />,
       isHeading: true,
       children: [
-        { id: "weekly-subscription", label: "订餐", icon: <ShoppingCart className="h-4 w-4" /> },
-        { id: "credits", label: "充值", icon: <CreditCard className="h-4 w-4" /> }
+        { id: "weekly-subscription", label: language === 'zh' ? "订餐" : "Start Ordering", icon: <ShoppingCart className="h-4 w-4" /> },
+        { id: "credits", label: language === 'zh' ? "充值" : "Recharge", icon: <CreditCard className="h-4 w-4" /> }
       ]
     },
     { 
       id: "daily-delivery-group", 
-      label: "每日直送", 
+      label: language === 'zh' ? "每日直送" : "Daily Delivery", 
       icon: <Calendar className="h-4 w-4" />,
       isHeading: true,
       children: [
-        { id: "daily-delivery", label: "订餐", icon: <ShoppingCart className="h-4 w-4" /> },
-        { id: "meal-vouchers", label: "充值", icon: <CreditCard className="h-4 w-4" /> }
+        { id: "daily-delivery", label: language === 'zh' ? "订餐" : "Start Ordering", icon: <ShoppingCart className="h-4 w-4" /> },
+        { id: "meal-vouchers", label: language === 'zh' ? "充值" : "Recharge", icon: <CreditCard className="h-4 w-4" /> }
       ]
     },
     /* Commented out for now
