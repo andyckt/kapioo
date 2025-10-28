@@ -10,6 +10,7 @@ export interface IVoucherPurchaseRequest extends Document {
   originalPrice?: number; // Original price before tax
   taxRate?: number; // Tax rate (e.g., 0.13 for 13%)
   imageProof: string; // URL to the uploaded proof image
+  referenceNumber: string; // Payment reference number
   status: 'pending' | 'approved' | 'declined';
   notes?: string; // Additional notes from user
   adminNotes?: string; // Notes from admin (for internal use)
@@ -56,6 +57,10 @@ const VoucherPurchaseRequestSchema = new Schema<IVoucherPurchaseRequest>({
     type: Number
   },
   imageProof: {
+    type: String,
+    required: true
+  },
+  referenceNumber: {
     type: String,
     required: true
   },

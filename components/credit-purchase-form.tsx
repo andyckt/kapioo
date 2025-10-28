@@ -34,6 +34,7 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
   const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
+    referenceNumber: '',
     notes: '',
   });
   const [uploadedImage, setUploadedImage] = useState<{
@@ -135,6 +136,16 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
       return;
     }
     
+    // Validate reference number
+    if (!formData.referenceNumber) {
+      toast({
+        title: language === 'en' ? "Missing reference number" : "缺少参考号码",
+        description: language === 'en' ? "Please enter the e-Transfer reference number" : "请输入电子转账参考号码",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Validate file upload
     if (!uploadedImage.file) {
       toast({
@@ -168,6 +179,7 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
           userId,
           amount: amount,
           imageProof: imageUrl,
+          referenceNumber: formData.referenceNumber,
           notes: formData.notes
         }),
       });
@@ -210,6 +222,7 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
       setIsSuccess(false);
       setFormData({
         amount: '',
+        referenceNumber: '',
         notes: '',
       });
       setUploadedImage({
@@ -258,6 +271,21 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
                     type="number"
                     min="1"
                     step="1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="referenceNumber">
+                    {language === 'en' ? 'Reference Number' : '参考号码'}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input 
+                    id="referenceNumber" 
+                    value={formData.referenceNumber} 
+                    onChange={handleInputChange} 
+                    className="mt-2"
+                    placeholder={language === 'en' ? 'Enter e-Transfer reference number' : '输入电子转账参考号码'}
+                    required
                   />
                 </div>
                 

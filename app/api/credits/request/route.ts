@@ -12,13 +12,14 @@ export async function POST(request: Request) {
     console.log('Credit request data:', JSON.stringify(data));
     
     // Validate required fields
-    if (!data.userId || !data.amount || !data.imageProof || !data.paymentMethod || !data.originalPrice) {
+    if (!data.userId || !data.amount || !data.imageProof || !data.paymentMethod || !data.originalPrice || !data.referenceNumber) {
       console.log('Missing required fields:', { 
         userId: !!data.userId, 
         amount: !!data.amount, 
         imageProof: !!data.imageProof,
         paymentMethod: !!data.paymentMethod,
-        originalPrice: !!data.originalPrice
+        originalPrice: !!data.originalPrice,
+        referenceNumber: !!data.referenceNumber
       });
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
       paymentMethod: data.paymentMethod,
       originalPrice: data.originalPrice,
       imageProof: data.imageProof,
+      referenceNumber: data.referenceNumber,
       notes: data.notes || '',
       planDescription: data.planDescription || '', // Store plan description
       mealPlanType: data.mealPlanType, // Store meal plan type (6aweek, 8aweek, etc.)

@@ -8,6 +8,7 @@ export interface ICreditPurchaseRequest extends Document {
   paymentMethod: 'wechat' | 'emt'; // Payment method used: WeChat or EMT
   originalPrice: number; // Original price before any discount/tax
   imageProof: string; // URL to the uploaded proof image
+  referenceNumber: string; // Payment reference number
   status: 'pending' | 'approved' | 'declined';
   requestedCredits?: number; // Credits requested by the user (legacy field)
   approvedCredits?: number; // Credits approved by admin (legacy field)
@@ -58,6 +59,10 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
     required: true
   },
   imageProof: {
+    type: String,
+    required: true
+  },
+  referenceNumber: {
     type: String,
     required: true
   },

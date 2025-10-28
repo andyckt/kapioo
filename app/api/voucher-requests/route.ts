@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
     
     // Parse request body
     const body = await request.json();
-    const { userId, type, quantity, amount, imageProof, notes } = body;
+    const { userId, type, quantity, amount, imageProof, referenceNumber, notes } = body;
     
     // Validate required fields
-    if (!userId || !type || !quantity || !amount || !imageProof) {
+    if (!userId || !type || !quantity || !amount || !imageProof || !referenceNumber) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
       quantity,
       amount,
       imageProof,
+      referenceNumber,
       notes,
       status: 'pending'
     });
