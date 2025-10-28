@@ -725,12 +725,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                     <p className="font-medium text-[#6B5F53]">
                       {language === 'zh' ? '点击上传付款凭证' : 'Click to upload payment proof'}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {language === 'zh' ? '支持 PNG, JPG, PDF 格式' : 'PNG, JPG, PDF formats supported'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {language === 'zh' ? '最大文件大小: 5MB' : 'Maximum file size: 5MB'}
-                    </p>
                   </div>
                 </motion.div>
               )}
@@ -739,7 +733,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 id="payment-proof" 
                 type="file" 
                 className="hidden" 
-                accept="image/png,image/jpeg,application/pdf"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif,image/tiff,image/bmp,application/pdf"
                 onChange={handleFileChange}
               />
             </div>
