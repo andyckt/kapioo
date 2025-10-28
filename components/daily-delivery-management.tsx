@@ -557,6 +557,68 @@ export function DailyDeliveryManagement() {
     setEditingDay(null)
   }
   
+  // Function to sync dishes from typeA (2-dish) to typeB (3-dish)
+  const syncDishesToTypeB = (dayId: string, comboId: string) => {
+    try {
+      // Get the current combo
+      const day = days[dayId];
+      if (!day) return;
+      
+      const combo = day.combos.find(c => c.id === comboId);
+      if (!combo) return;
+      
+      // Create a new typeB dishes array that starts with all typeA dishes
+      // and keeps any existing typeB dishes that aren't in typeA
+      const newTypeBDishes = [...combo.typeA.dishes];
+      
+      // Add any dishes from typeB that aren't in typeA
+      combo.typeB.dishes.forEach(dish => {
+        if (!newTypeBDishes.includes(dish)) {
+          newTypeBDishes.push(dish);
+        }
+      });
+      
+      // Update the combo in local state
+      setDays(prevDays => {
+        const updatedCombos = day.combos.map(c => {
+          if (c.id === comboId) {
+            return {
+              ...c,
+              typeB: {
+                ...c.typeB,
+                dishes: newTypeBDishes
+              }
+            };
+          }
+          return c;
+        });
+        
+        return {
+          ...prevDays,
+          [dayId]: {
+            ...day,
+            combos: updatedCombos
+          }
+        };
+      });
+      
+      // Save changes to backend
+      saveComboChanges(dayId, comboId);
+      
+      toast({
+        title: 'Success',
+        description: 'Synced 2-dish items to 3-dish option',
+      });
+    } catch (error) {
+      console.error('Error syncing dishes:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to sync dishes: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive'
+      });
+    }
+  };
+  
   // Function to initialize Next Week days based on This Week
   const initializeNextWeek = async () => {
     try {
@@ -1471,24 +1533,35 @@ export function DailyDeliveryManagement() {
                                       </div>
                                     </div>
                                   ))}
-                                  <div className="flex gap-2 mt-4">
-                                    <Input 
-                                      placeholder="Add new dish to 2-dish option" 
-                                      value={newDish} 
-                                      onChange={(e) => setNewDish(e.target.value)} 
-                                      className="border-blue-200 focus:border-blue-400"
-                                    />
+                                  <div className="mt-4 space-y-2">
+                                    <div className="flex gap-2">
+                                      <Input 
+                                        placeholder="Add new dish to 2-dish option" 
+                                        value={newDish} 
+                                        onChange={(e) => setNewDish(e.target.value)} 
+                                        className="border-blue-200 focus:border-blue-400"
+                                      />
+                                      <Button 
+                                        variant="outline" 
+                                        className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                                        onClick={() => {
+                                          if (newDish) {
+                                            addDishToCombo(selectedDay, combo.id, newDish, 'typeA')
+                                            setNewDish('')
+                                          }
+                                        }}
+                                      >
+                                        Add
+                                      </Button>
+                                    </div>
                                     <Button 
                                       variant="outline" 
-                                      className="border-blue-200 text-blue-600 hover:bg-blue-50"
-                                      onClick={() => {
-                                        if (newDish) {
-                                          addDishToCombo(selectedDay, combo.id, newDish, 'typeA')
-                                          setNewDish('')
-                                        }
-                                      }}
+                                      size="sm" 
+                                      className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 flex items-center justify-center gap-1"
+                                      onClick={() => syncDishesToTypeB(selectedDay, combo.id)}
                                     >
-                                      Add
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-down-to-line"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
+                                      Sync to 3-Dish Option
                                     </Button>
                                   </div>
                                 </div>
