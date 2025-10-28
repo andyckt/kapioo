@@ -586,7 +586,13 @@ export default function DailyDelivery() {
                   .filter(([_, count]) => count < 2)
                   .map(([day, _]) => {
                     const displayName = days[day]?.displayName || day;
-                    return language === 'zh' ? getChineseDayName(displayName) : displayName;
+                    if (language === 'zh') {
+                      return getChineseDayName(displayName);
+                    } else {
+                      // Capitalize the first letter and show full day name in English
+                      const baseDayName = displayName.toLowerCase().split('-')[0];
+                      return baseDayName.charAt(0).toUpperCase() + baseDayName.slice(1);
+                    }
                   });
                 
                 if (daysWithInsufficientMeals.length > 0) {
