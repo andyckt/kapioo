@@ -99,13 +99,8 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
       
       // Convert HEIC/HEIF to JPEG if needed
       if (isHeic) {
-        toast({
-          title: language === 'en' ? "Converting image" : "正在转换图片",
-          description: language === 'en' ? "Converting HEIC to JPEG format..." : "正在将HEIC转换为JPEG格式..."
-        });
-        
         try {
-          // Convert HEIC to JPEG using heic2any
+          // Convert HEIC to JPEG using heic2any (silently, without toast notifications)
           const jpegBlob = await heic2any({
             blob: file,
             toType: "image/jpeg",
@@ -116,11 +111,6 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
           processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
             type: 'image/jpeg',
             lastModified: new Date().getTime()
-          });
-          
-          toast({
-            title: language === 'en' ? "Conversion complete" : "转换完成",
-            description: language === 'en' ? "Image converted successfully" : "图片转换成功"
           });
         } catch (conversionError) {
           console.error('Error converting HEIC to JPEG:', conversionError);
@@ -384,18 +374,18 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
                     
                     {!uploadedImage.preview ? (
                       <div className="space-y-2">
-                        <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Upload className="h-6 w-6 text-primary" />
-                        </div>
+                        {isLoading ? (
+                          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                          </div>
+                        ) : (
+                          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Upload className="h-6 w-6 text-primary" />
+                          </div>
+                        )}
                         <div className="space-y-1">
                           <p className="text-sm font-medium">
                             {language === 'en' ? 'Click to upload' : '点击上传'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {language === 'en' 
-                              ? 'Upload image (MAX. 10MB)' 
-                              : '上传图片（最大10MB）'
-                            }
                           </p>
                         </div>
                       </div>

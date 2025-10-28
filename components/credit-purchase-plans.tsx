@@ -328,13 +328,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       
       // Convert HEIC/HEIF to JPEG if needed
       if (isHeic) {
-        toast({
-          title: language === 'zh' ? "正在转换图片" : "Converting image",
-          description: language === 'zh' ? "正在将HEIC转换为JPEG格式..." : "Converting HEIC to JPEG format..."
-        });
-        
         try {
-          // Convert HEIC to JPEG using heic2any
+          // Convert HEIC to JPEG using heic2any (silently, without toast notifications)
           const jpegBlob = await heic2any({
             blob: file,
             toType: "image/jpeg",
@@ -345,11 +340,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
             type: 'image/jpeg',
             lastModified: new Date().getTime()
-          });
-          
-          toast({
-            title: language === 'zh' ? "转换完成" : "Conversion complete",
-            description: language === 'zh' ? "图片转换成功" : "Image converted successfully"
           });
         } catch (conversionError) {
           console.error('Error converting HEIC to JPEG:', conversionError);
@@ -973,7 +963,11 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       {!paymentProof ? (
                         <div className="space-y-2">
                           <div className="mx-auto w-12 h-12 rounded-full bg-[#F9F3EC] flex items-center justify-center">
-                            <Upload className="h-6 w-6 text-[#C2884E]" />
+                            {isLoading ? (
+                              <Loader2 className="h-6 w-6 text-[#C2884E] animate-spin" />
+                            ) : (
+                              <Upload className="h-6 w-6 text-[#C2884E]" />
+                            )}
                           </div>
                           <div className="space-y-1">
                             <p className="text-sm font-medium text-[#6B5F53]">

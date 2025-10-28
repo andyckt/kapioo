@@ -131,13 +131,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       
       // Convert HEIC/HEIF to JPEG if needed
       if (isHeic) {
-        toast({
-          title: language === 'zh' ? "正在转换图片" : "Converting image",
-          description: language === 'zh' ? "正在将HEIC转换为JPEG格式..." : "Converting HEIC to JPEG format..."
-        });
-        
         try {
-          // Convert HEIC to JPEG using heic2any
+          // Convert HEIC to JPEG using heic2any (silently, without toast notifications)
           const jpegBlob = await heic2any({
             blob: file,
             toType: "image/jpeg",
@@ -148,11 +143,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
             type: 'image/jpeg',
             lastModified: new Date().getTime()
-          });
-          
-          toast({
-            title: language === 'zh' ? "转换完成" : "Conversion complete",
-            description: language === 'zh' ? "图片转换成功" : "Image converted successfully"
           });
         } catch (conversionError) {
           console.error('Error converting HEIC to JPEG:', conversionError);
@@ -719,7 +709,11 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                   transition={{ duration: 0.2 }}
                 >
                   <div className="bg-[#F5EDE4] w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-sm">
-                    <Upload className="h-6 w-6 text-[#C2884E]" />
+                    {isLoading ? (
+                      <Loader2 className="h-6 w-6 text-[#C2884E] animate-spin" />
+                    ) : (
+                      <Upload className="h-6 w-6 text-[#C2884E]" />
+                    )}
                   </div>
                   <div>
                     <p className="font-medium text-[#6B5F53]">
