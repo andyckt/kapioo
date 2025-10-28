@@ -185,12 +185,16 @@ export function UnifiedRechargeHistory({
   const getRequestDetails = (request: any) => {
     if (request.requestType === 'weekly') {
       // Weekly subscription request
+      // Use planDescription if available, otherwise format it consistently
+      if (request.planDescription) {
+        return request.planDescription;
+      }
+      
       const mealsPerWeek = request.mealsPerWeek || 0;
       const duration = request.duration || 1;
       
-      return language === 'zh'
-        ? `${mealsPerWeek}餐/周 x ${duration}周`
-        : `${mealsPerWeek} meals/week x ${duration} ${duration > 1 ? 'weeks' : 'week'}`;
+      // Format similar to the 套餐 field in credit-purchase-history
+      return `${mealsPerWeek} meals/week × ${duration}`;
     } else {
       // Daily delivery request
       const type = request.type === 'twoDish'
