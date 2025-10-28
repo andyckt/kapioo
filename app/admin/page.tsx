@@ -1371,7 +1371,7 @@ export default function AdminDashboardPage() {
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Weekly Subscription Management</h2>
+                  <h2 className="text-3xl font-bold tracking-tight">Weekly Meal Box Management</h2>
                 </div>
                 <WeeklySubscriptionManagement />
               </motion.div>
@@ -1497,7 +1497,7 @@ export default function AdminDashboardPage() {
                                 }}
                                 className="w-full"
                               >
-                                Weekly Subscription
+                                Weekly Meal Box
                               </Button>
                             </div>
                           </div>

@@ -406,7 +406,7 @@ export default function WeeklySubscription({
     <div className="flex flex-col h-full space-y-6">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">{language === 'zh' ? '每周订阅' : 'Weekly Subscription'}</h2>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">{language === 'zh' ? '周次Meal Box' : 'Weekly Subscription'}</h2>
           <div className="h-1 w-20 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] rounded-full mt-1"></div>
         </div>
         <div className="flex items-center gap-3">

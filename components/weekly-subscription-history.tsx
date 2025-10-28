@@ -213,8 +213,8 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{language === 'zh' ? '每周订阅订单' : 'Weekly Subscription Orders'}</CardTitle>
-        <CardDescription>{language === 'zh' ? '查看您的每周订阅订单及状态' : 'View your weekly subscription orders and their status'}</CardDescription>
+        <CardTitle>{language === 'zh' ? '周次Meal Box订单' : 'Weekly Meal Box Orders'}</CardTitle>
+        <CardDescription>{language === 'zh' ? '查看您的周次Meal Box订单及状态' : 'View your weekly meal box orders and their status'}</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (

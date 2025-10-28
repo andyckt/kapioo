@@ -144,7 +144,7 @@ export function ViewWeeklyOrders() {
         console.error("Error fetching orders:", data.error)
         toast({
           title: "Error",
-          description: "Failed to load weekly subscription orders",
+          description: "Failed to load weekly meal box orders",
           variant: "destructive"
         })
       }
@@ -152,7 +152,7 @@ export function ViewWeeklyOrders() {
       console.error("Error fetching orders:", error)
       toast({
         title: "Error",
-        description: "Failed to load weekly subscription orders",
+        description: "Failed to load weekly meal box orders",
         variant: "destructive"
       })
     } finally {
@@ -281,8 +281,8 @@ export function ViewWeeklyOrders() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>All Weekly Subscription Orders</CardTitle>
-        <CardDescription>View and manage all weekly subscription orders</CardDescription>
+        <CardTitle>All Weekly Meal Box Orders</CardTitle>
+        <CardDescription>View and manage all weekly meal box orders</CardDescription>
       </CardHeader>
       <CardContent>
         {/* Filters */}

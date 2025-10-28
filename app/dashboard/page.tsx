@@ -1316,7 +1316,7 @@ export default function DashboardPage() {
                       transition={{ duration: 0.2 }}
                       className="space-y-6"
                     >
-                      {/* Weekly Subscription Orders */}
+                      {/* Weekly Meal Box Orders */}
                       <WeeklySubscriptionHistory userId={userData._id} />
                       
                       {/* Daily Delivery Orders */}
