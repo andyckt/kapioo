@@ -260,6 +260,11 @@ export function UnifiedRechargeHistory({
                         {language === 'zh' ? '支付金额' : 'Amount Paid'}
                       </p>
                       <p className="text-muted-foreground">${request.amount?.toFixed(2)}</p>
+                      {request.referenceNumber && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <span className="font-medium">{language === 'zh' ? '参考号:' : 'Ref:'}</span> {request.referenceNumber}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="font-medium">
@@ -462,6 +467,17 @@ export function UnifiedRechargeHistory({
                       ${selectedRequest.amount?.toFixed(2)}
                     </p>
                   </div>
+                  
+                  {selectedRequest.referenceNumber && (
+                    <div>
+                      <p className="text-sm font-medium">
+                        {language === 'zh' ? '参考号码' : 'Reference Number'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedRequest.referenceNumber}
+                      </p>
+                    </div>
+                  )}
                   
                   {selectedRequest.status === 'approved' && selectedRequest.requestType === 'daily' && (
                     <div>
