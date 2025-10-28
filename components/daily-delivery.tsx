@@ -584,7 +584,10 @@ export default function DailyDelivery() {
                 // Check if any day has fewer than 2 meals
                 const daysWithInsufficientMeals = Object.entries(mealsPerDay)
                   .filter(([_, count]) => count < 2)
-                  .map(([day, _]) => days[day]?.displayName || day);
+                  .map(([day, _]) => {
+                    const displayName = days[day]?.displayName || day;
+                    return language === 'zh' ? getChineseDayName(displayName) : displayName;
+                  });
                 
                 if (daysWithInsufficientMeals.length > 0) {
                   const daysList = daysWithInsufficientMeals.join(', ');
