@@ -117,7 +117,7 @@ export default function DashboardPage() {
           id: "daily",
           title: language === 'en' ? t('dailyDeliveryTitle') : t('dailyDeliveryTitle'),
           description: language === 'en' ? t('dailyDeliveryDesc') : t('dailyDeliveryDesc'),
-          imagePath: "/food-gallery/Chinese style meal.jpg",
+          imagePath: "/food-gallery/_MG_4897.jpg",
           tabId: "daily-delivery"
         }
       ]
