@@ -131,14 +131,14 @@ const translations: TranslationsType = {
     dailyDeliveryDesc: "每天新鲜制作，每天直送 | 午间送达",
     // Hero section
     heroTitle: "北美健康餐食订阅品牌 <br/><span style=\"white-space: nowrap;\">让你每天拥有「被好好对待」的时刻</span>",
-    heroDescription: "每日现做 每日配送<br/>健康｜高质｜舒服｜幸福",
+    heroDescription: "每日现做 每日直送<br/>健康｜高质｜舒服｜幸福",
     getStartedBtn: "立即开始",
     howItWorksBtn: "如何运作",
     // Homepage additional translations
     healthyTags: "健康|高质|舒服|幸福",
     mainSlogan: "北美健康餐食订阅品牌",
     subSlogan: "让你每天拥有「被好好对待」的时刻",
-    tagline: "每日现做 每日配送",
+    tagline: "每日现做 每日直送",
     mottoFirstLine: "一顿饭的时间 给生活松一口气",
     mottoSecondLine: "Kapioo，你每天的松弛美好时刻",
     // Food Gallery Section
@@ -316,7 +316,7 @@ const translations: TranslationsType = {
     overview: "概览",
     myOrders: "我的订单",
     selectMeals: "选择餐点",
-    dailyDelivery: "每日配送",
+    dailyDelivery: "每日直送",
     weeklySubscription: "每周订阅",
     deliveryTracking: "配送追踪",
     credits: "餐券",

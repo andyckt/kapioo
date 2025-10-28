@@ -222,8 +222,8 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{language === 'en' ? 'Daily Delivery Orders' : '每日配送订单'}</CardTitle>
-        <CardDescription>{language === 'en' ? 'View your daily delivery orders and status' : '查看您的每日配送订单和状态'}</CardDescription>
+        <CardTitle>{language === 'en' ? 'Daily Delivery Orders' : '每日直送订单'}</CardTitle>
+        <CardDescription>{language === 'en' ? 'View your daily delivery orders and status' : '查看您的每日直送订单和状态'}</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -481,9 +481,9 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
             <div className="mb-3">
               <Package className="h-12 w-12 mx-auto text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium">{language === 'en' ? 'No daily delivery orders yet' : '暂无每日配送订单'}</h3>
+            <h3 className="text-lg font-medium">{language === 'en' ? 'No daily delivery orders yet' : '暂无每日直送订单'}</h3>
             <p className="text-muted-foreground mt-1">
-              {language === 'en' ? 'Your daily delivery orders will appear here' : '您的每日配送订单将显示在此处'}
+              {language === 'en' ? 'Your daily delivery orders will appear here' : '您的每日直送订单将显示在此处'}
             </p>
           </div>
         )}

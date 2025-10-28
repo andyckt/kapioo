@@ -813,7 +813,7 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">订单确认</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        ${name}，感谢您的订购！您的每日配送订单已成功提交。
+        ${name}，感谢您的订购！您的每日直送订单已成功提交。
       </p>
       
       <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
@@ -861,7 +861,7 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
   
   return sendEmail({
     to,
-    subject: `每日配送订单确认 (#${orderDetails.orderId})`,
+    subject: `每日直送订单确认 (#${orderDetails.orderId})`,
     html,
   });
 };
@@ -953,9 +953,9 @@ export const sendAdminDailyOrderNotification = async (orderDetails: {
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的每日配送订单</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的每日直送订单</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
-        用户 <strong>${orderDetails.userName}</strong> (${orderDetails.userEmail}) 提交了一个新的每日配送订单。
+        用户 <strong>${orderDetails.userName}</strong> (${orderDetails.userEmail}) 提交了一个新的每日直送订单。
       </p>
       
       <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
@@ -1006,7 +1006,7 @@ export const sendAdminDailyOrderNotification = async (orderDetails: {
   
   return sendEmail({
     to: adminEmail,
-    subject: `新的每日配送订单 (#${orderDetails.orderId}) 已提交`,
+    subject: `新的每日直送订单 (#${orderDetails.orderId}) 已提交`,
     html,
   });
 };
