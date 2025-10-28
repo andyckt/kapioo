@@ -692,7 +692,7 @@ export default function DailyDelivery() {
                     </p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
                     {isDayUnavailable(day).unavailable && (
-                      <p className="text-xs text-red-500 mt-1">Unavailable</p>
+                      <p className="text-[10px] md:text-xs text-red-500 mt-1">Unavailable</p>
                     )}
                   </div>
                 </button>
@@ -756,7 +756,7 @@ export default function DailyDelivery() {
                     </p>
                     <p className="text-xs opacity-80">{days[day].date}</p>
                     {isDayUnavailable(day).unavailable && (
-                      <p className="text-xs text-red-500 mt-1">Unavailable</p>
+                      <p className="text-[10px] md:text-xs text-red-500 mt-1">Unavailable</p>
                     )}
                   </div>
                 </button>
