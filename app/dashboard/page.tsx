@@ -1511,7 +1511,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center justify-between mt-4">
                     <h2 className="text-3xl font-bold tracking-tight">
-                      {language === 'zh' ? '周次订阅' : 'Weekly Meal Box'}
+                      {language === 'zh' ? '周次Meal Box' : 'Weekly Meal Box'}
                     </h2>
                     
                     <div className="flex items-center gap-2">

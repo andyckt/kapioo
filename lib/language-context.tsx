@@ -125,7 +125,7 @@ const translations: TranslationsType = {
     mealPlanOptionsTitle: "餐食订阅计划",
     selectAreaText: "选择您所在的区域，查看可用的餐食计划选项",
     servicesOverviewTitle: "服务概览",
-    weeklySubscriptionTitle: "周次订阅 Meal Box",
+    weeklySubscriptionTitle: "周次Meal Box",
     weeklySubscriptionDesc: "包周配送 一周配送2次 周日&周二 | 晚间送达",
     dailyDeliveryTitle: "每日直送系列",
     dailyDeliveryDesc: "每天新鲜制作，每天直送 | 午间送达",
