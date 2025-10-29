@@ -233,110 +233,147 @@ export function WeeklySubscriptionCheckout({
       
       const userData = JSON.parse(userDataStr)
       
-      // Determine the meal plan type based on total items
-      const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
-      let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
+      // Group cart items by date
+      const cartByDate: Record<string, CartItem[]> = {};
       
-      // Choose the meal plan type based on the total items in the cart
-      if (totalItems === 6 && weeklySIXmeals > 0) {
-        mealPlanType = '6aweek';
-      } else if (totalItems === 8 && weeklyEIGHTmeals > 0) {
-        mealPlanType = '8aweek';
-      } else if (totalItems === 10 && weeklyTENmeals > 0) {
-        mealPlanType = '10aweek';
-      } else if (totalItems === 12 && weeklyTWELVEmeals > 0) {
-        mealPlanType = '12aweek';
-      } else {
-        // This shouldn't happen because we validate in the previous screen,
-        // but just in case, set a fallback based on what's available
-        if (weeklySIXmeals > 0) {
-          mealPlanType = '6aweek';
-        } else if (weeklyEIGHTmeals > 0) {
-          mealPlanType = '8aweek';
-        } else if (weeklyTENmeals > 0) {
-          mealPlanType = '10aweek';
-        } else if (weeklyTWELVEmeals > 0) {
-          mealPlanType = '12aweek';
-        }
-      }
-      
-      // Submit subscription to API with user ID and additional details
-      const result = await submitUserSubscription({
-        items: cart,
-        userId: userData._id,
-        specialInstructions: formData.specialInstructions,
-        deliveryAddress: deliveryAddress,
-        phoneNumber: formData.phone,
-        area: formData.area,
-        mealPlanType // Pass the meal plan type to the API
-      })
-      
-      if (result.error) {
-        // Handle error case
-        if (result.requiredCredits && result.availableCredits) {
-          toast({
-            title: language === 'zh' ? '餐券不足' : 'Not Enough Meal Plans',
-            description: language === 'zh' 
-              ? `您没有足够的餐券来完成此订单` 
-              : `You don't have enough meal plans to complete this order`,
-            variant: "destructive"
-          })
-        } else {
-          toast({
-            title: language === 'zh' ? '订阅失败' : 'Subscription Failed',
-            description: language === 'zh' ? '处理您的订阅时出错' : 'Error processing your subscription',
-            variant: "destructive"
-          })
-        }
-      } else {
-        // Success case
-        // Update user data in localStorage based on which meal plan type was used
-        if (result.updatedUser) {
-          // Update the specific meal plan field that was used
-          if (result.usedMealPlanType === '6aweek') {
-            userData.weeklySIXmeals = result.updatedUser.weeklySIXmeals;
-            setWeeklySIXmeals(result.updatedUser.weeklySIXmeals);
-          } else if (result.usedMealPlanType === '8aweek') {
-            userData.weeklyEIGHTmeals = result.updatedUser.weeklyEIGHTmeals;
-            setWeeklyEIGHTmeals(result.updatedUser.weeklyEIGHTmeals);
-          } else if (result.usedMealPlanType === '10aweek') {
-            userData.weeklyTENmeals = result.updatedUser.weeklyTENmeals;
-            setWeeklyTENmeals(result.updatedUser.weeklyTENmeals);
-          } else if (result.usedMealPlanType === '12aweek') {
-            userData.weeklyTWELVEmeals = result.updatedUser.weeklyTWELVEmeals;
-            setWeeklyTWELVEmeals(result.updatedUser.weeklyTWELVEmeals);
-          } else {
-            // Fallback to legacy credits if no specific meal plan type was used
-            userData.credits = result.updatedUser.credits;
-            setUserCredits(result.updatedUser.credits);
+      cart.forEach(item => {
+        // Find the corresponding delivery day to get the date
+        const deliveryDay = deliveryDays.find(day => day.id === item.dayId);
+        if (deliveryDay) {
+          const date = deliveryDay.date;
+          if (!cartByDate[date]) {
+            cartByDate[date] = [];
           }
-          
-          // Update localStorage with all updated user data
-          localStorage.setItem('user', JSON.stringify(userData));
-        } else if (result.remainingCredits !== undefined) {
-          // Legacy support for old API response format
-          userData.credits = result.remainingCredits;
-          localStorage.setItem('user', JSON.stringify(userData));
-          setUserCredits(result.remainingCredits);
+          cartByDate[date].push(item);
+        }
+      });
+      
+      // Process each date as a separate order
+      const orderResults = [];
+      let totalRemainingCredits = userCredits;
+      let totalRemainingSixMeals = weeklySIXmeals;
+      let totalRemainingEightMeals = weeklyEIGHTmeals;
+      let totalRemainingTenMeals = weeklyTENmeals;
+      let totalRemainingTwelveMeals = weeklyTWELVEmeals;
+      
+      // Process each date as a separate order
+      for (const [date, dateItems] of Object.entries(cartByDate)) {
+        // Determine the meal plan type based on total items for this date
+        const totalItems = dateItems.reduce((total, item) => total + item.quantity, 0);
+        let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
+        
+        // Choose the meal plan type based on the total items in the cart for this date
+        if (totalItems === 6 && totalRemainingSixMeals > 0) {
+          mealPlanType = '6aweek';
+        } else if (totalItems === 8 && totalRemainingEightMeals > 0) {
+          mealPlanType = '8aweek';
+        } else if (totalItems === 10 && totalRemainingTenMeals > 0) {
+          mealPlanType = '10aweek';
+        } else if (totalItems === 12 && totalRemainingTwelveMeals > 0) {
+          mealPlanType = '12aweek';
+        } else {
+          // This shouldn't happen because we validate in the previous screen,
+          // but just in case, set a fallback based on what's available
+          if (totalRemainingSixMeals > 0) {
+            mealPlanType = '6aweek';
+          } else if (totalRemainingEightMeals > 0) {
+            mealPlanType = '8aweek';
+          } else if (totalRemainingTenMeals > 0) {
+            mealPlanType = '10aweek';
+          } else if (totalRemainingTwelveMeals > 0) {
+            mealPlanType = '12aweek';
+          }
         }
         
-        toast({
-          title: language === 'zh' ? '订单完成' : 'Order Completed',
-          description: language === 'zh' ? '您的订单已成功提交' : 'Your order has been successfully placed',
+        // Check if we have enough meal plans for this date
+        let hasEnoughMeals = false;
+        if (mealPlanType === '6aweek') {
+          hasEnoughMeals = totalRemainingSixMeals >= 1;
+        } else if (mealPlanType === '8aweek') {
+          hasEnoughMeals = totalRemainingEightMeals >= 1;
+        } else if (mealPlanType === '10aweek') {
+          hasEnoughMeals = totalRemainingTenMeals >= 1;
+        } else if (mealPlanType === '12aweek') {
+          hasEnoughMeals = totalRemainingTwelveMeals >= 1;
+        }
+        
+        if (!hasEnoughMeals) {
+          throw new Error('Insufficient meal plans for all orders');
+        }
+        
+        // Submit subscription to API with user ID and additional details for this date
+        const result = await submitUserSubscription({
+          items: dateItems,
+          userId: userData._id,
+          specialInstructions: formData.specialInstructions,
+          deliveryAddress: deliveryAddress,
+          phoneNumber: formData.phone,
+          area: formData.area,
+          mealPlanType // Pass the meal plan type to the API
         })
         
-        // Call onSuccess callback to clear the cart and close the checkout
-        onSuccess()
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        // Update remaining meal plans based on which type was used
+        if (result.updatedUser) {
+          if (result.usedMealPlanType === '6aweek') {
+            totalRemainingSixMeals = result.updatedUser.weeklySIXmeals;
+          } else if (result.usedMealPlanType === '8aweek') {
+            totalRemainingEightMeals = result.updatedUser.weeklyEIGHTmeals;
+          } else if (result.usedMealPlanType === '10aweek') {
+            totalRemainingTenMeals = result.updatedUser.weeklyTENmeals;
+          } else if (result.usedMealPlanType === '12aweek') {
+            totalRemainingTwelveMeals = result.updatedUser.weeklyTWELVEmeals;
+          } else {
+            totalRemainingCredits = result.updatedUser.credits;
+          }
+        } else if (result.remainingCredits !== undefined) {
+          // Legacy support for old API response format
+          totalRemainingCredits = result.remainingCredits;
+        }
+        
+        // Add result to array
+        orderResults.push(result);
       }
-    } catch (error) {
-      console.error("Error during checkout:", error)
+      
+      // All orders were successful
+      // Update user data in localStorage with the final counts
+      userData.credits = totalRemainingCredits;
+      userData.weeklySIXmeals = totalRemainingSixMeals;
+      userData.weeklyEIGHTmeals = totalRemainingEightMeals;
+      userData.weeklyTENmeals = totalRemainingTenMeals;
+      userData.weeklyTWELVEmeals = totalRemainingTwelveMeals;
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Update state with new values
+      setUserCredits(totalRemainingCredits);
+      setWeeklySIXmeals(totalRemainingSixMeals);
+      setWeeklyEIGHTmeals(totalRemainingEightMeals);
+      setWeeklyTENmeals(totalRemainingTenMeals);
+      setWeeklyTWELVEmeals(totalRemainingTwelveMeals);
+      
+      const orderCount = Object.keys(cartByDate).length;
       toast({
-        title: language === 'zh' ? '订阅失败' : 'Subscription Failed',
-        description: language === 'zh' ? '处理您的订阅时出错' : 'Error processing your subscription',
-        variant: "destructive"
+        title: language === 'zh' ? '订单完成' : 'Order Completed',
+        description: language === 'zh' 
+          ? `您的${orderCount}天的订单已成功提交` 
+          : `Your ${orderCount} orders have been successfully placed`,
       })
+      
+      // Call onSuccess callback to clear the cart and close the checkout
+      onSuccess()
+      
+    } catch (error) {
+      console.error("Error during checkout:", error);
+      toast({
+        title: language === 'zh' ? '订单失败' : 'Order Failed',
+        description: language === 'zh' ? '处理您的订单时出错' : 'Error processing your order',
+        variant: "destructive"
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
