@@ -227,11 +227,36 @@ export function ViewAllOrders() {
       const response = await fetch('/api/admin/daily-delivery/orders/areas')
       const data = await response.json()
       
-      if (data.success) {
-        setAreas(data.areas || [])
+      if (data.success && data.areas && data.areas.length > 0) {
+        setAreas(data.areas)
+      } else {
+        // Provide default areas if none are returned from the API
+        setAreas([
+          'Downtown',
+          'Midtown',
+          'North York',
+          'Markham',
+          'Richmond Hill',
+          'Scarborough',
+          'Etobicoke',
+          'Mississauga',
+          'Vaughan'
+        ])
       }
     } catch (error) {
       console.error('Error fetching areas:', error)
+      // Set default areas on error
+      setAreas([
+        'Downtown',
+        'Midtown',
+        'North York',
+        'Markham',
+        'Richmond Hill',
+        'Scarborough',
+        'Etobicoke',
+        'Mississauga',
+        'Vaughan'
+      ])
     }
   }
 
@@ -293,7 +318,7 @@ export function ViewAllOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search])
   
   // Load areas when component mounts
   useEffect(() => {
