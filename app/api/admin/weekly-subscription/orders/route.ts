@@ -139,11 +139,36 @@ export async function GET(request: Request) {
     
     // Search functionality
     if (search) {
-      // Search by order ID
-      const orderIdRegex = new RegExp(search, 'i');
-      query.$or = [{ orderId: orderIdRegex }];
+      // First, try to find users matching the search term
+      const searchRegex = new RegExp(search, 'i');
+      const matchingUsers = await User.find({
+        $or: [
+          { name: searchRegex },
+          { email: searchRegex },
+          { phoneNumber: searchRegex }
+        ]
+      }).select('_id').lean();
       
-      // If search is a valid ObjectId, also search by userId
+      // Extract user IDs from the matching users
+      const matchingUserIds = matchingUsers.map(user => user._id);
+      
+      // Build the search query with multiple conditions
+      query.$or = [
+        { orderId: searchRegex },                         // Search by order ID
+        { 'items.optionName': searchRegex },              // Search by meal option name
+        { 'deliveryAddress.streetAddress': searchRegex }, // Search by street address
+        { 'deliveryAddress.city': searchRegex },          // Search by city
+        { 'deliveryAddress.postalCode': searchRegex },    // Search by postal code
+        { phoneNumber: searchRegex },                     // Search by phone number
+        { area: searchRegex }                             // Search by area
+      ];
+      
+      // Add user IDs to the search if we found matching users
+      if (matchingUserIds.length > 0) {
+        query.$or.push({ userId: { $in: matchingUserIds } });
+      }
+      
+      // If search is a valid ObjectId, also search by userId directly
       if (mongoose.Types.ObjectId.isValid(search)) {
         query.$or.push({ userId: search });
       }
@@ -154,6 +179,7 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .populate('userId', 'name email phoneNumber')
       .lean();
     
     // Get total count for pagination
