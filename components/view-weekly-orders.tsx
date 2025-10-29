@@ -105,7 +105,6 @@ export function ViewWeeklyOrders() {
     startDate: '',
     endDate: '',
     area: '',
-    mealPlanType: 'all',
     deliveryDate: 'all'
   })
   const [deliveryDates, setDeliveryDates] = useState<Array<{date: string, day: string, display: string}>>([])
@@ -152,10 +151,7 @@ export function ViewWeeklyOrders() {
         params.append('area', filters.area)
       }
       
-      // Add meal plan type filter if provided
-      if (filters.mealPlanType && filters.mealPlanType !== 'all') {
-        params.append('mealPlanType', filters.mealPlanType)
-      }
+      // Meal plan type filter removed
       
       // Add delivery date filter if provided
       if (filters.deliveryDate && filters.deliveryDate !== 'all') {
@@ -325,10 +321,7 @@ export function ViewWeeklyOrders() {
         params.append('area', filters.area)
       }
       
-      // Add meal plan type filter if provided
-      if (filters.mealPlanType && filters.mealPlanType !== 'all') {
-        params.append('mealPlanType', filters.mealPlanType)
-      }
+      // Meal plan type filter removed
 
       // Create a link to download the CSV
       const link = document.createElement('a')
@@ -357,7 +350,7 @@ export function ViewWeeklyOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.mealPlanType, filters.search, filters.deliveryDate])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryDate])
   
   // Load areas and delivery dates when component mounts
   useEffect(() => {
@@ -556,25 +549,7 @@ export function ViewWeeklyOrders() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label htmlFor="mealPlanType">Meal Plan Type</Label>
-                <Select
-                  value={filters.mealPlanType}
-                  onValueChange={(value) => setFilters({...filters, mealPlanType: value})}
-                >
-                  <SelectTrigger id="mealPlanType">
-                    <SelectValue placeholder="Select meal plan type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Plans</SelectItem>
-                    <SelectItem value="6aweek">6 Meals/Week</SelectItem>
-                    <SelectItem value="8aweek">8 Meals/Week</SelectItem>
-                    <SelectItem value="10aweek">10 Meals/Week</SelectItem>
-                    <SelectItem value="12aweek">12 Meals/Week</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="deliveryDate">Delivery Date</Label>
                 <Select
@@ -603,7 +578,6 @@ export function ViewWeeklyOrders() {
                     startDate: '',
                     endDate: '',
                     area: '',
-                    mealPlanType: 'all',
                     deliveryDate: 'all'
                   });
                   handleSearch();
