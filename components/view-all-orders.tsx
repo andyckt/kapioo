@@ -104,8 +104,10 @@ export function ViewAllOrders() {
     search: '',
     startDate: '',
     endDate: '',
-    area: ''
+    area: '',
+    deliveryDate: 'all'
   })
+  const [deliveryDates, setDeliveryDates] = useState<Array<{date: string, day: string, display: string}>>([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [areas, setAreas] = useState<string[]>([])
@@ -147,6 +149,11 @@ export function ViewAllOrders() {
       // Add area filter if provided
       if (filters.area && filters.area !== 'all') {
         params.append('area', filters.area)
+      }
+      
+      // Add delivery date filter if provided
+      if (filters.deliveryDate && filters.deliveryDate !== 'all') {
+        params.append('deliveryDate', filters.deliveryDate)
       }
       
       const response = await fetch(`/api/admin/daily-delivery/orders?${params.toString()}`)
@@ -221,6 +228,27 @@ export function ViewAllOrders() {
     }
   }
   
+  // Fetch unique delivery dates for filter dropdown
+  const fetchDeliveryDates = async () => {
+    try {
+      console.log('Fetching delivery dates...')
+      const response = await fetch('/api/admin/daily-delivery/orders/delivery-dates')
+      const data = await response.json()
+      console.log('Delivery dates API response:', data)
+      
+      if (data.success && data.deliveryDates && data.deliveryDates.length > 0) {
+        console.log('Setting delivery dates:', data.deliveryDates)
+        setDeliveryDates(data.deliveryDates)
+      } else {
+        console.log('No delivery dates found or invalid response format')
+        setDeliveryDates([])
+      }
+    } catch (error) {
+      console.error('Error fetching delivery dates:', error)
+      setDeliveryDates([])
+    }
+  }
+
   // Fetch unique areas for filter dropdown
   const fetchAreas = async () => {
     try {
@@ -318,11 +346,12 @@ export function ViewAllOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryDate])
   
-  // Load areas when component mounts
+  // Load areas and delivery dates when component mounts
   useEffect(() => {
     fetchAreas()
+    fetchDeliveryDates()
   }, [])
   
   // Update order status
@@ -471,7 +500,7 @@ export function ViewAllOrders() {
         {/* Advanced Filters */}
         {showAdvancedFilters && (
           <div className="bg-muted/50 p-4 rounded-lg mb-6 border border-border/50">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Start Date</Label>
                 <div className="relative">
@@ -498,6 +527,8 @@ export function ViewAllOrders() {
                   />
                 </div>
               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="area">Area</Label>
                 <Select
@@ -515,6 +546,23 @@ export function ViewAllOrders() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryDate">Delivery Date</Label>
+                <Select
+                  value={filters.deliveryDate}
+                  onValueChange={(value) => setFilters({...filters, deliveryDate: value})}
+                >
+                  <SelectTrigger id="deliveryDate">
+                    <SelectValue placeholder="Select delivery date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    {deliveryDates.map((dateItem) => (
+                      <SelectItem key={dateItem.date} value={dateItem.date}>{dateItem.display}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button 
@@ -525,7 +573,8 @@ export function ViewAllOrders() {
                     search: '',
                     startDate: '',
                     endDate: '',
-                    area: ''
+                    area: '',
+                    deliveryDate: 'all'
                   });
                   handleSearch();
                 }}
@@ -553,7 +602,8 @@ export function ViewAllOrders() {
                   <tr className="border-b bg-muted/50">
                     <th className="h-10 px-4 text-left align-middle font-medium">Order ID</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Customer</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium">Date</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium">Date Ordered</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium">Delivery Date</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Status</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Area</th>
                     <th className="h-10 px-4 text-right align-middle font-medium">Actions</th>
@@ -582,6 +632,18 @@ export function ViewAllOrders() {
                               minute: '2-digit'
                             })}
                           </div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          {order.items && order.items.length > 0 ? (
+                            <>
+                              {order.items[0].date}
+                              <div className="text-xs text-muted-foreground">
+                                {order.items[0].day ? order.items[0].day.split('-')[0] : ''}
+                              </div>
+                            </>
+                          ) : (
+                            'N/A'
+                          )}
                         </td>
                         <td className="p-4 align-middle">
                           <OrderStatus status={order.status} />

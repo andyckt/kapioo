@@ -142,7 +142,9 @@ function convertToCSV(data: any[]): string {
     'User Name',
     'User Email',
     'Status',
-    'Date Created',
+    'Date Ordered',
+    'Delivery Date',
+    'Delivery Day',
     'Items',
     'Two-Dish Vouchers',
     'Three-Dish Vouchers',
@@ -162,8 +164,13 @@ function convertToCSV(data: any[]): string {
       `${item.date} ${item.day}: ${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'}) x${item.quantity}`
     ).join('; ');
     
-    // Format date
+    // Format date ordered
     const dateCreated = new Date(order.createdAt).toISOString().split('T')[0];
+    
+    // Format delivery date and day
+    const deliveryDate = order.items && order.items.length > 0 ? order.items[0].date : 'N/A';
+    const deliveryDay = order.items && order.items.length > 0 ? 
+      (order.items[0].day ? order.items[0].day.split('-')[0] : 'N/A') : 'N/A';
     
     // Format address
     const address = formatAddress(order.deliveryAddress);
@@ -186,6 +193,8 @@ function convertToCSV(data: any[]): string {
       escapeCSV(order.userEmail || ''),
       escapeCSV(order.status),
       escapeCSV(dateCreated),
+      escapeCSV(deliveryDate),
+      escapeCSV(deliveryDay),
       escapeCSV(itemsString),
       order.voucherCost?.twoDish || 0,
       order.voucherCost?.threeDish || 0,
@@ -215,6 +224,8 @@ export async function GET(request: Request) {
     const search = url.searchParams.get('search');
     const startDate = url.searchParams.get('startDate');
     const endDate = url.searchParams.get('endDate');
+    const area = url.searchParams.get('area');
+    const deliveryDate = url.searchParams.get('deliveryDate');
     
     // Build query
     const query: any = {};
@@ -238,6 +249,16 @@ export async function GET(request: Request) {
         endDateObj.setDate(endDateObj.getDate() + 1);
         query.createdAt.$lt = endDateObj;
       }
+    }
+    
+    // Filter by area if provided
+    if (area) {
+      query.area = area;
+    }
+    
+    // Filter by delivery date if provided
+    if (deliveryDate && deliveryDate !== 'all') {
+      query['items.date'] = deliveryDate;
     }
     
     // Search functionality

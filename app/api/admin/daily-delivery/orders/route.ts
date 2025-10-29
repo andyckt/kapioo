@@ -109,6 +109,7 @@ export async function GET(request: Request) {
     const startDate = url.searchParams.get('startDate');
     const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
+    const deliveryDate = url.searchParams.get('deliveryDate');
     const skip = (page - 1) * limit;
     
     // Build query
@@ -122,6 +123,11 @@ export async function GET(request: Request) {
     // Filter by area if provided
     if (area) {
       query.area = area;
+    }
+    
+    // Filter by delivery date if provided
+    if (deliveryDate && deliveryDate !== 'all') {
+      query['items.date'] = deliveryDate;
     }
     
     // Filter by date range if provided
