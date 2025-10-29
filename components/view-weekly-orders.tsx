@@ -237,14 +237,21 @@ export function ViewWeeklyOrders() {
   // Fetch unique delivery dates for filter dropdown
   const fetchDeliveryDates = async () => {
     try {
+      console.log('Fetching delivery dates...')
       const response = await fetch('/api/admin/weekly-subscription/orders/delivery-dates')
       const data = await response.json()
+      console.log('Delivery dates API response:', data)
       
       if (data.success && data.deliveryDates && data.deliveryDates.length > 0) {
+        console.log('Setting delivery dates:', data.deliveryDates)
         setDeliveryDates(data.deliveryDates)
+      } else {
+        console.log('No delivery dates found or invalid response format')
+        setDeliveryDates([])
       }
     } catch (error) {
       console.error('Error fetching delivery dates:', error)
+      setDeliveryDates([])
     }
   }
 
