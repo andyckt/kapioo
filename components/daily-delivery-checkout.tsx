@@ -291,92 +291,111 @@ export function DailyDeliveryCheckout({
     setIsLoading(true)
     
     try {
-      // Prepare data for API
-      // Enhance cart items with dish details
-      const enhancedCart = cart.map(item => {
-        const dayData = days[item.day];
-        const combo = dayData?.combos?.find(c => c.id === item.comboId);
-        const dishes = combo ? (item.type === 'A' ? combo.typeA.dishes : combo.typeB.dishes) : [];
-        
-        return {
-          ...item,
-          dishes: dishes // Add dishes to each cart item
-        };
+      // Group cart items by date
+      const cartByDate: Record<string, CartItem[]> = {};
+      
+      cart.forEach(item => {
+        if (!cartByDate[item.date]) {
+          cartByDate[item.date] = [];
+        }
+        cartByDate[item.date].push(item);
       });
       
-      const orderData = {
-        userId: userData._id,
-        items: enhancedCart,
-        specialInstructions: formData.specialInstructions,
-        deliveryAddress: editingAddress ? addressFormData : userData.address,
-        phoneNumber: formData.phone,
-        area: formData.area
-      }
+      // Process each date as a separate order
+      const orderResults = [];
+      let totalRemainingVouchers = {
+        twoDish: userVouchers.twoDish,
+        threeDish: userVouchers.threeDish
+      };
       
-      // Submit order
-      const result = await submitDailyOrder(orderData)
-      
-      if (result.error) {
-        let errorMessage = result.error
+      // Process each date as a separate order
+      for (const [date, dateItems] of Object.entries(cartByDate)) {
+        // Enhance cart items with dish details
+        const enhancedDateItems = dateItems.map(item => {
+          const dayData = days[item.day];
+          const combo = dayData?.combos?.find(c => c.id === item.comboId);
+          const dishes = combo ? (item.type === 'A' ? combo.typeA.dishes : combo.typeB.dishes) : [];
+          
+          return {
+            ...item,
+            dishes: dishes // Add dishes to each cart item
+          };
+        });
         
-        // Handle specific error cases
-        if (result.required && result.available) {
-          // Calculate how many vouchers are missing
-          const missingTwoDish = Math.max(0, result.required.twoDish - result.available.twoDish);
-          const missingThreeDish = Math.max(0, result.required.threeDish - result.available.threeDish);
-          
-          // Build the message only including voucher types that are missing
-          let zhMessage = '餐券不足。';
-          let enMessage = 'Insufficient vouchers. ';
-          
-          if (missingTwoDish > 0 && missingThreeDish > 0) {
-            zhMessage += `还需要${missingTwoDish}张2菜餐券和${missingThreeDish}张3菜餐券。`;
-            enMessage += `You need ${missingTwoDish} more two-dish vouchers and ${missingThreeDish} more three-dish vouchers.`;
-          } else if (missingTwoDish > 0) {
-            zhMessage += `还需要${missingTwoDish}张2菜餐券。`;
-            enMessage += `You need ${missingTwoDish} more two-dish vouchers.`;
-          } else if (missingThreeDish > 0) {
-            zhMessage += `还需要${missingThreeDish}张3菜餐券。`;
-            enMessage += `You need ${missingThreeDish} more three-dish vouchers.`;
-          }
-          
-          errorMessage = language === 'zh' ? zhMessage : enMessage;
+        // Calculate vouchers needed for this date
+        const dateVouchersNeeded = enhancedDateItems.reduce(
+          (totals, item) => {
+            if (item.voucherType === 'twoDish') {
+              totals.twoDish += item.quantity;
+            } else if (item.voucherType === 'threeDish') {
+              totals.threeDish += item.quantity;
+            }
+            return totals;
+          },
+          { twoDish: 0, threeDish: 0 }
+        );
+        
+        // Check if we have enough vouchers for this date
+        if (totalRemainingVouchers.twoDish < dateVouchersNeeded.twoDish || 
+            totalRemainingVouchers.threeDish < dateVouchersNeeded.threeDish) {
+          throw new Error('Insufficient vouchers for all orders');
         }
         
-        toast({
-          title: language === 'zh' ? '订单失败' : 'Order Failed',
-          description: errorMessage,
-          variant: "destructive"
-        })
-      } else {
-        // Update user vouchers in localStorage
-        if (userData && result.remainingVouchers) {
-          userData.twoDishVoucher = result.remainingVouchers.twoDish
-          userData.threeDishVoucher = result.remainingVouchers.threeDish
-          localStorage.setItem('user', JSON.stringify(userData))
-          setUserVouchers({
-            twoDish: result.remainingVouchers.twoDish,
-            threeDish: result.remainingVouchers.threeDish
-          })
+        const orderData = {
+          userId: userData._id,
+          items: enhancedDateItems,
+          specialInstructions: formData.specialInstructions,
+          deliveryAddress: editingAddress ? addressFormData : userData.address,
+          phoneNumber: formData.phone,
+          area: formData.area
+        };
+        
+        // Submit order for this date
+        const result = await submitDailyOrder(orderData);
+        
+        if (result.error) {
+          throw new Error(result.error);
         }
         
-        toast({
-          title: language === 'zh' ? '订单完成' : 'Order Completed',
-          description: language === 'zh' ? '您的订单已成功提交' : 'Your order has been successfully placed',
-        })
+        // Update remaining vouchers
+        totalRemainingVouchers = result.remainingVouchers;
         
-        // Call onSuccess callback to clear the cart and close the checkout
-        onSuccess()
+        // Add result to array
+        orderResults.push(result);
       }
+      
+      // All orders were successful
+      // Update user vouchers in localStorage
+      if (userData && totalRemainingVouchers) {
+        userData.twoDishVoucher = totalRemainingVouchers.twoDish;
+        userData.threeDishVoucher = totalRemainingVouchers.threeDish;
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUserVouchers({
+          twoDish: totalRemainingVouchers.twoDish,
+          threeDish: totalRemainingVouchers.threeDish
+        });
+      }
+      
+      const orderCount = Object.keys(cartByDate).length;
+      toast({
+        title: language === 'zh' ? '订单完成' : 'Order Completed',
+        description: language === 'zh' 
+          ? `您的${orderCount}个订单已成功提交` 
+          : `Your ${orderCount} orders have been successfully placed`,
+      });
+      
+      // Call onSuccess callback to clear the cart and close the checkout
+      onSuccess();
+      
     } catch (error) {
-      console.error("Error during checkout:", error)
+      console.error("Error during checkout:", error);
       toast({
         title: language === 'zh' ? '订单失败' : 'Order Failed',
         description: language === 'zh' ? '处理您的订单时出错' : 'Error processing your order',
         variant: "destructive"
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
