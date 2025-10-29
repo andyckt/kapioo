@@ -380,7 +380,7 @@ export function DailyDeliveryCheckout({
       toast({
         title: language === 'zh' ? '订单完成' : 'Order Completed',
         description: language === 'zh' 
-          ? `您的${orderCount}个订单已成功提交` 
+          ? `您的${orderCount}天的订单已成功提交` 
           : `Your ${orderCount} orders have been successfully placed`,
       });
       
