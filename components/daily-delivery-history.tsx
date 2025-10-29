@@ -102,10 +102,12 @@ function formatItems(items: any[]) {
   if (!items || !items.length) return "-";
   
   return items.map(item => {
-    const dayInfo = `${item.day} (${item.date})`;
+    // Extract day name from item.day (e.g., "monday-w1" -> "Monday")
+    const dayName = item.day.split('-')[0].charAt(0).toUpperCase() + item.day.split('-')[0].slice(1);
+    const dayInfo = `${item.date} ${dayName}`;
     const comboInfo = `${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'}) x${item.quantity}`;
     return `${dayInfo}: ${comboInfo}`;
-  }).join(', ');
+  }).join('\n');
 }
 
 interface DailyDeliveryHistoryProps {
@@ -255,9 +257,9 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                   <div className="grid md:grid-cols-4 gap-4 text-sm">
                     <div className="md:col-span-2">
                       <p className="font-medium">{language === 'en' ? 'Items' : '餐点'}</p>
-                      <p className="text-muted-foreground truncate max-w-[400px]">
+                      <div className="text-muted-foreground max-w-[400px] whitespace-pre-line">
                         {formatItems(order.items)}
-                      </p>
+                      </div>
                     </div>
                     <div>
                       <p className="font-medium">{language === 'en' ? 'Vouchers Used' : '使用的餐券'}</p>
@@ -375,7 +377,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                                   {selectedOrder.items.map((item: any, index: number) => (
                                     <li key={index} className="mb-2">
                                       <div>
-                                        <span className="font-medium">{item.day} ({item.date})</span>: {item.comboName} 
+                                        <span className="font-medium">{item.date} {item.day.split('-')[0].charAt(0).toUpperCase() + item.day.split('-')[0].slice(1)}</span>: {item.comboName} 
                                         <span className="text-muted-foreground ml-1">
                                           ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
                                         </span>
