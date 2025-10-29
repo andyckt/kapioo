@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal } from "lucide-react"
+import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -101,8 +101,15 @@ export function ViewWeeklyOrders() {
   })
   const [filters, setFilters] = useState({
     status: 'all',
-    search: ''
+    search: '',
+    startDate: '',
+    endDate: '',
+    area: '',
+    mealPlanType: 'all'
   })
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const [areas, setAreas] = useState<string[]>([])
   const [updateStatusDialog, setUpdateStatusDialog] = useState({
     isOpen: false,
     orderId: '',
@@ -127,6 +134,25 @@ export function ViewWeeklyOrders() {
       // Add search filter if provided
       if (filters.search) {
         params.append('search', filters.search)
+      }
+      
+      // Add date range filters if provided
+      if (filters.startDate) {
+        params.append('startDate', filters.startDate)
+      }
+      
+      if (filters.endDate) {
+        params.append('endDate', filters.endDate)
+      }
+      
+      // Add area filter if provided
+      if (filters.area && filters.area !== 'all') {
+        params.append('area', filters.area)
+      }
+      
+      // Add meal plan type filter if provided
+      if (filters.mealPlanType && filters.mealPlanType !== 'all') {
+        params.append('mealPlanType', filters.mealPlanType)
       }
       
       const response = await fetch(`/api/admin/weekly-subscription/orders?${params.toString()}`)
@@ -201,10 +227,114 @@ export function ViewWeeklyOrders() {
     }
   }
   
+  // Fetch unique areas for filter dropdown
+  const fetchAreas = async () => {
+    try {
+      const response = await fetch('/api/admin/weekly-subscription/orders/areas')
+      const data = await response.json()
+      
+      if (data.success && data.areas && data.areas.length > 0) {
+        setAreas(data.areas)
+      } else {
+        // Provide default areas if none are returned from the API
+        setAreas([
+          'Downtown',
+          'Midtown',
+          'North York',
+          'Markham',
+          'Richmond Hill',
+          'Scarborough',
+          'Etobicoke',
+          'Mississauga',
+          'Vaughan'
+        ])
+      }
+    } catch (error) {
+      console.error('Error fetching areas:', error)
+      // Set default areas on error
+      setAreas([
+        'Downtown',
+        'Midtown',
+        'North York',
+        'Markham',
+        'Richmond Hill',
+        'Scarborough',
+        'Etobicoke',
+        'Mississauga',
+        'Vaughan'
+      ])
+    }
+  }
+
+  // Export orders to CSV
+  const exportToCSV = async () => {
+    setIsExporting(true)
+    try {
+      // Build query parameters for export
+      const params = new URLSearchParams()
+      
+      // Add status filter if selected and not "all"
+      if (filters.status && filters.status !== 'all') {
+        params.append('status', filters.status)
+      }
+      
+      // Add search filter if provided
+      if (filters.search) {
+        params.append('search', filters.search)
+      }
+      
+      // Add date range filters if provided
+      if (filters.startDate) {
+        params.append('startDate', filters.startDate)
+      }
+      
+      if (filters.endDate) {
+        params.append('endDate', filters.endDate)
+      }
+      
+      // Add area filter if provided
+      if (filters.area && filters.area !== 'all') {
+        params.append('area', filters.area)
+      }
+      
+      // Add meal plan type filter if provided
+      if (filters.mealPlanType && filters.mealPlanType !== 'all') {
+        params.append('mealPlanType', filters.mealPlanType)
+      }
+
+      // Create a link to download the CSV
+      const link = document.createElement('a')
+      link.href = `/api/admin/weekly-subscription/orders/export?${params.toString()}`
+      link.setAttribute('download', `weekly-subscription-orders-${new Date().toISOString().split('T')[0]}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast({
+        title: "Export Started",
+        description: "Your CSV file will download shortly."
+      })
+    } catch (error) {
+      console.error('Error exporting orders:', error)
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting orders to CSV.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.mealPlanType, filters.search])
+  
+  // Load areas when component mounts
+  useEffect(() => {
+    fetchAreas()
+  }, [])
   
   // Update order status
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
@@ -280,13 +410,33 @@ export function ViewWeeklyOrders() {
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle>All Weekly Meal Box Orders</CardTitle>
-        <CardDescription>View and manage all weekly meal box orders</CardDescription>
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <CardTitle>All Weekly Meal Box Orders</CardTitle>
+          <CardDescription>View and manage all weekly meal box orders</CardDescription>
+        </div>
+        <Button
+          variant="outline"
+          className="flex items-center gap-2 sm:self-end"
+          onClick={exportToCSV}
+          disabled={isExporting}
+        >
+          {isExporting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Exporting...</span>
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4" />
+              <span>Export to CSV</span>
+            </>
+          )}
+        </Button>
       </CardHeader>
       <CardContent>
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        {/* Basic Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -318,11 +468,106 @@ export function ViewWeeklyOrders() {
               <SelectItem value="refunded">Refunded</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="flex items-center gap-1">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="flex items-center gap-2"
+          >
             <Filter className="h-4 w-4" />
-            More Filters
+            {showAdvancedFilters ? 'Hide Filters' : 'Advanced Filters'}
           </Button>
+          <Button onClick={handleSearch}>Search</Button>
         </div>
+        
+        {/* Advanced Filters */}
+        {showAdvancedFilters && (
+          <div className="bg-muted/50 p-4 rounded-lg mb-6 border border-border/50">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="startDate"
+                    type="date"
+                    className="pl-8"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters({...filters, startDate: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="endDate"
+                    type="date"
+                    className="pl-8"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters({...filters, endDate: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="area">Area</Label>
+                <Select
+                  value={filters.area}
+                  onValueChange={(value) => setFilters({...filters, area: value})}
+                >
+                  <SelectTrigger id="area">
+                    <SelectValue placeholder="Select area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Areas</SelectItem>
+                    {areas.map((area) => (
+                      <SelectItem key={area} value={area}>{area}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mealPlanType">Meal Plan Type</Label>
+                <Select
+                  value={filters.mealPlanType}
+                  onValueChange={(value) => setFilters({...filters, mealPlanType: value})}
+                >
+                  <SelectTrigger id="mealPlanType">
+                    <SelectValue placeholder="Select meal plan type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Plans</SelectItem>
+                    <SelectItem value="6aweek">6 Meals/Week</SelectItem>
+                    <SelectItem value="8aweek">8 Meals/Week</SelectItem>
+                    <SelectItem value="10aweek">10 Meals/Week</SelectItem>
+                    <SelectItem value="12aweek">12 Meals/Week</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setFilters({
+                    status: 'all',
+                    search: '',
+                    startDate: '',
+                    endDate: '',
+                    area: '',
+                    mealPlanType: 'all'
+                  });
+                  handleSearch();
+                }}
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Clear Filters
+              </Button>
+              <Button onClick={handleSearch}>Apply Filters</Button>
+            </div>
+          </div>
+        )}
 
         {/* Orders Table */}
         {isLoading ? (

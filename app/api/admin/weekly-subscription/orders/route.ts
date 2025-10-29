@@ -97,6 +97,10 @@ export async function GET(request: Request) {
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const status = url.searchParams.get('status');
     const search = url.searchParams.get('search');
+    const startDate = url.searchParams.get('startDate');
+    const endDate = url.searchParams.get('endDate');
+    const area = url.searchParams.get('area');
+    const mealPlanType = url.searchParams.get('mealPlanType');
     const skip = (page - 1) * limit;
     
     // Build query
@@ -105,6 +109,32 @@ export async function GET(request: Request) {
     // Filter by status if provided
     if (status) {
       query.status = status;
+    }
+    
+    // Filter by area if provided
+    if (area) {
+      query.area = area;
+    }
+    
+    // Filter by meal plan type if provided
+    if (mealPlanType) {
+      query.mealPlanType = mealPlanType;
+    }
+    
+    // Filter by date range if provided
+    if (startDate || endDate) {
+      query.createdAt = {};
+      
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      
+      if (endDate) {
+        // Add one day to include the end date fully
+        const endDateObj = new Date(endDate);
+        endDateObj.setDate(endDateObj.getDate() + 1);
+        query.createdAt.$lt = endDateObj;
+      }
     }
     
     // Search functionality

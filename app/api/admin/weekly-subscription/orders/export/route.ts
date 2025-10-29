@@ -208,6 +208,7 @@ export async function GET(request: Request) {
     const search = url.searchParams.get('search');
     const startDate = url.searchParams.get('startDate');
     const endDate = url.searchParams.get('endDate');
+    const area = url.searchParams.get('area');
     const mealPlanType = url.searchParams.get('mealPlanType');
     
     // Build query
@@ -216,6 +217,11 @@ export async function GET(request: Request) {
     // Filter by status if provided
     if (status) {
       query.status = status;
+    }
+    
+    // Filter by area if provided
+    if (area) {
+      query.area = area;
     }
     
     // Filter by meal plan type if provided
