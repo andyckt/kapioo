@@ -105,8 +105,10 @@ export function ViewAllOrders() {
     startDate: '',
     endDate: '',
     area: '',
-    deliveryDate: 'all'
+    deliveryDate: 'all',
+    comboName: 'all'
   })
+  const [comboNames, setComboNames] = useState<string[]>([])
   const [deliveryDates, setDeliveryDates] = useState<Array<{date: string, day: string, display: string}>>([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -154,6 +156,11 @@ export function ViewAllOrders() {
       // Add delivery date filter if provided
       if (filters.deliveryDate && filters.deliveryDate !== 'all') {
         params.append('deliveryDate', filters.deliveryDate)
+      }
+      
+      // Add combo name filter if provided
+      if (filters.comboName && filters.comboName !== 'all') {
+        params.append('comboName', filters.comboName)
       }
       
       const response = await fetch(`/api/admin/daily-delivery/orders?${params.toString()}`)
@@ -228,6 +235,27 @@ export function ViewAllOrders() {
     }
   }
   
+  // Fetch unique combo names for filter dropdown
+  const fetchComboNames = async () => {
+    try {
+      console.log('Fetching combo names...')
+      const response = await fetch('/api/admin/daily-delivery/orders/combos')
+      const data = await response.json()
+      console.log('Combo names API response:', data)
+      
+      if (data.success && data.comboNames && data.comboNames.length > 0) {
+        console.log('Setting combo names:', data.comboNames)
+        setComboNames(data.comboNames)
+      } else {
+        console.log('No combo names found or invalid response format')
+        setComboNames([])
+      }
+    } catch (error) {
+      console.error('Error fetching combo names:', error)
+      setComboNames([])
+    }
+  }
+
   // Fetch unique delivery dates for filter dropdown
   const fetchDeliveryDates = async () => {
     try {
@@ -318,6 +346,16 @@ export function ViewAllOrders() {
       if (filters.area && filters.area !== 'all') {
         params.append('area', filters.area)
       }
+      
+      // Add delivery date filter if provided
+      if (filters.deliveryDate && filters.deliveryDate !== 'all') {
+        params.append('deliveryDate', filters.deliveryDate)
+      }
+      
+      // Add combo name filter if provided
+      if (filters.comboName && filters.comboName !== 'all') {
+        params.append('comboName', filters.comboName)
+      }
 
       // Create a link to download the CSV
       const link = document.createElement('a')
@@ -346,12 +384,13 @@ export function ViewAllOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryDate])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryDate, filters.comboName])
   
-  // Load areas and delivery dates when component mounts
+  // Load areas, delivery dates, and combo names when component mounts
   useEffect(() => {
     fetchAreas()
     fetchDeliveryDates()
+    fetchComboNames()
   }, [])
   
   // Update order status
@@ -528,7 +567,7 @@ export function ViewAllOrders() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="area">Area</Label>
                 <Select
@@ -563,6 +602,23 @@ export function ViewAllOrders() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="comboName">Combo Name</Label>
+                <Select
+                  value={filters.comboName}
+                  onValueChange={(value) => setFilters({...filters, comboName: value})}
+                >
+                  <SelectTrigger id="comboName">
+                    <SelectValue placeholder="Select combo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Combos</SelectItem>
+                    {comboNames.map((combo) => (
+                      <SelectItem key={combo} value={combo}>{combo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button 
@@ -574,7 +630,8 @@ export function ViewAllOrders() {
                     startDate: '',
                     endDate: '',
                     area: '',
-                    deliveryDate: 'all'
+                    deliveryDate: 'all',
+                    comboName: 'all'
                   });
                   handleSearch();
                 }}
@@ -604,6 +661,7 @@ export function ViewAllOrders() {
                     <th className="h-10 px-4 text-left align-middle font-medium">Customer</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Date Ordered</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Delivery Date</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium">Order Items</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Status</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Area</th>
                     <th className="h-10 px-4 text-right align-middle font-medium">Actions</th>
@@ -641,6 +699,19 @@ export function ViewAllOrders() {
                                 {order.items[0].day ? order.items[0].day.split('-')[0] : ''}
                               </div>
                             </>
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
+                        <td className="p-4 align-middle">
+                          {order.items && order.items.length > 0 ? (
+                            <div className="max-w-[200px] truncate">
+                              {order.items.map((item: any, index: number) => (
+                                <div key={index} className={index > 0 ? 'mt-1' : ''}>
+                                  {item.comboName} ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
+                                </div>
+                              ))}
+                            </div>
                           ) : (
                             'N/A'
                           )}

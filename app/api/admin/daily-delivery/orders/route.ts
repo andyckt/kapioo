@@ -110,6 +110,7 @@ export async function GET(request: Request) {
     const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
     const deliveryDate = url.searchParams.get('deliveryDate');
+    const comboName = url.searchParams.get('comboName');
     const skip = (page - 1) * limit;
     
     // Build query
@@ -128,6 +129,11 @@ export async function GET(request: Request) {
     // Filter by delivery date if provided
     if (deliveryDate && deliveryDate !== 'all') {
       query['items.date'] = deliveryDate;
+    }
+    
+    // Filter by combo name if provided
+    if (comboName && comboName !== 'all') {
+      query['items.comboName'] = comboName;
     }
     
     // Filter by date range if provided
@@ -165,6 +171,8 @@ export async function GET(request: Request) {
       query.$or = [
         { orderId: searchRegex },                         // Search by order ID
         { 'items.comboName': searchRegex },               // Search by combo name
+        { 'items.dishes.name': searchRegex },             // Search by dish name
+        { 'items.type': searchRegex },                    // Search by type (A for 2-dish, B for 3-dish)
         { 'items.day': searchRegex },                     // Search by day name
         { 'items.date': searchRegex },                    // Search by date
         { 'deliveryAddress.streetAddress': searchRegex }, // Search by street address

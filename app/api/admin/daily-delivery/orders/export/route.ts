@@ -145,7 +145,8 @@ function convertToCSV(data: any[]): string {
     'Date Ordered',
     'Delivery Date',
     'Delivery Day',
-    'Items',
+    'Order Items',
+    'Items Detail',
     'Two-Dish Vouchers',
     'Three-Dish Vouchers',
     'Special Instructions',
@@ -159,9 +160,14 @@ function convertToCSV(data: any[]): string {
   
   // Add data rows
   data.forEach(order => {
-    // Format items as a string
+    // Format items as a string with full details
     const itemsString = order.items.map((item: any) => 
       `${item.date} ${item.day}: ${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'}) x${item.quantity}`
+    ).join('; ');
+    
+    // Format order items more concisely (just combo name, type, and quantity)
+    const orderItemsString = order.items.map((item: any) => 
+      `${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'}) x${item.quantity}`
     ).join('; ');
     
     // Format date ordered
@@ -195,6 +201,7 @@ function convertToCSV(data: any[]): string {
       escapeCSV(dateCreated),
       escapeCSV(deliveryDate),
       escapeCSV(deliveryDay),
+      escapeCSV(orderItemsString),
       escapeCSV(itemsString),
       order.voucherCost?.twoDish || 0,
       order.voucherCost?.threeDish || 0,
@@ -226,6 +233,7 @@ export async function GET(request: Request) {
     const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
     const deliveryDate = url.searchParams.get('deliveryDate');
+    const comboName = url.searchParams.get('comboName');
     
     // Build query
     const query: any = {};
@@ -259,6 +267,11 @@ export async function GET(request: Request) {
     // Filter by delivery date if provided
     if (deliveryDate && deliveryDate !== 'all') {
       query['items.date'] = deliveryDate;
+    }
+    
+    // Filter by combo name if provided
+    if (comboName && comboName !== 'all') {
+      query['items.comboName'] = comboName;
     }
     
     // Search functionality
