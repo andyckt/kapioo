@@ -128,7 +128,9 @@ function convertToCSV(data: any[]): string {
     'User Name',
     'User Email',
     'Status',
-    'Date Created',
+    'Date Ordered',
+    'Delivery Date',
+    'Delivery Day',
     'Items',
     'Meal Plan Type',
     'Credit Cost',
@@ -148,8 +150,12 @@ function convertToCSV(data: any[]): string {
       `${item.date} ${item.dayId}: ${item.optionName} x${item.quantity}`
     ).join('; ');
     
-    // Format date
+    // Format date ordered
     const dateCreated = new Date(order.createdAt).toISOString().split('T')[0];
+    
+    // Format delivery date and day
+    const deliveryDate = order.items && order.items.length > 0 ? order.items[0].date : 'N/A';
+    const deliveryDay = order.items && order.items.length > 0 ? order.items[0].dayId.split('-')[0] : 'N/A';
     
     // Format address
     const address = formatAddress(order.deliveryAddress);
@@ -179,6 +185,8 @@ function convertToCSV(data: any[]): string {
       escapeCSV(order.userEmail || ''),
       escapeCSV(order.status),
       escapeCSV(dateCreated),
+      escapeCSV(deliveryDate),
+      escapeCSV(deliveryDay),
       escapeCSV(itemsString),
       escapeCSV(mealPlanType),
       order.creditCost || 0,

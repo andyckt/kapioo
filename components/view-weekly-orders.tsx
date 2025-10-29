@@ -105,8 +105,10 @@ export function ViewWeeklyOrders() {
     startDate: '',
     endDate: '',
     area: '',
-    mealPlanType: 'all'
+    mealPlanType: 'all',
+    deliveryDate: 'all'
   })
+  const [deliveryDates, setDeliveryDates] = useState<Array<{date: string, day: string, display: string}>>([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [areas, setAreas] = useState<string[]>([])
@@ -153,6 +155,11 @@ export function ViewWeeklyOrders() {
       // Add meal plan type filter if provided
       if (filters.mealPlanType && filters.mealPlanType !== 'all') {
         params.append('mealPlanType', filters.mealPlanType)
+      }
+      
+      // Add delivery date filter if provided
+      if (filters.deliveryDate && filters.deliveryDate !== 'all') {
+        params.append('deliveryDate', filters.deliveryDate)
       }
       
       const response = await fetch(`/api/admin/weekly-subscription/orders?${params.toString()}`)
@@ -227,6 +234,20 @@ export function ViewWeeklyOrders() {
     }
   }
   
+  // Fetch unique delivery dates for filter dropdown
+  const fetchDeliveryDates = async () => {
+    try {
+      const response = await fetch('/api/admin/weekly-subscription/orders/delivery-dates')
+      const data = await response.json()
+      
+      if (data.success && data.deliveryDates && data.deliveryDates.length > 0) {
+        setDeliveryDates(data.deliveryDates)
+      }
+    } catch (error) {
+      console.error('Error fetching delivery dates:', error)
+    }
+  }
+
   // Fetch unique areas for filter dropdown
   const fetchAreas = async () => {
     try {
@@ -329,11 +350,12 @@ export function ViewWeeklyOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.mealPlanType, filters.search])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.mealPlanType, filters.search, filters.deliveryDate])
   
-  // Load areas when component mounts
+  // Load areas and delivery dates when component mounts
   useEffect(() => {
     fetchAreas()
+    fetchDeliveryDates()
   }, [])
   
   // Update order status
@@ -482,7 +504,7 @@ export function ViewWeeklyOrders() {
         {/* Advanced Filters */}
         {showAdvancedFilters && (
           <div className="bg-muted/50 p-4 rounded-lg mb-6 border border-border/50">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Start Date</Label>
                 <div className="relative">
@@ -526,6 +548,8 @@ export function ViewWeeklyOrders() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="mealPlanType">Meal Plan Type</Label>
                 <Select
@@ -544,6 +568,23 @@ export function ViewWeeklyOrders() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryDate">Delivery Date</Label>
+                <Select
+                  value={filters.deliveryDate}
+                  onValueChange={(value) => setFilters({...filters, deliveryDate: value})}
+                >
+                  <SelectTrigger id="deliveryDate">
+                    <SelectValue placeholder="Select delivery date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    {deliveryDates.map((dateItem) => (
+                      <SelectItem key={dateItem.date} value={dateItem.date}>{dateItem.display}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button 
@@ -555,7 +596,8 @@ export function ViewWeeklyOrders() {
                     startDate: '',
                     endDate: '',
                     area: '',
-                    mealPlanType: 'all'
+                    mealPlanType: 'all',
+                    deliveryDate: 'all'
                   });
                   handleSearch();
                 }}
@@ -583,7 +625,8 @@ export function ViewWeeklyOrders() {
                   <tr className="border-b bg-muted/50">
                     <th className="h-10 px-4 text-left align-middle font-medium">Order ID</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Customer</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium">Date</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium">Date Ordered</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium">Delivery Date</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Status</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Area</th>
                     <th className="h-10 px-4 text-right align-middle font-medium">Actions</th>
@@ -612,6 +655,18 @@ export function ViewWeeklyOrders() {
                               minute: '2-digit'
                             })}
                           </div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          {order.items && order.items.length > 0 ? (
+                            <>
+                              {order.items[0].date}
+                              <div className="text-xs text-muted-foreground">
+                                {order.items[0].dayId.split('-')[0]}
+                              </div>
+                            </>
+                          ) : (
+                            'N/A'
+                          )}
                         </td>
                         <td className="p-4 align-middle">
                           <OrderStatus status={order.status} />

@@ -101,6 +101,7 @@ export async function GET(request: Request) {
     const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
     const mealPlanType = url.searchParams.get('mealPlanType');
+    const deliveryDate = url.searchParams.get('deliveryDate');
     const skip = (page - 1) * limit;
     
     // Build query
@@ -119,6 +120,11 @@ export async function GET(request: Request) {
     // Filter by meal plan type if provided
     if (mealPlanType) {
       query.mealPlanType = mealPlanType;
+    }
+    
+    // Filter by delivery date if provided
+    if (deliveryDate && deliveryDate !== 'all') {
+      query['items.date'] = deliveryDate;
     }
     
     // Filter by date range if provided
