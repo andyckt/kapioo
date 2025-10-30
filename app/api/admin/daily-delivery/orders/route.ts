@@ -173,17 +173,29 @@ export async function GET(request: Request) {
       const dateFilter: any = {};
       
       if (deliveryStartDate) {
-        // Parse and format the date string to match database format
-        const formattedStartDate = parseAndFormatDate(deliveryStartDate);
+        // Parse the date string into a JavaScript Date object
+        const startDateObj = new Date(deliveryStartDate);
+        // Format the date as a string in the format used in the database (e.g., 'Nov 02')
+        // Use custom formatting to ensure leading zeros for days under 10
+        const month = startDateObj.toLocaleDateString('en-US', { month: 'short' });
+        const day = startDateObj.getDate();
+        const formattedDay = day < 10 ? `0${day}` : `${day}`;
+        const formattedStartDate = `${month} ${formattedDay}`;
         dateFilter.$gte = formattedStartDate;
-        console.log(`Filtering delivery dates >= ${formattedStartDate}`);
+        console.log(`Formatted start date: ${formattedStartDate}`);
       }
       
       if (deliveryEndDate) {
-        // Parse and format the date string to match database format
-        const formattedEndDate = parseAndFormatDate(deliveryEndDate);
+        // Parse the date string into a JavaScript Date object
+        const endDateObj = new Date(deliveryEndDate);
+        // Format the date as a string in the format used in the database (e.g., 'Nov 02')
+        // Use custom formatting to ensure leading zeros for days under 10
+        const month = endDateObj.toLocaleDateString('en-US', { month: 'short' });
+        const day = endDateObj.getDate();
+        const formattedDay = day < 10 ? `0${day}` : `${day}`;
+        const formattedEndDate = `${month} ${formattedDay}`;
         dateFilter.$lte = formattedEndDate;
-        console.log(`Filtering delivery dates <= ${formattedEndDate}`);
+        console.log(`Formatted end date: ${formattedEndDate}`);
       }
       
       // Use $elemMatch to find documents where at least one item in the items array matches our date criteria
