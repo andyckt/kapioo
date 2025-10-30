@@ -171,16 +171,26 @@ export async function GET(request: Request) {
       if (deliveryStartDate) {
         // Parse the date string into a JavaScript Date object
         const startDateObj = new Date(deliveryStartDate);
-        // Format the date as a string in the format used in the database (e.g., 'Oct 26')
-        const formattedStartDate = startDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        // Format the date as a string in the format used in the database (e.g., 'Nov 02')
+        // Use custom formatting to ensure leading zeros for days under 10
+        const month = startDateObj.toLocaleDateString('en-US', { month: 'short' });
+        const day = startDateObj.getDate();
+        const formattedDay = day < 10 ? `0${day}` : `${day}`;
+        const formattedStartDate = `${month} ${formattedDay}`;
+        console.log(`Formatted start date: ${formattedStartDate}`);
         dateFilter.$gte = formattedStartDate;
       }
       
       if (deliveryEndDate) {
         // Parse the date string into a JavaScript Date object
         const endDateObj = new Date(deliveryEndDate);
-        // Format the date as a string in the format used in the database (e.g., 'Oct 26')
-        const formattedEndDate = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        // Format the date as a string in the format used in the database (e.g., 'Nov 02')
+        // Use custom formatting to ensure leading zeros for days under 10
+        const month = endDateObj.toLocaleDateString('en-US', { month: 'short' });
+        const day = endDateObj.getDate();
+        const formattedDay = day < 10 ? `0${day}` : `${day}`;
+        const formattedEndDate = `${month} ${formattedDay}`;
+        console.log(`Formatted end date: ${formattedEndDate}`);
         dateFilter.$lte = formattedEndDate;
       }
       
