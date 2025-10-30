@@ -166,50 +166,75 @@ export async function POST(request: Request, { params }: RouteParams) {
         const LOGO_URL = 'https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/src/Kapioo.png';
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         
+        // Get Chinese voucher type name
+        let chineseVoucherName = '';
+        switch (field) {
+          case 'twoDishVoucher':
+            chineseVoucherName = '2菜餐券';
+            break;
+          case 'threeDishVoucher':
+            chineseVoucherName = '3菜餐券';
+            break;
+          case 'weeklySIXmeals':
+            chineseVoucherName = '6餐一周';
+            break;
+          case 'weeklyEIGHTmeals':
+            chineseVoucherName = '8餐一周';
+            break;
+          case 'weeklyTENmeals':
+            chineseVoucherName = '10餐一周';
+            break;
+          case 'weeklyTWELVEmeals':
+            chineseVoucherName = '12餐一周';
+            break;
+          default:
+            chineseVoucherName = '餐券';
+        }
+
         // Send email notification
-        const subject = `${voucherTypeName} Added - Kapioo`;
+        const subject = `${chineseVoucherName}已添加 - Kapioo`;
         
         const html = `
           <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
             <div style="text-align: center; margin-bottom: 30px;">
               <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
             </div>
-            <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${voucherTypeName} Added to Your Account</h2>
+            <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${chineseVoucherName}已添加到您的账户</h2>
             <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              Dear ${user.name}, ${voucherTypeName} have been successfully added to your account.
+              亲爱的 ${user.name}，${chineseVoucherName}已成功添加到您的账户。
             </p>
             
             <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
               <div style="margin-bottom: 15px;">
-                <h3 style="color: #C2884E; margin: 0 0 5px 0;">Transaction Confirmation</h3>
-                <p style="color: #666; margin: 0;">${voucherTypeName} have been added to your account</p>
+                <h3 style="color: #C2884E; margin: 0 0 5px 0;">交易确认</h3>
+                <p style="color: #666; margin: 0;">${chineseVoucherName}已添加到您的账户</p>
               </div>
               
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">Date:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString()}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">日期:</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString('zh-CN')}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">Added:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount} of ${voucherTypeName}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">添加数量:</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount}张 ${chineseVoucherName}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">New Balance:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${newBalance} of ${voucherTypeName}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">新${chineseVoucherName}余额:</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${newBalance}张 ${chineseVoucherName}</td>
                 </tr>
               </table>
             </div>
             
             <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
-              You can use these vouchers to order meals from your <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo Account</a>.
+              您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中使用这些餐券订购餐点。
             </p>
             
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
               <p style="color: #999; font-size: 14px;">
-                If you have any questions, please contact us at: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
+                如有任何问题，请随时联系我们: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
               </p>
-              <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo. All rights reserved.</p>
+              <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
             </div>
           </div>
         `;
@@ -220,7 +245,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           html
         });
         
-        console.log(`${voucherTypeName} added notification sent to ${user.email}`);
+        console.log(`${chineseVoucherName}添加通知已发送至 ${user.email}`);
       } catch (emailError) {
         console.error('Error sending voucher added notification:', emailError);
         // Continue even if email fails
