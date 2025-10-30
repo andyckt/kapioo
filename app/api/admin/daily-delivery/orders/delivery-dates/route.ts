@@ -108,8 +108,8 @@ export async function GET(request: Request) {
     
     await connectToDatabase();
     
-    // Get raw data to understand the structure
-    const allOrders = await DailyDeliveryOrder.find().limit(10).lean();
+    // Get all orders to extract all delivery dates
+    const allOrders = await DailyDeliveryOrder.find().lean();
     console.log(`Found ${allOrders.length} daily delivery orders in the database`);
     
     // Check the structure of items in orders
@@ -154,10 +154,12 @@ export async function GET(request: Request) {
             // Format the display string
             const date = item.date;
             const formattedDay = day ? day.charAt(0).toUpperCase() + day.slice(1) : '';
-            const display = `${date} (${formattedDay})`;
+            const display = `${date} ${formattedDay}`;
             
             // Use date as key to ensure uniqueness
-            uniqueDates.set(date, { date, day, display });
+            uniqueDates.set(date, { date, day: formattedDay, display });
+            
+            console.log(`Added delivery date: ${date} ${formattedDay}`);
           }
         }
       }
@@ -166,10 +168,9 @@ export async function GET(request: Request) {
     // Convert Map to array
     const result = Array.from(uniqueDates.values());
     
-    // Helper function to parse dates in various formats
+    // Enhanced helper function to parse dates in various formats
     function parseDate(dateStr: string): Date {
       // Try to parse date strings in different formats
-      // Format could be YYYY-MM-DD or other formats
       try {
         // First try direct parsing
         const parsedDate = new Date(dateStr);
@@ -195,7 +196,20 @@ export async function GET(request: Request) {
           }
         }
         
+        // Check if it's in format "DD MMM" like "26 Oct"
+        const dayMonthMatch = dateStr.match(/^(\d{1,2})\s+(\w{3})/);
+        if (dayMonthMatch) {
+          const day = parseInt(dayMonthMatch[1]);
+          const month = monthMap[dayMonthMatch[2]];
+          if (month !== undefined && !isNaN(day)) {
+            // Assume current year if not specified
+            const year = new Date().getFullYear();
+            return new Date(year, month, day);
+          }
+        }
+        
         // If all parsing attempts fail, return a fallback date
+        console.warn('Could not parse date:', dateStr);
         return new Date(0); // January 1, 1970
       } catch (e) {
         console.error('Error parsing date:', dateStr, e);
@@ -212,7 +226,7 @@ export async function GET(request: Request) {
     
     console.log(`Found ${result.length} unique delivery dates manually`);
     if (result.length > 0) {
-      console.log('Sample delivery dates:', JSON.stringify(result.slice(0, 3)));
+      console.log('First 5 delivery dates after sorting:', JSON.stringify(result.slice(0, 5)));
     }
     
     return NextResponse.json({
