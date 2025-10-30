@@ -218,6 +218,8 @@ export async function GET(request: Request) {
     const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
     const mealPlanType = url.searchParams.get('mealPlanType');
+    const deliveryStartDate = url.searchParams.get('deliveryStartDate');
+    const deliveryEndDate = url.searchParams.get('deliveryEndDate');
     
     // Build query
     const query: any = {};
@@ -235,6 +237,74 @@ export async function GET(request: Request) {
     // Filter by meal plan type if provided
     if (mealPlanType) {
       query.mealPlanType = mealPlanType;
+    }
+    
+    // Helper function to parse and format dates in various formats
+    function parseAndFormatDate(dateStr: string): string {
+      try {
+        // First try standard parsing
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj.getTime())) {
+          // Get month and day parts
+          const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+          const day = dateObj.getDate();
+          // Format with leading zero for days under 10
+          const formattedDay = day < 10 ? `0${day}` : `${day}`;
+          return `${month} ${formattedDay}`;
+        }
+        
+        // Handle 'MM DD' format (e.g., '04 01' for April 1)
+        const mmDdMatch = dateStr.match(/^(\d{1,2})\s+(\d{1,2})$/);
+        if (mmDdMatch) {
+          const month = parseInt(mmDdMatch[1]) - 1; // JS months are 0-indexed
+          const day = parseInt(mmDdMatch[2]);
+          if (month >= 0 && month < 12 && day >= 1 && day <= 31) {
+            const year = new Date().getFullYear();
+            const dateObj = new Date(year, month, day);
+            // Get month name
+            const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+            // Format with leading zero for days under 10
+            const formattedDay = day < 10 ? `0${day}` : `${day}`;
+            return `${monthName} ${formattedDay}`;
+          }
+        }
+        
+        // If all parsing attempts fail, return the original string
+        // This allows direct matching of database formats like 'Oct 26'
+        return dateStr;
+      } catch (e) {
+        console.error('Error parsing date:', dateStr, e);
+        return dateStr;
+      }
+    }
+    
+    // Filter by delivery date range if provided
+    if (deliveryStartDate || deliveryEndDate) {
+      // Create a date range filter for items.date
+      const dateFilter: any = {};
+      
+      if (deliveryStartDate) {
+        // Parse and format the date string to match database format
+        const formattedStartDate = parseAndFormatDate(deliveryStartDate);
+        dateFilter.$gte = formattedStartDate;
+        console.log(`Filtering delivery dates >= ${formattedStartDate}`);
+      }
+      
+      if (deliveryEndDate) {
+        // Parse and format the date string to match database format
+        const formattedEndDate = parseAndFormatDate(deliveryEndDate);
+        dateFilter.$lte = formattedEndDate;
+        console.log(`Filtering delivery dates <= ${formattedEndDate}`);
+      }
+      
+      // Use $elemMatch to find documents where at least one item in the items array matches our date criteria
+      if (Object.keys(dateFilter).length > 0) {
+        query['items'] = {
+          $elemMatch: {
+            date: dateFilter
+          }
+        };
+      }
     }
     
     // Filter by date range if provided

@@ -105,7 +105,8 @@ export function ViewWeeklyOrders() {
     startDate: '',
     endDate: '',
     area: '',
-    deliveryDate: 'all'
+    deliveryStartDate: '',
+    deliveryEndDate: ''
   })
   const [deliveryDates, setDeliveryDates] = useState<Array<{date: string, day: string, display: string}>>([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -153,9 +154,13 @@ export function ViewWeeklyOrders() {
       
       // Meal plan type filter removed
       
-      // Add delivery date filter if provided
-      if (filters.deliveryDate && filters.deliveryDate !== 'all') {
-        params.append('deliveryDate', filters.deliveryDate)
+      // Add delivery date range filters if provided
+      if (filters.deliveryStartDate) {
+        params.append('deliveryStartDate', filters.deliveryStartDate)
+      }
+      
+      if (filters.deliveryEndDate) {
+        params.append('deliveryEndDate', filters.deliveryEndDate)
       }
       
       const response = await fetch(`/api/admin/weekly-subscription/orders?${params.toString()}`)
@@ -323,6 +328,15 @@ export function ViewWeeklyOrders() {
       
       // Meal plan type filter removed
 
+      // Add delivery date range filters if provided
+      if (filters.deliveryStartDate) {
+        params.append('deliveryStartDate', filters.deliveryStartDate)
+      }
+      
+      if (filters.deliveryEndDate) {
+        params.append('deliveryEndDate', filters.deliveryEndDate)
+      }
+
       // Create a link to download the CSV
       const link = document.createElement('a')
       link.href = `/api/admin/weekly-subscription/orders/export?${params.toString()}`
@@ -350,7 +364,7 @@ export function ViewWeeklyOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryDate])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryStartDate, filters.deliveryEndDate])
   
   // Load areas and delivery dates when component mounts
   useEffect(() => {
@@ -549,23 +563,32 @@ export function ViewWeeklyOrders() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
-                <Label htmlFor="deliveryDate">Delivery Date</Label>
-                <Select
-                  value={filters.deliveryDate}
-                  onValueChange={(value) => setFilters({...filters, deliveryDate: value})}
-                >
-                  <SelectTrigger id="deliveryDate">
-                    <SelectValue placeholder="Select delivery date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Dates</SelectItem>
-                    {deliveryDates.map((dateItem) => (
-                      <SelectItem key={dateItem.date} value={dateItem.date}>{dateItem.display}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="deliveryStartDate">Delivery Start Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="deliveryStartDate"
+                    type="date"
+                    className="pl-8"
+                    value={filters.deliveryStartDate}
+                    onChange={(e) => setFilters({...filters, deliveryStartDate: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryEndDate">Delivery End Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="deliveryEndDate"
+                    type="date"
+                    className="pl-8"
+                    value={filters.deliveryEndDate}
+                    onChange={(e) => setFilters({...filters, deliveryEndDate: e.target.value})}
+                  />
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -578,7 +601,8 @@ export function ViewWeeklyOrders() {
                     startDate: '',
                     endDate: '',
                     area: '',
-                    deliveryDate: 'all'
+                    deliveryStartDate: '',
+                    deliveryEndDate: ''
                   });
                   handleSearch();
                 }}

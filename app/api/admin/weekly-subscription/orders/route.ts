@@ -101,7 +101,8 @@ export async function GET(request: Request) {
     const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
     const mealPlanType = url.searchParams.get('mealPlanType');
-    const deliveryDate = url.searchParams.get('deliveryDate');
+    const deliveryStartDate = url.searchParams.get('deliveryStartDate');
+    const deliveryEndDate = url.searchParams.get('deliveryEndDate');
     const skip = (page - 1) * limit;
     
     // Build query
@@ -122,9 +123,75 @@ export async function GET(request: Request) {
       query.mealPlanType = mealPlanType;
     }
     
-    // Filter by delivery date if provided
-    if (deliveryDate && deliveryDate !== 'all') {
-      query['items.date'] = deliveryDate;
+    // Helper function to parse and format dates in various formats
+    function parseAndFormatDate(dateStr: string): string {
+      try {
+        // First try standard parsing
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj.getTime())) {
+          // Get month and day parts
+          const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+          const day = dateObj.getDate();
+          // Format with leading zero for days under 10
+          const formattedDay = day < 10 ? `0${day}` : `${day}`;
+          return `${month} ${formattedDay}`;
+        }
+        
+        // Handle 'MM DD' format (e.g., '04 01' for April 1)
+        const mmDdMatch = dateStr.match(/^(\d{1,2})\s+(\d{1,2})$/);
+        if (mmDdMatch) {
+          const month = parseInt(mmDdMatch[1]) - 1; // JS months are 0-indexed
+          const day = parseInt(mmDdMatch[2]);
+          if (month >= 0 && month < 12 && day >= 1 && day <= 31) {
+            const year = new Date().getFullYear();
+            const dateObj = new Date(year, month, day);
+            // Get month name
+            const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+            // Format with leading zero for days under 10
+            const formattedDay = day < 10 ? `0${day}` : `${day}`;
+            return `${monthName} ${formattedDay}`;
+          }
+        }
+        
+        // If all parsing attempts fail, return the original string
+        // This allows direct matching of database formats like 'Oct 26'
+        return dateStr;
+      } catch (e) {
+        console.error('Error parsing date:', dateStr, e);
+        return dateStr;
+      }
+    }
+    
+    // Filter by delivery date range if provided
+    if (deliveryStartDate || deliveryEndDate) {
+      // Create a date range filter for items.date
+      // We need to use MongoDB's $elemMatch to filter array elements that match our criteria
+      const dateFilter: any = {};
+      
+      if (deliveryStartDate) {
+        // Parse the date string into a JavaScript Date object
+        const startDateObj = new Date(deliveryStartDate);
+        // Format the date as a string in the format used in the database (e.g., 'Oct 26')
+        const formattedStartDate = startDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dateFilter.$gte = formattedStartDate;
+      }
+      
+      if (deliveryEndDate) {
+        // Parse the date string into a JavaScript Date object
+        const endDateObj = new Date(deliveryEndDate);
+        // Format the date as a string in the format used in the database (e.g., 'Oct 26')
+        const formattedEndDate = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dateFilter.$lte = formattedEndDate;
+      }
+      
+      // Use $elemMatch to find documents where at least one item in the items array matches our date criteria
+      if (Object.keys(dateFilter).length > 0) {
+        query['items'] = {
+          $elemMatch: {
+            date: dateFilter
+          }
+        };
+      }
     }
     
     // Filter by date range if provided

@@ -105,7 +105,8 @@ export function ViewAllOrders() {
     startDate: '',
     endDate: '',
     area: '',
-    deliveryDate: 'all',
+    deliveryStartDate: '',
+    deliveryEndDate: '',
     comboName: 'all'
   })
   const [comboNames, setComboNames] = useState<string[]>([])
@@ -153,9 +154,13 @@ export function ViewAllOrders() {
         params.append('area', filters.area)
       }
       
-      // Add delivery date filter if provided
-      if (filters.deliveryDate && filters.deliveryDate !== 'all') {
-        params.append('deliveryDate', filters.deliveryDate)
+      // Add delivery date range filters if provided
+      if (filters.deliveryStartDate) {
+        params.append('deliveryStartDate', filters.deliveryStartDate)
+      }
+      
+      if (filters.deliveryEndDate) {
+        params.append('deliveryEndDate', filters.deliveryEndDate)
       }
       
       // Add combo name filter if provided
@@ -347,9 +352,13 @@ export function ViewAllOrders() {
         params.append('area', filters.area)
       }
       
-      // Add delivery date filter if provided
-      if (filters.deliveryDate && filters.deliveryDate !== 'all') {
-        params.append('deliveryDate', filters.deliveryDate)
+      // Add delivery date range filters if provided
+      if (filters.deliveryStartDate) {
+        params.append('deliveryStartDate', filters.deliveryStartDate)
+      }
+      
+      if (filters.deliveryEndDate) {
+        params.append('deliveryEndDate', filters.deliveryEndDate)
       }
       
       // Add combo name filter if provided
@@ -384,7 +393,7 @@ export function ViewAllOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryDate, filters.comboName])
+  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryStartDate, filters.deliveryEndDate, filters.comboName])
   
   // Load areas, delivery dates, and combo names when component mounts
   useEffect(() => {
@@ -567,7 +576,7 @@ export function ViewAllOrders() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="area">Area</Label>
                 <Select
@@ -586,21 +595,30 @@ export function ViewAllOrders() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryDate">Delivery Date</Label>
-                <Select
-                  value={filters.deliveryDate}
-                  onValueChange={(value) => setFilters({...filters, deliveryDate: value})}
-                >
-                  <SelectTrigger id="deliveryDate">
-                    <SelectValue placeholder="Select delivery date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Dates</SelectItem>
-                    {deliveryDates.map((dateItem) => (
-                      <SelectItem key={dateItem.date} value={dateItem.date}>{dateItem.display}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="deliveryStartDate">Delivery Start Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="deliveryStartDate"
+                    type="date"
+                    className="pl-8"
+                    value={filters.deliveryStartDate}
+                    onChange={(e) => setFilters({...filters, deliveryStartDate: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryEndDate">Delivery End Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="deliveryEndDate"
+                    type="date"
+                    className="pl-8"
+                    value={filters.deliveryEndDate}
+                    onChange={(e) => setFilters({...filters, deliveryEndDate: e.target.value})}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="comboName">Combo Name</Label>
@@ -630,7 +648,8 @@ export function ViewAllOrders() {
                     startDate: '',
                     endDate: '',
                     area: '',
-                    deliveryDate: 'all',
+                    deliveryStartDate: '',
+                    deliveryEndDate: '',
                     comboName: 'all'
                   });
                   handleSearch();
