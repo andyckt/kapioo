@@ -341,7 +341,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           userId: user._id,
           type: selectedPlan.type,
           quantity: selectedPlan.quantity,
-          amount: selectedPlan.price * 1.13, // Add 13% tax for EMT payment
+          amount: parseFloat((selectedPlan.price * 1.13).toFixed(2)), // Add 13% tax for EMT payment with 2 decimal precision
           originalPrice: selectedPlan.price, // Store original price before tax
           taxRate: 0.13, // 13% tax rate
           imageProof: imageProofUrl,
