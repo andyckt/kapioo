@@ -267,8 +267,28 @@ export default function DashboardPage() {
     if (activeTab === "overview") {
       console.log(`[Dashboard] Loading meals for tab: ${activeTab}`);
       loadMeals()
+      
+      // Refresh user data when overview tab is selected
+      if (userData?._id) {
+        const refreshUserData = async () => {
+          try {
+            const user = await getUserById(userData._id);
+            if (user) {
+              setUserData(user);
+              setCredits(user.credits || 0);
+            }
+          } catch (error) {
+            console.error('Error refreshing user data:', error);
+          }
+        };
+        
+        refreshUserData();
+        
+        // Also refresh order statistics
+        fetchOrderStats(userData._id);
+      }
     }
-  }, [toast, activeTab])
+  }, [toast, activeTab, userData?._id])
 
   useEffect(() => {
     // Check if user is logged in - get user from localStorage
@@ -396,28 +416,31 @@ export default function DashboardPage() {
     }
   }, [activeTab, userData?._id]);
 
+  // Function to fetch order statistics
+  const fetchOrderStats = async (userId: string) => {
+    if (!userId) return;
+    
+    try {
+      setOrderStatsLoading(true);
+      const response = await fetch(`/api/users/${userId}/orders/count`);
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setUpcomingDeliveries(data.data.upcomingDeliveries || 0);
+        setTotalOrders(data.data.totalOrders || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching order statistics:', error);
+    } finally {
+      setOrderStatsLoading(false);
+    }
+  };
+  
   // Effect to fetch total orders and upcoming deliveries when userData is loaded
   useEffect(() => {
     if (userData?._id) {
       // Fetch order stats for the user
-      const fetchOrderStats = async () => {
-        setOrderStatsLoading(true);
-        try {
-          const response = await fetch(`/api/users/${userData._id}/orders/count`);
-          const data = await response.json();
-          
-          if (data.success && data.data) {
-            setTotalOrders(data.data.totalOrders);
-            setUpcomingDeliveries(data.data.upcomingDeliveries);
-          }
-        } catch (error) {
-          console.error('Error fetching order statistics:', error);
-        } finally {
-          setOrderStatsLoading(false);
-        }
-      };
-      
-      fetchOrderStats();
+      fetchOrderStats(userData._id);
     }
   }, [userData?._id]);
 
