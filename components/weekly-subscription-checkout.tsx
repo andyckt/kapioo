@@ -256,52 +256,58 @@ export function WeeklySubscriptionCheckout({
       let totalRemainingTenMeals = weeklyTENmeals;
       let totalRemainingTwelveMeals = weeklyTWELVEmeals;
       
+      // Determine the meal plan type based on total items across all dates
+      const allCartItems = Object.values(cartByDate).flat();
+      const totalItemsAcrossAllDates = allCartItems.reduce((total, item) => total + item.quantity, 0);
+      
+      // Choose the meal plan type based on the total items in the entire cart
+      let selectedMealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
+      if (totalItemsAcrossAllDates === 6 && weeklySIXmeals > 0) {
+        selectedMealPlanType = '6aweek';
+      } else if (totalItemsAcrossAllDates === 8 && weeklyEIGHTmeals > 0) {
+        selectedMealPlanType = '8aweek';
+      } else if (totalItemsAcrossAllDates === 10 && weeklyTENmeals > 0) {
+        selectedMealPlanType = '10aweek';
+      } else if (totalItemsAcrossAllDates === 12 && weeklyTWELVEmeals > 0) {
+        selectedMealPlanType = '12aweek';
+      } else {
+        // This shouldn't happen because we validate in the previous screen,
+        // but just in case, set a fallback based on what's available
+        if (weeklySIXmeals > 0) {
+          selectedMealPlanType = '6aweek';
+        } else if (weeklyEIGHTmeals > 0) {
+          selectedMealPlanType = '8aweek';
+        } else if (weeklyTENmeals > 0) {
+          selectedMealPlanType = '10aweek';
+        } else if (weeklyTWELVEmeals > 0) {
+          selectedMealPlanType = '12aweek';
+        }
+      }
+      
+      // Check if we have enough meal plans for the entire cart
+      let hasEnoughMeals = false;
+      if (selectedMealPlanType === '6aweek') {
+        hasEnoughMeals = weeklySIXmeals >= 1;
+      } else if (selectedMealPlanType === '8aweek') {
+        hasEnoughMeals = weeklyEIGHTmeals >= 1;
+      } else if (selectedMealPlanType === '10aweek') {
+        hasEnoughMeals = weeklyTENmeals >= 1;
+      } else if (selectedMealPlanType === '12aweek') {
+        hasEnoughMeals = weeklyTWELVEmeals >= 1;
+      }
+      
+      if (!hasEnoughMeals) {
+        throw new Error('Insufficient meal plans for all orders');
+      }
+      
+      // Flag to track if we've already deducted a voucher
+      let voucherDeducted = false;
+      
       // Process each date as a separate order
       for (const [date, dateItems] of Object.entries(cartByDate)) {
-        // Determine the meal plan type based on total items for this date
-        const totalItems = dateItems.reduce((total, item) => total + item.quantity, 0);
-        let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
-        
-        // Choose the meal plan type based on the total items in the cart for this date
-        if (totalItems === 6 && totalRemainingSixMeals > 0) {
-          mealPlanType = '6aweek';
-        } else if (totalItems === 8 && totalRemainingEightMeals > 0) {
-          mealPlanType = '8aweek';
-        } else if (totalItems === 10 && totalRemainingTenMeals > 0) {
-          mealPlanType = '10aweek';
-        } else if (totalItems === 12 && totalRemainingTwelveMeals > 0) {
-          mealPlanType = '12aweek';
-        } else {
-          // This shouldn't happen because we validate in the previous screen,
-          // but just in case, set a fallback based on what's available
-          if (totalRemainingSixMeals > 0) {
-            mealPlanType = '6aweek';
-          } else if (totalRemainingEightMeals > 0) {
-            mealPlanType = '8aweek';
-          } else if (totalRemainingTenMeals > 0) {
-            mealPlanType = '10aweek';
-          } else if (totalRemainingTwelveMeals > 0) {
-            mealPlanType = '12aweek';
-          }
-        }
-        
-        // Check if we have enough meal plans for this date
-        let hasEnoughMeals = false;
-        if (mealPlanType === '6aweek') {
-          hasEnoughMeals = totalRemainingSixMeals >= 1;
-        } else if (mealPlanType === '8aweek') {
-          hasEnoughMeals = totalRemainingEightMeals >= 1;
-        } else if (mealPlanType === '10aweek') {
-          hasEnoughMeals = totalRemainingTenMeals >= 1;
-        } else if (mealPlanType === '12aweek') {
-          hasEnoughMeals = totalRemainingTwelveMeals >= 1;
-        }
-        
-        if (!hasEnoughMeals) {
-          throw new Error('Insufficient meal plans for all orders');
-        }
-        
         // Submit subscription to API with user ID and additional details for this date
+        console.log(`Processing order for date ${date}, deductVoucher=${!voucherDeducted}`);
+        
         const result = await submitUserSubscription({
           items: dateItems,
           userId: userData._id,
@@ -309,29 +315,39 @@ export function WeeklySubscriptionCheckout({
           deliveryAddress: deliveryAddress,
           phoneNumber: formData.phone,
           area: formData.area,
-          mealPlanType // Pass the meal plan type to the API
-        })
+          mealPlanType: selectedMealPlanType, // Pass the meal plan type to the API
+          deductVoucher: !voucherDeducted // Only deduct voucher on the first order
+        });
         
         if (result.error) {
           throw new Error(result.error);
         }
         
-        // Update remaining meal plans based on which type was used
-        if (result.updatedUser) {
-          if (result.usedMealPlanType === '6aweek') {
-            totalRemainingSixMeals = result.updatedUser.weeklySIXmeals;
-          } else if (result.usedMealPlanType === '8aweek') {
-            totalRemainingEightMeals = result.updatedUser.weeklyEIGHTmeals;
-          } else if (result.usedMealPlanType === '10aweek') {
-            totalRemainingTenMeals = result.updatedUser.weeklyTENmeals;
-          } else if (result.usedMealPlanType === '12aweek') {
-            totalRemainingTwelveMeals = result.updatedUser.weeklyTWELVEmeals;
-          } else {
-            totalRemainingCredits = result.updatedUser.credits;
+        // Update remaining meal plans based on which type was used, but only if this order deducted a voucher
+        if (result.voucherDeducted) {
+          console.log(`Voucher was deducted for date ${date}, updating remaining counts`);
+          
+          if (result.updatedUser) {
+            if (result.usedMealPlanType === '6aweek') {
+              totalRemainingSixMeals = result.updatedUser.weeklySIXmeals;
+            } else if (result.usedMealPlanType === '8aweek') {
+              totalRemainingEightMeals = result.updatedUser.weeklyEIGHTmeals;
+            } else if (result.usedMealPlanType === '10aweek') {
+              totalRemainingTenMeals = result.updatedUser.weeklyTENmeals;
+            } else if (result.usedMealPlanType === '12aweek') {
+              totalRemainingTwelveMeals = result.updatedUser.weeklyTWELVEmeals;
+            } else {
+              totalRemainingCredits = result.updatedUser.credits;
+            }
+          } else if (result.remainingCredits !== undefined) {
+            // Legacy support for old API response format
+            totalRemainingCredits = result.remainingCredits;
           }
-        } else if (result.remainingCredits !== undefined) {
-          // Legacy support for old API response format
-          totalRemainingCredits = result.remainingCredits;
+          
+          // Mark that we've deducted a voucher now
+          voucherDeducted = true;
+        } else {
+          console.log(`No voucher was deducted for date ${date}`);
         }
         
         // Add result to array

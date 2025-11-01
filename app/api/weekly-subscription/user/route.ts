@@ -225,22 +225,34 @@ export async function POST(request: Request) {
       });
     }
     
-    // Prepare the update object based on meal plan type
-    const updateField = mealPlanType === '6aweek' ? 'weeklySIXmeals' :
-                       mealPlanType === '8aweek' ? 'weeklyEIGHTmeals' :
-                       mealPlanType === '10aweek' ? 'weeklyTENmeals' :
-                       mealPlanType === '12aweek' ? 'weeklyTWELVEmeals' :
-                       'credits';
+    // Check if we should deduct a voucher for this order
+    const shouldDeductVoucher = data.deductVoucher !== false; // Default to true if not specified
     
-    const updateObj: any = {};
-    updateObj[updateField] = mealPlanType === 'legacy' ? -totalItems : -1;
+    let updatedUser = user;
     
-    // Deduct from the appropriate meal plan field
-    const updatedUser = await User.findByIdAndUpdate(
-      user._id,
-      { $inc: updateObj },
-      { new: true }
-    );
+    // Only deduct a voucher if the flag is true
+    if (shouldDeductVoucher) {
+      // Prepare the update object based on meal plan type
+      const updateField = mealPlanType === '6aweek' ? 'weeklySIXmeals' :
+                         mealPlanType === '8aweek' ? 'weeklyEIGHTmeals' :
+                         mealPlanType === '10aweek' ? 'weeklyTENmeals' :
+                         mealPlanType === '12aweek' ? 'weeklyTWELVEmeals' :
+                         'credits';
+      
+      const updateObj: any = {};
+      updateObj[updateField] = mealPlanType === 'legacy' ? -totalItems : -1;
+      
+      // Deduct from the appropriate meal plan field
+      updatedUser = await User.findByIdAndUpdate(
+        user._id,
+        { $inc: updateObj },
+        { new: true }
+      );
+      
+      console.log(`Voucher deducted: ${updateField} ${mealPlanType === 'legacy' ? -totalItems : -1}`);
+    } else {
+      console.log('Skipping voucher deduction as requested');
+    }
     
     // Send order confirmation email to user
     try {
@@ -298,7 +310,8 @@ export async function POST(request: Request) {
           weeklyTENmeals: updatedUser.weeklyTENmeals,
           weeklyTWELVEmeals: updatedUser.weeklyTWELVEmeals
         },
-        usedMealPlanType: mealPlanType
+        usedMealPlanType: mealPlanType,
+        voucherDeducted: shouldDeductVoucher // Include whether a voucher was deducted
       },
       { status: 200 }
     );
