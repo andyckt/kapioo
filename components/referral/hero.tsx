@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Sparkles } from "lucide-react"
 
@@ -27,6 +29,12 @@ export default function Hero() {
               <Button
                 size="lg"
                 className="bg-[#975820] hover:bg-[#7d4a1a] text-white font-medium rounded-full px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
+                onClick={() => {
+                  const howItWorksSection = document.getElementById('how-it-works');
+                  if (howItWorksSection) {
+                    howItWorksSection.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
               >
                 立即加入活动 🎁
               </Button>
