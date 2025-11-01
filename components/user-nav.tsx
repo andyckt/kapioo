@@ -31,8 +31,13 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
     credits?: number;
     twoDishVoucher?: number;
     threeDishVoucher?: number;
+    weeklySIXmeals?: number;
+    weeklyEIGHTmeals?: number;
+    weeklyTENmeals?: number;
+    weeklyTWELVEmeals?: number;
   } | null>(null)
   const [upcomingDeliveries, setUpcomingDeliveries] = useState(0)
+  const [isOpen, setIsOpen] = useState(false)
   
   useEffect(() => {
     // Get user data from localStorage when component mounts
@@ -53,6 +58,14 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
     }
   }, [])
   
+  // Fetch data when dropdown is opened
+  useEffect(() => {
+    if (isOpen && userData?._id) {
+      fetchUserData(userData._id)
+      fetchOrderStats(userData._id)
+    }
+  }, [isOpen])
+  
   // Fetch complete user data including credits and vouchers
   const fetchUserData = async (userId: string) => {
     try {
@@ -65,7 +78,11 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
           ...prevData,
           credits: data.data.credits,
           twoDishVoucher: data.data.twoDishVoucher,
-          threeDishVoucher: data.data.threeDishVoucher
+          threeDishVoucher: data.data.threeDishVoucher,
+          weeklySIXmeals: data.data.weeklySIXmeals,
+          weeklyEIGHTmeals: data.data.weeklyEIGHTmeals,
+          weeklyTENmeals: data.data.weeklyTENmeals,
+          weeklyTWELVEmeals: data.data.weeklyTWELVEmeals
         }))
       }
     } catch (error) {
@@ -116,7 +133,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   ]
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
