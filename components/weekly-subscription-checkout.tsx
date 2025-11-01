@@ -303,55 +303,85 @@ export function WeeklySubscriptionCheckout({
       // Flag to track if we've already deducted a voucher
       let voucherDeducted = false;
       
-      // Process each date as a separate order
-      for (const [date, dateItems] of Object.entries(cartByDate)) {
-        // Submit subscription to API with user ID and additional details for this date
-        console.log(`Processing order for date ${date}, deductVoucher=${!voucherDeducted}`);
+      // Get the dates in a consistent order to ensure deterministic processing
+      const sortedDates = Object.keys(cartByDate).sort();
+      console.log(`Processing orders for dates: ${sortedDates.join(', ')}`);
+      
+      // Process first date WITH voucher deduction
+      if (sortedDates.length > 0) {
+        const firstDate = sortedDates[0];
+        const firstDateItems = cartByDate[firstDate];
         
-        const result = await submitUserSubscription({
-          items: dateItems,
+        console.log(`Processing FIRST order for date ${firstDate} WITH voucher deduction`);
+        
+        // First order should deduct a voucher
+        const firstResult = await submitUserSubscription({
+          items: firstDateItems,
           userId: userData._id,
           specialInstructions: formData.specialInstructions,
           deliveryAddress: deliveryAddress,
           phoneNumber: formData.phone,
           area: formData.area,
-          mealPlanType: selectedMealPlanType, // Pass the meal plan type to the API
-          deductVoucher: !voucherDeducted // Only deduct voucher on the first order
+          mealPlanType: selectedMealPlanType,
+          deductVoucher: true // First order deducts voucher
         });
         
-        if (result.error) {
-          throw new Error(result.error);
+        if (firstResult.error) {
+          throw new Error(firstResult.error);
         }
         
-        // Update remaining meal plans based on which type was used, but only if this order deducted a voucher
-        if (result.voucherDeducted) {
-          console.log(`Voucher was deducted for date ${date}, updating remaining counts`);
+        // Update remaining meal plans based on the first order
+        if (firstResult.voucherDeducted) {
+          console.log(`Voucher was deducted for date ${firstDate}, updating remaining counts`);
           
-          if (result.updatedUser) {
-            if (result.usedMealPlanType === '6aweek') {
-              totalRemainingSixMeals = result.updatedUser.weeklySIXmeals;
-            } else if (result.usedMealPlanType === '8aweek') {
-              totalRemainingEightMeals = result.updatedUser.weeklyEIGHTmeals;
-            } else if (result.usedMealPlanType === '10aweek') {
-              totalRemainingTenMeals = result.updatedUser.weeklyTENmeals;
-            } else if (result.usedMealPlanType === '12aweek') {
-              totalRemainingTwelveMeals = result.updatedUser.weeklyTWELVEmeals;
+          if (firstResult.updatedUser) {
+            if (firstResult.usedMealPlanType === '6aweek') {
+              totalRemainingSixMeals = firstResult.updatedUser.weeklySIXmeals;
+            } else if (firstResult.usedMealPlanType === '8aweek') {
+              totalRemainingEightMeals = firstResult.updatedUser.weeklyEIGHTmeals;
+            } else if (firstResult.usedMealPlanType === '10aweek') {
+              totalRemainingTenMeals = firstResult.updatedUser.weeklyTENmeals;
+            } else if (firstResult.usedMealPlanType === '12aweek') {
+              totalRemainingTwelveMeals = firstResult.updatedUser.weeklyTWELVEmeals;
             } else {
-              totalRemainingCredits = result.updatedUser.credits;
+              totalRemainingCredits = firstResult.updatedUser.credits;
             }
-          } else if (result.remainingCredits !== undefined) {
+          } else if (firstResult.remainingCredits !== undefined) {
             // Legacy support for old API response format
-            totalRemainingCredits = result.remainingCredits;
+            totalRemainingCredits = firstResult.remainingCredits;
+          }
+        } else {
+          console.log(`Warning: No voucher was deducted for first date ${firstDate}`);
+        }
+        
+        // Add first result to array
+        orderResults.push(firstResult);
+        
+        // Process remaining dates WITHOUT voucher deduction
+        for (let i = 1; i < sortedDates.length; i++) {
+          const date = sortedDates[i];
+          const dateItems = cartByDate[date];
+          
+          console.log(`Processing additional order for date ${date} WITHOUT voucher deduction`);
+          
+          const result = await submitUserSubscription({
+            items: dateItems,
+            userId: userData._id,
+            specialInstructions: formData.specialInstructions,
+            deliveryAddress: deliveryAddress,
+            phoneNumber: formData.phone,
+            area: formData.area,
+            mealPlanType: selectedMealPlanType,
+            deductVoucher: false // Explicitly set to false for additional orders
+          });
+          
+          if (result.error) {
+            throw new Error(result.error);
           }
           
-          // Mark that we've deducted a voucher now
-          voucherDeducted = true;
-        } else {
-          console.log(`No voucher was deducted for date ${date}`);
+          // Add result to array
+          orderResults.push(result);
         }
-        
-        // Add result to array
-        orderResults.push(result);
       }
       
       // All orders were successful

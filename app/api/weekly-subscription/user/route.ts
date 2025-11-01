@@ -226,7 +226,9 @@ export async function POST(request: Request) {
     }
     
     // Check if we should deduct a voucher for this order
-    const shouldDeductVoucher = data.deductVoucher !== false; // Default to true if not specified
+    const shouldDeductVoucher = data.deductVoucher === true; // Only deduct if explicitly true
+    
+    console.log(`API received deductVoucher=${data.deductVoucher}, will deduct voucher: ${shouldDeductVoucher}`);
     
     let updatedUser = user;
     
