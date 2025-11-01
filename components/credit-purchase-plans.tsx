@@ -454,10 +454,10 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       
       if (effectivePaymentMethod === 'wechat') {
         // WeChat gets 10% discount
-        finalAmount = originalPrice * 0.9;
+        finalAmount = parseFloat((originalPrice * 0.9).toFixed(2));
       } else if (effectivePaymentMethod === 'emt') {
         // EMT has 13% tax
-        finalAmount = originalPrice * 1.13;
+        finalAmount = parseFloat((originalPrice * 1.13).toFixed(2));
       }
       
       // Submit request to backend
@@ -887,7 +887,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                             {language === 'zh' ? '总计 (EMT付款)' : 'Total (EMT payment)'}
                           </div>
                           <div className="font-bold text-lg text-[#C2884E]">
-                            ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 1.13).toFixed(2)}
+                            ${parseFloat((((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 1.13).toFixed(2))}
                           </div>
                         </div>
                         {/* WeChat payment total - commented out 
