@@ -6,7 +6,7 @@ import { Sparkles } from "lucide-react"
 export default function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#F8F6F2] to-white">
-      <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20 lg:py-24">
+      <div className="container mx-auto px-4 sm:px-6 pt-4 pb-12 sm:pt-6 sm:pb-16 md:pt-8 md:pb-20 lg:pt-12 lg:pb-24">
         <div className="grid gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16 items-center">
           {/* Text Content */}
           <div className="space-y-4 sm:space-y-6 text-center lg:text-left order-2 lg:order-1">
