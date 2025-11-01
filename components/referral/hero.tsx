@@ -20,9 +20,11 @@ export default function Hero() {
             </h1>
 
             <p className="text-base sm:text-lg md:text-xl text-[#5A7C5A] leading-relaxed text-pretty text-muted-foreground px-4 lg:px-0">
-              邀请好友吃Kapioo，一起免费吃一整周！
+              邀请好友订阅 Kapioo，
               <br />
-              好饭不独享，好事成双🤎
+              共同解锁专属免费餐次。
+              <br />
+              好味共享，喜悦成双
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-2">
