@@ -595,32 +595,25 @@ export default function DailyDelivery() {
         <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
         
         <div className="flex flex-wrap items-center gap-3">
-          {/* Voucher display with better mobile layout */}
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-sm hover:shadow-md transition-all duration-300 group rounded-xl">
-              <div className="p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-[#6B5F53] flex items-center gap-2">
-                    <Ticket className="h-4 w-4 text-[#C2884E]" />
-                    2菜餐券 剩余:
-                  </span>
-                  <div className="flex items-center">
-                    <span className="text-xl font-bold text-[#C2884E]">{userVouchers.twoDish}</span>
-                    <span className="ml-1 text-sm text-[#6B5F53]">张</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-[#6B5F53] flex items-center gap-2">
-                    <Ticket className="h-4 w-4 text-[#C2884E]" />
-                    3菜餐券 剩余:
-                  </span>
-                  <div className="flex items-center">
-                    <span className="text-xl font-bold text-[#C2884E]">{userVouchers.threeDish}</span>
-                    <span className="ml-1 text-sm text-[#6B5F53]">张</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
+          {/* Voucher display with rounded badges like weekly meal box */}
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+              <span className="text-sm font-medium text-[#6B5F53]">
+                {language === 'zh' ? '2菜餐券' : '2-Dish Voucher'}: 
+              </span>
+              <span className="text-sm font-bold text-[#C2884E]">
+                {userVouchers.twoDish}{language === 'zh' ? '张' : ''}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+              <span className="text-sm font-medium text-[#6B5F53]">
+                {language === 'zh' ? '3菜餐券' : '3-Dish Voucher'}: 
+              </span>
+              <span className="text-sm font-bold text-[#C2884E]">
+                {userVouchers.threeDish}{language === 'zh' ? '张' : ''}
+              </span>
+            </div>
           </div>
           
           {/* Checkout button */}
