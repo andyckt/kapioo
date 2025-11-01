@@ -33,9 +33,9 @@ export function HowItWorks() {
       details: [
         "你的好友获得：1 顿免费餐",
         "你获得的奖励：",
-        " 推荐 1 人 = 免费 1 餐",
-        " 推荐 3 人 = 免费 6 餐",
-        " 推荐 5 人 = 免费 10 餐",
+        "推荐 1 人 = 免费 1 餐",
+        "推荐 3 人 = 免费 6 餐",
+        "推荐 5 人 = 免费 10 餐",
       ],
       example: "客服将在 24–48 小时内确认并发放奖励",
       color: "from-[#B78C5B]/10 to-[#B78C5B]/5",
@@ -87,12 +87,24 @@ export function HowItWorks() {
                   </div>
 
                   <div className="space-y-2">
-                    {step.details.map((detail, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#975820] mt-2 flex-shrink-0" />
-                        <p className="text-[#2C3E2C]/80 text-xs sm:text-sm md:text-base">{detail}</p>
-                      </div>
-                    ))}
+                    {step.details.map((detail, i) => {
+                      // Check if this is one of the reward lines that shouldn't have a bullet point
+                      const isRewardLine = 
+                        detail.startsWith("推荐 1 人") || 
+                        detail.startsWith("推荐 3 人") || 
+                        detail.startsWith("推荐 5 人");
+                      
+                      return (
+                        <div key={i} className="flex items-start gap-2">
+                          {!isRewardLine && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#975820] mt-2 flex-shrink-0" />
+                          )}
+                          <p className={`text-[#2C3E2C]/80 text-xs sm:text-sm md:text-base ${isRewardLine ? "ml-3.5" : ""}`}>
+                            {detail}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-[#975820]/10">
