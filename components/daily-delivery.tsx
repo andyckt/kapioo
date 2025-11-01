@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Plus, Minus, ShoppingCart, X, Utensils } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, X, Utensils, Ticket } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
@@ -234,23 +234,56 @@ export default function DailyDelivery() {
   
   // Tag helper functions removed as icons are no longer used
 
+  // Function to fetch user data from API
+  const fetchUserData = async (userId: string) => {
+    try {
+      console.log('Fetching user data for daily delivery component');
+      const response = await fetch(`/api/users/${userId}`);
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Update vouchers with the latest data from API
+        setUserVouchers({
+          twoDish: data.data.twoDishVoucher || 0,
+          threeDish: data.data.threeDishVoucher || 0
+        });
+        console.log('Updated vouchers from API:', {
+          twoDish: data.data.twoDishVoucher || 0,
+          threeDish: data.data.threeDishVoucher || 0
+        });
+        
+        // Check user's region
+        if (data.data.address && data.data.address.province) {
+          setUserRegion(data.data.address.province);
+          
+          // If user's region is not in the supported list, show the dialog
+          if (!DAILY_DELIVERY_REGIONS.includes(data.data.address.province)) {
+            setShowRegionDialog(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
   // Load data from API
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
         // Fetch active days
-        const daysResponse = await fetch('/api/days?isActive=true')
-        const daysData = await daysResponse.json()
+        const daysResponse = await fetch('/api/days?isActive=true');
+        const daysData = await daysResponse.json();
         
         if (daysData.success) {
-          const formattedDays: Record<string, DayData> = {}
+          const formattedDays: Record<string, DayData> = {};
           
           // Process each day
           for (const day of daysData.data) {
             // Fetch combos for this day
-            const combosResponse = await fetch(`/api/days/${day.dayId}/combos`)
-            const combosData = await combosResponse.json()
+            const combosResponse = await fetch(`/api/days/${day.dayId}/combos`);
+            const combosData = await combosResponse.json();
             
             if (combosData.success) {
               // Format combo data to match our component's expected structure
@@ -261,18 +294,18 @@ export default function DailyDelivery() {
                 tags: combo.tags,
                 typeA: combo.typeA,
                 typeB: combo.typeB
-              }))
+              }));
               
               formattedDays[day.dayId] = {
                 date: day.date,
                 displayName: day.displayName,
                 week: day.week,
                 combos: formattedCombos
-              }
+              };
             }
           }
           
-          setDays(formattedDays)
+          setDays(formattedDays);
           
           // Find the first available day (not unavailable)
           if (Object.keys(formattedDays).length > 0) {
@@ -357,42 +390,71 @@ export default function DailyDelivery() {
             setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
           }
         } else {
-          throw new Error(daysData.error || 'Failed to fetch days')
+          throw new Error(daysData.error || 'Failed to fetch days');
         }
         
-        // Load user data, vouchers, and region
-        const storedUser = localStorage.getItem('user')
+        // Load user data from localStorage first (for initial display)
+        const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          const user = JSON.parse(storedUser)
+          const user = JSON.parse(storedUser);
+          
+          // Set initial voucher values from localStorage
           setUserVouchers({
             twoDish: user.twoDishVoucher || 0,
             threeDish: user.threeDishVoucher || 0
-          })
+          });
           
           // Check user's region
           if (user.address && user.address.province) {
-            setUserRegion(user.address.province)
+            setUserRegion(user.address.province);
             
             // If user's region is not in the supported list, show the dialog
             if (!DAILY_DELIVERY_REGIONS.includes(user.address.province)) {
-              setShowRegionDialog(true)
+              setShowRegionDialog(true);
             }
+          }
+          
+          // If user has _id, fetch complete user data with vouchers from API
+          if (user && user._id) {
+            await fetchUserData(user._id);
           }
         }
       } catch (error) {
-        console.error('Error fetching data:', error)
+        console.error('Error fetching data:', error);
         toast({
           title: "Error",
           description: "Failed to load data. Please try again.",
           variant: "destructive"
-        })
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
     
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
+  
+  // Listen for the refreshUserProfile event to update voucher data
+  useEffect(() => {
+    const handleRefreshUserProfile = async () => {
+      console.log('Refreshing user data in daily-delivery component');
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user && user._id) {
+          await fetchUserData(user._id);
+        }
+      }
+    };
+    
+    // Add event listener for the custom refresh event
+    window.addEventListener('refreshUserProfile', handleRefreshUserProfile);
+    
+    // Clean up the event listener when the component unmounts
+    return () => {
+      window.removeEventListener('refreshUserProfile', handleRefreshUserProfile);
+    };
+  }, []);
   
   // Add item to cart
   const addToCart = (day: string, date: string, combo: ComboItem, type: ComboType) => {
@@ -534,25 +596,31 @@ export default function DailyDelivery() {
         
         <div className="flex flex-wrap items-center gap-3">
           {/* Voucher display with better mobile layout */}
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-2 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-              <Utensils className="h-4 w-4 text-[#C2884E]" />
-              <span className="text-sm font-medium text-[#6B5F53]">
-                2菜餐券:
-              </span>
-              <span className="text-sm font-bold text-[#C2884E]">
-                {userVouchers.twoDish}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-              <Utensils className="h-4 w-4 text-[#C2884E]" />
-              <span className="text-sm font-medium text-[#6B5F53]">
-                3菜餐券:
-              </span>
-              <span className="text-sm font-bold text-[#C2884E]">
-                {userVouchers.threeDish}
-              </span>
-            </div>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-sm hover:shadow-md transition-all duration-300 group rounded-xl">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-[#6B5F53] flex items-center gap-2">
+                    <Ticket className="h-4 w-4 text-[#C2884E]" />
+                    2菜餐券 剩余:
+                  </span>
+                  <div className="flex items-center">
+                    <span className="text-xl font-bold text-[#C2884E]">{userVouchers.twoDish}</span>
+                    <span className="ml-1 text-sm text-[#6B5F53]">张</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-[#6B5F53] flex items-center gap-2">
+                    <Ticket className="h-4 w-4 text-[#C2884E]" />
+                    3菜餐券 剩余:
+                  </span>
+                  <div className="flex items-center">
+                    <span className="text-xl font-bold text-[#C2884E]">{userVouchers.threeDish}</span>
+                    <span className="ml-1 text-sm text-[#6B5F53]">张</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
           
           {/* Checkout button */}
