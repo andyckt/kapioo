@@ -4,6 +4,7 @@ import { RewardTiers } from "@/components/referral/reward-tiers"
 import { DoubleStampBanner } from "@/components/referral/double-stamp-banner"
 import { ProgramDetails } from "@/components/referral/program-details"
 import { JoinSection } from "@/components/referral/join-section"
+import { TermsConditions } from "@/components/referral/terms-conditions"
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
       <DoubleStampBanner />
       <ProgramDetails />
       <JoinSection />
+      <TermsConditions />
     </main>
   )
 }
