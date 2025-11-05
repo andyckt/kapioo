@@ -70,32 +70,6 @@ export default function DashboardPage() {
     if (!userAddress || !userAddress.province) return false
     return DAILY_DELIVERY_REGIONS.includes(userAddress.province)
   }
-  
-  // Function to check if user has daily delivery vouchers
-  const hasDailyVouchers = (user?: any): boolean => {
-    if (!user) return false
-    return (user.twoDishVoucher !== undefined && user.twoDishVoucher > 0) || 
-           (user.threeDishVoucher !== undefined && user.threeDishVoucher > 0)
-  }
-  
-  // Function to check if user has weekly meal box vouchers
-  const hasWeeklyVouchers = (user?: any): boolean => {
-    if (!user) return false
-    return (user.weeklySIXmeals > 0 || 
-           (user as any)?.weeklyEIGHTmeals > 0 || 
-           user.weeklyTENmeals > 0 || 
-           (user as any)?.weeklyTWELVEmeals > 0)
-  }
-  
-  // Function to determine if we should show daily delivery section
-  const shouldShowDailyDelivery = (user?: any): boolean => {
-    return hasAreaDailyDelivery(user?.address) || hasDailyVouchers(user)
-  }
-  
-  // Function to determine if we should show weekly meal box section
-  const shouldShowWeeklyDelivery = (user?: any): boolean => {
-    return true // Always show weekly delivery section
-  }
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [meals, setMeals] = useState<WeeklyMeals>({})
   const [isLoading, setIsLoading] = useState(true)
@@ -1155,8 +1129,8 @@ export default function DashboardPage() {
                   
                   {/* User Summary Cards - Premium Design */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                    {/* Daily Delivery Vouchers Card - Show if user's area has daily delivery or they have vouchers */}
-                    {userData && shouldShowDailyDelivery(userData) && (
+                    {/* Daily Delivery Vouchers Card - Show only if user's area has daily delivery */}
+                    {userData && hasAreaDailyDelivery(userData.address) && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1215,7 +1189,7 @@ export default function DashboardPage() {
                     )}
                     
                     {/* Weekly Delivery Vouchers Card - Show after daily delivery for users with daily delivery */}
-                    {userData && shouldShowDailyDelivery(userData) && shouldShowWeeklyDelivery(userData) && (
+                    {userData && hasAreaDailyDelivery(userData.address) && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1309,7 +1283,7 @@ export default function DashboardPage() {
                     )}
                     
                     {/* Weekly Delivery Vouchers Card - Show for users without daily delivery */}
-                    {userData && !shouldShowDailyDelivery(userData) && shouldShowWeeklyDelivery(userData) && (
+                    {userData && !hasAreaDailyDelivery(userData.address) && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
