@@ -70,6 +70,18 @@ export async function POST(request: Request) {
     // Send notification to admin
     try {
       console.log('Sending admin notification for request:', requestId);
+      
+      // Format user address for the email
+      const userAddress = user.address ? {
+        unitNumber: user.address.unitNumber || '',
+        streetAddress: user.address.streetAddress || '',
+        city: user.address.city || '',
+        province: user.address.province || '',
+        postalCode: user.address.postalCode || '',
+        country: user.address.country || '',
+        buzzCode: user.address.buzzCode || ''
+      } : null;
+      
       await sendAdminCreditRequestNotification({
         userId: user._id.toString(),
         userName: user.name || user.userID,
@@ -81,7 +93,8 @@ export async function POST(request: Request) {
         referenceNumber: data.referenceNumber,
         notes: data.notes,
         planDescription: data.planDescription || '',
-        requestId: requestId
+        requestId: requestId,
+        userAddress: userAddress
       });
       console.log('Admin notification sent successfully');
     } catch (emailError) {
