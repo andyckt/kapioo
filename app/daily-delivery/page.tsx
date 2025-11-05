@@ -548,7 +548,7 @@ export default function DailyDeliveryPage() {
                               </div>
                               <div>
                                 <h3 className="text-lg font-medium text-[#6B5F53] mb-1">餐券制</h3>
-                                <p className="text-[#6B5F53]/80">灵活选择每周所需天数。根据您的需求购买餐券，自由安排用餐日期，不浪费，更经济。</p>
+                                <p className="text-[#6B5F53]/80">购买餐券后，可根据个人需求灵活下单，自由选择使用日期——不浪费，更灵活</p>
                               </div>
                             </div>
                             
@@ -558,7 +558,7 @@ export default function DailyDeliveryPage() {
                               </div>
                               <div>
                                 <h3 className="text-lg font-medium text-[#6B5F53] mb-1">午间时段送达</h3>
-                                <p className="text-[#6B5F53]/80">11AM-1PM，享受当日鲜美。准时送达，让您在工作日也能享用健康美味的餐食。</p>
+                                <p className="text-[#6B5F53]/80">配送时间为 11AM-1PM。 开始配送后，您将收到包含预计送达时间的短信通知。</p>
                               </div>
                             </div>
                           </div>
@@ -568,19 +568,19 @@ export default function DailyDeliveryPage() {
                             <ul className="space-y-3">
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">注重新鲜度的美食爱好者</span>
+                                <span className="text-[#6B5F53]">注重健康饮食、关注餐食新鲜度的美食爱好者</span>
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">追求每日现做品质的你</span>
+                                <span className="text-[#6B5F53]">追求高品质食材、坚持每日新鲜制作的你</span>
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">工作繁忙但不想放弃健康饮食的职场人士</span>
+                                <span className="text-[#6B5F53]">学业或工作繁忙但不愿放弃健康饮食的人士</span>
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">需要灵活订餐方案的家庭</span>
+                                <span className="text-[#6B5F53]">寻求灵活订阅方案、可自由安排配送日程的你</span>
                               </li>
                             </ul>
                           </div>
@@ -621,7 +621,7 @@ export default function DailyDeliveryPage() {
                                   使用餐劵下单
                                 </h3>
                                 <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                  每周菜单定期更新，选择喜欢的餐点与配送日期，使用账户内餐劵下单即可，无需重复支付。
+                                  每周菜单定期更新，进入您的个人账户，选择餐食，使用账户内餐劵下单即可，订1餐扣1张
                                 </p>
                                 <div className="mt-2 flex items-center">
                                   <Clock className="h-4 w-4 text-[#C2884E] mr-1.5" />
