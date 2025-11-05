@@ -244,8 +244,8 @@ export function RegionCheckDialogRecharge({
   )
 
   const renderAddressStep = () => (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="p-4 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+      <div className="flex items-center gap-2 mb-2">
         <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center">
           <Home className="h-4 w-4 text-[#C2884E]" />
         </div>
@@ -254,21 +254,21 @@ export function RegionCheckDialogRecharge({
         </h3>
       </div>
       
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="unitNumber" className="text-sm">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="unitNumber" className="text-xs sm:text-sm">
             Unit/Apt Number
           </Label>
           <Input 
             id="unitNumber" 
             value={addressData.unitNumber} 
             onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
           />
         </div>
         
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="streetAddress" className="text-sm">
+        <div className="space-y-1 sm:col-span-2">
+          <Label htmlFor="streetAddress" className="text-xs sm:text-sm">
             <span className="text-red-500">*</span>
             Street Address
           </Label>
@@ -276,13 +276,13 @@ export function RegionCheckDialogRecharge({
             id="streetAddress" 
             value={addressData.streetAddress} 
             onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
             required
           />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="city" className="text-sm">
+        <div className="space-y-1">
+          <Label htmlFor="city" className="text-xs sm:text-sm">
             <span className="text-red-500">*</span>
             City
           </Label>
@@ -290,13 +290,13 @@ export function RegionCheckDialogRecharge({
             id="city" 
             value={addressData.city} 
             onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
             required
           />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="postalCode" className="text-sm">
+        <div className="space-y-1">
+          <Label htmlFor="postalCode" className="text-xs sm:text-sm">
             <span className="text-red-500">*</span>
             Postal Code
           </Label>
@@ -304,47 +304,47 @@ export function RegionCheckDialogRecharge({
             id="postalCode" 
             value={addressData.postalCode} 
             onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
             required
           />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="country" className="text-sm">
+        <div className="space-y-1">
+          <Label htmlFor="country" className="text-xs sm:text-sm">
             Country
           </Label>
           <Input 
             id="country" 
             value={addressData.country} 
             onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
           />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="buzzCode" className="text-sm">
+        <div className="space-y-1">
+          <Label htmlFor="buzzCode" className="text-xs sm:text-sm">
             Buzz Code / Entry Code <span className="text-xs text-muted-foreground">(Optional)</span>
           </Label>
           <Input 
             id="buzzCode" 
             value={addressData.buzzCode} 
             onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
           />
         </div>
       </div>
       
-      <div className="flex justify-between space-x-3 pt-4 border-t border-[#C2884E]/10">
+      <div className="flex justify-between space-x-3 pt-3 border-t border-[#C2884E]/10 sticky bottom-0 bg-white pb-2">
         <Button 
           variant="outline" 
           onClick={() => setStep('region')}
-          className="flex items-center"
+          className="flex items-center text-sm px-3 py-1 h-9"
         >
-          <ArrowLeft className="mr-1 h-4 w-4" />
+          <ArrowLeft className="mr-1 h-3 w-3" />
           {language === 'zh' ? '返回' : 'Back'}
         </Button>
         <Button 
-          className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white"
+          className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white text-sm px-3 py-1 h-9"
           onClick={handleCompleteAddress}
           disabled={isLoading}
         >
@@ -358,7 +358,7 @@ export function RegionCheckDialogRecharge({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 sm:border-[#C2884E]/10 shadow-xl rounded-xl sm:rounded-[24px]">
+      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 sm:border-[#C2884E]/10 shadow-xl rounded-xl sm:rounded-[24px] max-h-[90vh] w-[95vw] sm:w-auto">
         <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
           <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
             {step === 'region' 
