@@ -136,21 +136,46 @@ function formatAddress(address: any): string {
 
 // Helper function to convert an array to CSV with dish names as columns
 function convertToCSV(data: any[]): string {
-  // First, collect all unique combo names across all orders
-  const allComboNames = new Set<string>();
+  // First, collect all unique combo names and their dishes across all orders
+  const comboDetailsMap = new Map<string, Set<string>>();
   
   data.forEach(order => {
     order.items.forEach((item: any) => {
       if (item.comboName) {
-        // Add the combo name with type indicator (2-dish or 3-dish)
-        const comboWithType = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
-        allComboNames.add(comboWithType);
+        // Create a key for the combo (name + type)
+        const comboKey = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
+        
+        // Initialize the set of dishes for this combo if it doesn't exist
+        if (!comboDetailsMap.has(comboKey)) {
+          comboDetailsMap.set(comboKey, new Set<string>());
+        }
+        
+        // Add dishes to the set if they exist
+        if (item.dishes && Array.isArray(item.dishes) && item.dishes.length > 0) {
+          item.dishes.forEach((dish: string) => {
+            comboDetailsMap.get(comboKey)?.add(dish);
+          });
+        }
       }
     });
   });
   
-  // Convert to array and sort
-  const uniqueComboNames = Array.from(allComboNames).sort();
+  // Create combo keys and their display names
+  const comboKeys: string[] = [];
+  const comboDisplayNames: string[] = [];
+  
+  // Sort the combo keys and create display names with dish details
+  Array.from(comboDetailsMap.keys()).sort().forEach(comboKey => {
+    const dishes = comboDetailsMap.get(comboKey) || new Set<string>();
+    const dishList = Array.from(dishes).join(' + ');
+    
+    // Add the basic key to our keys array
+    comboKeys.push(comboKey);
+    
+    // Create a display name with dishes for the header
+    const displayName = dishList ? `${comboKey}: ${dishList}` : comboKey;
+    comboDisplayNames.push(displayName);
+  });
   
   // Define base headers (without date and status)
   const baseHeaders = [
@@ -173,8 +198,8 @@ function convertToCSV(data: any[]): string {
     'Special Instructions'
   ];
   
-  // Combine all headers: base headers, dish names, then date and status
-  const headers = [...baseHeaders, ...uniqueComboNames, ...dateStatusHeaders];
+  // Combine all headers: base headers, dish names with details, then date and status
+  const headers = [...baseHeaders, ...comboDisplayNames, ...dateStatusHeaders];
   
   // Create CSV content
   let csvContent = headers.join(',') + '\n';
@@ -213,25 +238,27 @@ function convertToCSV(data: any[]): string {
       escapeCSV(order.area || '')
     ];
     
-    // Create a map of combo name to quantity for this order
+    // Create a map of combo key to quantity for this order
     const comboQuantities: Record<string, number> = {};
     
     // Initialize all combo quantities to 0
-    uniqueComboNames.forEach(comboName => {
-      comboQuantities[comboName] = 0;
+    comboKeys.forEach(comboKey => {
+      comboQuantities[comboKey] = 0;
     });
     
     // Fill in the quantities for combos in this order
     order.items.forEach((item: any) => {
       if (item.comboName && item.quantity) {
-        const comboWithType = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
-        comboQuantities[comboWithType] = (comboQuantities[comboWithType] || 0) + item.quantity;
+        const comboKey = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
+        if (comboKeys.includes(comboKey)) {
+          comboQuantities[comboKey] = (comboQuantities[comboKey] || 0) + item.quantity;
+        }
       }
     });
     
     // Add combo quantities to the row, only showing non-zero values
-    const comboQuantitiesRow = uniqueComboNames.map(comboName => {
-      const quantity = comboQuantities[comboName] || 0;
+    const comboQuantitiesRow = comboKeys.map(comboKey => {
+      const quantity = comboQuantities[comboKey] || 0;
       // Return empty string if quantity is 0, otherwise return the quantity
       return quantity > 0 ? quantity : '';
     });
