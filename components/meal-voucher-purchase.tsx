@@ -86,7 +86,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   ]
 
   // Available service areas
-  const DAILY_DELIVERY_REGIONS = ['Downtown', 'Midtown', 'NorthYork', 'Markham', 'RichmondHill']
+  const DAILY_DELIVERY_REGIONS = ['Downtown Toronto', 'Midtown', 'NorthYork', 'Markham', 'RichmondHill']
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

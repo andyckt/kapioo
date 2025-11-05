@@ -88,7 +88,7 @@ export default function DailyDelivery() {
   
   // Define the supported regions for daily delivery
   const DAILY_DELIVERY_REGIONS = [
-    "Downtown",
+    "Downtown Toronto",
     "Midtown", 
     "NorthYork", 
     "Markham", 

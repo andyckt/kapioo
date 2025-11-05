@@ -32,16 +32,23 @@ import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-rech
 
 // Define the supported regions for weekly delivery
 const WEEKLY_DELIVERY_REGIONS = [
-  "Downtown",
+  "Downtown Toronto", 
   "Midtown", 
-  "NorthYork", 
+  "Scarborough", 
+  "North York", 
+  "East York",
+  "York",
+  "Etobicoke",
   "Markham", 
-  "RichmondHill",
-  "Vaughan",
-  "Mississauga",
+  "Richmond Hill",
+  "Aurora", 
+  "Newmarket",
+  "Vaughan (including Maple, Concord, King)", 
+  "Mississauga", 
   "Oakville",
-  "Aurora",
-  "Newmarket"
+  "Brampton",
+  "Hamilton",
+  "Burlington"
 ]
 
 interface WeeklySubscriptionCheckoutProps {

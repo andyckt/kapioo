@@ -508,7 +508,7 @@ export default function WeeklySubscription({
           currentRegion={userRegion}
           onRegionChange={handleRegionChange}
           onProceed={proceedToCheckout}
-          isValidRegion={["Downtown", "Midtown", "NorthYork", "Markham", "RichmondHill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket"].includes(userRegion || '')}
+          isValidRegion={["Downtown Toronto", "Midtown", "Scarborough", "North York", "East York", "York", "Etobicoke", "Markham", "Richmond Hill", "Aurora", "Newmarket", "Vaughan (including Maple, Concord, King)", "Mississauga", "Oakville", "Brampton", "Hamilton", "Burlington"].includes(userRegion || '')}
           existingAddress={(() => {
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
@@ -646,7 +646,7 @@ export default function WeeklySubscription({
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {['Downtown', 'Midtown', 'North York', 'Markham', 'Richmond Hill', 'Vaughan', 'Mississauga', 'Oakville', 'Aurora', 'Newmarket'].map((area) => (
+              {['Downtown Toronto', 'Midtown', 'Scarborough', 'North York', 'East York', 'York', 'Etobicoke', 'Markham', 'Richmond Hill', 'Aurora', 'Newmarket', 'Vaughan (including Maple, Concord, King)', 'Mississauga', 'Oakville', 'Brampton', 'Hamilton', 'Burlington'].map((area) => (
                 <div 
                   key={area} 
                   className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"

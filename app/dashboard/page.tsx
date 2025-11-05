@@ -1947,10 +1947,10 @@ export default function DashboardPage() {
                                 <PopoverContent className="p-0 w-full">
                                   <Command>
                                     <CommandInput placeholder="Search area..." />
-                                    <CommandList>
+                                    <CommandList className="max-h-[200px] overflow-y-auto">
                                       <CommandEmpty>No area found.</CommandEmpty>
                                       <CommandGroup>
-                                        {["Downtown", "Midtown", "NorthYork", "Markham", "Richmond Hill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket"].map((area) => (
+                                        {["Downtown Toronto", "Midtown", "Scarborough", "North York", "East York", "York", "Etobicoke", "Markham", "Richmond Hill", "Aurora", "Newmarket", "Vaughan (including Maple, Concord, King)", "Mississauga", "Oakville", "Brampton", "Hamilton", "Burlington"].map((area) => (
                                           <CommandItem
                                             key={area}
                                             value={area}

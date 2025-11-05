@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils'
 
 // Define the supported regions for daily delivery
 const DAILY_DELIVERY_REGIONS = [
-  "Downtown",
+  "Downtown Toronto",
   "Midtown", 
   "NorthYork", 
   "Markham", 
@@ -69,7 +69,7 @@ export function RegionCheckDialog({
                   您当前选择的区域 <span className="font-bold">{currentRegion || "未设置"}</span> 不在每日直送服务范围内
                 </p>
                 <p className="text-xs text-amber-700 mt-1">
-                  每日直送服务目前仅限于以下区域：Downtown、Midtown、North York、Markham、Richmond Hill
+                  每日直送服务目前仅限于以下区域：Downtown Toronto、Midtown、North York、Markham、Richmond Hill
                 </p>
               </div>
             </div>

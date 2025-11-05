@@ -18,16 +18,23 @@ import { useLanguage } from "@/lib/language-context"
 
 // Define available service areas
 const serviceAreas = [
-  'Downtown', 
+  'Downtown Toronto', 
   'Midtown', 
-  'NorthYork', 
+  'Scarborough', 
+  'North York', 
+  'East York',
+  'York',
+  'Etobicoke',
   'Markham', 
   'Richmond Hill',
-  'Vaughan', 
+  'Aurora', 
+  'Newmarket',
+  'Vaughan (including Maple, Concord, King)', 
   'Mississauga', 
   'Oakville', 
-  'Aurora', 
-  'Newmarket'
+  'Brampton',
+  'Hamilton',
+  'Burlington'
 ]
 
 export default function VerifyEmailSentPage() {

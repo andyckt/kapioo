@@ -48,7 +48,7 @@ import { CartItem, DayData, submitDailyOrder, formatAddress } from '@/lib/daily-
 
 // Define the supported regions for daily delivery
 const DAILY_DELIVERY_REGIONS = [
-  "Downtown",
+  "Downtown Toronto",
   "Midtown", 
   "NorthYork", 
   "Markham", 

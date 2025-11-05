@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast'
 
 // Define the supported regions for daily delivery
 const DAILY_DELIVERY_REGIONS = [
-  "Downtown",
+  "Downtown Toronto",
   "Midtown", 
   "NorthYork", 
   "Markham", 
@@ -162,8 +162,8 @@ export function RegionCheckDialogRecharge({
             </p>
             <p className="text-xs text-amber-700 mt-1">
               {language === 'zh'
-                ? '每日直送服务目前仅限于以下区域：Downtown、Midtown、North York、Markham、Richmond Hill'
-                : 'Daily delivery service is currently limited to: Downtown, Midtown, North York, Markham, Richmond Hill'
+                ? '每日直送服务目前仅限于以下区域：Downtown Toronto、Midtown、North York、Markham、Richmond Hill'
+                : 'Daily delivery service is currently limited to: Downtown Toronto, Midtown, North York, Markham, Richmond Hill'
               }
             </p>
           </div>

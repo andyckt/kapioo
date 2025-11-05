@@ -631,7 +631,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           currentRegion={userRegion}
           onRegionChange={handleRegionChange}
           onProceed={proceedToUpload}
-          isValidRegion={["Downtown", "Midtown", "NorthYork", "Markham", "RichmondHill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket"].includes(userRegion || '')}
+          isValidRegion={["Downtown Toronto", "Midtown", "Scarborough", "North York", "East York", "York", "Etobicoke", "Markham", "Richmond Hill", "Aurora", "Newmarket", "Vaughan (including Maple, Concord, King)", "Mississauga", "Oakville", "Brampton", "Hamilton", "Burlington"].includes(userRegion || '')}
           existingAddress={(() => {
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
