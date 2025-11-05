@@ -120,36 +120,43 @@ function formatAddress(address: any): string {
   return formattedAddress;
 }
 
-// Helper function to convert an array to CSV
+// Helper function to convert an array to CSV with dish names as columns
 function convertToCSV(data: any[]): string {
-  // Define CSV headers
-  const headers = [
+  // First, collect all unique dish names across all orders
+  const allDishNames = new Set<string>();
+  
+  data.forEach(order => {
+    order.items.forEach((item: any) => {
+      if (item.optionName) {
+        allDishNames.add(item.optionName);
+      }
+    });
+  });
+  
+  // Convert to array and sort
+  const uniqueDishNames = Array.from(allDishNames).sort();
+  
+  // Define basic CSV headers
+  const baseHeaders = [
     'Order ID',
     'User Name',
-    'User Email',
-    'Status',
+    'Email',
+    'Phone Number',
+    'Delivery Address',
     'Date Ordered',
     'Delivery Date',
     'Delivery Day',
-    'Items',
-    'Meal Plan Type',
-    'Credit Cost',
-    'Special Instructions',
-    'Address',
-    'Phone Number',
-    'Area'
+    'Status'
   ];
+  
+  // Combine base headers with dish names
+  const headers = [...baseHeaders, ...uniqueDishNames];
   
   // Create CSV content
   let csvContent = headers.join(',') + '\n';
   
   // Add data rows
   data.forEach(order => {
-    // Format items as a string
-    const itemsString = order.items.map((item: any) => 
-      `${item.date} ${item.dayId}: ${item.optionName} x${item.quantity}`
-    ).join('; ');
-    
     // Format date ordered
     const dateCreated = new Date(order.createdAt).toISOString().split('T')[0];
     
@@ -159,13 +166,6 @@ function convertToCSV(data: any[]): string {
     
     // Format address
     const address = formatAddress(order.deliveryAddress);
-    
-    // Format meal plan type
-    let mealPlanType = order.mealPlanType || 'legacy';
-    if (mealPlanType === '6aweek') mealPlanType = '6 Meals/Week';
-    else if (mealPlanType === '8aweek') mealPlanType = '8 Meals/Week';
-    else if (mealPlanType === '10aweek') mealPlanType = '10 Meals/Week';
-    else if (mealPlanType === '12aweek') mealPlanType = '12 Meals/Week';
     
     // Escape special characters in text fields
     const escapeCSV = (text: string) => {
@@ -178,25 +178,45 @@ function convertToCSV(data: any[]): string {
       return text;
     };
     
-    // Create row with proper escaping
-    const row = [
+    // Create a map of dish name to quantity for this order
+    const dishQuantities: Record<string, number> = {};
+    
+    // Initialize all dish quantities to 0
+    uniqueDishNames.forEach(dishName => {
+      dishQuantities[dishName] = 0;
+    });
+    
+    // Fill in the quantities for dishes in this order
+    order.items.forEach((item: any) => {
+      if (item.optionName && item.quantity) {
+        dishQuantities[item.optionName] = (dishQuantities[item.optionName] || 0) + item.quantity;
+      }
+    });
+    
+    // Create base row with proper escaping
+    const baseRow = [
       escapeCSV(order.orderId),
       escapeCSV(order.userName || ''),
       escapeCSV(order.userEmail || ''),
-      escapeCSV(order.status),
+      escapeCSV(order.phoneNumber || ''),
+      escapeCSV(address),
       escapeCSV(dateCreated),
       escapeCSV(deliveryDate),
       escapeCSV(deliveryDay),
-      escapeCSV(itemsString),
-      escapeCSV(mealPlanType),
-      order.creditCost || 0,
-      escapeCSV(order.specialInstructions || ''),
-      escapeCSV(address),
-      escapeCSV(order.phoneNumber || ''),
-      escapeCSV(order.area || '')
+      escapeCSV(order.status)
     ];
     
-    csvContent += row.join(',') + '\n';
+    // Add dish quantities to the row, only showing non-zero values
+    const dishQuantitiesRow = uniqueDishNames.map(dishName => {
+      const quantity = dishQuantities[dishName] || 0;
+      // Return empty string if quantity is 0, otherwise return the quantity
+      return quantity > 0 ? quantity : '';
+    });
+    
+    // Combine base row with dish quantities
+    const fullRow = [...baseRow, ...dishQuantitiesRow];
+    
+    csvContent += fullRow.join(',') + '\n';
   });
   
   return csvContent;
