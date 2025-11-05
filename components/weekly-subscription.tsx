@@ -403,8 +403,8 @@ export default function WeeklySubscription({
       setUserRegion(userData.address.province);
     }
     
-    // Show address confirmation dialog
-    setShowAddressDialog(true);
+    // Proceed directly to checkout without showing address dialog
+    setCheckoutOpen(true);
   }
   
   // Proceed to checkout after address confirmation
