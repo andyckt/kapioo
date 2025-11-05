@@ -184,7 +184,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   }, [])
 
   // Handle region change
-  const handleRegionChange = async (region: string): Promise<void> => {
+  const handleRegionChange = async (region: string, addressData?: any): Promise<void> => {
     try {
       // Get user data from localStorage
       const userData = localStorage.getItem('user')
@@ -194,10 +194,23 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       
       const user = JSON.parse(userData)
       
-      // Update user's address with the new region
-      const updatedAddress = {
+      // Update user's address with the new region and optional address data
+      let updatedAddress = {
         ...user.address,
         province: region
+      }
+      
+      // If additional address data is provided, merge it with the updated address
+      if (addressData) {
+        updatedAddress = {
+          ...updatedAddress,
+          unitNumber: addressData.unitNumber || updatedAddress.unitNumber,
+          streetAddress: addressData.streetAddress,
+          city: addressData.city,
+          postalCode: addressData.postalCode || updatedAddress.postalCode,
+          country: addressData.country || 'Canada',
+          buzzCode: addressData.buzzCode || updatedAddress.buzzCode
+        }
       }
       
       // Update user data in the database
@@ -221,9 +234,17 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
         // Update state
         setUserRegion(region)
         
+        const toastMessage = addressData 
+          ? (language === 'zh' ? "地址已更新" : "Address Updated") 
+          : (language === 'zh' ? "区域已更新" : "Region Updated")
+          
+        const toastDescription = addressData
+          ? (language === 'zh' ? "您的配送地址已成功更新" : "Your delivery address has been successfully updated")
+          : (language === 'zh' ? "您的区域已成功更新" : "Your region has been successfully updated")
+        
         toast({
-          title: language === 'zh' ? "区域已更新" : "Region Updated",
-          description: language === 'zh' ? "您的区域已成功更新" : "Your region has been successfully updated"
+          title: toastMessage,
+          description: toastDescription
         })
       } else {
         throw new Error(result.error || 'Failed to update region')
@@ -233,7 +254,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       toast({
         title: language === 'zh' ? "更新失败" : "Update Failed",
         description: error instanceof Error ? error.message : 
-          (language === 'zh' ? "更新区域时出现错误" : "An error occurred while updating your region"),
+          (language === 'zh' ? "更新地址时出现错误" : "An error occurred while updating your address"),
         variant: "destructive"
       })
       throw error
@@ -1352,9 +1373,10 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               </TabsList>
               
               
-              <AnimatePresence mode="wait">
+              {/* Removed AnimatePresence causing key errors */}
                 <TabsContent value="twoDish" className="mt-0">
                   <motion.div
+                    key="twoDish-tab-content"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -1378,6 +1400,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 
                 <TabsContent value="threeDish" className="mt-0">
                   <motion.div
+                    key="threeDish-tab-content"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -1398,7 +1421,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                     */}
                   </motion.div>
                 </TabsContent>
-              </AnimatePresence>
             </Tabs>
           </motion.div>
         )}
