@@ -750,16 +750,11 @@ export function WeeklySubscriptionCheckout({
                     <SelectValue placeholder={language === 'zh' ? '选择区域' : 'Select area'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Downtown">Downtown</SelectItem>
-                    <SelectItem value="Midtown">Midtown</SelectItem>
-                    <SelectItem value="NorthYork">North York</SelectItem>
-                    <SelectItem value="Markham">Markham</SelectItem>
-                    <SelectItem value="RichmondHill">Richmond Hill</SelectItem>
-                    <SelectItem value="Vaughan">Vaughan</SelectItem>
-                    <SelectItem value="Mississauga">Mississauga</SelectItem>
-                    <SelectItem value="Oakville">Oakville</SelectItem>
-                    <SelectItem value="Aurora">Aurora</SelectItem>
-                    <SelectItem value="Newmarket">Newmarket</SelectItem>
+                    {WEEKLY_DELIVERY_REGIONS.map((region) => (
+                      <SelectItem key={region} value={region}>
+                        {region}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

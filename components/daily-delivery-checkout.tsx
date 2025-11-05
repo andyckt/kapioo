@@ -584,21 +584,11 @@ export function DailyDeliveryCheckout({
                       <SelectValue placeholder={language === 'zh' ? '选择区域' : 'Select area'} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="downtown">
-                        Downtown
-                      </SelectItem>
-                      <SelectItem value="midtown">
-                        Midtown
-                      </SelectItem>
-                      <SelectItem value="northyork">
-                        North York
-                      </SelectItem>
-                      <SelectItem value="markham">
-                        Markham
-                      </SelectItem>
-                      <SelectItem value="richmond">
-                        Richmond Hill
-                      </SelectItem>
+                      {DAILY_DELIVERY_REGIONS.map((region) => (
+                        <SelectItem key={region} value={region}>
+                          {region}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

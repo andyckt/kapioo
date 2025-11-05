@@ -645,15 +645,8 @@ export default function WeeklySubscription({
                 {language === 'zh' ? '配送区域' : 'Available Areas'}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {['Downtown Toronto', 'Midtown', 'Scarborough', 'North York', 'East York', 'York', 'Etobicoke', 'Markham', 'Richmond Hill', 'Aurora', 'Newmarket', 'Vaughan (including Maple, Concord, King)', 'Mississauga', 'Oakville', 'Brampton', 'Hamilton', 'Burlington'].map((area) => (
-                <div 
-                  key={area} 
-                  className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"
-                >
-                  {area}
-                </div>
-              ))}
+            <div className="px-3 py-1.5 text-sm font-medium text-[#6B5F53]">
+              {language === 'zh' ? '大多伦多地区全覆盖' : 'Greater Toronto Area Coverage'}
             </div>
           </div>
           

@@ -24,7 +24,7 @@ type Location =
   | "Burlington"
 
 // Group locations by service availability
-const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown", "Midtown", "NorthYork", "Markham", "RichmondHill"]
+const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "NorthYork", "Markham", "RichmondHill"]
 const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
 
 export default function StarterPage() {
