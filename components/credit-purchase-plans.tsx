@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
+import { WeeklyAddressDialog } from '@/components/weekly-address-dialog'
 
 interface CreditPurchasePlansProps {
   userId: string;
@@ -636,13 +636,12 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     <div className="space-y-6">
       {/* Address Confirmation Dialog */}
       {showAddressDialog && (
-        <RegionCheckDialogRecharge
+        <WeeklyAddressDialog
           open={showAddressDialog}
           onClose={() => setShowAddressDialog(false)}
           currentRegion={userRegion}
           onRegionChange={handleRegionChange}
           onProceed={proceedToUpload}
-          isValidRegion={["Downtown Toronto", "Midtown", "Scarborough", "North York", "East York", "York", "Etobicoke", "Markham", "Richmond Hill", "Aurora", "Newmarket", "Vaughan (including Maple, Concord, King)", "Mississauga", "Oakville", "Brampton", "Hamilton", "Burlington"].includes(userRegion || '')}
           existingAddress={(() => {
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
