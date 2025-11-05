@@ -194,7 +194,7 @@ export default function AddressPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="grid gap-2.5">
-                  <Label htmlFor="province" className="text-sm font-medium">Province/State <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="province" className="text-sm font-medium">Area <span className="text-red-500">*</span></Label>
                   <Input
                     id="province"
                     placeholder="Province or state"

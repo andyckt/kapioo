@@ -664,7 +664,7 @@ export function WeeklySubscriptionCheckout({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="state" className="text-sm">
-                        Province/State <span className="text-red-500">*</span>
+                        Area <span className="text-red-500">*</span>
                       </Label>
                       <Input 
                         id="state" 

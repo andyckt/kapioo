@@ -645,7 +645,7 @@ const translations: TranslationsType = {
     streetAddress: "Street Address",
     city: "City",
     postalCode: "Postal/ZIP Code",
-    province: "Province/State",
+    province: "Area",
     country: "Country",
     buzzCode: "Entry/Buzz Code (If Required)",
     completeRegistration: "Complete Registration",
