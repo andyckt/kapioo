@@ -134,42 +134,53 @@ function formatAddress(address: any): string {
   return formattedAddress;
 }
 
-// Helper function to convert an array to CSV
+// Helper function to convert an array to CSV with dish names as columns
 function convertToCSV(data: any[]): string {
-  // Define CSV headers
-  const headers = [
+  // First, collect all unique combo names across all orders
+  const allComboNames = new Set<string>();
+  
+  data.forEach(order => {
+    order.items.forEach((item: any) => {
+      if (item.comboName) {
+        // Add the combo name with type indicator (2-dish or 3-dish)
+        const comboWithType = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
+        allComboNames.add(comboWithType);
+      }
+    });
+  });
+  
+  // Convert to array and sort
+  const uniqueComboNames = Array.from(allComboNames).sort();
+  
+  // Define base headers (without date and status)
+  const baseHeaders = [
     'Order ID',
     'User Name',
-    'User Email',
-    'Status',
-    'Date Ordered',
-    'Delivery Date',
-    'Delivery Day',
-    'Order Items',
-    'Items Detail',
-    'Two-Dish Vouchers',
-    'Three-Dish Vouchers',
-    'Special Instructions',
-    'Address',
+    'Email',
     'Phone Number',
+    'Delivery Address',
     'Area'
   ];
+  
+  // Define date and status headers to appear after dish names
+  const dateStatusHeaders = [
+    'Status',
+    'Delivery Date',
+    'Delivery Day',
+    'Date Ordered',
+    'Two-Dish Vouchers',
+    'Three-Dish Vouchers',
+    'Special Instructions'
+  ];
+  
+  // Combine all headers: base headers, dish names, then date and status
+  const headers = [...baseHeaders, ...uniqueComboNames, ...dateStatusHeaders];
   
   // Create CSV content
   let csvContent = headers.join(',') + '\n';
   
   // Add data rows
   data.forEach(order => {
-    // Format items as a string with full details
-    const itemsString = order.items.map((item: any) => 
-      `${item.date} ${item.day}: ${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'}) x${item.quantity}`
-    ).join('; ');
-    
-    // Format order items more concisely (just combo name, type, and quantity)
-    const orderItemsString = order.items.map((item: any) => 
-      `${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'}) x${item.quantity}`
-    ).join('; ');
-    
     // Format date ordered
     const dateCreated = new Date(order.createdAt).toISOString().split('T')[0];
     
@@ -192,26 +203,54 @@ function convertToCSV(data: any[]): string {
       return text;
     };
     
-    // Create row with proper escaping
-    const row = [
+    // Create base row with proper escaping (without date and status)
+    const baseRow = [
       escapeCSV(order.orderId),
       escapeCSV(order.userName || ''),
       escapeCSV(order.userEmail || ''),
-      escapeCSV(order.status),
-      escapeCSV(dateCreated),
-      escapeCSV(deliveryDate),
-      escapeCSV(deliveryDay),
-      escapeCSV(orderItemsString),
-      escapeCSV(itemsString),
-      order.voucherCost?.twoDish || 0,
-      order.voucherCost?.threeDish || 0,
-      escapeCSV(order.specialInstructions || ''),
-      escapeCSV(address),
       escapeCSV(order.phoneNumber || ''),
+      escapeCSV(address),
       escapeCSV(order.area || '')
     ];
     
-    csvContent += row.join(',') + '\n';
+    // Create a map of combo name to quantity for this order
+    const comboQuantities: Record<string, number> = {};
+    
+    // Initialize all combo quantities to 0
+    uniqueComboNames.forEach(comboName => {
+      comboQuantities[comboName] = 0;
+    });
+    
+    // Fill in the quantities for combos in this order
+    order.items.forEach((item: any) => {
+      if (item.comboName && item.quantity) {
+        const comboWithType = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
+        comboQuantities[comboWithType] = (comboQuantities[comboWithType] || 0) + item.quantity;
+      }
+    });
+    
+    // Add combo quantities to the row, only showing non-zero values
+    const comboQuantitiesRow = uniqueComboNames.map(comboName => {
+      const quantity = comboQuantities[comboName] || 0;
+      // Return empty string if quantity is 0, otherwise return the quantity
+      return quantity > 0 ? quantity : '';
+    });
+    
+    // Create date and status row
+    const dateStatusRow = [
+      escapeCSV(order.status),
+      escapeCSV(deliveryDate),
+      escapeCSV(deliveryDay),
+      escapeCSV(dateCreated),
+      order.voucherCost?.twoDish || 0,
+      order.voucherCost?.threeDish || 0,
+      escapeCSV(order.specialInstructions || '')
+    ];
+    
+    // Combine all rows: base row, combo quantities, then date and status
+    const fullRow = [...baseRow, ...comboQuantitiesRow, ...dateStatusRow];
+    
+    csvContent += fullRow.join(',') + '\n';
   });
   
   return csvContent;
