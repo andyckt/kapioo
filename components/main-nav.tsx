@@ -4,7 +4,7 @@ import Image from "next/image"
 export function MainNav() {
   return (
     <div className="flex items-center gap-4">
-      <Link href="/dashboard" className="flex items-center gap-2 group">
+      <Link href="/" className="flex items-center gap-2 group">
         <Image 
           src="/未命名設計.png" 
           alt="Kapioo Logo" 
