@@ -178,10 +178,10 @@ export function RegionCheckDialogRecharge({
               <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="p-0 w-full">
+          <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-content-available-width)]">
             <Command>
-                  <CommandInput placeholder={language === 'zh' ? "搜索区域..." : "Search area..."} />
-              <CommandList>
+              <CommandInput placeholder={language === 'zh' ? "搜索区域..." : "Search area..."} />
+              <CommandList className="max-h-[200px] overflow-y-auto">
                 <CommandEmpty>{language === 'zh' ? "未找到匹配的区域" : "No matching areas found"}</CommandEmpty>
                 <CommandGroup>
                   {DAILY_DELIVERY_REGIONS.map((region) => (
@@ -299,6 +299,7 @@ export function RegionCheckDialogRecharge({
             onChange={handleAddressChange}
             className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
             required
+          />
         </div>
         
         <div className="space-y-2">
