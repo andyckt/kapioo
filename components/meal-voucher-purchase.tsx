@@ -204,12 +204,12 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       if (addressData) {
         updatedAddress = {
           ...updatedAddress,
-          unitNumber: addressData.unitNumber || updatedAddress.unitNumber,
-          streetAddress: addressData.streetAddress,
-          city: addressData.city,
-          postalCode: addressData.postalCode || updatedAddress.postalCode,
-          country: addressData.country || 'Canada',
-          buzzCode: addressData.buzzCode || updatedAddress.buzzCode
+          unitNumber: addressData.unitNumber !== undefined ? addressData.unitNumber : updatedAddress.unitNumber,
+          streetAddress: addressData.streetAddress !== undefined ? addressData.streetAddress : updatedAddress.streetAddress,
+          city: addressData.city !== undefined ? addressData.city : updatedAddress.city,
+          postalCode: addressData.postalCode !== undefined ? addressData.postalCode : updatedAddress.postalCode,
+          country: addressData.country !== undefined ? addressData.country : 'Canada',
+          buzzCode: addressData.buzzCode !== undefined ? addressData.buzzCode : updatedAddress.buzzCode
         }
       }
       

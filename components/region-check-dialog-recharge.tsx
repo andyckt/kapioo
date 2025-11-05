@@ -118,11 +118,11 @@ export function RegionCheckDialogRecharge({
   const handleCompleteAddress = async () => {
     if (!selectedRegion) return
     
-    // Validate street address and city at minimum
-    if (!addressData.streetAddress || !addressData.city) {
+    // Validate required fields: street address, city, and postal code
+    if (!addressData.streetAddress || !addressData.city || !addressData.postalCode) {
       toast({
         title: language === 'zh' ? "请填写必填字段" : "Please fill in required fields",
-        description: language === 'zh' ? "街道地址和城市是必填的" : "Street address and city are required",
+        description: language === 'zh' ? "街道地址、城市和邮政编码是必填的" : "Street address, city, and postal code are required",
         variant: "destructive"
       })
       return
@@ -290,6 +290,7 @@ export function RegionCheckDialogRecharge({
         
         <div className="space-y-2">
           <Label htmlFor="postalCode" className="text-sm">
+            <span className="text-red-500">*</span>
             Postal Code
           </Label>
           <Input 
@@ -297,7 +298,7 @@ export function RegionCheckDialogRecharge({
             value={addressData.postalCode} 
             onChange={handleAddressChange}
             className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-          />
+            required
         </div>
         
         <div className="space-y-2">
