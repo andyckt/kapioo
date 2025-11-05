@@ -30,8 +30,10 @@ import {
   Sparkles,
   Tag,
   Calendar,
+  CalendarDays,
   Utensils,
-  MessageSquare
+  MessageSquare,
+  Ticket
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
@@ -1176,136 +1178,182 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 <Info className="h-4 w-4" />
               </button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-w-[92%] overflow-hidden p-0 bg-gradient-to-b from-[#FBF7F2] to-[#F5EDE4] rounded-xl">
-              <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6">
-                <DialogTitle className="text-white text-xl sm:text-2xl flex items-center gap-2">
-                  <Info className="h-5 w-5" />
-                  {language === 'zh' ? '购买流程' : 'How It Works'}
+            <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
+              <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
+                <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+                  {language === 'zh' ? '每日直送计划详情' : 'Daily Delivery Plan Details'}
                 </DialogTitle>
+                <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
+                  {language === 'zh' ? '了解我们的每日新鲜配送服务' : 'Learn about our daily fresh delivery service'}
+                </DialogDescription>
               </DialogHeader>
-              <motion.div 
-                className="p-4 sm:p-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="space-y-6 sm:space-y-8">
-                  <div className="flex items-start gap-4">
-                    <motion.div 
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.1, duration: 0.3 }}
+              <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-brand">
+                <Tabs defaultValue="howItWorks" className="w-full">
+                  <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6 bg-[#F5EDE4]/30 p-1 rounded-[20px]">
+                    <TabsTrigger 
+                      value="description" 
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-[14px] py-3 transition-all duration-300"
                     >
-                      1
-                    </motion.div>
-                    <motion.div 
-                      className="flex-1"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1, duration: 0.3 }}
+                      {language === 'zh' ? '产品介绍' : 'Product Description'}
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="howItWorks" 
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-[14px] py-3 transition-all duration-300"
                     >
-                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
-                        {language === 'zh' ? '选择套餐' : 'Choose Plan'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {language === 'zh' 
-                          ? '浏览可用套餐并选择最适合您需求的餐券数量' 
-                          : 'Browse available plans and select the voucher quantity that best fits your needs'}
-                      </p>
-                    </motion.div>
-                  </div>
+                      {language === 'zh' ? '如何运作' : 'How It Works'}
+                    </TabsTrigger>
+                  </TabsList>
                   
-                  <div className="flex items-start gap-4">
-                    <motion.div 
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.2, duration: 0.3 }}
-                    >
-                      2
-                    </motion.div>
-                    <motion.div 
-                      className="flex-1"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2, duration: 0.3 }}
-                    >
-                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
-                        {language === 'zh' ? '转账付款' : 'Send Payment'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {language === 'zh' 
-                          ? '通过Interac e-Transfer向指定账户转账付款' 
-                          : 'Send payment via Interac e-Transfer to the designated account'}
-                      </p>
-                      <div className="mt-2 bg-white p-3 rounded-lg border border-[#C2884E]/10 text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[#6B5F53]">{language === 'zh' ? '收款邮箱' : 'Recipient Email'}</span>
-                          <span className="font-medium">kapioomeal@gmail.com</span>
+                  <style jsx global>{`
+                    .scrollbar-brand::-webkit-scrollbar {
+                      width: 5px;
+                      height: 5px;
+                    }
+                    .scrollbar-brand::-webkit-scrollbar-track {
+                      background: #F5EDE4;
+                    }
+                    .scrollbar-brand::-webkit-scrollbar-thumb {
+                      background: linear-gradient(to bottom, #C2884E, #D1A46C);
+                      border-radius: 20px;
+                    }
+                  `}</style>
+                  
+                  <TabsContent value="description" className="mt-0 space-y-4">
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center mt-1 flex-shrink-0">
+                          <Check className="w-5 h-5 text-[#C2884E]" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">每日新鲜现做</h3>
+                          <p className="text-[#6B5F53]/80">直送上门，满分新鲜度。我们坚持每日现做，确保您收到的餐食保持最佳口感和营养价值。</p>
                         </div>
                       </div>
-                    </motion.div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4">
-                    <motion.div 
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.3, duration: 0.3 }}
-                    >
-                      3
-                    </motion.div>
-                    <motion.div 
-                      className="flex-1"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3, duration: 0.3 }}
-                    >
-                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
-                        {language === 'zh' ? '上传凭证' : 'Upload Proof'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {language === 'zh' 
-                          ? '上传付款截图或PDF作为付款证明' 
-                          : 'Upload a screenshot or PDF of your payment confirmation'}
-                      </p>
-                    </motion.div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4">
-                    <motion.div 
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white flex items-center justify-center font-bold shadow-md"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.4, duration: 0.3 }}
-                    >
-                      4
-                    </motion.div>
-                    <motion.div 
-                      className="flex-1"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4, duration: 0.3 }}
-                    >
-                      <h4 className="font-medium text-[#6B5F53] text-base sm:text-lg">
-                        {language === 'zh' ? '获得餐券' : 'Receive Vouchers'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {language === 'zh' 
-                          ? '我们确认付款后，会将餐券添加到您的账户' 
-                          : 'After payment verification, vouchers will be added to your account within 1-2 business days'}
-                      </p>
-                      <div className="mt-2 bg-white p-3 rounded-lg border border-[#C2884E]/10 flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-600" />
-                        <span className="text-[#6B5F53]">
-                          {language === 'zh' ? '您将收到电子邮件通知' : 'You will receive an email notification'}
-                        </span>
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center mt-1 flex-shrink-0">
+                          <Check className="w-5 h-5 text-[#C2884E]" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">餐券制</h3>
+                          <p className="text-[#6B5F53]/80">购买餐券后，可根据个人需求灵活下单，自由选择使用日期——不浪费，更灵活</p>
+                        </div>
                       </div>
-                    </motion.div>
-                  </div>
-                </div>
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center mt-1 flex-shrink-0">
+                          <Check className="w-5 h-5 text-[#C2884E]" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">午间时段送达</h3>
+                          <p className="text-[#6B5F53]/80">配送时间为 11AM-1PM。 开始配送后，您将收到包含预计送达时间的短信通知。</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-[#FFF6EF] rounded-xl p-6 mt-4">
+                      <h3 className="text-lg font-medium text-[#C2884E] mb-4">适合人群</h3>
+                      <ul className="space-y-3">
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
+                          <span className="text-[#6B5F53]">注重健康饮食、关注餐食新鲜度的美食爱好者</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
+                          <span className="text-[#6B5F53]">追求高品质食材、坚持每日新鲜制作的你</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
+                          <span className="text-[#6B5F53]">学业或工作繁忙但不愿放弃健康饮食的人士</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
+                          <span className="text-[#6B5F53]">寻求灵活订阅方案、可自由安排配送日程的你</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="howItWorks" className="mt-0 space-y-4">
+                    <div className="space-y-8">
+                      <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">如何运作</h3>
+                      
+                      {/* Step 1 */}
+                      <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                            <Ticket className="w-5 h-5 text-[#C2884E]" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">1</span>
+                            购买餐劵
+                          </h3>
+                          <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                            通过官网使用 电子转账（EMT）充值餐劵，餐劵会自动记录到您的账户中。
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Step 2 */}
+                      <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                            <CalendarDays className="w-5 h-5 text-[#C2884E]" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">2</span>
+                            使用餐劵下单
+                          </h3>
+                          <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                            每周菜单定期更新，进入您的个人账户，选择餐食，使用账户内餐劵下单即可，订1餐扣1张
+                          </p>
+                          <div className="mt-2 flex items-center">
+                            <Clock className="h-4 w-4 text-[#C2884E] mr-1.5" />
+                            <span className="text-xs font-medium text-[#C2884E]">下单截止时间：配送日前一天上午 11:59。</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Step 3 */}
+                      <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                            <Utensils className="w-5 h-5 text-[#C2884E]" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">3</span>
+                            每日新鲜中央厨房新鲜现做，中午配送～
+                          </h3>
+                          <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                            上午 11 点至下午 1 点 之间准时送达，确保新鲜与美味。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-[#FFF6EF] rounded-xl p-6 mt-8">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center">
+                          <Info className="w-5 h-5 text-[#C2884E]" />
+                        </div>
+                        <h3 className="text-lg font-medium text-[#C2884E]">配送要求</h3>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
+                        <div className="flex items-center">
+                          <span className="text-[#6B5F53] font-medium">每次配送至少2份餐食</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-[#6B5F53]/80 mt-2">我们提供多样化的菜单选择，满足您对不同口味的需求。每周更新菜单，让您的味蕾永远充满惊喜。</p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
                 
                 <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-[#C2884E]/10">
                   <Button 
@@ -1315,7 +1363,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                     {language === 'zh' ? '我明白了' : 'Got it'}
                   </Button>
                 </div>
-              </motion.div>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
