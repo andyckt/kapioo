@@ -136,21 +136,26 @@ function convertToCSV(data: any[]): string {
   // Convert to array and sort
   const uniqueDishNames = Array.from(allDishNames).sort();
   
-  // Define basic CSV headers
+  // Define base headers (without date and status)
   const baseHeaders = [
     'Order ID',
     'User Name',
     'Email',
     'Phone Number',
     'Delivery Address',
-    'Date Ordered',
-    'Delivery Date',
-    'Delivery Day',
-    'Status'
+    'Area'
   ];
   
-  // Combine base headers with dish names
-  const headers = [...baseHeaders, ...uniqueDishNames];
+  // Define date and status headers to appear after dish names
+  const dateStatusHeaders = [
+    'Status',
+    'Delivery Date',
+    'Delivery Day',
+    'Date Ordered'
+  ];
+  
+  // Combine all headers: base headers, dish names, then date and status
+  const headers = [...baseHeaders, ...uniqueDishNames, ...dateStatusHeaders];
   
   // Create CSV content
   let csvContent = headers.join(',') + '\n';
@@ -193,17 +198,14 @@ function convertToCSV(data: any[]): string {
       }
     });
     
-    // Create base row with proper escaping
+    // Create base row with proper escaping (without date and status)
     const baseRow = [
       escapeCSV(order.orderId),
       escapeCSV(order.userName || ''),
       escapeCSV(order.userEmail || ''),
       escapeCSV(order.phoneNumber || ''),
       escapeCSV(address),
-      escapeCSV(dateCreated),
-      escapeCSV(deliveryDate),
-      escapeCSV(deliveryDay),
-      escapeCSV(order.status)
+      escapeCSV(order.area || '')
     ];
     
     // Add dish quantities to the row, only showing non-zero values
@@ -213,8 +215,16 @@ function convertToCSV(data: any[]): string {
       return quantity > 0 ? quantity : '';
     });
     
-    // Combine base row with dish quantities
-    const fullRow = [...baseRow, ...dishQuantitiesRow];
+    // Create date and status row
+    const dateStatusRow = [
+      escapeCSV(order.status),
+      escapeCSV(deliveryDate),
+      escapeCSV(deliveryDay),
+      escapeCSV(dateCreated)
+    ];
+    
+    // Combine all rows: base row, dish quantities, then date and status
+    const fullRow = [...baseRow, ...dishQuantitiesRow, ...dateStatusRow];
     
     csvContent += fullRow.join(',') + '\n';
   });
