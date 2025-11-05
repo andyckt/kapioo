@@ -272,15 +272,18 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       const user = JSON.parse(storedUser)
       if (user.address && user.address.province) {
         const userProvince = user.address.province
-        if (!DAILY_DELIVERY_REGIONS.includes(userProvince)) {
-          setUserRegion(userProvince)
-          setShowRegionDialog(true)
-          return
-        }
+        const isValidRegion = DAILY_DELIVERY_REGIONS.includes(userProvince)
+        
+        // Always show the dialog to collect/confirm address details
+        setUserRegion(userProvince)
+        setShowRegionDialog(true)
+        
+        // The dialog will handle skipping the region selection if the region is valid
+        return
       }
     }
     
-    // If region is supported or no region is set, proceed to upload step
+    // If no region is set, proceed to upload step
     setPurchaseStep('upload')
     console.log('MealVoucherPurchase - Purchase step set to upload')
   }
@@ -1121,13 +1124,24 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   return (
     <div className="flex flex-col h-full space-y-6">
       {/* Region Check Dialog */}
-      <RegionCheckDialogRecharge
-        open={showRegionDialog}
-        onClose={() => setShowRegionDialog(false)}
-        currentRegion={userRegion}
-        onRegionChange={handleRegionChange}
-        onProceed={() => setPurchaseStep('upload')}
-      />
+      {showRegionDialog && (
+        <RegionCheckDialogRecharge
+          open={showRegionDialog}
+          onClose={() => setShowRegionDialog(false)}
+          currentRegion={userRegion}
+          onRegionChange={handleRegionChange}
+          onProceed={() => setPurchaseStep('upload')}
+          isValidRegion={DAILY_DELIVERY_REGIONS.includes(userRegion || '')}
+          existingAddress={(() => {
+            const storedUser = localStorage.getItem('user')
+            if (storedUser) {
+              const user = JSON.parse(storedUser)
+              return user.address
+            }
+            return undefined
+          })()}
+        />
+      )}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">

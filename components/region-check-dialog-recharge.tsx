@@ -44,6 +44,8 @@ interface RegionCheckDialogRechargeProps {
   currentRegion: string | undefined
   onRegionChange: (region: string, addressData?: AddressData) => Promise<void>
   onProceed: () => void
+  isValidRegion?: boolean // Flag to indicate if the current region is valid
+  existingAddress?: AddressData // Existing address data to pre-populate the form
 }
 
 interface AddressData {
@@ -60,23 +62,25 @@ export function RegionCheckDialogRecharge({
   onClose,
   currentRegion,
   onRegionChange,
-  onProceed
+  onProceed,
+  isValidRegion = false,
+  existingAddress
 }: RegionCheckDialogRechargeProps) {
   const { language } = useLanguage()
   const { toast } = useToast()
-  const [selectedRegion, setSelectedRegion] = useState<string>("")
+  const [selectedRegion, setSelectedRegion] = useState<string>(isValidRegion && currentRegion ? currentRegion : "")
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [step, setStep] = useState<'region' | 'address'>('region')
+  const [step, setStep] = useState<'region' | 'address'>(isValidRegion ? 'address' : 'region')
   
   // Address fields
   const [addressData, setAddressData] = useState<AddressData>({
-    unitNumber: '',
-    streetAddress: '',
-    city: '',
-    postalCode: '',
-    country: 'Canada',
-    buzzCode: ''
+    unitNumber: existingAddress?.unitNumber || '',
+    streetAddress: existingAddress?.streetAddress || '',
+    city: existingAddress?.city || '',
+    postalCode: existingAddress?.postalCode || '',
+    country: existingAddress?.country || 'Canada',
+    buzzCode: existingAddress?.buzzCode || ''
   })
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,7 +120,10 @@ export function RegionCheckDialogRecharge({
   }
 
   const handleCompleteAddress = async () => {
-    if (!selectedRegion) return
+    // Use the current region if we're in valid region mode, otherwise use selected region
+    const regionToUse = isValidRegion ? currentRegion : selectedRegion
+    
+    if (!regionToUse) return
     
     // Validate required fields: street address, city, and postal code
     if (!addressData.streetAddress || !addressData.city || !addressData.postalCode) {
@@ -131,7 +138,7 @@ export function RegionCheckDialogRecharge({
     setIsLoading(true)
     try {
       // Pass both region and address data
-      await onRegionChange(selectedRegion, addressData)
+      await onRegionChange(regionToUse, addressData)
       onClose() // Close the dialog first
       onProceed() // Then proceed with the flow
     } catch (error) {
@@ -361,7 +368,9 @@ export function RegionCheckDialogRecharge({
           <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
             {step === 'region' 
               ? (language === 'zh' ? '每日直送服务区域限制' : 'Daily delivery service area restrictions') 
-              : (language === 'zh' ? '请填写您的详细地址' : 'Please fill in your address details')}
+              : isValidRegion 
+                ? (language === 'zh' ? '请确认您的详细地址' : 'Please confirm your address details')
+                : (language === 'zh' ? '请填写您的详细地址' : 'Please fill in your address details')}
           </DialogDescription>
         </DialogHeader>
         
