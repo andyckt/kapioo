@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import AppInitializer from "@/components/app-initializer"
 import { LanguageProvider } from "@/lib/language-context"
+import { MaintenanceProvider } from "@/lib/maintenance-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -49,9 +50,11 @@ export default function RootLayout({
     <html lang="zh">
       <body className={inter.className}>
         <LanguageProvider>
-          <AppInitializer />
-          {children}
-          <Toaster />
+          <MaintenanceProvider>
+            <AppInitializer />
+            {children}
+            <Toaster />
+          </MaintenanceProvider>
         </LanguageProvider>
       </body>
     </html>

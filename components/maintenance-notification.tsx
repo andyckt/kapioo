@@ -5,21 +5,25 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/lib/language-context"
+import { useMaintenanceMode } from "@/lib/maintenance-context"
 
 export function MaintenanceNotification() {
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const { language } = useLanguage()
+  const { isMaintenanceMode } = useMaintenanceMode()
   const wechatId = "kapioomeal06"
 
-  // Show popup after a short delay
+  // Show popup after a short delay if maintenance mode is active
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsOpen(true)
-    }, 1500)
-    
-    return () => clearTimeout(timer)
-  }, [])
+    if (isMaintenanceMode) {
+      const timer = setTimeout(() => {
+        setIsOpen(true)
+      }, 1500)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isMaintenanceMode])
 
   const handleDismiss = () => {
     setIsOpen(false)
