@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getUserWeeklySubscription } from '@/lib/weekly-subscription'
 import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
 import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
+import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
 
 interface WeeklySubscriptionProps {
   userCredits?: number;
@@ -44,6 +45,10 @@ export default function WeeklySubscription({
   const [weeklyTENmeals, setWeeklyTENmeals] = useState<number>(propTenMeals || 0)
   const [weeklyTWELVEmeals, setWeeklyTWELVEmeals] = useState<number>(propTwelveMeals || 0)
   // No longer need activeTab state
+  
+  // Address confirmation dialog state
+  const [showAddressDialog, setShowAddressDialog] = useState(false)
+  const [userRegion, setUserRegion] = useState<string>("")
   
   // Function to check if a day is unavailable for ordering
   const isDayUnavailable = (day: DeliveryDay): { unavailable: boolean, reason: string } => {
@@ -392,8 +397,99 @@ export default function WeeklySubscription({
       return;
     }
     
+    // Get user data and region
+    const userData = JSON.parse(userDataStr);
+    if (userData.address && userData.address.province) {
+      setUserRegion(userData.address.province);
+    }
+    
+    // Show address confirmation dialog
+    setShowAddressDialog(true);
+  }
+  
+  // Proceed to checkout after address confirmation
+  const proceedToCheckout = () => {
     // Open checkout form
+    setShowAddressDialog(false);
     setCheckoutOpen(true);
+  }
+  
+  // Handle region change from dialog
+  const handleRegionChange = async (region: string, addressData?: any): Promise<void> => {
+    try {
+      // Get user data from localStorage
+      const userData = localStorage.getItem('user')
+      if (!userData) {
+        throw new Error('User not logged in')
+      }
+      
+      const user = JSON.parse(userData)
+      
+      // Update user's address with the new region and optional address data
+      let updatedAddress = {
+        ...user.address,
+        province: region
+      }
+      
+      // If additional address data is provided, merge it with the updated address
+      if (addressData) {
+        updatedAddress = {
+          ...updatedAddress,
+          unitNumber: addressData.unitNumber !== undefined ? addressData.unitNumber : updatedAddress.unitNumber,
+          streetAddress: addressData.streetAddress !== undefined ? addressData.streetAddress : updatedAddress.streetAddress,
+          city: addressData.city !== undefined ? addressData.city : updatedAddress.city,
+          postalCode: addressData.postalCode !== undefined ? addressData.postalCode : updatedAddress.postalCode,
+          country: addressData.country !== undefined ? addressData.country : 'Canada',
+          buzzCode: addressData.buzzCode !== undefined ? addressData.buzzCode : updatedAddress.buzzCode
+        }
+      }
+      
+      // Update user data in the database
+      const response = await fetch(`/api/users/${user._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: updatedAddress
+        }),
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update localStorage
+        user.address = updatedAddress
+        localStorage.setItem('user', JSON.stringify(user))
+        
+        // Update state
+        setUserRegion(region)
+        
+        const toastMessage = addressData 
+          ? (language === 'zh' ? "地址已更新" : "Address Updated") 
+          : (language === 'zh' ? "区域已更新" : "Region Updated")
+          
+        const toastDescription = addressData
+          ? (language === 'zh' ? "您的配送地址已成功更新" : "Your delivery address has been successfully updated")
+          : (language === 'zh' ? "您的区域已成功更新" : "Your region has been successfully updated")
+        
+        toast({
+          title: toastMessage,
+          description: toastDescription
+        })
+      } else {
+        throw new Error(result.error || 'Failed to update region')
+      }
+    } catch (error) {
+      console.error('Error updating region:', error)
+      toast({
+        title: language === 'zh' ? "更新失败" : "Update Failed",
+        description: error instanceof Error ? error.message : 
+          (language === 'zh' ? "更新地址时出现错误" : "An error occurred while updating your address"),
+        variant: "destructive"
+      })
+      throw error
+    }
   }
   
   // Handle checkout success
@@ -404,6 +500,26 @@ export default function WeeklySubscription({
 
   return (
     <div className="flex flex-col h-full space-y-6">
+      {/* Address Confirmation Dialog */}
+      {showAddressDialog && (
+        <RegionCheckDialogRecharge
+          open={showAddressDialog}
+          onClose={() => setShowAddressDialog(false)}
+          currentRegion={userRegion}
+          onRegionChange={handleRegionChange}
+          onProceed={proceedToCheckout}
+          isValidRegion={["Downtown", "Midtown", "NorthYork", "Markham", "RichmondHill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket"].includes(userRegion || '')}
+          existingAddress={(() => {
+            const storedUser = localStorage.getItem('user')
+            if (storedUser) {
+              const user = JSON.parse(storedUser)
+              return user.address
+            }
+            return undefined
+          })()}
+        />
+      )}
+      
       {/* Header section with responsive layout */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>

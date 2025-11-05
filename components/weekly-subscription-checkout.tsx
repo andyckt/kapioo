@@ -28,6 +28,7 @@ import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { CartItem, DeliveryDay, submitUserSubscription } from '@/lib/weekly-subscription'
+import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
 
 // Define the supported regions for weekly delivery
 const WEEKLY_DELIVERY_REGIONS = [
@@ -98,6 +99,8 @@ export function WeeklySubscriptionCheckout({
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
   const [popoverOpen, setPopoverOpen] = useState(false)
+  const [showAddressDialog, setShowAddressDialog] = useState(false)
+  const [userRegion, setUserRegion] = useState<string>("")
 
   // Calculate total items and cost
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0)
@@ -155,6 +158,84 @@ export function WeeklySubscriptionCheckout({
       province: area
     })
     setPopoverOpen(false)
+  }
+  
+  // Handle region change from dialog
+  const handleRegionChange = async (region: string, addressData?: any): Promise<void> => {
+    try {
+      // Get user data from localStorage
+      const userData = localStorage.getItem('user')
+      if (!userData) {
+        throw new Error('User not logged in')
+      }
+      
+      const user = JSON.parse(userData)
+      
+      // Update user's address with the new region and optional address data
+      let updatedAddress = {
+        ...user.address,
+        province: region
+      }
+      
+      // If additional address data is provided, merge it with the updated address
+      if (addressData) {
+        updatedAddress = {
+          ...updatedAddress,
+          unitNumber: addressData.unitNumber !== undefined ? addressData.unitNumber : updatedAddress.unitNumber,
+          streetAddress: addressData.streetAddress !== undefined ? addressData.streetAddress : updatedAddress.streetAddress,
+          city: addressData.city !== undefined ? addressData.city : updatedAddress.city,
+          postalCode: addressData.postalCode !== undefined ? addressData.postalCode : updatedAddress.postalCode,
+          country: addressData.country !== undefined ? addressData.country : 'Canada',
+          buzzCode: addressData.buzzCode !== undefined ? addressData.buzzCode : updatedAddress.buzzCode
+        }
+      }
+      
+      // Update user data in the database
+      const response = await fetch(`/api/users/${user._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: updatedAddress
+        }),
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update localStorage
+        user.address = updatedAddress
+        localStorage.setItem('user', JSON.stringify(user))
+        
+        // Update state
+        setUserRegion(region)
+        
+        const toastMessage = addressData 
+          ? (language === 'zh' ? "地址已更新" : "Address Updated") 
+          : (language === 'zh' ? "区域已更新" : "Region Updated")
+          
+        const toastDescription = addressData
+          ? (language === 'zh' ? "您的配送地址已成功更新" : "Your delivery address has been successfully updated")
+          : (language === 'zh' ? "您的区域已成功更新" : "Your region has been successfully updated")
+        
+        toast({
+          title: toastMessage,
+          description: toastDescription
+        })
+      } else {
+        throw new Error(result.error || 'Failed to update region')
+      }
+    } catch (error) {
+      console.error('Error updating region:', error)
+      toast({
+        title: language === 'zh' ? "更新失败" : "Update Failed",
+        description: error instanceof Error ? error.message : 
+          (language === 'zh' ? "更新地址时出现错误" : "An error occurred while updating your address"),
+        variant: "destructive"
+      })
+      throw error
+    }
   }
 
   const handleSaveAddress = async () => {
@@ -221,6 +302,8 @@ export function WeeklySubscriptionCheckout({
   }
 
   const handleCheckout = async () => {
+    console.log("handleCheckout called")
+    
     // Validate delivery information
     if (!formData.name || !formData.phone || !formData.area) {
       toast({
@@ -231,6 +314,23 @@ export function WeeklySubscriptionCheckout({
       return
     }
     
+    // Get user data and region
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      if (user.address && user.address.province) {
+        setUserRegion(user.address.province)
+      }
+    }
+    
+    // Show address confirmation dialog instead of proceeding directly
+    console.log("Setting showAddressDialog to true")
+    setShowAddressDialog(true)
+    console.log("showAddressDialog state after setting:", true)
+  }
+  
+  // The actual submission function that will be called after address confirmation
+  const handleSubmit = async () => {
     if (!userData?.address && !editingAddress) {
       toast({
         title: language === 'zh' ? '出错了' : 'Error Occurred',
@@ -493,6 +593,30 @@ export function WeeklySubscriptionCheckout({
       exit={{ y: -10 }}
       transition={{ duration: 0.2 }}
     >
+      {/* Address Confirmation Dialog */}
+      {/* Debug log: {console.log("Rendering dialog section, showAddressDialog:", showAddressDialog)} */}
+      {showAddressDialog && (
+        <RegionCheckDialogRecharge
+          open={showAddressDialog}
+          onClose={() => {
+            console.log("Dialog close triggered")
+            setShowAddressDialog(false)
+          }}
+          currentRegion={userRegion}
+          onRegionChange={handleRegionChange}
+          onProceed={handleSubmit}
+          isValidRegion={WEEKLY_DELIVERY_REGIONS.includes(userRegion || '')}
+          existingAddress={(() => {
+            const storedUser = localStorage.getItem('user')
+            if (storedUser) {
+              const user = JSON.parse(storedUser)
+              console.log("User address from localStorage:", user.address)
+              return user.address
+            }
+            return undefined
+          })()}
+        />
+      )}
       <div className="mb-4 flex">
         <Button
           variant="outline"
