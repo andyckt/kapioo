@@ -8,11 +8,40 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { 
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import { Check, MapPin } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { CartItem, DeliveryDay, submitUserSubscription } from '@/lib/weekly-subscription'
+
+// Define the supported regions for weekly delivery
+const WEEKLY_DELIVERY_REGIONS = [
+  "Downtown",
+  "Midtown", 
+  "NorthYork", 
+  "Markham", 
+  "RichmondHill",
+  "Vaughan",
+  "Mississauga",
+  "Oakville",
+  "Aurora",
+  "Newmarket"
+]
 
 interface WeeklySubscriptionCheckoutProps {
   cart: CartItem[]
@@ -68,6 +97,7 @@ export function WeeklySubscriptionCheckout({
   })
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
+  const [popoverOpen, setPopoverOpen] = useState(false)
 
   // Calculate total items and cost
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0)
@@ -117,6 +147,14 @@ export function WeeklySubscriptionCheckout({
       ...addressFormData,
       [id === 'state' ? 'province' : id === 'zip' ? 'postalCode' : id]: value
     })
+  }
+  
+  const handleAreaSelect = (area: string) => {
+    setAddressFormData({
+      ...addressFormData,
+      province: area
+    })
+    setPopoverOpen(false)
   }
 
   const handleSaveAddress = async () => {
@@ -666,12 +704,43 @@ export function WeeklySubscriptionCheckout({
                       <Label htmlFor="state" className="text-sm">
                         Area <span className="text-red-500">*</span>
                       </Label>
-                      <Input 
-                        id="state" 
-                        value={addressFormData.province} 
-                        onChange={handleAddressInputChange}
-                        required
-                      />
+                      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {addressFormData.province || (language === 'zh' ? "选择区域..." : "Select area...")}
+                            <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-content-available-width)]">
+                          <Command>
+                            <CommandInput placeholder={language === 'zh' ? "搜索区域..." : "Search area..."} />
+                            <CommandList className="max-h-[200px] overflow-y-auto">
+                              <CommandEmpty>{language === 'zh' ? "未找到匹配的区域" : "No matching areas found"}</CommandEmpty>
+                              <CommandGroup>
+                                {WEEKLY_DELIVERY_REGIONS.map((region) => (
+                                  <CommandItem
+                                    key={region}
+                                    value={region}
+                                    onSelect={() => handleAreaSelect(region)}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        addressFormData.province === region ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {region}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="zip" className="text-sm">
