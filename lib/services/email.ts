@@ -368,6 +368,15 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   referenceNumber?: string;
   notes?: string;
   requestId: string;
+  userAddress?: {
+    unitNumber?: string;
+    streetAddress?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    country?: string;
+    buzzCode?: string;
+  } | null;
 }) => {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -390,7 +399,22 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>餐券数量:</strong> ${requestDetails.quantity}</li>
         ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款金额:</strong> $${requestDetails.amount}</li>
-        <li style="padding: 10px 15px;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
+        
+        ${requestDetails.userAddress ? `
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>用户地址信息:</strong></li>
+        <li style="padding: 10px 15px; padding-left: 25px;">
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${requestDetails.userAddress.unitNumber ? `<li style="padding: 3px 0;"><strong>单元号码:</strong> ${requestDetails.userAddress.unitNumber}</li>` : ''}
+            ${requestDetails.userAddress.streetAddress ? `<li style="padding: 3px 0;"><strong>街道地址:</strong> ${requestDetails.userAddress.streetAddress}</li>` : ''}
+            ${requestDetails.userAddress.city ? `<li style="padding: 3px 0;"><strong>城市:</strong> ${requestDetails.userAddress.city}</li>` : ''}
+            ${requestDetails.userAddress.province ? `<li style="padding: 3px 0;"><strong>区域:</strong> ${requestDetails.userAddress.province}</li>` : ''}
+            ${requestDetails.userAddress.postalCode ? `<li style="padding: 3px 0;"><strong>邮政编码:</strong> ${requestDetails.userAddress.postalCode}</li>` : ''}
+            ${requestDetails.userAddress.country ? `<li style="padding: 3px 0;"><strong>国家:</strong> ${requestDetails.userAddress.country}</li>` : ''}
+            ${requestDetails.userAddress.buzzCode ? `<li style="padding: 3px 0;"><strong>门禁密码:</strong> ${requestDetails.userAddress.buzzCode}</li>` : ''}
+          </ul>
+        </li>
+        ` : `<li style="padding: 10px 15px;"><strong>用户地址信息:</strong> 未提供</li>`}
       </ul>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
         请点击下方链接查看付款凭证并进行审核：

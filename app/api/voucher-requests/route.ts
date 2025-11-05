@@ -120,6 +120,17 @@ export async function POST(request: NextRequest) {
     
     // Send notification to admin
     try {
+      // Format user address for the email
+      const userAddress = user.address ? {
+        unitNumber: user.address.unitNumber || '',
+        streetAddress: user.address.streetAddress || '',
+        city: user.address.city || '',
+        province: user.address.province || '',
+        postalCode: user.address.postalCode || '',
+        country: user.address.country || '',
+        buzzCode: user.address.buzzCode || ''
+      } : null;
+      
       await sendAdminVoucherRequestNotification({
         userId,
         userName: user.name,
@@ -130,7 +141,8 @@ export async function POST(request: NextRequest) {
         imageProofUrl: imageProof,
         referenceNumber,
         notes,
-        requestId
+        requestId,
+        userAddress: userAddress
       });
       console.log('Admin notification sent successfully for voucher request:', requestId);
     } catch (emailError) {
