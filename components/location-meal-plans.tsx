@@ -66,7 +66,7 @@ export default function LocationMealPlans() {
       zh: t('weeklySubscriptionDesc')
     },
     // Note: These image paths are placeholders. You'll need to add actual images to the public/meal-plans directory
-    imagePath: "/food-gallery/westernfood.JPG" // Using existing image as placeholder
+    imagePath: "/food-gallery/_MG_4897.jpg" // Swapped with daily delivery image
   }
   
   const dailyPlan: MealPlan = {
@@ -80,7 +80,7 @@ export default function LocationMealPlans() {
       zh: t('dailyDeliveryDesc')
     },
     // Note: These image paths are placeholders. You'll need to add actual images to the public/meal-plans directory
-    imagePath: "/food-gallery/_MG_4897.jpg" // Updated image for daily delivery
+    imagePath: "/food-gallery/westernfood.JPG" // Swapped with weekly subscription image
   }
   
   // Get available plans based on location
