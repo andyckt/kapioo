@@ -464,6 +464,16 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     }
   }
   
+  // Function to determine delivery fee based on region
+  const getDeliveryFee = (region: string): number => {
+    // Higher delivery fee for Hamilton and Burlington areas
+    if (region === 'Hamilton' || region === 'Burlington') {
+      return 15.99;
+    }
+    // Standard delivery fee for all other areas
+    return 11.99;
+  }
+  
   // Handle plan selection
   const handlePlanSelect = (plan: PlanOption) => {
     // Get user data and region
@@ -549,7 +559,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       else mealPlanType = '12aweek';
       
       // Calculate the final amount based on payment method
-      const originalPrice = selectedPlan.totalPrice + (11.99 * selectedPlan.duration); // Plan price + delivery fee
+      const deliveryFee = getDeliveryFee(userRegion || '');
+      const originalPrice = selectedPlan.totalPrice + (deliveryFee * selectedPlan.duration); // Plan price + delivery fee
       let finalAmount = originalPrice;
       
       // If no payment method is selected, default to 'emt'
@@ -717,7 +728,9 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   {language === 'zh' ? '配送费' : 'Delivery Fee'}
                 </h4>
                 <p className="text-sm text-[#8A7968]">
-                  {language === 'zh' ? '$11.99/周 (2次配送)' : '$11.99/week (2 deliveries)'}
+                  {language === 'zh' 
+                    ? `$${getDeliveryFee(userRegion || '')}/周 (2次配送)` 
+                    : `$${getDeliveryFee(userRegion || '')}/week (2 deliveries)`}
                 </p>
               </div>
             </div>
@@ -905,7 +918,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
               <span className="text-[#8A7968]">
                 {language === 'zh' ? '配送费/周 (2次配送)' : 'Delivery fee/week (2 deliveries)'}: 
               </span>
-              <span className="font-medium text-[#6B5F53] ml-2">$11.99</span>
+              <span className="font-medium text-[#6B5F53] ml-2">${getDeliveryFee(userRegion || '')}</span>
             </div>
             
             {/* Payment method and tax information - commented out
@@ -967,11 +980,11 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                         <div className="text-[13px] text-[#8A7968]">
                           {language === 'zh' ? '配送费' : 'Delivery fee'} 
                           <span className="ml-1">
-                            ($11.99 × {selectedPlan?.duration} {language === 'zh' ? '周' : 'weeks'})
+                            (${getDeliveryFee(userRegion || '')} × {selectedPlan?.duration} {language === 'zh' ? '周' : 'weeks'})
                           </span>
                         </div>
                         <div className="text-[13px] text-[#8A7968]">
-                          ${(11.99 * (selectedPlan?.duration || 0)).toFixed(2)}
+                          ${(getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)).toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -984,7 +997,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                           {language === 'zh' ? '税费 (HST 13%)' : 'Tax (HST 13%)'}
                         </div>
                         <div className="text-[13px] text-[#8A7968]">
-                          ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.13).toFixed(2)}
+                          ${(((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 0.13).toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -996,7 +1009,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                           {language === 'zh' ? '微信转账折扣 (10%)' : 'WeChat Payment Discount (10%)'}
                         </div>
                         <div className="font-medium text-green-600">
-                          -${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.1).toFixed(2)}
+                          -${(((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 0.1).toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -1010,7 +1023,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                             {language === 'zh' ? '总计 (EMT付款)' : 'Total (EMT payment)'}
                           </div>
                           <div className="font-bold text-lg text-[#C2884E]">
-                            ${parseFloat((((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 1.13).toFixed(2))}
+                            ${parseFloat((((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 1.13).toFixed(2))}
                           </div>
                         </div>
                         {/* WeChat payment total - commented out 
@@ -1020,7 +1033,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                             {language === 'zh' ? '总计 (微信转账)(10%折扣)' : 'Total (WeChat payment)(10% discount)'}
                           </div>
                           <div className="font-bold text-lg text-[#C2884E]">
-                            ${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 0.9).toFixed(2)}
+                            ${(((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 0.9).toFixed(2)}
                           </div>
                         </div>
                         */}
@@ -1059,7 +1072,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '金额' : 'Amount'}</p>
-                        <p className="font-medium text-[#C2884E]">${(((selectedPlan?.totalPrice || 0) + 11.99 * (selectedPlan?.duration || 0)) * 1.13).toFixed(2)}</p>
+                        <p className="font-medium text-[#C2884E]">${(((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 1.13).toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
