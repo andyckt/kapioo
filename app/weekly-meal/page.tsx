@@ -91,9 +91,11 @@ export default function WeeklyMealPage() {
           const data = await getUserWeeklySubscription();
           
           if (data && data.length > 0) {
-            // Format dates based on language
+            // Format dates based on language and create unique IDs
             const formattedData = data.map(day => ({
               ...day,
+              // Create a unique ID that includes the week information
+              uniqueId: `${day.id}-week-${day.weekOffset}`,
               name: language === 'zh' 
                 ? (day.id === 'sunday' ? '周日' : '周二')
                 : (day.id === 'sunday' ? 'Sunday' : 'Tuesday')
@@ -105,7 +107,7 @@ export default function WeeklyMealPage() {
             if (formattedData.length > 0) {
               const firstDayOfActiveWeek = formattedData.find(day => day.weekOffset === activeWeek - 1);
               if (firstDayOfActiveWeek) {
-                setSelectedMenuDay(firstDayOfActiveWeek.id);
+                setSelectedMenuDay(firstDayOfActiveWeek.uniqueId);
               }
             }
           } else {
@@ -114,6 +116,7 @@ export default function WeeklyMealPage() {
             const mockWeeklyMenu = [
               {
                 id: 'sunday',
+                uniqueId: 'sunday-week-0',
                 name: language === 'zh' ? '周日' : 'Sunday',
                 date: 'Oct 20',
                 weekOffset: 0,
@@ -132,6 +135,7 @@ export default function WeeklyMealPage() {
               },
               {
                 id: 'tuesday',
+                uniqueId: 'tuesday-week-0',
                 name: language === 'zh' ? '周二' : 'Tuesday',
                 date: 'Oct 22',
                 weekOffset: 0,
@@ -150,6 +154,7 @@ export default function WeeklyMealPage() {
               },
               {
                 id: 'sunday',
+                uniqueId: 'sunday-week-1',
                 name: language === 'zh' ? '周日' : 'Sunday',
                 date: 'Oct 27',
                 weekOffset: 1,
@@ -168,6 +173,7 @@ export default function WeeklyMealPage() {
               },
               {
                 id: 'tuesday',
+                uniqueId: 'tuesday-week-1',
                 name: language === 'zh' ? '周二' : 'Tuesday',
                 date: 'Oct 29',
                 weekOffset: 1,
@@ -192,7 +198,7 @@ export default function WeeklyMealPage() {
             if (mockWeeklyMenu.length > 0) {
               const firstDayOfActiveWeek = mockWeeklyMenu.find(day => day.weekOffset === activeWeek - 1);
               if (firstDayOfActiveWeek) {
-                setSelectedMenuDay(firstDayOfActiveWeek.id);
+                setSelectedMenuDay(firstDayOfActiveWeek.uniqueId);
               }
             }
           }
@@ -651,9 +657,9 @@ export default function WeeklyMealPage() {
                                     .map((day) => (
                                       <button
                                         key={day.id}
-                                        onClick={() => setSelectedMenuDay(day.id)}
+                                        onClick={() => setSelectedMenuDay(day.uniqueId)}
                                         className={`flex-shrink-0 transition-all duration-300 border
-                                          ${selectedMenuDay === day.id 
+                                          ${selectedMenuDay === day.uniqueId 
                                             ? "bg-white border-[#C2884E] text-[#C2884E] shadow-md" 
                                             : "bg-white/60 border-[#F5EDE4] text-[#6B5F53]/80 hover:border-[#C2884E]/30"}
                                           px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl min-w-[70px] sm:min-w-[80px]`}
@@ -686,10 +692,10 @@ export default function WeeklyMealPage() {
                                     key={day.id}
                                     onClick={() => {
                                       setActiveWeek(1);
-                                      setSelectedMenuDay(day.id);
+                                      setSelectedMenuDay(day.uniqueId);
                                     }}
                                     className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
-                                      ${selectedMenuDay === day.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
+                                      ${selectedMenuDay === day.uniqueId ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
                                   >
                                     <div className="w-full">
                                       <p className="font-medium capitalize text-sm">{day.name}</p>
@@ -719,10 +725,10 @@ export default function WeeklyMealPage() {
                                     key={day.id}
                                     onClick={() => {
                                       setActiveWeek(2);
-                                      setSelectedMenuDay(day.id);
+                                      setSelectedMenuDay(day.uniqueId);
                                     }}
                                     className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
-                                      ${selectedMenuDay === day.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
+                                      ${selectedMenuDay === day.uniqueId ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
                                   >
                                     <div className="w-full">
                                       <p className="font-medium capitalize text-sm">{day.name}</p>
@@ -737,7 +743,7 @@ export default function WeeklyMealPage() {
                           <div className="flex-1 px-3 py-2 sm:p-4 md:p-6 menu-content overflow-y-auto scrollbar-brand">
                             {selectedMenuDay ? (
                               (() => {
-                                const selectedDay = weeklyMenu.find(day => day.id === selectedMenuDay)
+                                const selectedDay = weeklyMenu.find(day => day.uniqueId === selectedMenuDay)
                                 
                                 if (!selectedDay) {
                                   return (
