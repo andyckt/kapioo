@@ -9,11 +9,14 @@ import { CardTitle } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import { Card } from "@/components/ui/card"
 import { useState, useEffect } from "react"
+import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2 } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useToast } from "@/hooks/use-toast"
 import { AdminDashboardEnhanced } from "@/components/admin-dashboard-enhanced"
 import {
@@ -124,6 +127,14 @@ export default function AdminDashboardPage() {
     limit: 10,
     total: 0,
     pages: 1
+  })
+  const [isExportingCreditRequests, setIsExportingCreditRequests] = useState(false)
+  const [creditRequestsDateRange, setCreditRequestsDateRange] = useState<{
+    startDate: Date | undefined;
+    endDate: Date | undefined;
+  }>({
+    startDate: undefined,
+    endDate: undefined
   })
   const [viewRequestOpen, setViewRequestOpen] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<any>(null)
@@ -402,7 +413,21 @@ export default function AdminDashboardPage() {
   const fetchCreditRequests = async (page = 1) => {
     setCreditRequestsLoading(true);
     try {
-      const response = await fetch(`/api/credits/request/admin?page=${page}&limit=${creditRequestsPagination.limit}`);
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', creditRequestsPagination.limit.toString());
+      
+      // Add date range if provided
+      if (creditRequestsDateRange.startDate) {
+        params.append('startDate', format(creditRequestsDateRange.startDate, 'yyyy-MM-dd'));
+      }
+      
+      if (creditRequestsDateRange.endDate) {
+        params.append('endDate', format(creditRequestsDateRange.endDate, 'yyyy-MM-dd'));
+      }
+      
+      const response = await fetch(`/api/credits/request/admin?${params.toString()}`);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -633,6 +658,51 @@ export default function AdminDashboardPage() {
       });
     } finally {
       setProcessingRequest(false);
+    }
+  };
+  
+  // Export credit requests to CSV
+  const exportCreditRequestsToCSV = async () => {
+    setIsExportingCreditRequests(true);
+    try {
+      // Build query parameters for export
+      const params = new URLSearchParams();
+      
+      // Add status filter if selected
+      if (activeTab === "credit-requests") {
+        params.append('status', 'all');
+      }
+      
+      // Add date range if provided
+      if (creditRequestsDateRange.startDate) {
+        params.append('startDate', format(creditRequestsDateRange.startDate, 'yyyy-MM-dd'));
+      }
+      
+      if (creditRequestsDateRange.endDate) {
+        params.append('endDate', format(creditRequestsDateRange.endDate, 'yyyy-MM-dd'));
+      }
+      
+      // Create a link to download the CSV
+      const link = document.createElement('a');
+      link.href = `/api/credits/request/admin/export?${params.toString()}`;
+      link.setAttribute('download', `credit-requests-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Export Started",
+        description: "Your CSV file will download shortly."
+      });
+    } catch (error) {
+      console.error('Error exporting credit requests:', error);
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting credit requests to CSV.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExportingCreditRequests(false);
     }
   };
   
@@ -2038,17 +2108,101 @@ export default function AdminDashboardPage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <h2 className="text-3xl font-bold tracking-tight">Weekly Purchase Requests</h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchCreditRequests(creditRequestsPagination.page)}
-                    className="h-9 gap-1"
-                  >
-                    <RefreshCcw className={cn("h-4 w-4", creditRequestsLoading && "animate-spin")} />
-                    {creditRequestsLoading ? "Refreshing..." : "Refresh"}
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 gap-1"
+                          >
+                            <CalendarDays className="h-4 w-4" />
+                            {creditRequestsDateRange.startDate ? (
+                              creditRequestsDateRange.endDate ? (
+                                <>
+                                  {format(creditRequestsDateRange.startDate, 'MMM d')} - {format(creditRequestsDateRange.endDate, 'MMM d')}
+                                </>
+                              ) : (
+                                format(creditRequestsDateRange.startDate, 'MMM d')
+                              )
+                            ) : (
+                              "Date Range"
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <Calendar
+                            mode="range"
+                            selected={{
+                              from: creditRequestsDateRange.startDate,
+                              to: creditRequestsDateRange.endDate,
+                            }}
+                            onSelect={(range) => {
+                              setCreditRequestsDateRange({
+                                startDate: range?.from,
+                                endDate: range?.to,
+                              });
+                              // Reset to page 1 when changing date range
+                              setCreditRequestsPagination(prev => ({
+                                ...prev,
+                                page: 1
+                              }));
+                              // Fetch with new date range
+                              fetchCreditRequests(1);
+                            }}
+                            numberOfMonths={2}
+                            className="rounded-md border"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCreditRequestsDateRange({
+                            startDate: undefined,
+                            endDate: undefined
+                          });
+                          fetchCreditRequests(1);
+                        }}
+                        className="h-9"
+                        disabled={!creditRequestsDateRange.startDate && !creditRequestsDateRange.endDate}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportCreditRequestsToCSV()}
+                      className="h-9 gap-1"
+                      disabled={isExportingCreditRequests || creditRequests.length === 0}
+                    >
+                      {isExportingCreditRequests ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Export to CSV
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchCreditRequests(creditRequestsPagination.page)}
+                      className="h-9 gap-1"
+                    >
+                      <RefreshCcw className={cn("h-4 w-4", creditRequestsLoading && "animate-spin")} />
+                      {creditRequestsLoading ? "Refreshing..." : "Refresh"}
+                    </Button>
+                  </div>
                 </div>
                 <Card>
                   <CardHeader>
