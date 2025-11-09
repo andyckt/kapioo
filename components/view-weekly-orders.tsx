@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X } from "lucide-react"
+import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X, Check, CheckSquare } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -93,6 +93,10 @@ export function ViewWeeklyOrders() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [orders, setOrders] = useState<any[]>([])
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
+  const [selectAllChecked, setSelectAllChecked] = useState(false)
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false)
+  const [batchStatus, setBatchStatus] = useState<string | null>(null)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -421,6 +425,99 @@ export function ViewWeeklyOrders() {
     }
   }
   
+  // Toggle selection of a single order
+  const toggleOrderSelection = (orderId: string) => {
+    const newSelectedOrders = new Set(selectedOrders)
+    if (newSelectedOrders.has(orderId)) {
+      newSelectedOrders.delete(orderId)
+    } else {
+      newSelectedOrders.add(orderId)
+    }
+    setSelectedOrders(newSelectedOrders)
+    
+    // Update selectAll checkbox state
+    if (newSelectedOrders.size === 0) {
+      setSelectAllChecked(false)
+    } else if (newSelectedOrders.size === orders.length) {
+      setSelectAllChecked(true)
+    } else {
+      setSelectAllChecked(false)
+    }
+  }
+  
+  // Toggle selection of all orders
+  const toggleSelectAll = () => {
+    if (selectAllChecked) {
+      // Unselect all
+      setSelectedOrders(new Set())
+    } else {
+      // Select all orders
+      const allOrderIds = orders.map(order => order.orderId)
+      setSelectedOrders(new Set(allOrderIds))
+    }
+    setSelectAllChecked(!selectAllChecked)
+  }
+  
+  // Update status for all selected orders
+  const updateSelectedOrdersStatus = async (newStatus: string) => {
+    if (selectedOrders.size === 0) {
+      toast({
+        title: "No orders selected",
+        description: "Please select at least one order to update",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    setIsBatchUpdating(true)
+    setBatchStatus(newStatus)
+    
+    try {
+      const orderIds = Array.from(selectedOrders)
+      const results = await Promise.allSettled(
+        orderIds.map(orderId => 
+          fetch(`/api/admin/weekly-subscription/orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: newStatus }),
+          }).then(res => res.json())
+        )
+      )
+      
+      // Count successes and failures
+      const successful = results.filter(r => r.status === 'fulfilled' && (r.value?.success ?? false)).length
+      const failed = results.length - successful
+      
+      // Update orders in the UI
+      setOrders(orders.map(order => 
+        selectedOrders.has(order.orderId) ? { ...order, status: newStatus } : order
+      ))
+      
+      // Clear selection
+      setSelectedOrders(new Set())
+      setSelectAllChecked(false)
+      
+      // Show toast with results
+      toast({
+        title: `Batch update complete`,
+        description: `Successfully updated ${successful} orders to "${newStatus}" status${failed > 0 ? `. Failed: ${failed}` : ''}`,
+        variant: failed > 0 ? "destructive" : "default"
+      })
+    } catch (error) {
+      console.error('Error in batch update:', error)
+      toast({
+        title: "Update failed",
+        description: "An error occurred during the batch update",
+        variant: "destructive"
+      })
+    } finally {
+      setIsBatchUpdating(false)
+      setBatchStatus(null)
+    }
+  }
+  
   // Format address for display
   const formatAddress = (address: any) => {
     if (!address) return "No address provided"
@@ -625,9 +722,71 @@ export function ViewWeeklyOrders() {
         ) : (
           <div className="rounded-md border">
             <div className="overflow-x-auto">
+              {/* Batch Actions */}
+              {selectedOrders.size > 0 && (
+                <div className="mb-4 p-3 bg-muted/30 border rounded-lg flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-medium">{selectedOrders.size} orders selected</span>
+                  <div className="flex-1"></div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm">Update status to:</span>
+                    <Select
+                      value={batchStatus || ""}
+                      onValueChange={setBatchStatus}
+                      disabled={isBatchUpdating}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="delivery">Delivery</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="refunded">Refunded</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      onClick={() => batchStatus && updateSelectedOrdersStatus(batchStatus)}
+                      disabled={isBatchUpdating || !batchStatus}
+                      className="ml-2"
+                    >
+                      {isBatchUpdating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        'Update Selected'
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setSelectedOrders(new Set())
+                        setSelectAllChecked(false)
+                      }}
+                      disabled={isBatchUpdating}
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
+                    <th className="h-10 px-2 text-left align-middle font-medium">
+                      <div className="flex items-center">
+                        <div 
+                          className="cursor-pointer flex items-center justify-center w-5 h-5 rounded border border-muted-foreground/30 mr-2"
+                          onClick={toggleSelectAll}
+                        >
+                          {selectAllChecked && <Check className="h-3.5 w-3.5 text-primary" />}
+                        </div>
+                      </div>
+                    </th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Order ID</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Customer</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Date Ordered</th>
@@ -641,6 +800,14 @@ export function ViewWeeklyOrders() {
                   {orders.length > 0 ? (
                     orders.map((order) => (
                       <tr key={order._id} className="border-b transition-colors hover:bg-muted/50">
+                        <td className="px-2 py-4 align-middle">
+                          <div 
+                            className="cursor-pointer flex items-center justify-center w-5 h-5 rounded border border-muted-foreground/30"
+                            onClick={() => toggleOrderSelection(order.orderId)}
+                          >
+                            {selectedOrders.has(order.orderId) && <Check className="h-3.5 w-3.5 text-primary" />}
+                          </div>
+                        </td>
                         <td className="p-4 align-middle">{order.orderId}</td>
                         <td className="p-4 align-middle">
                           {order.user?.name || 'Unknown'}
