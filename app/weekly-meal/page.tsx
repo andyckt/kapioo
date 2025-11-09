@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/lib/language-context"
+import { getUserWeeklySubscription } from "@/lib/weekly-subscription"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,17 +54,18 @@ export default function WeeklyMealPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
   const [isMenuLoading, setIsMenuLoading] = useState(false)
+  const [menuError, setMenuError] = useState<string | null>(null)
   interface MenuOption {
     id: string;
     name: string;
-    tags: string[];
+    tags?: string[];
   }
   
   interface MenuDay {
     id: string;
     name: string;
     date: string;
-    week: number;
+    weekOffset: number;
     options: MenuOption[];
   }
   
@@ -82,114 +84,130 @@ export default function WeeklyMealPage() {
   useEffect(() => {
     if (menuDialogOpen) {
       const fetchWeeklyMenu = async () => {
-        setIsMenuLoading(true)
+        setIsMenuLoading(true);
+        setMenuError(null);
         try {
-          // Simulate API call with a delay
-          await new Promise(resolve => setTimeout(resolve, 1000))
+          // Fetch real data from API
+          const data = await getUserWeeklySubscription();
           
-          // Sample weekly menu data
-          const mockWeeklyMenu = [
-            {
-              id: 'sunday',
-              name: language === 'zh' ? '周日' : 'Sunday',
-              date: 'Oct 20',
-              week: 1,
-              options: [
-                {
-                  id: 'option1',
-                  name: language === 'zh' ? '香煎三文鱼配时蔬' : 'Pan-seared Salmon with Vegetables',
-                  tags: ['高蛋白', '低碳水']
-                },
-                {
-                  id: 'option2',
-                  name: language === 'zh' ? '意式肉酱面' : 'Spaghetti Bolognese',
-                  tags: ['经典', '家常']
-                },
-                {
-                  id: 'option3',
-                  name: language === 'zh' ? '泰式咖喱鸡' : 'Thai Curry Chicken',
-                  tags: ['辣', '异国风味']
-                }
-              ]
-            },
-            {
-              id: 'tuesday',
-              name: language === 'zh' ? '周二' : 'Tuesday',
-              date: 'Oct 22',
-              week: 1,
-              options: [
-                {
-                  id: 'option4',
-                  name: language === 'zh' ? '烤牛排配蘑菇酱' : 'Grilled Steak with Mushroom Sauce',
-                  tags: ['高蛋白', '低碳水']
-                },
-                {
-                  id: 'option5',
-                  name: language === 'zh' ? '日式照烧鸡饭' : 'Japanese Teriyaki Chicken Rice',
-                  tags: ['经典', '家常']
-                },
-                {
-                  id: 'option6',
-                  name: language === 'zh' ? '墨西哥牛肉卷' : 'Mexican Beef Burrito',
-                  tags: ['辣', '异国风味']
-                }
-              ]
-            },
-            {
-              id: 'sunday-next',
-              name: language === 'zh' ? '周日' : 'Sunday',
-              date: 'Oct 27',
-              week: 2,
-              options: [
-                {
-                  id: 'option7',
-                  name: language === 'zh' ? '香煎鳕鱼配柠檬黄油' : 'Pan-fried Cod with Lemon Butter',
-                  tags: ['高蛋白', '低碳水']
-                },
-                {
-                  id: 'option8',
-                  name: language === 'zh' ? '意式烩饭' : 'Risotto',
-                  tags: ['经典', '家常']
-                }
-              ]
-            },
-            {
-              id: 'tuesday-next',
-              name: language === 'zh' ? '周二' : 'Tuesday',
-              date: 'Oct 29',
-              week: 2,
-              options: [
-                {
-                  id: 'option9',
-                  name: language === 'zh' ? '烤羊排配薄荷酱' : 'Grilled Lamb Chops with Mint Sauce',
-                  tags: ['高蛋白', '低碳水']
-                },
-                {
-                  id: 'option10',
-                  name: language === 'zh' ? '韩式拌饭' : 'Korean Bibimbap',
-                  tags: ['经典', '家常']
-                }
-              ]
+          if (data && data.length > 0) {
+            // Format dates based on language
+            const formattedData = data.map(day => ({
+              ...day,
+              name: language === 'zh' 
+                ? (day.id === 'sunday' ? '周日' : '周二')
+                : (day.id === 'sunday' ? 'Sunday' : 'Tuesday')
+            }));
+            
+            setWeeklyMenu(formattedData);
+            
+            // Set the first day as selected by default
+            if (formattedData.length > 0) {
+              const firstDayOfActiveWeek = formattedData.find(day => day.weekOffset === activeWeek - 1);
+              if (firstDayOfActiveWeek) {
+                setSelectedMenuDay(firstDayOfActiveWeek.id);
+              }
             }
-          ]
-          
-          setWeeklyMenu(mockWeeklyMenu)
-          
-          // Set the first day as selected by default
-          if (mockWeeklyMenu.length > 0) {
-            const firstDayOfActiveWeek = mockWeeklyMenu.find(day => day.week === activeWeek)
-            if (firstDayOfActiveWeek) {
-              setSelectedMenuDay(firstDayOfActiveWeek.id)
+          } else {
+            // If no data is returned, use fallback mock data for development
+            console.warn('No menu data returned from API, using fallback data');
+            const mockWeeklyMenu = [
+              {
+                id: 'sunday',
+                name: language === 'zh' ? '周日' : 'Sunday',
+                date: 'Oct 20',
+                weekOffset: 0,
+                options: [
+                  {
+                    id: 'option1',
+                    name: language === 'zh' ? '香煎三文鱼配时蔬' : 'Pan-seared Salmon with Vegetables',
+                    tags: ['高蛋白', '低碳水']
+                  },
+                  {
+                    id: 'option2',
+                    name: language === 'zh' ? '意式肉酱面' : 'Spaghetti Bolognese',
+                    tags: ['经典', '家常']
+                  }
+                ]
+              },
+              {
+                id: 'tuesday',
+                name: language === 'zh' ? '周二' : 'Tuesday',
+                date: 'Oct 22',
+                weekOffset: 0,
+                options: [
+                  {
+                    id: 'option4',
+                    name: language === 'zh' ? '烤牛排配蘑菇酱' : 'Grilled Steak with Mushroom Sauce',
+                    tags: ['高蛋白', '低碳水']
+                  },
+                  {
+                    id: 'option5',
+                    name: language === 'zh' ? '日式照烧鸡饭' : 'Japanese Teriyaki Chicken Rice',
+                    tags: ['经典', '家常']
+                  }
+                ]
+              },
+              {
+                id: 'sunday',
+                name: language === 'zh' ? '周日' : 'Sunday',
+                date: 'Oct 27',
+                weekOffset: 1,
+                options: [
+                  {
+                    id: 'option7',
+                    name: language === 'zh' ? '香煎鳕鱼配柠檬黄油' : 'Pan-fried Cod with Lemon Butter',
+                    tags: ['高蛋白', '低碳水']
+                  },
+                  {
+                    id: 'option8',
+                    name: language === 'zh' ? '意式烩饭' : 'Risotto',
+                    tags: ['经典', '家常']
+                  }
+                ]
+              },
+              {
+                id: 'tuesday',
+                name: language === 'zh' ? '周二' : 'Tuesday',
+                date: 'Oct 29',
+                weekOffset: 1,
+                options: [
+                  {
+                    id: 'option9',
+                    name: language === 'zh' ? '烤羊排配薄荷酱' : 'Grilled Lamb Chops with Mint Sauce',
+                    tags: ['高蛋白', '低碳水']
+                  },
+                  {
+                    id: 'option10',
+                    name: language === 'zh' ? '韩式拌饭' : 'Korean Bibimbap',
+                    tags: ['经典', '家常']
+                  }
+                ]
+              }
+            ];
+            
+            setWeeklyMenu(mockWeeklyMenu);
+            
+            // Set the first day as selected by default
+            if (mockWeeklyMenu.length > 0) {
+              const firstDayOfActiveWeek = mockWeeklyMenu.find(day => day.weekOffset === activeWeek - 1);
+              if (firstDayOfActiveWeek) {
+                setSelectedMenuDay(firstDayOfActiveWeek.id);
+              }
             }
           }
         } catch (error) {
-          console.error('Error fetching weekly menu:', error)
+          console.error('Error fetching weekly menu:', error);
+          setMenuError(language === 'zh' 
+            ? '加载菜单时出错，请稍后再试' 
+            : 'Error loading menu, please try again later');
+          setWeeklyMenu([]); // Clear any previous data
         } finally {
-          setIsMenuLoading(false)
+          setIsMenuLoading(false);
         }
-      }
+      };
       
-      fetchWeeklyMenu()
+      fetchWeeklyMenu();
     }
   }, [menuDialogOpen, activeWeek, language])
 
@@ -511,6 +529,27 @@ export default function WeeklyMealPage() {
                             <p className="text-sm sm:text-base text-[#6B5F53]">{language === 'zh' ? '加载中...' : 'Loading...'}</p>
                           </div>
                         </div>
+                      ) : menuError ? (
+                        <div className="flex justify-center items-center h-[200px] sm:h-[300px]">
+                          <div className="text-center bg-red-50 p-4 rounded-xl border border-red-200 max-w-[90%] sm:max-w-[80%]">
+                            <div className="text-red-500 mb-2">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <p className="text-sm sm:text-base text-red-700">{menuError}</p>
+                            <Button 
+                              className="mt-4 bg-red-100 hover:bg-red-200 text-red-700 border border-red-300"
+                              onClick={() => {
+                                setMenuDialogOpen(false);
+                                // Reset error when dialog is closed
+                                setTimeout(() => setMenuError(null), 300);
+                              }}
+                            >
+                              {language === 'zh' ? '关闭' : 'Close'}
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
                         <div className="flex flex-col md:flex-row h-full overflow-y-auto scrollbar-brand">
                           <style jsx global>{`
@@ -608,7 +647,7 @@ export default function WeeklyMealPage() {
                               <div className="overflow-x-auto pb-2 no-scrollbar text-center">
                                 <div className="inline-flex justify-center space-x-2.5 px-1 py-1">
                                   {weeklyMenu
-                                    .filter(day => day.week === activeWeek)
+                                    .filter(day => day.weekOffset === activeWeek - 1)
                                     .map((day) => (
                                       <button
                                         key={day.id}
@@ -641,7 +680,7 @@ export default function WeeklyMealPage() {
                               
                               {/* Week 1 Days */}
                               {weeklyMenu
-                                .filter(day => day.week === 1)
+                                .filter(day => day.weekOffset === 0)
                                 .map((day) => (
                                   <button
                                     key={day.id}
@@ -674,7 +713,7 @@ export default function WeeklyMealPage() {
                               
                               {/* Week 2 Days */}
                               {weeklyMenu
-                                .filter(day => day.week === 2)
+                                .filter(day => day.weekOffset === 1)
                                 .map((day) => (
                                   <button
                                     key={day.id}
