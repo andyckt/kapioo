@@ -87,23 +87,24 @@ const WeeklyOrderSchema = new mongoose.Schema({
   }
 });
 
-// Create the model
-let WeeklyOrder: mongoose.Model<WeeklyOrderDocument>;
-try {
-  // Check if the model already exists
-  WeeklyOrder = mongoose.models.WeeklyOrder as mongoose.Model<WeeklyOrderDocument>;
-} catch (error) {
-  // Create the model if it doesn't exist
-  WeeklyOrder = mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
-}
-
 // PATCH handler - update weekly subscription order status
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     // In a production environment, you should implement proper authentication
     // to ensure only admins can access this endpoint
     
+    // First connect to the database
     await connectToDatabase();
+    
+    // Initialize the model after database connection is established
+    let WeeklyOrder: mongoose.Model<WeeklyOrderDocument>;
+    if (mongoose.models.WeeklyOrder) {
+      // Use existing model if it exists
+      WeeklyOrder = mongoose.models.WeeklyOrder as mongoose.Model<WeeklyOrderDocument>;
+    } else {
+      // Create the model if it doesn't exist
+      WeeklyOrder = mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
+    }
     
     const { id } = params;
     const { status } = await request.json();
