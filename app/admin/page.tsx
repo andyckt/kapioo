@@ -12,11 +12,10 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useToast } from "@/hooks/use-toast"
 import { AdminDashboardEnhanced } from "@/components/admin-dashboard-enhanced"
 import {
@@ -90,7 +89,7 @@ export default function AdminDashboardPage() {
     { 
       id: "food-management-group", 
       label: "Food Management", 
-      icon: <Calendar className="h-4 w-4" />,
+      icon: <CalendarIcon className="h-4 w-4" />,
       isHeading: true,
       children: [
         { id: "daily-delivery", label: "Daily Delivery Management", icon: <Truck className="h-4 w-4" /> },
@@ -115,7 +114,7 @@ export default function AdminDashboardPage() {
       isHeading: true,
       children: [
         { id: "view-all-orders", label: "View Daily Delivery Orders", icon: <Eye className="h-4 w-4" /> },
-        { id: "view-weekly-orders", label: "View Weekly Orders", icon: <Calendar className="h-4 w-4" /> }
+        { id: "view-weekly-orders", label: "View Weekly Orders", icon: <CalendarIcon className="h-4 w-4" /> }
       ]
     },
     { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
@@ -2140,7 +2139,7 @@ export default function AdminDashboardPage() {
                               from: creditRequestsDateRange.startDate,
                               to: creditRequestsDateRange.endDate,
                             }}
-                            onSelect={(range) => {
+                            onSelect={(range: { from: Date | undefined; to: Date | undefined } | undefined) => {
                               setCreditRequestsDateRange({
                                 startDate: range?.from,
                                 endDate: range?.to,
@@ -2736,7 +2735,7 @@ export default function AdminDashboardPage() {
                               colorClass = "border-l-4 border-orange-500";
                               break;
                             case 'weekly-order':
-                              icon = <Calendar className="h-4 w-4 text-indigo-500" />;
+                              icon = <CalendarIcon className="h-4 w-4 text-indigo-500" />;
                               colorClass = "border-l-4 border-indigo-500";
                               break;
                             default:
