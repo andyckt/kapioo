@@ -96,23 +96,24 @@ const DailyDeliveryOrderSchema = new mongoose.Schema({
   }
 });
 
-// Create the model
-let DailyDeliveryOrder: mongoose.Model<DailyOrderDocument>;
-try {
-  // Check if the model already exists
-  DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder as mongoose.Model<DailyOrderDocument>;
-} catch (error) {
-  // Create the model if it doesn't exist
-  DailyDeliveryOrder = mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
-}
-
 // PATCH handler - update order status
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     // In a production environment, you should implement proper authentication
     // to ensure only admins can access this endpoint
     
+    // First connect to the database
     await connectToDatabase();
+    
+    // Initialize the model after database connection is established
+    let DailyDeliveryOrder: mongoose.Model<DailyOrderDocument>;
+    if (mongoose.models.DailyDeliveryOrder) {
+      // Use existing model if it exists
+      DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder as mongoose.Model<DailyOrderDocument>;
+    } else {
+      // Create the model if it doesn't exist
+      DailyDeliveryOrder = mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
+    }
     
     const { id } = params;
     const { status } = await request.json();
