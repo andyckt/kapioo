@@ -681,6 +681,20 @@ export default function WeeklySubscription({
                                 <div className="flex items-start justify-between">
                                   <h4 className="font-medium text-[#6B5F53]">{option.name}</h4>
                                 </div>
+                                
+                                {/* Display tags if available */}
+                                {option.tags && option.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {option.tags.map((tag, tagIndex) => (
+                                      <span 
+                                        key={tagIndex}
+                                        className="px-2 py-0.5 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] font-medium"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                               
                               <div className="flex items-center justify-end mt-4">
