@@ -1,9 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { format } from 'date-fns'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -24,7 +27,9 @@ import {
   Users,
   Upload,
   Info,
-  MessageSquare
+  MessageSquare,
+  FileSpreadsheet,
+  CalendarDays
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -65,6 +70,14 @@ export function MealVoucherManagement() {
   const [processingRequest, setProcessingRequest] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
+  const [dateRange, setDateRange] = useState<{
+    startDate: Date | undefined;
+    endDate: Date | undefined;
+  }>({
+    startDate: undefined,
+    endDate: undefined
+  })
 
   // Fetch requests when component mounts or active tab changes
   useEffect(() => {
@@ -98,13 +111,27 @@ export function MealVoucherManagement() {
     setIsLoading(true)
     
     try {
-      // Get query parameters based on active tab
-      let queryParams = '';
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      // Add status filter if not "all"
       if (activeTab !== 'all') {
-        queryParams = `?status=${activeTab}`;
+        params.append('status', activeTab);
       }
       
-      const response = await fetch(`/api/voucher-requests${queryParams}`);
+      // Add date range if provided
+      if (dateRange.startDate) {
+        params.append('startDate', format(dateRange.startDate, 'yyyy-MM-dd'));
+      }
+      
+      if (dateRange.endDate) {
+        params.append('endDate', format(dateRange.endDate, 'yyyy-MM-dd'));
+      }
+      
+      // Create query string
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      
+      const response = await fetch(`/api/voucher-requests${queryString}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch voucher purchase requests');
@@ -136,6 +163,51 @@ export function MealVoucherManagement() {
       title: "Refreshing",
       description: "Fetching the latest voucher purchase requests",
     });
+  }
+  
+  // Export voucher requests to CSV
+  const exportToCSV = async () => {
+    setIsExporting(true);
+    try {
+      // Build query parameters for export
+      const params = new URLSearchParams();
+      
+      // Add status filter if not "all"
+      if (activeTab !== 'all') {
+        params.append('status', activeTab);
+      }
+      
+      // Add date range if provided
+      if (dateRange.startDate) {
+        params.append('startDate', format(dateRange.startDate, 'yyyy-MM-dd'));
+      }
+      
+      if (dateRange.endDate) {
+        params.append('endDate', format(dateRange.endDate, 'yyyy-MM-dd'));
+      }
+      
+      // Create a link to download the CSV
+      const link = document.createElement('a');
+      link.href = `/api/voucher-requests/export?${params.toString()}`;
+      link.setAttribute('download', `voucher-requests-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Export Started",
+        description: "Your CSV file will download shortly."
+      });
+    } catch (error) {
+      console.error('Error exporting voucher requests:', error);
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting voucher requests to CSV.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   // Handle view request
@@ -271,17 +343,96 @@ export function MealVoucherManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-3xl font-bold tracking-tight">2Dish 3Dish Voucher Requests</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          className="h-9 gap-1"
-        >
-          <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? "Refreshing..." : "Refresh"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  {dateRange.startDate ? (
+                    dateRange.endDate ? (
+                      <>
+                        {format(dateRange.startDate, 'MMM d')} - {format(dateRange.endDate, 'MMM d')}
+                      </>
+                    ) : (
+                      format(dateRange.startDate, 'MMM d')
+                    )
+                  ) : (
+                    "Date Range"
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={{
+                    from: dateRange.startDate,
+                    to: dateRange.endDate,
+                  }}
+                  onSelect={(range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+                    setDateRange({
+                      startDate: range?.from,
+                      endDate: range?.to,
+                    });
+                    // Fetch with new date range
+                    fetchVoucherRequests();
+                  }}
+                  numberOfMonths={2}
+                  className="rounded-md border"
+                />
+              </PopoverContent>
+            </Popover>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDateRange({
+                  startDate: undefined,
+                  endDate: undefined
+                });
+                fetchVoucherRequests();
+              }}
+              className="h-9"
+              disabled={!dateRange.startDate && !dateRange.endDate}
+            >
+              Clear
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportToCSV}
+            className="h-9 gap-1"
+            disabled={isExporting || requests.length === 0}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="h-4 w-4" />
+                Export to CSV
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            className="h-9 gap-1"
+          >
+            <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-6">
