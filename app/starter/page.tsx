@@ -167,7 +167,7 @@ export default function StarterPage() {
                         transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
                       >
                         <Image 
-                          src="/food-gallery/_MG_4897.jpg" 
+                          src="/dailystarter.jpg" 
                           alt={language === 'zh' ? '每日直送' : 'Daily Fresh Delivery'} 
                           fill
                           className="object-cover transition-transform duration-[1.5s]"
@@ -233,6 +233,7 @@ export default function StarterPage() {
                           alt={language === 'zh' ? '周次 MealBox' : 'Weekly MealBox'} 
                           fill
                           className="object-cover transition-transform duration-[1.5s]"
+                          objectPosition="center bottom"
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
