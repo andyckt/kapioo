@@ -80,7 +80,7 @@ export default function LocationMealPlans() {
       zh: t('dailyDeliveryDesc')
     },
     // Note: These image paths are placeholders. You'll need to add actual images to the public/meal-plans directory
-    imagePath: "/food-gallery/_MG_4897.jpg" // Daily delivery image
+    imagePath: "/dailystarter.jpg" // Daily delivery image
   }
   
   // Get available plans based on location
