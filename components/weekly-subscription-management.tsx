@@ -81,10 +81,13 @@ export function WeeklySubscriptionManagement() {
       )
     );
     
-    // Update in database
+    // Update in database - include weekOffset to ensure correct record is updated
     const success = await updateDeliveryDay(section.day.id, { 
-      active: !section.day.active 
+      active: !section.day.active,
+      weekOffset: section.day.weekOffset // Add weekOffset parameter to identify the correct week
     });
+    
+    console.log(`Toggling ${section.day.id} with weekOffset=${section.day.weekOffset} to active=${!section.day.active}`);
     
     if (!success) {
       // Revert if failed
