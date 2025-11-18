@@ -238,11 +238,10 @@ export default function WeeklySubscription({
           
           setDeliveryDays(formattedData);
         } else {
-          toast({
-            title: language === 'zh' ? '加载失败' : 'Failed to load data',
-            description: language === 'zh' ? '请稍后再试' : 'Please try again later',
-            variant: "destructive"
-          });
+          // Don't show error toast, we'll display a friendly message in the UI
+          console.log('No active delivery days found');
+          // Set empty delivery days array
+          setDeliveryDays([]);
         }
       } catch (error) {
         console.error("Error fetching weekly subscription data:", error);
@@ -652,11 +651,26 @@ export default function WeeklySubscription({
           
           {/* All Available Days */}
           <div>
-            <div className="grid gap-8 md:grid-cols-2">
-              {deliveryDays
-                .filter(day => !isDayUnavailable(day).unavailable)
-                .slice(0, 2) // Only show the first two available days
-                .map((day) => (
+            {deliveryDays.length === 0 ? (
+              <div className="bg-[#F5EDE4]/30 rounded-xl p-8 text-center border border-[#F5EDE4]">
+                <div className="w-16 h-16 bg-[#F5EDE4] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="h-8 w-8 text-[#C2884E]" />
+                </div>
+                <h3 className="text-xl font-medium text-[#6B5F53] mb-2">
+                  {language === 'zh' ? '暂无可用配送日' : 'No Delivery Days Available'}
+                </h3>
+                <p className="text-[#6B5F53]/80 max-w-md mx-auto">
+                  {language === 'zh' 
+                    ? '本周暂无可用的配送日。请稍后再试或联系客服了解更多信息。' 
+                    : 'There are currently no available delivery days. Please check back later or contact customer service for more information.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-8 md:grid-cols-2">
+                {deliveryDays
+                  .filter(day => !isDayUnavailable(day).unavailable)
+                  .slice(0, 2) // Only show the first two available days
+                  .map((day) => (
                 <motion.div 
                   key={`${day.id}-${day.weekOffset}`}
                   initial={{ opacity: 0, y: 20 }}
@@ -728,6 +742,7 @@ export default function WeeklySubscription({
                 </motion.div>
               ))}
             </div>
+            )}
           </div>
           
           {/* Cart Summary removed as requested */}
