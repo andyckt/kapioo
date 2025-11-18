@@ -1017,6 +1017,9 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   // Track if component is mounted to prevent state updates after unmount
   const isMounted = useRef(true);
   
+  // Flag to track if plan selection from URL has been processed
+  const planSelectionProcessed = useRef(false);
+  
   // Cleanup function to set isMounted to false when component unmounts
   useEffect(() => {
     return () => {
@@ -1062,22 +1065,21 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     
     fetchVoucherBalance();
     
-    // Check URL parameters for plan selection
-    const urlParams = new URLSearchParams(window.location.search)
-    const shouldSelectPlan = urlParams.get('selectPlan') === 'true'
-    const urlPlanId = urlParams.get('plan')
-    
-    // Debug logging
-    console.log('MealVoucherPurchase - URL Parameters:', {
-      search: window.location.search,
-      shouldSelectPlan,
-      urlPlanId,
-      allPlans: [...twoDishPlans, ...threeDishPlans].map(p => p.id)
-    })
-    
-    if (shouldSelectPlan) {
-      // First check if there's a plan ID in the URL
-      if (urlPlanId) {
+    // Check URL parameters for plan selection - only if not already processed
+    if (!planSelectionProcessed.current) {
+      const urlParams = new URLSearchParams(window.location.search)
+      const shouldSelectPlan = urlParams.get('selectPlan') === 'true'
+      const urlPlanId = urlParams.get('plan')
+      
+      // Debug logging - only log once
+      console.log('MealVoucherPurchase - URL Parameters:', {
+        search: window.location.search,
+        shouldSelectPlan,
+        urlPlanId,
+        allPlans: [...twoDishPlans, ...threeDishPlans].map(p => p.id)
+      })
+      
+      if (shouldSelectPlan && urlPlanId) {
         // Find the matching plan in our available plans
         const allPlans = [...twoDishPlans, ...threeDishPlans]
         const matchingPlan = allPlans.find(p => p.id === urlPlanId)
@@ -1088,12 +1090,16 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           
           // Auto-select the plan and move to upload step
           setTimeout(() => {
-            handlePlanSelect(matchingPlan)
+            if (isMounted.current && !planSelectionProcessed.current) {
+              handlePlanSelect(matchingPlan)
+              // Mark as processed to prevent repeated execution
+              planSelectionProcessed.current = true
+            }
           }, 500)
         }
       }
       // If no plan ID in URL, check localStorage as fallback
-      else {
+      else if (shouldSelectPlan) {
         const storedPlanData = localStorage.getItem('selectedMealPlan')
         if (storedPlanData) {
           try {
@@ -1110,9 +1116,13 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             if (matchingPlan) {
               // Auto-select the plan and move to upload step
               setTimeout(() => {
-                handlePlanSelect(matchingPlan)
-                // Clear the stored plan to prevent auto-selection on future visits
-                localStorage.removeItem('selectedMealPlan')
+                if (isMounted.current && !planSelectionProcessed.current) {
+                  handlePlanSelect(matchingPlan)
+                  // Clear the stored plan to prevent auto-selection on future visits
+                  localStorage.removeItem('selectedMealPlan')
+                  // Mark as processed to prevent repeated execution
+                  planSelectionProcessed.current = true
+                }
               }, 500)
             }
           } catch (error) {
@@ -1120,8 +1130,11 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           }
         }
       }
+      
+      // Mark as processed even if no plan was selected to prevent future processing
+      planSelectionProcessed.current = true
     }
-  }, [twoDishPlans, threeDishPlans])
+  }, [twoDishPlans, threeDishPlans, handlePlanSelect, setActiveTab])
 
   return (
     <div className="flex flex-col h-full space-y-6">
