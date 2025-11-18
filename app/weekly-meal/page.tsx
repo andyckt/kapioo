@@ -111,96 +111,15 @@ export default function WeeklyMealPage() {
               }
             }
           } else {
-            // If no data is returned, use fallback mock data for development
-            console.warn('No menu data returned from API, using fallback data');
-            const mockWeeklyMenu = [
-              {
-                id: 'sunday',
-                uniqueId: 'sunday-week-0',
-                name: language === 'zh' ? '周日' : 'Sunday',
-                date: 'Oct 20',
-                weekOffset: 0,
-                options: [
-                  {
-                    id: 'option1',
-                    name: language === 'zh' ? '香煎三文鱼配时蔬' : 'Pan-seared Salmon with Vegetables',
-                    tags: ['高蛋白', '低碳水']
-                  },
-                  {
-                    id: 'option2',
-                    name: language === 'zh' ? '意式肉酱面' : 'Spaghetti Bolognese',
-                    tags: ['经典', '家常']
-                  }
-                ]
-              },
-              {
-                id: 'tuesday',
-                uniqueId: 'tuesday-week-0',
-                name: language === 'zh' ? '周二' : 'Tuesday',
-                date: 'Oct 22',
-                weekOffset: 0,
-                options: [
-                  {
-                    id: 'option4',
-                    name: language === 'zh' ? '烤牛排配蘑菇酱' : 'Grilled Steak with Mushroom Sauce',
-                    tags: ['高蛋白', '低碳水']
-                  },
-                  {
-                    id: 'option5',
-                    name: language === 'zh' ? '日式照烧鸡饭' : 'Japanese Teriyaki Chicken Rice',
-                    tags: ['经典', '家常']
-                  }
-                ]
-              },
-              {
-                id: 'sunday',
-                uniqueId: 'sunday-week-1',
-                name: language === 'zh' ? '周日' : 'Sunday',
-                date: 'Oct 27',
-                weekOffset: 1,
-                options: [
-                  {
-                    id: 'option7',
-                    name: language === 'zh' ? '香煎鳕鱼配柠檬黄油' : 'Pan-fried Cod with Lemon Butter',
-                    tags: ['高蛋白', '低碳水']
-                  },
-                  {
-                    id: 'option8',
-                    name: language === 'zh' ? '意式烩饭' : 'Risotto',
-                    tags: ['经典', '家常']
-                  }
-                ]
-              },
-              {
-                id: 'tuesday',
-                uniqueId: 'tuesday-week-1',
-                name: language === 'zh' ? '周二' : 'Tuesday',
-                date: 'Oct 29',
-                weekOffset: 1,
-                options: [
-                  {
-                    id: 'option9',
-                    name: language === 'zh' ? '烤羊排配薄荷酱' : 'Grilled Lamb Chops with Mint Sauce',
-                    tags: ['高蛋白', '低碳水']
-                  },
-                  {
-                    id: 'option10',
-                    name: language === 'zh' ? '韩式拌饭' : 'Korean Bibimbap',
-                    tags: ['经典', '家常']
-                  }
-                ]
-              }
-            ];
+            // If no data is returned, don't use mock data, just set empty menu
+            console.warn('No menu data returned from API, all days may be inactive');
+            setWeeklyMenu([]);
+            setMenuError(language === 'zh' 
+              ? '当前没有可用的菜单，请稍后再试或联系客服' 
+              : 'No menu is currently available. Please try again later or contact customer service.');
             
-            setWeeklyMenu(mockWeeklyMenu);
-            
-            // Set the first day as selected by default
-            if (mockWeeklyMenu.length > 0) {
-              const firstDayOfActiveWeek = mockWeeklyMenu.find(day => day.weekOffset === activeWeek - 1);
-              if (firstDayOfActiveWeek) {
-                setSelectedMenuDay(firstDayOfActiveWeek.uniqueId);
-              }
-            }
+            // No need to set a selected day when there are no days
+            setSelectedMenuDay(null);
           }
         } catch (error) {
           console.error('Error fetching weekly menu:', error);
