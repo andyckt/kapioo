@@ -437,6 +437,8 @@ export interface User {
   updatedAt?: Date | string;
   isActive?: boolean;
   totalOrders?: number;
+  dailyOrdersCount?: number;
+  weeklyOrdersCount?: number;
 }
 
 // Get all users with pagination and search

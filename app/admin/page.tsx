@@ -236,18 +236,32 @@ export default function AdminDashboardPage() {
         const usersWithOrderCounts = await Promise.all(
           result.users.map(async (user) => {
             try {
-              // Fetch order count from API
-              const response = await fetch(`/api/users/${user._id}/order-count`);
-              if (response.ok) {
-                const data = await response.json();
-                return { 
-                  ...user, 
-                  totalOrders: data.success ? data.count : 0 
-                };
+              // Fetch total order count
+              const totalOrderResponse = await fetch(`/api/users/${user._id}/order-count`);
+              let updatedUser = { ...user };
+              
+              if (totalOrderResponse.ok) {
+                const totalOrderData = await totalOrderResponse.json();
+                updatedUser.totalOrders = totalOrderData.success ? totalOrderData.count : 0;
               }
-              return user;
+              
+              // Fetch daily order count
+              const dailyOrderResponse = await fetch(`/api/users/${user._id}/daily-orders/count`);
+              if (dailyOrderResponse.ok) {
+                const dailyOrderData = await dailyOrderResponse.json();
+                updatedUser.dailyOrdersCount = dailyOrderData.success ? dailyOrderData.count : 0;
+              }
+              
+              // Fetch weekly order count
+              const weeklyOrderResponse = await fetch(`/api/users/${user._id}/weekly-orders/count`);
+              if (weeklyOrderResponse.ok) {
+                const weeklyOrderData = await weeklyOrderResponse.json();
+                updatedUser.weeklyOrdersCount = weeklyOrderData.success ? weeklyOrderData.count : 0;
+              }
+              
+              return updatedUser;
             } catch (e) {
-              console.error(`Error fetching order count for user ${user._id}:`, e);
+              console.error(`Error fetching order counts for user ${user._id}:`, e);
               return user;
             }
           })
@@ -1047,8 +1061,15 @@ export default function AdminDashboardPage() {
         'Email',
         'City',
         'Created',
-        'Total Orders',
-        'Credits'
+        '2-Dish Vouchers',
+        '3-Dish Vouchers',
+        '6 Meals Plan',
+        '8 Meals Plan',
+        '10 Meals Plan',
+        '12 Meals Plan',
+        'Daily Orders',
+        'Weekly Orders',
+        'Total Orders'
       ].join(',');
 
       // Create rows for each user
@@ -1079,8 +1100,15 @@ export default function AdminDashboardPage() {
           formatCSV(user.email),
           formatCSV(user.address?.city),
           formatDateForCSV(user.joined),
-          user.totalOrders || '0',
-          user.credits
+          user.twoDishVoucher || 0,
+          user.threeDishVoucher || 0,
+          user.weeklySIXmeals || 0,
+          user.weeklyEIGHTmeals || 0,
+          user.weeklyTENmeals || 0,
+          user.weeklyTWELVEmeals || 0,
+          user.dailyOrdersCount || 0,
+          user.weeklyOrdersCount || 0,
+          user.totalOrders || 0
         ].join(',');
       });
 
