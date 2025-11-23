@@ -477,6 +477,24 @@ export async function getUsers(
   }
 }
 
+// Get all users without pagination for export
+export async function getAllUsersForExport(): Promise<User[]> {
+  try {
+    const response = await fetch('/api/users/export');
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data;
+    }
+    
+    console.error('Failed to fetch all users for export');
+    return [];
+  } catch (error) {
+    console.error('Error fetching all users for export:', error);
+    return [];
+  }
+}
+
 // Get a user by ID
 export async function getUserById(id: string): Promise<User | null> {
   try {

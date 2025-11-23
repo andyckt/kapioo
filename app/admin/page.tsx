@@ -38,7 +38,8 @@ import {
   type User,
   setDayActiveStatus,
   getAdminWeeklyMeals,
-  deleteUser
+  deleteUser,
+  getAllUsersForExport
 } from "@/lib/utils"
 import {
   Select,
@@ -1051,8 +1052,52 @@ export default function AdminDashboardPage() {
   };
 
   // Export users to CSV
-  const handleExportUsers = () => {
+  const handleExportUsers = async () => {
     try {
+      setIsLoading(true);
+      toast({
+        title: "Export started",
+        description: "Fetching all users for export. This may take a moment...",
+      });
+
+      // Fetch all users for export
+      const allUsers = await getAllUsersForExport();
+      
+      // Process users to get order counts
+      const processedUsers = await Promise.all(
+        allUsers.map(async (user) => {
+          try {
+            let updatedUser = { ...user };
+            
+            // Fetch total order count
+            const totalOrderResponse = await fetch(`/api/users/${user._id}/order-count`);
+            if (totalOrderResponse.ok) {
+              const totalOrderData = await totalOrderResponse.json();
+              updatedUser.totalOrders = totalOrderData.success ? totalOrderData.count : 0;
+            }
+            
+            // Fetch daily order count
+            const dailyOrderResponse = await fetch(`/api/users/${user._id}/daily-orders/count`);
+            if (dailyOrderResponse.ok) {
+              const dailyOrderData = await dailyOrderResponse.json();
+              updatedUser.dailyOrdersCount = dailyOrderData.success ? dailyOrderData.count : 0;
+            }
+            
+            // Fetch weekly order count
+            const weeklyOrderResponse = await fetch(`/api/users/${user._id}/weekly-orders/count`);
+            if (weeklyOrderResponse.ok) {
+              const weeklyOrderData = await weeklyOrderResponse.json();
+              updatedUser.weeklyOrdersCount = weeklyOrderData.success ? weeklyOrderData.count : 0;
+            }
+            
+            return updatedUser;
+          } catch (e) {
+            console.error(`Error fetching order counts for user ${user._id}:`, e);
+            return user;
+          }
+        })
+      );
+
       // Create headers for CSV
       const headers = [
         'User ID',
@@ -1072,27 +1117,27 @@ export default function AdminDashboardPage() {
         'Total Orders'
       ].join(',');
 
+      // Format data and handle commas in text to avoid breaking CSV
+      const formatCSV = (text: string | undefined) => {
+        if (!text) return '';
+        // If contains comma, quote the text
+        return text.includes(',') ? `"${text}"` : text;
+      };
+
+      // Format date properly for CSV to prevent it from being split across rows
+      const formatDateForCSV = (date: Date | string | undefined) => {
+        if (!date) return '';
+        try {
+          const dateObj = date instanceof Date ? date : new Date(date);
+          // Format as YYYY-MM-DD to avoid commas and ensure it's a single cell
+          return dateObj.toISOString().split('T')[0];
+        } catch (e) {
+          return '';
+        }
+      };
+
       // Create rows for each user
-      const rows = filteredUsers.map(user => {
-        // Format data and handle commas in text to avoid breaking CSV
-        const formatCSV = (text: string | undefined) => {
-          if (!text) return '';
-          // If contains comma, quote the text
-          return text.includes(',') ? `"${text}"` : text;
-        };
-
-        // Format date properly for CSV to prevent it from being split across rows
-        const formatDateForCSV = (date: Date | string | undefined) => {
-          if (!date) return '';
-          try {
-            const dateObj = date instanceof Date ? date : new Date(date);
-            // Format as YYYY-MM-DD to avoid commas and ensure it's a single cell
-            return dateObj.toISOString().split('T')[0];
-          } catch (e) {
-            return '';
-          }
-        };
-
+      const rows = processedUsers.map(user => {
         return [
           formatCSV(user.userID),
           formatCSV(user.name),
@@ -1141,6 +1186,8 @@ export default function AdminDashboardPage() {
         description: "There was an error exporting users. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1261,9 +1308,19 @@ export default function AdminDashboardPage() {
                       size="sm"
                       onClick={handleExportUsers}
                       className="h-9 gap-1"
+                      disabled={isLoading}
                     >
-                      <Download className="h-4 w-4" />
-                      Export Users
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4" />
+                          Export Users
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
