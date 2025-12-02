@@ -619,6 +619,211 @@ export function DailyDeliveryManagement() {
     }
   };
   
+  // Function to roll forward the week - making Next Week into This Week and updating This Week with Next Week's content
+  const rollForwardWeek = async () => {
+    try {
+      // Show confirmation dialog
+      if (!confirm("This will update This Week with Next Week's content and create a new Next Week. Continue?")) {
+        return;
+      }
+
+      // Get all days from week 2 (Next Week) and week 1 (This Week)
+      const week2Days = Object.entries(days).filter(([_, day]) => day.week === 2);
+      const week1Days = Object.entries(days).filter(([dayId, day]) => day.week === 1);
+      
+      if (week2Days.length === 0) {
+        toast({
+          title: "Error",
+          description: "No days found in Next Week to roll forward",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Helper function to calculate next week's date
+      const calculateNextWeekDate = (dateStr: string): string => {
+        const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
+        if (dateMatch && dateMatch.length >= 3) {
+          const month = dateMatch[1]; // e.g., "Dec"
+          const dayNum = parseInt(dateMatch[2], 10); // e.g., 1
+          return `${month} ${dayNum + 7}`; // e.g., "Dec 8"
+        }
+        return dateStr;
+      };
+
+      // 1. Update This Week days with Next Week's content
+      for (const [nextDayId, nextDay] of week2Days) {
+        // Find matching day in This Week by displayName (e.g., "monday", "tuesday")
+        const matchingThisWeekDay = week1Days.find(([_, day]) => day.displayName === nextDay.displayName);
+        
+        if (matchingThisWeekDay) {
+          const [thisDayId, thisDay] = matchingThisWeekDay;
+          
+          // 1.1 Update This Week day with Next Week's date
+          await fetch(`/api/days/${thisDayId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              date: nextDay.date,
+              displayName: nextDay.displayName,
+              week: 1 // Keep it as week 1
+            }),
+          });
+          
+          // 1.2 Get combos for both days
+          const thisWeekCombosResponse = await fetch(`/api/days/${thisDayId}/combos`);
+          const thisWeekCombosData = await thisWeekCombosResponse.json();
+          
+          const nextWeekCombosResponse = await fetch(`/api/days/${nextDayId}/combos`);
+          const nextWeekCombosData = await nextWeekCombosResponse.json();
+          
+          if (thisWeekCombosData.success && nextWeekCombosData.success) {
+            // 1.3 Delete existing combos for This Week day
+            for (const combo of thisWeekCombosData.data) {
+              await fetch(`/api/combos/${combo.comboId}`, {
+                method: 'DELETE',
+              });
+            }
+            
+            // 1.4 Create new combos for This Week day based on Next Week's combos
+            for (const combo of nextWeekCombosData.data) {
+              const newComboId = `${thisDayId}-combo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+              
+              await fetch('/api/combos', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  comboId: newComboId,
+                  dayId: thisDayId,
+                  name: combo.name,
+                  calories: combo.calories,
+                  tags: combo.tags,
+                  typeA: combo.typeA,
+                  typeB: combo.typeB
+                }),
+              });
+            }
+          }
+        } else {
+          // If no matching day exists in This Week, create a new one
+          const newThisDayId = `${nextDay.displayName}-w1-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          
+          // Create new This Week day
+          await fetch('/api/days', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              dayId: newThisDayId,
+              date: nextDay.date,
+              displayName: nextDay.displayName,
+              week: 1,
+              isActive: true
+            }),
+          });
+          
+          // Copy combos from Next Week day to new This Week day
+          const nextWeekCombosResponse = await fetch(`/api/days/${nextDayId}/combos`);
+          const nextWeekCombosData = await nextWeekCombosResponse.json();
+          
+          if (nextWeekCombosData.success) {
+            for (const combo of nextWeekCombosData.data) {
+              const newComboId = `${newThisDayId}-combo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+              
+              await fetch('/api/combos', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  comboId: newComboId,
+                  dayId: newThisDayId,
+                  name: combo.name,
+                  calories: combo.calories,
+                  tags: combo.tags,
+                  typeA: combo.typeA,
+                  typeB: combo.typeB
+                }),
+              });
+            }
+          }
+        }
+      }
+
+      // 2. Update Next Week days with new dates (current date + 7 days)
+      for (const [nextDayId, nextDay] of week2Days) {
+        // Calculate new date for Next Week (current date + 7 days)
+        const newNextWeekDate = calculateNextWeekDate(nextDay.date);
+        
+        // Update Next Week day with new date
+        await fetch(`/api/days/${nextDayId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            date: newNextWeekDate,
+            displayName: nextDay.displayName,
+            week: 2 // Keep it as week 2
+          }),
+        });
+      }
+
+      // 3. Refresh data to show the updated weeks
+      const daysResponse = await fetch('/api/days');
+      const daysData = await daysResponse.json();
+      
+      if (daysData.success) {
+        const formattedDays: Record<string, DayData> = {};
+        
+        // Process each day
+        for (const day of daysData.data) {
+          // Fetch combos for this day
+          const combosResponse = await fetch(`/api/days/${day.dayId}/combos`);
+          const combosData = await combosResponse.json();
+          
+          if (combosData.success) {
+            // Format combo data to match our component's expected structure
+            const formattedCombos = combosData.data.map((combo: any) => ({
+              id: combo.comboId,
+              name: combo.name,
+              calories: combo.calories,
+              tags: combo.tags,
+              typeA: combo.typeA,
+              typeB: combo.typeB
+            }));
+            
+            formattedDays[day.dayId] = {
+              date: day.date,
+              displayName: day.displayName,
+              week: day.week,
+              combos: formattedCombos
+            };
+          }
+        }
+        
+        setDays(formattedDays);
+        
+        toast({
+          title: "Success",
+          description: "Week rolled forward successfully. This Week has been updated with Next Week's content, and Next Week's dates have been advanced.",
+        });
+      }
+    } catch (error) {
+      console.error('Error rolling forward week:', error);
+      toast({
+        title: "Error",
+        description: `Failed to roll forward week: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
+  };
+
   // Function to initialize Next Week days based on This Week
   const initializeNextWeek = async () => {
     try {
@@ -948,6 +1153,15 @@ export function DailyDeliveryManagement() {
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Day
+                    </Button>
+                    
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={rollForwardWeek}
+                    >
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      Roll Forward Week
                     </Button>
                   </div>
                 </div>
