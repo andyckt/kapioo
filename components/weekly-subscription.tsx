@@ -51,6 +51,7 @@ export default function WeeklySubscription({
   const [userRegion, setUserRegion] = useState<string>("")
   
   // Function to check if a day is unavailable for ordering
+  // Updated to match Daily Delivery cutoff time: 11:59 AM the day before delivery
   const isDayUnavailable = (day: DeliveryDay): { unavailable: boolean, reason: string } => {
     try {
       // Get current date and time in Toronto timezone
@@ -65,9 +66,6 @@ export default function WeeklySubscription({
       const currentHour = torontoDate.getHours();
       const currentMinute = torontoDate.getMinutes();
       
-      // Get current day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-      const currentDayOfWeek = torontoDate.getDay();
-      
       // Check if we have a date for this meal
       if (!day || !day.date) {
         return { 
@@ -77,7 +75,6 @@ export default function WeeklySubscription({
       }
       
       const mealDate = day.date;
-      const dayId = day.id; // 'sunday' or 'tuesday'
       
       // Parse the date (expected format like "Jan 01" or "Oct 10")
       try {
@@ -112,6 +109,13 @@ export default function WeeklySubscription({
               torontoDate.getDate()
             );
             
+            // Create tomorrow's date for comparison
+            const tomorrowYMD = new Date(
+              torontoDate.getFullYear(),
+              torontoDate.getMonth(),
+              torontoDate.getDate() + 1
+            );
+            
             // If meal date is before today
             if (mealSpecificDate < todayYMD) {
               return { 
@@ -120,66 +124,24 @@ export default function WeeklySubscription({
               };
             }
             
-            // If it's for today (which should not be available for ordering)
-            if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+            // If it's for tomorrow and it's past 11:59 AM today
+            if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
+                (currentHour > 11 || (currentHour === 11 && currentMinute > 59))) {
               return { 
                 unavailable: true, 
-                reason: language === 'zh' ? "不允许当天订餐" : "Same-day ordering is not available"
+                reason: language === 'zh' ? "订单必须在配送前一天的上午11:59前下单" : "Orders must be placed by 11:59 AM the day before delivery" 
               };
             }
             
-            // Apply the new cutoff times based on delivery day
-            // For Sunday deliveries: Friday 19:00 cutoff
-            // For Tuesday deliveries: Sunday 19:00 cutoff
-            
-            // Calculate days until delivery
-            const daysDiff = Math.floor((mealSpecificDate.getTime() - todayYMD.getTime()) / (1000 * 60 * 60 * 24));
-            
-            if (dayId === 'sunday') {
-              // For Sunday deliveries
-              
-              // Check if today is Friday and it's past 19:00
-              if (currentDayOfWeek === 5 && (currentHour > 19 || (currentHour === 19 && currentMinute >= 0))) {
-                // If today is Friday after 19:00 and delivery is this Sunday (2 days away)
-                if (daysDiff <= 2) {
-                  return { 
-                    unavailable: true, 
-                    reason: language === 'zh' ? "周日配送订单必须在周五晚上7点前下单" : "Sunday deliveries must be ordered by Friday 7:00 PM" 
-                  };
-                }
-              }
-              
-              // If today is Saturday or Sunday (delivery day), it's too late for this Sunday
-              if ((currentDayOfWeek === 6 || currentDayOfWeek === 0) && daysDiff <= 1) {
-                return { 
-                  unavailable: true, 
-                  reason: language === 'zh' ? "周日配送订单必须在周五晚上7点前下单" : "Sunday deliveries must be ordered by Friday 7:00 PM" 
-                };
-              }
-            } else if (dayId === 'tuesday') {
-              // For Tuesday deliveries
-              
-              // Check if today is Sunday and it's past 19:00
-              if (currentDayOfWeek === 0 && (currentHour > 19 || (currentHour === 19 && currentMinute >= 0))) {
-                // If today is Sunday after 19:00 and delivery is this Tuesday (2 days away)
-                if (daysDiff <= 2) {
-                  return { 
-                    unavailable: true, 
-                    reason: language === 'zh' ? "周二配送订单必须在周日晚上7点前下单" : "Tuesday deliveries must be ordered by Sunday 7:00 PM" 
-                  };
-                }
-              }
-              
-              // If today is Monday or Tuesday (delivery day), it's too late for this Tuesday
-              if ((currentDayOfWeek === 1 || currentDayOfWeek === 2) && daysDiff <= 1) {
-                return { 
-                  unavailable: true, 
-                  reason: language === 'zh' ? "周二配送订单必须在周日晚上7点前下单" : "Tuesday deliveries must be ordered by Sunday 7:00 PM" 
-                };
-              }
+            // If it's for today (same-day ordering not allowed)
+            if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+              return { 
+                unavailable: true, 
+                reason: language === 'zh' ? "订单必须在配送前一天的上午11:59前下单" : "Orders must be placed by 11:59 AM the day before delivery"
+              };
             }
             
-            // If we've passed all the checks, the day is available
+            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at 11:59 AM, it's available
             return { unavailable: false, reason: "" };
           }
         }
@@ -627,13 +589,11 @@ export default function WeeklySubscription({
                 ? '每周有两天配送选项：周日和周二。您可以选择一天或两天都配送。' 
                 : 'We offer two delivery days per week: Sunday and Tuesday. You can choose either or both days.'}
             </p>
-            {/* Commented out cutoff time notice
             <p className="text-[10px] text-[#6B5F53] mt-1">
               {language === 'zh' 
-                ? '订单截止时间：如周日配送 - 需周五晚上7点前下单；如周二配送 - 需周日晚上7点前下单。' 
-                : 'Order cutoff times: Sunday delivery - Friday 7:00 PM; Tuesday delivery - Sunday 7:00 PM.'}
+                ? '订单截止时间：配送前一天上午11:59前下单。' 
+                : 'Order cutoff: 11:59 AM the day before delivery.'}
             </p>
-            */}
           </div>
           
           {/* Service Area Information */}
