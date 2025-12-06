@@ -68,6 +68,18 @@ export async function DELETE(
     await connectToDatabase();
     const { dayId } = params;
     
+    console.log('DELETE request received for dayId:', dayId);
+    
+    // First, check if the day exists
+    const existingDay = await Day.findOne({ dayId });
+    console.log('Day lookup result:', existingDay ? 'Found' : 'Not found');
+    
+    if (!existingDay) {
+      // List all days to help debug
+      const allDays = await Day.find({}, 'dayId displayName');
+      console.log('All days in database:', allDays.map(d => ({ dayId: d.dayId, displayName: d.displayName })));
+    }
+    
     // Find and delete the day
     const day = await Day.findOneAndDelete({ dayId });
     
@@ -78,6 +90,7 @@ export async function DELETE(
       );
     }
     
+    console.log('Day deleted successfully:', dayId);
     return NextResponse.json({ success: true, data: {} });
   } catch (error) {
     console.error('Error deleting day:', error);

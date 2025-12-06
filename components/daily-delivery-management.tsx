@@ -1245,16 +1245,35 @@ export function DailyDeliveryManagement() {
                                   className="text-red-500"
                                   onClick={async () => {
                                     // Show confirmation dialog
-                                    if (confirm(`Are you sure you want to delete ${day.displayName} (${day.date})?`)) {
+                                    if (confirm(`Are you sure you want to delete ${day.displayName} (${day.date})?\n\nDay ID: ${dayId}`)) {
                                       try {
+                                        console.log('Attempting to delete day:', { dayId, displayName: day.displayName, date: day.date });
+                                        
                                         // Delete day via API
-                                        const response = await fetch(`/api/days/${dayId}`, {
+                                        const response = await fetch(`/api/days/${encodeURIComponent(dayId)}`, {
                                           method: 'DELETE',
                                         });
                                         
+                                        console.log('Delete response status:', response.status);
+                                        
                                         const data = await response.json();
+                                        console.log('Delete response data:', data);
                                         
                                         if (data.success) {
+                                          // Also delete all combos associated with this day
+                                          const combosToDelete = day.combos || [];
+                                          console.log(`Deleting ${combosToDelete.length} combos for this day`);
+                                          
+                                          for (const combo of combosToDelete) {
+                                            try {
+                                              await fetch(`/api/combos/${encodeURIComponent(combo.id)}`, {
+                                                method: 'DELETE',
+                                              });
+                                            } catch (comboError) {
+                                              console.warn('Error deleting combo:', combo.id, comboError);
+                                            }
+                                          }
+                                          
                                           // Update local state
                                           setDays(prevDays => {
                                             const newDays = { ...prevDays };
