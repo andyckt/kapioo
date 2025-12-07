@@ -12,7 +12,7 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -26,6 +26,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import {
   getWeeklyMeals,
   getAvailableMeals,
@@ -82,6 +89,7 @@ export default function AdminDashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("dashboard")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Define sidebar menu items with groups and submenus
   const sidebarMenuItems = [
@@ -1196,6 +1204,68 @@ export default function AdminDashboardPage() {
       <header className="sticky top-0 z-40 border-b bg-background">
         <div className="container flex h-16 items-center justify-between py-4">
           <div className="flex items-center gap-2">
+            {/* Mobile Menu Trigger */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[250px] sm:w-[300px]">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center space-x-2">
+                    <ShoppingCart className="h-6 w-6" />
+                    <span>Kapioo Admin</span>
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="mt-6 flex flex-col gap-2">
+                  {sidebarMenuItems.map((item) => (
+                    <div key={item.id}>
+                      {item.isHeading ? (
+                        <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
+                          {item.icon}
+                          <span className="ml-2">{item.label}</span>
+                        </div>
+                      ) : (
+                        <Button
+                          variant={activeTab === item.id ? "default" : "ghost"}
+                          className="justify-start w-full"
+                          onClick={() => {
+                            setActiveTab(item.id)
+                            setMobileMenuOpen(false)
+                          }}
+                        >
+                          {item.icon}
+                          <span className="ml-2">{item.label}</span>
+                        </Button>
+                      )}
+                      
+                      {/* Render children if they exist */}
+                      {item.children && item.children.length > 0 && (
+                        <div className="pl-6 mt-1 border-l-2 border-muted ml-2">
+                          {item.children.map((child) => (
+                            <Button
+                              key={child.id}
+                              variant={activeTab === child.id ? "default" : "ghost"}
+                              className="justify-start w-full text-sm"
+                              onClick={() => {
+                                setActiveTab(child.id)
+                                setMobileMenuOpen(false)
+                              }}
+                            >
+                              {child.icon}
+                              <span className="ml-2">{child.label}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+            
             <ShoppingCart className="h-6 w-6" />
             <span className="font-bold text-xl">Kapioo Admin</span>
           </div>
