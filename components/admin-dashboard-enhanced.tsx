@@ -335,8 +335,8 @@ export function AdminDashboardEnhanced() {
         ))}
       </div>
 
-      {/* Performance Metrics Section */}
-      <Card>
+      {/* Performance Metrics Section - COMMENTED OUT (Hardcoded data) */}
+      {/* <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -400,7 +400,7 @@ export function AdminDashboardEnhanced() {
             </TabsContent>
           </Tabs>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   )
 }
