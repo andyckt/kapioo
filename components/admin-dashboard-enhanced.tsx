@@ -252,30 +252,31 @@ export function AdminDashboardEnhanced() {
       icon: <Users className="h-4 w-4 text-muted-foreground" />,
       description: "Total registered users",
     },
-    {
-      title: "Pending Orders",
-      value: loading ? "..." : pendingOrders,
-      change: pendingOrdersGrowth,
-      trend: pendingOrdersGrowth >= 0 ? "up" : "down",
-      icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />,
-      description: "Orders in pending status",
-    },
-    {
-      title: "Successfully Delivered",
-      value: loading ? "..." : deliveredOrders,
-      change: deliveredOrdersGrowth,
-      trend: deliveredOrdersGrowth >= 0 ? "up" : "down",
-      icon: <CheckCircle className="h-4 w-4 text-muted-foreground" />,
-      description: "Orders delivered successfully",
-    },
-    {
-      title: "Popular Day",
-      value: loading ? "..." : popularDay,
-      change: popularDayChange,
-      trend: popularDayChange >= 0 ? "up" : "down",
-      icon: <Calendar className="h-4 w-4 text-muted-foreground" />,
-      description: "Most ordered day",
-    },
+    // COMMENTED OUT - Pending Orders, Successfully Delivered, and Popular Day metrics
+    // {
+    //   title: "Pending Orders",
+    //   value: loading ? "..." : pendingOrders,
+    //   change: pendingOrdersGrowth,
+    //   trend: pendingOrdersGrowth >= 0 ? "up" : "down",
+    //   icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />,
+    //   description: "Orders in pending status",
+    // },
+    // {
+    //   title: "Successfully Delivered",
+    //   value: loading ? "..." : deliveredOrders,
+    //   change: deliveredOrdersGrowth,
+    //   trend: deliveredOrdersGrowth >= 0 ? "up" : "down",
+    //   icon: <CheckCircle className="h-4 w-4 text-muted-foreground" />,
+    //   description: "Orders delivered successfully",
+    // },
+    // {
+    //   title: "Popular Day",
+    //   value: loading ? "..." : popularDay,
+    //   change: popularDayChange,
+    //   trend: popularDayChange >= 0 ? "up" : "down",
+    //   icon: <Calendar className="h-4 w-4 text-muted-foreground" />,
+    //   description: "Most ordered day",
+    // },
   ]
 
   return (
