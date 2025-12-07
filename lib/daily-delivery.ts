@@ -54,6 +54,7 @@ export type DailyOrderData = {
   deliveryAddress: DeliveryAddress
   phoneNumber: string
   area: string
+  idempotencyKey?: string  // Add idempotency key
 }
 
 // Get active delivery days

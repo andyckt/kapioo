@@ -154,6 +154,9 @@ try {
   throw error;
 }
 
+// In-memory store for idempotency (should use Redis in production)
+const idempotencyStore = new Map<string, any>();
+
 // POST handler - create a new daily order
 export async function POST(request: Request) {
   try {
@@ -173,6 +176,17 @@ export async function POST(request: Request) {
     
     // Parse request body
     const data = await request.json();
+    
+    // Check for idempotency key
+    const idempotencyKey = data.idempotencyKey;
+    if (idempotencyKey) {
+      // Check if we've already processed this request
+      if (idempotencyStore.has(idempotencyKey)) {
+        const cachedResponse = idempotencyStore.get(idempotencyKey);
+        console.log(`Idempotent request detected: ${idempotencyKey}, returning cached response`);
+        return NextResponse.json(cachedResponse, { status: 200 });
+      }
+    }
     
     // Debug logs
     console.log('Request data received:', JSON.stringify(data));
@@ -319,9 +333,29 @@ export async function POST(request: Request) {
       { new: true }
     );
     
-    // Send order confirmation email to user
-    try {
-      await sendDailyOrderConfirmationEmail(
+    // Prepare response BEFORE sending emails
+    const responseData = { 
+      success: true, 
+      data: dailyOrder,
+      remainingVouchers: {
+        twoDish: updatedUser.twoDishVoucher,
+        threeDish: updatedUser.threeDishVoucher
+      }
+    };
+    
+    // Store in idempotency cache (expires after 1 hour)
+    if (idempotencyKey) {
+      idempotencyStore.set(idempotencyKey, responseData);
+      // Auto-delete after 1 hour to prevent memory leak
+      setTimeout(() => {
+        idempotencyStore.delete(idempotencyKey);
+      }, 3600000);
+    }
+    
+    // Send emails asynchronously (fire and forget - don't await!)
+    // This prevents timeout issues
+    Promise.all([
+      sendDailyOrderConfirmationEmail(
         user.email,
         user.name,
         {
@@ -333,16 +367,13 @@ export async function POST(request: Request) {
           phoneNumber: data.phoneNumber,
           specialInstructions: data.specialInstructions
         }
-      );
-      console.log(`Order confirmation email sent to ${user.email}`);
-    } catch (emailError) {
-      console.error('Error sending order confirmation email:', emailError);
-      // Don't fail the API call if email sending fails
-    }
-    
-    // Send notification to admin
-    try {
-      await sendAdminDailyOrderNotification({
+      ).then(() => {
+        console.log(`Order confirmation email sent to ${user.email}`);
+      }).catch((emailError) => {
+        console.error('Error sending order confirmation email:', emailError);
+      }),
+      
+      sendAdminDailyOrderNotification({
         orderId,
         userId: user._id.toString(),
         userName: user.name,
@@ -353,22 +384,16 @@ export async function POST(request: Request) {
         phoneNumber: data.phoneNumber,
         deliveryAddress: data.deliveryAddress,
         specialInstructions: data.specialInstructions
-      });
-      console.log('Admin notification email sent');
-    } catch (emailError) {
-      console.error('Error sending admin notification email:', emailError);
-      // Don't fail the API call if email sending fails
-    }
+      }).then(() => {
+        console.log('Admin notification email sent');
+      }).catch((emailError) => {
+        console.error('Error sending admin notification email:', emailError);
+      })
+    ]);
 
+    // Return response immediately without waiting for emails
     return NextResponse.json(
-      { 
-        success: true, 
-        data: dailyOrder,
-        remainingVouchers: {
-          twoDish: updatedUser.twoDishVoucher,
-          threeDish: updatedUser.threeDishVoucher
-        }
-      },
+      responseData,
       { status: 200 }
     );
   } catch (error) {

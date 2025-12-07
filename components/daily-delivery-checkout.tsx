@@ -341,8 +341,16 @@ export function DailyDeliveryCheckout({
         threeDish: userVouchers.threeDish
       };
       
+      // Generate a unique batch ID for this checkout session (idempotency)
+      const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
       // Process each date as a separate order
+      let orderIndex = 0;
       for (const [date, dateItems] of Object.entries(cartByDate)) {
+        // Generate unique idempotency key for THIS specific order
+        const idempotencyKey = `${batchId}-order-${orderIndex}`;
+        orderIndex++;
+        
         // Enhance cart items with dish details
         const enhancedDateItems = dateItems.map(item => {
           const dayData = days[item.day];
@@ -380,14 +388,52 @@ export function DailyDeliveryCheckout({
           specialInstructions: formData.specialInstructions,
           deliveryAddress: editingAddress ? addressFormData : userData.address,
           phoneNumber: formData.phone,
-          area: formData.area
+          area: formData.area,
+          idempotencyKey: idempotencyKey // ADD IDEMPOTENCY KEY
         };
         
-        // Submit order for this date
-        const result = await submitDailyOrder(orderData);
+        console.log(`Submitting order ${orderIndex} with idempotency key: ${idempotencyKey}`);
         
-        if (result.error) {
-          throw new Error(result.error);
+        // Submit order for this date with retry logic
+        let retryCount = 0;
+        const maxRetries = 2;
+        let result = null;
+        
+        while (retryCount <= maxRetries) {
+          try {
+            result = await submitDailyOrder(orderData);
+            
+            // If successful, break the retry loop
+            if (result && !result.error) {
+              console.log(`Order ${orderIndex} submitted successfully`);
+              break;
+            }
+            
+            // If error but not a timeout, throw immediately
+            if (result.error && !result.error.includes('timeout') && !result.error.includes('timed out')) {
+              throw new Error(result.error);
+            }
+            
+            // If timeout, retry
+            retryCount++;
+            if (retryCount <= maxRetries) {
+              console.log(`Order ${orderIndex} timed out, retrying (${retryCount}/${maxRetries})...`);
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+            }
+          } catch (error: any) {
+            // If it's a fetch/network error, retry
+            if (retryCount < maxRetries && (error.message?.includes('timeout') || error.message?.includes('fetch'))) {
+              retryCount++;
+              console.log(`Order ${orderIndex} network error, retrying (${retryCount}/${maxRetries})...`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            } else {
+              throw error;
+            }
+          }
+        }
+        
+        if (!result || result.error) {
+          throw new Error(result?.error || 'Order submission failed');
         }
         
         // Update remaining vouchers
