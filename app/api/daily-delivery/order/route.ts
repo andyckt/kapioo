@@ -359,46 +359,62 @@ export async function POST(request: Request) {
       }, 3600000);
     }
     
-    // Send emails asynchronously (fire and forget - don't await!)
-    // This prevents timeout issues
-    Promise.all([
-      sendDailyOrderConfirmationEmail(
-        user.email,
-        user.name,
-        {
-          orderId,
-          items: data.items,
-          voucherCost: totalVouchers,
-          deliveryAddress: data.deliveryAddress,
-          area: data.area,
-          phoneNumber: data.phoneNumber,
-          specialInstructions: data.specialInstructions
-        }
-      ).then(() => {
-        console.log(`Order confirmation email sent to ${user.email}`);
-      }).catch((emailError) => {
-        console.error('Error sending order confirmation email:', emailError);
-      }),
-      
-      sendAdminDailyOrderNotification({
-        orderId,
-        userId: user._id.toString(),
-        userName: user.name,
-        userEmail: user.email,
-        items: data.items,
-        voucherCost: totalVouchers,
-        area: data.area,
-        phoneNumber: data.phoneNumber,
-        deliveryAddress: data.deliveryAddress,
-        specialInstructions: data.specialInstructions
-      }).then(() => {
-        console.log('Admin notification email sent');
-      }).catch((emailError) => {
-        console.error('Error sending admin notification email:', emailError);
-      })
-    ]);
+    // Send emails with a timeout to prevent function from hanging
+    // Wait for emails BUT with 8-second max timeout
+    try {
+      await Promise.race([
+        // Send both emails in parallel
+        Promise.all([
+          sendDailyOrderConfirmationEmail(
+            user.email,
+            user.name,
+            {
+              orderId,
+              items: data.items,
+              voucherCost: totalVouchers,
+              deliveryAddress: data.deliveryAddress,
+              area: data.area,
+              phoneNumber: data.phoneNumber,
+              specialInstructions: data.specialInstructions
+            }
+          ).then(() => {
+            console.log(`Order confirmation email sent to ${user.email}`);
+          }).catch((emailError) => {
+            console.error('Error sending order confirmation email:', emailError);
+          }),
+          
+          sendAdminDailyOrderNotification({
+            orderId,
+            userId: user._id.toString(),
+            userName: user.name,
+            userEmail: user.email,
+            items: data.items,
+            voucherCost: totalVouchers,
+            area: data.area,
+            phoneNumber: data.phoneNumber,
+            deliveryAddress: data.deliveryAddress,
+            specialInstructions: data.specialInstructions
+          }).then(() => {
+            console.log('Admin notification email sent');
+          }).catch((emailError) => {
+            console.error('Error sending admin notification email:', emailError);
+          })
+        ]),
+        // Timeout after 8 seconds
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email timeout')), 8000)
+        )
+      ]);
+    } catch (error: any) {
+      // If emails timeout or fail, log it but don't fail the order
+      if (error.message === 'Email timeout') {
+        console.log('Email sending timed out after 8 seconds, but order was successful');
+      } else {
+        console.error('Error during email sending:', error);
+      }
+    }
 
-    // Return response immediately without waiting for emails
+    // Return response after email attempt (or timeout)
     return NextResponse.json(
       responseData,
       { status: 200 }
