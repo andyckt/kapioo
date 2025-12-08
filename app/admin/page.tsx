@@ -1361,34 +1361,34 @@ export default function AdminDashboardPage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">User Management</h2>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => fetchUsers(usersPagination.page, usersPagination.limit)}
-                      className="h-9 gap-1"
+                      className="h-9 gap-1 flex-1 sm:flex-none"
                     >
                       <RefreshCcw className={cn("h-4 w-4", usersLoading && "animate-spin")} />
-                      {usersLoading ? "Refreshing..." : "Refresh"}
+                      <span className="hidden sm:inline">{usersLoading ? "Refreshing..." : "Refresh"}</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleExportUsers}
-                      className="h-9 gap-1"
+                      className="h-9 gap-1 flex-1 sm:flex-none"
                       disabled={isLoading}
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Exporting...
+                          <span className="hidden sm:inline">Exporting...</span>
                         </>
                       ) : (
                         <>
                           <Download className="h-4 w-4" />
-                          Export Users
+                          <span className="hidden sm:inline">Export Users</span>
                         </>
                       )}
                     </Button>
@@ -1401,13 +1401,14 @@ export default function AdminDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex items-center space-x-2">
+                      {/* Search Section - Mobile Responsive */}
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex gap-2 flex-1">
                           <Select
                             value={userSearchType}
                             onValueChange={(value: "all" | "name" | "email" | "userID") => setUserSearchType(value)}
                           >
-                            <SelectTrigger className="w-[120px]">
+                            <SelectTrigger className="w-[100px] sm:w-[120px]">
                               <SelectValue placeholder="Search by" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1422,7 +1423,7 @@ export default function AdminDashboardPage() {
                                          userSearchType === "name" ? "Search by name..." :
                                          userSearchType === "userID" ? "Search by user ID..." :
                                          "Search users..."}
-                            className="w-[300px]" 
+                            className="flex-1" 
                             value={userSearchQuery}
                             onChange={(e) => setUserSearchQuery(e.target.value)}
                             onKeyDown={(e) => {
@@ -1432,14 +1433,18 @@ export default function AdminDashboardPage() {
                             }}
                           />
                         </div>
-                        <Button variant="outline" onClick={handleUserSearch}>Search</Button>
-                        {userSearchQuery && (
-                          <Button variant="ghost" size="sm" onClick={resetUserSearch}>
-                            Clear
-                          </Button>
-                        )}
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={handleUserSearch} className="flex-1 sm:flex-none">Search</Button>
+                          {userSearchQuery && (
+                            <Button variant="ghost" size="sm" onClick={resetUserSearch}>
+                              Clear
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <div className="rounded-md border">
+                      
+                      {/* Desktop Table View - Hidden on Mobile */}
+                      <div className="hidden md:block rounded-md border">
                         <table className="w-full">
                           <thead>
                             <tr className="border-b">
@@ -1504,55 +1509,132 @@ export default function AdminDashboardPage() {
                           </tbody>
                         </table>
                       </div>
+                      
+                      {/* Mobile Card View - Hidden on Desktop */}
+                      <div className="md:hidden space-y-3">
+                        {filteredUsers.map((user) => (
+                          <Card key={user._id} className="overflow-hidden">
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                {/* Header with Name and Actions */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-base truncate">{user.name}</h3>
+                                    <p className="text-xs text-muted-foreground">ID: {user.userID}</p>
+                                  </div>
+                                  <div className="flex gap-1 flex-shrink-0">
+                                    <Button variant="outline" size="sm" onClick={() => handleViewUser(user)} className="h-8 px-2">
+                                      <Eye className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-500 border-red-200 hover:bg-red-50 h-8 px-2">
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                {/* User Details Grid */}
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Email</p>
+                                    <div className="flex items-center gap-1">
+                                      <p className="text-xs font-medium truncate" title={user.email || "-"}>
+                                        {user.email || "-"}
+                                      </p>
+                                      {user.email && (
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-4 w-4 flex-shrink-0"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(user.email);
+                                            toast({
+                                              title: "Copied",
+                                              description: "Email copied to clipboard",
+                                              duration: 2000,
+                                            });
+                                          }}
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                          </svg>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Phone</p>
+                                    <p className="text-xs font-medium truncate">{user.phone || "-"}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">City</p>
+                                    <p className="text-xs font-medium truncate">{user.address?.city || "-"}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Orders</p>
+                                    <p className="text-xs font-medium">{user.totalOrders || 0}</p>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <p className="text-xs text-muted-foreground">Joined</p>
+                                    <p className="text-xs font-medium">{user.joined ? formatDate(user.joined) : "-"}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleUserPagination('prev')}
-                          disabled={usersPagination.page <= 1}
-                        >
-                          Previous
-                        </Button>
-                        <div className="text-sm text-muted-foreground">Page {usersPagination.page} of {usersPagination.pages}</div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleUserPagination('next')}
-                          disabled={usersPagination.page >= usersPagination.pages}
-                        >
-                          Next
-                        </Button>
+                  <CardFooter className="flex-col gap-4 sm:flex-row">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleUserPagination('prev')}
+                        disabled={usersPagination.page <= 1}
+                        className="flex-1 sm:flex-none"
+                      >
+                        Previous
+                      </Button>
+                      <div className="text-sm text-muted-foreground whitespace-nowrap">
+                        Page {usersPagination.page} of {usersPagination.pages}
                       </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground">Rows per page:</span>
-                        <Select
-                          value={usersPagination.limit.toString()}
-                          onValueChange={(value) => {
-                            const newLimit = parseInt(value);
-                            setUsersPagination(prev => ({
-                              ...prev,
-                              limit: newLimit,
-                              page: 1 // Reset to first page when changing limit
-                            }));
-                            fetchUsers(1, newLimit);
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-[80px]">
-                            <SelectValue placeholder={usersPagination.limit.toString()} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="25">25</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleUserPagination('next')}
+                        disabled={usersPagination.page >= usersPagination.pages}
+                        className="flex-1 sm:flex-none"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-center sm:justify-end gap-2 w-full sm:w-auto sm:ml-auto">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+                      <Select
+                        value={usersPagination.limit.toString()}
+                        onValueChange={(value) => {
+                          const newLimit = parseInt(value);
+                          setUsersPagination(prev => ({
+                            ...prev,
+                            limit: newLimit,
+                            page: 1 // Reset to first page when changing limit
+                          }));
+                          fetchUsers(1, newLimit);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-[80px]">
+                          <SelectValue placeholder={usersPagination.limit.toString()} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </CardFooter>
                 </Card>
