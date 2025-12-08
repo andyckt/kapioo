@@ -361,6 +361,9 @@ export async function POST(request: Request) {
     
     // Send emails with a timeout to prevent function from hanging
     // Wait for emails BUT with 8-second max timeout
+    console.log('⏰ Starting email sending process...');
+    const emailStartTime = Date.now();
+    
     try {
       await Promise.race([
         // Send both emails in parallel
@@ -378,9 +381,16 @@ export async function POST(request: Request) {
               specialInstructions: data.specialInstructions
             }
           ).then(() => {
-            console.log(`Order confirmation email sent to ${user.email}`);
+            const elapsed = Date.now() - emailStartTime;
+            console.log(`✅ User email sent successfully to ${user.email} (${elapsed}ms)`);
           }).catch((emailError) => {
-            console.error('Error sending order confirmation email:', emailError);
+            const elapsed = Date.now() - emailStartTime;
+            console.error(`❌ Error sending user email after ${elapsed}ms:`, emailError);
+            console.error('User email error details:', {
+              name: emailError?.name,
+              message: emailError?.message,
+              code: emailError?.code
+            });
           }),
           
           sendAdminDailyOrderNotification({
@@ -395,9 +405,16 @@ export async function POST(request: Request) {
             deliveryAddress: data.deliveryAddress,
             specialInstructions: data.specialInstructions
           }).then(() => {
-            console.log('Admin notification email sent');
+            const elapsed = Date.now() - emailStartTime;
+            console.log(`✅ Admin email sent successfully (${elapsed}ms)`);
           }).catch((emailError) => {
-            console.error('Error sending admin notification email:', emailError);
+            const elapsed = Date.now() - emailStartTime;
+            console.error(`❌ Error sending admin email after ${elapsed}ms:`, emailError);
+            console.error('Admin email error details:', {
+              name: emailError?.name,
+              message: emailError?.message,
+              code: emailError?.code
+            });
           })
         ]),
         // Timeout after 8 seconds
@@ -405,12 +422,22 @@ export async function POST(request: Request) {
           setTimeout(() => reject(new Error('Email timeout')), 8000)
         )
       ]);
+      
+      const totalElapsed = Date.now() - emailStartTime;
+      console.log(`✅ Email process completed in ${totalElapsed}ms`);
+      
     } catch (error: any) {
+      const totalElapsed = Date.now() - emailStartTime;
+      
       // If emails timeout or fail, log it but don't fail the order
       if (error.message === 'Email timeout') {
-        console.log('Email sending timed out after 8 seconds, but order was successful');
+        console.log(`⏱️ Email sending timed out after ${totalElapsed}ms (max 8000ms)`);
+        console.log('⚠️ Order was successful but emails may not have been delivered');
+        console.log('💡 Check EMAIL_USER and EMAIL_PASS environment variables');
       } else {
-        console.error('Error during email sending:', error);
+        console.error(`❌ Error during email sending after ${totalElapsed}ms:`, error);
+        console.error('Email error name:', error?.name);
+        console.error('Email error message:', error?.message);
       }
     }
 
