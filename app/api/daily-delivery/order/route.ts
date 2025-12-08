@@ -321,15 +321,22 @@ export async function POST(request: Request) {
       );
     }
       
-    // Deduct vouchers from user
+    // Deduct vouchers from user and update phone number if provided
+    const updateFields: any = {
+      $inc: { 
+        twoDishVoucher: -vouchersNeeded.twoDish,
+        threeDishVoucher: -vouchersNeeded.threeDish
+      }
+    };
+    
+    // Update phone number if provided in order
+    if (data.phoneNumber && data.phoneNumber.trim()) {
+      updateFields.$set = { phone: data.phoneNumber.trim() };
+    }
+    
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
-      {
-        $inc: { 
-          twoDishVoucher: -vouchersNeeded.twoDish,
-          threeDishVoucher: -vouchersNeeded.threeDish
-        }
-      },
+      updateFields,
       { new: true }
     );
     

@@ -241,19 +241,35 @@ export async function POST(request: Request) {
                          mealPlanType === '12aweek' ? 'weeklyTWELVEmeals' :
                          'credits';
       
-      const updateObj: any = {};
-      updateObj[updateField] = mealPlanType === 'legacy' ? -totalItems : -1;
+      const updateObj: any = {
+        $inc: {}
+      };
+      updateObj.$inc[updateField] = mealPlanType === 'legacy' ? -totalItems : -1;
       
-      // Deduct from the appropriate meal plan field
+      // Update phone number if provided in order
+      if (data.phoneNumber && data.phoneNumber.trim()) {
+        updateObj.$set = { phone: data.phoneNumber.trim() };
+      }
+      
+      // Deduct from the appropriate meal plan field and update phone
       updatedUser = await User.findByIdAndUpdate(
         user._id,
-        { $inc: updateObj },
+        updateObj,
         { new: true }
       );
       
       console.log(`Voucher deducted: ${updateField} ${mealPlanType === 'legacy' ? -totalItems : -1}`);
     } else {
       console.log('Skipping voucher deduction as requested');
+      
+      // Even if not deducting voucher, still update phone number if provided
+      if (data.phoneNumber && data.phoneNumber.trim()) {
+        updatedUser = await User.findByIdAndUpdate(
+          user._id,
+          { $set: { phone: data.phoneNumber.trim() } },
+          { new: true }
+        );
+      }
     }
     
     // Send order confirmation email to user

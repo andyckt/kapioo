@@ -174,8 +174,11 @@ export async function POST(request: Request) {
       
       const savedOrder = await newOrder.save({ session });
       
-      // Deduct credits from user
+      // Deduct credits from user and update phone number if provided
       user.credits -= creditCost;
+      if (phoneNumber && phoneNumber.trim()) {
+        user.phone = phoneNumber.trim();
+      }
       await user.save({ session });
       
       // Create transaction record for the credit deduction
