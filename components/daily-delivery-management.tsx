@@ -44,7 +44,8 @@ import {
   Tag,
   Utensils,
   Package,
-  RefreshCcw
+  RefreshCcw,
+  ChevronDown
 } from "lucide-react"
 
 // Define types based on the daily-delivery.tsx file
@@ -170,6 +171,20 @@ export function DailyDeliveryManagement() {
   const [editedDate, setEditedDate] = useState<string>('')
   const [editedDisplayName, setEditedDisplayName] = useState<string>('')
   const [editedWeek, setEditedWeek] = useState<number>(1)
+  
+  // State for day creation modal
+  const [showDayCreationModal, setShowDayCreationModal] = useState<boolean>(false)
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string | null>(null)
+  const [selectedWeekNumber, setSelectedWeekNumber] = useState<number>(1)
+  const [startDate, setStartDate] = useState<string>('')
+  const [calculatedDates, setCalculatedDates] = useState<Record<string, string>>({
+    monday: '',
+    tuesday: '',
+    wednesday: '',
+    thursday: '',
+    friday: '',
+    sunday: ''
+  })
   
   // Helper function to update a combo locally
   const updateCombo = (dayId: string, comboId: string, updatedCombo: Partial<ComboItem>) => {
@@ -641,16 +656,80 @@ export function DailyDeliveryManagement() {
         return;
       }
 
-      // Helper function to calculate next week's date
-      const calculateNextWeekDate = (dateStr: string): string => {
-        const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
-        if (dateMatch && dateMatch.length >= 3) {
-          const month = dateMatch[1]; // e.g., "Dec"
-          const dayNum = parseInt(dateMatch[2], 10); // e.g., 1
-          return `${month} ${dayNum + 7}`; // e.g., "Dec 8"
-        }
-        return dateStr;
+  // Helper function to calculate next week's date
+  const calculateNextWeekDate = (dateStr: string): string => {
+    const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
+    if (dateMatch && dateMatch.length >= 3) {
+      const month = dateMatch[1]; // e.g., "Dec"
+      const dayNum = parseInt(dateMatch[2], 10); // e.g., 1
+      return `${month} ${dayNum + 7}`; // e.g., "Dec 8"
+    }
+    return dateStr;
+  };
+  
+  // Helper function to parse date string into a Date object
+  const parseDateString = (dateStr: string): Date | null => {
+    const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
+    if (dateMatch && dateMatch.length >= 3) {
+      const month = dateMatch[1]; // e.g., "Dec"
+      const dayNum = parseInt(dateMatch[2], 10); // e.g., 15
+      
+      // Map month abbreviation to month number (0-based)
+      const monthMap: Record<string, number> = {
+        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
       };
+      
+      if (monthMap[month] !== undefined) {
+        // Current year
+        const currentYear = new Date().getFullYear();
+        return new Date(currentYear, monthMap[month], dayNum);
+      }
+    }
+    return null;
+  };
+  
+  // Helper function to format a Date object to "MMM D" format (e.g., "Dec 15")
+  const formatDateToString = (date: Date): string => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}`;
+  };
+  
+  // Helper function to calculate dates for all days of the week based on a starting day and date
+  const calculateDatesForWeek = (startDay: string, startDateStr: string): Record<string, string> => {
+    const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const result: Record<string, string> = {
+      monday: '',
+      tuesday: '',
+      wednesday: '',
+      thursday: '',
+      friday: '',
+      sunday: ''
+    };
+    
+    // Parse the start date
+    const startDate = parseDateString(startDateStr);
+    if (!startDate) return result;
+    
+    // Find the index of the starting day
+    const startDayIndex = daysOfWeek.indexOf(startDay.toLowerCase());
+    if (startDayIndex === -1) return result;
+    
+    // Calculate dates for each day
+    for (const day of Object.keys(result)) {
+      if (day === 'saturday') continue; // Skip Saturday
+      
+      const dayIndex = daysOfWeek.indexOf(day);
+      if (dayIndex !== -1) {
+        const dayDiff = dayIndex - startDayIndex;
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + dayDiff);
+        result[day] = formatDateToString(date);
+      }
+    }
+    
+    return result;
+  };
 
       // 1. Update This Week days with Next Week's content
       for (const [nextDayId, nextDay] of week2Days) {
@@ -1055,115 +1134,238 @@ export function DailyDeliveryManagement() {
                   <div className="flex gap-2">
                     <Button 
                       size="sm"
-                      onClick={async () => {
-                        try {
-                          // Generate a new unique day ID
-                          const newDayId = `new-day-${Date.now()}`;
-                          
-                          // Create new day via API
-                          const dayResponse = await fetch('/api/days', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                              dayId: newDayId,
-                              date: 'New Date',
-                              displayName: 'new-day',
-                              week: 1,
-                              isActive: true
-                            }),
-                          });
-                          
-                          const dayData = await dayResponse.json();
-                          
-                          if (!dayData.success) {
-                            throw new Error(dayData.error || 'Failed to create day');
-                          }
-                          
-                          // Create default combo for the new day
-                          const comboId = `${newDayId}-combo1`;
-                          const comboResponse = await fetch('/api/combos', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                              comboId,
-                              dayId: newDayId,
-                              name: '套餐 1',
-                              calories: 650,
-                              tags: ["Fresh", "Healthy"],
-                              typeA: {
-                                dishes: ["Dish 1", "Dish 2", "Dish 3"],
-                                voucherType: 'twoDish'
-                              },
-                              typeB: {
-                                dishes: ["Dish 1", "Dish 2", "Dish 3", "Dish 4", "Dish 5"],
-                                voucherType: 'threeDish'
-                              }
-                            }),
-                          });
-                          
-                          const comboData = await comboResponse.json();
-                          
-                          if (!comboData.success) {
-                            throw new Error(comboData.error || 'Failed to create combo');
-                          }
-                          
-                          // Update local state
-                          setDays(prevDays => ({
-                            ...prevDays,
-                            [newDayId]: {
-                              date: 'New Date',
-                              displayName: 'new-day',
-                              week: 1,
-                              combos: [{
-                                id: comboId,
-                                name: '套餐 1',
-                                calories: 650,
-                                tags: ["Fresh", "Healthy"],
-                                typeA: {
-                                  dishes: ["Dish 1", "Dish 2", "Dish 3"],
-                                  voucherType: 'twoDish'
-                                },
-                                typeB: {
-                                  dishes: ["Dish 1", "Dish 2", "Dish 3", "Dish 4", "Dish 5"],
-                                  voucherType: 'threeDish'
-                                }
-                              }]
-                            }
-                          }));
-                          
-                          // Start editing the new day immediately
-                          startEditingDay(newDayId);
-                          
-                          toast({
-                            title: 'Success',
-                            description: 'New day created successfully',
-                          });
-                        } catch (error) {
-                          console.error('Error creating day:', error);
-                          toast({
-                            title: 'Error',
-                            description: `Failed to create day: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                            variant: 'destructive'
-                          });
-                        }
+                      className="flex items-center h-8 px-3 text-xs"
+                      onClick={() => {
+                        setSelectedWeekNumber(1);
+                        setShowDayCreationModal(true);
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Day
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Day (This Week)
+                    </Button>
+                    
+                    <Button 
+                      size="sm"
+                      variant="secondary"
+                      className="flex items-center h-8 px-3 text-xs"
+                      onClick={() => {
+                        setSelectedWeekNumber(2);
+                        setShowDayCreationModal(true);
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Day (Next Week)
                     </Button>
                     
                     <Button 
                       size="sm"
                       variant="outline"
+                      className="h-8 px-3 text-xs"
                       onClick={rollForwardWeek}
                     >
-                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      <RefreshCcw className="h-3 w-3 mr-1" />
                       Roll Forward Week
                     </Button>
+                    
+                    {/* Day Creation Modal */}
+                    {showDayCreationModal && (
+                      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                        <div className="bg-white rounded-lg shadow-lg w-[500px] max-w-[90vw]">
+                          <div className="p-4 border-b">
+                            <h3 className="text-lg font-medium">
+                              Add Day ({selectedWeekNumber === 1 ? 'This Week' : 'Next Week'})
+                            </h3>
+                          </div>
+                          
+                          <div className="p-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label>Select Day</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sunday"].map((day) => (
+                                  <Button
+                                    key={day}
+                                    variant={selectedDayOfWeek === day.toLowerCase() ? "default" : "outline"}
+                                    className="w-full"
+                                    onClick={() => {
+                                      setSelectedDayOfWeek(day.toLowerCase());
+                                      // If we already have a start date, recalculate dates based on the new day
+                                      if (startDate) {
+                                        setCalculatedDates(calculateDatesForWeek(day.toLowerCase(), startDate));
+                                      }
+                                    }}
+                                  >
+                                    {day}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {selectedDayOfWeek && (
+                              <div className="space-y-2">
+                                <Label htmlFor="start-date">Date for {selectedDayOfWeek}</Label>
+                                <Input
+                                  id="start-date"
+                                  placeholder="e.g. Dec 15"
+                                  value={startDate}
+                                  onChange={(e) => {
+                                    const newDate = e.target.value;
+                                    setStartDate(newDate);
+                                    if (selectedDayOfWeek && newDate) {
+                                      // Calculate dates for other days based on this date
+                                      setCalculatedDates(calculateDatesForWeek(selectedDayOfWeek, newDate));
+                                    }
+                                  }}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Format: "MMM D" (e.g., "Dec 15")
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Removed the Calculated Dates section as requested */}
+                          </div>
+                          
+                          <div className="p-4 border-t flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                // Close the modal and reset state
+                                setShowDayCreationModal(false);
+                                setSelectedDayOfWeek(null);
+                                setStartDate('');
+                                setCalculatedDates({
+                                  monday: '',
+                                  tuesday: '',
+                                  wednesday: '',
+                                  thursday: '',
+                                  friday: '',
+                                  sunday: ''
+                                });
+                              }}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Close
+                            </Button>
+                            
+                            <Button
+                              disabled={!selectedDayOfWeek || !startDate}
+                              onClick={async () => {
+                                if (!selectedDayOfWeek || !startDate) return;
+                                
+                                try {
+                                  // Generate a new unique day ID
+                                  const dayLower = selectedDayOfWeek.toLowerCase();
+                                  const newDayId = `${dayLower}-w${selectedWeekNumber}-${Date.now()}`;
+                                  
+                                  // Get the date for this specific day
+                                  const dateForDay = calculatedDates[dayLower];
+                                  
+                                  // Create new day via API
+                                  const dayResponse = await fetch('/api/days', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                      dayId: newDayId,
+                                      date: dateForDay || startDate,
+                                      displayName: dayLower,
+                                      week: selectedWeekNumber,
+                                      isActive: true
+                                    }),
+                                  });
+                                  
+                                  const dayData = await dayResponse.json();
+                                  
+                                  if (!dayData.success) {
+                                    throw new Error(dayData.error || 'Failed to create day');
+                                  }
+                                  
+                                  // Create default combo for the new day
+                                  const comboId = `${newDayId}-combo1`;
+                                  const comboResponse = await fetch('/api/combos', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                      comboId,
+                                      dayId: newDayId,
+                                      name: '套餐 1',
+                                      calories: 650,
+                                      tags: ["Fresh", "Healthy"],
+                                      typeA: {
+                                        dishes: ["Dish 1", "Dish 2", "Dish 3"],
+                                        voucherType: 'twoDish'
+                                      },
+                                      typeB: {
+                                        dishes: ["Dish 1", "Dish 2", "Dish 3", "Dish 4", "Dish 5"],
+                                        voucherType: 'threeDish'
+                                      }
+                                    }),
+                                  });
+                                  
+                                  const comboData = await comboResponse.json();
+                                  
+                                  if (!comboData.success) {
+                                    throw new Error(comboData.error || 'Failed to create combo');
+                                  }
+                                  
+                                  // Update local state
+                                  setDays(prevDays => ({
+                                    ...prevDays,
+                                    [newDayId]: {
+                                      date: dateForDay || startDate,
+                                      displayName: dayLower,
+                                      week: selectedWeekNumber,
+                                      combos: [{
+                                        id: comboId,
+                                        name: '套餐 1',
+                                        calories: 650,
+                                        tags: ["Fresh", "Healthy"],
+                                        typeA: {
+                                          dishes: ["Dish 1", "Dish 2", "Dish 3"],
+                                          voucherType: 'twoDish'
+                                        },
+                                        typeB: {
+                                          dishes: ["Dish 1", "Dish 2", "Dish 3", "Dish 4", "Dish 5"],
+                                          voucherType: 'threeDish'
+                                        }
+                                      }]
+                                    }
+                                  }));
+                                  
+                                  // Start editing the new day immediately
+                                  startEditingDay(newDayId);
+                                  
+                                  // Switch to the appropriate week view
+                                  setActiveWeekFilter(selectedWeekNumber);
+                                  
+                                  // Keep the modal open, just reset the form fields
+                                  setSelectedDayOfWeek(null);
+                                  setStartDate('');
+                                  
+                                  toast({
+                                    title: 'Success',
+                                    description: `${selectedDayOfWeek} (${dateForDay || startDate}) created successfully for ${selectedWeekNumber === 1 ? 'This Week' : 'Next Week'}`,
+                                  });
+                                } catch (error) {
+                                  console.error('Error creating day:', error);
+                                  toast({
+                                    title: 'Error',
+                                    description: `Failed to create day: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                    variant: 'destructive'
+                                  });
+                                }
+                              }}
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              Create Day
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
