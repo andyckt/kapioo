@@ -157,47 +157,96 @@ export default function DailyDeliveryPage() {
     }
   }
 
-  // Function to fetch weekly menu data
+  // Function to fetch weekly menu data - OPTIMIZED
   const fetchWeeklyMenu = async () => {
     setIsMenuLoading(true)
     try {
-      // Fetch active days
-      const daysResponse = await fetch('/api/days?isActive=true')
-      const daysData = await daysResponse.json()
-      
-      if (daysData.success) {
-        const formattedDays: Record<string, DayData> = {}
+      // 🚀 OPTIMIZATION #1: Try the optimized single-request endpoint first
+      try {
+        const optimizedResponse = await fetch('/api/days/active-with-combos')
+        const optimizedData = await optimizedResponse.json()
         
-        // Process each day
-        for (const day of daysData.data) {
-          // Only include week 1 and 2 days
-          if (day.week <= 2) {
-            // Fetch combos for this day
-            const combosResponse = await fetch(`/api/days/${day.dayId}/combos`)
-            const combosData = await combosResponse.json()
-            
-            if (combosData.success) {
-              // Format combo data to match our component's expected structure
-              const formattedCombos = combosData.data.map((combo: any) => ({
-                id: combo.comboId,
-                name: combo.name,
-                calories: combo.calories,
-                tags: combo.tags,
-                typeA: combo.typeA,
-                typeB: combo.typeB
-              }))
-              
+        if (optimizedData.success && optimizedData.data) {
+          const formattedDays: Record<string, DayData> = {}
+          
+          // Process the combined data (much faster!)
+          optimizedData.data.forEach((day: any) => {
+            // Only include week 1 and 2 days
+            if (day.week <= 2) {
               formattedDays[day.dayId] = {
                 date: day.date,
                 displayName: day.displayName,
                 week: day.week,
-                combos: formattedCombos
+                combos: day.combos.map((combo: any) => ({
+                  id: combo.comboId,
+                  name: combo.name,
+                  calories: combo.calories,
+                  tags: combo.tags,
+                  typeA: combo.typeA,
+                  typeB: combo.typeB
+                }))
               }
             }
-          }
+          })
+          
+          setWeeklyMenu(formattedDays)
+          console.log('✅ Loaded menu using optimized endpoint')
         }
+      } catch (optimizedError) {
+        console.log('⚠️ Optimized endpoint failed, falling back to parallel requests')
         
-        setWeeklyMenu(formattedDays)
+        // Fallback to parallel requests if optimized endpoint fails
+        const daysResponse = await fetch('/api/days?isActive=true')
+        const daysData = await daysResponse.json()
+        
+        if (daysData.success) {
+          const formattedDays: Record<string, DayData> = {}
+          
+          // 🚀 OPTIMIZATION #2: Fetch all combos in parallel
+          const comboPromises = daysData.data
+            .filter((day: any) => day.week <= 2) // Only include week 1 and 2 days
+            .map(async (day: any) => {
+              try {
+                const combosResponse = await fetch(`/api/days/${day.dayId}/combos`)
+                const combosData = await combosResponse.json()
+                
+                if (combosData.success) {
+                  const formattedCombos = combosData.data.map((combo: any) => ({
+                    id: combo.comboId,
+                    name: combo.name,
+                    calories: combo.calories,
+                    tags: combo.tags,
+                    typeA: combo.typeA,
+                    typeB: combo.typeB
+                  }))
+                  
+                  return {
+                    dayId: day.dayId,
+                    dayData: {
+                      date: day.date,
+                      displayName: day.displayName,
+                      week: day.week,
+                      combos: formattedCombos
+                    }
+                  }
+                }
+                return null
+              } catch (error) {
+                console.error(`Error fetching combos for ${day.dayId}:`, error)
+                return null
+              }
+            })
+          
+          const comboResults = await Promise.all(comboPromises)
+          
+          comboResults.forEach((result) => {
+            if (result) {
+              formattedDays[result.dayId] = result.dayData
+            }
+          })
+          
+          setWeeklyMenu(formattedDays)
+        }
       }
     } catch (error) {
       console.error('Error fetching weekly menu:', error)
