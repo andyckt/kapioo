@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X, Check, CheckSquare, Users, ShoppingCart, Eye, Ticket } from "lucide-react"
+import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X, Check, CheckSquare, Users, ShoppingCart, Eye, Ticket, Copy } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -97,6 +97,22 @@ export function ViewWeeklyOrders() {
   const [selectAllChecked, setSelectAllChecked] = useState(false)
   const [isBatchUpdating, setIsBatchUpdating] = useState(false)
   const [batchStatus, setBatchStatus] = useState<string | null>(null)
+  
+  // Copy email to clipboard
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email).then(() => {
+      toast({
+        title: "Email copied!",
+        description: `${email} copied to clipboard`,
+      })
+    }).catch(() => {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy email to clipboard",
+        variant: "destructive"
+      })
+    })
+  }
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -793,6 +809,7 @@ export function ViewWeeklyOrders() {
                     <th className="h-10 px-4 text-left align-middle font-medium">Order ID</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Customer</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Date Ordered</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium">Order Items</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Delivery Date</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Status</th>
                     <th className="h-10 px-4 text-left align-middle font-medium">Area</th>
@@ -814,9 +831,21 @@ export function ViewWeeklyOrders() {
                         <td className="p-4 align-middle">{order.orderId}</td>
                         <td className="p-4 align-middle">
                           {order.user?.name || 'Unknown'}
-                          <div className="text-xs text-muted-foreground">
-                            {order.user?.email || ''}
-                          </div>
+                          {order.user?.email && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-xs text-muted-foreground truncate">{order.user.email}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  copyEmail(order.user.email)
+                                }}
+                                className="flex-shrink-0 p-0.5 hover:bg-muted rounded transition-colors"
+                                title="Copy email"
+                              >
+                                <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                         <td className="p-4 align-middle">
                           {new Date(order.createdAt).toLocaleDateString('en-US', {
@@ -830,6 +859,31 @@ export function ViewWeeklyOrders() {
                               minute: '2-digit'
                             })}
                           </div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          {order.items && order.items.length > 0 ? (
+                            <div className="space-y-2 max-w-[180px]">
+                              {order.items.map((item: any, index: number) => (
+                                <div key={index} className="flex items-center gap-2 bg-muted/30 rounded-md px-2 py-1.5 border border-muted">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium truncate">
+                                      {item.date}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground capitalize">
+                                      {item.day || item.dayName || item.dayId?.split('-')[0]}
+                                    </div>
+                                  </div>
+                                  <div className="flex-shrink-0">
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 h-auto font-semibold">
+                                      ×{item.quantity || 1}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          )}
                         </td>
                         <td className="p-4 align-middle">
                           {order.items && order.items.length > 0 ? (
@@ -1033,7 +1087,7 @@ export function ViewWeeklyOrders() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                      <td colSpan={9} className="p-4 text-center text-muted-foreground">
                         {isLoading ? "" : "No orders found"}
                       </td>
                     </tr>
@@ -1068,7 +1122,21 @@ export function ViewWeeklyOrders() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{order.user?.name || 'Unknown'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{order.user?.email || ''}</p>
+                        {order.user?.email && (
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs text-muted-foreground truncate flex-1">{order.user.email}</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                copyEmail(order.user.email)
+                              }}
+                              className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"
+                              title="Copy email"
+                            >
+                              <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1095,15 +1163,24 @@ export function ViewWeeklyOrders() {
                       </div>
                       <div className="flex-1 min-w-0">
                         {order.items && order.items.length > 0 ? (
-                          <div className="space-y-1">
-                            {order.items.slice(0, 2).map((item: any, index: number) => (
-                              <p key={index} className="text-sm truncate">
-                                {item.optionName || item.mealName}
-                              </p>
+                          <div className="space-y-2">
+                            {order.items.map((item: any, index: number) => (
+                              <div key={index} className="flex items-center gap-2 bg-muted/30 rounded-md px-2 py-1.5 border border-muted">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium truncate">
+                                    {item.date}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground capitalize">
+                                    {item.day || item.dayName || item.dayId?.split('-')[0]}
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0">
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 h-auto font-semibold">
+                                    ×{item.quantity || 1}
+                                  </Badge>
+                                </div>
+                              </div>
                             ))}
-                            {order.items.length > 2 && (
-                              <p className="text-xs text-muted-foreground">+{order.items.length - 2} more</p>
-                            )}
                           </div>
                         ) : (
                           <p className="text-sm">N/A</p>
