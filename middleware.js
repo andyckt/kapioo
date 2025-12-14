@@ -2,8 +2,56 @@ import { NextResponse } from 'next/server';
 
 // This middleware increases the body size limit for API requests
 // particularly useful for file uploads
+// Also blocks common attack vectors and logs suspicious requests
+
+// List of suspicious paths that indicate scanning/attack attempts
+const SUSPICIOUS_PATHS = [
+  '.env',
+  '.git',
+  '.aws',
+  'phpinfo.php',
+  'info.php',
+  'test.php',
+  'debug.log',
+  'error.log',
+  'laravel.log',
+  'wp-content',
+  'wp-admin',
+  'wp-login',
+  'phpmyadmin',
+  'admin.php',
+  'config.php',
+  'database.yml',
+  'settings.py',
+  '_profiler',
+  'credentials',
+  '.sql',
+  '.bak',
+  '.backup',
+  'sitemap.xml.php'
+];
 
 export function middleware(request) {
+  const pathname = request.nextUrl.pathname.toLowerCase();
+  
+  // Check for suspicious paths
+  const isSuspicious = SUSPICIOUS_PATHS.some(suspiciousPath => 
+    pathname.includes(suspiciousPath)
+  );
+  
+  if (isSuspicious) {
+    // Log the attack attempt
+    console.warn('🚨 SECURITY: Suspicious request blocked', {
+      path: pathname,
+      ip: request.ip || request.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: request.headers.get('user-agent'),
+      timestamp: new Date().toISOString()
+    });
+    
+    // Return 404 to not reveal that we detected the attack
+    return new NextResponse(null, { status: 404 });
+  }
+  
   // Skip middleware processing for dashboard routes
   if (request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.next();
