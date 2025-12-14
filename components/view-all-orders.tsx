@@ -1362,7 +1362,7 @@ export function ViewAllOrders() {
                                 Details
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[600px]">
+                            <DialogContent className="max-w-4xl max-h-[85vh]">
                               {selectedOrder && selectedOrder.orderId === order.orderId ? (
                                 <>
                                   <DialogHeader>
@@ -1378,7 +1378,7 @@ export function ViewAllOrders() {
                                     </DialogDescription>
                                   </DialogHeader>
                                   
-                                  <div className="py-4">
+                                  <div className="overflow-y-auto max-h-[calc(85vh-120px)] py-4">
                                     {/* Order status section */}
                                     <div className="mb-4">
                                       <div className="flex justify-between items-center mb-2">
@@ -1402,17 +1402,37 @@ export function ViewAllOrders() {
                                       
                                       {/* Items ordered */}
                                       <div>
-                                        <h3 className="font-semibold mb-1">Ordered Items</h3>
-                                        <ul className="ml-5 list-disc space-y-1">
+                                        <h3 className="font-semibold mb-2">Ordered Items</h3>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                                           {selectedOrder.items.map((item: any, index: number) => (
-                                            <li key={index}>
-                                              <span className="font-medium">{item.day} ({item.date})</span>: {item.comboName} 
-                                              <span className="text-muted-foreground ml-1">
-                                                ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
-                                              </span>
-                                            </li>
+                                            <div key={index} className="border rounded-lg p-3 bg-muted/30">
+                                              <div className="flex justify-between items-start mb-2">
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="font-medium truncate">{item.comboName}</p>
+                                                  <p className="text-xs text-muted-foreground">
+                                                    {item.date} ({item.day ? item.day.split('-')[0].charAt(0).toUpperCase() + item.day.split('-')[0].slice(1) : ''})
+                                                  </p>
+                                                </div>
+                                                <Badge variant="secondary" className="ml-2 flex-shrink-0">
+                                                  {item.type === 'A' ? '2菜' : '3菜'} × {item.quantity}
+                                                </Badge>
+                                              </div>
+                                              {item.dishes && item.dishes.length > 0 && (
+                                                <div className="mt-2 pt-2 border-t">
+                                                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Dishes:</p>
+                                                  <ul className="text-xs space-y-1">
+                                                    {item.dishes.map((dish: any, dishIndex: number) => (
+                                                      <li key={dishIndex} className="flex items-start gap-1.5">
+                                                        <div className="w-1 h-1 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                                                        <span className="flex-1 leading-tight">{typeof dish === 'string' ? dish : dish.name}</span>
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                </div>
+                                              )}
+                                            </div>
                                           ))}
-                                        </ul>
+                                        </div>
                                       </div>
                                       
                                       {/* Delivery details */}
