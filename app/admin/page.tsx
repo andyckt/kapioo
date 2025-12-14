@@ -238,71 +238,115 @@ export default function AdminDashboardPage() {
       setUsersLoading(true)
       setUsersError(null)
       
-      const result = await getUsers(page, limit, search, searchType)
-      console.log(`Fetched ${result.users?.length || 0} users`);
-      
-      if (result.users) {
-        // Fetch order counts for users
-        const usersWithOrderCounts = await Promise.all(
-          result.users.map(async (user) => {
-            try {
-              // Fetch total order count
-              const totalOrderResponse = await fetch(`/api/users/${user._id}/order-count`);
-              let updatedUser = { ...user };
-              
-              if (totalOrderResponse.ok) {
-                const totalOrderData = await totalOrderResponse.json();
-                updatedUser.totalOrders = totalOrderData.success ? totalOrderData.count : 0;
-              }
-              
-              // Fetch daily order count
-              const dailyOrderResponse = await fetch(`/api/users/${user._id}/daily-orders/count`);
-              if (dailyOrderResponse.ok) {
-                const dailyOrderData = await dailyOrderResponse.json();
-                updatedUser.dailyOrdersCount = dailyOrderData.success ? dailyOrderData.count : 0;
-              }
-              
-              // Fetch weekly order count
-              const weeklyOrderResponse = await fetch(`/api/users/${user._id}/weekly-orders/count`);
-              if (weeklyOrderResponse.ok) {
-                const weeklyOrderData = await weeklyOrderResponse.json();
-                updatedUser.weeklyOrdersCount = weeklyOrderData.success ? weeklyOrderData.count : 0;
-              }
-              
-              return updatedUser;
-            } catch (e) {
-              console.error(`Error fetching order counts for user ${user._id}:`, e);
-              return user;
-            }
-          })
-        );
+      // 🚀 OPTIMIZATION: Use the new optimized endpoint that returns users with order counts
+      try {
+        let url = `/api/users/with-order-counts?page=${page}&limit=${limit}`;
         
-        setUsers(usersWithOrderCounts)
-        setFilteredUsers(usersWithOrderCounts)
-        setUsersPagination(result.pagination)
-        
-        // If this was a search, show toast with results
+        // Add search parameters if provided
         if (search && search.trim()) {
-          if (result.users.length === 0) {
-            toast({
-              title: "No matches",
-              description: `No users found matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
-            });
-          } else {
-            toast({
-              title: "Search results",
-              description: `Found ${result.pagination.total} users matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
-            });
+          url += `&search=${encodeURIComponent(search.trim())}`;
+          if (searchType && searchType !== 'all') {
+            url += `&searchType=${searchType}`;
           }
         }
-      } else {
-        console.error('Failed to fetch users, result:', result);
-        setUsersError('Failed to fetch users')
-        toast({
-          title: "Error",
-          description: 'Failed to fetch users',
-          variant: "destructive",
-        })
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          console.log(`✅ Fetched ${result.data.length} users with order counts in single request`);
+          
+          setUsers(result.data)
+          setFilteredUsers(result.data)
+          setUsersPagination(result.pagination)
+          
+          // If this was a search, show toast with results
+          if (search && search.trim()) {
+            if (result.data.length === 0) {
+              toast({
+                title: "No matches",
+                description: `No users found matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
+              });
+            } else {
+              toast({
+                title: "Search results",
+                description: `Found ${result.pagination.total} users matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
+              });
+            }
+          }
+        } else {
+          throw new Error('Optimized endpoint failed');
+        }
+      } catch (optimizedError) {
+        console.log('⚠️ Optimized endpoint failed, falling back to original method');
+        
+        // Fallback to original method if optimized endpoint fails
+        const result = await getUsers(page, limit, search, searchType)
+        console.log(`Fetched ${result.users?.length || 0} users (fallback)`);
+        
+        if (result.users) {
+          // Fetch order counts for users (original method)
+          const usersWithOrderCounts = await Promise.all(
+            result.users.map(async (user) => {
+              try {
+                // Fetch total order count
+                const totalOrderResponse = await fetch(`/api/users/${user._id}/order-count`);
+                let updatedUser = { ...user };
+                
+                if (totalOrderResponse.ok) {
+                  const totalOrderData = await totalOrderResponse.json();
+                  updatedUser.totalOrders = totalOrderData.success ? totalOrderData.count : 0;
+                }
+                
+                // Fetch daily order count
+                const dailyOrderResponse = await fetch(`/api/users/${user._id}/daily-orders/count`);
+                if (dailyOrderResponse.ok) {
+                  const dailyOrderData = await dailyOrderResponse.json();
+                  updatedUser.dailyOrdersCount = dailyOrderData.success ? dailyOrderData.count : 0;
+                }
+                
+                // Fetch weekly order count
+                const weeklyOrderResponse = await fetch(`/api/users/${user._id}/weekly-orders/count`);
+                if (weeklyOrderResponse.ok) {
+                  const weeklyOrderData = await weeklyOrderResponse.json();
+                  updatedUser.weeklyOrdersCount = weeklyOrderData.success ? weeklyOrderData.count : 0;
+                }
+                
+                return updatedUser;
+              } catch (e) {
+                console.error(`Error fetching order counts for user ${user._id}:`, e);
+                return user;
+              }
+            })
+          );
+          
+          setUsers(usersWithOrderCounts)
+          setFilteredUsers(usersWithOrderCounts)
+          setUsersPagination(result.pagination)
+          
+          // If this was a search, show toast with results
+          if (search && search.trim()) {
+            if (result.users.length === 0) {
+              toast({
+                title: "No matches",
+                description: `No users found matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
+              });
+            } else {
+              toast({
+                title: "Search results",
+                description: `Found ${result.pagination.total} users matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
+              });
+            }
+          }
+        } else {
+          console.error('Failed to fetch users, result:', result);
+          setUsersError('Failed to fetch users')
+          toast({
+            title: "Error",
+            description: 'Failed to fetch users',
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
       console.error('Error fetching users:', error)
