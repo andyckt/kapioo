@@ -56,6 +56,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     
     await connectToDatabase();
     
+    // Generate unique request ID for logging
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    console.log(`[${requestId}] Balance update request - User: ${id}, Field: ${field}, Amount: ${amount}, Operation: ${operation}`);
+    
     // Find user
     const user = await User.findOne({ 
       $or: [{ _id: id }, { userID: id }] 
@@ -68,23 +72,41 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
     
+    const currentBalance = user[field] || 0;
+    console.log(`[${requestId}] Current ${field} balance: ${currentBalance}`);
+    
     // Check if user has enough balance for deduction
-    if (operation === 'deduct' && user[field] < amount) {
+    if (operation === 'deduct' && currentBalance < amount) {
+      console.log(`[${requestId}] Insufficient balance - Required: ${amount}, Available: ${currentBalance}`);
       return NextResponse.json(
         { success: false, error: `Insufficient ${field} balance` },
         { status: 400 }
       );
     }
     
-    // Calculate the new balance
-    const currentBalance = user[field] || 0;
-    const newBalance = operation === 'add' 
-      ? currentBalance + amount 
-      : currentBalance - amount;
+    // Use atomic operation to prevent race conditions
+    // This ensures that even if two requests arrive simultaneously,
+    // they will be processed sequentially by MongoDB
+    const updateOperation = operation === 'add' ? amount : -amount;
+    console.log(`[${requestId}] Applying atomic update: $inc { ${field}: ${updateOperation} }`);
     
-    // Update the user's balance
-    user[field] = newBalance;
-    await user.save();
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { $inc: { [field]: updateOperation } },
+      { new: true } // Return the updated document
+    );
+    
+    if (!updatedUser) {
+      console.log(`[${requestId}] CRITICAL: Failed to update user balance`);
+      return NextResponse.json(
+        { success: false, error: 'Failed to update user balance' },
+        { status: 500 }
+      );
+    }
+    
+    // Get the new balance from the updated user
+    const newBalance = updatedUser[field] || 0;
+    console.log(`[${requestId}] Balance updated successfully - Old: ${currentBalance}, New: ${newBalance}`);
     
     // Create a transaction record for all balance operations
     // Get voucher type display name for the description
@@ -125,7 +147,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     
     const transaction = new Transaction({
-      userId: user._id,
+      userId: updatedUser._id,
       type: operation === 'add' ? 'Add' : 'Deduct',
       amount: amount,
       description: description || `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${shortVoucherName}`,
@@ -201,7 +223,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             </div>
             <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${chineseVoucherName}已添加到您的账户</h2>
             <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              亲爱的 ${user.name}，${chineseVoucherName}已成功添加到您的账户。
+              亲爱的 ${updatedUser.name}，${chineseVoucherName}已成功添加到您的账户。
             </p>
             
             <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
@@ -240,12 +262,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         `;
         
         await sendEmail({
-          to: user.email,
+          to: updatedUser.email,
           subject,
           html
         });
         
-        console.log(`${chineseVoucherName}添加通知已发送至 ${user.email}`);
+        console.log(`${chineseVoucherName}添加通知已发送至 ${updatedUser.email}`);
       } catch (emailError) {
         console.error('Error sending voucher added notification:', emailError);
         // Continue even if email fails
@@ -253,7 +275,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     
     // Return the updated user without sensitive information
-    const userResponse = user.toObject();
+    const userResponse = updatedUser.toObject();
     delete userResponse.password;
     delete userResponse.salt;
     delete userResponse.verificationCode;

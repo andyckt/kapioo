@@ -162,6 +162,7 @@ export default function AdminDashboardPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [serviceType, setServiceType] = useState<"daily" | "weekly">("daily")
   const [voucherType, setVoucherType] = useState<string>("twoDishVoucher")
+  const [isUpdatingBalance, setIsUpdatingBalance] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersPagination, setUsersPagination] = useState({
@@ -1928,6 +1929,13 @@ export default function AdminDashboardPage() {
                                       return;
                                     }
                                     
+                                    // Prevent double submission
+                                    if (isUpdatingBalance) {
+                                      return;
+                                    }
+                                    
+                                    setIsUpdatingBalance(true);
+                                    
                                     try {
                                       let response;
                                       let fieldToUpdate = voucherType;
@@ -1992,11 +2000,20 @@ export default function AdminDashboardPage() {
                                         description: "An unexpected error occurred",
                                         variant: "destructive"
                                       });
+                                    } finally {
+                                      setIsUpdatingBalance(false);
                                     }
                                   }}
-                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType}
+                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType || isUpdatingBalance}
                                 >
-                                  Add
+                                  {isUpdatingBalance ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Adding...
+                                    </>
+                                  ) : (
+                                    'Add'
+                                  )}
                                 </Button>
                                 <Button
                                   variant="destructive"
@@ -2031,6 +2048,13 @@ export default function AdminDashboardPage() {
                                       });
                                       return;
                                     }
+                                    
+                                    // Prevent double submission
+                                    if (isUpdatingBalance) {
+                                      return;
+                                    }
+                                    
+                                    setIsUpdatingBalance(true);
                                     
                                     try {
                                       let response;
@@ -2096,11 +2120,20 @@ export default function AdminDashboardPage() {
                                         description: "An unexpected error occurred",
                                         variant: "destructive"
                                       });
+                                    } finally {
+                                      setIsUpdatingBalance(false);
                                     }
                                   }}
-                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType}
+                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType || isUpdatingBalance}
                                 >
-                                  Deduct
+                                  {isUpdatingBalance ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Deducting...
+                                    </>
+                                  ) : (
+                                    'Deduct'
+                                  )}
                                 </Button>
                               </div>
                             </div>
