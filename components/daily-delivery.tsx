@@ -681,38 +681,39 @@ export default function DailyDelivery() {
         currentRegion={userRegion}
       />
       
-      {/* Header section with responsive layout */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Voucher display with rounded badges like weekly meal box */}
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-              <span className="text-sm font-medium text-[#6B5F53]">
-                {language === 'zh' ? '2菜餐券' : '2-Dish Voucher'}: 
-              </span>
-              <span className="text-sm font-bold text-[#C2884E]">
-                {userVouchers.twoDish}{language === 'zh' ? '张' : ''}
-              </span>
+      {/* Header section with responsive layout - Sticky on mobile */}
+      <div className="sticky top-0 z-20 bg-white pb-4 -mx-6 px-6 md:relative md:mx-0 md:px-0 md:z-0">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Voucher display with rounded badges like weekly meal box */}
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                <span className="text-sm font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '2菜餐券' : '2-Dish Voucher'}: 
+                </span>
+                <span className="text-sm font-bold text-[#C2884E]">
+                  {userVouchers.twoDish}{language === 'zh' ? '张' : ''}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                <span className="text-sm font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '3菜餐券' : '3-Dish Voucher'}: 
+                </span>
+                <span className="text-sm font-bold text-[#C2884E]">
+                  {userVouchers.threeDish}{language === 'zh' ? '张' : ''}
+                </span>
+              </div>
             </div>
             
-            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-              <span className="text-sm font-medium text-[#6B5F53]">
-                {language === 'zh' ? '3菜餐券' : '3-Dish Voucher'}: 
-              </span>
-              <span className="text-sm font-bold text-[#C2884E]">
-                {userVouchers.threeDish}{language === 'zh' ? '张' : ''}
-              </span>
-            </div>
-          </div>
-          
-          {/* Checkout button */}
-          {!checkoutOpen && (
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E] rounded-xl"
-              onClick={() => {
+            {/* Checkout button */}
+            {!checkoutOpen && (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E] rounded-xl"
+                onClick={() => {
                 if (cart.length === 0) {
                   toast({
                     title: t('cartEmpty'),
@@ -770,6 +771,7 @@ export default function DailyDelivery() {
               </span>
             </Button>
           )}
+          </div>
         </div>
       </div>
       
@@ -795,9 +797,9 @@ export default function DailyDelivery() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-row h-full">
-          {/* Sidebar Day Tabs - Always visible on all devices */}
-          <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 pr-2 overflow-y-auto max-h-[calc(100vh-120px)] md:max-h-none">
+        <div className="flex flex-row h-full relative">
+          {/* Sidebar Day Tabs - Sticky on mobile, scrollable independently */}
+          <div className="w-1/5 min-w-[80px] border-r border-[#C2884E]/20 pr-2 sticky top-[180px] md:top-0 self-start overflow-y-auto max-h-[calc(100vh-200px)] md:max-h-[calc(100vh-200px)] md:relative">
             <div className="space-y-1">
               
               {/* This Week Days */}
@@ -945,10 +947,10 @@ export default function DailyDelivery() {
             </div>
           </div>
 
-          {/* Content Area - Only show selected day */}
-          <div className="w-4/5 pl-4">
+          {/* Content Area - Scrollable, only show selected day */}
+          <div className="w-4/5 pl-4 overflow-y-auto max-h-[calc(100vh-200px)] md:max-h-none">
             {days[selectedDay] && (
-              <div className="relative transition-all duration-300 ease-out">
+              <div className="relative transition-all duration-300 ease-out pb-8">
                 {/* Day Header - Hidden on mobile */}
                 <div className="hidden md:block text-center mb-6 relative">
                   <div className="inline-block">
