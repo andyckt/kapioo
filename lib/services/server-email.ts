@@ -15,8 +15,8 @@ const createTransporter = () => {
   return transporter;
 };
 
-// Send an email from the server
-export const sendEmailFromServer = async (options: EmailOptions) => {
+// Send an email from the server with timeout protection
+export const sendEmailFromServer = async (options: EmailOptions, timeoutMs: number = 8000) => {
   try {
     console.log('📧 Creating email transporter...');
     console.log('EMAIL_USER:', process.env.EMAIL_USER ? `✅ Set (${process.env.EMAIL_USER})` : '❌ Not set');
@@ -30,15 +30,8 @@ export const sendEmailFromServer = async (options: EmailOptions) => {
     const transporter = createTransporter();
     console.log('✅ Email transporter created');
     
-    // Verify connection (quick test)
-    console.log('🔍 Verifying SMTP connection...');
-    try {
-      await transporter.verify();
-      console.log('✅ SMTP connection verified');
-    } catch (verifyError: any) {
-      console.error('❌ SMTP verification failed:', verifyError.message);
-      throw new Error(`SMTP connection failed: ${verifyError.message}`);
-    }
+    // Skip SMTP verification - it's slow and unnecessary
+    // We'll let sendMail handle any connection issues
     
     const mailOptions = {
       from: options.from || `"Kapioo" <${process.env.EMAIL_USER || 'kapioomeal@gmail.com'}>`,
@@ -59,18 +52,27 @@ export const sendEmailFromServer = async (options: EmailOptions) => {
       subject: mailOptions.subject
     });
     
-    const info = await transporter.sendMail(mailOptions);
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Email sending timeout')), timeoutMs);
+    });
+    
+    // Race between sending email and timeout
+    const info = await Promise.race([
+      transporter.sendMail(mailOptions),
+      timeoutPromise
+    ]);
+    
     console.log('✅ Email sent successfully!');
-    console.log('Message ID:', info.messageId);
-    console.log('Response:', info.response);
+    console.log('Message ID:', (info as any).messageId);
+    console.log('Response:', (info as any).response);
     return info;
   } catch (error) {
-    console.error('Error sending email from server:', error);
-    // Try to provide more context about the error
+    console.error('⚠️ Error sending email from server:', error);
+    // Log error details but don't throw - email failure shouldn't block user operations
     if (error instanceof Error) {
       console.error('Error name:', error.name);
       console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
     }
     throw error;
   }

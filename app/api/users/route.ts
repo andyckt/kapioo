@@ -186,17 +186,7 @@ export async function POST(request: Request) {
       }
     }
     
-    // Send welcome email (always send this)
-    try {
-      console.log('Sending welcome email to:', user.email);
-      await sendWelcomeEmail(user.email, user.name);
-      console.log('Welcome email sent successfully');
-    } catch (emailError) {
-      console.error('Error sending welcome email:', emailError);
-      // Continue with the registration process even if the welcome email fails
-    }
-    
-    // Return user without sensitive information
+    // Return user data immediately - don't wait for welcome email
     const userResponse = user.toObject();
     delete userResponse.password;
     delete userResponse.salt;
@@ -206,6 +196,18 @@ export async function POST(request: Request) {
     delete userResponse.resetPasswordExpires;
     
     console.log('User creation completed successfully');
+    
+    // Send welcome email in the background (non-blocking)
+    // Using Promise without await so it doesn't block the response
+    sendWelcomeEmail(user.email, user.name)
+      .then(() => {
+        console.log('✅ Welcome email sent successfully to:', user.email);
+      })
+      .catch((emailError) => {
+        console.error('⚠️ Welcome email failed (non-blocking):', emailError);
+        // Email failure doesn't affect user creation - user can still log in
+      });
+    
     return NextResponse.json(
       { success: true, data: userResponse },
       { status: 201 }
