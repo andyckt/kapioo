@@ -934,7 +934,7 @@ export function DailyDeliveryManagement() {
         }
       }
 
-      // 2. Update Next Week days with new dates (current date + 7 days)
+      // 2. Update Next Week days with new dates and replace combos with fresh templates
       for (const [nextDayId, nextDay] of week2Days) {
         // Calculate new date for Next Week (current date + 7 days)
         const newNextWeekDate = calculateNextWeekDate(nextDay.date);
@@ -951,6 +951,67 @@ export function DailyDeliveryManagement() {
             week: 2 // Keep it as week 2
           }),
         });
+        
+        // 2.1 Delete old combos for this Next Week day
+        const oldCombosResponse = await fetch(`/api/days/${nextDayId}/combos`);
+        const oldCombosData = await oldCombosResponse.json();
+        
+        if (oldCombosData.success) {
+          for (const combo of oldCombosData.data) {
+            await fetch(`/api/combos/${combo.comboId}`, {
+              method: 'DELETE',
+            });
+          }
+        }
+        
+        // 2.2 Create fresh template combos (套餐 1 and 套餐 2)
+        const templateCombos = [
+          {
+            name: '套餐 1',
+            calories: 0,
+            tags: [],
+            typeA: {
+              dishes: ['Dish 1'],
+              voucherType: 'twoDish'
+            },
+            typeB: {
+              dishes: ['Dish 1'],
+              voucherType: 'threeDish'
+            }
+          },
+          {
+            name: '套餐 2',
+            calories: 0,
+            tags: [],
+            typeA: {
+              dishes: ['Dish 1'],
+              voucherType: 'twoDish'
+            },
+            typeB: {
+              dishes: ['Dish 1'],
+              voucherType: 'threeDish'
+            }
+          }
+        ];
+        
+        for (const template of templateCombos) {
+          const newComboId = `${nextDayId}-combo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          
+          await fetch('/api/combos', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              comboId: newComboId,
+              dayId: nextDayId,
+              ...template
+            }),
+          });
+          
+          // Small delay to ensure unique IDs
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
       }
 
       // 3. Refresh data to show the updated weeks
