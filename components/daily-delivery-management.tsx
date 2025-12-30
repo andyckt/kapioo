@@ -1860,6 +1860,16 @@ export function DailyDeliveryManagement() {
                                 size="sm" 
                                 className="text-green-600"
                                 onClick={async () => {
+                                  // Validate calories before saving
+                                  if (combo.calories === 0) {
+                                    toast({
+                                      title: 'Validation Error',
+                                      description: 'Please enter calories before saving',
+                                      variant: 'destructive'
+                                    });
+                                    return;
+                                  }
+                                  
                                   const success = await saveComboChanges(selectedDay, combo.id);
                                   if (success) {
                                     setEditingCombo(null);
@@ -1965,13 +1975,23 @@ export function DailyDeliveryManagement() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`combo-calories-${combo.id}`}>Calories</Label>
+                              <Label htmlFor={`combo-calories-${combo.id}`}>
+                                Calories <span className="text-red-500">*</span>
+                              </Label>
                               <Input 
                                 id={`combo-calories-${combo.id}`} 
                                 type="number" 
-                                value={combo.calories} 
-                                onChange={(e) => updateCombo(selectedDay, combo.id, { calories: parseInt(e.target.value) })}
+                                value={combo.calories === 0 ? '' : combo.calories}
+                                placeholder="Enter calories"
+                                onChange={(e) => {
+                                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                  updateCombo(selectedDay, combo.id, { calories: value });
+                                }}
+                                className={combo.calories === 0 ? 'border-red-500 focus:border-red-500' : ''}
                               />
+                              {combo.calories === 0 && (
+                                <p className="text-xs text-red-500">Calories is required</p>
+                              )}
                             </div>
                           </div>
                           
