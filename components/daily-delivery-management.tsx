@@ -2002,11 +2002,35 @@ export function DailyDeliveryManagement() {
                                 variant="outline" 
                                 size="sm" 
                                 className="h-8 text-xs"
-                                onClick={() => {
+                                onClick={async () => {
                                   if (newTag && !availableTags.includes(newTag)) {
-                                    setAvailableTags([...availableTags, newTag]);
-                                    addTagToCombo(selectedDay, combo.id, newTag);
-                                    setNewTag('');
+                                    try {
+                                      // Save tag to database
+                                      const response = await fetch('/api/tags', {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ name: newTag }),
+                                      });
+                                      
+                                      const data = await response.json();
+                                      
+                                      if (data.success) {
+                                        setAvailableTags([...availableTags, newTag]);
+                                        addTagToCombo(selectedDay, combo.id, newTag);
+                                        setNewTag('');
+                                      } else {
+                                        throw new Error(data.error || 'Failed to create tag');
+                                      }
+                                    } catch (error) {
+                                      console.error('Error creating tag:', error);
+                                      toast({
+                                        title: 'Error',
+                                        description: `Failed to create tag: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                        variant: 'destructive'
+                                      });
+                                    }
                                   }
                                 }}
                               >
@@ -2031,6 +2055,45 @@ export function DailyDeliveryManagement() {
                                   placeholder="New tag..."
                                   value={newTag}
                                   onChange={(e) => setNewTag(e.target.value)}
+                                  onKeyDown={async (e) => {
+                                    if (e.key === 'Enter' && newTag.trim()) {
+                                      e.preventDefault();
+                                      
+                                      if (!availableTags.includes(newTag)) {
+                                        // Create new tag in database
+                                        try {
+                                          const response = await fetch('/api/tags', {
+                                            method: 'POST',
+                                            headers: {
+                                              'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify({ name: newTag }),
+                                          });
+                                          
+                                          const data = await response.json();
+                                          
+                                          if (data.success) {
+                                            setAvailableTags([...availableTags, newTag]);
+                                            addTagToCombo(selectedDay, combo.id, newTag);
+                                            setNewTag('');
+                                          } else {
+                                            throw new Error(data.error || 'Failed to create tag');
+                                          }
+                                        } catch (error) {
+                                          console.error('Error creating tag:', error);
+                                          toast({
+                                            title: 'Error',
+                                            description: `Failed to create tag: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                            variant: 'destructive'
+                                          });
+                                        }
+                                      } else {
+                                        // Tag already exists, just add it to this combo
+                                        addTagToCombo(selectedDay, combo.id, newTag);
+                                        setNewTag('');
+                                      }
+                                    }
+                                  }}
                                   className="h-8 w-[120px] text-sm"
                                 />
                                 <Select onValueChange={(tag) => {
@@ -2054,54 +2117,65 @@ export function DailyDeliveryManagement() {
                             </div>
                             
                             <div className="mt-4 pt-3 border-t">
-                              <Label className="text-sm text-muted-foreground mb-2 block">Available Tags</Label>
+                              <Label className="text-sm text-muted-foreground mb-2 block">
+                                Available Tags
+                                <span className="text-xs ml-2 font-normal">(Click to add to combo)</span>
+                              </Label>
                               <div className="flex flex-wrap gap-2">
                                 {availableTags.map((tag) => (
-                                  <div key={tag} className="flex items-center border rounded-md p-1">
-                                    <Badge variant="secondary" className="mr-1">{tag}</Badge>
+                                  <div key={tag} className="flex items-center border rounded-md p-1 hover:border-primary transition-colors">
+                                    <Badge 
+                                      variant="secondary" 
+                                      className={`mr-1 cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors ${
+                                        combo.tags.includes(tag) ? 'bg-primary text-primary-foreground' : ''
+                                      }`}
+                                      onClick={() => {
+                                        if (!combo.tags.includes(tag)) {
+                                          addTagToCombo(selectedDay, combo.id, tag);
+                                          toast({
+                                            title: 'Tag Added',
+                                            description: `"${tag}" added to combo`,
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {tag}
+                                    </Badge>
                                     <Button 
                                       variant="ghost" 
                                       size="icon" 
                                       className="h-5 w-5 text-red-500"
                                       onClick={async () => {
+                                        // Optimistic update - remove from UI immediately
+                                        setAvailableTags(availableTags.filter(t => t !== tag));
+                                        
                                         try {
                                           // Find tag ID by name
                                           const tagsResponse = await fetch('/api/tags');
                                           const tagsData = await tagsResponse.json();
                                           
-                                          if (!tagsData.success) {
-                                            throw new Error(tagsData.error || 'Failed to fetch tags');
-                                          }
-                                          
-                                          const tagObj = tagsData.data.find((t: any) => t.name === tag);
-                                          
-                                          if (!tagObj) {
-                                            throw new Error('Tag not found');
-                                          }
-                                          
-                                          // Delete tag via API
-                                          const response = await fetch(`/api/tags/${tagObj._id}`, {
-                                            method: 'DELETE',
-                                          });
-                                          
-                                          const data = await response.json();
-                                          
-                                          if (data.success) {
-                                            // Update local state
-                                            setAvailableTags(availableTags.filter(t => t !== tag));
+                                          if (tagsData.success) {
+                                            const tagObj = tagsData.data.find((t: any) => t.name === tag);
                                             
-                                            toast({
-                                              title: 'Success',
-                                              description: 'Tag deleted successfully',
-                                            });
-                                          } else {
-                                            throw new Error(data.error || 'Failed to delete tag');
+                                            if (tagObj) {
+                                              // Delete tag from database
+                                              await fetch(`/api/tags/${tagObj._id}`, {
+                                                method: 'DELETE',
+                                              });
+                                            }
                                           }
+                                          
+                                          toast({
+                                            title: 'Deleted',
+                                            description: `"${tag}" removed`,
+                                          });
                                         } catch (error) {
                                           console.error('Error deleting tag:', error);
+                                          // Revert on error
+                                          setAvailableTags([...availableTags, tag]);
                                           toast({
                                             title: 'Error',
-                                            description: `Failed to delete tag: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                            description: 'Failed to delete tag',
                                             variant: 'destructive'
                                           });
                                         }
