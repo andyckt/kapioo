@@ -4,7 +4,7 @@ import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import { format, addDays, addWeeks } from 'date-fns';
 
-// Helper function to get next Sunday and Tuesday dates
+// Helper function to get next Sunday and Tuesday dates for 3 weeks
 function getNextDeliveryDates() {
   const today = new Date();
   const dayOfWeek = today.getDay();
@@ -17,15 +17,19 @@ function getNextDeliveryDates() {
   const nextSunday = daysUntilSunday === 0 ? addDays(today, 7) : addDays(today, daysUntilSunday);
   const nextTuesday = daysUntilTuesday === 0 ? addDays(today, 7) : addDays(today, daysUntilTuesday);
   
-  // Calculate the following week's dates
+  // Calculate the following weeks' dates
   const followingSunday = addWeeks(nextSunday, 1);
   const followingTuesday = addWeeks(nextTuesday, 1);
+  const week3Sunday = addWeeks(nextSunday, 2);
+  const week3Tuesday = addWeeks(nextTuesday, 2);
   
   return {
-    currentSunday: format(nextSunday, 'MMM dd'),
-    currentTuesday: format(nextTuesday, 'MMM dd'),
-    nextSunday: format(followingSunday, 'MMM dd'),
-    nextTuesday: format(followingTuesday, 'MMM dd')
+    currentSunday: format(nextSunday, 'MMMM d'),
+    currentTuesday: format(nextTuesday, 'MMMM d'),
+    nextSunday: format(followingSunday, 'MMMM d'),
+    nextTuesday: format(followingTuesday, 'MMMM d'),
+    week3Sunday: format(week3Sunday, 'MMMM d'),
+    week3Tuesday: format(week3Tuesday, 'MMMM d')
   };
 }
 
@@ -59,12 +63,18 @@ export async function GET(request: Request) {
       .sort({ weekOffset: 1, day: 1 })
       .lean();
     
-    // If no delivery days exist, initialize with default data
+    console.log(`📊 Found ${deliveryDays.length} delivery days:`, deliveryDays.map(d => ({ day: d.day, weekOffset: d.weekOffset, date: d.date })));
+    
+    // If no delivery days exist OR if Week 3 is missing, initialize/update
+    const hasWeek3 = deliveryDays.some(day => day.weekOffset === 2);
+    console.log(`Week 3 exists: ${hasWeek3}`);
+    
     if (deliveryDays.length === 0) {
       const dates = getNextDeliveryDates();
       
-      // Create default delivery days
+      // Create default delivery days for all 3 weeks
       await WeeklyDeliveryDay.create([
+        // This Week
         {
           day: 'sunday',
           name: 'Sunday Delivery',
@@ -81,6 +91,7 @@ export async function GET(request: Request) {
           options: [],
           weekOffset: 0
         },
+        // Next Week
         {
           day: 'sunday',
           name: 'Sunday Delivery',
@@ -96,16 +107,77 @@ export async function GET(request: Request) {
           active: true,
           options: [],
           weekOffset: 1
+        },
+        // Week 3
+        {
+          day: 'sunday',
+          name: 'Sunday Delivery',
+          date: dates.week3Sunday,
+          active: true,
+          options: [],
+          weekOffset: 2
+        },
+        {
+          day: 'tuesday',
+          name: 'Tuesday Delivery',
+          date: dates.week3Tuesday,
+          active: true,
+          options: [],
+          weekOffset: 2
         }
       ]);
       
       // Fetch the newly created delivery days
       const newDeliveryDays = await WeeklyDeliveryDay.find()
+        .populate('options')
         .sort({ weekOffset: 1, day: 1 })
         .lean();
       
       return NextResponse.json(
         { success: true, data: newDeliveryDays },
+        { status: 200 }
+      );
+    } else if (!hasWeek3) {
+      // Week 3 is missing, create it
+      console.log('Week 3 not found, creating...');
+      const dates = getNextDeliveryDates();
+      
+      try {
+        const week3Docs = await WeeklyDeliveryDay.create([
+          {
+            day: 'sunday',
+            name: 'Sunday Delivery',
+            date: dates.week3Sunday,
+            active: true,
+            options: [],
+            weekOffset: 2
+          },
+          {
+            day: 'tuesday',
+            name: 'Tuesday Delivery',
+            date: dates.week3Tuesday,
+            active: true,
+            options: [],
+            weekOffset: 2
+          }
+        ]);
+        
+        console.log('✅ Week 3 created successfully:', week3Docs.map(d => ({ day: d.day, date: d.date, weekOffset: d.weekOffset })));
+      } catch (createError) {
+        console.error('❌ Error creating Week 3:', createError);
+        // If creation fails (e.g., documents already exist), just continue
+      }
+      
+      // Fetch all delivery days including the new Week 3
+      const allDeliveryDays = await WeeklyDeliveryDay.find()
+        .populate('options')
+        .sort({ weekOffset: 1, day: 1 })
+        .lean();
+      
+      console.log(`📊 Total delivery days after Week 3 creation: ${allDeliveryDays.length}`);
+      
+      return NextResponse.json(
+        { success: true, data: allDeliveryDays },
         { status: 200 }
       );
     }

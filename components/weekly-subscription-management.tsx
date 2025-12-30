@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, Edit, Plus, Trash2, Loader2, Save } from "lucide-react"
+import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import { 
   MealOption, 
@@ -33,39 +34,381 @@ export function WeeklySubscriptionManagement() {
   const [newMeal, setNewMeal] = useState<Partial<MealOption>>({ name: '', tags: [], active: true })
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [mealToDelete, setMealToDelete] = useState<MealOption | null>(null)
+  const [isRollingForward, setIsRollingForward] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [historyData, setHistoryData] = useState<any[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any | null>(null)
+  const [deletingHistoryId, setDeletingHistoryId] = useState<string | null>(null)
   
   // Fetch delivery sections from API
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getAdminWeeklySubscription();
-        if (data && data.length > 0) {
-          setDeliverySections(data);
-        } else {
-          // If no data returned, use fallback mock data
-          toast({
-            title: "Failed to load data",
-            description: "Using fallback data. Please try again later.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching weekly subscription data:", error);
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getAdminWeeklySubscription();
+      if (data && data.length > 0) {
+        setDeliverySections(data);
+      } else {
+        // If no data returned, use fallback mock data
         toast({
-          title: "Error",
-          description: "Failed to load weekly subscription data",
+          title: "Failed to load data",
+          description: "Using fallback data. Please try again later.",
           variant: "destructive"
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching weekly subscription data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load weekly subscription data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, [])
   
-  // No date calculation functions needed with fixed dates
+  // Helper function to parse date string (e.g., "January 5" or "Jan 5" → Date object)
+  const parseDateString = (dateStr: string): Date | null => {
+    const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
+    if (dateMatch && dateMatch.length >= 3) {
+      const month = dateMatch[1]; // e.g., "January" or "Jan"
+      const dayNum = parseInt(dateMatch[2], 10); // e.g., 5
+      
+      // Map both full and short month names to month number (0-based)
+      const monthMap: Record<string, number> = {
+        'January': 0, 'Jan': 0,
+        'February': 1, 'Feb': 1,
+        'March': 2, 'Mar': 2,
+        'April': 3, 'Apr': 3,
+        'May': 4,
+        'June': 5, 'Jun': 5,
+        'July': 6, 'Jul': 6,
+        'August': 7, 'Aug': 7,
+        'September': 8, 'Sep': 8,
+        'October': 9, 'Oct': 9,
+        'November': 10, 'Nov': 10,
+        'December': 11, 'Dec': 11
+      };
+      
+      if (monthMap[month] !== undefined) {
+        const currentYear = new Date().getFullYear();
+        return new Date(currentYear, monthMap[month], dayNum);
+      }
+    }
+    return null;
+  };
+  
+  // Helper function to format a Date object to "MMMM D" format (e.g., "January 5")
+  const formatDateToString = (date: Date): string => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${months[date.getMonth()]} ${date.getDate()}`;
+  };
+  
+  // Helper function to calculate next week's date (+7 days)
+  const calculateNextWeekDate = (dateStr: string): string => {
+    const date = parseDateString(dateStr);
+    if (!date) return dateStr;
+    
+    // Add 7 days
+    date.setDate(date.getDate() + 7);
+    
+    // Format back to "MMMM D" format
+    return formatDateToString(date);
+  };
+  
+  // Fetch history data
+  const fetchHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch('/api/weekly-delivery-history?limit=100');
+      const data = await response.json();
+      
+      if (data.success) {
+        setHistoryData(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load history data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+  
+  // Delete history entry
+  const handleDeleteHistory = async (historyId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation(); // Prevent card click when clicking delete
+    }
+    
+    setDeletingHistoryId(historyId);
+    
+    try {
+      const response = await fetch(`/api/weekly-delivery-history/${historyId}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove from local state
+        setHistoryData(prev => prev.filter(entry => entry.historyId !== historyId));
+        
+        // If we're viewing the deleted entry, go back to list
+        if (selectedHistoryEntry?.historyId === historyId) {
+          setSelectedHistoryEntry(null);
+        }
+        
+        toast({
+          title: "History deleted",
+          description: "The history entry has been deleted successfully."
+        });
+      } else {
+        throw new Error(data.error || 'Failed to delete history');
+      }
+    } catch (error) {
+      console.error('Error deleting history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete history entry",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingHistoryId(null);
+    }
+  };
+  
+  // Roll Forward Week function
+  const rollForwardWeek = async () => {
+    try {
+      if (!confirm("This will roll forward the weekly menu. This Week will be archived, Next Week becomes This Week, Week 3 becomes Next Week, and a new Week 3 will be created. Continue?")) {
+        return;
+      }
+
+      setIsRollingForward(true);
+
+      // Get sections by week offset
+      const thisWeekSections = deliverySections.filter(s => s.day.weekOffset === 0);
+      const nextWeekSections = deliverySections.filter(s => s.day.weekOffset === 1);
+      const week3Sections = deliverySections.filter(s => s.day.weekOffset === 2);
+      
+      console.log('🔄 Before roll forward:');
+      console.log('This Week:', thisWeekSections.map(s => ({ day: s.day.day, date: s.day.date })));
+      console.log('Next Week:', nextWeekSections.map(s => ({ day: s.day.day, date: s.day.date })));
+      console.log('Week 3:', week3Sections.map(s => ({ day: s.day.day, date: s.day.date })));
+      
+      // Store CURRENT Week 3 dates before any updates
+      // These will be used to calculate the NEW Week 3 dates (current Week 3 + 7 days)
+      const currentWeek3Dates = new Map(
+        week3Sections.map(s => [s.day.day, s.day.date])
+      );
+      console.log('📅 Current Week 3 dates stored:', Object.fromEntries(currentWeek3Dates));
+
+      // Step 0: Archive This Week
+      console.log('Archiving This Week...');
+      for (const section of thisWeekSections) {
+        try {
+          const historyId = `history-${section.day.day}-${section.day.weekOffset}-${Date.now()}`;
+          await fetch('/api/weekly-delivery-history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              historyId,
+              originalDay: section.day.day,
+              originalWeekOffset: section.day.weekOffset,
+              displayName: section.title,
+              date: section.day.date,
+              archivedReason: 'rolled_forward',
+              mealOptions: section.day.options.map(opt => ({
+                id: opt.id,
+                name: opt.name,
+                tags: opt.tags,
+                active: opt.active
+              }))
+            }),
+          });
+          console.log(`Archived: ${section.title} ${section.day.date}`);
+        } catch (error) {
+          console.error(`Error archiving ${section.title}:`, error);
+        }
+      }
+
+      // Step 1: Copy Next Week meal options to This Week
+      console.log('Moving Next Week → This Week...');
+      for (const nextSection of nextWeekSections) {
+        // Find corresponding This Week section
+        const thisSection = thisWeekSections.find(s => s.day.day === nextSection.day.day);
+        if (!thisSection) continue;
+        
+        // Delete old This Week meal options
+        for (const option of thisSection.day.options) {
+          await fetch(`/api/weekly-subscription/meal-options/${option.id}`, {
+            method: 'DELETE'
+          });
+        }
+        
+        // Create new meal options for This Week (copies from Next Week)
+        const newOptionIds = [];
+        for (const option of nextSection.day.options) {
+          const mealResponse = await fetch('/api/weekly-subscription/meal-options', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              day: thisSection.day.day,
+              weekOffset: 0,
+              name: option.name,
+              tags: option.tags,
+              active: option.active
+            }),
+          });
+          
+          if (mealResponse.ok) {
+            const mealData = await mealResponse.json();
+            newOptionIds.push(mealData.data.mealOption._id);
+          }
+        }
+        
+        // Update This Week day with new date and meal options
+        await fetch('/api/weekly-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            day: thisSection.day.day,
+            weekOffset: 0,
+            date: nextSection.day.date,
+            active: nextSection.day.active
+          }),
+        });
+      }
+
+      // Step 2: Copy Week 3 meal options to Next Week
+      console.log('Moving Week 3 → Next Week...');
+      for (const week3Section of week3Sections) {
+        // Find corresponding Next Week section
+        const nextSection = nextWeekSections.find(s => s.day.day === week3Section.day.day);
+        if (!nextSection) continue;
+        
+        // Delete old Next Week meal options
+        for (const option of nextSection.day.options) {
+          await fetch(`/api/weekly-subscription/meal-options/${option.id}`, {
+            method: 'DELETE'
+          });
+        }
+        
+        // Create new meal options for Next Week (copies from Week 3)
+        const newOptionIds = [];
+        for (const option of week3Section.day.options) {
+          const mealResponse = await fetch('/api/weekly-subscription/meal-options', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              day: nextSection.day.day,
+              weekOffset: 1,
+              name: option.name,
+              tags: option.tags,
+              active: option.active
+            }),
+          });
+          
+          if (mealResponse.ok) {
+            const mealData = await mealResponse.json();
+            newOptionIds.push(mealData.data.mealOption._id);
+          }
+        }
+        
+        // Update Next Week day with new date and meal options
+        await fetch('/api/weekly-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            day: nextSection.day.day,
+            weekOffset: 1,
+            date: week3Section.day.date,
+            active: week3Section.day.active
+          }),
+        });
+      }
+
+      // Step 3: Create new Week 3 with template meal
+      console.log('🆕 Creating new Week 3...');
+      for (const week3Section of week3Sections) {
+        // Get the CURRENT Week 3 date (before Step 2 moved it to Next Week)
+        const currentDate = currentWeek3Dates.get(week3Section.day.day);
+        if (!currentDate) {
+          console.error(`❌ Current date not found for ${week3Section.day.day}`);
+          continue;
+        }
+        
+        // Calculate new date: current Week 3 date + 7 days
+        const newDate = calculateNextWeekDate(currentDate);
+        
+        console.log(`📅 Calculating new Week 3 date for ${week3Section.day.day}: ${currentDate} + 7 days = ${newDate}`);
+        
+        // Delete old Week 3 meal options
+        for (const option of week3Section.day.options) {
+          await fetch(`/api/weekly-subscription/meal-options/${option.id}`, {
+            method: 'DELETE'
+          });
+        }
+        
+        // Create a template meal option
+        const mealResponse = await fetch('/api/weekly-subscription/meal-options', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            day: week3Section.day.day,
+            weekOffset: 2,
+            name: 'Dish 1',
+            tags: [],
+            active: true
+          }),
+        });
+        
+        if (!mealResponse.ok) {
+          throw new Error(`Failed to create template meal for Week 3 ${week3Section.day.day}`);
+        }
+        
+        // Update Week 3 day with new date
+        await fetch('/api/weekly-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            day: week3Section.day.day,
+            weekOffset: 2,
+            date: newDate,
+            active: true
+          }),
+        });
+        
+        console.log(`✅ Week 3 ${week3Section.day.day} updated to ${newDate}`);
+      }
+
+      // Step 4: Refresh data
+      await fetchData();
+
+      toast({
+        title: "Success",
+        description: "Week rolled forward successfully. This Week has been archived, and menus have been updated.",
+      });
+    } catch (error) {
+      console.error('Error rolling forward week:', error);
+      toast({
+        title: "Error",
+        description: `Failed to roll forward week: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsRollingForward(false);
+    }
+  };
   
   // Toggle day active status
   const toggleDayActive = async (sectionId: string) => {
@@ -327,6 +670,52 @@ export function WeeklySubscriptionManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Header with buttons */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Weekly Meal Box Management</h2>
+          <p className="text-muted-foreground mt-1">Manage Sunday and Tuesday deliveries across 3 weeks</p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={fetchData}
+            disabled={isLoading}
+          >
+            <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => {
+              setShowHistoryModal(true);
+              fetchHistory();
+            }}
+          >
+            <History className="h-4 w-4 mr-2" />
+            View History
+          </Button>
+          <Button 
+            variant="default"
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={rollForwardWeek}
+            disabled={isRollingForward}
+          >
+            {isRollingForward ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Rolling Forward...
+              </>
+            ) : (
+              <>
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                Roll Forward Week
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+      
       <div className="space-y-6">
         {isLoading ? (
           <div className="flex justify-center items-center h-[300px]">
@@ -676,6 +1065,208 @@ export function WeeklySubscriptionManagement() {
             <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* History Modal */}
+      <Dialog open={showHistoryModal} onOpenChange={(open) => {
+        setShowHistoryModal(open);
+        if (!open) {
+          setSelectedHistoryEntry(null);
+        }
+      }}>
+        <DialogContent className="max-w-[1100px] max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>
+              {selectedHistoryEntry ? (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setSelectedHistoryEntry(null)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span>Delivery Details</span>
+                </div>
+              ) : (
+                'Weekly Delivery History'
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedHistoryEntry 
+                ? `Viewing details for ${selectedHistoryEntry.date}`
+                : 'Select a date to view archived meal details'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2 min-h-0">
+            {isLoadingHistory ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : historyData.length === 0 ? (
+              <div className="flex justify-center items-center py-20">
+                <p className="text-muted-foreground">No history available</p>
+              </div>
+            ) : selectedHistoryEntry ? (
+              // Step 2: Show meal details for selected date
+              <div className="space-y-4 pb-4">
+                <Card className="border-2">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground mb-1">
+                          {selectedHistoryEntry.displayName}
+                        </p>
+                        <CardTitle className="text-2xl">{selectedHistoryEntry.date}</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Archived: {new Date(selectedHistoryEntry.archivedAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={selectedHistoryEntry.archivedReason === 'rolled_forward' ? 'default' : 'secondary'} className="text-sm px-3 py-1">
+                          {selectedHistoryEntry.archivedReason === 'rolled_forward' ? 'Rolled Forward' : 'Manually Deleted'}
+                        </Badge>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteHistory(selectedHistoryEntry.historyId)}
+                          disabled={deletingHistoryId === selectedHistoryEntry.historyId}
+                        >
+                          {deletingHistoryId === selectedHistoryEntry.historyId ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+                
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Meal Options ({selectedHistoryEntry.mealOptions?.length || 0})
+                  </h3>
+                  {selectedHistoryEntry.mealOptions && selectedHistoryEntry.mealOptions.length > 0 ? (
+                    selectedHistoryEntry.mealOptions.map((option: any, idx: number) => (
+                      <Card key={idx} className="border-l-4 border-l-primary/30 hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold text-base">{option.name}</h4>
+                                <Badge variant={option.active ? 'default' : 'secondary'} className="text-xs">
+                                  {option.active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                              {option.tags && option.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                  {option.tags.map((tag: string, tagIdx: number) => (
+                                    <Badge key={tagIdx} variant="outline" className="text-xs px-2 py-0.5">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <p className="text-sm text-muted-foreground">No meal options available</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Step 1: Cute square date picker grid
+              <div className="space-y-4 pb-4">
+                <div className="text-center mb-6">
+                  <p className="text-sm text-muted-foreground">
+                    Click on a date to view its meal details
+                  </p>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  {historyData.map((entry) => {
+                    // Parse the date to extract day and month
+                    const dateMatch = entry.date.match(/(\w+)\s+(\d+)/);
+                    const month = dateMatch ? dateMatch[1] : '';
+                    const day = dateMatch ? dateMatch[2] : '';
+                    
+                    return (
+                      <Card 
+                        key={entry.historyId}
+                        className="cursor-pointer hover:border-primary hover:shadow-lg transition-all duration-200 group overflow-hidden relative"
+                        onClick={() => setSelectedHistoryEntry(entry)}
+                      >
+                        {/* Delete Button - Top Right Corner */}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-md"
+                          onClick={(e) => handleDeleteHistory(entry.historyId, e)}
+                          disabled={deletingHistoryId === entry.historyId}
+                        >
+                          {deletingHistoryId === entry.historyId ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
+                        </Button>
+                        
+                        <CardContent className="p-0">
+                          {/* Date Display - Square Top Section */}
+                          <div className="bg-gradient-to-br from-primary/10 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 transition-colors p-6 text-center border-b">
+                            <div className="text-4xl font-bold text-primary mb-1">
+                              {day}
+                            </div>
+                            <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                              {month}
+                            </div>
+                          </div>
+                          
+                          {/* Info Section */}
+                          <div className="p-4 space-y-2">
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              <span className="truncate">
+                                {entry.displayName.replace('This Week ', '').replace('Next Week ', '')}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {entry.mealOptions?.length || 0} meal{entry.mealOptions?.length !== 1 ? 's' : ''}
+                              </Badge>
+                              <Badge 
+                                variant={entry.archivedReason === 'rolled_forward' ? 'default' : 'secondary'} 
+                                className="text-xs"
+                              >
+                                {entry.archivedReason === 'rolled_forward' ? 'Rolled' : 'Deleted'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

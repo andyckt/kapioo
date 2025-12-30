@@ -9,7 +9,7 @@ export interface IWeeklyDeliveryDay extends Document {
   date: string;
   active: boolean;
   options: mongoose.Types.ObjectId[] | IWeeklyMealOption[];
-  weekOffset: number; // 0 for current week, 1 for next week
+  weekOffset: number; // 0 for current week, 1 for next week, 2 for week 3
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,7 +41,7 @@ const WeeklyDeliveryDaySchema: Schema = new Schema(
     weekOffset: {
       type: Number,
       required: true,
-      enum: [0, 1], // 0 for current week, 1 for next week
+      enum: [0, 1, 2], // 0 for current week, 1 for next week, 2 for week 3
     },
   },
   { 

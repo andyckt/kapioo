@@ -11,7 +11,7 @@ export type DeliveryDay = {
   day: 'sunday' | 'tuesday';
   name: string;
   date: string;
-  weekOffset: number; // 0 for current week, 1 for next week
+  weekOffset: number; // 0 for current week, 1 for next week, 2 for week 3
   active: boolean;
   options: MealOption[];
 }
@@ -63,11 +63,11 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
     if (result.success && result.data) {
       // Format the response to match the frontend structure
       const deliverySections: DeliverySection[] = result.data.map((day: any) => {
-        const weekText = day.weekOffset === 0 ? 'This Week' : 'Next Week';
+        const weekText = day.weekOffset === 0 ? 'This Week' : day.weekOffset === 1 ? 'Next Week' : 'Week 3';
         const dayText = day.day === 'sunday' ? 'Sunday' : 'Tuesday';
         
         return {
-          id: `${day.weekOffset === 0 ? 'current' : 'next'}-${day.day}`,
+          id: `${day.weekOffset === 0 ? 'current' : day.weekOffset === 1 ? 'next' : 'week3'}-${day.day}`,
           title: `${weekText} ${dayText} Delivery`,
           day: {
             id: day.day,
