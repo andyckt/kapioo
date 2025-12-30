@@ -1568,7 +1568,12 @@ export function DailyDeliveryManagement() {
                       {Object.entries(days)
                         .filter(([_, day]) => activeWeekFilter === null || day.week === activeWeekFilter)
                         .sort(([_, dayA], [__, dayB]) => {
-                          // Define the correct order of days
+                          // First sort by week (This Week = 1, Next Week = 2)
+                          if (dayA.week !== dayB.week) {
+                            return dayA.week < dayB.week ? -1 : 1;
+                          }
+                          
+                          // Within the same week, sort by day order
                           const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sunday'];
                           const indexA = dayOrder.indexOf(dayA.displayName.toLowerCase());
                           const indexB = dayOrder.indexOf(dayB.displayName.toLowerCase());
@@ -1736,7 +1741,29 @@ export function DailyDeliveryManagement() {
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px] overflow-y-auto">
                         {Object.entries(days)
-                          .sort(([_, a], [__, b]) => (a.week === b.week ? 0 : a.week < b.week ? -1 : 1))
+                          .sort(([_, a], [__, b]) => {
+                            // First sort by week (This Week = 1, Next Week = 2)
+                            if (a.week !== b.week) {
+                              return a.week < b.week ? -1 : 1;
+                            }
+                            
+                            // Within the same week, sort by day order
+                            const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sunday'];
+                            const indexA = dayOrder.indexOf(a.displayName.toLowerCase());
+                            const indexB = dayOrder.indexOf(b.displayName.toLowerCase());
+                            
+                            // If both days are in the order array, sort by their position
+                            if (indexA !== -1 && indexB !== -1) {
+                              return indexA - indexB;
+                            }
+                            
+                            // If only one is in the array, prioritize it
+                            if (indexA !== -1) return -1;
+                            if (indexB !== -1) return 1;
+                            
+                            // If neither is in the array, maintain original order
+                            return 0;
+                          })
                           .map(([dayId, day]) => (
                             <SelectItem key={dayId} value={dayId} className="py-2">
                               <div className="flex items-center gap-2">
