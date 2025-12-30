@@ -1325,6 +1325,86 @@ export function DailyDeliveryManagement() {
     }
   };
 
+  // Function to bulk activate all This Week days
+  const bulkActivateThisWeek = async () => {
+    try {
+      setIsActivatingNextWeek(true);
+      
+      // Get all This Week days
+      const thisWeekDays = Object.entries(days).filter(([_, day]) => day.week === 1);
+      
+      if (thisWeekDays.length === 0) {
+        toast({
+          title: "No Days Found",
+          description: "No days found for This Week",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Update each day to active
+      for (const [dayId, day] of thisWeekDays) {
+        await fetch(`/api/days/${dayId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            isActive: true
+          }),
+        });
+      }
+      
+      // Refresh data
+      const daysResponse = await fetch('/api/days');
+      const daysData = await daysResponse.json();
+      
+      if (daysData.success) {
+        const formattedDays: Record<string, DayData> = {};
+        
+        for (const day of daysData.data) {
+          const combosResponse = await fetch(`/api/days/${day.dayId}/combos`);
+          const combosData = await combosResponse.json();
+          
+          if (combosData.success) {
+            const formattedCombos = combosData.data.map((combo: any) => ({
+              id: combo.comboId,
+              name: combo.name,
+              calories: combo.calories,
+              tags: combo.tags,
+              typeA: combo.typeA,
+              typeB: combo.typeB
+            }));
+            
+            formattedDays[day.dayId] = {
+              date: day.date,
+              displayName: day.displayName,
+              week: day.week,
+              isActive: day.isActive ?? true,
+              combos: formattedCombos
+            };
+          }
+        }
+        
+        setDays(formattedDays);
+        
+        toast({
+          title: "Success",
+          description: `Activated ${thisWeekDays.length} days for This Week`,
+        });
+      }
+    } catch (error) {
+      console.error('Error activating This Week days:', error);
+      toast({
+        title: "Error",
+        description: `Failed to activate This Week days: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsActivatingNextWeek(false);
+    }
+  };
+
   // Function to initialize Next Week days based on This Week
   const initializeNextWeek = async () => {
     try {
@@ -1523,7 +1603,7 @@ export function DailyDeliveryManagement() {
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Manage Next Week Status
+                    Manage Status
                     <ChevronDown className="h-4 w-4 ml-2" />
                   </>
                 )}
@@ -1537,6 +1617,10 @@ export function DailyDeliveryManagement() {
               <DropdownMenuItem onClick={bulkDeactivateNextWeek}>
                 <XCircle className="h-4 w-4 mr-2 text-red-600" />
                 Deactivate All Next Week
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={bulkActivateThisWeek}>
+                <CheckCircle className="h-4 w-4 mr-2 text-blue-600" />
+                Activate All This Week
               </DropdownMenuItem>
               <DropdownMenuItem onClick={bulkDeactivateThisWeek}>
                 <XCircle className="h-4 w-4 mr-2 text-orange-600" />
