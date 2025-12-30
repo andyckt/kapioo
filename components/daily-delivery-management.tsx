@@ -45,7 +45,8 @@ import {
   Utensils,
   Package,
   RefreshCcw,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from "lucide-react"
 
 // Define types based on the daily-delivery.tsx file
@@ -85,6 +86,7 @@ export function DailyDeliveryManagement() {
   
   // State for loading status
   const [isLoading, setIsLoading] = useState(true)
+  const [isRollingForward, setIsRollingForward] = useState(false)
   
   // Fetch data from API
   useEffect(() => {
@@ -635,38 +637,6 @@ export function DailyDeliveryManagement() {
     }
   };
   
-  // Function to roll forward the week - making Next Week into This Week and updating This Week with Next Week's content
-  const rollForwardWeek = async () => {
-    try {
-      // Show confirmation dialog
-      if (!confirm("This will update This Week with Next Week's content and create a new Next Week. Continue?")) {
-        return;
-      }
-
-      // Get all days from week 2 (Next Week) and week 1 (This Week)
-      const week2Days = Object.entries(days).filter(([_, day]) => day.week === 2);
-      const week1Days = Object.entries(days).filter(([dayId, day]) => day.week === 1);
-      
-      if (week2Days.length === 0) {
-        toast({
-          title: "Error",
-          description: "No days found in Next Week to roll forward",
-          variant: "destructive"
-        });
-        return;
-      }
-
-  // Helper function to calculate next week's date
-  const calculateNextWeekDate = (dateStr: string): string => {
-    const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
-    if (dateMatch && dateMatch.length >= 3) {
-      const month = dateMatch[1]; // e.g., "Dec"
-      const dayNum = parseInt(dateMatch[2], 10); // e.g., 1
-      return `${month} ${dayNum + 7}`; // e.g., "Dec 8"
-    }
-    return dateStr;
-  };
-  
   // Helper function to parse date string into a Date object
   const parseDateString = (dateStr: string): Date | null => {
     const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
@@ -695,9 +665,21 @@ export function DailyDeliveryManagement() {
     return `${months[date.getMonth()]} ${date.getDate()}`;
   };
   
+  // Helper function to calculate next week's date
+  const calculateNextWeekDate = (dateStr: string): string => {
+    // Parse the date string into a Date object
+    const date = parseDateString(dateStr);
+    if (!date) return dateStr;
+    
+    // Add 7 days
+    date.setDate(date.getDate() + 7);
+    
+    // Format back to "MMM D" format
+    return formatDateToString(date);
+  };
+  
   // Helper function to calculate dates for all days of the week based on a starting day and date
   const calculateDatesForWeek = (startDay: string, startDateStr: string): Record<string, string> => {
-    const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const result: Record<string, string> = {
       monday: '',
       tuesday: '',
@@ -711,25 +693,61 @@ export function DailyDeliveryManagement() {
     const startDate = parseDateString(startDateStr);
     if (!startDate) return result;
     
-    // Find the index of the starting day
-    const startDayIndex = daysOfWeek.indexOf(startDay.toLowerCase());
-    if (startDayIndex === -1) return result;
+    // Map day names to their position in a standard week (Monday = 0, Sunday = 6)
+    const dayNameToWeekPosition: Record<string, number> = {
+      'monday': 0,
+      'tuesday': 1,
+      'wednesday': 2,
+      'thursday': 3,
+      'friday': 4,
+      'sunday': 6  // Sunday is at the end of the week
+    };
     
-    // Calculate dates for each day
-    for (const day of Object.keys(result)) {
-      if (day === 'saturday') continue; // Skip Saturday
+    // Get the week position for the start day
+    const startDayPosition = dayNameToWeekPosition[startDay.toLowerCase()];
+    if (startDayPosition === undefined) return result;
+    
+    // Calculate dates for each day we need
+    for (const dayName of Object.keys(result)) {
+      const targetDayPosition = dayNameToWeekPosition[dayName];
+      if (targetDayPosition === undefined) continue;
       
-      const dayIndex = daysOfWeek.indexOf(day);
-      if (dayIndex !== -1) {
-        const dayDiff = dayIndex - startDayIndex;
-        const date = new Date(startDate);
-        date.setDate(date.getDate() + dayDiff);
-        result[day] = formatDateToString(date);
-      }
+      // Calculate the difference in days from the start day
+      const dayDiff = targetDayPosition - startDayPosition;
+      
+      // Create a new date and add the difference
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + dayDiff);
+      result[dayName] = formatDateToString(date);
     }
     
     return result;
   };
+  
+  // Function to roll forward the week - making Next Week into This Week and updating This Week with Next Week's content
+  const rollForwardWeek = async () => {
+    try {
+      // Show confirmation dialog
+      if (!confirm("This will update This Week with Next Week's content and create a new Next Week. Continue?")) {
+        return;
+      }
+
+      // Set loading state
+      setIsRollingForward(true);
+
+      // Get all days from week 2 (Next Week) and week 1 (This Week)
+      const week2Days = Object.entries(days).filter(([_, day]) => day.week === 2);
+      const week1Days = Object.entries(days).filter(([dayId, day]) => day.week === 1);
+      
+      if (week2Days.length === 0) {
+        toast({
+          title: "Error",
+          description: "No days found in Next Week to roll forward",
+          variant: "destructive"
+        });
+        setIsRollingForward(false);
+        return;
+      }
 
       // 1. Update This Week days with Next Week's content
       for (const [nextDayId, nextDay] of week2Days) {
@@ -901,6 +919,8 @@ export function DailyDeliveryManagement() {
         description: `Failed to roll forward week: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
+    } finally {
+      setIsRollingForward(false);
     }
   };
 
@@ -950,15 +970,8 @@ export function DailyDeliveryManagement() {
         // Create a new day ID for week 2
         const newDayId = `${day.displayName}-w2-${Date.now()}`;
         
-        // Calculate date for next week (add 7 days)
-        const dateMatch = day.date.match(/(\w+)\s+(\d+)/);
-        let nextWeekDate = day.date;
-        
-        if (dateMatch && dateMatch.length >= 3) {
-          const month = dateMatch[1];
-          const dayNum = parseInt(dateMatch[2], 10);
-          nextWeekDate = `${month} ${dayNum + 7}`;
-        }
+        // Calculate date for next week (add 7 days) - use proper date calculation
+        const nextWeekDate = calculateNextWeekDate(day.date);
         
         // Create new day via API
         const dayResponse = await fetch('/api/days', {
@@ -1162,9 +1175,19 @@ export function DailyDeliveryManagement() {
                       variant="outline"
                       className="h-8 px-3 text-xs"
                       onClick={rollForwardWeek}
+                      disabled={isRollingForward}
                     >
-                      <RefreshCcw className="h-3 w-3 mr-1" />
-                      Roll Forward Week
+                      {isRollingForward ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Rolling Forward...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCcw className="h-3 w-3 mr-1" />
+                          Roll Forward Week
+                        </>
+                      )}
                     </Button>
                     
                     {/* Day Creation Modal */}
