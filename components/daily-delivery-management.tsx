@@ -79,6 +79,7 @@ type DayData = {
   date: string
   displayName: string
   week: number
+  isActive: boolean
   combos: ComboItem[]
 }
 
@@ -137,6 +138,7 @@ export function DailyDeliveryManagement() {
                 date: day.date,
                 displayName: day.displayName,
                 week: day.week,
+                isActive: day.isActive ?? true,
                 combos: formattedCombos
               }
             }
@@ -190,6 +192,7 @@ export function DailyDeliveryManagement() {
   const [editedDate, setEditedDate] = useState<string>('')
   const [editedDisplayName, setEditedDisplayName] = useState<string>('')
   const [editedWeek, setEditedWeek] = useState<number>(1)
+  const [editedIsActive, setEditedIsActive] = useState<boolean>(true)
   
   // State for day creation modal
   const [showDayCreationModal, setShowDayCreationModal] = useState<boolean>(false)
@@ -572,6 +575,7 @@ export function DailyDeliveryManagement() {
       setEditedDate(day.date)
       setEditedDisplayName(day.displayName)
       setEditedWeek(day.week)
+      setEditedIsActive(day.isActive ?? true)
     }
   }
   
@@ -581,7 +585,8 @@ export function DailyDeliveryManagement() {
       await updateDay(editingDay, {
         date: editedDate,
         displayName: editedDisplayName,
-        week: editedWeek
+        week: editedWeek,
+        isActive: editedIsActive
       })
       setEditingDay(null)
     }
@@ -1043,6 +1048,7 @@ export function DailyDeliveryManagement() {
               date: day.date,
               displayName: day.displayName,
               week: day.week,
+              isActive: day.isActive ?? true,
               combos: formattedCombos
             };
           }
@@ -1169,6 +1175,7 @@ export function DailyDeliveryManagement() {
           date: nextWeekDate,
           displayName: day.displayName,
           week: 2,
+          isActive: day.isActive ?? true,
           combos: day.combos.map(combo => ({
             ...combo,
             id: `${newDayId}-combo-${Date.now()}-${Math.floor(Math.random() * 1000)}`
@@ -1204,6 +1211,7 @@ export function DailyDeliveryManagement() {
               date: day.date,
               displayName: day.displayName,
               week: day.week,
+              isActive: day.isActive ?? true,
               combos: formattedCombos
             };
           }
@@ -1502,6 +1510,7 @@ export function DailyDeliveryManagement() {
                                       date: dateForDay || startDate,
                                       displayName: dayLower,
                                       week: selectedWeekNumber,
+                                      isActive: true,
                                       combos: [{
                                         id: comboId,
                                         name: '套餐 1',
@@ -1621,9 +1630,15 @@ export function DailyDeliveryManagement() {
                                 </Select>
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-50">
-                                  Editing
-                                </Badge>
+                                <Select value={editedIsActive ? 'active' : 'inactive'} onValueChange={(value) => setEditedIsActive(value === 'active')}>
+                                  <SelectTrigger className="w-[120px]">
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </TableCell>
                               <TableCell className="text-right">
                                 <Button variant="ghost" size="icon" onClick={saveEditedDay} className="text-green-600">
@@ -1640,8 +1655,11 @@ export function DailyDeliveryManagement() {
                               <TableCell>{day.date}</TableCell>
                               <TableCell>{day.week === 1 ? 'This Week' : 'Next Week'}</TableCell>
                               <TableCell>
-                                <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
-                                  Active
+                                <Badge 
+                                  variant="outline" 
+                                  className={day.isActive !== false ? "bg-green-50 text-green-700 hover:bg-green-50" : "bg-gray-50 text-gray-700 hover:bg-gray-50"}
+                                >
+                                  {day.isActive !== false ? 'Active' : 'Inactive'}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
