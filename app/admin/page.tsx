@@ -84,6 +84,7 @@ import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { MealVoucherManagement } from "@/components/meal-voucher-management"
 import { ViewAllOrders } from "@/components/view-all-orders"
 import { ViewWeeklyOrders } from "@/components/view-weekly-orders"
+import { SettingsManagement } from "@/components/settings-management"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -2717,6 +2718,18 @@ export default function AdminDashboardPage() {
             {activeTab === "settings" && (
               <motion.div
                 key="settings"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <SettingsManagement />
+              </motion.div>
+            )}
+
+            {activeTab === "settings-old" && (
+              <motion.div
+                key="settings-old"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}

@@ -1,3 +1,38 @@
+// Cache for cutoff time settings
+let cutoffTimeCache: { hour: number; minute: number; timestamp: number } | null = null;
+const CACHE_DURATION = 60000; // 1 minute cache
+
+// Fetch cutoff time with caching
+async function getCutoffTime(): Promise<{ hour: number; minute: number }> {
+  // Check if cache is valid
+  if (cutoffTimeCache && (Date.now() - cutoffTimeCache.timestamp) < CACHE_DURATION) {
+    return { hour: cutoffTimeCache.hour, minute: cutoffTimeCache.minute };
+  }
+  
+  // Fetch from API
+  try {
+    const response = await fetch('/api/settings?key=cutoffTime', {
+      cache: 'no-store'
+    });
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      const hour = data.data.value.hour || 11;
+      const minute = data.data.value.minute || 59;
+      
+      // Update cache
+      cutoffTimeCache = { hour, minute, timestamp: Date.now() };
+      
+      return { hour, minute };
+    }
+  } catch (error) {
+    console.warn('Failed to fetch cutoff time, using default', error);
+  }
+  
+  // Return default
+  return { hour: 11, minute: 59 };
+}
+
 // Types for daily delivery service
 export type ComboType = 'A' | 'B'
 
@@ -170,8 +205,11 @@ export function calculateVouchers(cart: CartItem[]): { twoDish: number, threeDis
 }
 
 // Check if a day is in the past or today after ordering cutoff time
-export function isDayUnavailable(day: string, days: Record<string, DayData>): { unavailable: boolean, reason: string } {
+export async function isDayUnavailable(day: string, days: Record<string, DayData>): Promise<{ unavailable: boolean, reason: string }> {
   try {
+    // Fetch cutoff time from settings (with caching)
+    const { hour: cutoffHour, minute: cutoffMinute } = await getCutoffTime();
+    
     // Get current date and time in Toronto timezone
     const torontoOptions = { timeZone: 'America/Toronto' }
     const now = new Date()
@@ -243,20 +281,26 @@ export function isDayUnavailable(day: string, days: Record<string, DayData>): { 
             }
           }
           
-          // If it's for tomorrow and it's past 11:59 AM today
+          // If it's for tomorrow and it's past the cutoff time today
           if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
-              (currentHour > 11 || (currentHour === 11 && currentMinute > 59))) {
+              (currentHour > cutoffHour || (currentHour === cutoffHour && currentMinute > cutoffMinute))) {
+            const period = cutoffHour >= 12 ? 'PM' : 'AM';
+            const displayHour = cutoffHour === 0 ? 12 : cutoffHour > 12 ? cutoffHour - 12 : cutoffHour;
+            const displayMinute = cutoffMinute.toString().padStart(2, '0');
             return { 
               unavailable: true, 
-              reason: "Orders must be placed by 11:59 AM the day before delivery" 
+              reason: `Orders must be placed by ${displayHour}:${displayMinute} ${period} the day before delivery` 
             }
           }
           
           // If it's for today (which should not be available for ordering)
           if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+            const period = cutoffHour >= 12 ? 'PM' : 'AM';
+            const displayHour = cutoffHour === 0 ? 12 : cutoffHour > 12 ? cutoffHour - 12 : cutoffHour;
+            const displayMinute = cutoffMinute.toString().padStart(2, '0');
             return { 
               unavailable: true, 
-              reason: "Orders must be placed by 11:59 AM the day before delivery"
+              reason: `Orders must be placed by ${displayHour}:${displayMinute} ${period} the day before delivery`
             }
           }
           
