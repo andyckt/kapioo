@@ -182,6 +182,7 @@ export function DailyDeliveryManagement() {
   const [editingDay, setEditingDay] = useState<string | null>(null)
   const [newTag, setNewTag] = useState<string>('')
   const [newDish, setNewDish] = useState<string>('')
+  const [bulkDishes, setBulkDishes] = useState<string>('')
   const [editingDish, setEditingDish] = useState<{comboId: string, dish: string, type: 'typeA' | 'typeB'} | null>(null)
   const [editedDishName, setEditedDishName] = useState<string>('')
   
@@ -2298,6 +2299,77 @@ export function DailyDeliveryManagement() {
                                         Add
                                       </Button>
                                     </div>
+                                    
+                                    <div className="pt-3 border-t border-blue-200">
+                                      <Label className="text-lg font-semibold text-blue-700 mb-2 block">Bulk Add Dishes</Label>
+                                      <p className="text-xs text-blue-600 mb-2">Paste multiple dishes (tab, comma, or newline separated)</p>
+                                      <textarea
+                                        placeholder="e.g. 意式番茄炖牛肉&#9;黑椒烤西兰花&#9;补血紫米饭"
+                                        value={bulkDishes}
+                                        onChange={(e) => setBulkDishes(e.target.value)}
+                                        className="w-full h-20 px-3 py-2 text-sm border border-blue-200 rounded-md focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                      />
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full mt-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+                                        onClick={async () => {
+                                          if (bulkDishes.trim()) {
+                                            // Parse the bulk input
+                                            // Split by newlines first to handle multi-line input
+                                            const lines = bulkDishes.split('\n').filter(line => line.trim());
+                                            
+                                            const allDishes: string[] = [];
+                                            
+                                            lines.forEach(line => {
+                                              // For each line, split by tabs first, then by commas if no tabs
+                                              let lineDishes: string[];
+                                              
+                                              if (line.includes('\t')) {
+                                                // Tab-separated
+                                                lineDishes = line.split('\t');
+                                              } else if (line.includes(',')) {
+                                                // Comma-separated, but need to handle parentheses
+                                                // Don't split commas inside parentheses
+                                                lineDishes = line.split(/,(?![^(]*\))/).map(d => d.trim());
+                                              } else {
+                                                // Single dish per line
+                                                lineDishes = [line];
+                                              }
+                                              
+                                              // Clean and add to all dishes
+                                              lineDishes.forEach(dish => {
+                                                const cleaned = dish.trim();
+                                                if (cleaned) {
+                                                  allDishes.push(cleaned);
+                                                }
+                                              });
+                                            });
+                                            
+                                            // First, remove the default "Dish 1" if it exists
+                                            const currentCombo = days[selectedDay]?.combos?.find((c: any) => c.id === combo.id);
+                                            if (currentCombo?.typeA?.dishes?.includes('Dish 1')) {
+                                              await removeDishFromCombo(selectedDay, combo.id, 'Dish 1', 'typeA');
+                                            }
+                                            
+                                            // Add each dish
+                                            allDishes.forEach(dish => {
+                                              addDishToCombo(selectedDay, combo.id, dish, 'typeA');
+                                            });
+                                            
+                                            setBulkDishes('');
+                                            toast({
+                                              title: 'Success',
+                                              description: `Added ${allDishes.length} dish${allDishes.length > 1 ? 'es' : ''} to 2-dish option`,
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Add All Dishes
+                                      </Button>
+                                    </div>
+                                    
                                     <Button 
                                       variant="outline" 
                                       size="sm" 
@@ -2420,6 +2492,76 @@ export function DailyDeliveryManagement() {
                                       }}
                                     >
                                       Add
+                                    </Button>
+                                  </div>
+                                  
+                                  <div className="pt-3 border-t border-green-200 mt-4">
+                                    <Label className="text-lg font-semibold text-green-700 mb-2 block">Bulk Add Dishes</Label>
+                                    <p className="text-xs text-green-600 mb-2">Paste multiple dishes (tab, comma, or newline separated)</p>
+                                    <textarea
+                                      placeholder="e.g. 虾仁夏日卷 + 料汁&#9;虾皮冬瓜&#9;烤妈咪南瓜 + 紫米饭"
+                                      value={bulkDishes}
+                                      onChange={(e) => setBulkDishes(e.target.value)}
+                                      className="w-full h-20 px-3 py-2 text-sm border border-green-200 rounded-md focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full mt-2 border-green-200 text-green-600 hover:bg-green-50"
+                                      onClick={async () => {
+                                        if (bulkDishes.trim()) {
+                                          // Parse the bulk input
+                                          // Split by newlines first to handle multi-line input
+                                          const lines = bulkDishes.split('\n').filter(line => line.trim());
+                                          
+                                          const allDishes: string[] = [];
+                                          
+                                          lines.forEach(line => {
+                                            // For each line, split by tabs first, then by commas if no tabs
+                                            let lineDishes: string[];
+                                            
+                                            if (line.includes('\t')) {
+                                              // Tab-separated
+                                              lineDishes = line.split('\t');
+                                            } else if (line.includes(',')) {
+                                              // Comma-separated, but need to handle parentheses
+                                              // Don't split commas inside parentheses
+                                              lineDishes = line.split(/,(?![^(]*\))/).map(d => d.trim());
+                                            } else {
+                                              // Single dish per line
+                                              lineDishes = [line];
+                                            }
+                                            
+                                            // Clean and add to all dishes
+                                            lineDishes.forEach(dish => {
+                                              const cleaned = dish.trim();
+                                              if (cleaned) {
+                                                allDishes.push(cleaned);
+                                              }
+                                            });
+                                          });
+                                          
+                                          // First, remove the default "Dish 1" if it exists
+                                          const currentCombo = days[selectedDay]?.combos?.find((c: any) => c.id === combo.id);
+                                          if (currentCombo?.typeB?.dishes?.includes('Dish 1')) {
+                                            await removeDishFromCombo(selectedDay, combo.id, 'Dish 1', 'typeB');
+                                          }
+                                          
+                                          // Add each dish
+                                          allDishes.forEach(dish => {
+                                            addDishToCombo(selectedDay, combo.id, dish, 'typeB');
+                                          });
+                                          
+                                          setBulkDishes('');
+                                          toast({
+                                            title: 'Success',
+                                            description: `Added ${allDishes.length} dish${allDishes.length > 1 ? 'es' : ''} to 3-dish option`,
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add All Dishes
                                     </Button>
                                   </div>
                                 </div>
