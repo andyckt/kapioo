@@ -29,9 +29,6 @@ export function WeeklySubscriptionManagement() {
   const [deliverySections, setDeliverySections] = useState<DeliverySection[]>([])
   const [editingMeal, setEditingMeal] = useState<MealOption | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [addMealDialogOpen, setAddMealDialogOpen] = useState(false)
-  const [newMealSection, setNewMealSection] = useState<string>('')
-  const [newMeal, setNewMeal] = useState<Partial<MealOption>>({ name: '', tags: [], active: true })
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [mealToDelete, setMealToDelete] = useState<MealOption | null>(null)
   const [isRollingForward, setIsRollingForward] = useState(false)
@@ -40,6 +37,9 @@ export function WeeklySubscriptionManagement() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any | null>(null)
   const [deletingHistoryId, setDeletingHistoryId] = useState<string | null>(null)
+  const [addingMealToSection, setAddingMealToSection] = useState<string | null>(null)
+  const [newInlineMealName, setNewInlineMealName] = useState('')
+  const [isSavingInlineMeal, setIsSavingInlineMeal] = useState(false)
   
   // Fetch delivery sections from API
   const fetchData = async () => {
@@ -560,6 +560,66 @@ export function WeeklySubscriptionManagement() {
     }
   }
   
+  // Start inline add meal
+  const handleAddMealClick = (sectionId: string) => {
+    setAddingMealToSection(sectionId);
+    setNewInlineMealName('');
+  };
+  
+  // Cancel inline add meal
+  const handleCancelInlineAdd = () => {
+    setAddingMealToSection(null);
+    setNewInlineMealName('');
+  };
+  
+  // Save inline meal (on Enter key)
+  const handleSaveInlineMeal = async (sectionId: string) => {
+    if (!newInlineMealName.trim()) {
+      handleCancelInlineAdd();
+      return;
+    }
+    
+    setIsSavingInlineMeal(true);
+    
+    try {
+      const section = deliverySections.find(s => s.id === sectionId);
+      if (!section) return;
+      
+      const newMeal = await addMealOption(
+        section.day.day,
+        section.day.weekOffset,
+        {
+          name: newInlineMealName.trim(),
+          tags: [],
+          active: true // Always default to active
+        }
+      );
+      
+      if (newMeal) {
+        // Refresh data to show the new meal
+        await fetchData();
+        
+        toast({
+          title: "Meal added",
+          description: "The new meal option has been added successfully."
+        });
+        
+        handleCancelInlineAdd();
+      } else {
+        throw new Error('Failed to add meal');
+      }
+    } catch (error) {
+      console.error('Error adding meal:', error);
+      toast({
+        title: "Failed to add",
+        description: "Could not add new meal option",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingInlineMeal(false);
+    }
+  };
+  
   // Open delete confirmation dialog
   const handleDeleteClick = (meal: MealOption) => {
     setMealToDelete(meal)
@@ -606,67 +666,6 @@ export function WeeklySubscriptionManagement() {
     }
   }
   
-  // Open add meal dialog
-  const handleAddMealClick = (sectionId: string) => {
-    setNewMealSection(sectionId)
-    setNewMeal({
-      name: "",
-      tags: [],
-      active: true
-    })
-    setAddMealDialogOpen(true)
-  }
-  
-  // Add new meal option after form submission
-  const handleAddMealSubmit = async () => {
-    if (!newMealSection || !newMeal.name) return;
-    
-    const section = deliverySections.find(s => s.id === newMealSection);
-    if (!section) return;
-    
-    // Close dialog and show loading state
-    setAddMealDialogOpen(false);
-    setIsLoading(true);
-    
-    console.log('Adding meal option to section:', {
-      sectionId: section.id,
-      day: section.day.id,
-      weekOffset: section.day.weekOffset,
-      name: newMeal.name
-    });
-    
-    // Add to database - pass day ID and weekOffset instead of section ID
-    const result = await addMealOption(
-      section.day.id,
-      section.day.weekOffset,
-      {
-        name: newMeal.name,
-        tags: newMeal.tags || [],
-        active: newMeal.active !== undefined ? newMeal.active : true
-      }
-    );
-    
-    if (result && result.mealOption && result.deliveryDay) {
-      // Refresh data from API to get the updated list with proper IDs
-      const updatedData = await getAdminWeeklySubscription();
-      if (updatedData && updatedData.length > 0) {
-        setDeliverySections(updatedData);
-      }
-      
-      toast({
-        title: "Meal added",
-        description: "The new meal option has been added successfully."
-      });
-    } else {
-      toast({
-        title: "Failed to add",
-        description: "Could not add new meal option",
-        variant: "destructive"
-      });
-    }
-    
-    setIsLoading(false);
-  }
 
   return (
     <div className="space-y-6">
@@ -842,13 +841,55 @@ export function WeeklySubscriptionManagement() {
                         </div>
                       </div>
                     ))}
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-2" 
-                      onClick={() => handleAddMealClick(section.id)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add Meal Option
-                    </Button>
+                    
+                    {/* Inline Add Meal Input */}
+                    {addingMealToSection === section.id ? (
+                      <div className="flex items-center gap-2 p-3 rounded-md border border-primary bg-primary/5">
+                        <Input
+                          autoFocus
+                          placeholder="Enter meal name and press Enter..."
+                          value={newInlineMealName}
+                          onChange={(e) => setNewInlineMealName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveInlineMeal(section.id);
+                            } else if (e.key === 'Escape') {
+                              handleCancelInlineAdd();
+                            }
+                          }}
+                          disabled={isSavingInlineMeal}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSaveInlineMeal(section.id)}
+                          disabled={isSavingInlineMeal || !newInlineMealName.trim()}
+                        >
+                          {isSavingInlineMeal ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelInlineAdd}
+                          disabled={isSavingInlineMeal}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        className="w-full mt-2" 
+                        onClick={() => handleAddMealClick(section.id)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" /> Add Meal Option
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -953,101 +994,6 @@ export function WeeklySubscriptionManagement() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveMeal}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Add Meal Dialog */}
-      <Dialog open={addMealDialogOpen} onOpenChange={setAddMealDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add New Meal Option</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new meal option.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-meal-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="new-meal-name"
-                value={newMeal.name || ''}
-                onChange={(e) => setNewMeal({...newMeal, name: e.target.value})}
-                className="col-span-3"
-                placeholder="Enter meal name"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="new-meal-tags" className="text-right pt-2">
-                Tags
-              </Label>
-              <div className="col-span-3 space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {newMeal.tags?.map((tag, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary" 
-                      className="px-2 py-1 flex items-center gap-1"
-                    >
-                      {tag}
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-4 w-4 p-0 hover:bg-transparent" 
-                        onClick={() => {
-                          const newTags = [...(newMeal.tags || [])];
-                          newTags.splice(index, 1);
-                          setNewMeal({ ...newMeal, tags: newTags });
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-                <Input
-                  id="new-meal-tags"
-                  placeholder="Type a tag and press Enter"
-                  className="w-full"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                      e.preventDefault();
-                      const newTag = e.currentTarget.value.trim();
-                      if (newTag && (!newMeal.tags || !newMeal.tags.includes(newTag))) {
-                        setNewMeal({
-                          ...newMeal,
-                          tags: [...(newMeal.tags || []), newTag]
-                        });
-                        e.currentTarget.value = '';
-                      }
-                    }
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">Press Enter to add a tag</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-meal-active" className="text-right">
-                Active
-              </Label>
-              <div className="col-span-3 flex items-center">
-                <Switch 
-                  id="new-meal-active" 
-                  checked={newMeal.active !== undefined ? newMeal.active : true} 
-                  onCheckedChange={(checked) => setNewMeal({...newMeal, active: checked})} 
-                />
-                <Label htmlFor="new-meal-active" className="ml-2">
-                  {newMeal.active !== undefined ? (newMeal.active ? 'Active' : 'Inactive') : 'Active'}
-                </Label>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddMealDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddMealSubmit} disabled={!newMeal.name}>Add Meal</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
