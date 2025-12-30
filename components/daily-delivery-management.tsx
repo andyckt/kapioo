@@ -31,6 +31,14 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { 
   Calendar as CalendarIcon, 
   Plus, 
@@ -46,7 +54,8 @@ import {
   Package,
   RefreshCcw,
   ChevronDown,
-  Loader2
+  Loader2,
+  History
 } from "lucide-react"
 
 // Define types based on the daily-delivery.tsx file
@@ -87,6 +96,12 @@ export function DailyDeliveryManagement() {
   // State for loading status
   const [isLoading, setIsLoading] = useState(true)
   const [isRollingForward, setIsRollingForward] = useState(false)
+  
+  // State for history modal
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [historyData, setHistoryData] = useState<any[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any>(null)
   
   // Fetch data from API
   useEffect(() => {
@@ -637,6 +652,30 @@ export function DailyDeliveryManagement() {
     }
   };
   
+  // Function to fetch history data
+  const fetchHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch('/api/day-history?limit=100');
+      const data = await response.json();
+      
+      if (data.success) {
+        setHistoryData(data.data);
+      } else {
+        throw new Error(data.error || 'Failed to fetch history');
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to load history: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+  
   // Helper function to parse date string into a Date object
   const parseDateString = (dateStr: string): Date | null => {
     const dateMatch = dateStr.match(/(\w+)\s+(\d+)/);
@@ -747,6 +786,47 @@ export function DailyDeliveryManagement() {
         });
         setIsRollingForward(false);
         return;
+      }
+
+      // 0. Archive old This Week data before replacing it
+      console.log('Archiving old This Week data...');
+      for (const [thisDayId, thisDay] of week1Days) {
+        try {
+          // Fetch combos for this day
+          const combosResponse = await fetch(`/api/days/${thisDayId}/combos`);
+          const combosData = await combosResponse.json();
+          
+          if (combosData.success) {
+            // Create history entry
+            const historyId = `history-${thisDayId}-${Date.now()}`;
+            await fetch('/api/day-history', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                historyId,
+                originalDayId: thisDayId,
+                displayName: thisDay.displayName,
+                date: thisDay.date,
+                week: thisDay.week,
+                archivedReason: 'rolled_forward',
+                combos: combosData.data.map((combo: any) => ({
+                  comboId: combo.comboId,
+                  name: combo.name,
+                  calories: combo.calories,
+                  tags: combo.tags,
+                  typeA: combo.typeA,
+                  typeB: combo.typeB
+                }))
+              }),
+            });
+            console.log(`Archived: ${thisDay.displayName} ${thisDay.date}`);
+          }
+        } catch (error) {
+          console.error(`Error archiving ${thisDay.displayName}:`, error);
+          // Continue with roll forward even if archiving fails
+        }
       }
 
       // 1. Update This Week days with Next Week's content
@@ -1088,6 +1168,24 @@ export function DailyDeliveryManagement() {
 
   return (
     <div className="flex-1 space-y-6">
+      {/* Header with View History Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Daily Delivery Management</h2>
+          <p className="text-muted-foreground mt-1">Manage delivery dates, menus, and combos</p>
+        </div>
+        <Button 
+          variant="outline"
+          onClick={() => {
+            setShowHistoryModal(true);
+            fetchHistory();
+          }}
+        >
+          <History className="h-4 w-4 mr-2" />
+          View History
+        </Button>
+      </div>
+      
       {isLoading ? (
         <div className="flex justify-center items-center h-[300px]">
           <div className="text-center">
@@ -2183,6 +2281,145 @@ export function DailyDeliveryManagement() {
         
       </Tabs>
       )}
+      
+      {/* History Modal */}
+      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+        <DialogContent className="max-w-6xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Archived Days History</DialogTitle>
+            <DialogDescription>
+              View previously archived days and their menus from roll forward operations
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="h-[70vh] pr-4">
+            {isLoadingHistory ? (
+              <div className="flex justify-center items-center h-[200px]">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                  <p>Loading history...</p>
+                </div>
+              </div>
+            ) : historyData.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No archived history yet</p>
+                <p className="text-sm mt-2">Days will be archived here when you roll forward weeks</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {historyData.map((entry) => (
+                  <Card key={entry.historyId} className="border">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg capitalize flex items-center gap-2">
+                            {entry.displayName}
+                            <Badge variant="outline" className={entry.week === 1 ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}>
+                              {entry.week === 1 ? 'This Week' : 'Next Week'}
+                            </Badge>
+                          </CardTitle>
+                          <CardDescription className="mt-1">
+                            Date: {entry.date} • Archived: {new Date(entry.archivedAt).toLocaleString()}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedHistoryEntry(selectedHistoryEntry === entry.historyId ? null : entry.historyId)}
+                          >
+                            {selectedHistoryEntry === entry.historyId ? 'Hide Details' : 'View Details'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500"
+                            onClick={async () => {
+                              if (confirm('Delete this history entry permanently?')) {
+                                try {
+                                  const response = await fetch(`/api/day-history/${entry.historyId}`, {
+                                    method: 'DELETE',
+                                  });
+                                  const data = await response.json();
+                                  if (data.success) {
+                                    setHistoryData(prev => prev.filter(h => h.historyId !== entry.historyId));
+                                    toast({
+                                      title: 'Success',
+                                      description: 'History entry deleted',
+                                    });
+                                  }
+                                } catch (error) {
+                                  toast({
+                                    title: 'Error',
+                                    description: 'Failed to delete history entry',
+                                    variant: 'destructive'
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    {selectedHistoryEntry === entry.historyId && (
+                      <CardContent className="pt-0">
+                        <div className="space-y-3">
+                          <div className="text-sm text-muted-foreground mb-2">
+                            {entry.combos.length} combo(s) archived
+                          </div>
+                          {entry.combos.map((combo: any, idx: number) => (
+                            <Card key={idx} className="border bg-muted/30">
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center gap-2">
+                                  <CardTitle className="text-base">{combo.name}</CardTitle>
+                                  <Badge variant="outline">{combo.calories} KCAL</Badge>
+                                  {combo.tags.map((tag: string) => (
+                                    <Badge key={tag} variant="secondary" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <h5 className="font-medium text-sm mb-2 text-blue-700">2-Dish Option</h5>
+                                    <div className="space-y-1">
+                                      {combo.typeA.dishes.map((dish: string, dishIdx: number) => (
+                                        <div key={dishIdx} className="text-sm py-1 px-2 rounded bg-blue-50">
+                                          {dishIdx + 1}. {dish}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <h5 className="font-medium text-sm mb-2 text-green-700">3-Dish Option</h5>
+                                    <div className="space-y-1">
+                                      {combo.typeB.dishes.map((dish: string, dishIdx: number) => (
+                                        <div key={dishIdx} className="text-sm py-1 px-2 rounded bg-green-50">
+                                          {dishIdx + 1}. {dish}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
