@@ -2210,6 +2210,12 @@ export function DailyDeliveryManagement() {
                                             <Input
                                               value={editedDishName}
                                               onChange={(e) => setEditedDishName(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeA');
+                                                }
+                                              }}
                                               className="h-8"
                                               autoFocus
                                             />
@@ -2269,7 +2275,14 @@ export function DailyDeliveryManagement() {
                                       <Input 
                                         placeholder="Add new dish to 2-dish option" 
                                         value={newDish} 
-                                        onChange={(e) => setNewDish(e.target.value)} 
+                                        onChange={(e) => setNewDish(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && newDish.trim()) {
+                                            e.preventDefault();
+                                            addDishToCombo(selectedDay, combo.id, newDish, 'typeA');
+                                            setNewDish('');
+                                          }
+                                        }}
                                         className="border-blue-200 focus:border-blue-400"
                                       />
                                       <Button 
@@ -2315,6 +2328,12 @@ export function DailyDeliveryManagement() {
                                             <Input
                                               value={editedDishName}
                                               onChange={(e) => setEditedDishName(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeB');
+                                                }
+                                              }}
                                               className="h-8"
                                               autoFocus
                                             />
@@ -2380,7 +2399,14 @@ export function DailyDeliveryManagement() {
                                     <Input 
                                       placeholder="Add new dish to 3-dish option" 
                                       value={newDish} 
-                                      onChange={(e) => setNewDish(e.target.value)} 
+                                      onChange={(e) => setNewDish(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && newDish.trim()) {
+                                          e.preventDefault();
+                                          addDishToCombo(selectedDay, combo.id, newDish, 'typeB');
+                                          setNewDish('');
+                                        }
+                                      }}
                                       className="border-green-200 focus:border-green-400"
                                     />
                                     <Button 
