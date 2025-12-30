@@ -102,6 +102,7 @@ export function DailyDeliveryManagement() {
   const [historyData, setHistoryData] = useState<any[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any>(null)
+  const [selectedWeekRange, setSelectedWeekRange] = useState<string | null>(null)
   
   // Fetch data from API
   useEffect(() => {
@@ -2306,9 +2307,153 @@ export function DailyDeliveryManagement() {
                 <p>No archived history yet</p>
                 <p className="text-sm mt-2">Days will be archived here when you roll forward weeks</p>
               </div>
+            ) : !selectedWeekRange ? (
+              // Show week range buttons
+              <div className="space-y-3">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Select a Week to View
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Choose a week range to see the archived days and menus
+                  </p>
+                </div>
+                {(() => {
+                  // Group entries by when they were archived together (same roll forward operation)
+                  // Use archivedAt timestamp rounded to the minute to group days archived in same operation
+                  const weekGroups: Record<string, any[]> = {};
+                  
+                  historyData.forEach((entry) => {
+                    const archivedDate = new Date(entry.archivedAt);
+                    // Round to nearest minute to group operations that happened in same roll forward
+                    const weekKey = `${archivedDate.getFullYear()}-${String(archivedDate.getMonth() + 1).padStart(2, '0')}-${String(archivedDate.getDate()).padStart(2, '0')}-${String(archivedDate.getHours()).padStart(2, '0')}-${String(archivedDate.getMinutes()).padStart(2, '0')}`;
+                    
+                    if (!weekGroups[weekKey]) {
+                      weekGroups[weekKey] = [];
+                    }
+                    weekGroups[weekKey].push(entry);
+                  });
+                  
+                  // Convert to array and calculate date ranges for each week
+                  return Object.entries(weekGroups)
+                    .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()) // Sort by date, newest first
+                    .map(([weekKey, entries]) => {
+                      // Get the date range from the entries
+                      const dates = entries.map(e => e.date);
+                      
+                      // Parse dates to get month and day
+                      const parsedDates = dates.map(dateStr => {
+                        const match = dateStr.match(/(\w+)\s+(\d+)/);
+                        if (match) {
+                          const monthMap: Record<string, number> = {
+                            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+                            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+                          };
+                          const month = monthMap[match[1]];
+                          const day = parseInt(match[2]);
+                          return { month: match[1], day, sortValue: month * 100 + day };
+                        }
+                        return null;
+                      }).filter(Boolean);
+                      
+                      if (parsedDates.length === 0) return null;
+                      
+                      // Sort to get min and max dates
+                      parsedDates.sort((a: any, b: any) => a.sortValue - b.sortValue);
+                      const startDate = parsedDates[0] as any;
+                      const endDate = parsedDates[parsedDates.length - 1] as any;
+                      
+                      if (!startDate || !endDate) return null;
+                      
+                      const weekRange = startDate.month === endDate.month
+                        ? `${startDate.month} ${startDate.day} - ${endDate.day}`
+                        : `${startDate.month} ${startDate.day} - ${endDate.month} ${endDate.day}`;
+                      
+                      const archivedDate = new Date(entries[0].archivedAt);
+                      const dayCount = entries.length;
+                      const totalCombos = entries.reduce((sum, e) => sum + e.combos.length, 0);
+                      
+                      return (
+                        <Card 
+                          key={weekKey} 
+                          className="border-2 hover:border-primary/50 transition-all cursor-pointer"
+                          onClick={() => setSelectedWeekRange(weekKey)}
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <CardTitle className="text-xl mb-2 flex items-center gap-2">
+                                  <Calendar className="h-5 w-5 text-primary" />
+                                  {weekRange}
+                                </CardTitle>
+                                <CardDescription className="flex flex-col gap-1">
+                                  <span className="text-sm">
+                                    Archived: {archivedDate.toLocaleString('en-US', { 
+                                      month: 'short', 
+                                      day: 'numeric', 
+                                      year: 'numeric',
+                                      hour: 'numeric',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <Badge variant="secondary" className="text-xs">
+                                      <Package className="h-3 w-3 mr-1" />
+                                      {dayCount} {dayCount === 1 ? 'day' : 'days'}
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-xs">
+                                      <Utensils className="h-3 w-3 mr-1" />
+                                      {totalCombos} {totalCombos === 1 ? 'combo' : 'combos'}
+                                    </Badge>
+                                  </div>
+                                </CardDescription>
+                              </div>
+                              <Button variant="outline" size="sm">
+                                View Days
+                                <ChevronDown className="h-4 w-4 ml-1 rotate-[-90deg]" />
+                              </Button>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      );
+                    })
+                    .filter(Boolean);
+                })()}
+              </div>
             ) : (
+              // Show days for selected week
               <div className="space-y-4">
-                {historyData.map((entry) => (
+                <div className="flex items-center justify-between mb-4 pb-3 border-b">
+                  <div>
+                    <h3 className="text-lg font-semibold">Week Details</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Viewing archived days from this week
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedWeekRange(null);
+                      setSelectedHistoryEntry(null);
+                    }}
+                  >
+                    <ChevronDown className="h-4 w-4 mr-1 rotate-90" />
+                    Back to Weeks
+                  </Button>
+                </div>
+                
+                {historyData
+                  .filter((entry) => {
+                    const archivedDate = new Date(entry.archivedAt);
+                    const entryWeekKey = `${archivedDate.getFullYear()}-${String(archivedDate.getMonth() + 1).padStart(2, '0')}-${String(archivedDate.getDate()).padStart(2, '0')}-${String(archivedDate.getHours()).padStart(2, '0')}-${String(archivedDate.getMinutes()).padStart(2, '0')}`;
+                    return entryWeekKey === selectedWeekRange;
+                  })
+                  .sort((a, b) => {
+                    const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sunday'];
+                    return dayOrder.indexOf(a.displayName) - dayOrder.indexOf(b.displayName);
+                  })
+                  .map((entry) => (
                   <Card key={entry.historyId} className="border">
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
