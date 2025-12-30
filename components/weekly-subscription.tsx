@@ -49,9 +49,33 @@ export default function WeeklySubscription({
   // Address confirmation dialog state
   const [showAddressDialog, setShowAddressDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string>("")
+  const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
+  
+  // Fetch cutoff time from settings
+  useEffect(() => {
+    const fetchCutoffTime = async () => {
+      try {
+        const response = await fetch('/api/settings?key=cutoffTime', {
+          cache: 'no-store'
+        });
+        const data = await response.json();
+        
+        if (data.success && data.data?.value) {
+          setCutoffTime({
+            hour: data.data.value.hour || 11,
+            minute: data.data.value.minute || 59
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to fetch cutoff time, using default 11:59 AM', error);
+      }
+    };
+    
+    fetchCutoffTime();
+  }, [])
   
   // Function to check if a day is unavailable for ordering
-  // Updated to match Daily Delivery cutoff time: 11:59 AM the day before delivery
+  // Updated to use dynamic cutoff time from settings
   const isDayUnavailable = (day: DeliveryDay): { unavailable: boolean, reason: string } => {
     try {
       // Get current date and time in Toronto timezone
@@ -124,24 +148,32 @@ export default function WeeklySubscription({
               };
             }
             
-            // If it's for tomorrow and it's past 11:59 AM today
+            // If it's for tomorrow and it's past the cutoff time today
             if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
-                (currentHour > 11 || (currentHour === 11 && currentMinute > 59))) {
+                (currentHour > cutoffTime.hour || (currentHour === cutoffTime.hour && currentMinute > cutoffTime.minute))) {
+              const period = cutoffTime.hour >= 12 ? 'PM' : 'AM';
+              const displayHour = cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour;
+              const displayMinute = cutoffTime.minute.toString().padStart(2, '0');
+              const timeStr = `${displayHour}:${displayMinute} ${period}`;
               return { 
                 unavailable: true, 
-                reason: language === 'zh' ? "订单必须在配送前一天的上午11:59前下单" : "Orders must be placed by 11:59 AM the day before delivery" 
+                reason: language === 'zh' ? `订单必须在配送前一天的${timeStr}前下单` : `Orders must be placed by ${timeStr} the day before delivery` 
               };
             }
             
             // If it's for today (same-day ordering not allowed)
             if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+              const period = cutoffTime.hour >= 12 ? 'PM' : 'AM';
+              const displayHour = cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour;
+              const displayMinute = cutoffTime.minute.toString().padStart(2, '0');
+              const timeStr = `${displayHour}:${displayMinute} ${period}`;
               return { 
                 unavailable: true, 
-                reason: language === 'zh' ? "订单必须在配送前一天的上午11:59前下单" : "Orders must be placed by 11:59 AM the day before delivery"
+                reason: language === 'zh' ? `订单必须在配送前一天的${timeStr}前下单` : `Orders must be placed by ${timeStr} the day before delivery`
               };
             }
             
-            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at 11:59 AM, it's available
+            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at cutoff time, it's available
             return { unavailable: false, reason: "" };
           }
         }
@@ -591,8 +623,8 @@ export default function WeeklySubscription({
             </p>
             <p className="text-[10px] text-[#6B5F53] mt-1">
               {language === 'zh' 
-                ? '订单截止时间：配送前一天上午11:59前下单。' 
-                : 'Order cutoff: 11:59 AM the day before delivery.'}
+                ? `订单截止时间：配送前一天${cutoffTime.hour >= 12 ? '下午' : '上午'}${cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour}:${cutoffTime.minute.toString().padStart(2, '0')}前下单。`
+                : `Order cutoff: ${cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour}:${cutoffTime.minute.toString().padStart(2, '0')} ${cutoffTime.hour >= 12 ? 'PM' : 'AM'} the day before delivery.`}
             </p>
           </div>
           

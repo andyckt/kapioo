@@ -85,6 +85,7 @@ export default function DailyDelivery() {
   })
   const [showRegionDialog, setShowRegionDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
+  const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
   
   // Define the supported regions for daily delivery
   const DAILY_DELIVERY_REGIONS = [
@@ -94,6 +95,29 @@ export default function DailyDelivery() {
     "Markham", 
     "RichmondHill"
   ]
+  
+  // Fetch cutoff time from settings
+  useEffect(() => {
+    const fetchCutoffTime = async () => {
+      try {
+        const response = await fetch('/api/settings?key=cutoffTime', {
+          cache: 'no-store'
+        });
+        const data = await response.json();
+        
+        if (data.success && data.data?.value) {
+          setCutoffTime({
+            hour: data.data.value.hour || 11,
+            minute: data.data.value.minute || 59
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to fetch cutoff time, using default 11:59 AM', error);
+      }
+    };
+    
+    fetchCutoffTime();
+  }, [])
   
   // Check if a day is in the past or today after ordering cutoff time
   const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
@@ -192,24 +216,30 @@ export default function DailyDelivery() {
               };
             }
             
-            // If it's for tomorrow and it's past 11:59 AM today (changed to allow orders at exactly 11:59)
+            // If it's for tomorrow and it's past the cutoff time today
             if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
-                (currentHour > 11 || (currentHour === 11 && currentMinute > 59))) {
+                (currentHour > cutoffTime.hour || (currentHour === cutoffTime.hour && currentMinute > cutoffTime.minute))) {
+              const period = cutoffTime.hour >= 12 ? 'PM' : 'AM';
+              const displayHour = cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour;
+              const displayMinute = cutoffTime.minute.toString().padStart(2, '0');
               return { 
                 unavailable: true, 
-                reason: "Orders must be placed by 11:59 AM the day before delivery" 
+                reason: `Orders must be placed by ${displayHour}:${displayMinute} ${period} the day before delivery` 
               };
             }
             
             // If it's for today (which should not be available for ordering)
             if (mealSpecificDate.getTime() === todayYMD.getTime()) {
+              const period = cutoffTime.hour >= 12 ? 'PM' : 'AM';
+              const displayHour = cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour;
+              const displayMinute = cutoffTime.minute.toString().padStart(2, '0');
               return { 
                 unavailable: true, 
-                reason: "Orders must be placed by 11:59 AM the day before delivery"
+                reason: `Orders must be placed by ${displayHour}:${displayMinute} ${period} the day before delivery`
               };
             }
             
-            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at 11:59 AM, it's available
+            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at cutoff time, it's available
             return { unavailable: false, reason: "" };
           }
         }
