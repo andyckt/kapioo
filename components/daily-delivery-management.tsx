@@ -1383,6 +1383,24 @@ export function DailyDeliveryManagement() {
                     <TableBody>
                       {Object.entries(days)
                         .filter(([_, day]) => activeWeekFilter === null || day.week === activeWeekFilter)
+                        .sort(([_, dayA], [__, dayB]) => {
+                          // Define the correct order of days
+                          const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sunday'];
+                          const indexA = dayOrder.indexOf(dayA.displayName.toLowerCase());
+                          const indexB = dayOrder.indexOf(dayB.displayName.toLowerCase());
+                          
+                          // If both days are in the order array, sort by their position
+                          if (indexA !== -1 && indexB !== -1) {
+                            return indexA - indexB;
+                          }
+                          
+                          // If only one is in the array, prioritize it
+                          if (indexA !== -1) return -1;
+                          if (indexB !== -1) return 1;
+                          
+                          // If neither is in the array, maintain original order
+                          return 0;
+                        })
                         .map(([dayId, day]) => (
                         <TableRow key={dayId}>
                           {editingDay === dayId ? (
