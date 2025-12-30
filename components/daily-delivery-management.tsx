@@ -116,19 +116,67 @@ export function DailyDeliveryManagement() {
   // State for bulk activate
   const [isActivatingNextWeek, setIsActivatingNextWeek] = useState(false)
   
-  // Fetch data from API
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true)
+  // 🚀 OPTIMIZATION: Fetch data from API using optimized endpoint
+  const fetchData = async () => {
+    setIsLoading(true)
+    try {
+      console.log('🔄 Fetching days with combos (optimized)...')
+      const startTime = Date.now()
+      
+      // 🚀 Use optimized endpoint that fetches days WITH combos in a single request
       try {
-        // Fetch days
+        const daysResponse = await fetch('/api/days/with-combos', {
+          cache: 'no-store'
+        })
+        const daysData = await daysResponse.json()
+        
+        if (daysData.success && daysData.data) {
+          const loadTime = Date.now() - startTime
+          console.log(`✅ Loaded ${daysData.data.length} days with ${daysData.meta?.totalCombos || 0} combos in ${loadTime}ms (optimized)`)
+          
+          const formattedDays: Record<string, DayData> = {}
+          
+          // Process each day (data already includes combos!)
+          for (const day of daysData.data) {
+            // Format combo data to match our component's expected structure
+            const formattedCombos = day.combos.map((combo: any) => ({
+              id: combo.comboId,
+              name: combo.name,
+              calories: combo.calories,
+              tags: combo.tags,
+              typeA: combo.typeA,
+              typeB: combo.typeB
+            }))
+            
+            formattedDays[day.dayId] = {
+              date: day.date,
+              displayName: day.displayName,
+              week: day.week,
+              isActive: day.isActive ?? true,
+              combos: formattedCombos
+            }
+          }
+          
+          setDays(formattedDays)
+          
+          // Set default selected day if available
+          if (Object.keys(formattedDays).length > 0) {
+            setSelectedDay(Object.keys(formattedDays)[0])
+          }
+        } else {
+          throw new Error('Optimized endpoint failed')
+        }
+      } catch (optimizedError) {
+        console.log('⚠️ Optimized endpoint failed, falling back to original method')
+        
+        // Fallback to original method if optimized endpoint fails
         const daysResponse = await fetch('/api/days')
         const daysData = await daysResponse.json()
         
         if (daysData.success) {
           const formattedDays: Record<string, DayData> = {}
           
-          // Process each day
+          // Process each day (N+1 queries - slower fallback)
           for (const day of daysData.data) {
             // Fetch combos for this day
             const combosResponse = await fetch(`/api/days/${day.dayId}/combos`)
@@ -161,31 +209,37 @@ export function DailyDeliveryManagement() {
           if (Object.keys(formattedDays).length > 0) {
             setSelectedDay(Object.keys(formattedDays)[0])
           }
+          
+          const loadTime = Date.now() - startTime
+          console.log(`✅ Loaded ${Object.keys(formattedDays).length} days in ${loadTime}ms (fallback)`)
         } else {
           throw new Error(daysData.error || 'Failed to fetch days')
         }
-        
-        // Fetch tags
-        const tagsResponse = await fetch('/api/tags')
-        const tagsData = await tagsResponse.json()
-        
-        if (tagsData.success) {
-          setAvailableTags(tagsData.data.map((tag: any) => tag.name))
-        } else {
-          throw new Error(tagsData.error || 'Failed to fetch tags')
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error)
-        toast({
-          title: 'Error',
-          description: `Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          variant: 'destructive'
-        })
-      } finally {
-        setIsLoading(false)
       }
+      
+      // Fetch tags
+      const tagsResponse = await fetch('/api/tags')
+      const tagsData = await tagsResponse.json()
+      
+      if (tagsData.success) {
+        setAvailableTags(tagsData.data.map((tag: any) => tag.name))
+      } else {
+        throw new Error(tagsData.error || 'Failed to fetch tags')
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast({
+        title: 'Error',
+        description: `Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive'
+      })
+    } finally {
+      setIsLoading(false)
     }
-    
+  }
+  
+  // Only fetch data on component mount (not on every render)
+  useEffect(() => {
     fetchData()
   }, [])
   
@@ -1578,6 +1632,14 @@ export function DailyDeliveryManagement() {
           <p className="text-muted-foreground mt-1">Manage delivery dates, menus, and combos</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={fetchData}
+            disabled={isLoading}
+          >
+            <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
           <Button 
             variant="outline"
             onClick={() => {
