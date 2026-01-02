@@ -21,6 +21,7 @@ import {
   updateMealOption,
   deleteMealOption
 } from "@/lib/weekly-subscription"
+import { parseBulkInput } from "@/lib/bulk-parse-utils"
 
 export function WeeklySubscriptionManagement() {
   const { toast } = useToast()
@@ -40,6 +41,8 @@ export function WeeklySubscriptionManagement() {
   const [addingMealToSection, setAddingMealToSection] = useState<string | null>(null)
   const [newInlineMealName, setNewInlineMealName] = useState('')
   const [isSavingInlineMeal, setIsSavingInlineMeal] = useState(false)
+  const [bulkMeals, setBulkMeals] = useState<Record<string, string>>({})
+  const [removeExisting, setRemoveExisting] = useState<Record<string, boolean>>({})
   
   // Fetch delivery sections from API
   const fetchData = async () => {
@@ -620,6 +623,78 @@ export function WeeklySubscriptionManagement() {
     }
   };
   
+  // Bulk add meals
+  const handleBulkAddMeals = async (sectionId: string) => {
+    const sectionBulkMeals = bulkMeals[sectionId] || '';
+    if (!sectionBulkMeals.trim()) return;
+    
+    setIsSavingInlineMeal(true);
+    
+    try {
+      const section = deliverySections.find(s => s.id === sectionId);
+      if (!section) return;
+      
+      // Parse the bulk input using shared utility
+      const allMeals = parseBulkInput(sectionBulkMeals);
+      
+      // Get removeExisting setting for this section (default to true)
+      const shouldRemoveExisting = removeExisting[sectionId] !== false;
+      
+      // Remove existing meals if removeExisting is true
+      if (shouldRemoveExisting && section.day.options.length > 0) {
+        for (const option of section.day.options) {
+          try {
+            await deleteMealOption(option.id);
+          } catch (error) {
+            console.error(`Error removing existing meal "${option.name}":`, error);
+          }
+        }
+      }
+      
+      // Add each meal
+      let successCount = 0;
+      for (const mealName of allMeals) {
+        try {
+          const result = await addMealOption(
+            section.day.day,
+            section.day.weekOffset,
+            {
+              name: mealName,
+              tags: [],
+              active: true
+            }
+          );
+          
+          if (result) {
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`Error adding meal "${mealName}":`, error);
+        }
+      }
+      
+      // Refresh data to show the new meals
+      await fetchData();
+      
+      // Clear the bulk meals for this section
+      setBulkMeals(prev => ({ ...prev, [sectionId]: '' }));
+      
+      toast({
+        title: 'Success',
+        description: `${shouldRemoveExisting ? 'Replaced with' : 'Added'} ${successCount} meal${successCount > 1 ? 's' : ''} to ${section.title}`,
+      });
+    } catch (error) {
+      console.error('Error bulk adding meals:', error);
+      toast({
+        title: "Failed to add",
+        description: "Could not add meals",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingInlineMeal(false);
+    }
+  };
+  
   // Open delete confirmation dialog
   const handleDeleteClick = (meal: MealOption) => {
     setMealToDelete(meal)
@@ -890,6 +965,38 @@ export function WeeklySubscriptionManagement() {
                         <Plus className="h-4 w-4 mr-2" /> Add Meal Option
                       </Button>
                     )}
+                    
+                    {/* Bulk Add Meals Section */}
+                    <div className="pt-3 border-t mt-4">
+                      <Label className="text-sm font-semibold mb-2 block">Bulk Add Meals</Label>
+                      <p className="text-xs text-muted-foreground mb-2">Paste multiple meals (tab, comma, or newline separated)</p>
+                      <textarea
+                        placeholder="e.g. Grilled Chicken with Veggies&#9;Pasta Carbonara&#9;Salmon with Rice"
+                        value={bulkMeals[section.id] || ''}
+                        onChange={(e) => setBulkMeals(prev => ({ ...prev, [section.id]: e.target.value }))}
+                        className="w-full h-20 px-3 py-2 text-sm border rounded-md focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Switch 
+                          id={`remove-existing-${section.id}`}
+                          checked={removeExisting[section.id] !== false}
+                          onCheckedChange={(checked) => setRemoveExisting(prev => ({ ...prev, [section.id]: checked }))}
+                        />
+                        <Label htmlFor={`remove-existing-${section.id}`} className="text-xs cursor-pointer">
+                          Remove existing meals before adding
+                        </Label>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => handleBulkAddMeals(section.id)}
+                        disabled={!(bulkMeals[section.id] || '').trim() || isSavingInlineMeal}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        {removeExisting[section.id] !== false ? 'Replace All Meals' : 'Add All Meals'}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
