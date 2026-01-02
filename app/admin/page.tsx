@@ -102,8 +102,8 @@ export default function AdminDashboardPage() {
       icon: <CalendarIcon className="h-4 w-4" />,
       isHeading: true,
       children: [
-        { id: "daily-delivery", label: "Daily Delivery Management", icon: <Truck className="h-4 w-4" /> },
-        { id: "weekly-subscription", label: "Weekly Delivery Management", icon: <Gift className="h-4 w-4" /> }
+        { id: "daily-delivery", label: "Daily Delivery", icon: <Truck className="h-4 w-4" /> },
+        { id: "weekly-subscription", label: "Weekly Delivery", icon: <Gift className="h-4 w-4" /> }
       ]
     },
     { 
