@@ -89,12 +89,12 @@ import { SettingsManagement } from "@/components/settings-management"
 export default function AdminDashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("dashboard")
+  const [activeTab, setActiveTab] = useState("users")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Define sidebar menu items with groups and submenus
   const sidebarMenuItems = [
-    { id: "dashboard", label: "Dashboard", icon: <BarChart className="h-4 w-4" /> },
+    // { id: "dashboard", label: "Dashboard", icon: <BarChart className="h-4 w-4" /> },
     { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
     { 
       id: "food-management-group", 
@@ -198,6 +198,27 @@ export default function AdminDashboardPage() {
     pages: 1
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [totalUsersCount, setTotalUsersCount] = useState(0)
+  const [userGrowthRate, setUserGrowthRate] = useState(0)
+  const [totalUsersLoading, setTotalUsersLoading] = useState(true)
+
+  // Fetch total users count for the stats card
+  const fetchTotalUsersStats = async () => {
+    try {
+      setTotalUsersLoading(true)
+      const response = await fetch('/api/users/count')
+      const data = await response.json()
+      
+      if (data.success) {
+        setTotalUsersCount(data.data.total)
+        setUserGrowthRate(data.data.growthRate || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching total users stats:', error)
+    } finally {
+      setTotalUsersLoading(false)
+    }
+  }
 
   useEffect(() => {
     // Check if admin is logged in - in a real app, this would verify the session
@@ -222,6 +243,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (activeTab === 'users' || activeTab === 'credits') {
       fetchUsers(usersPagination.page, usersPagination.limit)
+      fetchTotalUsersStats()
       
       // Reset search results when tab changes
       setSearchResults([])
@@ -1413,11 +1435,14 @@ export default function AdminDashboardPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => fetchUsers(usersPagination.page, usersPagination.limit)}
+                      onClick={() => {
+                        fetchUsers(usersPagination.page, usersPagination.limit)
+                        fetchTotalUsersStats()
+                      }}
                       className="h-9 gap-1 flex-1 sm:flex-none"
                     >
-                      <RefreshCcw className={cn("h-4 w-4", usersLoading && "animate-spin")} />
-                      <span className="hidden sm:inline">{usersLoading ? "Refreshing..." : "Refresh"}</span>
+                      <RefreshCcw className={cn("h-4 w-4", (usersLoading || totalUsersLoading) && "animate-spin")} />
+                      <span className="hidden sm:inline">{(usersLoading || totalUsersLoading) ? "Refreshing..." : "Refresh"}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -1440,6 +1465,25 @@ export default function AdminDashboardPage() {
                     </Button>
                   </div>
                 </div>
+                
+                {/* Total Users Stats Card */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {totalUsersLoading ? "..." : totalUsersCount}
+                    </div>
+                    {!totalUsersLoading && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {userGrowthRate >= 0 ? "+" : ""}{userGrowthRate}% from last period
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+                
                 <Card>
                   <CardHeader>
                     <CardTitle>All Users</CardTitle>
