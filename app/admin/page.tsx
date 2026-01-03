@@ -8,6 +8,7 @@ import { CardDescription } from "@/components/ui/card"
 import { CardTitle } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
@@ -1894,14 +1895,14 @@ export default function AdminDashboardPage() {
                           {/* Step 2: Select Service Type */}
                           <div className="space-y-2">
                             <Label>Step 2: Select Service Type</Label>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-2 sm:gap-4">
                               <Button 
                                 variant={serviceType === "daily" ? "default" : "outline"}
                                 onClick={() => {
                                   setServiceType("daily");
                                   setVoucherType("twoDishVoucher");
                                 }}
-                                className="w-full"
+                                className="w-full h-10 text-sm"
                               >
                                 Daily Delivery
                               </Button>
@@ -1911,7 +1912,7 @@ export default function AdminDashboardPage() {
                                   setServiceType("weekly");
                                   setVoucherType("weeklySIXmeals");
                                 }}
-                                className="w-full"
+                                className="w-full h-10 text-sm"
                               >
                                 Weekly Meal Box
                               </Button>
@@ -1922,18 +1923,18 @@ export default function AdminDashboardPage() {
                           {serviceType === "daily" && (
                             <div className="space-y-2">
                               <Label>Step 3: Select Voucher Type</Label>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-2 gap-2 sm:gap-4">
                                 <Button 
                                   variant={voucherType === "twoDishVoucher" ? "default" : "outline"}
                                   onClick={() => setVoucherType("twoDishVoucher")}
-                                  className="w-full"
+                                  className="w-full h-10 text-sm"
                                 >
                                   2-Dish Voucher
                                 </Button>
                                 <Button 
                                   variant={voucherType === "threeDishVoucher" ? "default" : "outline"}
                                   onClick={() => setVoucherType("threeDishVoucher")}
-                                  className="w-full"
+                                  className="w-full h-10 text-sm"
                                 >
                                   3-Dish Voucher
                                 </Button>
@@ -1944,32 +1945,32 @@ export default function AdminDashboardPage() {
                           {serviceType === "weekly" && (
                             <div className="space-y-2">
                               <Label>Step 3: Select Meal Plan</Label>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-2 gap-2 sm:gap-4">
                                 <Button 
                                   variant={voucherType === "weeklySIXmeals" ? "default" : "outline"}
                                   onClick={() => setVoucherType("weeklySIXmeals")}
-                                  className="w-full"
+                                  className="w-full h-10 text-sm"
                                 >
                                   6 Meals/Week
                                 </Button>
                                 <Button 
                                   variant={voucherType === "weeklyEIGHTmeals" ? "default" : "outline"}
                                   onClick={() => setVoucherType("weeklyEIGHTmeals")}
-                                  className="w-full"
+                                  className="w-full h-10 text-sm"
                                 >
                                   8 Meals/Week
                                 </Button>
                                 <Button 
                                   variant={voucherType === "weeklyTENmeals" ? "default" : "outline"}
                                   onClick={() => setVoucherType("weeklyTENmeals")}
-                                  className="w-full"
+                                  className="w-full h-10 text-sm"
                                 >
                                   10 Meals/Week
                                 </Button>
                                 <Button 
                                   variant={voucherType === "weeklyTWELVEmeals" ? "default" : "outline"}
                                   onClick={() => setVoucherType("weeklyTWELVEmeals")}
-                                  className="w-full"
+                                  className="w-full h-10 text-sm"
                                 >
                                   12 Meals/Week
                                 </Button>
@@ -1982,17 +1983,18 @@ export default function AdminDashboardPage() {
                             <Label htmlFor="amount">
                               Step 4: Enter Amount
                             </Label>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2 sm:gap-4">
                               <Input 
                                 id="amount" 
                                 type="number" 
                                 min="1"
                                 defaultValue="10" 
                                 onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
+                                className="h-10"
                               />
                               <div className="grid grid-cols-2 gap-2">
                                 <Button
-                                  className="w-full"
+                                  className="w-full h-10"
                                   onClick={async () => {
                                     if (!selectedUser) {
                                       toast({
@@ -2100,7 +2102,7 @@ export default function AdminDashboardPage() {
                                 </Button>
                                 <Button
                                   variant="destructive"
-                                  className="w-full"
+                                  className="w-full h-10"
                                   onClick={async () => {
                                     if (!selectedUser) {
                                       toast({
@@ -2226,37 +2228,37 @@ export default function AdminDashboardPage() {
                       
                       {/* User Information */}
                       {selectedUser && (
-                        <div className="mt-4 p-4 bg-muted rounded-md">
-                          <h3 className="font-medium text-lg mb-2">User Balance:</h3>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="mt-4 p-3 sm:p-4 bg-muted rounded-md">
+                          <h3 className="font-medium text-base sm:text-lg mb-2">User Balance:</h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
                             <div className="p-2 bg-background rounded border">
-                              <p className="text-sm text-muted-foreground">2-Dish Vouchers</p>
-                              <p className="font-medium text-lg">{selectedUser.twoDishVoucher || 0}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">2-Dish</p>
+                              <p className="font-medium text-base sm:text-lg">{selectedUser.twoDishVoucher || 0}</p>
                             </div>
                             
                             <div className="p-2 bg-background rounded border">
-                              <p className="text-sm text-muted-foreground">3-Dish Vouchers</p>
-                              <p className="font-medium text-lg">{selectedUser.threeDishVoucher || 0}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">3-Dish</p>
+                              <p className="font-medium text-base sm:text-lg">{selectedUser.threeDishVoucher || 0}</p>
                             </div>
                             
                             <div className="p-2 bg-background rounded border">
-                              <p className="text-sm text-muted-foreground">6-Meal Weekly</p>
-                              <p className="font-medium text-lg">{selectedUser.weeklySIXmeals || 0}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">6-Meal</p>
+                              <p className="font-medium text-base sm:text-lg">{selectedUser.weeklySIXmeals || 0}</p>
                             </div>
                             
                             <div className="p-2 bg-background rounded border">
-                              <p className="text-sm text-muted-foreground">8-Meal Weekly</p>
-                              <p className="font-medium text-lg">{(selectedUser as any).weeklyEIGHTmeals || 0}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">8-Meal</p>
+                              <p className="font-medium text-base sm:text-lg">{(selectedUser as any).weeklyEIGHTmeals || 0}</p>
                             </div>
                             
                             <div className="p-2 bg-background rounded border">
-                              <p className="text-sm text-muted-foreground">10-Meal Weekly</p>
-                              <p className="font-medium text-lg">{selectedUser.weeklyTENmeals || 0}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">10-Meal</p>
+                              <p className="font-medium text-base sm:text-lg">{selectedUser.weeklyTENmeals || 0}</p>
                             </div>
                             
                             <div className="p-2 bg-background rounded border">
-                              <p className="text-sm text-muted-foreground">12-Meal Weekly</p>
-                              <p className="font-medium text-lg">{(selectedUser as any).weeklyTWELVEmeals || 0}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">12-Meal</p>
+                              <p className="font-medium text-base sm:text-lg">{(selectedUser as any).weeklyTWELVEmeals || 0}</p>
                             </div>
                           </div>
                         </div>
@@ -2270,7 +2272,8 @@ export default function AdminDashboardPage() {
                     <CardDescription>Recent transactions (credits and vouchers)</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-md border">
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block rounded-md border">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b">
@@ -2359,19 +2362,107 @@ export default function AdminDashboardPage() {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden grid grid-cols-1 gap-3">
+                      {transactionsLoading ? (
+                        <Card className="p-8">
+                          <div className="flex justify-center">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                          </div>
+                        </Card>
+                      ) : transactions.length > 0 ? (
+                        transactions.map((transaction) => {
+                          // Find user for this transaction
+                          const userForTransaction = users.find(u => u._id === transaction.userId);
+                          
+                          const displayUser = usersLoading ? (
+                            <span className="text-muted-foreground text-xs">Loading...</span>
+                          ) : userForTransaction ? (
+                            <span className="text-sm font-medium">{userForTransaction.name || userForTransaction.userID}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              {transaction.userId?.toString().substring(0, 8)}...
+                            </span>
+                          );
+
+                          const transactionType = transaction.type === 'credit' ? 'Add' : transaction.type === 'debit' ? 'Deduct' : 
+                            transaction.type === 'refund' ? 'Refund' : transaction.type;
+                          
+                          const isPositive = transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund';
+                          
+                          const voucherType = transaction.description ? (
+                            transaction.description.includes('2dish') || transaction.description.includes('twoDishVoucher') ? '2-Dish' :
+                            transaction.description.includes('3dish') || transaction.description.includes('threeDishVoucher') ? '3-Dish' :
+                            transaction.description.includes('6weekly') || transaction.description.includes('weeklySIXmeals') ? '6-Meal' :
+                            transaction.description.includes('8weekly') || transaction.description.includes('weeklyEIGHTmeals') ? '8-Meal' :
+                            transaction.description.includes('10weekly') || transaction.description.includes('weeklyTENmeals') ? '10-Meal' :
+                            transaction.description.includes('12weekly') || transaction.description.includes('weeklyTWELVEmeals') ? '12-Meal' :
+                            ''
+                          ) : '';
+                          
+                          return (
+                            <Card key={transaction._id} className={`border-l-4 ${isPositive ? 'border-green-500' : 'border-red-500'}`}>
+                              <CardHeader className="pb-2 pt-3 px-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <CardTitle className="text-sm font-semibold truncate">
+                                      {displayUser}
+                                    </CardTitle>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`}
+                                    </p>
+                                  </div>
+                                  <Badge variant={isPositive ? "default" : "destructive"} className="text-xs">
+                                    {transactionType}
+                                  </Badge>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="space-y-2 pb-3 px-3">
+                                {/* Amount */}
+                                <div className="flex items-center justify-between py-2 border-y">
+                                  <span className="text-xs text-muted-foreground">Amount</span>
+                                  <span className={`text-lg font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                    {isPositive ? '+' : '-'}{transaction.amount}
+                                    {voucherType && <span className="text-xs ml-1">({voucherType})</span>}
+                                  </span>
+                                </div>
+
+                                {/* Date */}
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Date</span>
+                                  <span>{new Date(transaction.createdAt).toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}</span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                      ) : (
+                        <Card className="p-8">
+                          <p className="text-center text-muted-foreground">
+                            No transactions found
+                          </p>
+                        </Card>
+                      )}
+                    </div>
                   </CardContent>
                   <CardFooter>
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-4">
+                      <div className="flex items-center justify-center sm:justify-start space-x-2">
                         <Button 
                           variant="outline" 
                           size="sm" 
                           onClick={() => handleTransactionPagination('prev')}
                           disabled={transactionsPagination.page === 1 || transactionsLoading}
+                          className="flex-1 sm:flex-none"
                         >
                           Previous
                         </Button>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-muted-foreground whitespace-nowrap">
                           Page {transactionsPagination.page} of {transactionsPagination.pages}
                         </div>
                         <Button 
@@ -2379,12 +2470,13 @@ export default function AdminDashboardPage() {
                           size="sm" 
                           onClick={() => handleTransactionPagination('next')}
                           disabled={transactionsPagination.page === transactionsPagination.pages || transactionsLoading}
+                          className="flex-1 sm:flex-none"
                         >
                           Next
                         </Button>
                       </div>
                       
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center justify-center sm:justify-end space-x-2">
                         <span className="text-sm text-muted-foreground">Rows per page:</span>
                         <Select
                           value={transactionsPagination.limit.toString()}

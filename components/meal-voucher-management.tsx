@@ -343,16 +343,16 @@ export function MealVoucherManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-3xl font-bold tracking-tight">2Dish 3Dish Voucher Requests</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="flex items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 gap-1"
+                  className="h-9 gap-1 flex-1 sm:flex-none"
                 >
                   <CalendarDays className="h-4 w-4" />
                   {dateRange.startDate ? (
@@ -398,7 +398,7 @@ export function MealVoucherManagement() {
                 });
                 fetchVoucherRequests();
               }}
-              className="h-9"
+              className="h-9 flex-1 sm:flex-none"
               disabled={!dateRange.startDate && !dateRange.endDate}
             >
               Clear
@@ -408,7 +408,7 @@ export function MealVoucherManagement() {
             variant="outline"
             size="sm"
             onClick={exportToCSV}
-            className="h-9 gap-1"
+            className="h-9 gap-1 hidden sm:flex"
             disabled={isExporting || requests.length === 0}
           >
             {isExporting ? (
@@ -426,11 +426,31 @@ export function MealVoucherManagement() {
           <Button
             variant="outline"
             size="sm"
+            onClick={exportToCSV}
+            className="h-9 gap-1 flex-1 sm:hidden"
+            disabled={isExporting || requests.length === 0}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Export
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="h-4 w-4" />
+                Export
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleRefresh}
-            className="h-9 gap-1"
+            className="h-9 gap-1 flex-1 sm:flex-none"
           >
             <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? "Refreshing..." : "Refresh"}
+            <span className="hidden sm:inline">{isLoading ? "Refreshing..." : "Refresh"}</span>
+            <span className="sm:hidden">{isLoading ? "..." : "Refresh"}</span>
           </Button>
         </div>
       </div>
@@ -465,15 +485,15 @@ export function MealVoucherManagement() {
               </div>
             </div>
             
-            <div className="rounded-md border">
+            {/* Desktop Table View */}
+            <div className="hidden md:block rounded-md border">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-4 font-medium">Request ID</th>
                     <th className="text-left p-4 font-medium">User</th>
-                    <th className="text-left p-4 font-medium hidden md:table-cell">Vouchers</th>
-                    <th className="text-left p-4 font-medium hidden md:table-cell">Amount</th>
-                    <th className="text-left p-4 font-medium hidden">Reference</th>
+                    <th className="text-left p-4 font-medium">Vouchers</th>
+                    <th className="text-left p-4 font-medium">Amount</th>
                     <th className="text-left p-4 font-medium hidden lg:table-cell">Date</th>
                     <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-center p-4 font-medium">Actions</th>
@@ -496,19 +516,16 @@ export function MealVoucherManagement() {
                             <div className="text-sm text-muted-foreground">{request.userId?.email || "Unknown"}</div>
                           </div>
                         </td>
-                        <td className="p-4 align-middle hidden md:table-cell">
+                        <td className="p-4 align-middle">
                           {getVoucherTypeDisplay(request.type, request.quantity)}
                         </td>
-                        <td className="p-4 align-middle hidden md:table-cell">
+                        <td className="p-4 align-middle">
                           <div>${request.amount}</div>
                           {request.referenceNumber && (
                             <div className="text-xs text-blue-600 font-medium mt-1">
                               Ref No: {request.referenceNumber}
                             </div>
                           )}
-                        </td>
-                        <td className="p-4 align-middle hidden">
-                          {request.referenceNumber || <span className="text-muted-foreground text-sm">No reference</span>}
                         </td>
                         <td className="p-4 align-middle hidden lg:table-cell">{formatDate(request.createdAt)}</td>
                         <td className="p-4 align-middle">{getStatusBadge(request.status)}</td>
@@ -557,6 +574,124 @@ export function MealVoucherManagement() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden grid grid-cols-1 gap-3">
+              {isLoading ? (
+                <Card className="p-8">
+                  <div className="flex justify-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                </Card>
+              ) : filteredRequests.length > 0 ? (
+                filteredRequests.map((request) => (
+                  <Card 
+                    key={request.requestId} 
+                    className={`border-l-4 ${
+                      request.status === 'pending' 
+                        ? 'border-yellow-500' 
+                        : request.status === 'approved' 
+                        ? 'border-green-500' 
+                        : 'border-red-500'
+                    }`}
+                  >
+                    <CardHeader className="pb-2 pt-3 px-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-sm font-semibold truncate">
+                            {request.userId?.name || "Unknown"}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            ID: {request.requestId}
+                          </p>
+                        </div>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 pb-2 px-3">
+                      {/* Amount & Voucher Type - Single Row */}
+                      <div className="flex items-center justify-between py-2 border-y">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{request.quantity}× {request.type === 'twoDish' ? '2-Dish' : '3-Dish'}</span>
+                        </div>
+                        <span className="text-xl font-bold">${request.amount}</span>
+                      </div>
+
+                      {/* Compact Info Grid */}
+                      <div className="space-y-1.5 text-xs">
+                        {/* Reference Number */}
+                        {request.referenceNumber && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground w-12 flex-shrink-0">Ref:</span>
+                            <span className="font-mono font-medium truncate">{request.referenceNumber}</span>
+                          </div>
+                        )}
+
+                        {/* Email */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground w-12 flex-shrink-0">Email:</span>
+                          <span className="truncate">{request.userId?.email || "Unknown"}</span>
+                        </div>
+
+                        {/* Date */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground w-12 flex-shrink-0">Date:</span>
+                          <span>{formatDate(request.createdAt)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-2 pb-3 px-3">
+                      {request.status === 'pending' ? (
+                        <div className="grid grid-cols-3 gap-2 w-full">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewRequest(request)}
+                            className="w-full h-9"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveDialog(request)}
+                            className="w-full h-9 bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            <span className="text-xs">Approve</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeclineDialog(request)}
+                            className="w-full h-9 border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            <span className="text-xs">Decline</span>
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewRequest(request)}
+                          className="w-full h-9"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          <span className="text-xs">View Details</span>
+                        </Button>
+                      )}
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
+                <Card className="p-8">
+                  <p className="text-center text-muted-foreground">
+                    No voucher purchase requests found
+                  </p>
+                </Card>
+              )}
             </div>
           </CardContent>
         </Card>
