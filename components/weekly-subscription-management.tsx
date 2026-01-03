@@ -745,45 +745,52 @@ export function WeeklySubscriptionManagement() {
   return (
     <div className="space-y-6">
       {/* Header with buttons */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Weekly Meal Box Management</h2>
-          <p className="text-muted-foreground mt-1">Manage Sunday and Tuesday deliveries across 3 weeks</p>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Weekly Meal Box Management</h2>
+          <p className="text-sm text-muted-foreground mt-1">Manage Sunday and Tuesday deliveries across 3 weeks</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline"
+            size="sm"
             onClick={fetchData}
             disabled={isLoading}
+            className="flex-1 sm:flex-none"
           >
-            <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Refreshing...' : 'Refresh'}
+            <RefreshCcw className={`h-4 w-4 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isLoading ? 'Refreshing...' : 'Refresh'}</span>
           </Button>
           <Button 
             variant="outline"
+            size="sm"
             onClick={() => {
               setShowHistoryModal(true);
               fetchHistory();
             }}
+            className="flex-1 sm:flex-none"
           >
-            <History className="h-4 w-4 mr-2" />
-            View History
+            <History className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">View History</span>
           </Button>
           <Button 
             variant="default"
-            className="bg-blue-600 hover:bg-blue-700"
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none"
             onClick={rollForwardWeek}
             disabled={isRollingForward}
           >
             {isRollingForward ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Rolling Forward...
+                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+                <span className="hidden sm:inline">Rolling Forward...</span>
+                <span className="sm:hidden">Rolling...</span>
               </>
             ) : (
               <>
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Roll Forward Week
+                <RefreshCcw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Roll Forward Week</span>
+                <span className="sm:hidden">Roll</span>
               </>
             )}
           </Button>
@@ -799,19 +806,19 @@ export function WeeklySubscriptionManagement() {
             </div>
           </div>
         ) : deliverySections.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
             {deliverySections.map((section) => (
               <Card key={section.id} className={`border ${!section.day.active ? 'border-dashed opacity-70' : ''}`}>
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-5 w-5 text-muted-foreground" />
-                      <CardTitle className="text-lg">{section.title}</CardTitle>
+                      <CardTitle className="text-base sm:text-lg">{section.title}</CardTitle>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-2">
                         <Input 
-                          className="w-40 text-sm" 
+                          className="flex-1 sm:w-40 text-sm" 
                           value={section.day.date} 
                           onChange={(e) => {
                             setDeliverySections(sections => 
@@ -890,36 +897,42 @@ export function WeeklySubscriptionManagement() {
                     {section.day.options.map((option) => (
                       <div 
                         key={option.id} 
-                        className={`flex items-center justify-between p-3 rounded-md border ${!option.active ? 'border-dashed opacity-70' : 'bg-muted/50'}`}
+                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-md border gap-3 ${!option.active ? 'border-dashed opacity-70' : 'bg-muted/50'}`}
                       >
-                        <div>
-                          <div className="font-medium">{option.name}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{option.name}</div>
+                          <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
                             {option.tags?.map((tag) => (
-                              <Badge key={tag} variant="outline" className="mr-1">{tag}</Badge>
+                              <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
                             ))}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Switch 
-                            id={`${option.id}-active`} 
-                            checked={option.active} 
-                            onCheckedChange={() => toggleMealActive(section.id, option.id)} 
-                            className="mr-2"
-                          />
-                          <Button variant="ghost" size="icon" onClick={() => handleEditMeal(option)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(option)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center gap-2 justify-between sm:justify-end">
+                          <div className="flex items-center gap-2">
+                            <Switch 
+                              id={`${option.id}-active`} 
+                              checked={option.active} 
+                              onCheckedChange={() => toggleMealActive(section.id, option.id)} 
+                            />
+                            <Label htmlFor={`${option.id}-active`} className="text-xs sm:hidden">
+                              {option.active ? 'Active' : 'Inactive'}
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditMeal(option)} className="h-8 w-8">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(option)} className="h-8 w-8">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
                     
                     {/* Inline Add Meal Input */}
                     {addingMealToSection === section.id ? (
-                      <div className="flex items-center gap-2 p-3 rounded-md border border-primary bg-primary/5">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 rounded-md border border-primary bg-primary/5">
                         <Input
                           autoFocus
                           placeholder="Enter meal name and press Enter..."
@@ -935,30 +948,38 @@ export function WeeklySubscriptionManagement() {
                           disabled={isSavingInlineMeal}
                           className="flex-1"
                         />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSaveInlineMeal(section.id)}
-                          disabled={isSavingInlineMeal || !newInlineMealName.trim()}
-                        >
-                          {isSavingInlineMeal ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleCancelInlineAdd}
-                          disabled={isSavingInlineMeal}
-                        >
-                          ✕
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSaveInlineMeal(section.id)}
+                            disabled={isSavingInlineMeal || !newInlineMealName.trim()}
+                            className="flex-1 sm:flex-none"
+                          >
+                            {isSavingInlineMeal ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Save className="h-4 w-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Save</span>
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelInlineAdd}
+                            disabled={isSavingInlineMeal}
+                            className="flex-1 sm:flex-none"
+                          >
+                            ✕
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <Button 
                         variant="outline" 
+                        size="sm"
                         className="w-full mt-2" 
                         onClick={() => handleAddMealClick(section.id)}
                       >
@@ -1011,7 +1032,7 @@ export function WeeklySubscriptionManagement() {
       
       {/* Edit Meal Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Meal Option</DialogTitle>
             <DialogDescription>
@@ -1020,22 +1041,22 @@ export function WeeklySubscriptionManagement() {
           </DialogHeader>
           {editingMeal && (
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="meal-name" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                <Label htmlFor="meal-name" className="sm:text-right">
                   Name
                 </Label>
                 <Input
                   id="meal-name"
                   value={editingMeal.name}
                   onChange={(e) => setEditingMeal({...editingMeal, name: e.target.value})}
-                  className="col-span-3"
+                  className="sm:col-span-3"
                 />
               </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="meal-tags" className="text-right pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-4">
+              <Label htmlFor="meal-tags" className="sm:text-right sm:pt-2">
                 Tags
               </Label>
-              <div className="col-span-3 space-y-2">
+              <div className="sm:col-span-3 space-y-2">
                 <div className="flex flex-wrap gap-2">
                   {editingMeal.tags?.map((tag, index) => (
                     <Badge 
