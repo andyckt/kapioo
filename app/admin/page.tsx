@@ -12,7 +12,7 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -2460,10 +2460,10 @@ export default function AdminDashboardPage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <h2 className="text-3xl font-bold tracking-tight">Weekly Purchase Requests</h2>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Weekly Purchase Requests</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1 sm:flex-none">
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -2520,7 +2520,7 @@ export default function AdminDashboardPage() {
                           });
                           fetchCreditRequests(1);
                         }}
-                        className="h-9"
+                        className="h-9 flex-1 sm:flex-none"
                         disabled={!creditRequestsDateRange.startDate && !creditRequestsDateRange.endDate}
                       >
                         Clear
@@ -2530,18 +2530,19 @@ export default function AdminDashboardPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => exportCreditRequestsToCSV()}
-                      className="h-9 gap-1"
+                      className="h-9 gap-1 flex-1 sm:flex-none"
                       disabled={isExportingCreditRequests || creditRequests.length === 0}
                     >
                       {isExportingCreditRequests ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Exporting...
+                          <Loader2 className="h-4 w-4 sm:mr-1 animate-spin" />
+                          <span className="hidden sm:inline">Exporting...</span>
                         </>
                       ) : (
                         <>
-                          <FileSpreadsheet className="h-4 w-4" />
-                          Export to CSV
+                          <FileSpreadsheet className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Export to CSV</span>
+                          <span className="sm:hidden">Export</span>
                         </>
                       )}
                     </Button>
@@ -2549,10 +2550,10 @@ export default function AdminDashboardPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => fetchCreditRequests(creditRequestsPagination.page)}
-                      className="h-9 gap-1"
+                      className="h-9 gap-1 flex-1 sm:flex-none"
                     >
                       <RefreshCcw className={cn("h-4 w-4", creditRequestsLoading && "animate-spin")} />
-                      {creditRequestsLoading ? "Refreshing..." : "Refresh"}
+                      <span className="hidden sm:inline">{creditRequestsLoading ? "Refreshing..." : "Refresh"}</span>
                     </Button>
                   </div>
                 </div>
@@ -2562,7 +2563,8 @@ export default function AdminDashboardPage() {
                     <CardDescription>Review and process credit purchase requests from users</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-md border">
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block rounded-md border">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b">
@@ -2700,9 +2702,175 @@ export default function AdminDashboardPage() {
                         </tbody>
                       </table>
                     </div>
+                    
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                      {creditRequestsLoading ? (
+                        <div className="flex justify-center items-center py-12">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : creditRequests.length > 0 ? (
+                        creditRequests.map((request) => {
+                          const user = request.userId;
+                          const userName = user ? (user.name || user.userID) : 'Unknown User';
+                          const userEmail = user?.email || '';
+                          
+                          let statusColor = 'bg-gray-100 text-gray-800';
+                          let statusBorderColor = 'border-gray-200';
+                          let statusText = request.status;
+                          
+                          switch(request.status) {
+                            case 'pending':
+                              statusColor = 'bg-yellow-50 text-yellow-800 border-yellow-200';
+                              statusBorderColor = 'border-yellow-200';
+                              statusText = 'Pending';
+                              break;
+                            case 'approved':
+                              statusColor = 'bg-green-50 text-green-800 border-green-200';
+                              statusBorderColor = 'border-green-200';
+                              statusText = 'Approved';
+                              break;
+                            case 'declined':
+                              statusColor = 'bg-red-50 text-red-800 border-red-200';
+                              statusBorderColor = 'border-red-200';
+                              statusText = 'Declined';
+                              break;
+                          }
+                          
+                          return (
+                            <Card key={request._id} className={`overflow-hidden border-l-4 ${statusBorderColor} shadow-sm hover:shadow-md transition-shadow`}>
+                              <CardHeader className="pb-3 bg-muted/30">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <CardTitle className="text-base font-semibold truncate">{userName}</CardTitle>
+                                    {userEmail && (
+                                      <p className="text-xs text-muted-foreground truncate mt-0.5">{userEmail}</p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      <span className="font-medium">ID:</span> {request.requestId}
+                                    </p>
+                                  </div>
+                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
+                                    {statusText}
+                                  </span>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="pb-3 pt-4 space-y-3">
+                                {/* Amount - Most Important */}
+                                <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground mb-0.5">Payment Amount</p>
+                                      <p className="text-2xl font-bold text-primary">${request.amount.toFixed(2)}</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">via e-Transfer</p>
+                                    </div>
+                                    <DollarSign className="h-8 w-8 text-primary/30" />
+                                  </div>
+                                </div>
+                                
+                                {/* Plan Details */}
+                                <div className="bg-muted/50 p-3 rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                                    <Package className="h-3 w-3" />
+                                    Plan Details
+                                  </p>
+                                  <p className="font-medium text-sm">
+                                    {request.planDescription || 'No plan details'}
+                                  </p>
+                                  {request.status === 'approved' && (
+                                    <div className="flex items-center gap-1 mt-2">
+                                      <CheckCircle className="h-3 w-3 text-green-600" />
+                                      <span className="text-xs text-green-600 font-medium">Plan approved</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Reference & Date */}
+                                <div className="space-y-2">
+                                  {request.referenceNumber && (
+                                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+                                      <div className="flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full flex-shrink-0">
+                                        <span className="text-blue-600 text-xs font-bold">#</span>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs text-blue-600 font-medium truncate">{request.referenceNumber}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30">
+                                    <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <p className="text-xs font-medium">
+                                      {new Date(request.createdAt).toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                              <CardFooter className="pt-0 pb-3 flex flex-col gap-2">
+                                {request.status === 'pending' ? (
+                                  <>
+                                    <div className="flex gap-2 w-full">
+                                      <Button 
+                                        variant="default" 
+                                        size="sm" 
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                        onClick={() => handleApproveRequest(request)}
+                                      >
+                                        <Check className="h-4 w-4 mr-1" />
+                                        Approve
+                                      </Button>
+                                      <Button 
+                                        variant="destructive" 
+                                        size="sm" 
+                                        className="flex-1 shadow-sm"
+                                        onClick={() => handleDeclineRequest(request)}
+                                      >
+                                        <X className="h-4 w-4 mr-1" />
+                                        Decline
+                                      </Button>
+                                    </div>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => handleViewRequest(request)}
+                                      className="w-full"
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      View Details
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleViewRequest(request)}
+                                    className="w-full"
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View Details
+                                  </Button>
+                                )}
+                              </CardFooter>
+                            </Card>
+                          );
+                        })
+                      ) : (
+                        <div className="flex flex-col justify-center items-center py-12 text-center">
+                          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-3">
+                            <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                          <p className="text-muted-foreground font-medium">No credit purchase requests found</p>
+                          <p className="text-xs text-muted-foreground mt-1">Requests will appear here when submitted</p>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                   <CardFooter>
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4">
                       <div className="flex items-center space-x-2">
                         <Button 
                           variant="outline" 
@@ -2712,7 +2880,7 @@ export default function AdminDashboardPage() {
                         >
                           Previous
                         </Button>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-muted-foreground whitespace-nowrap">
                           Page {creditRequestsPagination.page} of {creditRequestsPagination.pages}
                         </div>
                         <Button 
@@ -2726,7 +2894,7 @@ export default function AdminDashboardPage() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground">Rows per page:</span>
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
                         <Select
                           value={creditRequestsPagination.limit.toString()}
                           onValueChange={(value) => {
