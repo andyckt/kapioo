@@ -1626,19 +1626,21 @@ export function DailyDeliveryManagement() {
   return (
     <div className="flex-1 space-y-6">
       {/* Header with View History Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Daily Delivery Management</h2>
-          <p className="text-muted-foreground mt-1">Manage delivery dates, menus, and combos</p>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Daily Delivery Management</h2>
+          <p className="text-sm text-muted-foreground mt-1">Manage delivery dates, menus, and combos</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline"
             onClick={fetchData}
             disabled={isLoading}
+            size="sm"
+            className="flex-1 sm:flex-none"
           >
-            <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Refreshing...' : 'Refresh'}
+            <RefreshCcw className={`h-4 w-4 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isLoading ? 'Refreshing...' : 'Refresh'}</span>
           </Button>
           <Button 
             variant="outline"
@@ -1646,26 +1648,30 @@ export function DailyDeliveryManagement() {
               setShowHistoryModal(true);
               fetchHistory();
             }}
+            size="sm"
+            className="flex-1 sm:flex-none"
           >
-            <History className="h-4 w-4 mr-2" />
-            View History
+            <History className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">View History</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="default"
-                className="bg-green-600 hover:bg-green-700"
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
                 disabled={isActivatingNextWeek}
               >
                 {isActivatingNextWeek ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
+                    <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+                    <span className="hidden sm:inline">Processing...</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Manage Status
+                    <CheckCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Manage Status</span>
+                    <span className="sm:hidden">Status</span>
                     <ChevronDown className="h-4 w-4 ml-2" />
                   </>
                 )}
@@ -1722,14 +1728,15 @@ export function DailyDeliveryManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-lg font-medium">Current Delivery Schedule</h3>
+                <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    <h3 className="text-base md:text-lg font-medium">Current Delivery Schedule</h3>
                     <div className="flex items-center gap-2">
                       <Button 
                         variant={activeWeekFilter === null ? "default" : "outline"} 
                         size="sm"
                         onClick={() => setActiveWeekFilter(null)}
+                        className="flex-1 sm:flex-none"
                       >
                         All
                       </Button>
@@ -1737,6 +1744,7 @@ export function DailyDeliveryManagement() {
                         variant={activeWeekFilter === 1 ? "default" : "outline"} 
                         size="sm"
                         onClick={() => setActiveWeekFilter(1)}
+                        className="flex-1 sm:flex-none"
                       >
                         This Week
                       </Button>
@@ -1744,53 +1752,58 @@ export function DailyDeliveryManagement() {
                         variant={activeWeekFilter === 2 ? "default" : "outline"} 
                         size="sm"
                         onClick={() => setActiveWeekFilter(2)}
+                        className="flex-1 sm:flex-none"
                       >
                         Next Week
                       </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button 
                       size="sm"
-                      className="flex items-center h-8 px-3 text-xs"
+                      className="flex items-center h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none"
                       onClick={() => {
                         setSelectedWeekNumber(1);
                         setShowDayCreationModal(true);
                       }}
                     >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Day (This Week)
+                      <Plus className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Add Day (This Week)</span>
+                      <span className="sm:hidden">This Week</span>
                     </Button>
                     
                     <Button 
                       size="sm"
                       variant="secondary"
-                      className="flex items-center h-8 px-3 text-xs"
+                      className="flex items-center h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none"
                       onClick={() => {
                         setSelectedWeekNumber(2);
                         setShowDayCreationModal(true);
                       }}
                     >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Day (Next Week)
+                      <Plus className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Add Day (Next Week)</span>
+                      <span className="sm:hidden">Next Week</span>
                     </Button>
                     
                     <Button 
                       size="sm"
                       variant="outline"
-                      className="h-8 px-3 text-xs"
+                      className="h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none"
                       onClick={rollForwardWeek}
                       disabled={isRollingForward}
                     >
                       {isRollingForward ? (
                         <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Rolling Forward...
+                          <Loader2 className="h-3 w-3 sm:mr-1 animate-spin" />
+                          <span className="hidden sm:inline">Rolling Forward...</span>
+                          <span className="sm:hidden">Rolling...</span>
                         </>
                       ) : (
                         <>
-                          <RefreshCcw className="h-3 w-3 mr-1" />
-                          Roll Forward Week
+                          <RefreshCcw className="h-3 w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Roll Forward Week</span>
+                          <span className="sm:hidden">Roll</span>
                         </>
                       )}
                     </Button>
@@ -1998,7 +2011,8 @@ export function DailyDeliveryManagement() {
                   </div>
                 </div>
                 
-                <div className="border rounded-md">
+                {/* Desktop Table View */}
+                <div className="hidden md:block border rounded-md">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -2172,6 +2186,194 @@ export function DailyDeliveryManagement() {
                     </TableBody>
                   </Table>
                 </div>
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {Object.entries(days)
+                    .filter(([_, day]) => activeWeekFilter === null || day.week === activeWeekFilter)
+                    .sort(([_, dayA], [__, dayB]) => {
+                      // First sort by week (This Week = 1, Next Week = 2)
+                      if (dayA.week !== dayB.week) {
+                        return dayA.week < dayB.week ? -1 : 1;
+                      }
+                      
+                      // Within the same week, sort by day order
+                      const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sunday'];
+                      const indexA = dayOrder.indexOf(dayA.displayName.toLowerCase());
+                      const indexB = dayOrder.indexOf(dayB.displayName.toLowerCase());
+                      
+                      // If both days are in the order array, sort by their position
+                      if (indexA !== -1 && indexB !== -1) {
+                        return indexA - indexB;
+                      }
+                      
+                      // If only one is in the array, prioritize it
+                      if (indexA !== -1) return -1;
+                      if (indexB !== -1) return 1;
+                      
+                      // If neither is in the array, maintain original order
+                      return 0;
+                    })
+                    .map(([dayId, day]) => (
+                      <Card key={dayId} className="overflow-hidden">
+                        {editingDay === dayId ? (
+                          <CardContent className="p-4 space-y-3">
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Day</Label>
+                              <Input
+                                value={editedDisplayName}
+                                onChange={(e) => setEditedDisplayName(e.target.value)}
+                                className="w-full"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Date</Label>
+                              <Input
+                                value={editedDate}
+                                onChange={(e) => setEditedDate(e.target.value)}
+                                className="w-full"
+                                placeholder="e.g. Sep 1"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Week</Label>
+                              <Select value={editedWeek.toString()} onValueChange={(value) => setEditedWeek(parseInt(value))}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Select week" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1">This Week</SelectItem>
+                                  <SelectItem value="2">Next Week</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Status</Label>
+                              <Select value={editedIsActive ? 'active' : 'inactive'} onValueChange={(value) => setEditedIsActive(value === 'active')}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="active">Active</SelectItem>
+                                  <SelectItem value="inactive">Inactive</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                              <Button variant="default" size="sm" onClick={saveEditedDay} className="flex-1 bg-green-600 hover:bg-green-700">
+                                <Check className="h-4 w-4 mr-1" />
+                                Save
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={cancelEditingDay} className="flex-1">
+                                <X className="h-4 w-4 mr-1" />
+                                Cancel
+                              </Button>
+                            </div>
+                          </CardContent>
+                        ) : (
+                          <>
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                  <CardTitle className="text-base capitalize">{day.displayName}</CardTitle>
+                                </div>
+                                <Badge 
+                                  variant="outline" 
+                                  className={day.isActive !== false ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-700"}
+                                >
+                                  {day.isActive !== false ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pb-3">
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <p className="text-xs text-muted-foreground mb-1">Date</p>
+                                  <p className="font-medium">{day.date}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground mb-1">Week</p>
+                                  <Badge variant="outline" className={day.week === 1 ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}>
+                                    {day.week === 1 ? 'This Week' : 'Next Week'}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </CardContent>
+                            <CardFooter className="pt-0 pb-3 flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => startEditingDay(dayId)} className="flex-1">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={async () => {
+                                  // Show confirmation dialog
+                                  if (confirm(`Are you sure you want to delete ${day.displayName} (${day.date})?\n\nDay ID: ${dayId}`)) {
+                                    try {
+                                      console.log('Attempting to delete day:', { dayId, displayName: day.displayName, date: day.date });
+                                      
+                                      // Delete day via API
+                                      const response = await fetch(`/api/days/${encodeURIComponent(dayId)}`, {
+                                        method: 'DELETE',
+                                      });
+                                      
+                                      console.log('Delete response status:', response.status);
+                                      
+                                      const data = await response.json();
+                                      console.log('Delete response data:', data);
+                                      
+                                      if (data.success) {
+                                        // Also delete all combos associated with this day
+                                        const combosToDelete = day.combos || [];
+                                        console.log(`Deleting ${combosToDelete.length} combos for this day`);
+                                        
+                                        for (const combo of combosToDelete) {
+                                          try {
+                                            await fetch(`/api/combos/${encodeURIComponent(combo.id)}`, {
+                                              method: 'DELETE',
+                                            });
+                                          } catch (comboError) {
+                                            console.warn('Error deleting combo:', combo.id, comboError);
+                                          }
+                                        }
+                                        
+                                        // Update local state
+                                        setDays(prevDays => {
+                                          const newDays = { ...prevDays };
+                                          delete newDays[dayId];
+                                          return newDays;
+                                        });
+                                        
+                                        toast({
+                                          title: 'Success',
+                                          description: 'Day deleted successfully',
+                                        });
+                                      } else {
+                                        throw new Error(data.error || 'Failed to delete day');
+                                      }
+                                    } catch (error) {
+                                      console.error('Error deleting day:', error);
+                                      toast({
+                                        title: 'Error',
+                                        description: `Failed to delete day: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                        variant: 'destructive'
+                                      });
+                                    }
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </CardFooter>
+                          </>
+                        )}
+                      </Card>
+                    ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -2186,11 +2388,11 @@ export function DailyDeliveryManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <Label htmlFor="day-select" className="text-base font-medium">Select Day</Label>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                  <div className="flex-1">
+                    <Label htmlFor="day-select" className="text-sm sm:text-base font-medium">Select Day</Label>
                     <Select value={selectedDay} onValueChange={setSelectedDay}>
-                      <SelectTrigger id="day-select" className="w-[250px] mt-1">
+                      <SelectTrigger id="day-select" className="w-full sm:w-[250px] mt-1">
                         <SelectValue placeholder="Select day" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px] overflow-y-auto">
@@ -2234,6 +2436,8 @@ export function DailyDeliveryManagement() {
                     </Select>
                   </div>
                   <Button
+                    size="sm"
+                    className="w-full sm:w-auto"
                     onClick={async () => {
                       try {
                         if (!selectedDay) {
@@ -2447,7 +2651,7 @@ export function DailyDeliveryManagement() {
                     {combo.id === editingCombo ? (
                       <CardContent className="pt-4">
                         <div className="space-y-6">
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor={`combo-name-${combo.id}`}>Combo Name</Label>
                               <Input 
