@@ -114,7 +114,7 @@ export default function LocationMealPlans() {
   const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
   
   return (
-    <section className={`pt-12 md:pt-16 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-hidden ${selectedLocation ? 'pb-8 md:pb-16' : 'pb-6 md:pb-10'}`}>
+    <section className="pt-12 md:pt-16 pb-12 md:pb-20 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-visible">
       {/* Decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-[10%] w-[400px] h-[400px] bg-gradient-to-tr from-[#C2884E]/5 to-transparent rounded-full blur-[80px]"></div>
@@ -171,7 +171,7 @@ export default function LocationMealPlans() {
         
         {/* Location Selector */}
         <motion.div 
-          className="relative w-full max-w-md mx-auto mb-8 md:mb-16 z-20"
+          className="relative w-full max-w-md mx-auto mb-8 md:mb-16 z-50"
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.5 }}
@@ -196,8 +196,18 @@ export default function LocationMealPlans() {
             
             {/* Dropdown */}
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-[#C2884E]/20 shadow-xl overflow-hidden z-30 w-full">
-                <div className="max-h-64 overflow-y-auto py-2">
+              <>
+                {/* Backdrop overlay */}
+                <div 
+                  className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsDropdownOpen(false)
+                  }}
+                />
+                {/* Dropdown menu */}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-xl border border-[#C2884E]/20 shadow-2xl overflow-hidden z-50 w-full max-w-sm">
+                  <div className="max-h-80 overflow-y-auto py-2 scrollbar-hide">
                   {allLocations.map((location) => (
                     <div 
                       key={location}
@@ -219,6 +229,7 @@ export default function LocationMealPlans() {
                   ))}
                 </div>
               </div>
+              </>
             )}
           </div>
         </motion.div>
