@@ -97,6 +97,7 @@ export function DailyDeliveryCheckout({
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
   const [popoverOpen, setPopoverOpen] = useState(false)
+  const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
 
   // Calculate total vouchers needed by type
   const vouchersNeeded = cart.reduce(
@@ -137,6 +138,14 @@ export function DailyDeliveryCheckout({
           country: user.address.country || "",
           buzzCode: user.address.buzzCode || ""
         })
+        
+        // Check if user's stored area is valid for daily delivery
+        const userArea = user.address.province || ""
+        const isValid = DAILY_DELIVERY_REGIONS.includes(userArea)
+        setIsValidDeliveryArea(isValid)
+      } else {
+        // No address stored, mark as invalid
+        setIsValidDeliveryArea(false)
       }
     }
   }, [])
@@ -164,9 +173,27 @@ export function DailyDeliveryCheckout({
       province: area
     })
     setPopoverOpen(false)
+    
+    // Update validity status when area is selected
+    const isValid = DAILY_DELIVERY_REGIONS.includes(area)
+    setIsValidDeliveryArea(isValid)
   }
 
   const handleSaveAddress = async () => {
+    // Validate that the selected area is valid for daily delivery
+    const selectedArea = addressFormData.province
+    const isValid = DAILY_DELIVERY_REGIONS.includes(selectedArea)
+    setIsValidDeliveryArea(isValid)
+    
+    if (!isValid) {
+      toast({
+        title: language === 'zh' ? '无效区域' : 'Invalid Area',
+        description: language === 'zh' ? '请选择每日直送服务覆盖的区域' : 'Please select an area covered by daily delivery service',
+        variant: "destructive"
+      })
+      return
+    }
+    
     // Always update the local userData for display in the current order
     setUserData((prev: any) => prev ? {
       ...prev,
@@ -642,7 +669,14 @@ export function DailyDeliveryCheckout({
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Delivery Address</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Delivery Address</Label>
+                    {!isValidDeliveryArea && (
+                      <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded border border-red-200">
+                        {language === 'zh' ? '不在服务范围内' : 'Not in service area'}
+                      </span>
+                    )}
+                  </div>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -803,7 +837,7 @@ export function DailyDeliveryCheckout({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3 rounded-md border bg-muted/20">
+                  <div className={`p-3 rounded-md border ${!isValidDeliveryArea ? 'bg-red-50 border-red-200' : 'bg-muted/20'}`}>
                     {userData?.address ? (
                       <div>
                         <p className="text-sm">{formatAddress(userData.address)}</p>
@@ -812,6 +846,15 @@ export function DailyDeliveryCheckout({
                             <span className="font-medium">Door Access Code: </span>
                             {userData.address.buzzCode}
                           </p>
+                        )}
+                        {!isValidDeliveryArea && (
+                          <div className="mt-2 pt-2 border-t border-red-200">
+                            <p className="text-xs text-red-600 font-medium">
+                              {language === 'zh' 
+                                ? '⚠️ 此地址不在每日直送服务范围内。请点击"编辑"更新为有效区域。' 
+                                : '⚠️ This address is not in the daily delivery service area. Please click "Edit" to update to a valid area.'}
+                            </p>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -858,14 +901,16 @@ export function DailyDeliveryCheckout({
           </Button>
           <Button 
             onClick={handleCheckout}
-            disabled={isLoading}
-            className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#B67A45] hover:to-[#C29960] text-white"
+            disabled={isLoading || !isValidDeliveryArea}
+            className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#B67A45] hover:to-[#C29960] text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {language === 'zh' ? '处理中...' : 'Processing...'}
               </>
+            ) : !isValidDeliveryArea ? (
+              language === 'zh' ? '请更新配送地址' : 'Please Update Delivery Address'
             ) : (
               language === 'zh' ? '完成结账' : 'Complete Checkout'
             )}
