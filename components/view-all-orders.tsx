@@ -656,7 +656,9 @@ export function ViewAllOrders() {
                     type="date"
                     className="pl-8"
                     value={filters.deliveryDate}
-                    onChange={(e) => setFilters({...filters, deliveryDate: e.target.value})}
+                    onChange={(e) => {
+                      setFilters({...filters, deliveryDate: e.target.value});
+                    }}
                   />
                 </div>
               </div>

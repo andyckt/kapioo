@@ -366,7 +366,7 @@ export function ViewWeeklyOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryStartDate, filters.deliveryEndDate])
+  }, [filters.status, filters.area, filters.search, filters.deliveryDate])
   
   // Load areas and delivery dates when component mounts
   useEffect(() => {
@@ -640,7 +640,9 @@ export function ViewWeeklyOrders() {
                     type="date"
                     className="pl-8"
                     value={filters.deliveryDate}
-                    onChange={(e) => setFilters({...filters, deliveryDate: e.target.value})}
+                    onChange={(e) => {
+                      setFilters({...filters, deliveryDate: e.target.value});
+                    }}
                   />
                 </div>
               </div>
