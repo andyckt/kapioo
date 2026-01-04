@@ -57,6 +57,14 @@ export default function StarterPage() {
   // All locations
   const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
   
+  // Format location display names
+  const getLocationDisplayName = (location: Location | null): string => {
+    if (!location) return ""
+    if (location === "NorthYork") return "North York"
+    if (location === "RichmondHill") return "Richmond Hill"
+    return location
+  }
+  
   return (
     <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
       <main className="flex-1 container max-w-5xl py-12 md:py-20 px-4">
@@ -94,7 +102,7 @@ export default function StarterPage() {
                 <div className="flex items-center">
                   <MapPin className="h-5 w-5 text-[#C2884E] mr-3" />
                   <span className={`text-lg ${selectedLocation ? 'text-[#6B5F53]' : 'text-[#6B5F53]/60'}`}>
-                    {selectedLocation || (language === 'zh' ? '选择位置' : 'Select location')}
+                    {getLocationDisplayName(selectedLocation) || (language === 'zh' ? '选择位置' : 'Select location')}
                   </span>
                 </div>
                 <div className={`transition-transform duration-300 ${isLocationOpen ? 'rotate-180' : ''}`}>
@@ -126,7 +134,7 @@ export default function StarterPage() {
                       >
                         <div className="flex items-center justify-between">
                           <span className={`${selectedLocation === location ? 'text-[#C2884E]' : 'text-[#6B5F53]'}`}>
-                            {location}
+                            {getLocationDisplayName(location)}
                           </span>
                           {selectedLocation === location && (
                             <Check className="h-4 w-4 text-[#C2884E]" />

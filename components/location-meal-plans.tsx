@@ -96,6 +96,8 @@ export default function LocationMealPlans() {
   
   // Location display names
   const getLocationDisplayName = (location: Location | ""): string => {
+    if (location === "NorthYork") return "North York"
+    if (location === "RichmondHill") return "Richmond Hill"
     return location
   }
   
@@ -114,7 +116,7 @@ export default function LocationMealPlans() {
   const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
   
   return (
-    <section className="pt-12 md:pt-16 pb-12 md:pb-20 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-visible">
+    <section className="pt-12 md:pt-16 pb-20 md:pb-20 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-visible">
       {/* Decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-[10%] w-[400px] h-[400px] bg-gradient-to-tr from-[#C2884E]/5 to-transparent rounded-full blur-[80px]"></div>
