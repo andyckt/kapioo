@@ -1728,9 +1728,9 @@ export function DailyDeliveryManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+                <div className="flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                    <h3 className="text-base md:text-lg font-medium">Current Delivery Schedule</h3>
+                    <h3 className="text-base md:text-lg font-medium whitespace-nowrap">Current Delivery Schedule</h3>
                     <div className="flex items-center gap-2">
                       <Button 
                         variant={activeWeekFilter === null ? "default" : "outline"} 
@@ -1758,10 +1758,10 @@ export function DailyDeliveryManagement() {
                       </Button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 sm:flex-nowrap">
                     <Button 
                       size="sm"
-                      className="flex items-center h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none"
+                      className="flex items-center h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none whitespace-nowrap"
                       onClick={() => {
                         setSelectedWeekNumber(1);
                         setShowDayCreationModal(true);
@@ -1775,7 +1775,7 @@ export function DailyDeliveryManagement() {
                     <Button 
                       size="sm"
                       variant="secondary"
-                      className="flex items-center h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none"
+                      className="flex items-center h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none whitespace-nowrap"
                       onClick={() => {
                         setSelectedWeekNumber(2);
                         setShowDayCreationModal(true);
@@ -1789,7 +1789,7 @@ export function DailyDeliveryManagement() {
                     <Button 
                       size="sm"
                       variant="outline"
-                      className="h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none"
+                      className="h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none whitespace-nowrap"
                       onClick={rollForwardWeek}
                       disabled={isRollingForward}
                     >
