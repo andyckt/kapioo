@@ -10,23 +10,30 @@ import { useMaintenanceMode } from "@/lib/maintenance-context"
 export function MaintenanceNotification() {
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [hasShown, setHasShown] = useState(false)
   const { language } = useLanguage()
   const { isMaintenanceMode } = useMaintenanceMode()
   const wechatId = "kapioomeal06"
 
   // Show popup after a short delay if maintenance mode is active
   useEffect(() => {
-    if (isMaintenanceMode) {
+    if (isMaintenanceMode && !hasShown) {
       const timer = setTimeout(() => {
         setIsOpen(true)
+        setHasShown(true)
       }, 1500)
       
       return () => clearTimeout(timer)
+    } else if (!isMaintenanceMode) {
+      // Reset when maintenance mode is turned off
+      setIsOpen(false)
+      setHasShown(false)
     }
-  }, [isMaintenanceMode])
+  }, [isMaintenanceMode, hasShown])
 
   const handleDismiss = () => {
     setIsOpen(false)
+    // Don't reset hasShown - we don't want to show it again on the same page visit
   }
 
   const copyToClipboard = () => {
@@ -35,7 +42,8 @@ export function MaintenanceNotification() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (!isOpen) return null
+  // Don't render anything if not in maintenance mode or not open
+  if (!isMaintenanceMode || !isOpen) return null
 
   return (
     <AnimatePresence>

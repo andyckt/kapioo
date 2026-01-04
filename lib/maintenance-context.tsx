@@ -11,26 +11,58 @@ const MaintenanceContext = createContext<MaintenanceContextType | undefined>(und
 
 export function MaintenanceProvider({ children }: { children: React.ReactNode }) {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   
-  // Load maintenance state from localStorage on component mount
+  // Load maintenance state from API on component mount
   useEffect(() => {
-    const storedValue = localStorage.getItem('maintenanceMode')
-    if (storedValue !== null) {
-      setIsMaintenanceMode(storedValue === 'true')
+    const fetchMaintenanceStatus = async () => {
+      try {
+        const response = await fetch('/api/maintenance/status')
+        if (response.ok) {
+          const data = await response.json()
+          setIsMaintenanceMode(data.isMaintenanceMode || false)
+        }
+      } catch (error) {
+        console.error('Failed to fetch maintenance status:', error)
+        // Fallback to localStorage if API fails
+        const storedValue = localStorage.getItem('maintenanceMode')
+        if (storedValue !== null) {
+          setIsMaintenanceMode(storedValue === 'true')
+        }
+      } finally {
+        setIsLoading(false)
+      }
     }
+    
+    fetchMaintenanceStatus()
   }, [])
 
-  // Save to localStorage whenever the state changes
+  // Save to both localStorage and API whenever the state changes
   useEffect(() => {
-    localStorage.setItem('maintenanceMode', isMaintenanceMode.toString())
-  }, [isMaintenanceMode])
+    if (!isLoading) {
+      localStorage.setItem('maintenanceMode', isMaintenanceMode.toString())
+    }
+  }, [isMaintenanceMode, isLoading])
 
-  const setMaintenanceMode = (value: boolean) => {
+  const updateMaintenanceMode = async (value: boolean) => {
     setIsMaintenanceMode(value)
+    
+    // Update on server
+    try {
+      await fetch('/api/maintenance/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isMaintenanceMode: value }),
+      })
+    } catch (error) {
+      console.error('Failed to update maintenance status on server:', error)
+    }
   }
 
   return (
-    <MaintenanceContext.Provider value={{ isMaintenanceMode, setMaintenanceMode }}>
+    <MaintenanceContext.Provider value={{ isMaintenanceMode, setMaintenanceMode: updateMaintenanceMode }}>
       {children}
     </MaintenanceContext.Provider>
   )
