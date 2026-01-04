@@ -1361,8 +1361,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </header>
-      <div className="container grid flex-1 gap-12 md:grid-cols-[200px_1fr] pt-6">
-        <aside className="hidden w-[200px] flex-col md:flex">
+      <div className="container grid flex-1 gap-12 md:grid-cols-[240px_1fr] pt-6">
+        <aside className="hidden w-[240px] flex-col md:flex">
           <motion.nav
             className="grid items-start gap-2"
             initial={{ opacity: 0, x: -20 }}
@@ -1372,33 +1372,37 @@ export default function AdminDashboardPage() {
             {sidebarMenuItems.map((item) => (
               <div key={item.id}>
                 {item.isHeading ? (
-                  <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
+                  <div className="px-3 py-2 text-xs font-medium flex items-center gap-2">
                     {item.icon}
                     <span className="ml-2">{item.label}</span>
                   </div>
                 ) : (
                   <Button
                     variant={activeTab === item.id ? "default" : "ghost"}
-                    className="justify-start"
+                    className="justify-start w-full h-auto py-2 px-3"
                     onClick={() => setActiveTab(item.id)}
                   >
-                    {item.icon}
-                    <span className="ml-2">{item.label}</span>
+                    <div className="flex items-center gap-2 w-full">
+                      {item.icon}
+                      <span className="text-xs leading-tight text-left flex-1">{item.label}</span>
+                    </div>
                   </Button>
                 )}
                 
                 {/* Render children if they exist */}
                 {item.children && item.children.length > 0 && (
-                  <div className="pl-6 mt-1 border-l-2 border-muted ml-2">
+                  <div className="pl-4 mt-1 border-l-2 border-muted ml-2 space-y-1">
                     {item.children.map((child) => (
                       <Button
                         key={child.id}
                         variant={activeTab === child.id ? "default" : "ghost"}
-                        className="justify-start w-full text-sm"
+                        className="justify-start w-full h-auto py-2 px-2 text-xs"
                         onClick={() => setActiveTab(child.id)}
                       >
-                        {child.icon}
-                        <span className="ml-2">{child.label}</span>
+                        <div className="flex items-center gap-2 w-full">
+                          {child.icon}
+                          <span className="text-xs leading-tight text-left flex-1">{child.label}</span>
+                        </div>
                       </Button>
                     ))}
                   </div>
