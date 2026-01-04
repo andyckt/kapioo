@@ -97,12 +97,8 @@ export async function GET(request: Request) {
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const status = url.searchParams.get('status');
     const search = url.searchParams.get('search');
-    const startDate = url.searchParams.get('startDate');
-    const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
-    const mealPlanType = url.searchParams.get('mealPlanType');
-    const deliveryStartDate = url.searchParams.get('deliveryStartDate');
-    const deliveryEndDate = url.searchParams.get('deliveryEndDate');
+    const deliveryDate = url.searchParams.get('deliveryDate');
     const skip = (page - 1) * limit;
     
     // Build query
@@ -116,11 +112,6 @@ export async function GET(request: Request) {
     // Filter by area if provided
     if (area) {
       query.area = area;
-    }
-    
-    // Filter by meal plan type if provided
-    if (mealPlanType) {
-      query.mealPlanType = mealPlanType;
     }
     
     // Helper function to parse and format dates in various formats
@@ -162,62 +153,25 @@ export async function GET(request: Request) {
       }
     }
     
-    // Filter by delivery date range if provided
-    if (deliveryStartDate || deliveryEndDate) {
-      // Create a date range filter for items.date
-      // We need to use MongoDB's $elemMatch to filter array elements that match our criteria
-      const dateFilter: any = {};
+    // Filter by delivery date if provided
+    if (deliveryDate) {
+      // Parse the date string into a JavaScript Date object
+      const dateObj = new Date(deliveryDate);
+      // Format the date as a string in the format used in the database (e.g., 'Nov 02')
+      // Use custom formatting to ensure leading zeros for days under 10
+      const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+      const day = dateObj.getDate();
+      const formattedDay = day < 10 ? `0${day}` : `${day}`;
+      const formattedDate = `${month} ${formattedDay}`;
       
-      if (deliveryStartDate) {
-        // Parse the date string into a JavaScript Date object
-        const startDateObj = new Date(deliveryStartDate);
-        // Format the date as a string in the format used in the database (e.g., 'Nov 02')
-        // Use custom formatting to ensure leading zeros for days under 10
-        const month = startDateObj.toLocaleDateString('en-US', { month: 'short' });
-        const day = startDateObj.getDate();
-        const formattedDay = day < 10 ? `0${day}` : `${day}`;
-        const formattedStartDate = `${month} ${formattedDay}`;
-        console.log(`Formatted start date: ${formattedStartDate}`);
-        dateFilter.$gte = formattedStartDate;
-      }
+      console.log(`Formatted delivery date: ${formattedDate}`);
       
-      if (deliveryEndDate) {
-        // Parse the date string into a JavaScript Date object
-        const endDateObj = new Date(deliveryEndDate);
-        // Format the date as a string in the format used in the database (e.g., 'Nov 02')
-        // Use custom formatting to ensure leading zeros for days under 10
-        const month = endDateObj.toLocaleDateString('en-US', { month: 'short' });
-        const day = endDateObj.getDate();
-        const formattedDay = day < 10 ? `0${day}` : `${day}`;
-        const formattedEndDate = `${month} ${formattedDay}`;
-        console.log(`Formatted end date: ${formattedEndDate}`);
-        dateFilter.$lte = formattedEndDate;
-      }
-      
-      // Use $elemMatch to find documents where at least one item in the items array matches our date criteria
-      if (Object.keys(dateFilter).length > 0) {
-        query['items'] = {
-          $elemMatch: {
-            date: dateFilter
-          }
-        };
-      }
-    }
-    
-    // Filter by date range if provided
-    if (startDate || endDate) {
-      query.createdAt = {};
-      
-      if (startDate) {
-        query.createdAt.$gte = new Date(startDate);
-      }
-      
-      if (endDate) {
-        // Add one day to include the end date fully
-        const endDateObj = new Date(endDate);
-        endDateObj.setDate(endDateObj.getDate() + 1);
-        query.createdAt.$lt = endDateObj;
-      }
+      // Use $elemMatch to find documents where at least one item in the items array matches our date
+      query['items'] = {
+        $elemMatch: {
+          date: formattedDate
+        }
+      };
     }
     
     // Search functionality

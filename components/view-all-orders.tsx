@@ -106,11 +106,8 @@ export function ViewAllOrders() {
   const [filters, setFilters] = useState({
     status: 'all',
     search: '',
-    startDate: '',
-    endDate: '',
     area: '',
-    deliveryStartDate: '',
-    deliveryEndDate: '',
+    deliveryDate: '',
     comboName: 'all'
   })
   const [comboNames, setComboNames] = useState<string[]>([])
@@ -144,27 +141,14 @@ export function ViewAllOrders() {
         params.append('search', filters.search)
       }
       
-      // Add date range filters if provided
-      if (filters.startDate) {
-        params.append('startDate', filters.startDate)
-      }
-      
-      if (filters.endDate) {
-        params.append('endDate', filters.endDate)
-      }
-      
       // Add area filter if provided
       if (filters.area && filters.area !== 'all') {
         params.append('area', filters.area)
       }
       
-      // Add delivery date range filters if provided
-      if (filters.deliveryStartDate) {
-        params.append('deliveryStartDate', filters.deliveryStartDate)
-      }
-      
-      if (filters.deliveryEndDate) {
-        params.append('deliveryEndDate', filters.deliveryEndDate)
+      // Add delivery date filter if provided
+      if (filters.deliveryDate) {
+        params.append('deliveryDate', filters.deliveryDate)
       }
       
       // Add combo name filter if provided
@@ -397,7 +381,7 @@ export function ViewAllOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.startDate, filters.endDate, filters.search, filters.deliveryStartDate, filters.deliveryEndDate, filters.comboName])
+  }, [filters.status, filters.area, filters.search, filters.deliveryDate, filters.comboName])
   
   // Load areas, delivery dates, and combo names when component mounts
   useEffect(() => {
@@ -645,35 +629,7 @@ export function ViewAllOrders() {
         {/* Advanced Filters */}
         {showAdvancedFilters && (
           <div className="bg-muted/50 p-4 rounded-lg mb-6 border border-border/50">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Ordered Start Date</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="startDate"
-                    type="date"
-                    className="pl-8"
-                    value={filters.startDate}
-                    onChange={(e) => setFilters({...filters, startDate: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">Ordered End Date</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="endDate"
-                    type="date"
-                    className="pl-8"
-                    value={filters.endDate}
-                    onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="area">Area</Label>
                 <Select
@@ -692,28 +648,15 @@ export function ViewAllOrders() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryStartDate">Delivery Start Date</Label>
+                <Label htmlFor="deliveryDate">Delivery Date</Label>
                 <div className="relative">
                   <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="deliveryStartDate"
+                    id="deliveryDate"
                     type="date"
                     className="pl-8"
-                    value={filters.deliveryStartDate}
-                    onChange={(e) => setFilters({...filters, deliveryStartDate: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="deliveryEndDate">Delivery End Date</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="deliveryEndDate"
-                    type="date"
-                    className="pl-8"
-                    value={filters.deliveryEndDate}
-                    onChange={(e) => setFilters({...filters, deliveryEndDate: e.target.value})}
+                    value={filters.deliveryDate}
+                    onChange={(e) => setFilters({...filters, deliveryDate: e.target.value})}
                   />
                 </div>
               </div>
@@ -742,11 +685,8 @@ export function ViewAllOrders() {
                   setFilters({
                     status: 'all',
                     search: '',
-                    startDate: '',
-                    endDate: '',
                     area: '',
-                    deliveryStartDate: '',
-                    deliveryEndDate: '',
+                    deliveryDate: '',
                     comboName: 'all'
                   });
                   handleSearch();
