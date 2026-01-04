@@ -137,18 +137,18 @@ export default function Home() {
                       {t('tagline')}
                     </div>
                     
-                    {/* Enhanced tags layout */}
-                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                    {/* Enhanced tags layout - Single row on all screen sizes, fully visible without scrolling */}
+                    <div className="flex flex-nowrap gap-1 xs:gap-1.5 sm:gap-3 justify-between">
                       {t('healthyTags').split('|').map((tag, index) => (
                         <motion.span 
                           key={index}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.3, delay: 0.1 * index }}
-                          className="px-3 sm:px-4 py-1.5 bg-white rounded-full text-sm sm:text-base text-[#6B5F53] shadow-sm border border-[#C2884E]/10 flex items-center"
+                          className="px-2 xs:px-2.5 sm:px-4 py-1.5 bg-white rounded-full text-[11px] xs:text-xs sm:text-base text-[#6B5F53] shadow-sm border border-[#C2884E]/10 flex items-center whitespace-nowrap flex-1 justify-center"
                         >
-                          <span className="w-2 h-2 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-2 inline-block"></span>
-                          {tag}
+                          <span className="w-1.5 h-1.5 xs:w-2 xs:h-2 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1 xs:mr-1.5 sm:mr-2 inline-block flex-shrink-0"></span>
+                          <span className="truncate">{tag}</span>
                         </motion.span>
                       ))}
                     </div>
