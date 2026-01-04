@@ -13,12 +13,16 @@ import CustomerReviewsSection from "@/components/customer-reviews-section"
 import HowItWorksSection from "@/components/how-it-works-section"
 import LocationMealPlans from "@/components/location-meal-plans"
 import SectionNavigation from "@/components/section-navigation"
+import { AnnouncementBar } from "@/components/announcement-bar"
 
 export default function Home() {
   const { t } = useLanguage();
   
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Announcement Bar - At the very top */}
+      <AnnouncementBar />
+      
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex gap-4 md:gap-10">
