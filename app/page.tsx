@@ -51,15 +51,15 @@ export default function Home() {
       <main className="flex-1">
         {/* Navigation Menu */}
         <SectionNavigation />
-        <section className="w-full relative overflow-hidden min-h-screen bg-[#fff6ef]">
+        <section className="w-full relative overflow-hidden lg:min-h-screen bg-[#fff6ef]">
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
           
-          <div className="container px-4 md:px-6 relative z-10 py-4 md:py-6 flex flex-col lg:flex-row lg:items-center lg:h-[calc(100vh-4rem)]">
+          <div className="container px-4 md:px-6 relative z-10 py-8 md:py-12 lg:py-6 flex flex-col lg:flex-row lg:items-center lg:h-[calc(100vh-4rem)]">
             {/* Mobile: Order 1 - Desktop: Order 1 */}
             <motion.div 
-              className="w-full order-1 lg:w-1/2 mb-6 lg:mb-0"
+              className="w-full order-1 lg:w-1/2 mb-4 md:mb-6 lg:mb-0"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8 }}
@@ -80,11 +80,11 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex flex-col justify-center space-y-6 order-2 lg:w-1/2 lg:pl-12"
+              className="flex flex-col justify-center space-y-4 md:space-y-6 order-2 lg:w-1/2 lg:pl-12"
             >
               {/* Redesigned card container with modern styling */}
               <motion.div 
-                className="relative z-10 bg-white/90 backdrop-blur-md p-6 sm:p-10 rounded-2xl border-0 shadow-xl ring-1 ring-[#C2884E]/10">
+                className="relative z-10 bg-white/90 backdrop-blur-md p-5 sm:p-8 md:p-10 rounded-2xl border-0 shadow-xl ring-1 ring-[#C2884E]/10">
                 {/* Logo positioned with improved animation */}
                 <motion.div 
                   className="absolute -top-16 sm:-top-20 right-6 sm:right-10"
@@ -110,7 +110,7 @@ export default function Home() {
                   </div>
                 </motion.div>
                 
-                <div className="space-y-6 sm:space-y-8">
+                <div className="space-y-4 sm:space-y-6 md:space-y-8">
                   {/* Main heading section with enhanced styling */}
                   <div className="relative">
                     <motion.div
@@ -175,7 +175,7 @@ export default function Home() {
         </div>
 
         {/* Food Gallery Section - Enhanced */}
-        <section id="food-gallery" className="w-full py-20 sm:py-28 bg-gradient-to-b from-white to-[#FBF7F2] relative overflow-hidden">
+        <section id="food-gallery" className="w-full py-8 md:py-16 lg:py-24 bg-gradient-to-b from-white to-[#FBF7F2] relative overflow-hidden">
           {/* Enhanced decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-20 right-[10%] w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-[100px]"></div>
@@ -194,7 +194,7 @@ export default function Home() {
           <div className="container px-4 md:px-6 relative">
             {/* Enhanced Section Header */}
             <motion.div 
-              className="text-center max-w-3xl mx-auto mb-20"
+              className="text-center max-w-3xl mx-auto mb-10 md:mb-16 lg:mb-20"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}

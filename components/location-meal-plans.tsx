@@ -114,7 +114,7 @@ export default function LocationMealPlans() {
   const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
   
   return (
-    <section className="pt-12 pb-24 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-hidden">
+    <section className={`pt-12 md:pt-16 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-hidden ${selectedLocation ? 'pb-8 md:pb-16' : 'pb-6 md:pb-10'}`}>
       {/* Decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-[10%] w-[400px] h-[400px] bg-gradient-to-tr from-[#C2884E]/5 to-transparent rounded-full blur-[80px]"></div>
@@ -129,7 +129,7 @@ export default function LocationMealPlans() {
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <motion.div 
-          className="text-center max-w-3xl mx-auto mb-16"
+          className="text-center max-w-3xl mx-auto mb-8 md:mb-16"
           initial={{ opacity: 0, y: 30 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.7 }}
@@ -171,7 +171,7 @@ export default function LocationMealPlans() {
         
         {/* Location Selector */}
         <motion.div 
-          className="relative w-full max-w-md mx-auto mb-16 z-20"
+          className="relative w-full max-w-md mx-auto mb-8 md:mb-16 z-20"
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.5 }}
@@ -226,7 +226,7 @@ export default function LocationMealPlans() {
 
         
         {/* Meal Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto min-h-[400px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {selectedLocation ? getAvailablePlans().map((plan, index) => (
             <motion.div 
               key={plan.id}
@@ -292,13 +292,7 @@ export default function LocationMealPlans() {
                 </motion.div>
               </div>
             </motion.div>
-          )) : (
-            <div className="col-span-1 md:col-span-2 flex items-center justify-center h-[400px]">
-              <div className="text-center text-[#6B5F53] text-lg md:text-xl opacity-70">
-                {language === 'en' ? 'Please select a location to view available meal plans' : '请选择位置以查看可用的餐饮计划'}
-              </div>
-            </div>
-          )}
+          )) : null}
         </div>
       </div>
     </section>
