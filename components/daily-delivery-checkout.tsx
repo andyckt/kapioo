@@ -98,6 +98,7 @@ export function DailyDeliveryCheckout({
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
+  const [tempSelectedArea, setTempSelectedArea] = useState<string>("")
 
   // Calculate total vouchers needed by type
   const vouchersNeeded = cart.reduce(
@@ -174,9 +175,8 @@ export function DailyDeliveryCheckout({
     })
     setPopoverOpen(false)
     
-    // Update validity status when area is selected
-    const isValid = DAILY_DELIVERY_REGIONS.includes(area)
-    setIsValidDeliveryArea(isValid)
+    // Store the temporarily selected area for visual feedback
+    setTempSelectedArea(area)
   }
 
   const handleSaveAddress = async () => {
@@ -193,6 +193,9 @@ export function DailyDeliveryCheckout({
       })
       return
     }
+    
+    // Clear temp selected area since we're now saving
+    setTempSelectedArea("")
     
     // Always update the local userData for display in the current order
     setUserData((prev: any) => prev ? {
@@ -671,7 +674,7 @@ export function DailyDeliveryCheckout({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Label>Delivery Address</Label>
-                    {!isValidDeliveryArea && (
+                    {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
                       <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded border border-red-200">
                         {language === 'zh' ? '不在服务范围内' : 'Not in service area'}
                       </span>
@@ -728,8 +731,13 @@ export function DailyDeliveryCheckout({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="state" className="text-sm">
-                          Area <span className="text-red-500">*</span>
+                        <Label htmlFor="state" className="text-sm flex items-center gap-2">
+                          <span>Area <span className="text-red-500">*</span></span>
+                          {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
+                            <span className="text-xs text-red-600 font-medium">
+                              ({language === 'zh' ? '请选择有效区域' : 'Please select valid area'})
+                            </span>
+                          )}
                         </Label>
                         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                           <PopoverTrigger asChild>
@@ -822,7 +830,10 @@ export function DailyDeliveryCheckout({
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => setEditingAddress(false)}
+                        onClick={() => {
+                          setEditingAddress(false)
+                          setTempSelectedArea("") // Reset temp area on cancel
+                        }}
                         disabled={isLoading}
                       >
                         {language === 'zh' ? '取消' : 'Cancel'}
@@ -837,7 +848,7 @@ export function DailyDeliveryCheckout({
                     </div>
                   </div>
                 ) : (
-                  <div className={`p-3 rounded-md border ${!isValidDeliveryArea ? 'bg-red-50 border-red-200' : 'bg-muted/20'}`}>
+                  <div className={`p-3 rounded-md border ${!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) ? 'bg-red-50 border-red-200' : 'bg-muted/20'}`}>
                     {userData?.address ? (
                       <div>
                         <p className="text-sm">{formatAddress(userData.address)}</p>
@@ -847,7 +858,7 @@ export function DailyDeliveryCheckout({
                             {userData.address.buzzCode}
                           </p>
                         )}
-                        {!isValidDeliveryArea && (
+                        {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
                           <div className="mt-2 pt-2 border-t border-red-200">
                             <p className="text-xs text-red-600 font-medium">
                               {language === 'zh' 
