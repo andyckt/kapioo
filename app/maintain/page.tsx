@@ -18,7 +18,7 @@ export default function MaintenancePage() {
   const [error, setError] = useState("")
   
   // Simple authentication - in a real app, use proper authentication
-  const adminPassword = "admin123" // This should be an environment variable in production
+  const adminPassword = "admin123456!" // This should be an environment variable in production
   
   const handleLogin = () => {
     if (password === adminPassword) {
