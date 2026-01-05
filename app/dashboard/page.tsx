@@ -1128,7 +1128,7 @@ export default function DashboardPage() {
                   
                   {/* User Summary Cards - Premium Design */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                    {/* No Credits Message - Show when user has 0 vouchers across all types */}
+                    {/* Two-Step Flow: No Credits Message OR Service Selection Cards */}
                     {userData && 
                       (userData?.twoDishVoucher || 0) === 0 && 
                       (userData?.threeDishVoucher || 0) === 0 && 
@@ -1136,84 +1136,80 @@ export default function DashboardPage() {
                       ((userData as any)?.weeklyEIGHTmeals || 0) === 0 && 
                       (userData?.weeklyTENmeals || 0) === 0 && 
                       ((userData as any)?.weeklyTWELVEmeals || 0) === 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4 }}
-                        className="col-span-full"
-                      >
-                        <Card className="overflow-hidden border border-[#C2884E]/20 bg-gradient-to-br from-white to-[#FFF6EF] shadow-lg rounded-3xl">
-                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"></div>
-                          <CardContent className="p-8 text-center">
-                            <div className="flex flex-col items-center justify-center space-y-6">
-                              {/* Icon */}
-                              <div className="h-20 w-20 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-                                <Ticket className="h-10 w-10 text-[#C2884E]" />
-                              </div>
-                              
-                              {/* Message */}
-                              <div className="space-y-2">
-                                <h3 className="text-2xl font-semibold text-[#6B5F53]">
-                                  {language === 'en' 
-                                    ? "You don't have any meal credits right now" 
-                                    : '您目前没有任何餐券'}
+                      <AnimatePresence mode="wait">
+                        {!showServiceSelection ? (
+                          // Step 1: No Credits Message
+                          <motion.div
+                            key="no-credits"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.4 }}
+                            className="col-span-full"
+                          >
+                            <Card className="overflow-hidden border border-[#C2884E]/20 bg-gradient-to-br from-white to-[#FFF6EF] shadow-lg rounded-3xl">
+                              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"></div>
+                              <CardContent className="p-8 text-center">
+                                <div className="flex flex-col items-center justify-center space-y-6">
+                                  {/* Icon */}
+                                  <div className="h-20 w-20 rounded-full bg-[#F5EDE4] flex items-center justify-center">
+                                    <Ticket className="h-10 w-10 text-[#C2884E]" />
+                                  </div>
+                                  
+                                  {/* Message */}
+                                  <div className="space-y-2">
+                                    <h3 className="text-2xl font-semibold text-[#6B5F53]">
+                                      {language === 'en' 
+                                        ? "You don't have any meal credits right now" 
+                                        : '您目前没有任何餐券'}
+                                    </h3>
+                                    <p className="text-[#6B5F53]/70 text-base max-w-md mx-auto">
+                                      {language === 'en'
+                                        ? 'Please start recharging to enjoy our delicious meals'
+                                        : '请充值以享受我们美味的餐点'}
+                                    </p>
+                                  </div>
+                                  
+                                  {/* CTA Button */}
+                                  <Button 
+                                    size="lg"
+                                    className="bg-[#C2884E] hover:bg-[#B17940] text-white rounded-xl px-8 py-6 text-base font-medium shadow-md hover:shadow-lg transition-all duration-300"
+                                    onClick={() => setShowServiceSelection(true)}
+                                  >
+                                    <CreditCard className="h-5 w-5 mr-2" />
+                                    {language === 'en' ? 'Start Recharging' : '开始充值'}
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ) : (
+                          // Step 2: Service Selection Cards
+                          <motion.div
+                            key="service-selection"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.5 }}
+                            className="col-span-full"
+                          >
+                            <div className="space-y-6">
+                              {/* Title */}
+                              <div className="text-center">
+                                <h3 className="text-2xl font-semibold text-[#6B5F53] mb-2">
+                                  {language === 'en' ? 'Choose Your Service' : '选择您的服务'}
                                 </h3>
-                                <p className="text-[#6B5F53]/70 text-base max-w-md mx-auto">
-                                  {language === 'en'
-                                    ? 'Please start recharging to enjoy our delicious meals'
-                                    : '请充值以享受我们美味的餐点'}
-                                </p>
                               </div>
                               
-                              {/* CTA Button */}
-                              <Button 
-                                size="lg"
-                                className="bg-[#C2884E] hover:bg-[#B17940] text-white rounded-xl px-8 py-6 text-base font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                                onClick={() => setShowServiceSelection(true)}
-                              >
-                                <CreditCard className="h-5 w-5 mr-2" />
-                                {language === 'en' ? 'Start Recharging' : '开始充值'}
-                              </Button>
+                              {/* Service Cards */}
+                              <ServiceSelectionCards 
+                                onSelectDaily={() => setActiveTab("meal-vouchers")}
+                                onSelectWeekly={() => setActiveTab("credits")}
+                              />
                             </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )}
-                    
-                    {/* Service Selection Cards - Show when user clicks Start Recharging */}
-                    {showServiceSelection && userData && 
-                      (userData?.twoDishVoucher || 0) === 0 && 
-                      (userData?.threeDishVoucher || 0) === 0 && 
-                      (userData?.weeklySIXmeals || 0) === 0 && 
-                      ((userData as any)?.weeklyEIGHTmeals || 0) === 0 && 
-                      (userData?.weeklyTENmeals || 0) === 0 && 
-                      ((userData as any)?.weeklyTWELVEmeals || 0) === 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="col-span-full mt-8"
-                      >
-                        <div className="space-y-6">
-                          {/* Title */}
-                          <div className="text-center">
-                            <h3 className="text-2xl font-semibold text-[#6B5F53] mb-2">
-                              {language === 'en' ? 'Choose Your Service' : '选择您的服务'}
-                            </h3>
-                            <p className="text-[#6B5F53]/70">
-                              {language === 'en' 
-                                ? 'Select a service to start recharging' 
-                                : '选择一个服务开始充值'}
-                            </p>
-                          </div>
-                          
-                          {/* Service Cards */}
-                          <ServiceSelectionCards 
-                            onSelectDaily={() => setActiveTab("meal-vouchers")}
-                            onSelectWeekly={() => setActiveTab("credits")}
-                          />
-                        </div>
-                      </motion.div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     )}
                     
                     {/* Show Daily first if user has both daily and weekly vouchers, otherwise show weekly first if only weekly */}
