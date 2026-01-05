@@ -814,8 +814,16 @@ const translations: TranslationsType = {
 };
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  // Default to Chinese, no localStorage check
-  const [language, setLanguage] = useState<Language>('zh');
+  // Initialize language from localStorage if available, otherwise default to Chinese
+  const [language, setLanguage] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const savedLanguage = localStorage.getItem('preferredLanguage');
+      if (savedLanguage === 'zh' || savedLanguage === 'en') {
+        return savedLanguage;
+      }
+    }
+    return 'zh';
+  });
   
   // Translation function
   const t = (key: TranslationKey): string => {

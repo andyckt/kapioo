@@ -6,6 +6,7 @@ import AppInitializer from "@/components/app-initializer"
 import { LanguageProvider } from "@/lib/language-context"
 import { MaintenanceProvider } from "@/lib/maintenance-context"
 import { MaintenanceNotification } from "@/components/maintenance-notification"
+import { LanguagePreferenceDialog } from "@/components/language-preference-dialog"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -53,6 +54,7 @@ export default function RootLayout({
         <LanguageProvider>
           <MaintenanceProvider>
             <AppInitializer />
+            <LanguagePreferenceDialog />
             <MaintenanceNotification />
             {children}
             <Toaster />

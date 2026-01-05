@@ -16,14 +16,31 @@ export function MaintenanceNotification() {
   const wechatId = "kapioomeal06"
 
   // Show popup after a short delay if maintenance mode is active
+  // AND after language preference has been set
   useEffect(() => {
     if (isMaintenanceMode && !hasShown) {
-      const timer = setTimeout(() => {
-        setIsOpen(true)
-        setHasShown(true)
-      }, 1500)
+      // Check if language preference has been set
+      const languagePreferenceSet = typeof window !== 'undefined' 
+        ? localStorage.getItem('languagePreferenceSet') 
+        : null;
       
-      return () => clearTimeout(timer)
+      // Only show maintenance popup after language preference is set
+      if (languagePreferenceSet) {
+        const timer = setTimeout(() => {
+          setIsOpen(true)
+          setHasShown(true)
+        }, 1500)
+        
+        return () => clearTimeout(timer)
+      } else {
+        // If language preference not set, check again after a delay
+        const checkTimer = setTimeout(() => {
+          // This will re-trigger the effect
+          setHasShown(false)
+        }, 500)
+        
+        return () => clearTimeout(checkTimer)
+      }
     } else if (!isMaintenanceMode) {
       // Reset when maintenance mode is turned off
       setIsOpen(false)
