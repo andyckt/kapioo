@@ -1172,7 +1172,7 @@ export default function DashboardPage() {
                                   onClick={() => setActiveTab("daily-delivery")}
                                 >
                                   <ShoppingCart className="h-4 w-4 mr-2" />
-                                  去订餐
+                                  {language === 'en' ? 'Start Ordering' : '去订餐'}
                                 </Button>
                                 <Button 
                                   variant="ghost" 
@@ -1180,7 +1180,7 @@ export default function DashboardPage() {
                                   onClick={() => setActiveTab("meal-vouchers")}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
-                                  去充值
+                                  {language === 'en' ? 'Recharge' : '去充值'}
                                 </Button>
                               </div>
                             </div>
@@ -1260,7 +1260,7 @@ export default function DashboardPage() {
                                   onClick={() => setActiveTab("weekly-subscription")}
                                 >
                                   <ShoppingCart className="h-4 w-4 mr-2" />
-                                  去订餐
+                                  {language === 'en' ? 'Start Ordering' : '去订餐'}
                                 </Button>
                                 <Button 
                                   variant="ghost" 
@@ -1268,7 +1268,7 @@ export default function DashboardPage() {
                                   onClick={() => setActiveTab("credits")}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
-                                  去充值
+                                  {language === 'en' ? 'Recharge' : '去充值'}
                                 </Button>
                               </div>
                             </div>
@@ -1319,7 +1319,7 @@ export default function DashboardPage() {
                                   onClick={() => setActiveTab("daily-delivery")}
                                 >
                                   <ShoppingCart className="h-4 w-4 mr-2" />
-                                  去订餐
+                                  {language === 'en' ? 'Start Ordering' : '去订餐'}
                                 </Button>
                                 <Button 
                                   variant="ghost" 
@@ -1327,7 +1327,7 @@ export default function DashboardPage() {
                                   onClick={() => setActiveTab("meal-vouchers")}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
-                                  去充值
+                                  {language === 'en' ? 'Recharge' : '去充值'}
                                 </Button>
                               </div>
                             </div>
