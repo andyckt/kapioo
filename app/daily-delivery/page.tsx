@@ -87,6 +87,16 @@ export default function DailyDeliveryPage() {
   const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   
+  // Helper function to translate combo names
+  const translateComboName = (name: string): string => {
+    if (language === 'zh') return name
+    // Translate common combo name patterns
+    if (name.includes('套餐')) {
+      return name.replace(/套餐/g, 'Combo')
+    }
+    return name
+  }
+  
   // Check if user is authenticated on component mount
   useEffect(() => {
     const authStatus = localStorage.getItem('isAuthenticated')
@@ -950,7 +960,7 @@ export default function DailyDeliveryPage() {
                                     <div className="relative backdrop-blur-xl bg-white/90 rounded-2xl p-4 sm:p-5 border border-[#F5EDE4] shadow-sm transition-all duration-300 ease-out h-full">
                                       {/* Combo header - Minimalist Design */}
                                       <div className="flex flex-wrap items-center justify-between mb-4">
-                                        <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">{combo.name}</h3>
+                                        <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">{translateComboName(combo.name)}</h3>
                                         <div className="text-xs font-medium bg-[#F5EDE4] px-2 py-1 rounded-full text-[#C2884E]">
                                           {combo.calories} KCAL
                                         </div>
@@ -962,7 +972,7 @@ export default function DailyDeliveryPage() {
                                         <div className="mb-4">
                                           <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
-                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐2菜</span>
+                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">{language === 'zh' ? '每餐2菜' : '2-Dish Meal'}</span>
                                             </div>
                                           </div>
                                           
@@ -1024,7 +1034,7 @@ export default function DailyDeliveryPage() {
                                         <div>
                                           <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
-                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐3菜</span>
+                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">{language === 'zh' ? '每餐3菜' : '3-Dish Meal'}</span>
                                             </div>
                                           </div>
                                           

@@ -87,6 +87,16 @@ export default function DailyDelivery() {
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
   const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
   
+  // Helper function to translate combo names
+  const translateComboName = (name: string): string => {
+    if (language === 'zh') return name
+    // Translate common combo name patterns
+    if (name.includes('套餐')) {
+      return name.replace(/套餐/g, 'Combo')
+    }
+    return name
+  }
+  
   // Define the supported regions for daily delivery
   const DAILY_DELIVERY_REGIONS = [
     "Downtown Toronto",
@@ -1003,8 +1013,8 @@ export default function DailyDelivery() {
                 
                 {/* Order Notice - Visible on all devices */}
                 <div className="text-left mb-6 pl-3 border-l-2 border-[#C2884E]">
-                  <h4 className="text-xs font-bold text-[#C2884E] mb-1">下单须知</h4>
-                  <p className="text-[10px] text-[#6B5F53]">每天至少选购两餐起送</p>
+                  <h4 className="text-xs font-bold text-[#C2884E] mb-1">{language === 'zh' ? '下单须知' : 'Order Notice'}</h4>
+                  <p className="text-[10px] text-[#6B5F53]">{language === 'zh' ? '每天至少选购两餐起送' : 'Minimum 2 meals per day required for delivery'}</p>
                 </div>
                 
                 {/* Day Warning - Shows when trying to switch days with only 1 item */}
@@ -1035,7 +1045,7 @@ export default function DailyDelivery() {
                         ${isDayUnavailable(selectedDay).unavailable ? 'opacity-60' : ''}
                       `}>
                         <div className="flex flex-wrap items-center justify-between mb-4">
-                          <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{combo.name}</h3>
+                          <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{translateComboName(combo.name)}</h3>
                           <div className="text-sm font-medium bg-[#C2884E]/5 px-2 py-1 rounded-md text-[#C2884E]">
                             {combo.calories} KCAL
                           </div>
@@ -1045,7 +1055,7 @@ export default function DailyDelivery() {
                         <div className="mb-4">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐2菜</span>
+                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">{language === 'zh' ? '每餐2菜' : '2-Dish Meal'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button 
@@ -1093,7 +1103,7 @@ export default function DailyDelivery() {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">每餐3菜</span>
+                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">{language === 'zh' ? '每餐3菜' : '3-Dish Meal'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button 
