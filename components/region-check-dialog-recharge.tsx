@@ -244,110 +244,113 @@ export function RegionCheckDialogRecharge({
   )
 
   const renderAddressStep = () => (
-    <div className="p-4 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-          <Home className="h-4 w-4 text-[#C2884E]" />
+    <>
+      <div className="p-4 sm:p-6 space-y-4 max-h-[calc(90vh-240px)] overflow-y-auto">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center">
+            <Home className="h-4 w-4 text-[#C2884E]" />
+          </div>
+          <h3 className="text-lg font-medium text-[#6B5F53]">
+            {language === 'zh' ? '配送地址' : 'Delivery Address'}
+          </h3>
         </div>
-        <h3 className="text-lg font-medium text-[#6B5F53]">
-          {language === 'zh' ? '配送地址' : 'Delivery Address'}
-        </h3>
-      </div>
-      
-      {/* Display selected area */}
-      <div className="bg-[#F5EDE4]/50 p-3 rounded-lg border border-[#C2884E]/20">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-[#C2884E]" />
-          <span className="text-sm text-[#6B5F53]">
-            {language === 'zh' ? '已选择区域：' : 'Selected Area:'} 
-            <span className="font-semibold text-[#C2884E] ml-1">
-              {isValidRegion ? currentRegion : selectedRegion}
+        
+        {/* Display selected area */}
+        <div className="bg-[#F5EDE4]/50 p-3 rounded-lg border border-[#C2884E]/20">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-[#C2884E]" />
+            <span className="text-sm text-[#6B5F53]">
+              {language === 'zh' ? '已选择区域：' : 'Selected Area:'} 
+              <span className="font-semibold text-[#C2884E] ml-1">
+                {isValidRegion ? currentRegion : selectedRegion}
+              </span>
             </span>
-          </span>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="unitNumber" className="text-xs sm:text-sm">
+              Unit/Apt Number
+            </Label>
+            <Input 
+              id="unitNumber" 
+              value={addressData.unitNumber} 
+              onChange={handleAddressChange}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
+            />
+          </div>
+          
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="streetAddress" className="text-xs sm:text-sm">
+              <span className="text-red-500">*</span>
+              Street Address
+            </Label>
+            <Input 
+              id="streetAddress" 
+              value={addressData.streetAddress} 
+              onChange={handleAddressChange}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
+              required
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <Label htmlFor="city" className="text-xs sm:text-sm">
+              <span className="text-red-500">*</span>
+              City
+            </Label>
+            <Input 
+              id="city" 
+              value={addressData.city} 
+              onChange={handleAddressChange}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
+              required
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <Label htmlFor="postalCode" className="text-xs sm:text-sm">
+              <span className="text-red-500">*</span>
+              Postal Code
+            </Label>
+            <Input 
+              id="postalCode" 
+              value={addressData.postalCode} 
+              onChange={handleAddressChange}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
+              required
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <Label htmlFor="country" className="text-xs sm:text-sm">
+              Country
+            </Label>
+            <Input 
+              id="country" 
+              value={addressData.country} 
+              onChange={handleAddressChange}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <Label htmlFor="buzzCode" className="text-xs sm:text-sm">
+              Buzz Code / Entry Code <span className="text-xs text-muted-foreground">(Optional)</span>
+            </Label>
+            <Input 
+              id="buzzCode" 
+              value={addressData.buzzCode} 
+              onChange={handleAddressChange}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
+            />
+          </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label htmlFor="unitNumber" className="text-xs sm:text-sm">
-            Unit/Apt Number
-          </Label>
-          <Input 
-            id="unitNumber" 
-            value={addressData.unitNumber} 
-            onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-          />
-        </div>
-        
-        <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="streetAddress" className="text-xs sm:text-sm">
-            <span className="text-red-500">*</span>
-            Street Address
-          </Label>
-          <Input 
-            id="streetAddress" 
-            value={addressData.streetAddress} 
-            onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-            required
-          />
-        </div>
-        
-        <div className="space-y-1">
-          <Label htmlFor="city" className="text-xs sm:text-sm">
-            <span className="text-red-500">*</span>
-            City
-          </Label>
-          <Input 
-            id="city" 
-            value={addressData.city} 
-            onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-            required
-          />
-        </div>
-        
-        <div className="space-y-1">
-          <Label htmlFor="postalCode" className="text-xs sm:text-sm">
-            <span className="text-red-500">*</span>
-            Postal Code
-          </Label>
-          <Input 
-            id="postalCode" 
-            value={addressData.postalCode} 
-            onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-            required
-          />
-        </div>
-        
-        <div className="space-y-1">
-          <Label htmlFor="country" className="text-xs sm:text-sm">
-            Country
-          </Label>
-          <Input 
-            id="country" 
-            value={addressData.country} 
-            onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-          />
-        </div>
-        
-        <div className="space-y-1">
-          <Label htmlFor="buzzCode" className="text-xs sm:text-sm">
-            Buzz Code / Entry Code <span className="text-xs text-muted-foreground">(Optional)</span>
-          </Label>
-          <Input 
-            id="buzzCode" 
-            value={addressData.buzzCode} 
-            onChange={handleAddressChange}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-          />
-        </div>
-      </div>
-      
-      <div className="flex justify-between space-x-3 pt-3 border-t border-[#C2884E]/10 sticky bottom-0 bg-white pb-2">
+      {/* Fixed button bar at bottom */}
+      <div className="flex justify-between space-x-3 px-4 sm:px-6 py-3 border-t border-[#C2884E]/10 bg-white">
         <Button 
           variant="outline" 
           onClick={() => setStep('region')}
@@ -366,7 +369,7 @@ export function RegionCheckDialogRecharge({
             : (language === 'zh' ? '保存并继续' : 'Save & Continue')}
         </Button>
       </div>
-    </div>
+    </>
   )
 
   return (
