@@ -4,15 +4,15 @@ import User from '@/models/User';
 
 // Interface for route params
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // POST handler - change user password
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { currentPassword, newPassword } = await request.json();
     
     // Validate inputs
@@ -56,7 +56,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       message: 'Password updated successfully' 
     });
   } catch (error) {
-    console.error(`Error changing password for user ${params.id}:`, error);
+    const { id } = await params;
+    console.error(`Error changing password for user ${id}:`, error);
     return NextResponse.json(
       { success: false, error: 'Failed to change password' },
       { status: 500 }
