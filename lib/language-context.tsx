@@ -483,8 +483,8 @@ const translations: TranslationsType = {
     getStartedBtn: "Get Started",
     howItWorksBtn: "How It Works",
     // Homepage additional translations
-    healthyTags: "Healthy|Quality|Comfort|Happy",
-    mainSlogan: "Premium Meal Subscription in North America",
+    healthyTags: "Health|Quality|Comfort|Joy",
+    mainSlogan: "Asian Fusion Meals, Curated to Nourish Your Soul",
     subSlogan: "Bringing care to your everyday moments",
     tagline: "Freshly made, daily delivery",
     mottoFirstLine: "Take a moment to relax with a good meal",
