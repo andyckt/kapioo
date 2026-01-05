@@ -478,7 +478,6 @@ const translations: TranslationsType = {
     dailyDeliveryTitle: "Daily Fresh Delivery",
     dailyDeliveryDesc: "Freshly made every day, delivered daily | Afternoon delivery",
     // Hero section
-    heroTitle: "Premium Meal Subscription in North America <br/><span style=\"white-space: nowrap;\">Bringing care to your everyday moments</span>",
     heroDescription: "Freshly made, daily delivery<br/>Healthy | Quality | Comfort | Happiness",
     getStartedBtn: "Get Started",
     howItWorksBtn: "How It Works",
