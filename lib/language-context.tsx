@@ -478,14 +478,14 @@ const translations: TranslationsType = {
     dailyDeliveryTitle: "Daily Fresh Delivery",
     dailyDeliveryDesc: "Freshly made every day, delivered daily | Afternoon delivery",
     // Hero section
-    heroDescription: "Freshly made, daily delivery<br/>Healthy | Quality | Comfort | Happiness",
+    heroDescription: "Freshly Made Everyday from 5am<br/>Healthy | Quality | Comfort | Happiness",
     getStartedBtn: "Get Started",
     howItWorksBtn: "How It Works",
     // Homepage additional translations
     healthyTags: "Health|Quality|Comfort|Joy",
     mainSlogan: "Asian Fusion Meals, Curated to Nourish Your Soul",
     subSlogan: "Bringing care to your everyday moments",
-    tagline: "Freshly made, daily delivery",
+    tagline: "Freshly Made Everyday from 5am",
     mottoFirstLine: "Take a moment to relax with a good meal",
     mottoSecondLine: "Kapioo, your daily moment of comfort and joy",
     // Food Gallery Section
