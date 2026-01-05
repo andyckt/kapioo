@@ -1238,8 +1238,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                           <Check className="w-5 h-5 text-[#C2884E]" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">每日新鲜现做</h3>
-                          <p className="text-[#6B5F53]/80">直送上门，满分新鲜度。我们坚持每日现做，确保您收到的餐食保持最佳口感和营养价值。</p>
+                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">{language === 'zh' ? '每日新鲜现做' : 'Freshly Made Daily'}</h3>
+                          <p className="text-[#6B5F53]/80">{language === 'zh' ? '直送上门，满分新鲜度。我们坚持每日现做，确保您收到的餐食保持最佳口感和营养价值。' : 'Delivered to your door, maximum freshness. We make meals fresh daily to ensure you receive the best taste and nutritional value.'}</p>
                         </div>
                       </div>
                       
@@ -1248,8 +1248,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                           <Check className="w-5 h-5 text-[#C2884E]" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">餐券制</h3>
-                          <p className="text-[#6B5F53]/80">购买餐券后，可根据个人需求灵活下单，自由选择使用日期——不浪费，更灵活</p>
+                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">{language === 'zh' ? '餐券制' : 'Credit-Based System'}</h3>
+                          <p className="text-[#6B5F53]/80">{language === 'zh' ? '购买餐券后，可根据个人需求灵活下单，自由选择使用日期——不浪费，更灵活' : 'After purchasing credits, order flexibly based on your needs and freely choose when to use them—no waste, more flexibility'}</p>
                         </div>
                       </div>
                       
@@ -1258,8 +1258,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                           <Check className="w-5 h-5 text-[#C2884E]" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">午间时段送达</h3>
-                          <p className="text-[#6B5F53]/80">配送时间为 11AM-1PM。 开始配送后，您将收到包含预计送达时间的短信通知。</p>
+                          <h3 className="text-lg font-medium text-[#6B5F53] mb-1">{language === 'zh' ? '午间时段送达' : 'Lunch Time Delivery'}</h3>
+                          <p className="text-[#6B5F53]/80">{language === 'zh' ? '配送时间为 11AM-1PM。 开始配送后，您将收到包含预计送达时间的短信通知。' : 'Delivery time is 11AM-1PM. Once delivery starts, you will receive an SMS notification with the estimated arrival time.'}</p>
                         </div>
                       </div>
                     </div>
