@@ -100,6 +100,16 @@ export function DailyDeliveryCheckout({
   const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
   const [tempSelectedArea, setTempSelectedArea] = useState<string>("")
 
+  // Helper function to translate combo names
+  const translateComboName = (name: string): string => {
+    if (language === 'zh') return name
+    // Translate common combo name patterns
+    if (name.includes('套餐')) {
+      return name.replace(/套餐/g, 'Combo')
+    }
+    return name
+  }
+
   // Calculate total vouchers needed by type
   const vouchersNeeded = cart.reduce(
     (totals, item) => {
@@ -579,9 +589,9 @@ export function DailyDeliveryCheckout({
                                     <CheckCircle2 className="h-4 w-4 text-[#C2884E]" />
                                   </div>
                                   <div>
-                                    <span className="text-[#6B5F53] font-medium">{item.comboName}</span>
+                                    <span className="text-[#6B5F53] font-medium">{translateComboName(item.comboName)}</span>
                                     <span className="text-[#6B5F53]/60 text-xs ml-2">
-                                      ({item.type === 'A' ? '2菜' : '3菜'})
+                                      ({item.type === 'A' ? (language === 'zh' ? '2菜' : '2-Dish') : (language === 'zh' ? '3菜' : '3-Dish')})
                                     </span>
                                   </div>
                                 </div>
@@ -612,8 +622,8 @@ export function DailyDeliveryCheckout({
                   <div className="border-t border-[#C2884E]/20 pt-3 flex justify-between font-medium">
                     <span className="text-[#6B5F53]">{language === 'zh' ? '总计' : 'Total'}</span>
                     <div className="text-[#C2884E] flex gap-2">
-                      {vouchersNeeded.twoDish > 0 && <span>2菜: {vouchersNeeded.twoDish}</span>}
-                      {vouchersNeeded.threeDish > 0 && <span>3菜: {vouchersNeeded.threeDish}</span>}
+                      {vouchersNeeded.twoDish > 0 && <span>{language === 'zh' ? '2菜' : '2-Dish'}: {vouchersNeeded.twoDish}</span>}
+                      {vouchersNeeded.threeDish > 0 && <span>{language === 'zh' ? '3菜' : '3-Dish'}: {vouchersNeeded.threeDish}</span>}
                       {vouchersNeeded.twoDish === 0 && vouchersNeeded.threeDish === 0 && <span>0</span>}
                     </div>
                   </div>
