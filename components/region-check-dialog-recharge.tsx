@@ -254,6 +254,19 @@ export function RegionCheckDialogRecharge({
         </h3>
       </div>
       
+      {/* Display selected area */}
+      <div className="bg-[#F5EDE4]/50 p-3 rounded-lg border border-[#C2884E]/20">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-[#C2884E]" />
+          <span className="text-sm text-[#6B5F53]">
+            {language === 'zh' ? '已选择区域：' : 'Selected Area:'} 
+            <span className="font-semibold text-[#C2884E] ml-1">
+              {isValidRegion ? currentRegion : selectedRegion}
+            </span>
+          </span>
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="unitNumber" className="text-xs sm:text-sm">
