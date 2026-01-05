@@ -86,8 +86,8 @@ function formatAddress(address: any, language: string) {
   
   formattedAddress += address.streetAddress || '';
   
-  if (address.city || address.province || address.postalCode) {
-    formattedAddress += `, ${address.city || ''} ${address.province || ''} ${address.postalCode || ''}`;
+  if (address.province || address.postalCode) {
+    formattedAddress += `, ${address.province || ''} ${address.postalCode || ''}`;
   }
   
   if (address.country) {
