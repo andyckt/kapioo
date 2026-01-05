@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info, Check, ChevronsUpDown, Search, ChevronDown, Ticket } from "lucide-react"
+import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info, Check, ChevronsUpDown, Search, ChevronDown, Ticket, CalendarCheck, UtensilsCrossed, Truck, Clock, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,7 +30,7 @@ import { MealDetail } from "@/components/meal-detail"
 import { ReferralCard } from "@/components/referral-card"
 import { DeliveryTracking } from "@/components/delivery-tracking"
 // import { SupportChat } from "@/components/support-chat"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
@@ -1688,76 +1688,264 @@ export default function DashboardPage() {
                   transition={{ duration: 0.2 }}
                   className="space-y-6"
                 >
-                  <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">
-                      {language === 'zh' ? '周次Meal Box' : 'Weekly Meal Box'}
-                    </h2>
-                    
-                    <div className="flex items-center gap-2">
-                      {/* Available Meal Plans Display */}
-                      {userData && (
-                        <div className="flex flex-wrap gap-2">
-                          {userData.weeklySIXmeals !== undefined && userData.weeklySIXmeals > 0 && (
-                            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                              <span className="text-sm font-medium text-[#6B5F53]">
-                                {language === 'zh' ? '6餐一周' : '6 Meals/Week'}: 
-                              </span>
-                              <span className="text-sm font-bold text-[#C2884E]">
-                                {userData.weeklySIXmeals}{language === 'zh' ? '张' : ''}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {(userData as any).weeklyEIGHTmeals !== undefined && (userData as any).weeklyEIGHTmeals > 0 && (
-                            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                              <span className="text-sm font-medium text-[#6B5F53]">
-                                {language === 'zh' ? '8餐一周' : '8 Meals/Week'}: 
-                              </span>
-                              <span className="text-sm font-bold text-[#C2884E]">
-                                {(userData as any).weeklyEIGHTmeals}{language === 'zh' ? '张' : ''}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {userData.weeklyTENmeals !== undefined && userData.weeklyTENmeals > 0 && (
-                            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                              <span className="text-sm font-medium text-[#6B5F53]">
-                                {language === 'zh' ? '10餐一周' : '10 Meals/Week'}: 
-                              </span>
-                              <span className="text-sm font-bold text-[#C2884E]">
-                                {userData.weeklyTENmeals}{language === 'zh' ? '张' : ''}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {(userData as any).weeklyTWELVEmeals !== undefined && (userData as any).weeklyTWELVEmeals > 0 && (
-                            <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                              <span className="text-sm font-medium text-[#6B5F53]">
-                                {language === 'zh' ? '12餐一周' : '12 Meals/Week'}: 
-                              </span>
-                              <span className="text-sm font-bold text-[#C2884E]">
-                                {(userData as any).weeklyTWELVEmeals}{language === 'zh' ? '张' : ''}
-                              </span>
-                            </div>
-                          )}
+                  {/* New Header Design matching Weekly Meal Page */}
+                  <div className="bg-gradient-to-br from-[#FFF6EF] to-white rounded-2xl p-6 md:p-8 shadow-sm border border-[#C2884E]/10 mt-4">
+                    <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                      {/* Left column - Title and description */}
+                      <div className="md:w-1/2">
+                        <div className="inline-flex items-center mb-4">
+                          <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
+                            <span className="text-sm font-medium text-[#C2884E]">
+                              {language === 'zh' ? '周次餐盒订阅' : 'Weekly Meal Subscription'}
+                            </span>
+                          </div>
                         </div>
-                      )}
+                        
+                        <h2 className="text-2xl md:text-4xl font-bold mb-4 text-[#6B5F53]">
+                          <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
+                            {language === 'zh' ? '周次MealBox' : 'Weekly MealBox'}
+                          </span>
+                          <span className="block mt-1">
+                            {language === 'zh' ? '餐盒订阅' : 'Meal Subscription'}
+                          </span>
+                        </h2>
+                        
+                        <p className="text-base md:text-lg text-[#6B5F53]/80 mb-6">
+                          {language === 'zh' 
+                            ? '适合把餐食储存于冰箱，随取随享，注重极度便利的你' 
+                            : 'Perfect for those who prefer to store meals in the refrigerator and enjoy maximum convenience'}
+                        </p>
+                        
+                        {/* Available Meal Plans Display */}
+                        {userData && (
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {userData.weeklySIXmeals !== undefined && userData.weeklySIXmeals > 0 && (
+                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                                <span className="text-sm font-medium text-[#6B5F53]">
+                                  {language === 'zh' ? '6餐一周' : '6 Meals/Week'}: 
+                                </span>
+                                <span className="text-sm font-bold text-[#C2884E]">
+                                  {userData.weeklySIXmeals}{language === 'zh' ? '张' : ''}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {(userData as any).weeklyEIGHTmeals !== undefined && (userData as any).weeklyEIGHTmeals > 0 && (
+                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                                <span className="text-sm font-medium text-[#6B5F53]">
+                                  {language === 'zh' ? '8餐一周' : '8 Meals/Week'}: 
+                                </span>
+                                <span className="text-sm font-bold text-[#C2884E]">
+                                  {(userData as any).weeklyEIGHTmeals}{language === 'zh' ? '张' : ''}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {userData.weeklyTENmeals !== undefined && userData.weeklyTENmeals > 0 && (
+                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                                <span className="text-sm font-medium text-[#6B5F53]">
+                                  {language === 'zh' ? '10餐一周' : '10 Meals/Week'}: 
+                                </span>
+                                <span className="text-sm font-bold text-[#C2884E]">
+                                  {userData.weeklyTENmeals}{language === 'zh' ? '张' : ''}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {(userData as any).weeklyTWELVEmeals !== undefined && (userData as any).weeklyTWELVEmeals > 0 && (
+                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                                <span className="text-sm font-medium text-[#6B5F53]">
+                                  {language === 'zh' ? '12餐一周' : '12 Meals/Week'}: 
+                                </span>
+                                <span className="text-sm font-bold text-[#C2884E]">
+                                  {(userData as any).weeklyTWELVEmeals}{language === 'zh' ? '张' : ''}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-3">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                className="border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 transition-all duration-300"
+                              >
+                                {language === 'zh' ? '了解更多' : 'Learn More'}
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
+                              <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
+                                <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+                                  {language === 'zh' ? '了解更多' : 'Learn More'}
+                                </DialogTitle>
+                                <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
+                                  {language === 'zh' ? '了解我们的周次餐盒订阅服务' : 'Learn about our weekly meal subscription service'}
+                                </DialogDescription>
+                              </DialogHeader>
+                              
+                              <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-brand">
+                                <div className="space-y-8">
+                                  <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '订阅方式' : 'Subscription Process'}</h3>
+                                  
+                                  {/* Step 1 */}
+                                  <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                        <Calendar className="w-5 h-5 text-[#C2884E]" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">1</span>
+                                        {language === 'zh' ? '选择适合你的周卡' : 'Choose Your Weekly Plan'}
+                                      </h3>
+                                      <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                        {language === 'zh' ? '根据您的用餐需求选择合适的周卡套餐，灵活安排每周用餐计划。' : 'Select a weekly plan that suits your meal needs and flexibly arrange your weekly meal schedule.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Step 2 */}
+                                  <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                        <CreditCard className="w-5 h-5 text-[#C2884E]" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">2</span>
+                                        {language === 'zh' ? '完成在线付款' : 'Complete Online Payment'}
+                                      </h3>
+                                      <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                        {language === 'zh' ? '通过线上支付方式完成周卡购买，系统自动记录您的周卡余额。' : 'Complete your weekly plan purchase through online payment. The system automatically records your plan balance.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Step 3 */}
+                                  <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                        <CalendarCheck className="w-5 h-5 text-[#C2884E]" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">3</span>
+                                        {language === 'zh' ? '使用周卡下单订餐' : 'Order Meals with Your Plan'}
+                                      </h3>
+                                      <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                        {language === 'zh' ? '登录账户，使用周卡下单订餐，无需重复支付。' : 'Log into your account and use your weekly plan to order meals without repeated payments.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Step 4 */}
+                                  <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                        <UtensilsCrossed className="w-5 h-5 text-[#C2884E]" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">4</span>
+                                        {language === 'zh' ? '每周更新菜单，自由挑选餐食' : 'Weekly Menu Updates, Choose Freely'}
+                                      </h3>
+                                      <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                        {language === 'zh' ? '我们每周更新菜单，您可以提前选择喜欢的菜品和配送日期。' : 'We update our menu weekly. You can select your favorite dishes and delivery dates in advance.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Step 5 */}
+                                  <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
+                                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
+                                        <Truck className="w-5 h-5 text-[#C2884E]" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
+                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">5</span>
+                                        {language === 'zh' ? '晚间送达 → 冷藏保存 → 按最佳日期享用' : 'Evening Delivery → Refrigerate → Enjoy by Best-By Date'}
+                                      </h3>
+                                      <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
+                                        {language === 'zh' ? '我们会在晚间将餐食送达您指定的地址，您可以将餐食冷藏保存，按照标注的最佳食用日期享用。' : 'We deliver meals to your specified address in the evening. You can refrigerate the meals and enjoy them by the labeled best-by date.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
                       
-                      <button 
-                        className="flex items-center justify-center w-7 h-7 rounded-full bg-[#F5EDE4] hover:bg-[#F0E5D9] text-[#C2884E] transition-all duration-300 hover:scale-110"
-                        onClick={() => {
-                          // Find the CreditPurchasePlans component and trigger its info dialog
-                          const event = new CustomEvent('openInfoDialog');
-                          document.dispatchEvent(event);
-                        }}
-                      >
-                        <Info className="h-4 w-4" />
-                      </button>
+                      {/* Right column - Feature tags */}
+                      <div className="md:w-1/2 flex flex-col justify-center">
+                        <div className="space-y-4">
+                          {/* Feature 1 */}
+                          <div className="group flex items-center gap-4 p-1">
+                            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center shadow-sm border border-[#C2884E]/10 group-hover:border-[#C2884E]/30 transition-all duration-300">
+                              <div className="transform group-hover:scale-110 transition-transform duration-300 text-[#C2884E]">
+                                <Calendar className="h-6 w-6" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-base font-medium text-[#6B5F53] group-hover:text-[#C2884E] transition-colors duration-300">
+                                {language === 'zh' ? '周次MealBox' : 'Weekly MealBox'}
+                              </p>
+                              <p className="text-sm text-[#6B5F53]/80">
+                                {language === 'zh' ? '每周配送2次，轻松覆盖整周' : 'Two deliveries per week, covering the entire week'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Feature 2 */}
+                          <div className="group flex items-center gap-4 p-1">
+                            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center shadow-sm border border-[#C2884E]/10 group-hover:border-[#C2884E]/30 transition-all duration-300">
+                              <div className="transform group-hover:scale-110 transition-transform duration-300 text-[#C2884E]">
+                                <Clock className="h-6 w-6" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-base font-medium text-[#6B5F53] group-hover:text-[#C2884E] transition-colors duration-300">
+                                {language === 'zh' ? '晚间配送' : 'Evening Delivery'}
+                              </p>
+                              <p className="text-sm text-[#6B5F53]/80">
+                                {language === 'zh' ? '6PM-10PM送达，方便省心' : 'Delivered 6PM-10PM, convenient and worry-free'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Feature 3 */}
+                          <div className="group flex items-center gap-4 p-1">
+                            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center shadow-sm border border-[#C2884E]/10 group-hover:border-[#C2884E]/30 transition-all duration-300">
+                              <div className="transform group-hover:scale-110 transition-transform duration-300 text-[#C2884E]">
+                                <Star className="h-6 w-6" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-base font-medium text-[#6B5F53] group-hover:text-[#C2884E] transition-colors duration-300">
+                                {language === 'zh' ? '冷藏保存' : 'Refrigerate & Enjoy'}
+                              </p>
+                              <p className="text-sm text-[#6B5F53]/80">
+                                {language === 'zh' ? '储存于冰箱，随取随享' : 'Store in refrigerator, enjoy anytime'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
-                  {/* Available Areas Section - First section right below heading */}
-                  <div className="mb-6 mt-4">
+                  {/* Available Areas Section */}
+                  <div className="mb-6">
                     <AvailableAreas />
                   </div>
                   
