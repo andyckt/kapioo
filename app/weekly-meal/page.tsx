@@ -758,7 +758,7 @@ export default function WeeklyMealPage() {
                       
                       <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-brand">
                         <div className="space-y-8">
-                          <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">订阅方式</h3>
+                          <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '订阅方式' : 'Subscription Process'}</h3>
                           
                           {/* Step 1 */}
                           <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
@@ -770,10 +770,10 @@ export default function WeeklyMealPage() {
                             <div className="flex-1">
                               <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
                                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">1</span>
-                                选择适合你的周卡
+                                {language === 'zh' ? '选择适合你的周卡' : 'Choose Your Weekly Plan'}
                               </h3>
                               <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                根据您的用餐需求选择合适的周卡套餐，灵活安排每周用餐计划。
+                                {language === 'zh' ? '根据您的用餐需求选择合适的周卡套餐，灵活安排每周用餐计划。' : 'Select a weekly plan that suits your meal needs and flexibly arrange your weekly meal schedule.'}
                               </p>
                             </div>
                           </div>
@@ -788,10 +788,10 @@ export default function WeeklyMealPage() {
                             <div className="flex-1">
                               <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
                                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">2</span>
-                                完成在线付款
+                                {language === 'zh' ? '完成在线付款' : 'Complete Online Payment'}
                               </h3>
                               <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                通过线上支付方式完成周卡购买，系统自动记录您的周卡余额。
+                                {language === 'zh' ? '通过线上支付方式完成周卡购买，系统自动记录您的周卡余额。' : 'Complete your weekly plan purchase through online payment. The system automatically records your plan balance.'}
                               </p>
                             </div>
                           </div>
@@ -806,10 +806,10 @@ export default function WeeklyMealPage() {
                             <div className="flex-1">
                               <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
                                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">3</span>
-                                使用周卡下单订餐
+                                {language === 'zh' ? '使用周卡下单订餐' : 'Order Meals with Your Plan'}
                               </h3>
                               <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                登录账户，使用周卡下单订餐，无需重复支付。
+                                {language === 'zh' ? '登录账户，使用周卡下单订餐，无需重复支付。' : 'Log into your account and use your weekly plan to order meals without repeated payments.'}
                               </p>
                             </div>
                           </div>
@@ -824,10 +824,10 @@ export default function WeeklyMealPage() {
                             <div className="flex-1">
                               <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
                                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">4</span>
-                                每周更新菜单，自由挑选餐食
+                                {language === 'zh' ? '每周更新菜单，自由挑选餐食' : 'Weekly Menu Updates, Choose Freely'}
                               </h3>
                               <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                我们每周更新菜单，您可以提前选择喜欢的菜品和配送日期。
+                                {language === 'zh' ? '我们每周更新菜单，您可以提前选择喜欢的菜品和配送日期。' : 'We update our menu weekly. You can select your favorite dishes and delivery dates in advance.'}
                               </p>
                             </div>
                           </div>
@@ -842,10 +842,10 @@ export default function WeeklyMealPage() {
                             <div className="flex-1">
                               <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
                                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">5</span>
-                                晚间送达 → 冷藏保存 → 按最佳日期享用
+                                {language === 'zh' ? '晚间送达 → 冷藏保存 → 按最佳日期享用' : 'Evening Delivery → Refrigerate → Enjoy by Best-By Date'}
                               </h3>
                               <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                我们会在晚间将餐食送达您指定的地址，您可以将餐食冷藏保存，按照标注的最佳食用日期享用。
+                                {language === 'zh' ? '我们会在晚间将餐食送达您指定的地址，您可以将餐食冷藏保存，按照标注的最佳食用日期享用。' : 'We deliver meals to your specified address in the evening. You can refrigerate the meals and enjoy them by the labeled best-by date.'}
                               </p>
                             </div>
                           </div>
