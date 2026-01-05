@@ -1547,7 +1547,7 @@ export default function AdminDashboardPage() {
                               <th className="text-left p-4 font-medium">Name</th>
                               <th className="text-left p-4 font-medium w-[150px]">Email</th>
                               <th className="text-left p-4 font-medium">Phone</th>
-                              <th className="text-left p-4 font-medium">City</th>
+                              <th className="text-left p-4 font-medium">Area</th>
                               <th className="text-left p-4 font-medium">Created</th>
                               <th className="text-left p-4 font-medium">Orders</th>
                               <th className="text-center p-4 font-medium">Actions</th>
@@ -1586,7 +1586,7 @@ export default function AdminDashboardPage() {
                                   </div>
                                 </td>
                                 <td className="p-4">{user.phone || "-"}</td>
-                                <td className="p-4">{user.address?.city || "-"}</td>
+                                <td className="p-4">{user.address?.province || "-"}</td>
                                 <td className="p-4">{user.joined ? formatDate(user.joined) : "-"}</td>
                                 <td className="p-4">{user.totalOrders || 0}</td>
                                 <td className="p-4">
@@ -1662,8 +1662,8 @@ export default function AdminDashboardPage() {
                                     <p className="text-xs font-medium truncate">{user.phone || "-"}</p>
                                   </div>
                                   <div>
-                                    <p className="text-xs text-muted-foreground">City</p>
-                                    <p className="text-xs font-medium truncate">{user.address?.city || "-"}</p>
+                                    <p className="text-xs text-muted-foreground">Area</p>
+                                    <p className="text-xs font-medium truncate">{user.address?.province || "-"}</p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground">Orders</p>
