@@ -1123,7 +1123,7 @@ export default function DailyDelivery() {
                           {/* 3-Dish Voucher Additional Dishes */}
                           <div className="mt-3">
                             <div className="text-xs font-medium mb-2 text-[#6B5F53]/80 italic">
-                              包含以上的所有菜品，再加:
+                              {language === 'zh' ? '包含以上的所有菜品，再加:' : 'Includes all dishes above, plus:'}
                             </div>
                             <ul className="grid grid-cols-1 gap-2">
                               {combo.typeB.dishes
