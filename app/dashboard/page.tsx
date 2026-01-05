@@ -185,10 +185,9 @@ export default function DashboardPage() {
   const [addressInfo, setAddressInfo] = useState({
     unitNumber: '',
     streetAddress: '',
-    city: '',
     province: '', // State in UI
     postalCode: '', // ZIP code in UI
-    country: '',
+    country: 'Canada', // Always Canada, not shown in UI
     buzzCode: ''
   });
 
@@ -360,10 +359,9 @@ export default function DashboardPage() {
             setAddressInfo({
               unitNumber: user.address.unitNumber || '',
               streetAddress: user.address.streetAddress || '',
-              city: user.address.city || '',
               province: user.address.province || '', // State in UI
               postalCode: user.address.postalCode || '', // ZIP code in UI
-              country: user.address.country || '',
+              country: user.address.country || 'Canada', // Always Canada
               buzzCode: user.address.buzzCode || ''
             });
           }
@@ -410,10 +408,9 @@ export default function DashboardPage() {
             setAddressInfo({
               unitNumber: user.address.unitNumber || '',
               streetAddress: user.address.streetAddress || '',
-              city: user.address.city || '',
               province: user.address.province || '',
               postalCode: user.address.postalCode || '',
-              country: user.address.country || '',
+              country: user.address.country || 'Canada', // Always Canada
               buzzCode: user.address.buzzCode || ''
             });
           }
@@ -1991,10 +1988,6 @@ export default function DashboardPage() {
                               <Input id="streetAddress" value={addressInfo.streetAddress} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="city">{t('city')}</Label>
-                              <Input id="city" value={addressInfo.city} onChange={handleAddressInfoChange} />
-                            </div>
-                            <div className="space-y-2">
                               <Label htmlFor="state">{t('state')}</Label>
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -2042,10 +2035,6 @@ export default function DashboardPage() {
                             <div className="space-y-2">
                               <Label htmlFor="zip">{t('zipCode')}</Label>
                               <Input id="zip" value={addressInfo.postalCode} onChange={handleAddressInfoChange} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="country">{t('country')}</Label>
-                              <Input id="country" value={addressInfo.country} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="buzzCode" className="text-sm">{t('buzzCodeLabel')} <span className="text-muted-foreground text-xs">{t('buzzCodeOptional')}</span></Label>

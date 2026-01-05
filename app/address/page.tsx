@@ -15,10 +15,9 @@ import { useLanguage } from "@/lib/language-context"
 export default function AddressPage() {
   const [unitNumber, setUnitNumber] = useState("")
   const [streetAddress, setStreetAddress] = useState("")
-  const [city, setCity] = useState("")
   const [postalCode, setPostalCode] = useState("")
   const [province, setProvince] = useState("")
-  const [country, setCountry] = useState("")
+  const [country] = useState("Canada") // Always Canada, not shown in UI
   const [buzzCode, setBuzzCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
@@ -46,7 +45,7 @@ export default function AddressPage() {
 
   const validateForm = () => {
     // Check required fields
-    if (!streetAddress || !city || !postalCode || !province || !country) {
+    if (!streetAddress || !postalCode || !province) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
@@ -78,10 +77,9 @@ export default function AddressPage() {
           address: {
             unitNumber,
             streetAddress,
-            city,
             postalCode,
             province,
-            country,
+            country, // Always "Canada"
             buzzCode,
           }
         }),
@@ -180,18 +178,6 @@ export default function AddressPage() {
                 />
               </div>
               
-              <div className="grid gap-2.5">
-                <Label htmlFor="city" className="text-sm font-medium">City <span className="text-red-500">*</span></Label>
-                <Input
-                  id="city"
-                  placeholder="City"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="h-11 text-base placeholder:text-sm"
-                  required
-                />
-              </div>
-              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="grid gap-2.5">
                   <Label htmlFor="province" className="text-sm font-medium">Area <span className="text-red-500">*</span></Label>
@@ -206,28 +192,16 @@ export default function AddressPage() {
                 </div>
                 
                 <div className="grid gap-2.5">
-                  <Label htmlFor="postalCode" className="text-sm font-medium">Postal Code <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="postalCode" className="text-sm font-medium">ZIP Code <span className="text-red-500">*</span></Label>
                   <Input
                     id="postalCode"
-                    placeholder="Postal code"
+                    placeholder="ZIP code"
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
                     className="h-11 text-base placeholder:text-sm"
                     required
                   />
                 </div>
-              </div>
-              
-              <div className="grid gap-2.5">
-                <Label htmlFor="country" className="text-sm font-medium">Country <span className="text-red-500">*</span></Label>
-                <Input
-                  id="country"
-                  placeholder="Country"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="h-11 text-base placeholder:text-sm"
-                  required
-                />
               </div>
               
               <div className="grid gap-2.5">

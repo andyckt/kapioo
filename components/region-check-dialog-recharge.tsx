@@ -51,9 +51,8 @@ interface RegionCheckDialogRechargeProps {
 interface AddressData {
   unitNumber?: string;
   streetAddress?: string;
-  city?: string;
   postalCode?: string;
-  country?: string;
+  country?: string; // Always "Canada", not shown in UI
   buzzCode?: string;
 }
 
@@ -77,9 +76,8 @@ export function RegionCheckDialogRecharge({
   const [addressData, setAddressData] = useState<AddressData>({
     unitNumber: existingAddress?.unitNumber || '',
     streetAddress: existingAddress?.streetAddress || '',
-    city: existingAddress?.city || '',
     postalCode: existingAddress?.postalCode || '',
-    country: existingAddress?.country || 'Canada',
+    country: existingAddress?.country || 'Canada', // Always Canada
     buzzCode: existingAddress?.buzzCode || ''
   })
 
@@ -125,11 +123,11 @@ export function RegionCheckDialogRecharge({
     
     if (!regionToUse) return
     
-    // Validate required fields: street address, city, and postal code
-    if (!addressData.streetAddress || !addressData.city || !addressData.postalCode) {
+    // Validate required fields: street address and ZIP code
+    if (!addressData.streetAddress || !addressData.postalCode) {
       toast({
         title: language === 'zh' ? "请填写必填字段" : "Please fill in required fields",
-        description: language === 'zh' ? "街道地址、城市和邮政编码是必填的" : "Street address, city, and postal code are required",
+        description: language === 'zh' ? "街道地址和邮政编码是必填的" : "Street address and ZIP code are required",
         variant: "destructive"
       })
       return
@@ -296,23 +294,9 @@ export function RegionCheckDialogRecharge({
           </div>
           
           <div className="space-y-1">
-            <Label htmlFor="city" className="text-xs sm:text-sm">
-              <span className="text-red-500">*</span>
-              City
-            </Label>
-            <Input 
-              id="city" 
-              value={addressData.city} 
-              onChange={handleAddressChange}
-              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-              required
-            />
-          </div>
-          
-          <div className="space-y-1">
             <Label htmlFor="postalCode" className="text-xs sm:text-sm">
               <span className="text-red-500">*</span>
-              Postal Code
+              ZIP Code
             </Label>
             <Input 
               id="postalCode" 
@@ -320,18 +304,6 @@ export function RegionCheckDialogRecharge({
               onChange={handleAddressChange}
               className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
               required
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <Label htmlFor="country" className="text-xs sm:text-sm">
-              Country
-            </Label>
-            <Input 
-              id="country" 
-              value={addressData.country} 
-              onChange={handleAddressChange}
-              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
             />
           </div>
           

@@ -53,10 +53,9 @@ const WEEKLY_DELIVERY_REGIONS = [
 interface AddressData {
   unitNumber?: string
   streetAddress?: string
-  city?: string
   province?: string
   postalCode?: string
-  country?: string
+  country?: string // Always "Canada", not shown in UI
   buzzCode?: string
 }
 
@@ -89,10 +88,9 @@ export function WeeklyAddressDialog({
   const [addressData, setAddressData] = useState<AddressData>({
     unitNumber: existingAddress?.unitNumber || '',
     streetAddress: existingAddress?.streetAddress || '',
-    city: existingAddress?.city || '',
     province: selectedRegion || '',
     postalCode: existingAddress?.postalCode || '',
-    country: existingAddress?.country || 'Canada',
+    country: existingAddress?.country || 'Canada', // Always Canada
     buzzCode: existingAddress?.buzzCode || '',
   })
   
@@ -102,10 +100,9 @@ export function WeeklyAddressDialog({
       setAddressData({
         unitNumber: existingAddress.unitNumber || '',
         streetAddress: existingAddress.streetAddress || '',
-        city: existingAddress.city || '',
         province: selectedRegion || existingAddress.province || '',
         postalCode: existingAddress.postalCode || '',
-        country: existingAddress.country || 'Canada',
+        country: existingAddress.country || 'Canada', // Always Canada
         buzzCode: existingAddress.buzzCode || '',
       })
     }
@@ -147,11 +144,11 @@ export function WeeklyAddressDialog({
       return
     }
     
-    // Validate required fields: street address, city, and postal code
-    if (!addressData.streetAddress || !addressData.city || !addressData.postalCode) {
+    // Validate required fields: street address and ZIP code
+    if (!addressData.streetAddress || !addressData.postalCode) {
       toast({
         title: language === 'zh' ? "请填写必填字段" : "Please fill in required fields",
-        description: language === 'zh' ? "街道地址、城市和邮政编码是必填的" : "Street address, city, and postal code are required",
+        description: language === 'zh' ? "街道地址和邮政编码是必填的" : "Street address and ZIP code are required",
         variant: "destructive"
       })
       return
@@ -273,26 +270,11 @@ export function WeeklyAddressDialog({
               />
             </div>
             
-            {/* City */}
-            <div className="space-y-1">
-              <Label htmlFor="city" className="text-xs sm:text-sm">
-                <span className="text-red-500">*</span>
-                City
-              </Label>
-              <Input 
-                id="city" 
-                value={addressData.city} 
-                onChange={handleAddressChange}
-                className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-                required
-              />
-            </div>
-            
-            {/* Postal Code */}
+            {/* ZIP Code */}
             <div className="space-y-1">
               <Label htmlFor="postalCode" className="text-xs sm:text-sm">
                 <span className="text-red-500">*</span>
-                Postal Code
+                ZIP Code
               </Label>
               <Input 
                 id="postalCode" 
@@ -300,19 +282,6 @@ export function WeeklyAddressDialog({
                 onChange={handleAddressChange}
                 className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
                 required
-              />
-            </div>
-            
-            {/* Country */}
-            <div className="space-y-1">
-              <Label htmlFor="country" className="text-xs sm:text-sm">
-                Country
-              </Label>
-              <Input 
-                id="country" 
-                value={addressData.country} 
-                onChange={handleAddressChange}
-                className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
               />
             </div>
             
@@ -334,7 +303,7 @@ export function WeeklyAddressDialog({
             <Button 
               className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white text-sm px-3 py-1 h-9"
               onClick={handleAddressSubmit}
-              disabled={!addressData.streetAddress || !addressData.city || !addressData.postalCode || !selectedRegion || isLoading}
+              disabled={!addressData.streetAddress || !addressData.postalCode || !selectedRegion || isLoading}
             >
               {isLoading 
                 ? (language === 'zh' ? '处理中...' : 'Processing...') 

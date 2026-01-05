@@ -97,10 +97,9 @@ export function WeeklySubscriptionCheckout({
   const [addressFormData, setAddressFormData] = useState({
     unitNumber: '',
     streetAddress: '',
-    city: '',
     province: '',
     postalCode: '',
-    country: '',
+    country: 'Canada', // Always Canada, not shown in UI
     buzzCode: ''
   })
   const [editingAddress, setEditingAddress] = useState(false)
@@ -132,10 +131,9 @@ export function WeeklySubscriptionCheckout({
         setAddressFormData({
           unitNumber: user.address.unitNumber || "",
           streetAddress: user.address.streetAddress || "",
-          city: user.address.city || "",
           province: user.address.province || "",
           postalCode: user.address.postalCode || "",
-          country: user.address.country || "",
+          country: user.address.country || "Canada", // Always Canada
           buzzCode: user.address.buzzCode || ""
         })
       }
@@ -350,8 +348,8 @@ export function WeeklySubscriptionCheckout({
     // Use either the form address data (if editing) or the stored user address
     const deliveryAddress = editingAddress ? addressFormData : userData?.address
     
-    if (!deliveryAddress || !deliveryAddress.streetAddress || !deliveryAddress.city || 
-        !deliveryAddress.province || !deliveryAddress.postalCode || !deliveryAddress.country) {
+    if (!deliveryAddress || !deliveryAddress.streetAddress || 
+        !deliveryAddress.province || !deliveryAddress.postalCode) {
       toast({
         title: language === 'zh' ? '出错了' : 'Error Occurred',
         description: language === 'zh' ? '请填写完整的地址信息' : 'Please provide a complete address',
@@ -816,17 +814,6 @@ export function WeeklySubscriptionCheckout({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="city" className="text-sm">
-                        City <span className="text-red-500">*</span>
-                      </Label>
-                      <Input 
-                        id="city" 
-                        value={addressFormData.city} 
-                        onChange={handleAddressInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
                       <Label htmlFor="state" className="text-sm">
                         Area <span className="text-red-500">*</span>
                       </Label>
@@ -870,22 +857,11 @@ export function WeeklySubscriptionCheckout({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="zip" className="text-sm">
-                        Postal/ZIP Code <span className="text-red-500">*</span>
+                        ZIP Code <span className="text-red-500">*</span>
                       </Label>
                       <Input 
                         id="zip" 
                         value={addressFormData.postalCode} 
-                        onChange={handleAddressInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="country" className="text-sm">
-                        Country <span className="text-red-500">*</span>
-                      </Label>
-                      <Input 
-                        id="country" 
-                        value={addressFormData.country} 
                         onChange={handleAddressInputChange}
                         required
                       />

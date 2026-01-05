@@ -5,10 +5,9 @@ import crypto from 'crypto';
 export interface IAddress {
   unitNumber?: string;
   streetAddress: string;
-  city: string;
   postalCode: string;  // This corresponds to "ZIP code" in the UI
   province: string;    // This corresponds to "State" in the UI
-  country: string;
+  country: string;     // Always "Canada" by default, not shown in UI
   buzzCode?: string;
 }
 
@@ -16,10 +15,9 @@ export interface IAddress {
 const AddressSchema: Schema = new Schema({
   unitNumber: { type: String },
   streetAddress: { type: String, required: false },
-  city: { type: String, required: false },
   postalCode: { type: String, required: false },
   province: { type: String, required: false },
-  country: { type: String, required: false },
+  country: { type: String, default: 'Canada' },
   buzzCode: { type: String }
 }, { _id: false }); // Prevent MongoDB from creating an _id for embedded documents
 

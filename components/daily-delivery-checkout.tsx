@@ -88,10 +88,9 @@ export function DailyDeliveryCheckout({
   const [addressFormData, setAddressFormData] = useState({
     unitNumber: '',
     streetAddress: '',
-    city: '',
     province: '',
     postalCode: '',
-    country: '',
+    country: 'Canada', // Always Canada, not shown in UI
     buzzCode: ''
   })
   const [editingAddress, setEditingAddress] = useState(false)
@@ -143,10 +142,9 @@ export function DailyDeliveryCheckout({
         setAddressFormData({
           unitNumber: user.address.unitNumber || "",
           streetAddress: user.address.streetAddress || "",
-          city: user.address.city || "",
           province: user.address.province || "",
           postalCode: user.address.postalCode || "",
-          country: user.address.country || "",
+          country: user.address.country || "Canada", // Always Canada
           buzzCode: user.address.buzzCode || ""
         })
         
@@ -730,17 +728,6 @@ export function DailyDeliveryCheckout({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="city" className="text-sm">
-                          City <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="city" 
-                          value={addressFormData.city} 
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
                         <Label htmlFor="state" className="text-sm flex items-center gap-2">
                           <span>Area <span className="text-red-500">*</span></span>
                           {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
@@ -789,22 +776,11 @@ export function DailyDeliveryCheckout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="zip" className="text-sm">
-                          Postal/ZIP Code <span className="text-red-500">*</span>
+                          ZIP Code <span className="text-red-500">*</span>
                         </Label>
                         <Input 
                           id="zip" 
                           value={addressFormData.postalCode} 
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="country" className="text-sm">
-                          Country <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="country" 
-                          value={addressFormData.country} 
                           onChange={handleAddressInputChange}
                           required
                         />
