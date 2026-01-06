@@ -58,6 +58,7 @@ export default function WeeklyMealPage() {
   interface MenuOption {
     id: string;
     name: string;
+    nameEn?: string;
     tags?: string[];
   }
   
@@ -66,13 +67,14 @@ export default function WeeklyMealPage() {
     name: string;
     date: string;
     weekOffset: number;
+    week?: number;
+    uniqueId?: string;
     options: MenuOption[];
   }
   
   const [weeklyMenu, setWeeklyMenu] = useState<MenuDay[]>([])
   const [activeWeek, setActiveWeek] = useState(1)
   const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
-  const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
   
   // Check if user is authenticated on component mount
   useEffect(() => {
@@ -81,37 +83,12 @@ export default function WeeklyMealPage() {
     setIsAuthenticated(authStatus === 'true' && !!userData)
   }, [])
   
-  // Fetch dish translations on component mount
-  useEffect(() => {
-    const fetchDishTranslations = async () => {
-      try {
-        const response = await fetch('/api/dishes');
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          // Create a map of Chinese name -> English name
-          const translationsMap: Record<string, string> = {};
-          result.data.forEach((dish: any) => {
-            if (dish.nameEn) {
-              translationsMap[dish.name] = dish.nameEn;
-            }
-          });
-          setDishTranslations(translationsMap);
-        }
-      } catch (error) {
-        console.error('Error fetching dish translations:', error);
-      }
-    };
-    
-    fetchDishTranslations();
-  }, [])
-  
-  // Helper function to translate dish names
-  const translateDishName = (dishName: string): string => {
-    if (language === 'zh' || !dishTranslations[dishName]) {
-      return dishName
+  // Helper function to translate menu option names
+  const translateOptionName = (option: MenuOption): string => {
+    if (language === 'zh') {
+      return option.name
     }
-    return dishTranslations[dishName] || dishName
+    return option.nameEn || option.name
   }
   
   // Fetch weekly menu data when dialog opens
@@ -610,7 +587,7 @@ export default function WeeklyMealPage() {
                                     .map((day) => (
                                       <button
                                         key={day.id}
-                                        onClick={() => setSelectedMenuDay(day.uniqueId)}
+                                        onClick={() => setSelectedMenuDay(day.uniqueId || day.id)}
                                         className={`flex-shrink-0 transition-all duration-300 border
                                           ${selectedMenuDay === day.uniqueId 
                                             ? "bg-white border-[#C2884E] text-[#C2884E] shadow-md" 
@@ -645,7 +622,7 @@ export default function WeeklyMealPage() {
                                     key={day.id}
                                     onClick={() => {
                                       setActiveWeek(1);
-                                      setSelectedMenuDay(day.uniqueId);
+                                      setSelectedMenuDay(day.uniqueId || day.id);
                                     }}
                                     className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
                                       ${selectedMenuDay === day.uniqueId ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
@@ -678,7 +655,7 @@ export default function WeeklyMealPage() {
                                     key={day.id}
                                     onClick={() => {
                                       setActiveWeek(2);
-                                      setSelectedMenuDay(day.uniqueId);
+                                      setSelectedMenuDay(day.uniqueId || day.id);
                                     }}
                                     className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center gap-2
                                       ${selectedMenuDay === day.uniqueId ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md" : "hover:bg-[#F5EDE4] text-[#6B5F53]"}`}
@@ -729,7 +706,7 @@ export default function WeeklyMealPage() {
                                           className="bg-white/95 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-[#F5EDE4] shadow-sm hover:shadow-md transition-shadow duration-300 mobile-menu-animation"
                                           style={{animationDelay: `${index * 0.05}s`}}
                                         >
-                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-2.5 sm:mb-3 leading-tight">{translateDishName(option.name)}</h4>
+                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-2.5 sm:mb-3 leading-tight">{translateOptionName(option)}</h4>
                                           
                                           {option.tags && option.tags.length > 0 && (
                                             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
