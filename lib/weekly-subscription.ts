@@ -274,12 +274,15 @@ export async function submitUserSubscription(data: {
   try {
     console.log('Submitting subscription with user ID:', data.userId);
     
+    // Get user's language preference from localStorage
+    const language = localStorage.getItem('language') || 'zh';
+    
     const response = await fetch('/api/weekly-subscription/user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, language }), // Include language preference
     });
     
     const result = await response.json();
