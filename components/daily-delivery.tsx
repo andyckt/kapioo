@@ -86,6 +86,7 @@ export default function DailyDelivery() {
   const [showRegionDialog, setShowRegionDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
   const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
+  const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
   
   // Helper function to translate combo names
   const translateComboName = (name: string): string => {
@@ -97,6 +98,14 @@ export default function DailyDelivery() {
     return name
   }
   
+  // Helper function to translate dish names
+  const translateDishName = (dishName: string): string => {
+    if (language === 'zh' || !dishTranslations[dishName]) {
+      return dishName
+    }
+    return dishTranslations[dishName] || dishName
+  }
+  
   // Define the supported regions for daily delivery
   const DAILY_DELIVERY_REGIONS = [
     "Downtown Toronto",
@@ -105,6 +114,31 @@ export default function DailyDelivery() {
     "Markham", 
     "RichmondHill"
   ]
+  
+  // Fetch dish translations
+  useEffect(() => {
+    const fetchDishTranslations = async () => {
+      try {
+        const response = await fetch('/api/dishes');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Create a map of Chinese name -> English name
+          const translationsMap: Record<string, string> = {};
+          result.data.forEach((dish: any) => {
+            if (dish.nameEn) {
+              translationsMap[dish.name] = dish.nameEn;
+            }
+          });
+          setDishTranslations(translationsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching dish translations:', error);
+      }
+    };
+    
+    fetchDishTranslations();
+  }, []);
   
   // Fetch cutoff time from settings
   useEffect(() => {
@@ -1087,7 +1121,7 @@ export default function DailyDelivery() {
                             <ul className="grid grid-cols-1 gap-2">
                               {combo.typeA.dishes.map((dish, idx) => (
                                 <li key={idx} className="flex items-center">
-                                  <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{dish}</span>
+                                  <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{translateDishName(dish)}</span>
                                 </li>
                               ))}
                             </ul>
@@ -1140,7 +1174,7 @@ export default function DailyDelivery() {
                                 .filter(dish => !combo.typeA.dishes.includes(dish))
                                 .map((dish, idx) => (
                                   <li key={idx} className="flex items-center">
-                                    <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{dish}</span>
+                                    <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{translateDishName(dish)}</span>
                                   </li>
                                 ))
                               }
