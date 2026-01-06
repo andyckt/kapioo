@@ -125,8 +125,8 @@ export async function POST(request: Request) {
       );
     }
     
-    if (!deliveryAddress || !deliveryAddress.streetAddress || !deliveryAddress.city || 
-        !deliveryAddress.province || !deliveryAddress.postalCode || !deliveryAddress.country) {
+    if (!deliveryAddress || !deliveryAddress.streetAddress || 
+        !deliveryAddress.province || !deliveryAddress.postalCode) {
       return NextResponse.json(
         { success: false, error: 'Complete delivery address is required' },
         { status: 400 }

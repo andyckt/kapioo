@@ -71,7 +71,6 @@ const WeeklyOrderSchema = new mongoose.Schema({
   deliveryAddress: {
     unitNumber: String,
     streetAddress: String,
-    city: String,
     province: String,
     postalCode: String,
     country: String,

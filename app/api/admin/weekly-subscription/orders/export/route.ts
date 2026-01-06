@@ -72,7 +72,6 @@ const WeeklyOrderSchema = new mongoose.Schema({
   deliveryAddress: {
     unitNumber: String,
     streetAddress: String,
-    city: String,
     province: String,
     postalCode: String,
     country: String,
@@ -109,8 +108,8 @@ function formatAddress(address: any): string {
   
   formattedAddress += address.streetAddress || '';
   
-  if (address.city || address.province || address.postalCode) {
-    formattedAddress += `, ${address.city || ''} ${address.province || ''} ${address.postalCode || ''}`;
+  if (address.province || address.postalCode) {
+    formattedAddress += `, ${address.province || ''} ${address.postalCode || ''}`;
   }
   
   if (address.country) {
@@ -373,7 +372,6 @@ export async function GET(request: Request) {
         { orderId: searchRegex },                         // Search by order ID
         { 'items.optionName': searchRegex },              // Search by meal option name
         { 'deliveryAddress.streetAddress': searchRegex }, // Search by street address
-        { 'deliveryAddress.city': searchRegex },          // Search by city
         { 'deliveryAddress.postalCode': searchRegex },    // Search by postal code
         { phoneNumber: searchRegex },                     // Search by phone number
         { area: searchRegex }                             // Search by area

@@ -399,7 +399,6 @@ export async function GET(request: Request) {
         { 'items.day': searchRegex },                     // Search by day name
         { 'items.date': searchRegex },                    // Search by date
         { 'deliveryAddress.streetAddress': searchRegex }, // Search by street address
-        { 'deliveryAddress.city': searchRegex },          // Search by city
         { 'deliveryAddress.postalCode': searchRegex },    // Search by postal code
         { phoneNumber: searchRegex },                     // Search by phone number
         { area: searchRegex }                             // Search by area

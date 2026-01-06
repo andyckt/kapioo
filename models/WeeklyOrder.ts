@@ -61,10 +61,6 @@ const AddressSchema = new Schema({
     type: String,
     required: true,
   },
-  city: {
-    type: String,
-    required: true,
-  },
   province: {
     type: String,
     required: true,
@@ -75,7 +71,8 @@ const AddressSchema = new Schema({
   },
   country: {
     type: String,
-    required: true,
+    required: false,
+    default: 'Canada',
   },
   buzzCode: {
     type: String,
