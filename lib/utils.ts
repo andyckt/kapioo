@@ -426,7 +426,6 @@ export interface User {
   address?: {
     unitNumber?: string;
     streetAddress: string;
-    city: string;
     postalCode: string;
     province: string;
     country: string;

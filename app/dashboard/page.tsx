@@ -55,6 +55,27 @@ const CreditPurchaseHistory = dynamic(() => import("@/components/credit-purchase
 import { OrderSectionNavigation } from "@/components/order-section-navigation"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
 
+// Valid delivery areas for weekly meal service
+const VALID_DELIVERY_AREAS = [
+  "Downtown Toronto", 
+  "Midtown", 
+  "Scarborough", 
+  "North York", 
+  "East York",
+  "York",
+  "Etobicoke",
+  "Markham", 
+  "Richmond Hill",
+  "Aurora", 
+  "Newmarket",
+  "Vaughan (including Maple, Concord, King)", 
+  "Mississauga", 
+  "Oakville",
+  "Brampton",
+  "Hamilton",
+  "Burlington"
+];
+
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -624,7 +645,6 @@ export default function DashboardPage() {
           address: {
             unitNumber: addressInfo.unitNumber,
             streetAddress: addressInfo.streetAddress,
-            city: addressInfo.city,
             province: addressInfo.province,
             postalCode: addressInfo.postalCode,
             country: addressInfo.country,
@@ -640,7 +660,12 @@ export default function DashboardPage() {
         setUserData((prev: UserType | null) => prev ? { 
           ...prev, 
           address: {
-            ...addressInfo
+            unitNumber: addressInfo.unitNumber,
+            streetAddress: addressInfo.streetAddress,
+            province: addressInfo.province,
+            postalCode: addressInfo.postalCode,
+            country: addressInfo.country,
+            buzzCode: addressInfo.buzzCode
           } 
         } : null);
         
@@ -651,7 +676,12 @@ export default function DashboardPage() {
           const updatedUser = { 
             ...userObj, 
             address: {
-              ...addressInfo
+              unitNumber: addressInfo.unitNumber,
+              streetAddress: addressInfo.streetAddress,
+              province: addressInfo.province,
+              postalCode: addressInfo.postalCode,
+              country: addressInfo.country,
+              buzzCode: addressInfo.buzzCode
             } 
           };
           localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -2295,13 +2325,23 @@ export default function DashboardPage() {
                               <Input id="streetAddress" value={addressInfo.streetAddress} onChange={handleAddressInfoChange} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="state">{t('state')}</Label>
+                              <div className="flex items-center gap-2">
+                                <Label htmlFor="state">{t('state')}</Label>
+                                {addressInfo.province && !VALID_DELIVERY_AREAS.includes(addressInfo.province) && (
+                                  <span className="text-red-500 text-xs">
+                                    ({language === 'zh' ? '请选择有效的配送区域' : 'Please select a valid delivery area'})
+                                  </span>
+                                )}
+                              </div>
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <Button
                                     variant="outline"
                                     role="combobox"
-                                    className="w-full justify-between"
+                                    className={cn(
+                                      "w-full justify-between",
+                                      addressInfo.province && !VALID_DELIVERY_AREAS.includes(addressInfo.province) && "border-red-500"
+                                    )}
                                   >
                                     {addressInfo.province || "Select an area..."}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -2313,7 +2353,7 @@ export default function DashboardPage() {
                                     <CommandList className="max-h-[200px] overflow-y-auto">
                                       <CommandEmpty>No area found.</CommandEmpty>
                                       <CommandGroup>
-                                        {["Downtown Toronto", "Midtown", "Scarborough", "North York", "East York", "York", "Etobicoke", "Markham", "Richmond Hill", "Aurora", "Newmarket", "Vaughan (including Maple, Concord, King)", "Mississauga", "Oakville", "Brampton", "Hamilton", "Burlington"].map((area) => (
+                                        {VALID_DELIVERY_AREAS.map((area) => (
                                           <CommandItem
                                             key={area}
                                             value={area}
