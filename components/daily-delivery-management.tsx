@@ -63,7 +63,8 @@ import {
   Loader2,
   History,
   CheckCircle,
-  XCircle
+  XCircle,
+  Languages
 } from "lucide-react"
 
 // Define types based on the daily-delivery.tsx file
@@ -239,9 +240,31 @@ export function DailyDeliveryManagement() {
     }
   }
   
+  // Fetch dish translations
+  const fetchDishTranslations = async () => {
+    try {
+      const response = await fetch('/api/dishes');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Create a map of Chinese name -> English name
+        const translationsMap: Record<string, string> = {};
+        result.data.forEach((dish: any) => {
+          if (dish.nameEn) {
+            translationsMap[dish.name] = dish.nameEn;
+          }
+        });
+        setDishTranslations(translationsMap);
+      }
+    } catch (error) {
+      console.error('Error fetching dish translations:', error);
+    }
+  }
+  
   // Only fetch data on component mount (not on every render)
   useEffect(() => {
     fetchData()
+    fetchDishTranslations()
   }, [])
   
   // State for editing
@@ -253,6 +276,9 @@ export function DailyDeliveryManagement() {
   const [bulkDishes, setBulkDishes] = useState<string>('')
   const [editingDish, setEditingDish] = useState<{comboId: string, dish: string, type: 'typeA' | 'typeB'} | null>(null)
   const [editedDishName, setEditedDishName] = useState<string>('')
+  const [editingDishTranslation, setEditingDishTranslation] = useState<{dish: string} | null>(null)
+  const [dishTranslationInput, setDishTranslationInput] = useState<string>('')
+  const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
   
   // State for date editing
   const [editedDate, setEditedDate] = useState<string>('')
@@ -541,6 +567,64 @@ export function DailyDeliveryManagement() {
       // Reset editing state
       setEditingDish(null);
       setEditedDishName('');
+    }
+  }
+  
+  // Start inline English translation edit for a dish
+  const handleStartDishTranslation = (dishName: string) => {
+    setEditingDishTranslation({ dish: dishName });
+    setDishTranslationInput(dishTranslations[dishName] || '');
+  }
+  
+  // Cancel inline dish translation edit
+  const handleCancelDishTranslation = () => {
+    setEditingDishTranslation(null);
+    setDishTranslationInput('');
+  }
+  
+  // Save inline dish translation
+  const handleSaveDishTranslation = async (dishName: string) => {
+    const trimmedTranslation = dishTranslationInput.trim();
+    
+    try {
+      // Save to database
+      const response = await fetch(`/api/dishes/${encodeURIComponent(dishName)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nameEn: trimmedTranslation
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update local state
+        setDishTranslations(prev => ({
+          ...prev,
+          [dishName]: trimmedTranslation
+        }));
+        
+        toast({
+          title: 'Success',
+          description: 'English translation saved successfully',
+        });
+      } else {
+        throw new Error(data.error || 'Failed to save translation');
+      }
+    } catch (error) {
+      console.error('Error saving dish translation:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to save translation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive'
+      });
+    } finally {
+      // Reset editing state
+      setEditingDishTranslation(null);
+      setDishTranslationInput('');
     }
   }
   
@@ -2902,72 +2986,122 @@ export function DailyDeliveryManagement() {
                                 
                                 <div className="space-y-2">
                                   {combo.typeA.dishes.map((dish, index) => (
-                                    <div key={dish} className="flex items-center justify-between bg-white p-3 rounded-md border border-blue-100">
-                                      <div className="flex items-center flex-grow">
-                                        <span className="font-medium text-blue-900">{index + 1}.</span>
-                                        {editingDish && editingDish.comboId === combo.id && editingDish.dish === dish && editingDish.type === 'typeA' ? (
-                                          <div className="ml-2 flex-grow flex gap-2">
-                                            <Input
-                                              value={editedDishName}
-                                              onChange={(e) => setEditedDishName(e.target.value)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                  e.preventDefault();
-                                                  updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeA');
-                                                }
-                                              }}
-                                              className="h-8"
-                                              autoFocus
-                                            />
-                                            <div className="flex gap-1">
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-8 text-green-600"
-                                                onClick={() => updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeA')}
-                                              >
-                                                <Check className="h-4 w-4" />
-                                              </Button>
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-8"
-                                                onClick={() => {
-                                                  setEditingDish(null);
-                                                  setEditedDishName('');
+                                    <div key={dish} className="bg-white p-3 rounded-md border border-blue-100 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center flex-grow">
+                                          <span className="font-medium text-blue-900">{index + 1}.</span>
+                                          {editingDish && editingDish.comboId === combo.id && editingDish.dish === dish && editingDish.type === 'typeA' ? (
+                                            <div className="ml-2 flex-grow flex gap-2">
+                                              <Input
+                                                value={editedDishName}
+                                                onChange={(e) => setEditedDishName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeA');
+                                                  }
                                                 }}
-                                              >
-                                                <X className="h-4 w-4" />
-                                              </Button>
+                                                className="h-8"
+                                                autoFocus
+                                              />
+                                              <div className="flex gap-1">
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-8 text-green-600"
+                                                  onClick={() => updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeA')}
+                                                >
+                                                  <Check className="h-4 w-4" />
+                                                </Button>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-8"
+                                                  onClick={() => {
+                                                    setEditingDish(null);
+                                                    setEditedDishName('');
+                                                  }}
+                                                >
+                                                  <X className="h-4 w-4" />
+                                                </Button>
+                                              </div>
                                             </div>
-                                          </div>
-                                        ) : (
-                                          <span className="ml-2">{dish}</span>
-                                        )}
-                                      </div>
-                                      <div className="flex gap-1">
-                                        {!(editingDish && editingDish.comboId === combo.id && editingDish.dish === dish) && (
+                                          ) : (
+                                            <span className="ml-2">{dish}</span>
+                                          )}
+                                        </div>
+                                        <div className="flex gap-1">
+                                          {!(editingDish && editingDish.comboId === combo.id && editingDish.dish === dish) && (
+                                            <>
+                                              <Button 
+                                                variant={editingDishTranslation && editingDishTranslation.dish === dish ? "default" : "ghost"}
+                                                size="icon" 
+                                                onClick={() => handleStartDishTranslation(dish)}
+                                                className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                                title="Add/Edit English Translation"
+                                              >
+                                                <Languages className="h-4 w-4" />
+                                              </Button>
+                                              <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => {
+                                                  setEditingDish({ comboId: combo.id, dish, type: 'typeA' });
+                                                  setEditedDishName(dish);
+                                                }}
+                                                className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                              >
+                                                <Edit className="h-4 w-4" />
+                                              </Button>
+                                            </>
+                                          )}
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            onClick={() => {
-                                              setEditingDish({ comboId: combo.id, dish, type: 'typeA' });
-                                              setEditedDishName(dish);
-                                            }}
-                                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                            onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeA')}
+                                            className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                                           >
-                                            <Edit className="h-4 w-4" />
+                                            <X className="h-4 w-4" />
                                           </Button>
-                                        )}
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeA')}
-                                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
+                                        </div>
                                       </div>
+                                      
+                                      {/* Inline English Translation Edit */}
+                                      {editingDishTranslation && editingDishTranslation.dish === dish ? (
+                                        <div className="flex items-center gap-2 pl-7">
+                                          <Input
+                                            autoFocus
+                                            placeholder="Enter English translation..."
+                                            value={dishTranslationInput}
+                                            onChange={(e) => setDishTranslationInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSaveDishTranslation(dish);
+                                              } else if (e.key === 'Escape') {
+                                                handleCancelDishTranslation();
+                                              }
+                                            }}
+                                            className="h-7 text-xs"
+                                          />
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={handleCancelDishTranslation}
+                                            className="h-7 px-2 text-xs"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          {dishTranslations[dish] && (
+                                            <div className="text-xs text-blue-600 italic pl-7">
+                                              {dishTranslations[dish]}
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
                                     </div>
                                   ))}
                                   <div className="mt-4 space-y-2">
@@ -3091,79 +3225,129 @@ export function DailyDeliveryManagement() {
                                 
                                 <div className="space-y-2">
                                   {combo.typeB.dishes.map((dish, index) => (
-                                    <div key={dish} className="flex items-center justify-between bg-white p-3 rounded-md border border-green-100">
-                                      <div className="flex items-center flex-grow">
-                                        <span className="font-medium text-green-900">{index + 1}.</span>
-                                        {editingDish && editingDish.comboId === combo.id && editingDish.dish === dish && editingDish.type === 'typeB' ? (
-                                          <div className="ml-2 flex-grow flex gap-2">
-                                            <Input
-                                              value={editedDishName}
-                                              onChange={(e) => setEditedDishName(e.target.value)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                  e.preventDefault();
-                                                  updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeB');
-                                                }
-                                              }}
-                                              className="h-8"
-                                              autoFocus
-                                            />
-                                            <div className="flex gap-1">
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-8 text-green-600"
-                                                onClick={() => updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeB')}
-                                              >
-                                                <Check className="h-4 w-4" />
-                                              </Button>
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-8"
-                                                onClick={() => {
-                                                  setEditingDish(null);
-                                                  setEditedDishName('');
+                                    <div key={dish} className="bg-white p-3 rounded-md border border-green-100 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center flex-grow">
+                                          <span className="font-medium text-green-900">{index + 1}.</span>
+                                          {editingDish && editingDish.comboId === combo.id && editingDish.dish === dish && editingDish.type === 'typeB' ? (
+                                            <div className="ml-2 flex-grow flex gap-2">
+                                              <Input
+                                                value={editedDishName}
+                                                onChange={(e) => setEditedDishName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeB');
+                                                  }
                                                 }}
-                                              >
-                                                <X className="h-4 w-4" />
-                                              </Button>
+                                                className="h-8"
+                                                autoFocus
+                                              />
+                                              <div className="flex gap-1">
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-8 text-green-600"
+                                                  onClick={() => updateDishName(selectedDay, combo.id, dish, editedDishName, 'typeB')}
+                                                >
+                                                  <Check className="h-4 w-4" />
+                                                </Button>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-8"
+                                                  onClick={() => {
+                                                    setEditingDish(null);
+                                                    setEditedDishName('');
+                                                  }}
+                                                >
+                                                  <X className="h-4 w-4" />
+                                                </Button>
+                                              </div>
                                             </div>
-                                          </div>
-                                        ) : (
-                                          <>
-                                            <span className="ml-2">{dish}</span>
-                                            {combo.typeA.dishes.includes(dish) && (
-                                              <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-600 border-green-200">
-                                                Also in 2-dish option
-                                              </Badge>
-                                            )}
-                                          </>
-                                        )}
-                                      </div>
-                                      <div className="flex gap-1">
-                                        {!(editingDish && editingDish.comboId === combo.id && editingDish.dish === dish) && (
+                                          ) : (
+                                            <>
+                                              <span className="ml-2">{dish}</span>
+                                              {combo.typeA.dishes.includes(dish) && (
+                                                <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-600 border-green-200">
+                                                  Also in 2-dish option
+                                                </Badge>
+                                              )}
+                                            </>
+                                          )}
+                                        </div>
+                                        <div className="flex gap-1">
+                                          {!(editingDish && editingDish.comboId === combo.id && editingDish.dish === dish) && (
+                                            <>
+                                              <Button 
+                                                variant={editingDishTranslation && editingDishTranslation.dish === dish ? "default" : "ghost"}
+                                                size="icon" 
+                                                onClick={() => handleStartDishTranslation(dish)}
+                                                className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50"
+                                                title="Add/Edit English Translation"
+                                              >
+                                                <Languages className="h-4 w-4" />
+                                              </Button>
+                                              <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => {
+                                                  setEditingDish({ comboId: combo.id, dish, type: 'typeB' });
+                                                  setEditedDishName(dish);
+                                                }}
+                                                className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50"
+                                              >
+                                                <Edit className="h-4 w-4" />
+                                              </Button>
+                                            </>
+                                          )}
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            onClick={() => {
-                                              setEditingDish({ comboId: combo.id, dish, type: 'typeB' });
-                                              setEditedDishName(dish);
-                                            }}
-                                            className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                                            onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeB')}
+                                            className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50"
                                           >
-                                            <Edit className="h-4 w-4" />
+                                            <X className="h-4 w-4" />
                                           </Button>
-                                        )}
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          onClick={() => removeDishFromCombo(selectedDay, combo.id, dish, 'typeB')}
-                                          className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
+                                        </div>
                                       </div>
+                                      
+                                      {/* Inline English Translation Edit */}
+                                      {editingDishTranslation && editingDishTranslation.dish === dish ? (
+                                        <div className="flex items-center gap-2 pl-7">
+                                          <Input
+                                            autoFocus
+                                            placeholder="Enter English translation..."
+                                            value={dishTranslationInput}
+                                            onChange={(e) => setDishTranslationInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSaveDishTranslation(dish);
+                                              } else if (e.key === 'Escape') {
+                                                handleCancelDishTranslation();
+                                              }
+                                            }}
+                                            className="h-7 text-xs"
+                                          />
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={handleCancelDishTranslation}
+                                            className="h-7 px-2 text-xs"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          {dishTranslations[dish] && (
+                                            <div className="text-xs text-green-600 italic pl-7">
+                                              {dishTranslations[dish]}
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
                                     </div>
                                   ))}
                                   <div className="flex gap-2 mt-4">
