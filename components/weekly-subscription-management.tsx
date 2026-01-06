@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight } from "lucide-react"
+import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight, Languages } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -43,6 +43,8 @@ export function WeeklySubscriptionManagement() {
   const [isSavingInlineMeal, setIsSavingInlineMeal] = useState(false)
   const [bulkMeals, setBulkMeals] = useState<Record<string, string>>({})
   const [removeExisting, setRemoveExisting] = useState<Record<string, boolean>>({})
+  const [editingEnglishForMealId, setEditingEnglishForMealId] = useState<string | null>(null)
+  const [inlineEnglishName, setInlineEnglishName] = useState('')
   
   // Fetch delivery sections from API
   const fetchData = async () => {
@@ -517,6 +519,47 @@ export function WeeklySubscriptionManagement() {
     setEditDialogOpen(true)
   }
   
+  // Start inline English translation edit
+  const handleStartEnglishEdit = (meal: MealOption) => {
+    setEditingEnglishForMealId(meal.id)
+    setInlineEnglishName(meal.nameEn || '')
+  }
+  
+  // Cancel inline English edit
+  const handleCancelEnglishEdit = () => {
+    setEditingEnglishForMealId(null)
+    setInlineEnglishName('')
+  }
+  
+  // Save inline English translation
+  const handleSaveInlineEnglish = async (mealId: string) => {
+    const trimmedName = inlineEnglishName.trim()
+    
+    // Update the meal option with English name
+    const updatedMeal = await updateMealOption(mealId, {
+      nameEn: trimmedName
+    });
+    
+    if (updatedMeal) {
+      // Update local state without refreshing
+      setDeliverySections(sections => 
+        sections.map(section => ({
+          ...section,
+          day: {
+            ...section.day,
+            options: section.day.options.map(option => 
+              option.id === mealId ? { ...option, nameEn: trimmedName } : option
+            )
+          }
+        }))
+      );
+      
+      // Reset inline edit state
+      setEditingEnglishForMealId(null)
+      setInlineEnglishName('')
+    }
+  }
+  
   // Save edited meal
   const handleSaveMeal = async () => {
     if (!editingMeal) return;
@@ -902,11 +945,45 @@ export function WeeklySubscriptionManagement() {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{option.name}</div>
-                          <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
-                            {option.tags?.map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
-                            ))}
-                          </div>
+                          {/* Inline English Translation Edit */}
+                          {editingEnglishForMealId === option.id ? (
+                            <div className="mt-2 flex items-center gap-2">
+                              <Input
+                                autoFocus
+                                placeholder="Enter English translation..."
+                                value={inlineEnglishName}
+                                onChange={(e) => setInlineEnglishName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleSaveInlineEnglish(option.id)
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelEnglishEdit()
+                                  }
+                                }}
+                                className="h-7 text-xs"
+                              />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={handleCancelEnglishEdit}
+                                className="h-7 px-2"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              {option.nameEn && (
+                                <div className="text-xs text-muted-foreground mt-1 italic">{option.nameEn}</div>
+                              )}
+                              <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
+                                {option.tags?.map((tag) => (
+                                  <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                                ))}
+                              </div>
+                            </>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 justify-between sm:justify-end">
                           <div className="flex items-center gap-2">
@@ -920,6 +997,15 @@ export function WeeklySubscriptionManagement() {
                             </Label>
                           </div>
                           <div className="flex items-center gap-1">
+                            <Button 
+                              variant={editingEnglishForMealId === option.id ? "default" : "ghost"} 
+                              size="icon" 
+                              onClick={() => handleStartEnglishEdit(option)} 
+                              className="h-8 w-8"
+                              title="Add/Edit English Translation"
+                            >
+                              <Languages className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleEditMeal(option)} className="h-8 w-8">
                               <Edit className="h-4 w-4" />
                             </Button>
