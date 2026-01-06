@@ -1417,7 +1417,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               }
             }}
           >
-            {language === 'zh' ? '购买餐券' : 'Purchase Coupons'}
+            {language === 'zh' ? '购买餐券' : 'Purchase Vouchers'}
           </Button>
             </div>
           </div>
