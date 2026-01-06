@@ -98,6 +98,7 @@ export function DailyDeliveryCheckout({
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
   const [tempSelectedArea, setTempSelectedArea] = useState<string>("")
+  const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
 
   // Helper function to translate combo names
   const translateComboName = (name: string): string => {
@@ -108,6 +109,39 @@ export function DailyDeliveryCheckout({
     }
     return name
   }
+  
+  // Helper function to translate dish names
+  const translateDishName = (dishName: string): string => {
+    if (language === 'zh' || !dishTranslations[dishName]) {
+      return dishName
+    }
+    return dishTranslations[dishName] || dishName
+  }
+  
+  // Fetch dish translations on component mount
+  useEffect(() => {
+    const fetchDishTranslations = async () => {
+      try {
+        const response = await fetch('/api/dishes');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Create a map of Chinese name -> English name
+          const translationsMap: Record<string, string> = {};
+          result.data.forEach((dish: any) => {
+            if (dish.nameEn) {
+              translationsMap[dish.name] = dish.nameEn;
+            }
+          });
+          setDishTranslations(translationsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching dish translations:', error);
+      }
+    };
+    
+    fetchDishTranslations();
+  }, []);
 
   // Calculate total vouchers needed by type
   const vouchersNeeded = cart.reduce(
@@ -606,7 +640,7 @@ export function DailyDeliveryCheckout({
                                   {dishes.map((dish, dishIdx) => (
                                     <div key={dishIdx} className="flex items-center gap-2">
                                       <div className="w-1 h-1 rounded-full bg-[#C2884E]/40"></div>
-                                      <span className="text-xs text-[#6B5F53]">{dish}</span>
+                                      <span className="text-xs text-[#6B5F53]">{translateDishName(dish)}</span>
                                     </div>
                                   ))}
                                 </div>
