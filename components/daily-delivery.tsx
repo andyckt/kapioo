@@ -24,7 +24,6 @@ type ComboType = 'A' | 'B'
 type ComboItem = {
   id: string
   name: string
-  nameEn?: string // English translation of combo name
   calories: number
   tags: string[]
   typeA: {
@@ -49,7 +48,6 @@ type CartItem = {
   date: string
   comboId: string
   comboName: string
-  comboNameEn?: string
   type: ComboType
   quantity: number
   voucherType: 'twoDish' | 'threeDish'
@@ -90,10 +88,13 @@ export default function DailyDelivery() {
   const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
   
   // Helper function to translate combo names
-  const translateComboName = (combo: ComboItem): string => {
-    if (language === 'zh') return combo.name
-    // Use English translation if available, otherwise fallback to Chinese name
-    return combo.nameEn || combo.name
+  const translateComboName = (name: string): string => {
+    if (language === 'zh') return name
+    // Translate common combo name patterns
+    if (name.includes('套餐')) {
+      return name.replace(/套餐/g, 'Combo')
+    }
+    return name
   }
   
   // Define the supported regions for daily delivery
@@ -618,7 +619,6 @@ export default function DailyDelivery() {
           date,
           comboId: combo.id,
           comboName: combo.name,
-          comboNameEn: combo.nameEn,
           type,
           quantity: 1,
           voucherType: type === 'A' ? 'twoDish' : 'threeDish'
@@ -1045,7 +1045,7 @@ export default function DailyDelivery() {
                         ${isDayUnavailable(selectedDay).unavailable ? 'opacity-60' : ''}
                       `}>
                         <div className="flex flex-wrap items-center justify-between mb-4">
-                          <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{translateComboName(combo)}</h3>
+                          <h3 className="text-lg font-bold text-[#6B5F53] tracking-wide">{translateComboName(combo.name)}</h3>
                           <div className="text-sm font-medium bg-[#C2884E]/5 px-2 py-1 rounded-md text-[#C2884E]">
                             {combo.calories} KCAL
                           </div>

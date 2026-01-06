@@ -100,10 +100,13 @@ export function DailyDeliveryCheckout({
   const [tempSelectedArea, setTempSelectedArea] = useState<string>("")
 
   // Helper function to translate combo names
-  const translateComboName = (name: string, nameEn?: string): string => {
+  const translateComboName = (name: string): string => {
     if (language === 'zh') return name
-    // Use English translation if available, otherwise fallback to Chinese name
-    return nameEn || name
+    // Translate common combo name patterns
+    if (name.includes('套餐')) {
+      return name.replace(/套餐/g, 'Combo')
+    }
+    return name
   }
 
   // Calculate total vouchers needed by type
@@ -584,7 +587,7 @@ export function DailyDeliveryCheckout({
                                     <CheckCircle2 className="h-4 w-4 text-[#C2884E]" />
                                   </div>
                                   <div>
-                                    <span className="text-[#6B5F53] font-medium">{translateComboName(item.comboName, item.comboNameEn)}</span>
+                                    <span className="text-[#6B5F53] font-medium">{translateComboName(item.comboName)}</span>
                                     <span className="text-[#6B5F53]/60 text-xs ml-2">
                                       ({item.type === 'A' ? (language === 'zh' ? '2菜' : '2-Dish') : (language === 'zh' ? '3菜' : '3-Dish')})
                                     </span>
