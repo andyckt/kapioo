@@ -130,7 +130,7 @@ export function WeeklySubscriptionCheckout({
           streetAddress: user.address.streetAddress || "",
           province: user.address.province || "",
           postalCode: user.address.postalCode || "",
-          country: user.address.country || "Canada", // Always Canada
+          country: "Canada", // Always force to Canada regardless of stored value
           buzzCode: user.address.buzzCode || ""
         })
       }
@@ -178,7 +178,10 @@ export function WeeklySubscriptionCheckout({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            address: addressFormData
+            address: {
+              ...addressFormData,
+              country: 'Canada' // Always force to Canada
+            }
           }),
         })
         
@@ -191,7 +194,10 @@ export function WeeklySubscriptionCheckout({
             const userObj = JSON.parse(storedUser)
             const updatedUser = { 
               ...userObj, 
-              address: { ...addressFormData } 
+              address: { 
+                ...addressFormData,
+                country: 'Canada' // Always force to Canada
+              } 
             }
             localStorage.setItem('user', JSON.stringify(updatedUser))
           }
@@ -256,7 +262,11 @@ export function WeeklySubscriptionCheckout({
     }
     
     // Use either the form address data (if editing) or the stored user address
-    const deliveryAddress = editingAddress ? addressFormData : userData?.address
+    // Always force country to "Canada" regardless of what's stored
+    const deliveryAddress = {
+      ...(editingAddress ? addressFormData : userData?.address),
+      country: 'Canada' // Force country to Canada
+    }
     
     if (!deliveryAddress || !deliveryAddress.streetAddress || 
         !deliveryAddress.province || !deliveryAddress.postalCode) {
