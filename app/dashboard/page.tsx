@@ -1898,6 +1898,21 @@ export default function DashboardPage() {
                               </div>
                             </DialogContent>
                           </Dialog>
+                          
+                          {/* Purchase Button - Mobile Only */}
+                          <Button 
+                            variant="default"
+                            size="sm"
+                            className="md:hidden bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
+                            onClick={() => {
+                              const element = document.getElementById('weekly-service-area-section');
+                              if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
+                            }}
+                          >
+                            {language === 'zh' ? '购买餐券' : 'Purchase Coupons'}
+                          </Button>
                         </div>
                       </div>
                       
@@ -1960,13 +1975,13 @@ export default function DashboardPage() {
                   </div>
                   
                   {/* Available Areas Section */}
-                  <div className="mb-6">
+                  <div id="weekly-service-area-section" className="mb-6">
                     <AvailableAreas />
                   </div>
                   
                   {/* Credit Purchase Plans */}
                   {userData && userData._id && (
-                    <div className="mb-6">
+                    <div id="weekly-meal-plans-section" className="mb-6">
                       <CreditPurchasePlans 
                         userId={userData._id} 
                         onSuccess={() => {

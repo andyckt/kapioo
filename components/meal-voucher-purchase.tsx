@@ -1404,6 +1404,21 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               </div>
             </DialogContent>
           </Dialog>
+          
+          {/* Purchase Button - Mobile Only */}
+          <Button 
+            variant="default"
+            size="sm"
+            className="md:hidden bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
+            onClick={() => {
+              const element = document.getElementById('daily-service-area-section');
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }}
+          >
+            {language === 'zh' ? '购买餐券' : 'Purchase Coupons'}
+          </Button>
             </div>
           </div>
           
@@ -1466,7 +1481,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       </div>
 
       {/* Service Area Information */}
-      <div className="mb-8">
+      <div id="daily-service-area-section" className="mb-8">
         <div className="flex items-center gap-2 mb-3">
           <MapPin className="h-4 w-4 text-[#C2884E]" />
           <p className="text-sm font-medium text-[#6B5F53]">
@@ -1495,7 +1510,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
-            <div className="mb-8">
+            <div id="daily-meal-plans-section" className="mb-8">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-[#6B5F53] flex items-center gap-2">
                   <Tag className="h-5 w-5 text-[#C2884E]" />
