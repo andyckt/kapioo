@@ -45,6 +45,8 @@ export function WeeklySubscriptionManagement() {
   const [removeExisting, setRemoveExisting] = useState<Record<string, boolean>>({})
   const [editingEnglishForMealId, setEditingEnglishForMealId] = useState<string | null>(null)
   const [inlineEnglishName, setInlineEnglishName] = useState('')
+  const [editingChineseForMealId, setEditingChineseForMealId] = useState<string | null>(null)
+  const [inlineChineseName, setInlineChineseName] = useState('')
   
   // Fetch delivery sections from API
   const fetchData = async () => {
@@ -560,6 +562,56 @@ export function WeeklySubscriptionManagement() {
     }
   }
   
+  // Start inline Chinese name edit
+  const handleStartChineseEdit = (meal: MealOption) => {
+    setEditingChineseForMealId(meal.id)
+    setInlineChineseName(meal.name)
+  }
+  
+  // Cancel inline Chinese edit
+  const handleCancelChineseEdit = () => {
+    setEditingChineseForMealId(null)
+    setInlineChineseName('')
+  }
+  
+  // Save inline Chinese name
+  const handleSaveInlineChinese = async (mealId: string) => {
+    const trimmedName = inlineChineseName.trim()
+    
+    if (!trimmedName) {
+      toast({
+        title: "Error",
+        description: "Chinese name cannot be empty",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    // Update the meal option with Chinese name
+    const updatedMeal = await updateMealOption(mealId, {
+      name: trimmedName
+    });
+    
+    if (updatedMeal) {
+      // Update local state without refreshing
+      setDeliverySections(sections => 
+        sections.map(section => ({
+          ...section,
+          day: {
+            ...section.day,
+            options: section.day.options.map(option => 
+              option.id === mealId ? { ...option, name: trimmedName } : option
+            )
+          }
+        }))
+      );
+      
+      // Reset inline edit state
+      setEditingChineseForMealId(null)
+      setInlineChineseName('')
+    }
+  }
+  
   // Save edited meal
   const handleSaveMeal = async () => {
     if (!editingMeal) return;
@@ -944,7 +996,43 @@ export function WeeklySubscriptionManagement() {
                         className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-md border gap-3 ${!option.active ? 'border-dashed opacity-70' : 'bg-muted/50'}`}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{option.name}</div>
+                          {/* Inline Chinese Name Edit */}
+                          {editingChineseForMealId === option.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                autoFocus
+                                placeholder="Enter Chinese name..."
+                                value={inlineChineseName}
+                                onChange={(e) => setInlineChineseName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleSaveInlineChinese(option.id)
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelChineseEdit()
+                                  }
+                                }}
+                                className="h-8 font-medium"
+                              />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={handleCancelChineseEdit}
+                                className="h-8 px-2"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <div 
+                              className="font-medium truncate cursor-pointer hover:text-primary transition-colors" 
+                              onDoubleClick={() => handleStartChineseEdit(option)}
+                              title="Double-click to edit"
+                            >
+                              {option.name}
+                            </div>
+                          )}
+                          
                           {/* Inline English Translation Edit */}
                           {editingEnglishForMealId === option.id ? (
                             <div className="mt-2 flex items-center gap-2">
