@@ -237,6 +237,7 @@ export function WeeklySubscriptionManagement() {
               mealOptions: section.day.options.map(opt => ({
                 id: opt.id,
                 name: opt.name,
+                nameEn: opt.nameEn, // Include English translation
                 tags: opt.tags,
                 active: opt.active
               }))
@@ -1467,6 +1468,11 @@ export function WeeklySubscriptionManagement() {
                                   {option.active ? 'Active' : 'Inactive'}
                                 </Badge>
                               </div>
+                              {option.nameEn && (
+                                <div className="text-sm text-muted-foreground italic mb-2">
+                                  {option.nameEn}
+                                </div>
+                              )}
                               {option.tags && option.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mt-2">
                                   {option.tags.map((tag: string, tagIdx: number) => (
