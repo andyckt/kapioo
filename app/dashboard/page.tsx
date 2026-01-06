@@ -827,7 +827,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <header className="bg-background sticky top-0 z-40 w-full border-b flex-shrink-0">
+      <header className="bg-background sticky top-0 z-50 w-full border-b flex-shrink-0">
         <div className="container flex h-16 items-center justify-between px-4">
           <MainNav />
           
@@ -854,7 +854,7 @@ export default function DashboardPage() {
       <AnimatePresence mode="wait">
         {isMobileMenuOpen && (
           <motion.div 
-            className="fixed inset-0 z-35 bg-background/90 backdrop-blur-md md:hidden overflow-hidden"
+            className="fixed inset-0 z-40 bg-background/90 backdrop-blur-md md:hidden overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1034,7 +1034,7 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative z-10">
         {/* Brand icon background elements */}
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
           {/* Large semi-transparent brand icon in bottom right */}
