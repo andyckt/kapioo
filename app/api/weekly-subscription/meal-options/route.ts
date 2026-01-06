@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     // Create the new meal option
     const newMealOption = await WeeklyMealOption.create({
       name: data.name,
+      nameEn: data.nameEn || undefined, // Optional English name
       tags: data.tags || [],
       active: data.active !== undefined ? data.active : true
     });

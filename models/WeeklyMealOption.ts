@@ -4,6 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IWeeklyMealOption extends Document {
   id: string;
   name: string;
+  nameEn?: string; // English translation of the dish name
   tags?: string[];
   active: boolean;
   createdAt: Date;
@@ -16,6 +17,10 @@ const WeeklyMealOptionSchema: Schema = new Schema(
     name: { 
       type: String, 
       required: true,
+    },
+    nameEn: {
+      type: String,
+      required: false, // Optional field for English translation
     },
     tags: { 
       type: [String], 

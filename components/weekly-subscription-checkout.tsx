@@ -572,7 +572,8 @@ export function WeeklySubscriptionCheckout({
                             if (day.id === item.dayId) {
                               const option = day.options.find(opt => opt.id === item.optionId);
                               if (option) {
-                                optionName = option.name;
+                                // Use English name if available and language is English
+                                optionName = (language === 'en' && option.nameEn) ? option.nameEn : option.name;
                                 break;
                               }
                             }

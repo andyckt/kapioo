@@ -2,6 +2,7 @@
 export type MealOption = {
   id: string;
   name: string;
+  nameEn?: string; // English translation of the dish name
   tags?: string[];
   active: boolean;
 }
@@ -79,6 +80,7 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
             options: day.options.map((option: any) => ({
               id: option._id,
               name: option.name,
+              nameEn: option.nameEn, // Include English name
               tags: option.tags || [],
               active: option.active
             }))
@@ -145,7 +147,7 @@ export async function updateDeliveryDay(
 export async function addMealOption(
   day: string, 
   weekOffset: number, 
-  mealData: { name: string; tags?: string[]; active?: boolean }
+  mealData: { name: string; nameEn?: string; tags?: string[]; active?: boolean }
 ): Promise<any> {
   try {
     console.log('Adding meal option:', { day, weekOffset, ...mealData });
@@ -194,7 +196,7 @@ export async function addMealOption(
 }
 
 // Update a meal option
-export async function updateMealOption(id: string, data: { name?: string; tags?: string[]; active?: boolean }): Promise<MealOption | null> {
+export async function updateMealOption(id: string, data: { name?: string; nameEn?: string; tags?: string[]; active?: boolean }): Promise<MealOption | null> {
   try {
     const response = await fetch(`/api/weekly-subscription/meal-options/${id}`, {
       method: 'PUT',

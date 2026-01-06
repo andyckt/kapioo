@@ -40,6 +40,7 @@ export async function GET(request: Request) {
       options: day.options.map((option: any) => ({
         id: option._id,
         name: option.name,
+        nameEn: option.nameEn, // Include English name
         tags: option.tags
       }))
     }));

@@ -542,6 +542,7 @@ export function WeeklySubscriptionManagement() {
     // Update in database
     const updatedMeal = await updateMealOption(editingMeal.id, {
       name: editingMeal.name,
+      nameEn: editingMeal.nameEn,
       tags: editingMeal.tags,
       active: editingMeal.active
     });
@@ -1043,13 +1044,26 @@ export function WeeklySubscriptionManagement() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
                 <Label htmlFor="meal-name" className="sm:text-right">
-                  Name
+                  Name (Chinese)
                 </Label>
                 <Input
                   id="meal-name"
                   value={editingMeal.name}
                   onChange={(e) => setEditingMeal({...editingMeal, name: e.target.value})}
                   className="sm:col-span-3"
+                  placeholder="e.g., 红烧肉"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                <Label htmlFor="meal-name-en" className="sm:text-right">
+                  Name (English)
+                </Label>
+                <Input
+                  id="meal-name-en"
+                  value={editingMeal.nameEn || ''}
+                  onChange={(e) => setEditingMeal({...editingMeal, nameEn: e.target.value})}
+                  className="sm:col-span-3"
+                  placeholder="e.g., Braised Pork Belly"
                 />
               </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-4">

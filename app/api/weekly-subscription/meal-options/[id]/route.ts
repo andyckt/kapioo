@@ -6,13 +6,14 @@ import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 // GET handler - return a specific meal option
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
     // Get the meal option by ID
-    const mealOption = await WeeklyMealOption.findById(params.id).lean();
+    const mealOption = await WeeklyMealOption.findById(id).lean();
     
     if (!mealOption) {
       return NextResponse.json(
@@ -37,23 +38,24 @@ export async function GET(
 // PUT handler - update a meal option
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const data = await request.json();
     
     await connectToDatabase();
     
     // Update the meal option
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.nameEn !== undefined) updateData.nameEn = data.nameEn;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.active !== undefined) updateData.active = data.active;
+    
     const updatedMealOption = await WeeklyMealOption.findByIdAndUpdate(
-      params.id,
-      {
-        $set: {
-          name: data.name,
-          tags: data.tags,
-          active: data.active
-        }
-      },
+      id,
+      { $set: updateData },
       { new: true }
     );
     
@@ -80,13 +82,14 @@ export async function PUT(
 // DELETE handler - delete a meal option and remove it from delivery days
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
     // Find the meal option to be deleted
-    const mealOption = await WeeklyMealOption.findById(params.id);
+    const mealOption = await WeeklyMealOption.findById(id);
     
     if (!mealOption) {
       return NextResponse.json(
@@ -97,12 +100,12 @@ export async function DELETE(
     
     // Remove the meal option from all delivery days
     await WeeklyDeliveryDay.updateMany(
-      { options: params.id },
-      { $pull: { options: params.id } }
+      { options: id },
+      { $pull: { options: id } }
     );
     
     // Delete the meal option
-    await WeeklyMealOption.findByIdAndDelete(params.id);
+    await WeeklyMealOption.findByIdAndDelete(id);
     
     return NextResponse.json(
       { success: true, message: 'Meal option deleted successfully' },

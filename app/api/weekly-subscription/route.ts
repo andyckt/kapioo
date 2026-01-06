@@ -63,8 +63,6 @@ export async function GET(request: Request) {
       .sort({ weekOffset: 1, day: 1 })
       .lean();
     
-    console.log(`📊 Found ${deliveryDays.length} delivery days:`, deliveryDays.map(d => ({ day: d.day, weekOffset: d.weekOffset, date: d.date })));
-    
     // If no delivery days exist OR if Week 3 is missing, initialize/update
     const hasWeek3 = deliveryDays.some(day => day.weekOffset === 2);
     console.log(`Week 3 exists: ${hasWeek3}`);

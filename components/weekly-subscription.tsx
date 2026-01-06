@@ -692,7 +692,9 @@ export default function WeeklySubscription({
                         <CardContent className="p-0">
                           <div className="p-4">
                                 <div className="flex items-start justify-between">
-                                  <h4 className="font-medium text-[#6B5F53]">{option.name}</h4>
+                                  <h4 className="font-medium text-[#6B5F53]">
+                                    {language === 'en' && option.nameEn ? option.nameEn : option.name}
+                                  </h4>
                                 </div>
                                 
                                 {/* Display tags if available */}
