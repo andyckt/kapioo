@@ -1050,6 +1050,12 @@ export function WeeklySubscriptionManagement() {
                   id="meal-name"
                   value={editingMeal.name}
                   onChange={(e) => setEditingMeal({...editingMeal, name: e.target.value})}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveMeal();
+                    }
+                  }}
                   className="sm:col-span-3"
                   placeholder="e.g., 红烧肉"
                 />
@@ -1062,6 +1068,12 @@ export function WeeklySubscriptionManagement() {
                   id="meal-name-en"
                   value={editingMeal.nameEn || ''}
                   onChange={(e) => setEditingMeal({...editingMeal, nameEn: e.target.value})}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveMeal();
+                    }
+                  }}
                   className="sm:col-span-3"
                   placeholder="e.g., Braised Pork Belly"
                 />
