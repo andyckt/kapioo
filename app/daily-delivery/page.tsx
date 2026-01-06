@@ -88,13 +88,10 @@ export default function DailyDeliveryPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   
   // Helper function to translate combo names
-  const translateComboName = (name: string): string => {
-    if (language === 'zh') return name
-    // Translate common combo name patterns
-    if (name.includes('套餐')) {
-      return name.replace(/套餐/g, 'Combo')
-    }
-    return name
+  const translateComboName = (combo: any): string => {
+    if (language === 'zh') return combo.name
+    // Use English translation if available, otherwise fallback to Chinese name
+    return combo.nameEn || combo.name
   }
   
   // Check if user is authenticated on component mount
@@ -960,7 +957,7 @@ export default function DailyDeliveryPage() {
                                     <div className="relative backdrop-blur-xl bg-white/90 rounded-2xl p-4 sm:p-5 border border-[#F5EDE4] shadow-sm transition-all duration-300 ease-out h-full">
                                       {/* Combo header - Minimalist Design */}
                                       <div className="flex flex-wrap items-center justify-between mb-4">
-                                        <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">{translateComboName(combo.name)}</h3>
+                                        <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">{translateComboName(combo)}</h3>
                                         <div className="text-xs font-medium bg-[#F5EDE4] px-2 py-1 rounded-full text-[#C2884E]">
                                           {combo.calories} KCAL
                                         </div>

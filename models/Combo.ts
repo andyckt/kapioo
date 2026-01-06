@@ -4,6 +4,7 @@ export interface ComboDocument extends Document {
   comboId: string;
   dayId: string;
   name: string;
+  nameEn?: string; // English translation of combo name
   calories: number;
   tags: string[];
   typeA: {
@@ -32,6 +33,10 @@ const ComboSchema = new Schema({
   name: {
     type: String,
     required: true
+  },
+  nameEn: {
+    type: String,
+    required: false
   },
   calories: {
     type: Number,

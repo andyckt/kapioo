@@ -71,6 +71,7 @@ type ComboType = 'A' | 'B'
 type ComboItem = {
   id: string
   name: string
+  nameEn?: string // English translation of combo name
   calories: number
   tags: string[]
   typeA: {
@@ -2653,13 +2654,26 @@ export function DailyDeliveryManagement() {
                         <div className="space-y-6">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor={`combo-name-${combo.id}`}>Combo Name</Label>
+                              <Label htmlFor={`combo-name-${combo.id}`}>Combo Name (Chinese)</Label>
                               <Input 
                                 id={`combo-name-${combo.id}`} 
                                 value={combo.name} 
                                 onChange={(e) => updateCombo(selectedDay, combo.id, { name: e.target.value })}
+                                placeholder="e.g., 套餐 1"
                               />
                             </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`combo-name-en-${combo.id}`}>Combo Name (English)</Label>
+                              <Input 
+                                id={`combo-name-en-${combo.id}`} 
+                                value={combo.nameEn || ''} 
+                                onChange={(e) => updateCombo(selectedDay, combo.id, { nameEn: e.target.value })}
+                                placeholder="e.g., Combo 1"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor={`combo-calories-${combo.id}`}>
                                 Calories <span className="text-red-500">*</span>
