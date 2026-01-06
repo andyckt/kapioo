@@ -1931,7 +1931,7 @@ export default function DashboardPage() {
                                 {language === 'zh' ? '周次MealBox' : 'Weekly MealBox'}
                               </p>
                               <p className="text-sm text-[#6B5F53]/80">
-                                {language === 'zh' ? '每周配送2次，轻松覆盖整周' : 'Two deliveries per week, covering the entire week'}
+                                {language === 'zh' ? '每周配送2次 (周日 & 周二)，轻松覆盖整周' : '2 deliveries per week (Sun & Tue), covering the entire week'}
                               </p>
                             </div>
                           </div>
