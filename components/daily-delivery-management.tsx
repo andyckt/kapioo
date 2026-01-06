@@ -484,6 +484,30 @@ export function DailyDeliveryManagement() {
     }
     
     try {
+      // If the dish has a translation, transfer it to the new name
+      if (dishTranslations[oldDishName]) {
+        const oldTranslation = dishTranslations[oldDishName];
+        
+        // Update the translation in the database with the new dish name
+        await fetch(`/api/dishes/${encodeURIComponent(newDishName)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nameEn: oldTranslation
+          }),
+        });
+        
+        // Update local translations map
+        setDishTranslations(prev => {
+          const updated = { ...prev };
+          delete updated[oldDishName]; // Remove old entry
+          updated[newDishName] = oldTranslation; // Add new entry
+          return updated;
+        });
+      }
+      
       // First update local state for immediate feedback
       setDays(prevDays => {
         const day = prevDays[dayId];
