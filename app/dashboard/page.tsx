@@ -1718,50 +1718,65 @@ export default function DashboardPage() {
                         
                         {/* Available Meal Plans Display */}
                         {userData && (
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {userData.weeklySIXmeals !== undefined && userData.weeklySIXmeals > 0 && (
-                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                                <span className="text-sm font-medium text-[#6B5F53]">
-                                  {language === 'zh' ? '6餐一周' : '6 Meals/Week'}: 
-                                </span>
-                                <span className="text-sm font-bold text-[#C2884E]">
-                                  {userData.weeklySIXmeals}{language === 'zh' ? '张' : ''}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {(userData as any).weeklyEIGHTmeals !== undefined && (userData as any).weeklyEIGHTmeals > 0 && (
-                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                                <span className="text-sm font-medium text-[#6B5F53]">
-                                  {language === 'zh' ? '8餐一周' : '8 Meals/Week'}: 
-                                </span>
-                                <span className="text-sm font-bold text-[#C2884E]">
-                                  {(userData as any).weeklyEIGHTmeals}{language === 'zh' ? '张' : ''}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {userData.weeklyTENmeals !== undefined && userData.weeklyTENmeals > 0 && (
-                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                                <span className="text-sm font-medium text-[#6B5F53]">
-                                  {language === 'zh' ? '10餐一周' : '10 Meals/Week'}: 
-                                </span>
-                                <span className="text-sm font-bold text-[#C2884E]">
-                                  {userData.weeklyTENmeals}{language === 'zh' ? '张' : ''}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {(userData as any).weeklyTWELVEmeals !== undefined && (userData as any).weeklyTWELVEmeals > 0 && (
-                              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
-                                <span className="text-sm font-medium text-[#6B5F53]">
-                                  {language === 'zh' ? '12餐一周' : '12 Meals/Week'}: 
-                                </span>
-                                <span className="text-sm font-bold text-[#C2884E]">
-                                  {(userData as any).weeklyTWELVEmeals}{language === 'zh' ? '张' : ''}
-                                </span>
-                              </div>
-                            )}
+                          <div className="mb-4">
+                            <p className="text-xs font-medium text-[#6B5F53]/70 mb-2">
+                              {language === 'zh' ? '当前可用餐券：' : 'Available Coupons:'}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {userData.weeklySIXmeals !== undefined && userData.weeklySIXmeals > 0 && (
+                                <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full border border-[#C2884E]/20">
+                                  <span className="text-sm font-medium text-[#6B5F53]">
+                                    {language === 'zh' ? '6餐一周' : '6 Meals/Week'}: 
+                                  </span>
+                                  <span className="text-sm font-bold text-[#C2884E]">
+                                    {userData.weeklySIXmeals}{language === 'zh' ? '张' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {(userData as any).weeklyEIGHTmeals !== undefined && (userData as any).weeklyEIGHTmeals > 0 && (
+                                <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full border border-[#C2884E]/20">
+                                  <span className="text-sm font-medium text-[#6B5F53]">
+                                    {language === 'zh' ? '8餐一周' : '8 Meals/Week'}: 
+                                  </span>
+                                  <span className="text-sm font-bold text-[#C2884E]">
+                                    {(userData as any).weeklyEIGHTmeals}{language === 'zh' ? '张' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {userData.weeklyTENmeals !== undefined && userData.weeklyTENmeals > 0 && (
+                                <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full border border-[#C2884E]/20">
+                                  <span className="text-sm font-medium text-[#6B5F53]">
+                                    {language === 'zh' ? '10餐一周' : '10 Meals/Week'}: 
+                                  </span>
+                                  <span className="text-sm font-bold text-[#C2884E]">
+                                    {userData.weeklyTENmeals}{language === 'zh' ? '张' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {(userData as any).weeklyTWELVEmeals !== undefined && (userData as any).weeklyTWELVEmeals > 0 && (
+                                <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full border border-[#C2884E]/20">
+                                  <span className="text-sm font-medium text-[#6B5F53]">
+                                    {language === 'zh' ? '12餐一周' : '12 Meals/Week'}: 
+                                  </span>
+                                  <span className="text-sm font-bold text-[#C2884E]">
+                                    {(userData as any).weeklyTWELVEmeals}{language === 'zh' ? '张' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Show message if no coupons */}
+                              {(!userData.weeklySIXmeals || userData.weeklySIXmeals === 0) && 
+                               (!(userData as any).weeklyEIGHTmeals || (userData as any).weeklyEIGHTmeals === 0) &&
+                               (!userData.weeklyTENmeals || userData.weeklyTENmeals === 0) &&
+                               (!(userData as any).weeklyTWELVEmeals || (userData as any).weeklyTWELVEmeals === 0) && (
+                                <div className="text-sm text-[#6B5F53]/60 italic">
+                                  {language === 'zh' ? '暂无可用餐券' : 'No coupons available'}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                         
