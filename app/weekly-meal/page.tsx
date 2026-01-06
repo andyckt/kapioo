@@ -72,6 +72,7 @@ export default function WeeklyMealPage() {
   const [weeklyMenu, setWeeklyMenu] = useState<MenuDay[]>([])
   const [activeWeek, setActiveWeek] = useState(1)
   const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
+  const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
   
   // Check if user is authenticated on component mount
   useEffect(() => {
@@ -79,6 +80,39 @@ export default function WeeklyMealPage() {
     const userData = localStorage.getItem('user')
     setIsAuthenticated(authStatus === 'true' && !!userData)
   }, [])
+  
+  // Fetch dish translations on component mount
+  useEffect(() => {
+    const fetchDishTranslations = async () => {
+      try {
+        const response = await fetch('/api/dishes');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Create a map of Chinese name -> English name
+          const translationsMap: Record<string, string> = {};
+          result.data.forEach((dish: any) => {
+            if (dish.nameEn) {
+              translationsMap[dish.name] = dish.nameEn;
+            }
+          });
+          setDishTranslations(translationsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching dish translations:', error);
+      }
+    };
+    
+    fetchDishTranslations();
+  }, [])
+  
+  // Helper function to translate dish names
+  const translateDishName = (dishName: string): string => {
+    if (language === 'zh' || !dishTranslations[dishName]) {
+      return dishName
+    }
+    return dishTranslations[dishName] || dishName
+  }
   
   // Fetch weekly menu data when dialog opens
   useEffect(() => {
@@ -695,7 +729,7 @@ export default function WeeklyMealPage() {
                                           className="bg-white/95 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-[#F5EDE4] shadow-sm hover:shadow-md transition-shadow duration-300 mobile-menu-animation"
                                           style={{animationDelay: `${index * 0.05}s`}}
                                         >
-                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-2.5 sm:mb-3 leading-tight">{option.name}</h4>
+                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-2.5 sm:mb-3 leading-tight">{translateDishName(option.name)}</h4>
                                           
                                           {option.tags && option.tags.length > 0 && (
                                             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
