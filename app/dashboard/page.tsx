@@ -2507,6 +2507,17 @@ export default function DashboardPage() {
                     weeklyEIGHTmeals={(userData as any)?.weeklyEIGHTmeals}
                     weeklyTENmeals={userData?.weeklyTENmeals}
                     weeklyTWELVEmeals={(userData as any)?.weeklyTWELVEmeals}
+                    onVoucherUpdate={() => {
+                      // Refresh user data after successful order
+                      if (userData?._id) {
+                        getUserById(userData._id).then(user => {
+                          if (user) {
+                            setUserData(user);
+                            setCredits(user.credits || 0);
+                          }
+                        });
+                      }
+                    }}
                   />
                 </motion.div>
               )}

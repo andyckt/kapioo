@@ -23,6 +23,7 @@ interface WeeklySubscriptionProps {
   weeklyEIGHTmeals?: number;
   weeklyTENmeals?: number;
   weeklyTWELVEmeals?: number;
+  onVoucherUpdate?: () => void;
 }
 
 export default function WeeklySubscription({ 
@@ -30,7 +31,8 @@ export default function WeeklySubscription({
   weeklySIXmeals: propSixMeals,
   weeklyEIGHTmeals: propEightMeals,
   weeklyTENmeals: propTenMeals,
-  weeklyTWELVEmeals: propTwelveMeals
+  weeklyTWELVEmeals: propTwelveMeals,
+  onVoucherUpdate
 }: WeeklySubscriptionProps) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
@@ -489,6 +491,11 @@ export default function WeeklySubscription({
   const handleCheckoutSuccess = () => {
     setCart([]);
     setCheckoutOpen(false);
+    
+    // Trigger parent component to refresh user data
+    if (onVoucherUpdate) {
+      onVoucherUpdate();
+    }
   }
 
   return (
