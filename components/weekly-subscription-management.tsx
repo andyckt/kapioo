@@ -556,9 +556,21 @@ export function WeeklySubscriptionManagement() {
         }))
       );
       
+      // Show success toast
+      toast({
+        title: "English translation updated",
+        description: "The English name has been saved successfully."
+      });
+      
       // Reset inline edit state
       setEditingEnglishForMealId(null)
       setInlineEnglishName('')
+    } else {
+      toast({
+        title: "Failed to update",
+        description: "Could not save English translation",
+        variant: "destructive"
+      });
     }
   }
   
@@ -606,9 +618,21 @@ export function WeeklySubscriptionManagement() {
         }))
       );
       
+      // Show success toast
+      toast({
+        title: "Chinese name updated",
+        description: "The dish name has been saved successfully."
+      });
+      
       // Reset inline edit state
       setEditingChineseForMealId(null)
       setInlineChineseName('')
+    } else {
+      toast({
+        title: "Failed to update",
+        description: "Could not save Chinese name",
+        variant: "destructive"
+      });
     }
   }
   
