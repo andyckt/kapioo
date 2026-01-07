@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, setLanguage } = useLanguage()
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -69,6 +69,13 @@ export default function LoginPage() {
         
         // Set authentication state
         localStorage.setItem('isAuthenticated', 'true');
+        
+        // Immediately enforce user's account language preference, overriding any session language
+        if (result.data.user.languagePreference && 
+            (result.data.user.languagePreference === 'zh' || result.data.user.languagePreference === 'en')) {
+          setLanguage(result.data.user.languagePreference);
+          localStorage.setItem('preferredLanguage', result.data.user.languagePreference);
+        }
         
         // Show success toast
         toast({

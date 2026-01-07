@@ -423,6 +423,7 @@ export interface User {
   weeklyTWELVEmeals: number;
   joined: Date | string;
   status: string;
+  languagePreference?: 'zh' | 'en';
   address?: {
     unitNumber?: string;
     streetAddress: string;

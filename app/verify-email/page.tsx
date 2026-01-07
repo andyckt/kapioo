@@ -73,6 +73,7 @@ export default function VerifyEmailPage() {
           password: pendingUser.password,
           credits: pendingUser.credits || 0,
           status: pendingUser.status || 'Active',
+          languagePreference: pendingUser.languagePreference || 'zh',
           isVerified: true // Mark as verified immediately
         }),
       })

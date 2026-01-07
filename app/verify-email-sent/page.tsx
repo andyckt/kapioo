@@ -39,7 +39,7 @@ const serviceAreas = [
 
 export default function VerifyEmailSentPage() {
   const router = useRouter()
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const [userEmail, setUserEmail] = useState<string>("")
   const [userId, setUserId] = useState<string>("")
   const [verificationCode, setVerificationCode] = useState<string>("")
@@ -91,8 +91,8 @@ export default function VerifyEmailSentPage() {
       const pendingUserStr = localStorage.getItem('pendingUser')
       if (!pendingUserStr) {
         toast({
-          title: "重新发送失败",
-          description: "无法找到注册信息，请重新注册",
+          title: t('resendFailed'),
+          description: t('cannotFindRegistration'),
           variant: "destructive",
         })
         setIsResending(false)
@@ -125,21 +125,21 @@ export default function VerifyEmailSentPage() {
       
       if (data.success) {
         toast({
-          title: "验证码已发送",
-          description: "请查看您的邮箱获取验证码",
+          title: t('verificationCodeSent'),
+          description: t('resendSuccess'),
         })
       } else {
         toast({
-          title: "重新发送失败",
-          description: data.error || "发生错误，请重试",
+          title: t('resendFailed'),
+          description: data.error || t('errorOccurred'),
           variant: "destructive",
         })
       }
     } catch (error) {
       console.error('Error resending verification:', error)
       toast({
-        title: "重新发送失败",
-        description: "发生错误，请重试",
+        title: t('resendFailed'),
+        description: t('errorOccurred'),
         variant: "destructive",
       })
     } finally {
@@ -152,8 +152,8 @@ export default function VerifyEmailSentPage() {
     
     if (!userEmail || !verificationCode) {
       toast({
-        title: "验证失败",
-        description: "请输入验证码",
+        title: t('verificationFailed'),
+        description: t('verificationCodePlaceholder'),
         variant: "destructive",
       })
       return
@@ -165,11 +165,11 @@ export default function VerifyEmailSentPage() {
       // Get the pending user data from localStorage
       const pendingUserStr = localStorage.getItem('pendingUser')
       if (!pendingUserStr) {
-        setErrorMessage("无法找到注册信息，请重新注册")
+        setErrorMessage(t('cannotFindRegistration'))
         setVerificationStatus("error")
         toast({
-          title: "验证失败",
-          description: "无法找到注册信息，请重新注册",
+          title: t('verificationFailed'),
+          description: t('cannotFindRegistration'),
           variant: "destructive",
         })
         setIsVerifying(false)
@@ -181,10 +181,10 @@ export default function VerifyEmailSentPage() {
       // Verify that the entered code matches the stored code
       if (pendingUser.email !== userEmail || pendingUser.verificationCode !== verificationCode) {
         setVerificationStatus("error")
-        setErrorMessage("验证码无效或邮箱地址不匹配")
+        setErrorMessage(t('invalidCode'))
         toast({
-          title: "验证失败",
-          description: "验证码无效或邮箱地址不匹配",
+          title: t('verificationFailed'),
+          description: t('invalidCode'),
           variant: "destructive",
         })
         setIsVerifying(false)
@@ -203,6 +203,7 @@ export default function VerifyEmailSentPage() {
           password: pendingUser.password,
           credits: pendingUser.credits || 0,
           status: pendingUser.status || 'Active',
+          languagePreference: pendingUser.languagePreference || 'zh',
           isVerified: true // Mark as verified immediately
         }),
       })
@@ -442,20 +443,20 @@ export default function VerifyEmailSentPage() {
               <div className="mx-auto h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-2">
                 <X className="h-6 w-6 text-red-600" />
               </div>
-              <CardTitle className="text-xl text-center">验证失败</CardTitle>
+              <CardTitle className="text-xl text-center">{t('verificationFailed')}</CardTitle>
             </CardHeader>
             <CardContent className="text-center pb-6">
               <p className="text-muted-foreground mb-4">
-                {errorMessage || "验证码无效或已过期"}
+                {errorMessage || t('invalidCode')}
               </p>
               <form onSubmit={handleVerifyCode} className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="code">验证码</Label>
+                  <Label htmlFor="code">{t('enterVerificationCode')}</Label>
                   <Input
                     id="code"
                     value={verificationCode}
                     onChange={(e) => setVerificationCode(e.target.value)}
-                    placeholder="请输入6位数验证码"
+                    placeholder={t('verificationCodePlaceholder')}
                     className="h-10 text-center text-lg tracking-widest"
                     maxLength={6}
                     required
@@ -469,10 +470,10 @@ export default function VerifyEmailSentPage() {
                   {isVerifying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      正在验证...
+                      {t('verifying')}
                     </>
                   ) : (
-                    "重新验证"
+                    t('verifyEmail')
                   )}
                 </Button>
               </form>
@@ -487,10 +488,10 @@ export default function VerifyEmailSentPage() {
                 {isResending ? (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    正在重新发送...
+                    {t('resending')}
                   </>
                 ) : (
-                  "重新发送验证码"
+                  t('resendCode')
                 )}
               </Button>
             </CardFooter>
@@ -504,20 +505,20 @@ export default function VerifyEmailSentPage() {
               <div className="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
                 <Check className="h-6 w-6 text-[#C2884E]" />
               </div>
-              <CardTitle className="text-xl text-center">查看您的邮箱</CardTitle>
+              <CardTitle className="text-xl text-center">{t('checkYourEmail')}</CardTitle>
             </CardHeader>
             <CardContent className="text-center pb-6">
               <p className="text-muted-foreground mb-4">
-                我们已向 <span className="font-medium text-black">{userEmail || "您的邮箱"}</span> 发送了一个6位数的验证码
+                {t('verificationCodeSentTo')} <span className="font-medium text-black">{userEmail || (language === 'zh' ? '您的邮箱' : 'your email')}</span> {t('pleaseCheckEmail')}
               </p>
               <form onSubmit={handleVerifyCode} className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="code">验证码</Label>
+                  <Label htmlFor="code">{t('enterVerificationCode')}</Label>
                   <Input
                     id="code"
                     value={verificationCode}
                     onChange={(e) => setVerificationCode(e.target.value)}
-                    placeholder="请输入6位数验证码"
+                    placeholder={t('verificationCodePlaceholder')}
                     className="h-10 text-center text-lg tracking-widest"
                     maxLength={6}
                     required
@@ -534,10 +535,10 @@ export default function VerifyEmailSentPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      正在验证...
+                      {t('verifying')}
                     </>
                   ) : (
-                    "验证邮箱"
+                    t('verifyEmail')
                   )}
                 </Button>
               </form>
@@ -552,10 +553,10 @@ export default function VerifyEmailSentPage() {
                 {isResending ? (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    正在重新发送...
+                    {t('resending')}
                   </>
                 ) : (
-                  "重新发送验证码"
+                  t('resendCode')
                 )}
               </Button>
               <p className="text-xs text-center text-muted-foreground pt-2">

@@ -45,6 +45,7 @@ export interface IUser extends Document {
   isVerified: boolean;
   resetPasswordCode?: string;
   resetPasswordExpires?: Date;
+  languagePreference: 'zh' | 'en';
   setPassword: (password: string) => Promise<void>;
   comparePassword: (candidatePassword: string) => Promise<boolean>;
   generateVerificationCode: () => { code: string, expires: Date };
@@ -145,6 +146,12 @@ const UserSchema: Schema = new Schema(
     },
     resetPasswordExpires: {
       type: Date
+    },
+    // Language preference
+    languagePreference: {
+      type: String,
+      enum: ['zh', 'en'],
+      default: 'zh'
     }
   },
   { 

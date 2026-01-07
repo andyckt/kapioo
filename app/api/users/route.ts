@@ -152,6 +152,8 @@ export async function POST(request: Request) {
       phone: data.phone || '',
       // Handle address data if provided
       address: data.address || {},
+      // Language preference - default to 'zh' for backward compatibility
+      languagePreference: data.languagePreference || 'zh',
       // If isVerified is provided (from the verification flow), use it; otherwise, default to false
       isVerified: data.isVerified === true ? true : false
     });

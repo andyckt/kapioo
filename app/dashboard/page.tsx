@@ -79,7 +79,7 @@ const VALID_DELIVERY_AREAS = [
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { t, language } = useLanguage()
+  const { t, language, setLanguage } = useLanguage()
   const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
   const [customizeMeal, setCustomizeMeal] = useState(null)
@@ -191,7 +191,8 @@ export default function DashboardPage() {
     name: '',
     nickname: '',
     email: '',
-    phone: ''
+    phone: '',
+    languagePreference: 'zh' as 'zh' | 'en'
   })
   
   // Initialize activeTab from URL parameters
@@ -374,7 +375,8 @@ export default function DashboardPage() {
             name: user.name || '',
             nickname: user.nickname || '',
             email: user.email || '',
-            phone: user.phone || ''
+            phone: user.phone || '',
+            languagePreference: user.languagePreference || 'zh'
           });
           
           // Set address data if available
@@ -592,7 +594,8 @@ export default function DashboardPage() {
           name: personalInfo.name,
           nickname: personalInfo.nickname,
           email: personalInfo.email,
-          phone: personalInfo.phone
+          phone: personalInfo.phone,
+          languagePreference: personalInfo.languagePreference
         }),
       });
       
@@ -608,7 +611,12 @@ export default function DashboardPage() {
           const userObj = JSON.parse(storedUser);
           const updatedUser = { ...userObj, ...personalInfo };
           localStorage.setItem('user', JSON.stringify(updatedUser));
+          // Update language preference in localStorage for immediate effect
+          localStorage.setItem('preferredLanguage', personalInfo.languagePreference);
         }
+        
+        // Update the language context immediately
+        setLanguage(personalInfo.languagePreference);
         
         toast({
           title: t('changesSaved'),
@@ -2301,6 +2309,38 @@ export default function DashboardPage() {
                             <div className="space-y-2">
                               <Label htmlFor="phone">{t('phone')}</Label>
                               <Input id="phone" value={personalInfo.phone} onChange={handlePersonalInfoChange} />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2 mt-4">
+                            <Label htmlFor="languagePreference">{t('preferredLanguage')}</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setPersonalInfo((prev) => ({ ...prev, languagePreference: 'zh' }))}
+                                className={cn(
+                                  "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center gap-2",
+                                  personalInfo.languagePreference === 'zh'
+                                    ? "border-[#C2884E] bg-[#FFF6EF] text-[#C2884E] font-medium"
+                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                                )}
+                              >
+                                <span className="text-xl">🇨🇳</span>
+                                <span className="text-sm">中文</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPersonalInfo((prev) => ({ ...prev, languagePreference: 'en' }))}
+                                className={cn(
+                                  "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center gap-2",
+                                  personalInfo.languagePreference === 'en'
+                                    ? "border-[#C2884E] bg-[#FFF6EF] text-[#C2884E] font-medium"
+                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                                )}
+                              >
+                                <span className="text-xl">🇨🇦</span>
+                                <span className="text-sm">English</span>
+                              </button>
                             </div>
                           </div>
                         </CardContent>

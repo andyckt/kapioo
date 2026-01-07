@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,20 @@ import { useLanguage } from '@/lib/language-context';
 
 export function LanguageSwitcher() {
   const { language, setLanguage, t } = useLanguage();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  useEffect(() => {
+    // Check if user is logged in
+    if (typeof window !== 'undefined') {
+      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+      setIsLoggedIn(isAuthenticated);
+    }
+  }, []);
+  
+  // Hide language switcher when user is logged in
+  if (isLoggedIn) {
+    return null;
+  }
   
   return (
     <DropdownMenu>

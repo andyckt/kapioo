@@ -23,6 +23,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [languagePreference, setLanguagePreference] = useState<'zh' | 'en'>('zh')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -135,6 +136,7 @@ export default function SignupPage() {
           verificationCode: verificationCode,
           credits: 0,
           status: 'Active',
+          languagePreference: languagePreference,
           fromPage,
           planIdentifier
         }));
@@ -290,6 +292,39 @@ export default function SignupPage() {
                   {errors.confirmPassword && <p className="text-destructive text-xs">{errors.confirmPassword}</p>}
                 </div>
 
+                <div className="grid gap-2.5">
+                  <Label htmlFor="languagePreference" className="text-sm font-medium">
+                    {t('preferredLanguage')}
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setLanguagePreference('zh')}
+                      className={cn(
+                        "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center gap-2",
+                        languagePreference === 'zh'
+                          ? "border-[#C2884E] bg-[#FFF6EF] text-[#C2884E] font-medium"
+                          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                      )}
+                    >
+                      <span className="text-xl">🇨🇳</span>
+                      <span className="text-sm">中文</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLanguagePreference('en')}
+                      className={cn(
+                        "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center gap-2",
+                        languagePreference === 'en'
+                          ? "border-[#C2884E] bg-[#FFF6EF] text-[#C2884E] font-medium"
+                          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                      )}
+                    >
+                      <span className="text-xl">🇨🇦</span>
+                      <span className="text-sm">English</span>
+                    </button>
+                  </div>
+                </div>
 
                 <Button 
                   type="submit" 

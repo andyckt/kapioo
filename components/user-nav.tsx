@@ -105,8 +105,11 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   }
   
   const handleLogout = () => {
-    // Clear user data from localStorage
+    // Clear user data and authentication state from localStorage
     localStorage.removeItem('user')
+    localStorage.removeItem('isAuthenticated')
+    // Note: We intentionally keep 'preferredLanguage' so users can continue 
+    // browsing in their preferred language when logged out
     
     toast({
       title: "Logged out",

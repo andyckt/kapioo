@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Language = 'zh' | 'en';
 
@@ -48,9 +48,14 @@ type TranslationKey =
   | 'loginSuccess' | 'welcomeBack' | 'loginFailed' | 'invalidCredentials' | 'loginError'
   // Signup page translations
   | 'createAccount' | 'enterDetails' | 'fullName' | 'phoneNumber' | 'enterPhoneNumber'
-  | 'confirmPassword' | 'continueBtn' | 'alreadyHaveAccount' | 'loginHere'
+  | 'confirmPassword' | 'preferredLanguage' | 'continueBtn' | 'alreadyHaveAccount' | 'loginHere'
   | 'nameRequired' | 'emailRequired' | 'validEmailRequired' | 'passwordRequired' | 'passwordLength'
   | 'passwordsDoNotMatch' | 'registrationFailed' | 'somethingWentWrong' | 'registrationError' | 'creatingAccount'
+  // Email verification page translations
+  | 'checkYourEmail' | 'verificationCodeSent' | 'verificationCodeSentTo' | 'enterVerificationCode'
+  | 'verificationCodePlaceholder' | 'verifyEmail' | 'verifying' | 'resendCode' | 'resending'
+  | 'verificationSuccess' | 'verificationFailed' | 'invalidCode' | 'resendSuccess' | 'resendFailed'
+  | 'cannotFindRegistration' | 'pleaseCheckEmail'
   // Address page translations
   | 'deliveryAddress' | 'whereDeliver' | 'unitNumber' | 'streetAddress' | 'city'
   | 'postalCode' | 'province' | 'country' | 'buzzCode' | 'completeRegistration'
@@ -276,6 +281,7 @@ const translations: TranslationsType = {
     phoneNumber: "电话号码",
     enterPhoneNumber: "输入您的电话号码",
     confirmPassword: "确认密码",
+    preferredLanguage: "首选语言",
     continueBtn: "继续",
     alreadyHaveAccount: "已经有账户？",
     loginHere: "登录",
@@ -289,6 +295,24 @@ const translations: TranslationsType = {
     somethingWentWrong: "出现了问题",
     registrationError: "注册过程中发生错误",
     creatingAccount: "创建账户中...",
+    
+    // Email verification page
+    checkYourEmail: "查看您的邮箱",
+    verificationCodeSent: "验证码已发送",
+    verificationCodeSentTo: "我们已向",
+    enterVerificationCode: "验证码",
+    verificationCodePlaceholder: "请输入6位数验证码",
+    verifyEmail: "验证邮箱",
+    verifying: "验证中...",
+    resendCode: "重新发送验证码",
+    resending: "正在重新发送...",
+    verificationSuccess: "验证成功",
+    verificationFailed: "验证失败",
+    invalidCode: "验证码无效或邮箱地址不匹配",
+    resendSuccess: "请查看您的邮箱获取验证码",
+    resendFailed: "重新发送失败",
+    cannotFindRegistration: "无法找到注册信息，请重新注册",
+    pleaseCheckEmail: "发送了一个6位数的验证码",
     
     // Address page
     deliveryAddress: "送货地址",
@@ -393,7 +417,6 @@ const translations: TranslationsType = {
     passwordMismatch: "两次输入的密码不一致",
     loggingOut: "正在退出登录",
     loggedOut: "已退出登录",
-    passwordRequired: "密码是必需的",
     newPasswordRequired: "新密码是必需的",
     confirmPasswordRequired: "确认密码是必需的",
     errorOccurred: "发生错误",
@@ -623,6 +646,7 @@ const translations: TranslationsType = {
     phoneNumber: "Phone Number",
     enterPhoneNumber: "Enter your phone number",
     confirmPassword: "Confirm Password",
+    preferredLanguage: "Preferred Language",
     continueBtn: "Continue",
     alreadyHaveAccount: "Already have an account?",
     loginHere: "Sign in",
@@ -636,6 +660,24 @@ const translations: TranslationsType = {
     somethingWentWrong: "Something went wrong",
     registrationError: "An error occurred during registration",
     creatingAccount: "Creating account...",
+    
+    // Email verification page
+    checkYourEmail: "Check Your Email",
+    verificationCodeSent: "Verification Code Sent",
+    verificationCodeSentTo: "We have sent a 6-digit verification code to",
+    enterVerificationCode: "Verification Code",
+    verificationCodePlaceholder: "Enter 6-digit code",
+    verifyEmail: "Verify Email",
+    verifying: "Verifying...",
+    resendCode: "Resend Code",
+    resending: "Resending...",
+    verificationSuccess: "Verification Successful",
+    verificationFailed: "Verification Failed",
+    invalidCode: "Invalid code or email mismatch",
+    resendSuccess: "Please check your email for the verification code",
+    resendFailed: "Failed to Resend",
+    cannotFindRegistration: "Cannot find registration info, please sign up again",
+    pleaseCheckEmail: "a 6-digit verification code",
     
     // Address page
     deliveryAddress: "Delivery Address",
@@ -740,7 +782,6 @@ const translations: TranslationsType = {
     passwordMismatch: "Passwords do not match",
     loggingOut: "Logging out",
     loggedOut: "Logged out",
-    passwordRequired: "Password is required",
     newPasswordRequired: "New password is required",
     confirmPasswordRequired: "Confirm password is required",
     errorOccurred: "An error occurred",
@@ -817,6 +858,20 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   // Initialize language from localStorage if available, otherwise default to Chinese
   const [language, setLanguage] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
+      // First check if user is logged in and has a language preference
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.languagePreference === 'zh' || user.languagePreference === 'en') {
+            return user.languagePreference;
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+      
+      // Fall back to saved language preference
       const savedLanguage = localStorage.getItem('preferredLanguage');
       if (savedLanguage === 'zh' || savedLanguage === 'en') {
         return savedLanguage;
@@ -824,6 +879,47 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     }
     return 'zh';
   });
+  
+  // Effect to sync language when user logs in or updates their profile
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkAndUpdateLanguage = () => {
+        const userStr = localStorage.getItem('user');
+        const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+        
+        if (isAuthenticated && userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user.languagePreference && (user.languagePreference === 'zh' || user.languagePreference === 'en')) {
+              // Always enforce user's account language preference when logged in
+              if (language !== user.languagePreference) {
+                setLanguage(user.languagePreference);
+                localStorage.setItem('preferredLanguage', user.languagePreference);
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        }
+      };
+      
+      // Check immediately
+      checkAndUpdateLanguage();
+      
+      // Also listen for storage events (for when user logs in in another tab)
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'user' || e.key === 'isAuthenticated') {
+          checkAndUpdateLanguage();
+        }
+      };
+      
+      window.addEventListener('storage', handleStorageChange);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, [language]);
   
   // Translation function
   const t = (key: TranslationKey): string => {
