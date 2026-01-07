@@ -18,6 +18,20 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Remove all focus outlines and rings - for language preference dialog */
+  .no-focus-ring,
+  .no-focus-ring:focus,
+  .no-focus-ring:focus-visible,
+  .no-focus-ring:active,
+  .no-focus-ring:focus-within {
+    outline: none !important;
+    box-shadow: none !important;
+    --tw-ring-offset-width: 0px !important;
+    --tw-ring-offset-color: transparent !important;
+    --tw-ring-color: transparent !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+  }
 }
 
 @layer base {

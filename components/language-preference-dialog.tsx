@@ -54,8 +54,10 @@ export function LanguagePreferenceDialog() {
             >
               <Button
                 onClick={() => handleLanguageSelect('zh')}
-                className="w-full h-auto py-3.5 px-5 bg-white hover:bg-[#F5EDE4] border border-[#C2884E]/20 hover:border-[#C2884E] text-[#6B5F53] rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 active:outline-none"
+                className="no-focus-ring w-full h-auto py-3.5 px-5 bg-white hover:bg-[#F5EDE4] border border-[#C2884E]/20 hover:border-[#C2884E] text-[#6B5F53] rounded-lg transition-all duration-300 shadow-sm hover:shadow-md !outline-none !ring-0 !ring-offset-0"
                 variant="outline"
+                type="button"
+                onFocus={(e) => e.currentTarget.blur()}
               >
                 <div className="flex items-center gap-3 w-full pointer-events-none">
                   <span className="text-2xl">🇨🇳</span>
@@ -71,8 +73,10 @@ export function LanguagePreferenceDialog() {
             >
               <Button
                 onClick={() => handleLanguageSelect('en')}
-                className="w-full h-auto py-3.5 px-5 bg-white hover:bg-[#F5EDE4] border border-[#C2884E]/20 hover:border-[#C2884E] text-[#6B5F53] rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 active:outline-none"
+                className="no-focus-ring w-full h-auto py-3.5 px-5 bg-white hover:bg-[#F5EDE4] border border-[#C2884E]/20 hover:border-[#C2884E] text-[#6B5F53] rounded-lg transition-all duration-300 shadow-sm hover:shadow-md !outline-none !ring-0 !ring-offset-0"
                 variant="outline"
+                type="button"
+                onFocus={(e) => e.currentTarget.blur()}
               >
                 <div className="flex items-center gap-3 w-full pointer-events-none">
                   <span className="text-2xl">🇨🇦</span>
