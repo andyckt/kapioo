@@ -79,21 +79,21 @@ export const sendWelcomeEmail = async (to: string, name: string) => {
       <div style="display: flex; justify-content: space-between; margin: 35px 0;">
         <div style="width: 30%; text-align: center; padding: 15px;">
           <div style="width: 60px; height: 60px; background-color: #FFF6EF; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-            <img src="${baseUrl}/icons/menu.png" alt="菜单图标" style="width: 30px; height: 30px;" onerror="this.src='${LOGO_URL}'; this.style.width='30px'; this.style.height='30px';" />
+            <span style="font-size: 30px;">🍽️</span>
           </div>
           <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">探索菜单</h4>
           <p style="color: #666; font-size: 14px; margin: 0;">浏览我们的特色菜品</p>
         </div>
         <div style="width: 30%; text-align: center; padding: 15px;">
           <div style="width: 60px; height: 60px; background-color: #FFF6EF; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-            <img src="${baseUrl}/icons/subscribe.png" alt="订阅图标" style="width: 30px; height: 30px;" onerror="this.src='${LOGO_URL}'; this.style.width='30px'; this.style.height='30px';" />
+            <span style="font-size: 30px;">📋</span>
           </div>
           <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">选择计划</h4>
           <p style="color: #666; font-size: 14px; margin: 0;">定制您的餐食订阅</p>
         </div>
         <div style="width: 30%; text-align: center; padding: 15px;">
           <div style="width: 60px; height: 60px; background-color: #FFF6EF; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-            <img src="${baseUrl}/icons/delivery.png" alt="配送图标" style="width: 30px; height: 30px;" onerror="this.src='${LOGO_URL}'; this.style.width='30px'; this.style.height='30px';" />
+            <span style="font-size: 30px;">🚚</span>
           </div>
           <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">按时配送</h4>
           <p style="color: #666; font-size: 14px; margin: 0;">享受新鲜餐食送到家</p>
@@ -101,10 +101,13 @@ export const sendWelcomeEmail = async (to: string, name: string) => {
       </div>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
         <p style="color: #999; font-size: 14px; margin-bottom: 15px;">关注我们的社交媒体获取最新信息</p>
-        <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
-          <a href="#" style="display: inline-block; width: 36px; height: 36px; background-color: #C2884E; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">W</a>
-          <a href="#" style="display: inline-block; width: 36px; height: 36px; background-color: #C2884E; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">I</a>
-          <a href="#" style="display: inline-block; width: 36px; height: 36px; background-color: #C2884E; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">F</a>
+        <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; align-items: center;">
+          <a href="https://www.xiaohongshu.com/user/profile/66ad59e5000000001d0303d8?xsec_token=YBlVGv-hVLpDCO5YkHnFDzsnUYaHdUVHDV87mIVi0Brnw=&xsec_source=app_share&xhsshare=CopyLink&shareRedId=ODw5MjdJRk82NzUyOTgwNjY2OTo0PD89&apptime=1767759588" target="_blank" style="display: inline-block; width: 40px; height: 40px; background-color: #FF2442; border-radius: 8px; text-decoration: none; line-height: 40px; text-align: center;">
+            <span style="font-size: 24px; vertical-align: middle;">📕</span>
+          </a>
+          <a href="https://www.instagram.com/kapioo_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" style="display: inline-block; width: 40px; height: 40px; background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); border-radius: 8px; text-decoration: none; line-height: 40px; text-align: center;">
+            <span style="font-size: 24px; vertical-align: middle;">📸</span>
+          </a>
         </div>
         <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
       </div>
