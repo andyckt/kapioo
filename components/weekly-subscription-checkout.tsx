@@ -296,6 +296,29 @@ export function WeeklySubscriptionCheckout({
       
       const userData = JSON.parse(userDataStr)
       
+      // CRITICAL FIX: Fetch fresh user data from database before checkout validation
+      // This ensures we have the most up-to-date coupon counts, especially for newly approved users
+      console.log('=== CHECKOUT DEBUG: Fetching fresh user data from database ===');
+      console.log('User ID:', userData._id);
+      console.log('Props before fetch - weeklySIXmeals:', weeklySIXmeals, 'weeklyEIGHTmeals:', weeklyEIGHTmeals, 'weeklyTENmeals:', weeklyTENmeals, 'weeklyTWELVEmeals:', weeklyTWELVEmeals);
+      
+      const freshUserResponse = await fetch(`/api/users/${userData._id}`);
+      const freshUserData = await freshUserResponse.json();
+
+      if (!freshUserData.success || !freshUserData.data) {
+        console.error('Failed to fetch fresh user data:', freshUserData.error);
+        throw new Error(freshUserData.error || 'Failed to fetch user data for validation');
+      }
+      
+      const freshUser = freshUserData.data;
+      console.log('Fresh user data from DB - weeklySIXmeals:', freshUser.weeklySIXmeals, 'weeklyEIGHTmeals:', freshUser.weeklyEIGHTmeals, 'weeklyTENmeals:', freshUser.weeklyTENmeals, 'weeklyTWELVEmeals:', freshUser.weeklyTWELVEmeals);
+      
+      // Use fresh data for validation instead of stale props
+      const freshSixMeals = freshUser.weeklySIXmeals || 0;
+      const freshEightMeals = freshUser.weeklyEIGHTmeals || 0;
+      const freshTenMeals = freshUser.weeklyTENmeals || 0;
+      const freshTwelveMeals = freshUser.weeklyTWELVEmeals || 0;
+      
       // Group cart items by date
       const cartByDate: Record<string, CartItem[]> = {};
       
@@ -311,71 +334,99 @@ export function WeeklySubscriptionCheckout({
         }
       });
       
+      console.log('Cart grouped by date:', Object.keys(cartByDate).map(date => `${date}: ${cartByDate[date].length} items`));
+      
       // Process each date as a separate order
       const orderResults = [];
       let totalRemainingCredits = userCredits;
-      let totalRemainingSixMeals = weeklySIXmeals;
-      let totalRemainingEightMeals = weeklyEIGHTmeals;
-      let totalRemainingTenMeals = weeklyTENmeals;
-      let totalRemainingTwelveMeals = weeklyTWELVEmeals;
+      let totalRemainingSixMeals = freshSixMeals; // Use fresh data
+      let totalRemainingEightMeals = freshEightMeals; // Use fresh data
+      let totalRemainingTenMeals = freshTenMeals; // Use fresh data
+      let totalRemainingTwelveMeals = freshTwelveMeals; // Use fresh data
       
       // Determine the meal plan type based on total items across all dates
       const allCartItems = Object.values(cartByDate).flat();
       const totalItemsAcrossAllDates = allCartItems.reduce((total, item) => total + item.quantity, 0);
       
+      console.log('Total items across all dates:', totalItemsAcrossAllDates);
+      
       // Choose the meal plan type based on the total items in the entire cart
+      // CRITICAL: Use fresh data from database, not stale props
       let selectedMealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
-      if (totalItemsAcrossAllDates === 6 && weeklySIXmeals > 0) {
+      if (totalItemsAcrossAllDates === 6 && freshSixMeals > 0) {
         selectedMealPlanType = '6aweek';
-      } else if (totalItemsAcrossAllDates === 8 && weeklyEIGHTmeals > 0) {
+        console.log('Selected meal plan type: 6aweek (freshSixMeals:', freshSixMeals, ')');
+      } else if (totalItemsAcrossAllDates === 8 && freshEightMeals > 0) {
         selectedMealPlanType = '8aweek';
-      } else if (totalItemsAcrossAllDates === 10 && weeklyTENmeals > 0) {
+        console.log('Selected meal plan type: 8aweek (freshEightMeals:', freshEightMeals, ')');
+      } else if (totalItemsAcrossAllDates === 10 && freshTenMeals > 0) {
         selectedMealPlanType = '10aweek';
-      } else if (totalItemsAcrossAllDates === 12 && weeklyTWELVEmeals > 0) {
+        console.log('Selected meal plan type: 10aweek (freshTenMeals:', freshTenMeals, ')');
+      } else if (totalItemsAcrossAllDates === 12 && freshTwelveMeals > 0) {
         selectedMealPlanType = '12aweek';
+        console.log('Selected meal plan type: 12aweek (freshTwelveMeals:', freshTwelveMeals, ')');
       } else {
         // This shouldn't happen because we validate in the previous screen,
         // but just in case, set a fallback based on what's available
-        if (weeklySIXmeals > 0) {
+        console.log('No exact match, using fallback logic');
+        if (freshSixMeals > 0) {
           selectedMealPlanType = '6aweek';
-        } else if (weeklyEIGHTmeals > 0) {
+          console.log('Fallback: Selected 6aweek (freshSixMeals:', freshSixMeals, ')');
+        } else if (freshEightMeals > 0) {
           selectedMealPlanType = '8aweek';
-        } else if (weeklyTENmeals > 0) {
+          console.log('Fallback: Selected 8aweek (freshEightMeals:', freshEightMeals, ')');
+        } else if (freshTenMeals > 0) {
           selectedMealPlanType = '10aweek';
-        } else if (weeklyTWELVEmeals > 0) {
+          console.log('Fallback: Selected 10aweek (freshTenMeals:', freshTenMeals, ')');
+        } else if (freshTwelveMeals > 0) {
           selectedMealPlanType = '12aweek';
+          console.log('Fallback: Selected 12aweek (freshTwelveMeals:', freshTwelveMeals, ')');
         }
       }
       
       // Check if we have enough meal plans for the entire cart
+      // CRITICAL: Use fresh data from database, not stale props
       let hasEnoughMeals = false;
       if (selectedMealPlanType === '6aweek') {
-        hasEnoughMeals = weeklySIXmeals >= 1;
+        hasEnoughMeals = freshSixMeals >= 1;
       } else if (selectedMealPlanType === '8aweek') {
-        hasEnoughMeals = weeklyEIGHTmeals >= 1;
+        hasEnoughMeals = freshEightMeals >= 1;
       } else if (selectedMealPlanType === '10aweek') {
-        hasEnoughMeals = weeklyTENmeals >= 1;
+        hasEnoughMeals = freshTenMeals >= 1;
       } else if (selectedMealPlanType === '12aweek') {
-        hasEnoughMeals = weeklyTWELVEmeals >= 1;
+        hasEnoughMeals = freshTwelveMeals >= 1;
       }
       
+      console.log('Validation check - selectedMealPlanType:', selectedMealPlanType, 'hasEnoughMeals:', hasEnoughMeals);
+      
       if (!hasEnoughMeals) {
-        throw new Error('Insufficient meal plans for all orders');
+        console.error('VALIDATION FAILED: Insufficient meal plans. Selected type:', selectedMealPlanType, 'Available:', {
+          freshSixMeals,
+          freshEightMeals,
+          freshTenMeals,
+          freshTwelveMeals
+        });
+        throw new Error(language === 'zh' ? '餐券不足，请先购买餐券' : 'Insufficient meal plans, please purchase more');
       }
+      
+      console.log('Validation PASSED. Proceeding with checkout...');
       
       // Flag to track if we've already deducted a voucher
       let voucherDeducted = false;
       
       // Get the dates in a consistent order to ensure deterministic processing
       const sortedDates = Object.keys(cartByDate).sort();
-      console.log(`Processing orders for dates: ${sortedDates.join(', ')}`);
+      console.log(`=== Processing ${sortedDates.length} orders for dates: ${sortedDates.join(', ')} ===`);
       
       // Process first date WITH voucher deduction
       if (sortedDates.length > 0) {
         const firstDate = sortedDates[0];
         const firstDateItems = cartByDate[firstDate];
         
-        console.log(`Processing FIRST order for date ${firstDate} WITH voucher deduction`);
+        console.log(`\n--- Processing FIRST order (${firstDate}) ---`);
+        console.log('Items:', firstDateItems.map(item => `${item.quantity}x ${item.optionId}`));
+        console.log('Meal plan type:', selectedMealPlanType);
+        console.log('Deduct voucher: TRUE');
         
         // First order should deduct a voucher
         const firstResult = await submitUserSubscription({
@@ -389,7 +440,10 @@ export function WeeklySubscriptionCheckout({
           deductVoucher: true // First order deducts voucher
         });
         
+        console.log('First order result:', firstResult.error ? `ERROR: ${firstResult.error}` : 'SUCCESS');
+        
         if (firstResult.error) {
+          console.error('First order failed with error:', firstResult.error);
           throw new Error(firstResult.error);
         }
         
@@ -425,7 +479,10 @@ export function WeeklySubscriptionCheckout({
           const date = sortedDates[i];
           const dateItems = cartByDate[date];
           
-          console.log(`Processing additional order for date ${date} WITHOUT voucher deduction`);
+          console.log(`\n--- Processing additional order ${i+1}/${sortedDates.length} (${date}) ---`);
+          console.log('Items:', dateItems.map(item => `${item.quantity}x ${item.optionId}`));
+          console.log('Meal plan type:', selectedMealPlanType);
+          console.log('Deduct voucher: FALSE');
           
           const result = await submitUserSubscription({
             items: dateItems,
@@ -438,7 +495,10 @@ export function WeeklySubscriptionCheckout({
             deductVoucher: false // Explicitly set to false for additional orders
           });
           
+          console.log(`Order ${i+1} result:`, result.error ? `ERROR: ${result.error}` : 'SUCCESS');
+          
           if (result.error) {
+            console.error(`Order ${i+1} failed with error:`, result.error);
             throw new Error(result.error);
           }
           
@@ -447,8 +507,17 @@ export function WeeklySubscriptionCheckout({
         }
       }
       
+      console.log(`\n=== All ${sortedDates.length} orders completed successfully ===`);
+      
       // All orders were successful
       // Update user data in localStorage with the final counts
+      console.log('Updating localStorage and state with final counts:', {
+        totalRemainingSixMeals,
+        totalRemainingEightMeals,
+        totalRemainingTenMeals,
+        totalRemainingTwelveMeals
+      });
+      
       userData.credits = totalRemainingCredits;
       userData.weeklySIXmeals = totalRemainingSixMeals;
       userData.weeklyEIGHTmeals = totalRemainingEightMeals;

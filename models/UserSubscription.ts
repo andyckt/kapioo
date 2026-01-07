@@ -11,7 +11,7 @@ export interface ICartItem {
 export interface IAddress {
   unitNumber?: string;
   streetAddress: string;
-  city: string;
+  city?: string; // Made optional to match User model which doesn't have city
   province: string;
   postalCode: string;
   country: string;
@@ -59,7 +59,7 @@ const AddressSchema = new Schema({
   },
   city: {
     type: String,
-    required: true,
+    required: false, // Made optional to match User model which doesn't have city
   },
   province: {
     type: String,
@@ -112,4 +112,8 @@ const UserSubscriptionSchema: Schema = new Schema(
 );
 
 // Create model if it doesn't exist already (for Next.js hot reloading)
-export default mongoose.models.UserSubscription || mongoose.model<IUserSubscription>('UserSubscription', UserSubscriptionSchema);
+// Clear cached model to pick up schema changes during development
+if (mongoose.models.UserSubscription) {
+  delete mongoose.models.UserSubscription;
+}
+export default mongoose.model<IUserSubscription>('UserSubscription', UserSubscriptionSchema);
