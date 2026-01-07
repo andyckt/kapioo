@@ -64,18 +64,20 @@ export default function LoginPage() {
       const result = await response.json();
 
       if (result.success) {
-        // Store user data in localStorage or a state management solution
+        // STEP 4: Set language preference FIRST before storing user data
+        // This prevents the LanguageProvider from reading the old session language
+        if (result.data.user.languagePreference && 
+            (result.data.user.languagePreference === 'zh' || result.data.user.languagePreference === 'en')) {
+          console.log('Login: Setting language from database:', result.data.user.languagePreference);
+          setLanguage(result.data.user.languagePreference);
+          localStorage.setItem('preferredLanguage', result.data.user.languagePreference);
+        }
+        
+        // Now store user data in localStorage
         localStorage.setItem('user', JSON.stringify(result.data.user));
         
         // Set authentication state
         localStorage.setItem('isAuthenticated', 'true');
-        
-        // Immediately enforce user's account language preference, overriding any session language
-        if (result.data.user.languagePreference && 
-            (result.data.user.languagePreference === 'zh' || result.data.user.languagePreference === 'en')) {
-          setLanguage(result.data.user.languagePreference);
-          localStorage.setItem('preferredLanguage', result.data.user.languagePreference);
-        }
         
         // Show success toast
         toast({

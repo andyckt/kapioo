@@ -859,11 +859,16 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       // First check if user is logged in and has a language preference
+      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
       const userStr = localStorage.getItem('user');
-      if (userStr) {
+      
+      if (isAuthenticated && userStr) {
         try {
           const user = JSON.parse(userStr);
           if (user.languagePreference === 'zh' || user.languagePreference === 'en') {
+            console.log('LanguageProvider Init: Using database language for authenticated user:', user.languagePreference);
+            // Also update preferredLanguage to match account preference
+            localStorage.setItem('preferredLanguage', user.languagePreference);
             return user.languagePreference;
           }
         } catch (error) {
@@ -871,12 +876,14 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      // Fall back to saved language preference
+      // Fall back to saved language preference (for non-authenticated users)
       const savedLanguage = localStorage.getItem('preferredLanguage');
       if (savedLanguage === 'zh' || savedLanguage === 'en') {
+        console.log('LanguageProvider Init: Using localStorage language for non-authenticated user:', savedLanguage);
         return savedLanguage;
       }
     }
+    console.log('LanguageProvider Init: Using default language: zh');
     return 'zh';
   });
   
@@ -893,6 +900,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
             if (user.languagePreference && (user.languagePreference === 'zh' || user.languagePreference === 'en')) {
               // Always enforce user's account language preference when logged in
               if (language !== user.languagePreference) {
+                console.log('LanguageProvider: Syncing language for authenticated user:', user.languagePreference);
                 setLanguage(user.languagePreference);
                 localStorage.setItem('preferredLanguage', user.languagePreference);
               }

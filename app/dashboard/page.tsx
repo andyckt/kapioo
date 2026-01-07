@@ -363,6 +363,14 @@ export default function DashboardPage() {
           setUserData(user);
           setCredits(user.credits || 0);
           
+          // STEP 1: Set language from database (primary source for authenticated users)
+          if (user.languagePreference && (user.languagePreference === 'zh' || user.languagePreference === 'en')) {
+            console.log('Dashboard: Setting language from database:', user.languagePreference);
+            setLanguage(user.languagePreference);
+            // Also sync to localStorage as backup
+            localStorage.setItem('preferredLanguage', user.languagePreference);
+          }
+          
           // Set form data for checkout
           setFormData({
             name: user.name || '',
@@ -615,7 +623,8 @@ export default function DashboardPage() {
           localStorage.setItem('preferredLanguage', personalInfo.languagePreference);
         }
         
-        // Update the language context immediately
+        // STEP 3: Update the language context immediately
+        console.log('Profile Settings: Updating language to:', personalInfo.languagePreference);
         setLanguage(personalInfo.languagePreference);
         
         toast({
