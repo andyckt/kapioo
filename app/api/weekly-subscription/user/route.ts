@@ -286,7 +286,8 @@ export async function POST(request: Request) {
           area: data.area,
           phoneNumber: data.phoneNumber,
           specialInstructions: data.specialInstructions
-        }
+        },
+        user.languagePreference || 'zh' // Pass user's language preference from database
       );
       console.log(`Order confirmation email sent to ${user.email}`);
     } catch (emailError) {

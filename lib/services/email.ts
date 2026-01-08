@@ -645,8 +645,60 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
   area: string;
   phoneNumber: string;
   specialInstructions?: string;
-}) => {
+}, language: 'zh' | 'en' = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  // Language-specific text
+  const text = {
+    zh: {
+      orderConfirmation: '订单确认',
+      thankYou: '感谢您的订购！您的订单已成功提交。',
+      orderDetails: '订单详情',
+      orderNumber: '订单号',
+      selectedMeals: '已选餐点',
+      total: '总计',
+      deliveryInfo: '配送信息',
+      area: '区域',
+      phone: '电话',
+      address: '地址',
+      specialInstructions: '特别说明',
+      unit: '单元',
+      buzzCode: '门禁码',
+      viewMyOrders: '查看我的订单',
+      contactSupport: '如有任何问题，请联系我们的客服团队。',
+      allRightsReserved: '保留所有权利。',
+      sunday: '周日',
+      tuesday: '周二',
+      meals: '餐',
+      voucher: '张',
+      mealsPerWeek: (count: number) => `${count}餐一周`
+    },
+    en: {
+      orderConfirmation: 'Order Confirmation',
+      thankYou: 'Thank you for your order! Your order has been successfully submitted.',
+      orderDetails: 'Order Details',
+      orderNumber: 'Order Number',
+      selectedMeals: 'Selected Meals',
+      total: 'Total',
+      deliveryInfo: 'Delivery Information',
+      area: 'Area',
+      phone: 'Phone',
+      address: 'Address',
+      specialInstructions: 'Special Instructions',
+      unit: 'Unit',
+      buzzCode: 'Buzz Code',
+      viewMyOrders: 'View My Orders',
+      contactSupport: 'If you have any questions, please contact our customer service team.',
+      allRightsReserved: 'All rights reserved.',
+      sunday: 'Sunday',
+      tuesday: 'Tuesday',
+      meals: 'meals',
+      voucher: 'voucher',
+      mealsPerWeek: (count: number) => `${count} Meals/Week`
+    }
+  };
+  
+  const t = text[language];
   
   // Format delivery days and items
   const deliveryDays = orderDetails.items.reduce((acc: any, item) => {
@@ -665,7 +717,7 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
   // Generate HTML for each delivery day and its items
   let deliveryItemsHtml = '';
   Object.values(deliveryDays).forEach((day: any) => {
-    const dayName = day.dayId === 'sunday' ? '周日' : '周二';
+    const dayName = day.dayId === 'sunday' ? t.sunday : t.tuesday;
     deliveryItemsHtml += `
       <div style="margin-bottom: 15px;">
         <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${dayName} (${day.date})</h4>
@@ -686,80 +738,80 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
   // Format address
   const addr = orderDetails.deliveryAddress;
   let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
+  if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
   formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+  if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">订单确认</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.orderConfirmation}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        ${name}，感谢您的订购！您的订单已成功提交。
+        ${name}, ${t.thankYou}
       </p>
       
       <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
-        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px;">订单详情</h3>
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px;">${t.orderDetails}</h3>
         <p style="color: #333; margin-bottom: 15px; font-size: 15px;">
-          <strong>订单号:</strong> ${orderDetails.orderId}
+          <strong>${t.orderNumber}:</strong> ${orderDetails.orderId}
         </p>
         
         <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 15px; margin: 20px 0;">
-          <h4 style="color: #C2884E; margin-top: 0; font-size: 16px;">已选餐点</h4>
+          <h4 style="color: #C2884E; margin-top: 0; font-size: 16px;">${t.selectedMeals}</h4>
           ${deliveryItemsHtml}
           <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
-            <span style="font-weight: bold; color: #333;">总计:</span>
+            <span style="font-weight: bold; color: #333;">${t.total}:</span>
             <span style="font-weight: bold; color: #C2884E;">
               ${(() => {
                 if (orderDetails.totalCredits === 6) {
-                  return '6餐一周: 1张';
+                  return `${t.mealsPerWeek(6)}: 1 ${t.voucher}`;
                 } else if (orderDetails.totalCredits === 8) {
-                  return '8餐一周: 1张';
+                  return `${t.mealsPerWeek(8)}: 1 ${t.voucher}`;
                 } else if (orderDetails.totalCredits === 10) {
-                  return '10餐一周: 1张';
+                  return `${t.mealsPerWeek(10)}: 1 ${t.voucher}`;
                 } else if (orderDetails.totalCredits === 12) {
-                  return '12餐一周: 1张';
+                  return `${t.mealsPerWeek(12)}: 1 ${t.voucher}`;
                 } else {
-                  return `${orderDetails.totalCredits} 餐`;
+                  return `${orderDetails.totalCredits} ${t.meals}`;
                 }
               })()}
             </span>
           </div>
         </div>
         
-        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">配送信息</h4>
+        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">${t.deliveryInfo}</h4>
         <p style="color: #333; margin: 5px 0; font-size: 15px;">
-          <strong>区域:</strong> ${orderDetails.area}
+          <strong>${t.area}:</strong> ${orderDetails.area}
         </p>
         <p style="color: #333; margin: 5px 0; font-size: 15px;">
-          <strong>电话:</strong> ${orderDetails.phoneNumber}
+          <strong>${t.phone}:</strong> ${orderDetails.phoneNumber}
         </p>
         <p style="color: #333; margin: 5px 0; font-size: 15px;">
-          <strong>地址:</strong> ${formattedAddress}
+          <strong>${t.address}:</strong> ${formattedAddress}
         </p>
         ${orderDetails.specialInstructions ? `
         <p style="color: #333; margin: 5px 0; font-size: 15px;">
-          <strong>特别说明:</strong> ${orderDetails.specialInstructions}
+          <strong>${t.specialInstructions}:</strong> ${orderDetails.specialInstructions}
         </p>
         ` : ''}
       </div>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${baseUrl}/dashboard?tab=orders" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">查看我的订单</a>
+        <a href="${baseUrl}/dashboard?tab=orders" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">${t.viewMyOrders}</a>
       </div>
       
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
-        <p>如有任何问题，请联系我们的客服团队。</p>
-        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p>${t.contactSupport}</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${t.allRightsReserved}</p>
       </div>
     </div>
   `;
   
   return sendEmail({
     to,
-    subject: `[Kapioo] 订单确认 #${orderDetails.orderId}`,
+    subject: `[Kapioo] ${t.orderConfirmation} #${orderDetails.orderId}`,
     html,
   });
 };
