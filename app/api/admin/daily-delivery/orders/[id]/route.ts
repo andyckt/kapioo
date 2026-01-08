@@ -147,3 +147,63 @@ export async function GET(request: Request, { params }: RouteParams) {
     );
   }
 }
+
+// DELETE handler - delete order without notification (admin only)
+// Optional: return vouchers/credits based on query parameter
+// Does NOT send email notification
+export async function DELETE(request: Request, { params }: RouteParams) {
+  try {
+    // In a production environment, you should implement proper authentication
+    // to ensure only admins can access this endpoint
+    
+    await connectToDatabase();
+    
+    const { id } = params;
+    
+    // Get query parameter to check if vouchers should be returned
+    const url = new URL(request.url);
+    const returnVouchers = url.searchParams.get('returnVouchers') === 'true';
+    
+    // Find the order by orderId
+    const order = await DailyDeliveryOrder.findOne({ orderId: id });
+    
+    if (!order) {
+      return NextResponse.json(
+        { success: false, error: 'Order not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Return vouchers to user if requested and order was not already refunded
+    if (returnVouchers && order.status !== 'refunded') {
+      const user = await User.findById(order.userId);
+      if (user) {
+        const twoDishReturned = order.voucherCost?.twoDish || 0;
+        const threeDishReturned = order.voucherCost?.threeDish || 0;
+        
+        user.twoDishVoucher += twoDishReturned;
+        user.threeDishVoucher += threeDishReturned;
+        await user.save();
+        
+        console.log(`Returned vouchers to user ${user.email}: ${twoDishReturned} 2-dish, ${threeDishReturned} 3-dish`);
+      }
+    }
+    
+    // Delete the order (no email notification)
+    await DailyDeliveryOrder.deleteOne({ orderId: id });
+    
+    console.log(`Order ${id} deleted without notification (vouchers ${returnVouchers ? 'returned' : 'not returned'}) by admin`);
+    
+    return NextResponse.json({
+      success: true,
+      message: `Order deleted successfully without notification${returnVouchers ? ' (vouchers returned)' : ''}`
+    });
+  } catch (error: any) {
+    console.error('Error deleting order:', error);
+    
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete order', details: error.message },
+      { status: 500 }
+    );
+  }
+}

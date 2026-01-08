@@ -137,3 +137,61 @@ export async function GET(request: Request, { params }: RouteParams) {
     );
   }
 }
+
+// DELETE handler - delete order without notification (admin only)
+// Optional: return credits based on query parameter
+// Does NOT send email notification
+export async function DELETE(request: Request, { params }: RouteParams) {
+  try {
+    // In a production environment, you should implement proper authentication
+    // to ensure only admins can access this endpoint
+    
+    await connectToDatabase();
+    
+    const { id } = params;
+    
+    // Get query parameter to check if credits should be returned
+    const url = new URL(request.url);
+    const returnCredits = url.searchParams.get('returnCredits') === 'true';
+    
+    // Find the order by orderId
+    const order = await WeeklyOrder.findOne({ orderId: id });
+    
+    if (!order) {
+      return NextResponse.json(
+        { success: false, error: 'Order not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Return credits to user if requested and order was not already refunded
+    if (returnCredits && order.status !== 'refunded') {
+      const user = await User.findById(order.userId);
+      if (user) {
+        const creditsReturned = order.creditCost || 0;
+        
+        user.credits += creditsReturned;
+        await user.save();
+        
+        console.log(`Returned credits to user ${user.email}: ${creditsReturned} credits`);
+      }
+    }
+    
+    // Delete the order (no email notification)
+    await WeeklyOrder.deleteOne({ orderId: id });
+    
+    console.log(`Weekly order ${id} deleted without notification (credits ${returnCredits ? 'returned' : 'not returned'}) by admin`);
+    
+    return NextResponse.json({
+      success: true,
+      message: `Order deleted successfully without notification${returnCredits ? ' (credits returned)' : ''}`
+    });
+  } catch (error: any) {
+    console.error('Error deleting weekly order:', error);
+    
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete order', details: error.message },
+      { status: 500 }
+    );
+  }
+}

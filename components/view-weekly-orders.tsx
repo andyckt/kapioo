@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X, Check, CheckSquare, Users, ShoppingCart, Eye, Ticket, Copy } from "lucide-react"
+import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X, Check, CheckSquare, Users, ShoppingCart, Eye, Ticket, Copy, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Checkbox } from "@/components/ui/checkbox"
 
 // Order status component with appropriate icon and color
 function OrderStatus({ status }: { status: string }) {
@@ -133,6 +135,11 @@ export function ViewWeeklyOrders() {
     isOpen: false,
     orderId: '',
     currentStatus: ''
+  })
+  const [deleteDialog, setDeleteDialog] = useState({
+    isOpen: false,
+    orderId: '',
+    returnCredits: false
   })
 
   // Fetch orders with pagination and filters
@@ -420,6 +427,54 @@ export function ViewWeeklyOrders() {
     } finally {
       setIsUpdating(false)
       setUpdateStatusDialog({ isOpen: false, orderId: '', currentStatus: '' })
+    }
+  }
+  
+  // Delete order without notification
+  const deleteOrderWithoutNotice = async () => {
+    const { orderId, returnCredits } = deleteDialog
+    setIsUpdating(true)
+    try {
+      const url = `/api/admin/weekly-subscription/orders/${orderId}${returnCredits ? '?returnCredits=true' : ''}`
+      const response = await fetch(url, {
+        method: 'DELETE',
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Remove the order from the list
+        setOrders(orders.filter(order => order.orderId !== orderId))
+        
+        // Close selected order dialog if it's the one being deleted
+        if (selectedOrder && selectedOrder.orderId === orderId) {
+          setSelectedOrder(null)
+        }
+        
+        // Update pagination total
+        setPagination(prev => ({ ...prev, total: prev.total - 1 }))
+        
+        toast({
+          title: "Order Deleted",
+          description: data.message || `Order ${orderId} deleted successfully without notification${returnCredits ? ' (credits returned)' : ''}.`,
+        })
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: data.error || "Failed to delete order",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error)
+      toast({
+        title: "Delete Failed",
+        description: "An error occurred while deleting the order",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUpdating(false)
+      setDeleteDialog({ isOpen: false, orderId: '', returnCredits: false })
     }
   }
   
@@ -897,6 +952,15 @@ export function ViewWeeklyOrders() {
                               >
                                 Mark as Refunded
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteDialog({ isOpen: true, orderId: order.orderId, returnCredits: false })}
+                                disabled={isUpdating}
+                                className="text-red-800"
+                              >
+                                <Trash2 className="h-3 w-3 mr-2" />
+                                Delete without notice
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                           
@@ -1369,6 +1433,62 @@ export function ViewWeeklyOrders() {
           </div>
         </div>
       </CardContent>
+      
+      {/* Delete Order Dialog */}
+      <Dialog open={deleteDialog.isOpen} onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, orderId: '', returnCredits: false })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Order Without Notice</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete order <strong>{deleteDialog.orderId}</strong>? 
+              This action cannot be undone and the user will NOT be notified.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex items-center space-x-2 py-4">
+            <Checkbox 
+              id="returnCredits" 
+              checked={deleteDialog.returnCredits}
+              onCheckedChange={(checked) => 
+                setDeleteDialog(prev => ({ ...prev, returnCredits: checked as boolean }))
+              }
+            />
+            <label
+              htmlFor="returnCredits"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Return credits to user
+            </label>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ isOpen: false, orderId: '', returnCredits: false })}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteOrderWithoutNotice}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Order
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
