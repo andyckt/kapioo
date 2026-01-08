@@ -1,3 +1,5 @@
+import { getTranslations, type Language } from '@/lib/email-translations';
+
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -55,25 +57,26 @@ export const generateVerificationCode = (): string => {
 const LOGO_URL = 'https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/src/Kapioo.png';
 
 // Send a welcome email to new users
-export const sendWelcomeEmail = async (to: string, name: string) => {
+export const sendWelcomeEmail = async (to: string, name: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const t = getTranslations(language);
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">欢迎加入Kapioo！</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.welcomeToKapioo}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        ${name}，感谢您选择Kapioo餐饮订阅服务！
+        ${name}, ${t.account.thankYouForJoining}
       </p>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto;">
-        <h3 style="color: #C2884E; margin-top: 0; text-align: center; font-size: 18px;">您的账户已成功创建</h3>
+        <h3 style="color: #C2884E; margin-top: 0; text-align: center; font-size: 18px;">${t.account.accountCreated}</h3>
         <p style="color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 20px; text-align: center;">
-          您现在可以开始浏览我们的菜单，并订阅您喜爱的餐食计划。
+          ${t.account.accountCreatedDesc}
         </p>
         <div style="text-align: center;">
-          <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">进入您的账户</a>
+          <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">${t.account.goToDashboard}</a>
         </div>
       </div>
       <div style="display: flex; justify-content: space-between; margin: 35px 0;">
@@ -81,26 +84,26 @@ export const sendWelcomeEmail = async (to: string, name: string) => {
           <div style="width: 60px; height: 60px; background-color: #FFF6EF; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
             <span style="font-size: 30px;">🍽️</span>
           </div>
-          <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">探索菜单</h4>
-          <p style="color: #666; font-size: 14px; margin: 0;">浏览我们的特色菜品</p>
+          <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${t.account.exploreMenu}</h4>
+          <p style="color: #666; font-size: 14px; margin: 0;">${t.account.exploreMenuDesc}</p>
         </div>
         <div style="width: 30%; text-align: center; padding: 15px;">
           <div style="width: 60px; height: 60px; background-color: #FFF6EF; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
             <span style="font-size: 30px;">📋</span>
           </div>
-          <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">选择计划</h4>
-          <p style="color: #666; font-size: 14px; margin: 0;">定制您的餐食订阅</p>
+          <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${t.account.choosePlan}</h4>
+          <p style="color: #666; font-size: 14px; margin: 0;">${t.account.choosePlanDesc}</p>
         </div>
         <div style="width: 30%; text-align: center; padding: 15px;">
           <div style="width: 60px; height: 60px; background-color: #FFF6EF; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
             <span style="font-size: 30px;">🚚</span>
           </div>
-          <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">按时配送</h4>
-          <p style="color: #666; font-size: 14px; margin: 0;">享受新鲜餐食送到家</p>
+          <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${t.account.onTimeDelivery}</h4>
+          <p style="color: #666; font-size: 14px; margin: 0;">${t.account.onTimeDeliveryDesc}</p>
         </div>
       </div>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
-        <p style="color: #999; font-size: 14px; margin-bottom: 15px;">关注我们的社交媒体获取最新信息</p>
+        <p style="color: #999; font-size: 14px; margin-bottom: 15px;">${t.account.followUs}</p>
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; align-items: center;">
           <a href="https://www.xiaohongshu.com/user/profile/66ad59e5000000001d0303d8?xsec_token=YBlVGv-hVLpDCO5YkHnFDzsnUYaHdUVHDV87mIVi0Brnw=&xsec_source=app_share&xhsshare=CopyLink&shareRedId=ODw5MjdJRk82NzUyOTgwNjY2OTo0PD89&apptime=1767759588" target="_blank" style="display: inline-block; width: 40px; height: 40px; background-color: #FF2442; border-radius: 8px; text-decoration: none; line-height: 40px; text-align: center;">
             <span style="font-size: 24px; vertical-align: middle;">📕</span>
@@ -109,78 +112,92 @@ export const sendWelcomeEmail = async (to: string, name: string) => {
             <span style="font-size: 24px; vertical-align: middle;">📸</span>
           </a>
         </div>
-        <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
       </div>
     </div>
   `;
   
+  const subject = language === 'zh' 
+    ? `欢迎加入Kapioo，${name}！` 
+    : `Welcome to Kapioo, ${name}!`;
+  
   return sendEmail({
     to,
-    subject: `欢迎加入Kapioo，${name}！`,
+    subject,
     html,
   });
 };
 
 // Send a verification email with 6-digit code
-export const sendVerificationEmail = async (to: string, code: string) => {
+export const sendVerificationEmail = async (to: string, code: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const t = getTranslations(language);
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">验证您的电子邮件</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.verifyYourEmail}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        感谢您注册Kapioo餐饮订阅服务！请使用以下验证码完成注册：
+        ${t.account.verificationRequired}:
       </p>
       <div style="background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); border-radius: 8px; padding: 20px; margin: 30px auto; text-align: center; width: 60%;">
         <p style="letter-spacing: 8px; font-size: 32px; font-weight: bold; color: white; margin: 0; text-align: center;">${code}</p>
       </div>
       <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center;">
-        此验证码将在24小时内有效。如果您没有请求此验证码，请忽略此邮件。
+        ${t.account.codeExpiresIn}
       </p>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
-        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
       </div>
     </div>
   `;
   
+  const subject = language === 'zh' 
+    ? '验证您的邮箱 - Kapioo'
+    : 'Verify Your Email - Kapioo';
+  
   return sendEmail({
     to,
-    subject: '验证您的邮箱 - Kapioo',
+    subject,
     html,
   });
 };
 
 // Send a password reset email with 6-digit code
-export const sendPasswordResetEmail = async (to: string, code: string) => {
+export const sendPasswordResetEmail = async (to: string, code: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const t = getTranslations(language);
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">重置您的密码</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.resetYourPassword}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        我们收到了重置您密码的请求。请使用以下验证码重置您的密码：
+        ${t.account.resetPasswordPrompt}. ${t.account.enterResetCode}:
       </p>
       <div style="background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); border-radius: 8px; padding: 20px; margin: 30px auto; text-align: center; width: 60%;">
         <p style="letter-spacing: 8px; font-size: 32px; font-weight: bold; color: white; margin: 0; text-align: center;">${code}</p>
       </div>
       <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center;">
-        此验证码将在1小时内有效。如果您没有请求重置密码，请忽略此邮件。
+        ${t.account.resetCodeExpiresIn}. ${t.account.didNotRequest}.
       </p>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
-        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
       </div>
     </div>
   `;
   
+  const subject = language === 'zh' 
+    ? '重置您的密码 - Kapioo'
+    : 'Reset Your Password - Kapioo';
+  
   return sendEmail({
     to,
-    subject: '重置您的密码 - Kapioo',
+    subject,
     html,
   });
 };
