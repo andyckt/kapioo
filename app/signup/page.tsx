@@ -121,7 +121,8 @@ export default function SignupPage() {
         body: JSON.stringify({
           name,
           email,
-          code: verificationCode
+          code: verificationCode,
+          language: languagePreference // Pass user's selected language preference
         }),
       });
 
