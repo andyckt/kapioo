@@ -379,7 +379,8 @@ export async function POST(request: Request) {
               area: data.area,
               phoneNumber: data.phoneNumber,
               specialInstructions: data.specialInstructions
-            }
+            },
+            user.languagePreference || 'zh' // Pass user's language preference from database
           ).then(() => {
             const elapsed = Date.now() - emailStartTime;
             console.log(`✅ User email sent successfully to ${user.email} (${elapsed}ms)`);

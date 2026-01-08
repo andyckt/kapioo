@@ -148,17 +148,14 @@ export async function getActiveDays(): Promise<Record<string, DayData>> {
 // Submit daily delivery order
 export async function submitDailyOrder(data: DailyOrderData): Promise<any> {
   try {
-    // Get user's language preference from localStorage
-    const language = localStorage.getItem('language') || 'zh';
-    
     // Apply 13% tax to the order
     // For daily delivery, we don't have a monetary price but we indicate that tax is included
     const taxRate = 0.13; // 13% tax rate
     const dataWithTax = {
       ...data,
       taxIncluded: true,
-      taxRate: taxRate,
-      language: language // Include language preference for email
+      taxRate: taxRate
+      // Note: Language preference is now fetched from user's database settings in the API
     };
     
     const response = await fetch('/api/daily-delivery/order', {
