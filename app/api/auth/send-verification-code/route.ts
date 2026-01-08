@@ -29,7 +29,9 @@ export async function POST(request: Request) {
     
     // Send verification email with the provided code
     try {
-      await sendVerificationEmail(data.email, data.code);
+      // Use language from request or default to 'zh'
+      const language = data.language || 'zh';
+      await sendVerificationEmail(data.email, data.code, language);
       console.log('Verification email sent successfully to:', data.email);
     } catch (emailError) {
       console.error('Error sending verification email:', emailError);

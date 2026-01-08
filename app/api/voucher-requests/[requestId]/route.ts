@@ -139,7 +139,8 @@ export async function PUT(
             'approved',
             voucherRequest.type,
             voucherRequest.quantity,
-            adminNotes
+            adminNotes,
+            user.languagePreference || 'zh' // Pass user's language preference
           );
         } catch (emailError) {
           console.error('Failed to send approval email to user:', emailError);
@@ -157,7 +158,8 @@ export async function PUT(
               'declined',
               voucherRequest.type,
               voucherRequest.quantity,
-              adminNotes
+              adminNotes,
+              user.languagePreference || 'zh' // Pass user's language preference
             );
           }
         } catch (emailError) {

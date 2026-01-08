@@ -179,7 +179,7 @@ export async function POST(request: Request) {
     if (!data.isVerified) {
       try {
         console.log('Sending verification email to:', user.email);
-        await sendVerificationEmail(user.email, user.verificationCode || '');
+        await sendVerificationEmail(user.email, user.verificationCode || '', user.languagePreference || 'zh');
         console.log('Verification email sent successfully');
       } catch (emailError) {
         console.error('Error sending verification email:', emailError);
@@ -201,7 +201,7 @@ export async function POST(request: Request) {
     
     // Send welcome email in the background (non-blocking)
     // Using Promise without await so it doesn't block the response
-    sendWelcomeEmail(user.email, user.name)
+    sendWelcomeEmail(user.email, user.name, user.languagePreference || 'zh')
       .then(() => {
         console.log('✅ Welcome email sent successfully to:', user.email);
       })

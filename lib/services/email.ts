@@ -327,51 +327,57 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   requestId: string;
   referenceNumber?: string;
   planDescription?: string;
-}) => {
+}, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const t = getTranslations(language);
+  
+  const paymentMethodText = requestDetails.paymentMethod === 'wechat' ? t.account.wechatTransfer : t.account.interacTransfer;
+  const paymentNote = requestDetails.paymentMethod === 'wechat' 
+    ? `(${t.account.wechatDiscount})` 
+    : `(${t.account.taxIncluded})`;
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">充值请求已提交</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.creditRequestSubmitted}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
-        亲爱的 <strong>${requestDetails.userName}</strong>，
+        ${language === 'zh' ? '亲爱的' : 'Dear'} <strong>${requestDetails.userName}</strong>,
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-        感谢您提交充值请求。我们已收到您的请求，并将尽快处理。以下是您的请求详情：
+        ${t.account.thankYouForRequest}. ${t.account.requestDetailsBelow}:
       </p>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin-bottom: 30px;">
         <ul style="list-style: none; padding: 0; margin: 0;">
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
-          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>原始价格:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>实际付款:</strong> $${requestDetails.amount.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
-          ${requestDetails.planDescription ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
-          <li style="padding: 10px 0;"><strong>状态:</strong> <span style="color: #F59E0B; font-weight: 500;">待审核</span></li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.requestId}:</strong> ${requestDetails.requestId}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.paymentMethod}:</strong> ${paymentMethodText}</li>
+          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.referenceNumber}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.originalPrice}:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.actualPayment}:</strong> $${requestDetails.amount.toFixed(2)} ${paymentNote}</li>
+          ${requestDetails.planDescription ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.selectedPlan}:</strong> ${requestDetails.planDescription}</li>` : ''}
+          <li style="padding: 10px 0;"><strong>${t.account.status}:</strong> <span style="color: #F59E0B; font-weight: 500;">${t.account.pendingReview}</span></li>
         </ul>
       </div>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
-        我们的管理员将尽快审核您的请求。一旦审核通过，您的账户将立即充值，您将收到确认邮件。
+        ${t.account.adminWillReview}.
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-        如有任何问题，请随时联系我们的客服团队。
+        ${t.account.contactForQuestions}.
       </p>
       <div style="text-align: center;">
-        <a href="${baseUrl}/dashboard?tab=credits" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">查看我的充值记录</a>
+        <a href="${baseUrl}/dashboard?tab=credits" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">${t.account.viewCreditHistory}</a>
       </div>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
-        <p>此邮件由系统自动发送，请勿回复。</p>
-        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p>${t.account.autoGeneratedEmail}.</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
       </div>
     </div>
   `;
 
   return sendEmail({
     to: requestDetails.userEmail,
-    subject: `充值请求已提交 (#${requestDetails.requestId})`,
+    subject: `[Kapioo] ${t.account.creditRequestSubmitted} (#${requestDetails.requestId})`,
     html,
   });
 };
@@ -469,95 +475,112 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   requestId: string;
   referenceNumber?: string;
   notes?: string;
-}) => {
+}, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const voucherTypeText = requestDetails.type === 'twoDish' ? '2菜餐券' : '3菜餐券';
+  const t = getTranslations(language);
+  
+  const voucherTypeText = requestDetails.type === 'twoDish' ? t.account.twoDishMeal : t.account.threeDishMeal;
+  const notesLabel = language === 'zh' ? '备注' : 'Notes';
+  const paymentAmountLabel = language === 'zh' ? '付款金额' : 'Payment Amount';
+  const adminWillReviewVouchers = language === 'zh'
+    ? '我们的管理员将尽快审核您的请求。一旦审核通过，餐券将立即添加到您的账户中，您将收到确认邮件'
+    : 'Our administrator will review your request as soon as possible. Once approved, vouchers will be added to your account immediately and you will receive a confirmation email';
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">餐券购买请求已提交</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.voucherRequestSubmitted}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
-        亲爱的 <strong>${requestDetails.userName}</strong>，
+        ${language === 'zh' ? '亲爱的' : 'Dear'} <strong>${requestDetails.userName}</strong>,
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-        感谢您提交餐券购买请求。我们已收到您的请求，并将尽快处理。以下是您的请求详情：
+        ${t.account.thankYouForRequest}. ${t.account.requestDetailsBelow}:
       </p>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin-bottom: 30px;">
         <ul style="list-style: none; padding: 0; margin: 0;">
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>餐券类型:</strong> ${voucherTypeText}</li>
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>餐券数量:</strong> ${requestDetails.quantity}</li>
-          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>付款金额:</strong> $${requestDetails.amount.toFixed(2)}</li>
-          ${requestDetails.notes ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>备注:</strong> ${requestDetails.notes}</li>` : ''}
-          <li style="padding: 10px 0;"><strong>状态:</strong> <span style="color: #F59E0B; font-weight: 500;">待审核</span></li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.requestId}:</strong> ${requestDetails.requestId}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.voucherType}:</strong> ${voucherTypeText}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.voucherQuantity}:</strong> ${requestDetails.quantity}</li>
+          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.referenceNumber}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${paymentAmountLabel}:</strong> $${requestDetails.amount.toFixed(2)}</li>
+          ${requestDetails.notes ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${notesLabel}:</strong> ${requestDetails.notes}</li>` : ''}
+          <li style="padding: 10px 0;"><strong>${t.account.status}:</strong> <span style="color: #F59E0B; font-weight: 500;">${t.account.pendingReview}</span></li>
         </ul>
       </div>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
-        我们的管理员将尽快审核您的请求。一旦审核通过，餐券将立即添加到您的账户中，您将收到确认邮件。
+        ${adminWillReviewVouchers}.
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-        如有任何问题，请随时联系我们的客服团队。
+        ${t.account.contactForQuestions}.
       </p>
       <div style="text-align: center;">
-        <a href="${baseUrl}/dashboard?tab=meal-vouchers" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">查看我的餐券记录</a>
+        <a href="${baseUrl}/dashboard?tab=meal-vouchers" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; margin-top: 10px; transition: transform 0.3s;">${t.account.viewVoucherHistory}</a>
       </div>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
-        <p>此邮件由系统自动发送，请勿回复。</p>
-        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p>${t.account.autoGeneratedEmail}.</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
       </div>
     </div>
   `;
 
   return sendEmail({
     to: requestDetails.userEmail,
-    subject: `餐券购买请求已提交 (#${requestDetails.requestId})`,
+    subject: `[Kapioo] ${t.account.voucherRequestSubmitted} (#${requestDetails.requestId})`,
     html,
   });
 };
 
 // Send notification to user for credit purchase status
-export const sendCreditPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', credits?: number, planDescription?: string) => {
+export const sendCreditPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', credits?: number, planDescription?: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const t = getTranslations(language);
   
   let statusText = '';
   let statusColor = '';
   let statusMessage = '';
   
   if (status === 'approved') {
-    statusText = '已批准';
+    statusText = t.account.requestApproved;
     statusColor = '#4CAF50';
     statusMessage = planDescription 
-      ? `请求已获批准，${planDescription.replace(/星期$/, '张 ')}已添加到您的账户。`
-      : `请求已获批准，套餐已添加到您的账户。`;
+      ? (language === 'zh' 
+          ? `${t.account.requestApproved}，${planDescription.replace(/星期$/, '张 ')}${t.account.creditsAddedToAccount.replace('餐券已添加到您的账户', '已添加到您的账户')}。`
+          : `${t.account.creditPurchaseApproved}. ${planDescription} ${t.account.creditsAddedToAccount.toLowerCase()}.`)
+      : t.account.creditsAddedToAccount;
   } else {
-    statusText = '已拒绝';
+    statusText = t.account.requestDeclined;
     statusColor = '#F44336';
-    statusMessage = '很遗憾，您的充值请求未获批准。请联系客服了解更多详情。';
+    statusMessage = language === 'zh'
+      ? `${t.account.sorryForInconvenience}，您的充值请求未获批准。${t.account.contactForQuestions}。`
+      : `${t.account.sorryForInconvenience}. ${t.account.contactForQuestions}.`;
   }
+  
+  const viewMyPlan = language === 'zh' ? '查看我的套餐' : 'View My Plans';
+  const statusUpdate = language === 'zh' ? '充值状态更新' : 'Credit Purchase Status Update';
+  const yourRequestUpdated = language === 'zh' ? '您的请求状态已更新' : 'Your request status has been updated';
+  const selectedPlan = language === 'zh' ? '所选套餐' : 'Selected Plan';
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">充值状态更新</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${statusUpdate}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        ${name}，您的请求状态已更新：
+        ${name}, ${yourRequestUpdated}:
       </p>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto; text-align: center;">
         <div style="display: inline-block; padding: 8px 16px; background-color: ${statusColor}; color: white; border-radius: 20px; font-weight: bold; margin-bottom: 15px;">
           ${statusText}
         </div>
         <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
-          请求编号: ${requestId}
+          ${t.account.requestId}: ${requestId}
         </p>
         ${planDescription ? `
         <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
-          所选套餐: ${planDescription}
+          ${selectedPlan}: ${planDescription}
         </p>
         ` : ''}
         <p style="color: #333; font-size: 15px; line-height: 1.6;">
@@ -565,61 +588,78 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
         </p>
       </div>
       <div style="text-align: center; margin-top: 30px;">
-        <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">查看我的套餐</a>
+        <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">${viewMyPlan}</a>
       </div>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
-        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
       </div>
     </div>
   `;
   
+  const subjectText = status === 'approved' 
+    ? (language === 'zh' ? '已批准' : 'Approved')
+    : (language === 'zh' ? '已拒绝' : 'Declined');
+  
   return sendEmail({
     to,
-    subject: `[Kapioo] 您的餐券充值请求${status === 'approved' ? '已批准' : '已拒绝'}`,
+    subject: `[Kapioo] ${language === 'zh' ? '您的餐券充值请求' : 'Your Credit Purchase Request'} ${subjectText}`,
     html,
   });
 };
 
 // Send notification to user for voucher purchase status
-export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', voucherType: 'twoDish' | 'threeDish', quantity: number, adminNotes?: string) => {
+export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', voucherType: 'twoDish' | 'threeDish', quantity: number, adminNotes?: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const t = getTranslations(language);
   
-  const voucherTypeText = voucherType === 'twoDish' ? '2菜餐券' : '3菜餐券';
+  const voucherTypeText = voucherType === 'twoDish' ? t.account.twoDishMeal : t.account.threeDishMeal;
   let statusText = '';
   let statusColor = '';
   let statusMessage = '';
   
   if (status === 'approved') {
-    statusText = '已批准';
+    statusText = t.account.requestApproved;
     statusColor = '#4CAF50';
-    statusMessage = `您的${voucherTypeText}购买请求已获批准，${quantity}张${voucherTypeText}已添加到您的账户。`;
+    statusMessage = language === 'zh'
+      ? `您的${voucherTypeText}购买请求已获批准，${quantity}张${voucherTypeText}已添加到您的账户。`
+      : `Your ${voucherTypeText} purchase request has been approved. ${quantity} ${voucherTypeText} vouchers have been added to your account.`;
   } else {
-    statusText = '已拒绝';
+    statusText = t.account.requestDeclined;
     statusColor = '#F44336';
-    statusMessage = `很遗憾，您的${voucherTypeText}购买请求未获批准。${adminNotes ? '管理员备注: ' + adminNotes : '请联系客服了解更多详情。'}`;
+    statusMessage = language === 'zh'
+      ? `很遗憾，您的${voucherTypeText}购买请求未获批准。${adminNotes ? `${t.account.adminNotes}: ${adminNotes}` : `${t.account.contactForQuestions}。`}`
+      : `${t.account.sorryForInconvenience}. Your ${voucherTypeText} purchase request has not been approved. ${adminNotes ? `${t.account.adminNotes}: ${adminNotes}` : t.account.contactForQuestions}`;
   }
+  
+  const statusUpdateTitle = language === 'zh' 
+    ? `${voucherTypeText}购买状态更新`
+    : `${voucherTypeText} Purchase Status Update`;
+  const yourRequestUpdated = language === 'zh'
+    ? `您的${voucherTypeText}购买请求状态已更新`
+    : `Your ${voucherTypeText} purchase request status has been updated`;
+  const viewMyVouchers = language === 'zh' ? '查看我的餐券' : 'View My Vouchers';
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${voucherTypeText}购买状态更新</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${statusUpdateTitle}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-        ${name}，您的${voucherTypeText}购买请求状态已更新：
+        ${name}, ${yourRequestUpdated}:
       </p>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto; text-align: center;">
         <div style="display: inline-block; padding: 8px 16px; background-color: ${statusColor}; color: white; border-radius: 20px; font-weight: bold; margin-bottom: 15px;">
           ${statusText}
         </div>
         <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
-          请求编号: ${requestId}
+          ${t.account.requestId}: ${requestId}
         </p>
         <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
-          餐券类型: ${voucherTypeText}
+          ${t.account.voucherType}: ${voucherTypeText}
         </p>
         <p style="color: #333; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
-          餐券数量: ${quantity}
+          ${t.account.voucherQuantity}: ${quantity}
         </p>
         <p style="color: #333; font-size: 15px; line-height: 1.6;">
           ${statusMessage}
@@ -627,23 +667,29 @@ export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, r
         ${adminNotes && status === 'approved' ? `
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #C2884E30;">
           <p style="color: #333; font-size: 15px; line-height: 1.6;">
-            <strong>管理员备注:</strong> ${adminNotes}
+            <strong>${t.account.adminNotes}:</strong> ${adminNotes}
           </p>
         </div>
         ` : ''}
       </div>
       <div style="text-align: center; margin-top: 30px;">
-        <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">查看我的餐券</a>
+        <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px; transition: transform 0.3s;">${viewMyVouchers}</a>
       </div>
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
-        <p>&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
       </div>
     </div>
   `;
   
+  const subjectStatus = status === 'approved' 
+    ? (language === 'zh' ? '已批准' : 'Approved')
+    : (language === 'zh' ? '已拒绝' : 'Declined');
+  const yourText = language === 'zh' ? '您的' : 'Your';
+  const purchaseRequest = language === 'zh' ? '购买请求' : 'Purchase Request';
+  
   return sendEmail({
     to,
-    subject: `[Kapioo] 您的${voucherTypeText}购买请求${status === 'approved' ? '已批准' : '已拒绝'}`,
+    subject: `[Kapioo] ${yourText}${voucherTypeText}${purchaseRequest} ${subjectStatus}`,
     html,
   });
 };

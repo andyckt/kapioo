@@ -178,7 +178,8 @@ export async function POST(request: Request) {
             creditRequest.requestId,
             'approved',
             approvedCredits,
-            creditRequest.planDescription
+            creditRequest.planDescription,
+            user.languagePreference || 'zh' // Pass user's language preference
           );
           
           // Also send the same notification as the "Add Credits" button
@@ -233,7 +234,8 @@ export async function POST(request: Request) {
             creditRequest.requestId,
             'declined',
             undefined,
-            creditRequest.planDescription
+            creditRequest.planDescription,
+            user.languagePreference || 'zh' // Pass user's language preference
           );
         } catch (emailError) {
           console.error('Error sending decline email:', emailError);

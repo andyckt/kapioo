@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     await user.save();
     
     // Send verification email with code
-    await sendVerificationEmail(user.email, code);
+    await sendVerificationEmail(user.email, code, user.languagePreference || 'zh');
     
     return NextResponse.json({
       success: true,

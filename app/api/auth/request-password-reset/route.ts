@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     
     // Send password reset email with code
     try {
-      await sendPasswordResetEmail(user.email, code);
+      await sendPasswordResetEmail(user.email, code, user.languagePreference || 'zh');
     } catch (emailError) {
       console.error('Error sending password reset email:', emailError);
       return NextResponse.json(

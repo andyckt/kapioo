@@ -115,7 +115,7 @@ export async function POST(request: Request) {
         referenceNumber: data.referenceNumber,
         planDescription: data.planDescription || '',
         requestId: requestId
-      });
+      }, user.languagePreference || 'zh'); // Pass user's language preference
       console.log('User confirmation email sent successfully');
     } catch (emailError) {
       console.error('Error sending user confirmation email:', emailError);

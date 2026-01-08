@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
         referenceNumber,
         notes,
         requestId
-      });
+      }, user.languagePreference || 'zh'); // Pass user's language preference
       console.log('User confirmation email sent successfully for voucher request:', requestId);
     } catch (emailError) {
       console.error('Failed to send user confirmation email:', emailError);
