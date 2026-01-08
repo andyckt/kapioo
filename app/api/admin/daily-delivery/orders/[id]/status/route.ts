@@ -175,7 +175,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           id,
           status,
           order.items,
-          order.status // Previous status
+          order.status, // Previous status
+          user.languagePreference || 'zh' // Pass user's language preference from database
         );
       }
     } catch (notificationError) {

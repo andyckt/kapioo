@@ -1,6 +1,7 @@
 import { sendEmail } from './email';
 import { IOrder } from '@/models/Order';
 import { IUser } from '@/models/User';
+import { getTranslations, getOrderStatusInfo, getStatusUpdateSubject, type Language } from '@/lib/email-translations';
 
 // AWS S3 hosted logo URL for emails
 const LOGO_URL = 'https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/src/Kapioo.png';
@@ -499,101 +500,61 @@ export const sendDailyOrderStatusUpdateNotification = async (
   orderId: string,
   status: string,
   items: any[],
-  previousStatus: string = 'pending'
+  previousStatus: string = 'pending',
+  language: 'zh' | 'en' = 'zh'
 ): Promise<void> => {
   try {
-    let subject = '';
-    let statusText = '';
-    let statusDescription = '';
-    let statusColor = '#000000';
+    // Get translations for the specified language
+    const t = getTranslations(language);
     
-    // Set appropriate subject and content based on order status
-    switch (status) {
-      case 'confirmed':
-        subject = `订单已确认 - Kapioo #${orderId}`;
-        statusText = '已确认';
-        statusDescription = '您的订单已确认，我们正在准备您的餐点。';
-        statusColor = '#007bff';
-        break;
-      
-      case 'delivery':
-        subject = `订单配送中 - Kapioo #${orderId}`;
-        statusText = '配送中';
-        statusDescription = '您的餐点正在配送中，请确保您的地址信息准确，保持电话畅通。';
-        statusColor = '#6610f2';
-        break;
-      
-      case 'delivered':
-        subject = `订单已送达 - Kapioo #${orderId}`;
-        statusText = '已送达';
-        statusDescription = '您的订单已送达。祝您用餐愉快！';
-        statusColor = '#198754';
-        break;
-      
-      case 'cancelled':
-        subject = `订单已取消 - Kapioo #${orderId}`;
-        statusText = '已取消';
-        statusDescription = '您的订单已取消。';
-        statusColor = '#dc3545';
-        break;
-      
-      case 'refunded':
-        subject = `订单已退款 - Kapioo #${orderId}`;
-        statusText = '已退款';
-        statusDescription = '您的订单已退款，餐卷已返还到您的账户。';
-        statusColor = '#fd7e14';
-        break;
-        
-      default:
-        return; // Don't send for other statuses
+    // Get status info (text, color, description)
+    const currentStatusInfo = getOrderStatusInfo(status, language);
+    const previousStatusInfo = getOrderStatusInfo(previousStatus, language);
+    
+    // Get subject line
+    const subject = getStatusUpdateSubject(orderId, status, language);
+    
+    // Return early if status doesn't need notification
+    if (!currentStatusInfo.description) {
+      return;
     }
     
-    // Translate previous status to Chinese
-    let previousStatusText = previousStatus;
-    switch (previousStatus) {
-      case 'pending':
-        previousStatusText = '待确认';
-        break;
-      case 'confirmed':
-        previousStatusText = '已确认';
-        break;
-      case 'delivery':
-        previousStatusText = '配送中';
-        break;
-      case 'delivered':
-        previousStatusText = '已送达';
-        break;
-      case 'cancelled':
-        previousStatusText = '已取消';
-        break;
-      case 'refunded':
-        previousStatusText = '已退款';
-        break;
-    }
+    const statusText = currentStatusInfo.text;
+    const statusDescription = currentStatusInfo.description;
+    const statusColor = currentStatusInfo.color;
+    const previousStatusText = previousStatusInfo.text;
     
     // Format items for display
     const formattedItems = items.map(item => {
+      const dishType = item.type === 'A' ? t.order.twoDish : t.order.threeDish;
       return `<li>
         <span style="font-weight: bold;">${item.day} (${item.date})</span>: ${item.comboName} 
         <span style="color: #666;">
-          (${item.type === 'A' ? '2菜' : '3菜'}) x${item.quantity}
+          (${dishType}) x${item.quantity}
         </span>
       </li>`;
     }).join('');
+    
+    const locale = language === 'zh' ? 'zh-CN' : 'en-US';
+    const dashboardText = language === 'zh' ? 'Kapioo 账户' : 'Kapioo account';
+    const viewDetailsText = language === 'zh' ? '中查看订单详情' : ' to view order details';
+    const contactText = language === 'zh' 
+      ? '如有任何问题，请随时联系我们' 
+      : 'If you have any questions, please contact us';
     
     const html = `
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
         <div style="text-align: center; margin-bottom: 30px;">
           <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
         </div>
-        <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">订单状态更新</h2>
+        <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.order.orderStatusUpdate}</h2>
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
-          亲爱的 ${name}，您的订单状态已更新。
+          ${t.common.dear} ${name}, ${t.order.statusUpdated}
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
           <div style="display: inline-block; background-color: #F8F0E5; border-radius: 8px; padding: 20px 40px;">
-            <p style="margin: 0; color: #666;">订单状态已从</p>
+            <p style="margin: 0; color: #666;">${t.order.statusChangedFrom}</p>
             <p style="margin: 10px 0; color: #666; font-size: 16px;">
               <span style="color: #888; text-decoration: line-through;">${previousStatusText}</span>
               &nbsp;&rarr;&nbsp;
@@ -604,29 +565,29 @@ export const sendDailyOrderStatusUpdateNotification = async (
         </div>
         
         <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-          <h3 style="color: #C2884E; margin-top: 0;">订单详情</h3>
+          <h3 style="color: #C2884E; margin-top: 0;">${t.order.orderDetails}</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">订单号:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.common.orderNumber}:</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; font-weight: bold; text-align: right;">${orderId}</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">订单日期:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString('zh-CN')}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.common.orderDate}:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString(locale)}</td>
             </tr>
           </table>
         </div>
         
         
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
-          您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中查看订单详情。
+          ${language === 'zh' ? '您可以在您的' : 'You can'} <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">${dashboardText}</a> ${viewDetailsText}.
         </p>
         
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
           <p style="color: #999; font-size: 14px;">
-            如有任何问题，请随时联系我们: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
+            ${contactText}: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
           </p>
-          <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+          <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
         </div>
       </div>
     `;
