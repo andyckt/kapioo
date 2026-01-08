@@ -711,6 +711,32 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
 }, language: 'zh' | 'en' = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   
+  // Fetch meal option translations if language is English
+  let mealOptionTranslations: Record<string, string> = {};
+  if (language === 'en') {
+    try {
+      const WeeklyMealOption = (await import('@/models/WeeklyMealOption')).default;
+      const connectToDatabase = (await import('@/lib/db')).default;
+      await connectToDatabase();
+      
+      const mealOptions = await WeeklyMealOption.find({ nameEn: { $exists: true, $ne: null } });
+      mealOptions.forEach((option: any) => {
+        if (option.name && option.nameEn) {
+          mealOptionTranslations[option.name] = option.nameEn;
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching meal option translations for email:', error);
+      // Continue without translations if fetch fails
+    }
+  }
+  
+  // Helper function to translate meal option names
+  const translateOptionName = (optionName: string): string => {
+    if (language === 'zh') return optionName;
+    return mealOptionTranslations[optionName] || optionName;
+  };
+  
   // Language-specific text
   const text = {
     zh: {
@@ -785,14 +811,17 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
       <div style="margin-bottom: 15px;">
         <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${dayName} (${day.date})</h4>
         <ul style="list-style: none; padding: 0; margin: 0;">
-          ${day.items.map((item: any) => `
+          ${day.items.map((item: any) => {
+            const translatedOptionName = translateOptionName(item.optionName);
+            return `
             <li style="padding: 8px 0; border-bottom: 1px dashed #eaeaea;">
               <div style="display: flex; justify-content: space-between;">
-                <span style="color: #333;">${item.optionName}</span>
+                <span style="color: #333;">${translatedOptionName}</span>
                 <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
               </div>
             </li>
-          `).join('')}
+            `;
+          }).join('')}
         </ul>
       </div>
     `;
