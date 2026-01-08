@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { sendEmail } from '@/lib/services/email';
+import { getTranslations, type Language } from '@/lib/email-translations';
 
 // Define the route params interface
 interface RouteParams {
@@ -160,103 +161,106 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Send email notification when vouchers are added (not when deducted)
     if (operation === 'add' && field !== 'credits') {
       try {
-        // Get voucher type display name
-        let voucherTypeName = '';
-        switch (field) {
-          case 'twoDishVoucher':
-            voucherTypeName = '2-Dish Vouchers';
-            break;
-          case 'threeDishVoucher':
-            voucherTypeName = '3-Dish Vouchers';
-            break;
-          case 'weeklySIXmeals':
-            voucherTypeName = '6-Meal Weekly Subscription';
-            break;
-          case 'weeklyEIGHTmeals':
-            voucherTypeName = '8-Meal Weekly Subscription';
-            break;
-          case 'weeklyTENmeals':
-            voucherTypeName = '10-Meal Weekly Subscription';
-            break;
-          case 'weeklyTWELVEmeals':
-            voucherTypeName = '12-Meal Weekly Subscription';
-            break;
-          default:
-            voucherTypeName = 'Vouchers';
-        }
-        
         const LOGO_URL = 'https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/src/Kapioo.png';
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         
-        // Get Chinese voucher type name
-        let chineseVoucherName = '';
+        // Get user's language preference
+        const language: Language = updatedUser.languagePreference || 'zh';
+        const t = getTranslations(language);
+        
+        // Get voucher type display name based on language
+        let voucherTypeName = '';
+        let emailSubject = '';
+        
         switch (field) {
           case 'twoDishVoucher':
-            chineseVoucherName = '2菜餐券';
+            voucherTypeName = t.account.twoDishVoucherName;
+            emailSubject = t.account.twoDishVoucherAdded;
             break;
           case 'threeDishVoucher':
-            chineseVoucherName = '3菜餐券';
+            voucherTypeName = t.account.threeDishVoucherName;
+            emailSubject = t.account.threeDishVoucherAdded;
             break;
           case 'weeklySIXmeals':
-            chineseVoucherName = '6餐一周';
+            voucherTypeName = t.account.weeklySixMeals;
+            emailSubject = t.account.weeklySixMealsAdded;
             break;
           case 'weeklyEIGHTmeals':
-            chineseVoucherName = '8餐一周';
+            voucherTypeName = t.account.weeklyEightMeals;
+            emailSubject = t.account.weeklyEightMealsAdded;
             break;
           case 'weeklyTENmeals':
-            chineseVoucherName = '10餐一周';
+            voucherTypeName = t.account.weeklyTenMeals;
+            emailSubject = t.account.weeklyTenMealsAdded;
             break;
           case 'weeklyTWELVEmeals':
-            chineseVoucherName = '12餐一周';
+            voucherTypeName = t.account.weeklyTwelveMeals;
+            emailSubject = t.account.weeklyTwelveMealsAdded;
             break;
           default:
-            chineseVoucherName = '餐券';
+            voucherTypeName = language === 'zh' ? '餐券' : 'Vouchers';
+            emailSubject = t.account.voucherAdded;
         }
 
         // Send email notification
-        const subject = `${chineseVoucherName}已添加 - Kapioo`;
+        const subject = `${emailSubject} - Kapioo`;
+        
+        const transactionConfirmation = language === 'zh' ? '交易确认' : 'Transaction Confirmation';
+        const voucherAddedToAccount = language === 'zh' 
+          ? `${voucherTypeName}已添加到您的账户`
+          : `${voucherTypeName} added to your account`;
+        const voucherSuccessfullyAdded = language === 'zh'
+          ? `亲爱的 ${updatedUser.name}，${voucherTypeName}已成功添加到您的账户。`
+          : `Dear ${updatedUser.name}, ${voucherTypeName} have been successfully added to your account.`;
+        const dateLocale = language === 'zh' ? 'zh-CN' : 'en-US';
+        const voucherUnit = language === 'zh' ? '张' : '';
+        const newBalanceLabel = language === 'zh' ? `新${voucherTypeName}余额` : `New ${voucherTypeName} Balance`;
+        const yourAccount = language === 'zh' ? 'Kapioo 账户' : 'Kapioo Account';
+        const contactUs = language === 'zh' 
+          ? '如有任何问题，请随时联系我们'
+          : 'If you have any questions, please contact us';
         
         const html = `
           <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
             <div style="text-align: center; margin-bottom: 30px;">
               <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
             </div>
-            <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${chineseVoucherName}已添加到您的账户</h2>
+            <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${voucherAddedToAccount}</h2>
             <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              亲爱的 ${updatedUser.name}，${chineseVoucherName}已成功添加到您的账户。
+              ${voucherSuccessfullyAdded}
             </p>
             
             <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
               <div style="margin-bottom: 15px;">
-                <h3 style="color: #C2884E; margin: 0 0 5px 0;">交易确认</h3>
-                <p style="color: #666; margin: 0;">${chineseVoucherName}已添加到您的账户</p>
+                <h3 style="color: #C2884E; margin: 0 0 5px 0;">${transactionConfirmation}</h3>
+                <p style="color: #666; margin: 0;">${voucherAddedToAccount}</p>
               </div>
               
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">日期:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString('zh-CN')}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.account.date}:</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString(dateLocale)}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">添加数量:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount}张 ${chineseVoucherName}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.account.addedAmount}:</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount}${voucherUnit} ${voucherTypeName}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">新${chineseVoucherName}余额:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${newBalance}张 ${chineseVoucherName}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${newBalanceLabel}:</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${newBalance}${voucherUnit} ${voucherTypeName}</td>
                 </tr>
               </table>
             </div>
             
             <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
-              您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中使用这些餐券订购餐点。
+              ${t.account.youCanUseVouchers}. <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">${yourAccount}</a>
             </p>
             
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
               <p style="color: #999; font-size: 14px;">
-                如有任何问题，请随时联系我们: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
+                ${contactUs}: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
               </p>
-              <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
+              <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
             </div>
           </div>
         `;
@@ -267,7 +271,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           html
         });
         
-        console.log(`${chineseVoucherName}添加通知已发送至 ${updatedUser.email}`);
+        console.log(`${voucherTypeName} added notification sent to ${updatedUser.email}`);
       } catch (emailError) {
         console.error('Error sending voucher added notification:', emailError);
         // Continue even if email fails
