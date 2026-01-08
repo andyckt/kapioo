@@ -1030,6 +1030,7 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
     type: string;
     quantity: number;
     voucherType: string;
+    dishes?: Array<{ dishId: string; name: string }>;
   }>;
   voucherCost: {
     twoDish: number;
@@ -1041,6 +1042,39 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
   specialInstructions?: string;
 }, language: 'zh' | 'en' = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  // Helper function to translate combo names
+  const translateComboName = (comboName: string): string => {
+    if (language === 'zh') return comboName;
+    // Translate "套餐 1" to "Combo 1", "套餐 2" to "Combo 2", etc.
+    return comboName.replace(/套餐\s*(\d+)/g, 'Combo $1');
+  };
+  
+  // Fetch dish translations if language is English
+  let dishTranslations: Record<string, string> = {};
+  if (language === 'en') {
+    try {
+      const Dish = (await import('@/models/Dish')).default;
+      const connectToDatabase = (await import('@/lib/db')).default;
+      await connectToDatabase();
+      
+      const dishes = await Dish.find({ nameEn: { $exists: true, $ne: null } });
+      dishes.forEach((dish: any) => {
+        if (dish.name && dish.nameEn) {
+          dishTranslations[dish.name] = dish.nameEn;
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching dish translations for email:', error);
+      // Continue without translations if fetch fails
+    }
+  }
+  
+  // Helper function to translate dish names
+  const translateDishName = (dishName: string): string => {
+    if (language === 'zh') return dishName;
+    return dishTranslations[dishName] || dishName;
+  };
   
   // Format delivery days and items
   const deliveryDays = orderDetails.items.reduce((acc: any, item) => {
@@ -1113,24 +1147,31 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
       <div style="margin-bottom: 15px;">
         <h4 style="color: #C2884E; margin: 0 0 10px; font-size: 16px;">${dayName} (${day.date})</h4>
         <ul style="list-style: none; padding: 0; margin: 0;">
-          ${day.items.map((item: any) => `
+          ${day.items.map((item: any) => {
+            const translatedComboName = translateComboName(item.comboName);
+            return `
             <li style="padding: 8px 0; border-bottom: 1px dashed #eaeaea;">
               <div style="display: flex; justify-content: space-between;">
-                <span style="color: #333;">${item.comboName} (${item.type === 'A' ? t.twoDish : t.threeDish})</span>
+                <span style="color: #333;">${translatedComboName} (${item.type === 'A' ? t.twoDish : t.threeDish})</span>
                 <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
               </div>
               ${item.dishes && item.dishes.length > 0 ? `
               <div style="margin-top: 5px; padding-left: 15px;">
-                ${item.dishes.map((dish: string) => `
+                ${item.dishes.map((dish: any) => {
+                  const dishName = typeof dish === 'string' ? dish : dish.name;
+                  const translatedDishName = translateDishName(dishName);
+                  return `
                   <div style="display: flex; align-items: center; margin-bottom: 3px;">
                     <div style="width: 4px; height: 4px; border-radius: 50%; background-color: #C2884E; opacity: 0.6; margin-right: 8px;"></div>
-                    <span style="color: #6B5F53; font-size: 13px;">${dish}</span>
+                    <span style="color: #6B5F53; font-size: 13px;">${translatedDishName}</span>
                   </div>
-                `).join('')}
+                  `;
+                }).join('')}
               </div>
               ` : ''}
             </li>
-          `).join('')}
+            `;
+          }).join('')}
         </ul>
       </div>
     `;
