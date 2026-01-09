@@ -418,6 +418,34 @@ export const weeklyTranslations = {
 };
 
 /**
+ * Menu update notification translations
+ */
+export const menuUpdateTranslations = {
+  zh: {
+    subject: '[Kapioo] 菜单已更新 - 探索我们的新菜品！',
+    title: '菜单已更新！',
+    greeting: (name: string) => `亲爱的 ${name}，`,
+    mainMessage: '我们很高兴地通知您，Kapioo 每日直送菜单已更新！',
+    description: '我们精心准备了全新的美味菜品，期待为您带来更多惊喜。',
+    ctaButton: '立即查看菜单',
+    footerNote: '感谢您选择 Kapioo！',
+    reminderTitle: '温馨提示',
+    reminderText: '您目前拥有每日直送餐券。立即使用，享受我们的新鲜美味！'
+  },
+  en: {
+    subject: '[Kapioo] Menu Updated - Explore Our New Dishes!',
+    title: 'Menu Updated!',
+    greeting: (name: string) => `Dear ${name},`,
+    mainMessage: 'We are excited to announce that our Kapioo Daily Delivery menu has been updated!',
+    description: 'We have carefully prepared fresh new delicious dishes and look forward to bringing you more delightful surprises.',
+    ctaButton: 'View Menu Now',
+    footerNote: 'Thank you for choosing Kapioo!',
+    reminderTitle: 'Friendly Reminder',
+    reminderText: 'You currently have daily delivery vouchers. Use them now to enjoy our fresh delicious meals!'
+  }
+};
+
+/**
  * Helper function to get translations for a specific language
  */
 export function getTranslations(language: Language = 'zh') {
@@ -425,7 +453,8 @@ export function getTranslations(language: Language = 'zh') {
     common: commonTranslations[language],
     order: orderTranslations[language],
     account: accountTranslations[language],
-    weekly: weeklyTranslations[language]
+    weekly: weeklyTranslations[language],
+    menuUpdate: menuUpdateTranslations[language]
   };
 }
 

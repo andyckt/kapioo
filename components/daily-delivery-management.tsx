@@ -64,7 +64,9 @@ import {
   History,
   CheckCircle,
   XCircle,
-  Languages
+  Languages,
+  Mail,
+  Send
 } from "lucide-react"
 
 // Define types based on the daily-delivery.tsx file
@@ -116,6 +118,10 @@ export function DailyDeliveryManagement() {
   
   // State for bulk activate
   const [isActivatingNextWeek, setIsActivatingNextWeek] = useState(false)
+  
+  // State for menu update notification
+  const [isSendingNotifications, setIsSendingNotifications] = useState(false)
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false)
   
   // 🚀 OPTIMIZATION: Fetch data from API using optimized endpoint
   const fetchData = async () => {
@@ -1731,6 +1737,41 @@ export function DailyDeliveryManagement() {
     }
   }
 
+  // Function to send menu update notifications
+  const sendMenuUpdateNotifications = async () => {
+    setIsSendingNotifications(true);
+    try {
+      const response = await fetch('/api/admin/notify-menu-update', {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "Notifications Sent Successfully!",
+          description: `Sent ${data.emailsSent} emails to users with daily delivery vouchers${data.emailsFailed > 0 ? `. ${data.emailsFailed} failed.` : '.'}`,
+        });
+        setShowNotificationDialog(false);
+      } else {
+        toast({
+          title: "Failed to Send Notifications",
+          description: data.error || "An error occurred while sending notifications",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error sending notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send menu update notifications",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingNotifications(false);
+    }
+  };
+
   return (
     <div className="flex-1 space-y-6">
       {/* Header with View History Button */}
@@ -1761,6 +1802,15 @@ export function DailyDeliveryManagement() {
           >
             <History className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">View History</span>
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowNotificationDialog(true)}
+            size="sm"
+            className="flex-1 sm:flex-none border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            <Mail className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Notify Users</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -3779,6 +3829,73 @@ export function DailyDeliveryManagement() {
               </div>
             )}
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Menu Update Notification Dialog */}
+      <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              Send Menu Update Notification
+            </DialogTitle>
+            <DialogDescription>
+              This will send an email notification to all users who have daily delivery vouchers (2-dish or 3-dish).
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Email Details:
+              </h4>
+              <ul className="text-sm text-blue-800 space-y-1 ml-6 list-disc">
+                <li>Bilingual: English for English users, Chinese for Chinese users</li>
+                <li>Eye-catching, minimalistic, high-end design</li>
+                <li>Informs users about menu update without specific details</li>
+                <li>Includes call-to-action button to view menu</li>
+              </ul>
+            </div>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Batch Processing:
+              </h4>
+              <p className="text-sm text-amber-800">
+                Emails will be sent in batches of 50 with 2-second delays between batches to ensure smooth delivery and avoid rate limits.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowNotificationDialog(false)}
+              disabled={isSendingNotifications}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={sendMenuUpdateNotifications}
+              disabled={isSendingNotifications}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSendingNotifications ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Notifications
+                </>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
