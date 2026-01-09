@@ -1482,3 +1482,68 @@ export const sendMenuUpdateEmail = async (to: string, userName: string, language
     html,
   });
 };
+
+/**
+ * Send weekly menu update notification to a user
+ */
+export const sendWeeklyMenuUpdateEmail = async (to: string, userName: string, language: Language = 'zh') => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const t = getTranslations(language);
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      
+      <h2 style="color: #C2884E; text-align: center; font-size: 28px; margin-bottom: 20px; font-weight: 600;">
+        ${t.weeklyMenuUpdate.title}
+      </h2>
+      
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        ${t.weeklyMenuUpdate.greeting(userName)}
+      </p>
+      
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+        ${t.weeklyMenuUpdate.mainMessage}
+      </p>
+      
+      <p style="color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 30px;">
+        ${t.weeklyMenuUpdate.description}
+      </p>
+      
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto; border-left: 4px solid #C2884E;">
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px; margin-bottom: 10px;">
+          ${t.weeklyMenuUpdate.reminderTitle}
+        </h3>
+        <p style="color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 0;">
+          ${t.weeklyMenuUpdate.reminderText}
+        </p>
+      </div>
+      
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${baseUrl}/weekly-meal" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; transition: transform 0.3s; box-shadow: 0 4px 12px rgba(194, 136, 78, 0.3);">
+          ${t.weeklyMenuUpdate.ctaButton}
+        </a>
+      </div>
+      
+      <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #eee; text-align: center;">
+        <p style="color: #999; font-size: 14px; margin-bottom: 10px;">
+          ${t.weeklyMenuUpdate.footerNote}
+        </p>
+        <p style="color: #999; font-size: 13px; margin-bottom: 5px;">
+          ${t.common.contactSupport}
+        </p>
+        <p style="color: #bbb; font-size: 12px; margin-top: 15px;">
+          © ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}
+        </p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to,
+    subject: t.weeklyMenuUpdate.subject,
+    html,
+  });
+};

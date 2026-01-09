@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight, Languages } from "lucide-react"
+import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight, Languages, Mail, Send, AlertCircle, CheckCircle, XCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
+import { Progress } from "@/components/ui/progress"
 import { 
   MealOption, 
   DeliveryDay, 
@@ -47,6 +48,22 @@ export function WeeklySubscriptionManagement() {
   const [inlineEnglishName, setInlineEnglishName] = useState('')
   const [editingChineseForMealId, setEditingChineseForMealId] = useState<string | null>(null)
   const [inlineChineseName, setInlineChineseName] = useState('')
+  
+  // State for menu update notification
+  const [isSendingNotifications, setIsSendingNotifications] = useState(false)
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false)
+  const [showProgressDialog, setShowProgressDialog] = useState(false)
+  const [notificationProgress, setNotificationProgress] = useState({
+    totalUsers: 0,
+    emailsSent: 0,
+    emailsFailed: 0,
+    currentBatch: 0,
+    totalBatches: 0,
+    progress: 0,
+    logs: [] as Array<{ type: string; message: string; timestamp: Date; data?: any }>,
+    failedEmails: [] as Array<{ email: string; name: string; error: string }>,
+    isComplete: false
+  })
   
   // Fetch delivery sections from API
   const fetchData = async () => {
@@ -862,6 +879,147 @@ export function WeeklySubscriptionManagement() {
     }
   }
   
+  // Function to send weekly menu update notifications with real-time progress
+  const sendWeeklyMenuUpdateNotifications = async () => {
+    setIsSendingNotifications(true);
+    setShowNotificationDialog(false);
+    setShowProgressDialog(true);
+    
+    // Reset progress state
+    setNotificationProgress({
+      totalUsers: 0,
+      emailsSent: 0,
+      emailsFailed: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+      progress: 0,
+      logs: [],
+      failedEmails: [],
+      isComplete: false
+    });
+    
+    try {
+      const response = await fetch('/api/admin/notify-weekly-menu-update', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to start notification process');
+      }
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      
+      if (!reader) {
+        throw new Error('No response body');
+      }
+      
+      // Read the stream
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const logEntry = {
+                type: data.type,
+                message: data.message,
+                timestamp: new Date(),
+                data: data.data
+              };
+              
+              setNotificationProgress(prev => {
+                const newLogs = [...prev.logs, logEntry];
+                
+                // Update progress based on message type
+                let updates: any = { logs: newLogs };
+                
+                if (data.type === 'progress' && data.data?.totalUsers) {
+                  updates.totalUsers = data.data.totalUsers;
+                }
+                
+                if (data.type === 'batch_start' && data.data) {
+                  updates.currentBatch = data.data.batchNumber;
+                  updates.totalBatches = data.data.totalBatches;
+                  updates.progress = data.data.progress || 0;
+                }
+                
+                if (data.type === 'email_sent' && data.data) {
+                  updates.emailsSent = data.data.totalSent;
+                  updates.emailsFailed = data.data.totalFailed;
+                }
+                
+                if (data.type === 'email_failed' && data.data) {
+                  updates.emailsSent = data.data.totalSent;
+                  updates.emailsFailed = data.data.totalFailed;
+                  if (data.data.email && data.data.name && data.data.error) {
+                    updates.failedEmails = [...prev.failedEmails, {
+                      email: data.data.email,
+                      name: data.data.name,
+                      error: data.data.error
+                    }];
+                  }
+                }
+                
+                if (data.type === 'batch_complete' && data.data) {
+                  updates.progress = data.data.progress || 0;
+                }
+                
+                if (data.type === 'complete') {
+                  updates.isComplete = true;
+                  updates.progress = 100;
+                  if (data.data) {
+                    updates.totalUsers = data.data.totalUsers || prev.totalUsers;
+                    updates.emailsSent = data.data.emailsSent || prev.emailsSent;
+                    updates.emailsFailed = data.data.emailsFailed || prev.emailsFailed;
+                    if (data.data.failedEmails) {
+                      updates.failedEmails = data.data.failedEmails;
+                    }
+                  }
+                }
+                
+                if (data.type === 'error') {
+                  updates.isComplete = true;
+                  console.error('Notification error:', data.data);
+                }
+                
+                return { ...prev, ...updates };
+              });
+              
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error in notification stream:', error);
+      setNotificationProgress(prev => ({
+        ...prev,
+        isComplete: true,
+        logs: [...prev.logs, {
+          type: 'error',
+          message: `Critical error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          timestamp: new Date()
+        }]
+      }));
+      
+      toast({
+        title: "Error",
+        description: "Failed to send weekly menu update notifications",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingNotifications(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -893,6 +1051,15 @@ export function WeeklySubscriptionManagement() {
           >
             <History className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">View History</span>
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowNotificationDialog(true)}
+            size="sm"
+            className="flex-1 sm:flex-none border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            <Mail className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Notify Users</span>
           </Button>
           <Button 
             variant="default"
@@ -1570,6 +1737,235 @@ export function WeeklySubscriptionManagement() {
                 </div>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Weekly Menu Update Notification Dialog */}
+      <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              Send Weekly Menu Update Notification
+            </DialogTitle>
+            <DialogDescription>
+              This will send an email notification to all users who have weekly subscription credits.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Email Details:
+              </h4>
+              <ul className="text-sm text-blue-800 space-y-1 ml-6 list-disc">
+                <li>Bilingual: English for English users, Chinese for Chinese users</li>
+                <li>Eye-catching, minimalistic, high-end design</li>
+                <li>Informs users about menu update without specific details</li>
+                <li>Includes call-to-action button to view menu</li>
+              </ul>
+            </div>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Batch Processing:
+              </h4>
+              <p className="text-sm text-amber-800">
+                Emails will be sent in batches of 50 with 2-second delays between batches to ensure smooth delivery and avoid rate limits.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowNotificationDialog(false)}
+              disabled={isSendingNotifications}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={sendWeeklyMenuUpdateNotifications}
+              disabled={isSendingNotifications}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSendingNotifications ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Notifications
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Real-time Progress Tracking Dialog */}
+      <Dialog open={showProgressDialog} onOpenChange={(open) => {
+        // Only allow closing if process is complete
+        if (!open && notificationProgress.isComplete) {
+          setShowProgressDialog(false);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-blue-600" />
+              Sending Weekly Menu Update Notifications
+            </DialogTitle>
+            <DialogDescription>
+              Real-time progress tracking for email notifications
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
+            {/* Progress Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Total Users</CardDescription>
+                  <CardTitle className="text-2xl">{notificationProgress.totalUsers}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Emails Sent</CardDescription>
+                  <CardTitle className="text-2xl text-green-600">{notificationProgress.emailsSent}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Failed</CardDescription>
+                  <CardTitle className="text-2xl text-red-600">{notificationProgress.emailsFailed}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Progress</CardDescription>
+                  <CardTitle className="text-2xl">{notificationProgress.progress}%</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {notificationProgress.currentBatch > 0 && (
+                    <>Batch {notificationProgress.currentBatch} of {notificationProgress.totalBatches}</>
+                  )}
+                </span>
+                <span className="font-medium">{notificationProgress.progress}%</span>
+              </div>
+              <Progress value={notificationProgress.progress} className="h-2" />
+            </div>
+            
+            {/* Status Badge */}
+            <div className="flex items-center gap-2">
+              {!notificationProgress.isComplete ? (
+                <Badge className="bg-blue-600">
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Processing...
+                </Badge>
+              ) : notificationProgress.emailsFailed === 0 ? (
+                <Badge className="bg-green-600">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Complete - All emails sent successfully
+                </Badge>
+              ) : (
+                <Badge className="bg-orange-600">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Complete - {notificationProgress.emailsFailed} emails failed
+                </Badge>
+              )}
+            </div>
+            
+            {/* Failed Emails Section */}
+            {notificationProgress.failedEmails.length > 0 && (
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-red-900 flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    Failed Emails ({notificationProgress.failedEmails.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-32">
+                    <div className="space-y-2">
+                      {notificationProgress.failedEmails.map((failed, idx) => (
+                        <div key={idx} className="text-xs bg-white p-2 rounded border border-red-200">
+                          <div className="font-medium text-red-900">{failed.name} ({failed.email})</div>
+                          <div className="text-red-700 mt-1">{failed.error}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Live Log */}
+            <Card className="flex-1 flex flex-col overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Live Activity Log
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden pb-0">
+                <ScrollArea className="h-full pr-4">
+                  <div className="space-y-1 font-mono text-xs">
+                    {notificationProgress.logs.map((log, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`py-1 px-2 rounded ${
+                          log.type === 'error' || log.type === 'email_failed' 
+                            ? 'bg-red-50 text-red-900' 
+                            : log.type === 'email_sent'
+                            ? 'bg-green-50 text-green-900'
+                            : log.type === 'batch_start' || log.type === 'batch_complete'
+                            ? 'bg-blue-50 text-blue-900 font-semibold'
+                            : log.type === 'complete'
+                            ? 'bg-green-100 text-green-900 font-bold'
+                            : 'bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <span className="text-gray-500 mr-2">
+                          {log.timestamp.toLocaleTimeString()}
+                        </span>
+                        {log.message}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Footer Actions */}
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              {notificationProgress.isComplete ? (
+                <>Process completed at {notificationProgress.logs[notificationProgress.logs.length - 1]?.timestamp.toLocaleTimeString()}</>
+              ) : (
+                <>Please wait while emails are being sent...</>
+              )}
+            </div>
+            <Button
+              onClick={() => setShowProgressDialog(false)}
+              disabled={!notificationProgress.isComplete}
+              variant={notificationProgress.isComplete ? "default" : "outline"}
+            >
+              {notificationProgress.isComplete ? 'Close' : 'Processing...'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
