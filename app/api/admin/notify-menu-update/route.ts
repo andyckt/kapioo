@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
+import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import { sendMenuUpdateEmail } from '@/lib/services/email';
 import type { Language } from '@/lib/email-translations';
