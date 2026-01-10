@@ -321,15 +321,6 @@ export function ViewWeeklyOrders() {
         params.append('search', filters.search)
       }
       
-      // Add date range filters if provided
-      if (filters.startDate) {
-        params.append('startDate', filters.startDate)
-      }
-      
-      if (filters.endDate) {
-        params.append('endDate', filters.endDate)
-      }
-      
       // Add area filter if provided
       if (filters.area && filters.area !== 'all') {
         params.append('area', filters.area)
