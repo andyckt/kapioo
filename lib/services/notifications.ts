@@ -272,7 +272,7 @@ export const sendOrderStatusUpdateNotification = async (
       case 'confirmed':
         subject = `订单已确认 - Kapioo #${order.orderId}`;
         statusText = '已确认';
-        statusDescription = '您的订单已确认，我们正在准备您的餐点。';
+        statusDescription = '您的订单已确认。';
         statusColor = '#007bff';
         break;
       

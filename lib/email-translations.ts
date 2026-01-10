@@ -123,7 +123,7 @@ export const orderTranslations = {
     
     // Status descriptions
     statusUpdated: '您的订单状态已更新。',
-    orderConfirmed: '您的订单已确认，我们正在准备您的餐点。',
+    orderConfirmed: '您的订单已确认。',
     orderInDelivery: '您的餐点正在配送中，请确保您的地址信息准确，保持电话畅通。',
     orderDelivered: '您的订单已送达。祝您用餐愉快！',
     orderCancelled: '您的订单已取消。',
@@ -169,7 +169,7 @@ export const orderTranslations = {
     
     // Status descriptions
     statusUpdated: 'Your order status has been updated.',
-    orderConfirmed: 'Your order has been confirmed, and we are preparing your meals.',
+    orderConfirmed: 'Your order has been confirmed.',
     orderInDelivery: 'Your meals are being delivered. Please ensure your address is correct and your phone is available.',
     orderDelivered: 'Your order has been delivered. Enjoy your meal!',
     orderCancelled: 'Your order has been cancelled.',
