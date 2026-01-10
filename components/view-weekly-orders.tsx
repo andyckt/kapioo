@@ -337,13 +337,9 @@ export function ViewWeeklyOrders() {
       
       // Meal plan type filter removed
 
-      // Add delivery date range filters if provided
-      if (filters.deliveryStartDate) {
-        params.append('deliveryStartDate', filters.deliveryStartDate)
-      }
-      
-      if (filters.deliveryEndDate) {
-        params.append('deliveryEndDate', filters.deliveryEndDate)
+      // Add delivery date filter if provided
+      if (filters.deliveryDate) {
+        params.append('deliveryDate', filters.deliveryDate)
       }
 
       // Create a link to download the CSV

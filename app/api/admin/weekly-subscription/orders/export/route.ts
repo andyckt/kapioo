@@ -247,6 +247,7 @@ export async function GET(request: Request) {
     const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
     const mealPlanType = url.searchParams.get('mealPlanType');
+    const deliveryDate = url.searchParams.get('deliveryDate');
     const deliveryStartDate = url.searchParams.get('deliveryStartDate');
     const deliveryEndDate = url.searchParams.get('deliveryEndDate');
     
@@ -307,8 +308,28 @@ export async function GET(request: Request) {
       }
     }
     
-    // Filter by delivery date range if provided
-    if (deliveryStartDate || deliveryEndDate) {
+    // Filter by single delivery date if provided (takes precedence over date range)
+    if (deliveryDate) {
+      // Parse the date string into a JavaScript Date object
+      const dateObj = new Date(deliveryDate);
+      // Format the date as a string in the format used in the database (e.g., 'Nov 02')
+      // Use custom formatting to ensure leading zeros for days under 10
+      const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+      const day = dateObj.getDate();
+      const formattedDay = day < 10 ? `0${day}` : `${day}`;
+      const formattedDate = `${month} ${formattedDay}`;
+      
+      console.log(`Filtering by single delivery date: ${formattedDate}`);
+      
+      // Use $elemMatch to find documents where at least one item in the items array matches our date
+      query['items'] = {
+        $elemMatch: {
+          date: formattedDate
+        }
+      };
+    }
+    // Filter by delivery date range if provided (only if single deliveryDate is not provided)
+    else if (deliveryStartDate || deliveryEndDate) {
       // Create a date range filter for items.date
       const dateFilter: any = {};
       
