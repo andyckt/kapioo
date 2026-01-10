@@ -1549,7 +1549,6 @@ export default function AdminDashboardPage() {
                               <th className="text-left p-4 font-medium">Phone</th>
                               <th className="text-left p-4 font-medium">Area</th>
                               <th className="text-left p-4 font-medium">Created</th>
-                              <th className="text-left p-4 font-medium">Orders</th>
                               <th className="text-center p-4 font-medium">Actions</th>
                             </tr>
                           </thead>
@@ -1588,7 +1587,6 @@ export default function AdminDashboardPage() {
                                 <td className="p-4">{user.phone || "-"}</td>
                                 <td className="p-4">{user.address?.province || "-"}</td>
                                 <td className="p-4">{user.joined ? formatDate(user.joined) : "-"}</td>
-                                <td className="p-4">{user.totalOrders || 0}</td>
                                 <td className="p-4">
                                   <div className="flex justify-center gap-1">
                                     <Button variant="outline" size="sm" onClick={() => handleViewUser(user)}>
@@ -1664,10 +1662,6 @@ export default function AdminDashboardPage() {
                                   <div>
                                     <p className="text-xs text-muted-foreground">Area</p>
                                     <p className="text-xs font-medium truncate">{user.address?.province || "-"}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Orders</p>
-                                    <p className="text-xs font-medium">{user.totalOrders || 0}</p>
                                   </div>
                                   <div className="col-span-2">
                                     <p className="text-xs text-muted-foreground">Joined</p>
