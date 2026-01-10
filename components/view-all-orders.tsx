@@ -333,27 +333,14 @@ export function ViewAllOrders() {
         params.append('search', filters.search)
       }
       
-      // Add date range filters if provided
-      if (filters.startDate) {
-        params.append('startDate', filters.startDate)
-      }
-      
-      if (filters.endDate) {
-        params.append('endDate', filters.endDate)
-      }
-      
       // Add area filter if provided
       if (filters.area && filters.area !== 'all') {
         params.append('area', filters.area)
       }
       
-      // Add delivery date range filters if provided
-      if (filters.deliveryStartDate) {
-        params.append('deliveryStartDate', filters.deliveryStartDate)
-      }
-      
-      if (filters.deliveryEndDate) {
-        params.append('deliveryEndDate', filters.deliveryEndDate)
+      // Add delivery date filter if provided
+      if (filters.deliveryDate) {
+        params.append('deliveryDate', filters.deliveryDate)
       }
       
       // Add combo name filter if provided
