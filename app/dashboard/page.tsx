@@ -322,6 +322,58 @@ export default function DashboardPage() {
         fetchOrderStats(userData._id);
       }
     }
+    
+    // Refresh user data when weekly-subscription tab is selected
+    // This ensures voucher counts are up-to-date after admin approval
+    if (activeTab === "weekly-subscription") {
+      console.log(`[Dashboard] Refreshing user data for weekly subscription tab`);
+      if (userData?._id) {
+        const refreshUserData = async () => {
+          try {
+            const user = await getUserById(userData._id);
+            if (user) {
+              console.log('[Dashboard] Fresh user data fetched:', {
+                weeklySIXmeals: user.weeklySIXmeals,
+                weeklyEIGHTmeals: user.weeklyEIGHTmeals,
+                weeklyTENmeals: user.weeklyTENmeals,
+                weeklyTWELVEmeals: user.weeklyTWELVEmeals
+              });
+              setUserData(user);
+              setCredits(user.credits || 0);
+            }
+          } catch (error) {
+            console.error('Error refreshing user data:', error);
+          }
+        };
+        
+        refreshUserData();
+      }
+    }
+    
+    // Refresh user data when daily-delivery tab is selected
+    // This ensures voucher counts are up-to-date after admin approval
+    if (activeTab === "daily-delivery") {
+      console.log(`[Dashboard] Refreshing user data for daily delivery tab`);
+      if (userData?._id) {
+        const refreshUserData = async () => {
+          try {
+            const user = await getUserById(userData._id);
+            if (user) {
+              console.log('[Dashboard] Fresh user data fetched:', {
+                twoDishVoucher: user.twoDishVoucher,
+                threeDishVoucher: user.threeDishVoucher
+              });
+              setUserData(user);
+              setCredits(user.credits || 0);
+            }
+          } catch (error) {
+            console.error('Error refreshing user data:', error);
+          }
+        };
+        
+        refreshUserData();
+      }
+    }
   }, [toast, activeTab, userData?._id])
 
   useEffect(() => {
