@@ -33,9 +33,9 @@ import { useToast } from '@/hooks/use-toast'
 const DAILY_DELIVERY_REGIONS = [
   "Downtown Toronto",
   "Midtown", 
-  "NorthYork", 
+  "North York", 
   "Markham", 
-  "RichmondHill"
+  "Richmond Hill"
 ]
 
 interface RegionCheckDialogRechargeProps {

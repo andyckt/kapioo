@@ -9,11 +9,11 @@ import { ServiceSelectionCards } from "@/components/service-selection-cards"
 
 // Location types - same as in location-meal-plans.tsx
 type Location = 
-  | "Downtown" 
+  | "Downtown Toronto" 
   | "Midtown" 
-  | "NorthYork" 
+  | "North York" 
   | "Markham" 
-  | "RichmondHill"
+  | "Richmond Hill"
   | "Vaughan" 
   | "Mississauga" 
   | "Oakville" 
@@ -24,7 +24,7 @@ type Location =
   | "Scarborough"
 
 // Group locations by service availability
-const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "NorthYork", "Markham", "RichmondHill"]
+const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
 const WEEKLY_ONLY_LOCATIONS: Location[] = ["Scarborough", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
 
 export default function StarterPage() {
@@ -58,11 +58,9 @@ export default function StarterPage() {
   // All locations
   const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
   
-  // Format location display names
+  // Format location display names (no longer needed - using actual names)
   const getLocationDisplayName = (location: Location | null): string => {
     if (!location) return ""
-    if (location === "NorthYork") return "North York"
-    if (location === "RichmondHill") return "Richmond Hill"
     return location
   }
   

@@ -110,9 +110,9 @@ export default function DailyDelivery() {
   const DAILY_DELIVERY_REGIONS = [
     "Downtown Toronto",
     "Midtown", 
-    "NorthYork", 
+    "North York", 
     "Markham", 
-    "RichmondHill"
+    "Richmond Hill"
   ]
   
   // Fetch dish translations

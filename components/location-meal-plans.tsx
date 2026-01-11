@@ -9,11 +9,11 @@ import { useRouter } from "next/navigation"
 
 // Location types
 type Location = 
-  | "Downtown" 
+  | "Downtown Toronto" 
   | "Midtown" 
-  | "NorthYork" 
+  | "North York" 
   | "Markham" 
-  | "RichmondHill"
+  | "Richmond Hill"
   | "Vaughan" 
   | "Mississauga" 
   | "Oakville" 
@@ -24,7 +24,7 @@ type Location =
   | "Scarborough"
 
 // Group locations by service availability
-const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "NorthYork", "Markham", "RichmondHill"]
+const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
 const WEEKLY_ONLY_LOCATIONS: Location[] = ["Scarborough", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
 
 // Meal plan types
@@ -95,10 +95,8 @@ export default function LocationMealPlans() {
     }
   }
   
-  // Location display names
+  // Location display names (no longer needed - using actual names)
   const getLocationDisplayName = (location: Location | ""): string => {
-    if (location === "NorthYork") return "North York"
-    if (location === "RichmondHill") return "Richmond Hill"
     return location
   }
   

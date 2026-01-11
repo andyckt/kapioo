@@ -50,9 +50,9 @@ import { CartItem, DayData, submitDailyOrder, formatAddress } from '@/lib/daily-
 const DAILY_DELIVERY_REGIONS = [
   "Downtown Toronto",
   "Midtown", 
-  "NorthYork", 
+  "North York", 
   "Markham", 
-  "RichmondHill"
+  "Richmond Hill"
 ]
 
 interface DailyDeliveryCheckoutProps {

@@ -16,9 +16,9 @@ import { useLanguage } from '@/lib/language-context'
 const DAILY_DELIVERY_REGIONS = [
   "Downtown Toronto",
   "Midtown", 
-  "NorthYork", 
+  "North York", 
   "Markham", 
-  "RichmondHill"
+  "Richmond Hill"
 ]
 
 interface RegionCheckDialogProps {

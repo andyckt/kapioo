@@ -88,7 +88,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   ]
 
   // Available service areas
-  const DAILY_DELIVERY_REGIONS = ['Downtown Toronto', 'Midtown', 'NorthYork', 'Markham', 'RichmondHill']
+  const DAILY_DELIVERY_REGIONS = ['Downtown Toronto', 'Midtown', 'North York', 'Markham', 'Richmond Hill']
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1494,7 +1494,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               key={area} 
               className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"
             >
-              {area === 'NorthYork' ? 'North York' : area === 'RichmondHill' ? 'Richmond Hill' : area}
+              {area}
             </div>
           ))}
         </div>

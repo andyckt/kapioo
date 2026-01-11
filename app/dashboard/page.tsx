@@ -86,7 +86,7 @@ export default function DashboardPage() {
   const [showServiceSelection, setShowServiceSelection] = useState(false)
   
   // Daily delivery regions
-  const DAILY_DELIVERY_REGIONS = ['Downtown Toronto', 'Midtown', 'NorthYork', 'Markham', 'RichmondHill']
+  const DAILY_DELIVERY_REGIONS = ['Downtown Toronto', 'Midtown', 'North York', 'Markham', 'Richmond Hill']
   
   // Function to check if user's area has daily delivery service
   const hasAreaDailyDelivery = (userAddress?: any): boolean => {
@@ -119,9 +119,9 @@ export default function DashboardPage() {
     | "Downtown" 
     | "Downtown Toronto"
     | "Midtown" 
-    | "NorthYork" 
+    | "North York" 
     | "Markham" 
-    | "RichmondHill"
+    | "Richmond Hill"
     | "Vaughan" 
     | "Mississauga" 
     | "Oakville" 
@@ -132,7 +132,7 @@ export default function DashboardPage() {
     | "Scarborough"
   
   // Group locations by service availability
-  const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "NorthYork", "Markham", "RichmondHill"]
+  const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
   const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington", "Scarborough"]
   
   // All locations
