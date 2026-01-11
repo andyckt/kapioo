@@ -929,18 +929,25 @@ export default function DailyDeliveryPage() {
                                 </button>
                               ))}
                               
-                            {/* Commenting out Week 2 section
+                            {/* Next Week Section */}
                             <div className="mt-4 mb-2 px-3">
-                              <div className="h-px bg-[#C2884E]/50 w-full"></div>
+                              <div className="relative flex items-center">
+                                <div className="h-px bg-[#C2884E]/50 flex-grow"></div>
+                                <span className="px-2 text-xs font-medium text-[#C2884E] whitespace-nowrap">
+                                  {language === 'zh' ? '下周' : 'Next Week'}
+                                </span>
+                                <div className="h-px bg-[#C2884E]/50 flex-grow"></div>
+                              </div>
                             </div>
                             
-                            <div className="px-3 py-2 mb-2">
-                              <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4" />
-                                {language === 'zh' ? '下周' : 'Next Week'}
-                              </h3>
-                            </div>
+                            {/* Show message if no Next Week menu available */}
+                            {Object.keys(weeklyMenu).filter(dayId => weeklyMenu[dayId].week === 2).length === 0 && (
+                              <div className="px-3 py-2 text-center text-xs text-[#6B5F53]/70">
+                                {language === 'zh' ? '暂无下周菜单' : 'No Next Week menu available yet'}
+                              </div>
+                            )}
                             
+                            {/* Next Week Days */}
                             {Object.keys(weeklyMenu)
                               .filter(dayId => weeklyMenu[dayId].week === 2)
                               .sort((a, b) => {
@@ -968,7 +975,6 @@ export default function DailyDeliveryPage() {
                                   </div>
                                 </button>
                               ))}
-                            */}
                           </div>
                         </div>
                         
