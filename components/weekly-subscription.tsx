@@ -223,6 +223,8 @@ export default function WeeklySubscription({
       setIsLoading(true);
       try {
         const data = await getUserWeeklySubscription();
+        console.log('🔍 FRONTEND DEBUG: Received delivery days from API:', data);
+        
         if (data && data.length > 0) {
           // Format dates based on language
           const formattedData = data.map(day => ({
@@ -231,6 +233,13 @@ export default function WeeklySubscription({
               ? (day.id === 'sunday' ? '周日配送' : '周二配送')
               : day.name
           }));
+          
+          console.log('🔍 FRONTEND DEBUG: Formatted delivery days:', formattedData.map(d => ({ 
+            id: d.id, 
+            date: d.date, 
+            weekOffset: d.weekOffset,
+            optionsCount: d.options.length 
+          })));
           
           setDeliveryDays(formattedData);
         } else {
@@ -259,6 +268,9 @@ export default function WeeklySubscription({
     // Find the day to check availability
     const day = deliveryDays.find(d => d.id === dayId);
     
+    console.log(`🔍 FRONTEND DEBUG: Adding to cart - dayId: ${dayId}, optionId: ${optionId}`);
+    console.log(`🔍 FRONTEND DEBUG: Found day:`, day ? { id: day.id, date: day.date, weekOffset: day.weekOffset } : 'NOT FOUND');
+    
     if (day) {
       // Check if the day is unavailable
       const { unavailable, reason } = isDayUnavailable(day);
@@ -276,7 +288,7 @@ export default function WeeklySubscription({
     }
     
     const existingItemIndex = cart.findIndex(
-      item => item.dayId === dayId && item.optionId === optionId
+      item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset
     )
     
     if (existingItemIndex >= 0) {
@@ -284,23 +296,32 @@ export default function WeeklySubscription({
       const updatedCart = [...cart]
       updatedCart[existingItemIndex].quantity += 1
       setCart(updatedCart)
+      console.log(`🔍 FRONTEND DEBUG: Updated cart item quantity to ${updatedCart[existingItemIndex].quantity}`);
     } else {
-      // Add new item
-      setCart([
+      // Add new item with weekOffset
+      const newCart = [
         ...cart,
         {
           dayId,
           optionId,
-          quantity: 1
+          quantity: 1,
+          weekOffset: day?.weekOffset // Include weekOffset to identify which week
         }
-      ])
+      ];
+      setCart(newCart);
+      console.log(`🔍 FRONTEND DEBUG: Added new item to cart with weekOffset: ${day?.weekOffset}. Total cart items: ${newCart.length}`);
     }
+    
+    console.log(`🔍 FRONTEND DEBUG: Current cart state:`, cart);
   }
   
   // Remove item from cart
   const removeFromCart = (dayId: string, optionId: string) => {
+    // Find the day to get weekOffset
+    const day = deliveryDays.find(d => d.id === dayId);
+    
     const existingItemIndex = cart.findIndex(
-      item => item.dayId === dayId && item.optionId === optionId
+      item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset
     )
     
     if (existingItemIndex >= 0) {
@@ -318,7 +339,9 @@ export default function WeeklySubscription({
   
   // Get quantity of specific item in cart
   const getQuantityInCart = (dayId: string, optionId: string): number => {
-    const item = cart.find(item => item.dayId === dayId && item.optionId === optionId)
+    // Find the day to get weekOffset
+    const day = deliveryDays.find(d => d.id === dayId);
+    const item = cart.find(item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset)
     return item ? item.quantity : 0
   }
   

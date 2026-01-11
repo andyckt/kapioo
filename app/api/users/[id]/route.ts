@@ -4,15 +4,15 @@ import User from '@/models/User';
 
 // Interface for route params
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // GET handler - return a specific user by ID
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     await connectToDatabase();
     
@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 // PATCH handler - update a user
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
     
     await connectToDatabase();
@@ -103,7 +103,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     
     return NextResponse.json({ success: true, data: userResponse });
   } catch (error) {
-    console.error(`Error updating user ${params.id}:`, error);
+    console.error(`Error updating user:`, error);
     return NextResponse.json(
       { success: false, error: 'Failed to update user' },
       { status: 500 }
@@ -114,7 +114,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 // DELETE handler - delete a user
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     await connectToDatabase();
     

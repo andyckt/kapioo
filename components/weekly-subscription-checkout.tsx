@@ -322,11 +322,19 @@ export function WeeklySubscriptionCheckout({
       // Group cart items by date
       const cartByDate: Record<string, CartItem[]> = {};
       
+      console.log('🔍 DEBUG: Starting cart grouping by date');
+      console.log('🔍 DEBUG: Cart items:', cart);
+      console.log('🔍 DEBUG: Delivery days available:', deliveryDays.map(d => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
+      
       cart.forEach(item => {
         // Find the corresponding delivery day to get the date
         const deliveryDay = deliveryDays.find(day => day.id === item.dayId);
+        console.log(`🔍 DEBUG: Processing cart item - dayId: ${item.dayId}, optionId: ${item.optionId}, quantity: ${item.quantity}`);
+        console.log(`🔍 DEBUG: Found delivery day:`, deliveryDay ? { id: deliveryDay.id, date: deliveryDay.date, weekOffset: deliveryDay.weekOffset } : 'NOT FOUND');
+        
         if (deliveryDay) {
           const date = deliveryDay.date;
+          console.log(`🔍 DEBUG: Using date: ${date} for dayId: ${item.dayId}`);
           if (!cartByDate[date]) {
             cartByDate[date] = [];
           }
@@ -334,6 +342,7 @@ export function WeeklySubscriptionCheckout({
         }
       });
       
+      console.log('🔍 DEBUG: Final cartByDate grouping:', cartByDate);
       console.log('Cart grouped by date:', Object.keys(cartByDate).map(date => `${date}: ${cartByDate[date].length} items`));
       
       // Process each date as a separate order
@@ -425,6 +434,7 @@ export function WeeklySubscriptionCheckout({
         
         console.log(`\n--- Processing FIRST order (${firstDate}) ---`);
         console.log('Items:', firstDateItems.map(item => `${item.quantity}x ${item.optionId}`));
+        console.log('🔍 DEBUG: Full items being sent to API:', firstDateItems);
         console.log('Meal plan type:', selectedMealPlanType);
         console.log('Deduct voucher: TRUE');
         
@@ -439,6 +449,8 @@ export function WeeklySubscriptionCheckout({
           mealPlanType: selectedMealPlanType,
           deductVoucher: true // First order deducts voucher
         });
+        
+        console.log('🔍 DEBUG: First order API response:', firstResult);
         
         console.log('First order result:', firstResult.error ? `ERROR: ${firstResult.error}` : 'SUCCESS');
         

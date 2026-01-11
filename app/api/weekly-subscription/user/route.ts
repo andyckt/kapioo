@@ -74,6 +74,9 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
     
+    console.log('🔍 API DEBUG: Received POST request with data:', JSON.stringify(data, null, 2));
+    console.log('🔍 API DEBUG: Items received:', data.items);
+    
     // Validate required fields
     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
       return NextResponse.json(
@@ -161,31 +164,70 @@ export async function POST(request: Request) {
       optionNameMap[option._id.toString()] = option.name;
     });
     
-    // Load delivery day dates
+    // Load delivery day dates - FIXED: Use weekOffset to get the correct day
     const deliveryDayIds = data.items.map((item: any) => item.dayId);
+    const weekOffsets = data.items.map((item: any) => item.weekOffset);
+    console.log('🔍 API DEBUG: Looking for delivery days with IDs:', deliveryDayIds);
+    console.log('🔍 API DEBUG: With weekOffsets:', weekOffsets);
+    
+    // Build query conditions for each unique day+weekOffset combination
+    const dayWeekCombos = data.items.map((item: any) => ({
+      day: item.dayId,
+      weekOffset: item.weekOffset
+    }));
+    
+    // Remove duplicates
+    const uniqueCombos = Array.from(
+      new Map(dayWeekCombos.map((combo: any) => [`${combo.day}-${combo.weekOffset}`, combo])).values()
+    );
+    
+    console.log('🔍 API DEBUG: Unique day+weekOffset combinations:', uniqueCombos);
+    
     const deliveryDays = await WeeklyDeliveryDay.find({
-      day: { $in: deliveryDayIds },
+      $or: uniqueCombos.map(combo => ({
+        day: combo.day,
+        weekOffset: combo.weekOffset
+      })),
       active: true
     });
     
-    // Create a map of day IDs to dates
+    console.log('🔍 API DEBUG: Found delivery days from DB:', deliveryDays.map((d: any) => ({ 
+      day: d.day, 
+      date: d.date, 
+      weekOffset: d.weekOffset,
+      _id: d._id 
+    })));
+    
+    // Create a map of day IDs + weekOffset to dates (to handle multiple weeks)
     const dayDateMap: Record<string, string> = {};
     deliveryDays.forEach((day: any) => {
-      dayDateMap[day.day] = day.date;
+      const key = `${day.day}-${day.weekOffset}`;
+      dayDateMap[key] = day.date;
+      console.log(`🔍 API DEBUG: Mapping "${key}" to date "${day.date}"`);
     });
+    
+    console.log('🔍 API DEBUG: Final dayDateMap:', dayDateMap);
     
     // Generate a unique order ID with only numbers
     const randomNumbers = Math.floor(10000000 + Math.random() * 90000000); // 8-digit number
     const orderId = `WS-${randomNumbers}`;
     
-    // Create order items with names and dates
-    const orderItems = data.items.map((item: any) => ({
-      dayId: item.dayId,
-      optionId: item.optionId,
-      optionName: optionNameMap[item.optionId] || 'Unknown Meal Option',
-      quantity: item.quantity,
-      date: dayDateMap[item.dayId] || 'Unknown Date'
-    }));
+    // Create order items with names and dates - FIXED: Use weekOffset in lookup
+    const orderItems = data.items.map((item: any) => {
+      const key = `${item.dayId}-${item.weekOffset}`;
+      const mappedDate = dayDateMap[key];
+      console.log(`🔍 API DEBUG: Creating order item - dayId: ${item.dayId}, weekOffset: ${item.weekOffset}, key: ${key}, mapped date: ${mappedDate}, optionId: ${item.optionId}, quantity: ${item.quantity}`);
+      
+      return {
+        dayId: item.dayId,
+        optionId: item.optionId,
+        optionName: optionNameMap[item.optionId] || 'Unknown Meal Option',
+        quantity: item.quantity,
+        date: mappedDate || 'Unknown Date'
+      };
+    });
+    
+    console.log('🔍 API DEBUG: Final orderItems to be saved:', JSON.stringify(orderItems, null, 2));
     
     // Create a new weekly order
     const weeklyOrder = await WeeklyOrder.create({

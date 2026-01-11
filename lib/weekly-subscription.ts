@@ -27,6 +27,7 @@ export type CartItem = {
   dayId: string;
   optionId: string;
   quantity: number;
+  weekOffset?: number; // Add weekOffset to identify which week's delivery
 }
 
 // Get all delivery days and meal options for admin
