@@ -21,10 +21,11 @@ type Location =
   | "Newmarket" 
   | "Hamilton" 
   | "Burlington"
+  | "Scarborough"
 
 // Group locations by service availability
 const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "NorthYork", "Markham", "RichmondHill"]
-const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
+const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington", "Scarborough"]
 
 // Meal plan types
 interface MealPlan {
