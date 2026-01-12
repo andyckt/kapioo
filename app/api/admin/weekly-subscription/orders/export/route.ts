@@ -310,21 +310,25 @@ export async function GET(request: Request) {
     
     // Filter by single delivery date if provided (takes precedence over date range)
     if (deliveryDate) {
-      // Parse the date string into a JavaScript Date object
-      const dateObj = new Date(deliveryDate);
-      // Format the date as a string in the format used in the database (e.g., 'Nov 02')
-      // Use custom formatting to ensure leading zeros for days under 10
-      const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
-      const day = dateObj.getDate();
-      const formattedDay = day < 10 ? `0${day}` : `${day}`;
-      const formattedDate = `${month} ${formattedDay}`;
+      // Parse the date string components to avoid timezone issues
+      // Input format: "YYYY-MM-DD" (e.g., "2026-01-13")
+      const [year, month, day] = deliveryDate.split('-').map(Number);
+      // Create date object in local timezone (not UTC)
+      const dateObj = new Date(year, month - 1, day);
       
-      console.log(`Filtering by single delivery date: ${formattedDate}`);
+      // Format the date as a string in the format used in the database (e.g., 'Jan 13')
+      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = dateObj.getDate();
       
-      // Use $elemMatch to find documents where at least one item in the items array matches our date
+      // Database may have inconsistent formats: "Feb 1" vs "Feb 01"
+      // Query for both formats to ensure we match all orders
+      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+      const formattedWithoutZero = `${monthName} ${dayNum}`;
+      
+      // Use $elemMatch with $in to match either format
       query['items'] = {
         $elemMatch: {
-          date: formattedDate
+          date: { $in: [formattedWithZero, formattedWithoutZero] }
         }
       };
     }

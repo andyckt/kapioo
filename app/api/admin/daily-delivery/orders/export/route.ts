@@ -353,16 +353,20 @@ export async function GET(request: Request) {
     
     // Filter by delivery date if provided
     if (deliveryDate) {
-      // Parse the date string into a JavaScript Date object
-      const dateObj = new Date(deliveryDate);
-      // Format the date as a string in the format used in the database (e.g., 'Nov 02')
-      // Use custom formatting to ensure leading zeros for days under 10
-      const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
-      const day = dateObj.getDate();
-      const formattedDay = day < 10 ? `0${day}` : `${day}`;
-      const formattedDate = `${month} ${formattedDay}`;
+      // Parse the date string components to avoid timezone issues
+      // Input format: "YYYY-MM-DD" (e.g., "2026-01-13")
+      const [year, month, day] = deliveryDate.split('-').map(Number);
+      // Create date object in local timezone (not UTC)
+      const dateObj = new Date(year, month - 1, day);
       
-      console.log(`Formatted delivery date: ${formattedDate}`);
+      // Format the date as a string in the format used in the database (e.g., 'Jan 13')
+      // Use custom formatting to ensure leading zeros for days under 10
+      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = dateObj.getDate();
+      const formattedDay = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
+      const formattedDate = `${monthName} ${formattedDay}`;
+      
+      console.log(`Input delivery date: ${deliveryDate} → Formatted: ${formattedDate}`);
       
       // Use $elemMatch to find documents where at least one item in the items array matches our date
       query['items'] = {

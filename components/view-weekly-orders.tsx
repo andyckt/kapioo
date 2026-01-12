@@ -845,23 +845,44 @@ export function ViewWeeklyOrders() {
                         <td className="p-4 align-middle">
                           {order.items && order.items.length > 0 ? (
                             <div className="space-y-2 max-w-[180px]">
-                              {order.items.map((item: any, index: number) => (
-                                <div key={index} className="flex items-center gap-2 bg-muted/30 rounded-md px-2 py-1.5 border border-muted">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-medium truncate">
-                                      {item.date}
+                              {(() => {
+                                // Filter items by delivery date if filter is active
+                                const itemsToDisplay = filters.deliveryDate 
+                                  ? order.items.filter((item: any) => {
+                                      // Convert filter date to database format for comparison
+                                      if (!filters.deliveryDate) return true;
+                                      const [year, month, day] = filters.deliveryDate.split('-').map(Number);
+                                      const dateObj = new Date(year, month - 1, day);
+                                      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                                      const dayNum = dateObj.getDate();
+                                      
+                                      // Database has inconsistent formats: "Feb 1" vs "Feb 01"
+                                      // So we need to match BOTH formats
+                                      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+                                      const formattedWithoutZero = `${monthName} ${dayNum}`;
+                                      
+                                      return item.date === formattedWithZero || item.date === formattedWithoutZero;
+                                    })
+                                  : order.items;
+                                
+                                return itemsToDisplay.map((item: any, index: number) => (
+                                  <div key={index} className="flex items-center gap-2 bg-muted/30 rounded-md px-2 py-1.5 border border-muted">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-xs font-medium truncate">
+                                        {item.date}
+                                      </div>
+                                      <div className="text-[10px] text-muted-foreground capitalize">
+                                        {item.day || item.dayName || item.dayId?.split('-')[0]}
+                                      </div>
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground capitalize">
-                                      {item.day || item.dayName || item.dayId?.split('-')[0]}
+                                    <div className="flex-shrink-0">
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 h-auto font-semibold">
+                                        ×{item.quantity || 1}
+                                      </Badge>
                                     </div>
                                   </div>
-                                  <div className="flex-shrink-0">
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 h-auto font-semibold">
-                                      ×{item.quantity || 1}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              ))}
+                                ));
+                              })()}
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">N/A</span>
