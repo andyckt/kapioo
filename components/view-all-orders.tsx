@@ -1262,11 +1262,32 @@ export function ViewAllOrders() {
                         <td className="p-4 align-middle">
                           {order.items && order.items.length > 0 ? (
                             <div className="max-w-[200px] truncate">
-                              {order.items.map((item: any, index: number) => (
-                                <div key={index} className={index > 0 ? 'mt-1' : ''}>
-                                  {item.comboName} ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
-                                </div>
-                              ))}
+                              {(() => {
+                                // Filter items by delivery date if filter is active
+                                const itemsToDisplay = filters.deliveryDate 
+                                  ? order.items.filter((item: any) => {
+                                      // Convert filter date to database format for comparison
+                                      if (!filters.deliveryDate) return true;
+                                      const [year, month, day] = filters.deliveryDate.split('-').map(Number);
+                                      const dateObj = new Date(year, month - 1, day);
+                                      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                                      const dayNum = dateObj.getDate();
+                                      
+                                      // Database may have inconsistent formats: "Feb 1" vs "Feb 01"
+                                      // Match both formats
+                                      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+                                      const formattedWithoutZero = `${monthName} ${dayNum}`;
+                                      
+                                      return item.date === formattedWithZero || item.date === formattedWithoutZero;
+                                    })
+                                  : order.items;
+                                
+                                return itemsToDisplay.map((item: any, index: number) => (
+                                  <div key={index} className={index > 0 ? 'mt-1' : ''}>
+                                    {item.comboName} ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
+                                  </div>
+                                ));
+                              })()}
                             </div>
                           ) : (
                             'N/A'

@@ -172,18 +172,18 @@ export async function GET(request: Request) {
       const dateObj = new Date(year, month - 1, day);
       
       // Format the date as a string in the format used in the database (e.g., 'Jan 13')
-      // Use custom formatting to ensure leading zeros for days under 10
       const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
       const dayNum = dateObj.getDate();
-      const formattedDay = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
-      const formattedDate = `${monthName} ${formattedDay}`;
       
-      console.log(`Input delivery date: ${deliveryDate} → Formatted: ${formattedDate}`);
+      // Database may have inconsistent formats: "Feb 1" vs "Feb 01"
+      // Query for both formats to ensure we match all orders
+      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+      const formattedWithoutZero = `${monthName} ${dayNum}`;
       
-      // Use $elemMatch to find documents where at least one item in the items array matches our date
+      // Use $elemMatch with $in to match either format
       query['items'] = {
         $elemMatch: {
-          date: formattedDate
+          date: { $in: [formattedWithZero, formattedWithoutZero] }
         }
       };
     }
