@@ -319,28 +319,49 @@ export function WeeklySubscriptionCheckout({
       const freshTenMeals = freshUser.weeklyTENmeals || 0;
       const freshTwelveMeals = freshUser.weeklyTWELVEmeals || 0;
       
-      // Group cart items by date
+      // CRITICAL FIX: Fetch fresh delivery days from database before checkout
+      // This prevents stale dates if admin rolled forward while user was browsing
+      console.log('=== CHECKOUT DEBUG: Fetching fresh delivery days from database ===');
+      console.log('Delivery days prop before fetch:', deliveryDays.map(d => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
+      
+      const freshDeliveryDaysResponse = await fetch('/api/weekly-subscription/user');
+      const freshDeliveryDaysData = await freshDeliveryDaysResponse.json();
+      
+      if (!freshDeliveryDaysData.success || !freshDeliveryDaysData.data) {
+        console.error('Failed to fetch fresh delivery days:', freshDeliveryDaysData.error);
+        throw new Error('Failed to fetch current delivery schedule');
+      }
+      
+      const freshDeliveryDays = freshDeliveryDaysData.data;
+      console.log('Fresh delivery days from DB:', freshDeliveryDays.map((d: any) => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
+      
+      // Use fresh delivery days for date mapping instead of stale props
+      const currentDeliveryDays = freshDeliveryDays;
+      
+      // Group cart items by date using FRESH delivery days
       const cartByDate: Record<string, CartItem[]> = {};
       
       console.log('🔍 DEBUG: Starting cart grouping by date');
       console.log('🔍 DEBUG: Cart items:', cart);
-      console.log('🔍 DEBUG: Delivery days available:', deliveryDays.map(d => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
+      console.log('🔍 DEBUG: Using FRESH delivery days:', currentDeliveryDays.map((d: any) => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
       
       cart.forEach(item => {
         // CRITICAL FIX: Find the corresponding delivery day by BOTH dayId AND weekOffset
-        const deliveryDay = deliveryDays.find(day => day.id === item.dayId && day.weekOffset === item.weekOffset);
+        // Use FRESH delivery days to prevent stale date issues
+        const deliveryDay = currentDeliveryDays.find((day: any) => day.id === item.dayId && day.weekOffset === item.weekOffset);
         console.log(`🔍 DEBUG: Processing cart item - dayId: ${item.dayId}, weekOffset: ${item.weekOffset}, optionId: ${item.optionId}, quantity: ${item.quantity}`);
         console.log(`🔍 DEBUG: Found delivery day:`, deliveryDay ? { id: deliveryDay.id, date: deliveryDay.date, weekOffset: deliveryDay.weekOffset } : 'NOT FOUND');
         
         if (deliveryDay) {
           const date = deliveryDay.date;
-          console.log(`🔍 DEBUG: Using date: ${date} for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
+          console.log(`🔍 DEBUG: Using FRESH date: ${date} for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
           if (!cartByDate[date]) {
             cartByDate[date] = [];
           }
           cartByDate[date].push(item);
         } else {
           console.error(`🚨 ERROR: Could not find delivery day for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
+          console.error(`🚨 This might mean the delivery schedule was updated while you were browsing.`);
         }
       });
       

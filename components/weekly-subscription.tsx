@@ -53,6 +53,10 @@ export default function WeeklySubscription({
   const [userRegion, setUserRegion] = useState<string>("")
   const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
   
+  // State for menu update notification
+  const [menuUpdateAvailable, setMenuUpdateAvailable] = useState(false)
+  const [lastFetchedDates, setLastFetchedDates] = useState<string>('')
+  
   // Fetch cutoff time from settings
   useEffect(() => {
     const fetchCutoffTime = async () => {
@@ -242,6 +246,10 @@ export default function WeeklySubscription({
           })));
           
           setDeliveryDays(formattedData);
+          
+          // Store the current dates for comparison
+          const currentDates = formattedData.map(d => `${d.id}-${d.date}`).sort().join(',');
+          setLastFetchedDates(currentDates);
         } else {
           // Don't show error toast, we'll display a friendly message in the UI
           console.log('No active delivery days found');
@@ -262,6 +270,78 @@ export default function WeeklySubscription({
 
     fetchData();
   }, [language, toast])
+  
+  // Periodically check for menu updates (every 30 seconds)
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const data = await getUserWeeklySubscription();
+        if (data && data.length > 0) {
+          const newDates = data.map(d => `${d.id}-${d.date}`).sort().join(',');
+          
+          // If dates have changed and we have previously fetched data
+          if (lastFetchedDates && newDates !== lastFetchedDates) {
+            console.log('🔔 Menu update detected!');
+            console.log('Old dates:', lastFetchedDates);
+            console.log('New dates:', newDates);
+            setMenuUpdateAvailable(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for menu updates:', error);
+      }
+    };
+    
+    // Only start checking after initial load
+    if (lastFetchedDates) {
+      const interval = setInterval(checkForUpdates, 30000); // Check every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [lastFetchedDates])
+  
+  // Function to refresh the menu
+  const handleRefreshMenu = async () => {
+    setMenuUpdateAvailable(false);
+    setIsLoading(true);
+    
+    try {
+      const data = await getUserWeeklySubscription();
+      console.log('🔄 Refreshing menu data:', data);
+      
+      if (data && data.length > 0) {
+        // Format dates based on language
+        const formattedData = data.map(day => ({
+          ...day,
+          name: language === 'zh' 
+            ? (day.id === 'sunday' ? '周日配送' : '周二配送')
+            : day.name
+        }));
+        
+        setDeliveryDays(formattedData);
+        
+        // Update the stored dates
+        const currentDates = formattedData.map(d => `${d.id}-${d.date}`).sort().join(',');
+        setLastFetchedDates(currentDates);
+        
+        // Clear cart if items reference old dates
+        setCart([]);
+        
+        toast({
+          title: language === 'zh' ? '菜单已更新' : 'Menu Updated',
+          description: language === 'zh' ? '已加载最新的配送日期和菜单' : 'Latest delivery dates and menu loaded',
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing menu:", error);
+      toast({
+        title: language === 'zh' ? '错误' : 'Error',
+        description: language === 'zh' ? '无法刷新菜单' : 'Failed to refresh menu',
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
   
   // Add item to cart
   const addToCart = (dayId: string, optionId: string, weekOffset?: number) => {
@@ -650,6 +730,44 @@ export default function WeeklySubscription({
         </div>
       ) : (
         <div className="space-y-8">
+          {/* Menu Update Notification Banner */}
+          {menuUpdateAvailable && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 border-2 border-[#C2884E] rounded-xl shadow-sm"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="flex-shrink-0 w-10 h-10 bg-[#C2884E] rounded-full flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[#6B5F53]">
+                      {language === 'zh' ? '菜单已更新！' : 'Menu Updated!'}
+                    </p>
+                    <p className="text-sm text-[#6B5F53]/80">
+                      {language === 'zh' 
+                        ? '请点击刷新以查看最新内容' 
+                        : 'Please press to refresh'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleRefreshMenu}
+                  className="bg-[#C2884E] hover:bg-[#B67A45] text-white flex items-center gap-2 w-full sm:w-auto"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                  {language === 'zh' ? '刷新菜单' : 'Refresh Menu'}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+          
           {/* Order Notice - Visible on all devices */}
           <div className="text-left mb-6 pl-3 border-l-2 border-[#C2884E]">
             <h4 className="text-xs font-bold text-[#C2884E] mb-1">
