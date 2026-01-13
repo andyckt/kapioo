@@ -290,6 +290,7 @@ export function WeeklySubscriptionManagement() {
               day: thisSection.day.day,
               weekOffset: 0,
               name: option.name,
+              nameEn: option.nameEn, // ✅ Include English translation
               tags: option.tags,
               active: option.active
             }),
@@ -338,6 +339,7 @@ export function WeeklySubscriptionManagement() {
               day: nextSection.day.day,
               weekOffset: 1,
               name: option.name,
+              nameEn: option.nameEn, // ✅ Include English translation
               tags: option.tags,
               active: option.active
             }),
