@@ -318,3 +318,119 @@ export async function getUserSubscriptionHistory(): Promise<any[]> {
     return [];
   }
 }
+
+// ============================================
+// NEW: Consecutive Date Validation Helpers
+// ============================================
+
+/**
+ * Helper: Sort delivery days consistently (must match backend sorting)
+ * Sorts by weekOffset first, then by day (sunday=0, tuesday=1)
+ */
+export function sortDeliveryDays(days: DeliveryDay[]): DeliveryDay[] {
+  return [...days].sort((a, b) => {
+    // First sort by weekOffset
+    if (a.weekOffset !== b.weekOffset) {
+      return a.weekOffset - b.weekOffset;
+    }
+    // Then sort by day (sunday=0, tuesday=1)
+    const dayOrder: Record<string, number> = { 'sunday': 0, 'tuesday': 1 };
+    const aDayOrder = dayOrder[a.id] || 0;
+    const bDayOrder = dayOrder[b.id] || 0;
+    return aDayOrder - bDayOrder;
+  });
+}
+
+/**
+ * Helper: Check if two dates are consecutive in the available days list
+ * Two dates are consecutive if their indices in the sorted list differ by exactly 1
+ */
+export function areConsecutiveDates(
+  date1: string,
+  date2: string,
+  availableDays: DeliveryDay[]
+): boolean {
+  // Sort days consistently
+  const sortedDays = sortDeliveryDays(availableDays);
+  
+  // Find indices of both dates
+  const index1 = sortedDays.findIndex(day => day.date === date1);
+  const index2 = sortedDays.findIndex(day => day.date === date2);
+  
+  // Both must exist
+  if (index1 === -1 || index2 === -1) {
+    return false;
+  }
+  
+  // Check if adjacent (absolute difference = 1)
+  return Math.abs(index1 - index2) === 1;
+}
+
+/**
+ * Helper: Get adjacent dates for a selected date
+ * Returns array of dates that are immediately before or after the selected date
+ */
+export function getAdjacentDates(
+  selectedDate: string,
+  availableDays: DeliveryDay[]
+): string[] {
+  // Sort days consistently
+  const sortedDays = sortDeliveryDays(availableDays);
+  
+  // Find index of selected date
+  const selectedIndex = sortedDays.findIndex(day => day.date === selectedDate);
+  
+  if (selectedIndex === -1) {
+    return [];
+  }
+  
+  const adjacentDates: string[] = [];
+  
+  // Add previous date if exists
+  if (selectedIndex > 0) {
+    adjacentDates.push(sortedDays[selectedIndex - 1].date);
+  }
+  
+  // Add next date if exists
+  if (selectedIndex < sortedDays.length - 1) {
+    adjacentDates.push(sortedDays[selectedIndex + 1].date);
+  }
+  
+  return adjacentDates;
+}
+
+/**
+ * Helper: Validate if a set of selected dates follows the consecutive rule
+ * Returns validation result with error message if invalid
+ */
+export function validateSelectedDates(
+  selectedDates: string[],
+  availableDays: DeliveryDay[]
+): { isValid: boolean; error?: string } {
+  // Rule 1: 0 or 1 date is always valid
+  if (selectedDates.length <= 1) {
+    return { isValid: true };
+  }
+  
+  // Rule 2: More than 2 dates is invalid
+  if (selectedDates.length > 2) {
+    return { 
+      isValid: false, 
+      error: 'Maximum 2 delivery dates allowed' 
+    };
+  }
+  
+  // Rule 3: Exactly 2 dates - must be consecutive
+  if (selectedDates.length === 2) {
+    const isConsecutive = areConsecutiveDates(selectedDates[0], selectedDates[1], availableDays);
+    
+    if (!isConsecutive) {
+      return { 
+        isValid: false, 
+        error: 'Selected delivery dates must be consecutive' 
+      };
+    }
+  }
+  
+  return { isValid: true };
+}

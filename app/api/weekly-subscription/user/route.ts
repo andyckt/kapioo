@@ -8,6 +8,120 @@ import User from '@/models/User';
 import { nanoid } from 'nanoid';
 import { sendWeeklyOrderConfirmationEmail, sendAdminWeeklyOrderNotification } from '@/lib/services/email';
 
+// Types for consecutive date validation
+interface DeliveryDayForValidation {
+  day: string;
+  date: string;
+  weekOffset: number;
+}
+
+interface DateValidationResult {
+  isValid: boolean;
+  error?: string;
+  selectedDates?: string[];
+  availableDates?: string[];
+}
+
+// Helper function: Sort delivery days consistently (same as frontend)
+function sortDeliveryDays(days: DeliveryDayForValidation[]): DeliveryDayForValidation[] {
+  return [...days].sort((a, b) => {
+    // First sort by weekOffset
+    if (a.weekOffset !== b.weekOffset) {
+      return a.weekOffset - b.weekOffset;
+    }
+    // Then sort by day (sunday=0, tuesday=1)
+    const dayOrder: Record<string, number> = { 'sunday': 0, 'tuesday': 1 };
+    return (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0);
+  });
+}
+
+// Helper function: Validate consecutive dates
+function validateConsecutiveDates(
+  orderItems: Array<{ dayId: string; weekOffset: number }>,
+  allAvailableDeliveryDays: DeliveryDayForValidation[]
+): DateValidationResult {
+  // Extract unique day+weekOffset combinations from order items
+  const uniqueCombinations = Array.from(
+    new Set(orderItems.map(item => `${item.dayId}-${item.weekOffset}`))
+  ).map(combo => {
+    const [dayId, weekOffsetStr] = combo.split('-');
+    return { dayId, weekOffset: parseInt(weekOffsetStr, 10) };
+  });
+
+  console.log('📋 VALIDATION: Unique combinations in order:', uniqueCombinations);
+
+  // Rule 1: Single date is always valid
+  if (uniqueCombinations.length === 1) {
+    console.log('✅ VALIDATION: Single date order - VALID');
+    return { isValid: true };
+  }
+
+  // Rule 2: More than 2 dates is invalid
+  if (uniqueCombinations.length > 2) {
+    console.log('❌ VALIDATION: More than 2 dates - INVALID');
+    return {
+      isValid: false,
+      error: 'Maximum 2 delivery dates allowed',
+    };
+  }
+
+  // Rule 3: Exactly 2 dates - check if consecutive
+  if (uniqueCombinations.length === 2) {
+    // Sort available delivery days (same sorting as frontend)
+    const sortedAvailableDays = sortDeliveryDays(allAvailableDeliveryDays);
+    
+    console.log('📋 VALIDATION: Sorted available days:', sortedAvailableDays.map(d => `${d.day}-week${d.weekOffset} (${d.date})`));
+
+    // Find indices of selected dates in sorted list
+    const index1 = sortedAvailableDays.findIndex(
+      day => day.day === uniqueCombinations[0].dayId && day.weekOffset === uniqueCombinations[0].weekOffset
+    );
+    const index2 = sortedAvailableDays.findIndex(
+      day => day.day === uniqueCombinations[1].dayId && day.weekOffset === uniqueCombinations[1].weekOffset
+    );
+
+    console.log(`📋 VALIDATION: Index of ${uniqueCombinations[0].dayId}-week${uniqueCombinations[0].weekOffset}: ${index1}`);
+    console.log(`📋 VALIDATION: Index of ${uniqueCombinations[1].dayId}-week${uniqueCombinations[1].weekOffset}: ${index2}`);
+
+    // Both dates must exist in available list
+    if (index1 === -1 || index2 === -1) {
+      console.log('❌ VALIDATION: One or both dates not found in available days - INVALID');
+      return {
+        isValid: false,
+        error: 'Selected dates are not available',
+      };
+    }
+
+    // Check if indices are adjacent (abs difference = 1)
+    const isConsecutive = Math.abs(index1 - index2) === 1;
+
+    if (isConsecutive) {
+      console.log('✅ VALIDATION: Two consecutive dates - VALID');
+      return { isValid: true };
+    } else {
+      console.log('❌ VALIDATION: Two non-consecutive dates - INVALID');
+      
+      // Get date strings for error message
+      const date1 = sortedAvailableDays[index1]?.date;
+      const date2 = sortedAvailableDays[index2]?.date;
+      
+      return {
+        isValid: false,
+        error: 'Selected delivery dates must be consecutive. Please select either one date or two consecutive delivery slots.',
+        selectedDates: [date1, date2],
+        availableDates: sortedAvailableDays.map(d => d.date),
+      };
+    }
+  }
+
+  // Fallback (should never reach here)
+  console.log('⚠️ VALIDATION: Unexpected state - defaulting to INVALID');
+  return {
+    isValid: false,
+    error: 'Invalid date selection',
+  };
+}
+
 // GET handler - return active delivery days and options for users
 export async function GET(request: Request) {
   try {
@@ -103,6 +217,46 @@ export async function POST(request: Request) {
         { success: false, error: 'User not found' },
         { status: 404 }
       );
+    }
+    
+    // NEW VALIDATION: Consecutive Dates Rule
+    // Only validate on FIRST order (when deductVoucher = true)
+    // This prevents validation from running on subsequent orders in multi-date checkout
+    if (data.deductVoucher === true) {
+      console.log('🔍 CONSECUTIVE VALIDATION: Starting validation (first order in sequence)');
+      
+      // Fetch all available delivery days for validation
+      const availableDeliveryDays = await WeeklyDeliveryDay.find({ active: true })
+        .select('day date weekOffset')
+        .sort({ weekOffset: 1, day: 1 })
+        .lean();
+      
+      const availableDaysForValidation: DeliveryDayForValidation[] = availableDeliveryDays.map((day: any) => ({
+        day: day.day,
+        date: day.date,
+        weekOffset: day.weekOffset,
+      }));
+      
+      // Validate consecutive dates
+      const validation = validateConsecutiveDates(data.items, availableDaysForValidation);
+      
+      if (!validation.isValid) {
+        console.log('❌ CONSECUTIVE VALIDATION: Failed -', validation.error);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: validation.error || 'Invalid delivery date selection',
+            details: 'Selected delivery dates must be consecutive delivery slots',
+            selectedDates: validation.selectedDates,
+            availableDates: validation.availableDates,
+          },
+          { status: 400 }
+        );
+      }
+      
+      console.log('✅ CONSECUTIVE VALIDATION: Passed');
+    } else {
+      console.log('⏭️ CONSECUTIVE VALIDATION: Skipped (subsequent order in multi-date checkout)');
     }
     
     // Calculate total items

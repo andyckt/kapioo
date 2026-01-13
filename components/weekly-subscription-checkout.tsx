@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
-import { CartItem, DeliveryDay, submitUserSubscription } from '@/lib/weekly-subscription'
+import { CartItem, DeliveryDay, submitUserSubscription, validateSelectedDates, sortDeliveryDays } from '@/lib/weekly-subscription'
 
 // Define the supported regions for weekly delivery
 const WEEKLY_DELIVERY_REGIONS = [
@@ -312,6 +312,32 @@ export function WeeklySubscriptionCheckout({
       
       const freshUser = freshUserData.data;
       console.log('Fresh user data from DB - weeklySIXmeals:', freshUser.weeklySIXmeals, 'weeklyEIGHTmeals:', freshUser.weeklyEIGHTmeals, 'weeklyTENmeals:', freshUser.weeklyTENmeals, 'weeklyTWELVEmeals:', freshUser.weeklyTWELVEmeals);
+      
+      // NEW: Validate consecutive dates BEFORE processing
+      // Extract unique dates from cart
+      const uniqueDates = Array.from(new Set(
+        cart.map(item => {
+          const day = deliveryDays.find(d => d.id === item.dayId && d.weekOffset === item.weekOffset);
+          return day?.date;
+        }).filter(Boolean)
+      )) as string[];
+      
+      console.log('🔍 CHECKOUT VALIDATION: Unique dates in cart:', uniqueDates);
+      
+      // Validate consecutive dates
+      const validation = validateSelectedDates(uniqueDates, deliveryDays);
+      
+      if (!validation.isValid) {
+        console.log('❌ CHECKOUT VALIDATION: Failed -', validation.error);
+        throw new Error(
+          validation.error || 
+          (language === 'zh' 
+            ? '请选择连续的配送日期（周日+周二 或 周二+周日）' 
+            : 'Please select consecutive delivery dates (Sun+Tue or Tue+Sun)')
+        );
+      }
+      
+      console.log('✅ CHECKOUT VALIDATION: Consecutive dates check passed');
       
       // Use fresh data for validation instead of stale props
       const freshSixMeals = freshUser.weeklySIXmeals || 0;

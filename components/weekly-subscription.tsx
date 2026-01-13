@@ -12,7 +12,7 @@ import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 // Removed tabs imports as we're now using a single interface
-import { getUserWeeklySubscription } from '@/lib/weekly-subscription'
+import { getUserWeeklySubscription, sortDeliveryDays, getAdjacentDates, validateSelectedDates } from '@/lib/weekly-subscription'
 import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
 import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
@@ -39,6 +39,11 @@ export default function WeeklySubscription({
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
   const [deliveryDays, setDeliveryDays] = useState<DeliveryDay[]>([])
+  
+  // NEW: State for consecutive date validation
+  const [visibleDeliveryDays, setVisibleDeliveryDays] = useState<DeliveryDay[]>([]) // Limited to 3 available days
+  const [selectedDates, setSelectedDates] = useState<string[]>([]) // Track selected delivery dates
+  const [disabledDates, setDisabledDates] = useState<Set<string>>(new Set()) // Track disabled dates for consecutive rule
   
   // State for all meal plan types
   const [userCredits, setUserCredits] = useState<number>(propCredits || 0)
@@ -247,6 +252,20 @@ export default function WeeklySubscription({
           
           setDeliveryDays(formattedData);
           
+          // NEW: Filter to next 3 available days (Update A)
+          const availableDays = formattedData.filter(day => {
+            const { unavailable } = isDayUnavailable(day);
+            return !unavailable;
+          }).slice(0, 3); // Take first 3 available days
+          
+          console.log('📅 FRONTEND DEBUG: Visible delivery days (max 3):', availableDays.map(d => ({ 
+            id: d.id, 
+            date: d.date, 
+            weekOffset: d.weekOffset 
+          })));
+          
+          setVisibleDeliveryDays(availableDays);
+          
           // Store the current dates for comparison
           const currentDates = formattedData.map(d => `${d.id}-${d.date}`).sort().join(',');
           setLastFetchedDates(currentDates);
@@ -270,6 +289,63 @@ export default function WeeklySubscription({
 
     fetchData();
   }, [language, toast])
+  
+  // NEW: Track selected dates from cart (Update B & C)
+  useEffect(() => {
+    // Extract unique dates from cart items
+    const uniqueDates = Array.from(new Set(
+      cart.map(item => {
+        const day = deliveryDays.find(d => d.id === item.dayId && d.weekOffset === item.weekOffset);
+        return day?.date;
+      }).filter(Boolean)
+    )) as string[];
+    
+    console.log('🎯 Selected dates from cart:', uniqueDates);
+    setSelectedDates(uniqueDates);
+  }, [cart, deliveryDays]);
+  
+  // NEW: Calculate disabled dates based on consecutive rule (Update C)
+  useEffect(() => {
+    const newDisabledDates = new Set<string>();
+    
+    if (selectedDates.length === 0) {
+      // Rule: No selection - all dates enabled
+      console.log('✅ No dates selected - all enabled');
+      setDisabledDates(newDisabledDates);
+    } else if (selectedDates.length === 1) {
+      // Rule: 1 date selected - only adjacent dates enabled
+      const adjacentDates = getAdjacentDates(selectedDates[0], visibleDeliveryDays);
+      console.log(`✅ One date selected (${selectedDates[0]}) - adjacent dates:`, adjacentDates);
+      
+      visibleDeliveryDays.forEach(day => {
+        if (day.date !== selectedDates[0] && !adjacentDates.includes(day.date)) {
+          newDisabledDates.add(day.date);
+        }
+      });
+      
+      console.log('🚫 Disabled dates:', Array.from(newDisabledDates));
+      setDisabledDates(newDisabledDates);
+    } else if (selectedDates.length === 2) {
+      // Rule: 2 dates selected - only selected dates enabled (so user can remove)
+      console.log(`✅ Two dates selected (${selectedDates.join(', ')}) - disabling others`);
+      
+      visibleDeliveryDays.forEach(day => {
+        if (!selectedDates.includes(day.date)) {
+          newDisabledDates.add(day.date);
+        }
+      });
+      
+      console.log('🚫 Disabled dates:', Array.from(newDisabledDates));
+      setDisabledDates(newDisabledDates);
+    } else if (selectedDates.length > 2) {
+      // Should not happen, but disable all to prevent further selection
+      console.log('⚠️ More than 2 dates selected - this should not happen!');
+      visibleDeliveryDays.forEach(day => {
+        newDisabledDates.add(day.date);
+      });
+      setDisabledDates(newDisabledDates);
+    }
+  }, [selectedDates, visibleDeliveryDays]);
   
   // Periodically check for menu updates (every 30 seconds)
   useEffect(() => {
@@ -319,11 +395,18 @@ export default function WeeklySubscription({
         
         setDeliveryDays(formattedData);
         
+        // NEW: Update visible delivery days (max 3 available)
+        const availableDays = formattedData.filter(day => {
+          const { unavailable } = isDayUnavailable(day);
+          return !unavailable;
+        }).slice(0, 3);
+        setVisibleDeliveryDays(availableDays);
+        
         // Update the stored dates
         const currentDates = formattedData.map(d => `${d.id}-${d.date}`).sort().join(',');
         setLastFetchedDates(currentDates);
         
-        // Clear cart if items reference old dates
+        // Clear cart if items reference old dates (this will also clear selectedDates via effect)
         setCart([]);
         
         toast({
@@ -815,11 +898,14 @@ export default function WeeklySubscription({
                 </p>
               </div>
             ) : (
-              <div className="grid gap-8 md:grid-cols-2">
-                {deliveryDays
-                  .filter(day => !isDayUnavailable(day).unavailable)
-                  .slice(0, 2) // Only show the first two available days
-                  .map((day) => (
+              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                {visibleDeliveryDays.map((day) => {
+                  // Check if this date is disabled by consecutive rule
+                  const isDateDisabled = disabledDates.has(day.date);
+                  const isDateSelected = selectedDates.includes(day.date);
+                  const { unavailable, reason } = isDayUnavailable(day);
+                  
+                  return (
                 <motion.div 
                   key={`${day.id}-${day.weekOffset}`}
                   initial={{ opacity: 0, y: 20 }}
@@ -833,11 +919,30 @@ export default function WeeklySubscription({
                     <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 relative">
+                    {/* NEW: Disabled Overlay for Consecutive Rule */}
+                    {isDateDisabled && (
+                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl z-10 flex items-center justify-center p-4">
+                        <div className="text-center">
+                          <div className="bg-[#F5EDE4] rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                            <Info className="h-6 w-6 text-[#C2884E]" />
+                          </div>
+                          <p className="text-xs font-medium text-[#6B5F53] max-w-[200px]">
+                            {language === 'zh' 
+                              ? '您必须选择连续的配送日期（周日+周二 或 周二+周日）' 
+                              : 'You must select consecutive delivery days (Sun+Tue or Tue+Sun)'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
                     {day.options.map((option) => (
                       <Card 
                         key={option.id}
-                        className="overflow-hidden transition-all duration-300 hover:shadow-md border-[#C2884E]/10 hover:border-[#C2884E]/30 bg-white rounded-lg hover:rounded-xl"
+                        className={cn(
+                          "overflow-hidden transition-all duration-300 border-[#C2884E]/10 bg-white rounded-lg",
+                          !isDateDisabled && "hover:shadow-md hover:border-[#C2884E]/30 hover:rounded-xl"
+                        )}
                       >
                         <CardContent className="p-0">
                           <div className="p-4">
@@ -869,7 +974,7 @@ export default function WeeklySubscription({
                                     size="icon" 
                                     className="h-7 w-7 bg-white/80"
                                     onClick={() => removeFromCart(day.id, option.id, day.weekOffset)}
-                                    disabled={getQuantityInCart(day.id, option.id, day.weekOffset) === 0}
+                                    disabled={getQuantityInCart(day.id, option.id, day.weekOffset) === 0 || isDateDisabled}
                                   >
                                     <Minus className="h-3 w-3" />
                                   </Button>
@@ -881,6 +986,7 @@ export default function WeeklySubscription({
                                     size="icon" 
                                     className="h-7 w-7 bg-white/80"
                                     onClick={() => addToCart(day.id, option.id, day.weekOffset)}
+                                    disabled={isDateDisabled}
                                   >
                                     <Plus className="h-3 w-3" />
                                   </Button>
@@ -891,7 +997,8 @@ export default function WeeklySubscription({
                     ))}
                   </div>
                 </motion.div>
-              ))}
+                );
+                })}
             </div>
             )}
           </div>
