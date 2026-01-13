@@ -88,6 +88,10 @@ export default function DailyDelivery() {
   const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
   const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
   
+  // State for menu update notification
+  const [menuUpdateAvailable, setMenuUpdateAvailable] = useState(false)
+  const [lastFetchedDates, setLastFetchedDates] = useState<string>('')
+  
   // Helper function to translate combo names
   const translateComboName = (name: string): string => {
     if (language === 'zh') return name
@@ -341,18 +345,16 @@ export default function DailyDelivery() {
     }
   };
 
-  // Load data from API
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
+  // Function to fetch menu data (extracted for reuse)
+  const fetchMenuData = async () => {
+    try {
+      // 🚀 OPTIMIZATION #1: Try the optimized single-request endpoint first
       try {
-        // 🚀 OPTIMIZATION #1: Try the optimized single-request endpoint first
-        try {
-          const optimizedResponse = await fetch('/api/days/active-with-combos');
-          const optimizedData = await optimizedResponse.json();
-          
-          if (optimizedData.success && optimizedData.data) {
-            const formattedDays: Record<string, DayData> = {};
+        const optimizedResponse = await fetch('/api/days/active-with-combos');
+        const optimizedData = await optimizedResponse.json();
+        
+        if (optimizedData.success && optimizedData.data) {
+          const formattedDays: Record<string, DayData> = {};
             
             // Process the combined data (much faster!)
             optimizedData.data.forEach((day: any) => {
@@ -372,6 +374,12 @@ export default function DailyDelivery() {
             });
             
             setDays(formattedDays);
+            
+            // Store the current dates for comparison (for update detection)
+            const currentDates = Object.keys(formattedDays)
+              .map(dayId => `${dayId}-${formattedDays[dayId].date}`)
+              .sort()
+              .join(',');
             
             // Find the first available day
             if (Object.keys(formattedDays).length > 0) {
@@ -439,6 +447,7 @@ export default function DailyDelivery() {
             
             // Success with optimized endpoint
             console.log('✅ Loaded menu using optimized endpoint');
+            return currentDates;
           }
         } catch (optimizedError) {
           console.log('⚠️ Optimized endpoint failed, falling back to parallel requests');
@@ -555,6 +564,8 @@ export default function DailyDelivery() {
               const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
               setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
             }
+            
+            return currentDates;
           }
         }
         
@@ -591,6 +602,53 @@ export default function DailyDelivery() {
           description: "Failed to load data. Please try again.",
           variant: "destructive"
         });
+      }
+      
+      return undefined;
+    } catch (error) {
+      console.error('Error in fetchMenuData:', error);
+      return undefined;
+    }
+  };
+  
+  // Load data from API on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const dates = await fetchMenuData();
+        if (dates) {
+          setLastFetchedDates(dates);
+        }
+        
+        // Load user data from localStorage first (for initial display)
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          
+          // Set initial voucher values from localStorage
+          setUserVouchers({
+            twoDish: user.twoDishVoucher || 0,
+            threeDish: user.threeDishVoucher || 0
+          });
+          
+          // Check user's region
+          if (user.address && user.address.province) {
+            setUserRegion(user.address.province);
+            
+            // If user's region is not in the supported list, show the dialog
+            if (!DAILY_DELIVERY_REGIONS.includes(user.address.province)) {
+              setShowRegionDialog(true);
+            }
+          }
+          
+          // If user has _id, fetch complete user data with vouchers from API
+          if (user && user._id) {
+            await fetchUserData(user._id);
+          }
+        }
+      } catch (error) {
+        console.error('Error in initial data load:', error);
       } finally {
         setIsLoading(false);
       }
@@ -598,6 +656,59 @@ export default function DailyDelivery() {
     
     fetchData();
   }, []);
+  
+  // Periodically check for menu updates (every 30 seconds)
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const dates = await fetchMenuData();
+        if (dates && lastFetchedDates && dates !== lastFetchedDates) {
+          console.log('🔔 Daily menu update detected!');
+          console.log('Old dates:', lastFetchedDates);
+          console.log('New dates:', dates);
+          setMenuUpdateAvailable(true);
+        }
+      } catch (error) {
+        console.error('Error checking for menu updates:', error);
+      }
+    };
+    
+    // Only start checking after initial load
+    if (lastFetchedDates) {
+      const interval = setInterval(checkForUpdates, 30000); // Check every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [lastFetchedDates]);
+  
+  // Function to refresh the menu
+  const handleRefreshMenu = async () => {
+    setMenuUpdateAvailable(false);
+    setIsLoading(true);
+    
+    try {
+      const dates = await fetchMenuData();
+      if (dates) {
+        setLastFetchedDates(dates);
+      }
+      
+      // Clear cart to prevent stale date issues
+      setCart([]);
+      
+      toast({
+        title: language === 'zh' ? '菜单已更新' : 'Menu Updated',
+        description: language === 'zh' ? '已加载最新的配送日期和菜单' : 'Latest delivery dates and menu loaded',
+      });
+    } catch (error) {
+      console.error("Error refreshing menu:", error);
+      toast({
+        title: language === 'zh' ? '错误' : 'Error',
+        description: language === 'zh' ? '无法刷新菜单' : 'Failed to refresh menu',
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Listen for the refreshUserProfile event to update voucher data
   useEffect(() => {
@@ -754,6 +865,44 @@ export default function DailyDelivery() {
         onClose={() => setShowRegionDialog(false)} 
         currentRegion={userRegion}
       />
+      
+      {/* Menu Update Notification Banner */}
+      {menuUpdateAvailable && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 border-2 border-[#C2884E] rounded-xl shadow-sm"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="flex-shrink-0 w-10 h-10 bg-[#C2884E] rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-[#6B5F53]">
+                  {language === 'zh' ? '菜单已更新！' : 'Menu Updated!'}
+                </p>
+                <p className="text-sm text-[#6B5F53]/80">
+                  {language === 'zh' 
+                    ? '请点击刷新以查看最新内容' 
+                    : 'Please press to refresh'}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleRefreshMenu}
+              className="bg-[#C2884E] hover:bg-[#B67A45] text-white flex items-center gap-2 w-full sm:w-auto"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+              {language === 'zh' ? '刷新菜单' : 'Refresh Menu'}
+            </Button>
+          </div>
+        </motion.div>
+      )}
       
       {/* Header section with responsive layout - Sticky on mobile */}
       <div className="sticky top-0 z-20 bg-white pb-4 -mx-6 px-6 md:relative md:mx-0 md:px-0 md:z-0">
