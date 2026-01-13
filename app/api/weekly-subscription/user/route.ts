@@ -110,40 +110,48 @@ export async function POST(request: Request) {
     
     // Determine which meal plan type to use
     const mealPlanType = data.mealPlanType || 'legacy';
-    let hasEnoughMeals = false;
-    let availableMeals = 0;
     
-    // Check if user has enough of the specified meal plan type
-    if (mealPlanType === '6aweek') {
-      hasEnoughMeals = user.weeklySIXmeals >= 1;
-      availableMeals = user.weeklySIXmeals;
-    } else if (mealPlanType === '8aweek') {
-      hasEnoughMeals = user.weeklyEIGHTmeals >= 1;
-      availableMeals = user.weeklyEIGHTmeals;
-    } else if (mealPlanType === '10aweek') {
-      hasEnoughMeals = user.weeklyTENmeals >= 1;
-      availableMeals = user.weeklyTENmeals;
-    } else if (mealPlanType === '12aweek') {
-      hasEnoughMeals = user.weeklyTWELVEmeals >= 1;
-      availableMeals = user.weeklyTWELVEmeals;
-    } else {
-      // Legacy fallback to credits
-      hasEnoughMeals = user.credits >= totalItems;
-      availableMeals = user.credits;
-    }
+    // CRITICAL FIX: Only validate voucher availability if we're going to deduct one
+    // For subsequent orders in a multi-date checkout, deductVoucher will be false
+    const shouldDeductVoucher = data.deductVoucher === true;
     
-    // Check if user has enough of the specified meal plan
-    if (!hasEnoughMeals) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Not enough meal plans', 
-          requiredCredits: mealPlanType === 'legacy' ? totalItems : 1, 
-          availableCredits: availableMeals,
-          mealPlanType
-        },
-        { status: 400 }
-      );
+    if (shouldDeductVoucher) {
+      // Only check if user has enough meals when we're actually going to deduct a voucher
+      let hasEnoughMeals = false;
+      let availableMeals = 0;
+      
+      // Check if user has enough of the specified meal plan type
+      if (mealPlanType === '6aweek') {
+        hasEnoughMeals = user.weeklySIXmeals >= 1;
+        availableMeals = user.weeklySIXmeals;
+      } else if (mealPlanType === '8aweek') {
+        hasEnoughMeals = user.weeklyEIGHTmeals >= 1;
+        availableMeals = user.weeklyEIGHTmeals;
+      } else if (mealPlanType === '10aweek') {
+        hasEnoughMeals = user.weeklyTENmeals >= 1;
+        availableMeals = user.weeklyTENmeals;
+      } else if (mealPlanType === '12aweek') {
+        hasEnoughMeals = user.weeklyTWELVEmeals >= 1;
+        availableMeals = user.weeklyTWELVEmeals;
+      } else {
+        // Legacy fallback to credits
+        hasEnoughMeals = user.credits >= totalItems;
+        availableMeals = user.credits;
+      }
+      
+      // Check if user has enough of the specified meal plan
+      if (!hasEnoughMeals) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Not enough meal plans', 
+            requiredCredits: mealPlanType === 'legacy' ? totalItems : 1, 
+            availableCredits: availableMeals,
+            mealPlanType
+          },
+          { status: 400 }
+        );
+      }
     }
     
     // Find existing active subscription for this user
@@ -267,9 +275,6 @@ export async function POST(request: Request) {
         area: data.area || ''
       });
     }
-    
-    // Check if we should deduct a voucher for this order
-    const shouldDeductVoucher = data.deductVoucher === true; // Only deduct if explicitly true
     
     console.log(`API received deductVoucher=${data.deductVoucher}, will deduct voucher: ${shouldDeductVoucher}`);
     
