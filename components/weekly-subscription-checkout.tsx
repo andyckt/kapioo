@@ -371,6 +371,9 @@ export function WeeklySubscriptionCheckout({
       console.log('🔍 DEBUG: Cart items:', cart);
       console.log('🔍 DEBUG: Using FRESH delivery days:', currentDeliveryDays.map((d: any) => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
       
+      // CRITICAL VALIDATION: Check if all cart items have matching delivery days in fresh data
+      const invalidItems: CartItem[] = [];
+      
       cart.forEach(item => {
         // CRITICAL FIX: Find the corresponding delivery day by BOTH dayId AND weekOffset
         // Use FRESH delivery days to prevent stale date issues
@@ -388,8 +391,20 @@ export function WeeklySubscriptionCheckout({
         } else {
           console.error(`🚨 ERROR: Could not find delivery day for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
           console.error(`🚨 This might mean the delivery schedule was updated while you were browsing.`);
+          invalidItems.push(item);
         }
       });
+      
+      // If any items couldn't be mapped to valid delivery days, show error and stop
+      if (invalidItems.length > 0) {
+        console.error('🚨 CHECKOUT BLOCKED: Some cart items reference outdated delivery schedule');
+        console.error('Invalid items:', invalidItems);
+        throw new Error(
+          language === 'zh'
+            ? '配送日期已更新，请刷新页面重新选择餐点'
+            : 'Delivery schedule has been updated. Please refresh the page and re-select your meals.'
+        );
+      }
       
       console.log('🔍 DEBUG: Final cartByDate grouping:', cartByDate);
       console.log('Cart grouped by date:', Object.keys(cartByDate).map(date => `${date}: ${cartByDate[date].length} items`));
