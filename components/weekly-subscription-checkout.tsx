@@ -631,14 +631,17 @@ export function WeeklySubscriptionCheckout({
     return optionsMap
   }, [deliveryDays])
   
-  // Group cart items by delivery day for display
+  // CRITICAL FIX: Group cart items by delivery day + weekOffset for display
+  // Use a composite key: "dayId-weekOffset" to distinguish same day across different weeks
   const cartByDay: Record<string, CartItem[]> = {}
   
   cart.forEach(item => {
-    if (!cartByDay[item.dayId]) {
-      cartByDay[item.dayId] = []
+    // Create composite key to uniquely identify day across weeks
+    const compositeKey = `${item.dayId}-${item.weekOffset ?? 0}`;
+    if (!cartByDay[compositeKey]) {
+      cartByDay[compositeKey] = []
     }
-    cartByDay[item.dayId].push(item)
+    cartByDay[compositeKey].push(item)
   })
 
   return (
@@ -673,39 +676,45 @@ export function WeeklySubscriptionCheckout({
             <Card className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-[#C2884E]/20">
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  {Object.entries(cartByDay).map(([dayId, items]) => (
-                    <div key={dayId} className="pb-3 last:pb-0">
+                  {Object.entries(cartByDay).map(([compositeKey, items]) => {
+                    // CRITICAL FIX: Extract dayId and weekOffset from composite key (format: "dayId-weekOffset")
+                    const [dayId, weekOffsetStr] = compositeKey.split('-');
+                    const weekOffset = parseInt(weekOffsetStr, 10);
+                    
+                    return (
+                    <div key={compositeKey} className="pb-3 last:pb-0">
                       <div className="font-medium capitalize mb-2 flex items-center">
                         <span className="text-[#6B5F53]">
                           {dayId === 'sunday' ? (language === 'zh' ? '周日' : 'Sunday') : 
                            dayId === 'tuesday' ? (language === 'zh' ? '周二' : 'Tuesday') : dayId}
                         </span>
                         {(() => {
-                          // Find the date for this day
-                          for (const day of deliveryDays) {
-                            if (day.id === dayId && day.date) {
-                              return (
-                                <span className="text-[#6B5F53]/60 text-sm ml-2">
-                                  ({day.date})
-                                </span>
-                              );
-                            }
+                          // Find the date using the extracted weekOffset
+                          const matchingDay = deliveryDays.find(
+                            day => day.id === dayId && day.weekOffset === weekOffset
+                          );
+                          if (matchingDay && matchingDay.date) {
+                            return (
+                              <span className="text-[#6B5F53]/60 text-sm ml-2">
+                                ({matchingDay.date})
+                              </span>
+                            );
                           }
                           return null;
                         })()}
                       </div>
                       <div className="space-y-2">
                         {items.map((item, index) => {
-                          // Find the option in all delivery days
+                          // CRITICAL FIX: Find the option in matching delivery day by BOTH dayId AND weekOffset
                           let optionName = item.optionId;
-                          for (const day of deliveryDays) {
-                            if (day.id === item.dayId) {
-                              const option = day.options.find(opt => opt.id === item.optionId);
-                              if (option) {
-                                // Use English name if available and language is English
-                                optionName = (language === 'en' && option.nameEn) ? option.nameEn : option.name;
-                                break;
-                              }
+                          const matchingDay = deliveryDays.find(
+                            day => day.id === item.dayId && day.weekOffset === item.weekOffset
+                          );
+                          if (matchingDay) {
+                            const option = matchingDay.options.find(opt => opt.id === item.optionId);
+                            if (option) {
+                              // Use English name if available and language is English
+                              optionName = (language === 'en' && option.nameEn) ? option.nameEn : option.name;
                             }
                           }
                           
@@ -720,11 +729,12 @@ export function WeeklySubscriptionCheckout({
                         })}
                       </div>
                       {Object.keys(cartByDay).length > 1 && 
-                       Object.keys(cartByDay).indexOf(dayId) < Object.keys(cartByDay).length - 1 && (
+                       Object.keys(cartByDay).indexOf(compositeKey) < Object.keys(cartByDay).length - 1 && (
                         <div className="border-b border-[#C2884E]/20 mt-3"></div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                   
                   <div className="border-t border-[#C2884E]/20 pt-2 mt-2 flex justify-between font-medium">
                     <span>{language === 'zh' ? '总计' : 'Total'}</span>
