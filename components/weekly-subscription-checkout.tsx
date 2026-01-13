@@ -327,18 +327,20 @@ export function WeeklySubscriptionCheckout({
       console.log('🔍 DEBUG: Delivery days available:', deliveryDays.map(d => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
       
       cart.forEach(item => {
-        // Find the corresponding delivery day to get the date
-        const deliveryDay = deliveryDays.find(day => day.id === item.dayId);
-        console.log(`🔍 DEBUG: Processing cart item - dayId: ${item.dayId}, optionId: ${item.optionId}, quantity: ${item.quantity}`);
+        // CRITICAL FIX: Find the corresponding delivery day by BOTH dayId AND weekOffset
+        const deliveryDay = deliveryDays.find(day => day.id === item.dayId && day.weekOffset === item.weekOffset);
+        console.log(`🔍 DEBUG: Processing cart item - dayId: ${item.dayId}, weekOffset: ${item.weekOffset}, optionId: ${item.optionId}, quantity: ${item.quantity}`);
         console.log(`🔍 DEBUG: Found delivery day:`, deliveryDay ? { id: deliveryDay.id, date: deliveryDay.date, weekOffset: deliveryDay.weekOffset } : 'NOT FOUND');
         
         if (deliveryDay) {
           const date = deliveryDay.date;
-          console.log(`🔍 DEBUG: Using date: ${date} for dayId: ${item.dayId}`);
+          console.log(`🔍 DEBUG: Using date: ${date} for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
           if (!cartByDate[date]) {
             cartByDate[date] = [];
           }
           cartByDate[date].push(item);
+        } else {
+          console.error(`🚨 ERROR: Could not find delivery day for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
         }
       });
       

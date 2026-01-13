@@ -264,11 +264,14 @@ export default function WeeklySubscription({
   }, [language, toast])
   
   // Add item to cart
-  const addToCart = (dayId: string, optionId: string) => {
+  const addToCart = (dayId: string, optionId: string, weekOffset?: number) => {
     // Find the day to check availability
-    const day = deliveryDays.find(d => d.id === dayId);
+    // CRITICAL FIX: Match by BOTH dayId AND weekOffset to handle multiple weeks
+    const day = weekOffset !== undefined 
+      ? deliveryDays.find(d => d.id === dayId && d.weekOffset === weekOffset)
+      : deliveryDays.find(d => d.id === dayId);
     
-    console.log(`🔍 FRONTEND DEBUG: Adding to cart - dayId: ${dayId}, optionId: ${optionId}`);
+    console.log(`🔍 FRONTEND DEBUG: Adding to cart - dayId: ${dayId}, weekOffset: ${weekOffset}, optionId: ${optionId}`);
     console.log(`🔍 FRONTEND DEBUG: Found day:`, day ? { id: day.id, date: day.date, weekOffset: day.weekOffset } : 'NOT FOUND');
     
     if (day) {
@@ -316,9 +319,12 @@ export default function WeeklySubscription({
   }
   
   // Remove item from cart
-  const removeFromCart = (dayId: string, optionId: string) => {
+  const removeFromCart = (dayId: string, optionId: string, weekOffset?: number) => {
     // Find the day to get weekOffset
-    const day = deliveryDays.find(d => d.id === dayId);
+    // CRITICAL FIX: Match by BOTH dayId AND weekOffset to handle multiple weeks
+    const day = weekOffset !== undefined
+      ? deliveryDays.find(d => d.id === dayId && d.weekOffset === weekOffset)
+      : deliveryDays.find(d => d.id === dayId);
     
     const existingItemIndex = cart.findIndex(
       item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset
@@ -338,9 +344,12 @@ export default function WeeklySubscription({
   }
   
   // Get quantity of specific item in cart
-  const getQuantityInCart = (dayId: string, optionId: string): number => {
+  const getQuantityInCart = (dayId: string, optionId: string, weekOffset?: number): number => {
     // Find the day to get weekOffset
-    const day = deliveryDays.find(d => d.id === dayId);
+    // CRITICAL FIX: Match by BOTH dayId AND weekOffset to handle multiple weeks
+    const day = weekOffset !== undefined
+      ? deliveryDays.find(d => d.id === dayId && d.weekOffset === weekOffset)
+      : deliveryDays.find(d => d.id === dayId);
     const item = cart.find(item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset)
     return item ? item.quantity : 0
   }
@@ -741,19 +750,19 @@ export default function WeeklySubscription({
                                     variant="outline" 
                                     size="icon" 
                                     className="h-7 w-7 bg-white/80"
-                                    onClick={() => removeFromCart(day.id, option.id)}
-                                    disabled={getQuantityInCart(day.id, option.id) === 0}
+                                    onClick={() => removeFromCart(day.id, option.id, day.weekOffset)}
+                                    disabled={getQuantityInCart(day.id, option.id, day.weekOffset) === 0}
                                   >
                                     <Minus className="h-3 w-3" />
                                   </Button>
                                   <span className="w-5 text-center text-sm">
-                                    {getQuantityInCart(day.id, option.id)}
+                                    {getQuantityInCart(day.id, option.id, day.weekOffset)}
                                   </span>
                                   <Button 
                                     variant="outline" 
                                     size="icon" 
                                     className="h-7 w-7 bg-white/80"
-                                    onClick={() => addToCart(day.id, option.id)}
+                                    onClick={() => addToCart(day.id, option.id, day.weekOffset)}
                                   >
                                     <Plus className="h-3 w-3" />
                                   </Button>
