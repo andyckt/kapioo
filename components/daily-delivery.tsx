@@ -356,257 +356,260 @@ export default function DailyDelivery() {
         if (optimizedData.success && optimizedData.data) {
           const formattedDays: Record<string, DayData> = {};
             
-            // Process the combined data (much faster!)
-            optimizedData.data.forEach((day: any) => {
-              formattedDays[day.dayId] = {
-                date: day.date,
-                displayName: day.displayName,
-                week: day.week,
-                combos: day.combos.map((combo: any) => ({
+          // Process the combined data (much faster!)
+          optimizedData.data.forEach((day: any) => {
+            formattedDays[day.dayId] = {
+              date: day.date,
+              displayName: day.displayName,
+              week: day.week,
+              combos: day.combos.map((combo: any) => ({
+                id: combo.comboId,
+                name: combo.name,
+                calories: combo.calories,
+                tags: combo.tags,
+                typeA: combo.typeA,
+                typeB: combo.typeB
+              }))
+            };
+          });
+          
+          setDays(formattedDays);
+          
+          // Store the current dates for comparison (for update detection)
+          const currentDates = Object.keys(formattedDays)
+            .map(dayId => `${dayId}-${formattedDays[dayId].date}`)
+            .sort()
+            .join(',');
+          
+          // Find the first available day
+          if (Object.keys(formattedDays).length > 0) {
+            // Use the same availability logic
+            const checkDayAvailability = (day: string): boolean => {
+              try {
+                const torontoOptions = { timeZone: 'America/Toronto' };
+                const now = new Date();
+                const torontoDateString = now.toLocaleString('en-US', torontoOptions);
+                const torontoDate = new Date(torontoDateString);
+                
+                const dayData = formattedDays[day];
+                if (!dayData || !dayData.date) return false;
+                
+                const mealDate = dayData.date;
+                
+                try {
+                  const parts = mealDate.split(' ');
+                  
+                  if (parts.length === 2) {
+                    const monthStr = parts[0];
+                    const dayStr = parts[1];
+                    
+                    const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const monthIndex = shortMonths.findIndex(m => 
+                      monthStr.toLowerCase() === m.toLowerCase());
+                    
+                    const dayNum = parseInt(dayStr);
+                    
+                    if (monthIndex !== -1 && !isNaN(dayNum)) {
+                      const mealSpecificDate = new Date(
+                        torontoDate.getFullYear(), 
+                        monthIndex, 
+                        dayNum
+                      );
+                      
+                      const todayYMD = new Date(
+                        torontoDate.getFullYear(), 
+                        torontoDate.getMonth(), 
+                        torontoDate.getDate()
+                      );
+                      
+                      if (mealSpecificDate < todayYMD || mealSpecificDate.getTime() === todayYMD.getTime()) {
+                        return false;
+                      }
+                      
+                      return true;
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error checking day availability:', error);
+                }
+                
+                return false;
+              } catch (error) {
+                console.error('Error in checkDayAvailability:', error);
+                return false;
+              }
+            };
+            
+            const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
+            setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
+          }
+          
+          // Success with optimized endpoint
+          console.log('✅ Loaded menu using optimized endpoint');
+          return currentDates;
+        }
+      } catch (optimizedError) {
+        console.log('⚠️ Optimized endpoint failed, falling back to parallel requests');
+        
+        // Fallback to parallel requests if optimized endpoint fails
+        const daysResponse = await fetch('/api/days?isActive=true');
+        const daysData = await daysResponse.json();
+        
+        if (daysData.success) {
+          const formattedDays: Record<string, DayData> = {};
+          
+          // 🚀 OPTIMIZATION #2: Fetch all combos in parallel
+          const comboPromises = daysData.data.map(async (day: any) => {
+            try {
+              const combosResponse = await fetch(`/api/days/${day.dayId}/combos`);
+              const combosData = await combosResponse.json();
+              
+              if (combosData.success) {
+                const formattedCombos = combosData.data.map((combo: any) => ({
                   id: combo.comboId,
                   name: combo.name,
                   calories: combo.calories,
                   tags: combo.tags,
                   typeA: combo.typeA,
                   typeB: combo.typeB
-                }))
-              };
-            });
-            
-            setDays(formattedDays);
-            
-            // Store the current dates for comparison (for update detection)
-            const currentDates = Object.keys(formattedDays)
-              .map(dayId => `${dayId}-${formattedDays[dayId].date}`)
-              .sort()
-              .join(',');
-            
-            // Find the first available day
-            if (Object.keys(formattedDays).length > 0) {
-              // Use the same availability logic
-              const checkDayAvailability = (day: string): boolean => {
-                try {
-                  const torontoOptions = { timeZone: 'America/Toronto' };
-                  const now = new Date();
-                  const torontoDateString = now.toLocaleString('en-US', torontoOptions);
-                  const torontoDate = new Date(torontoDateString);
-                  
-                  const dayData = formattedDays[day];
-                  if (!dayData || !dayData.date) return false;
-                  
-                  const mealDate = dayData.date;
-                  
-                  try {
-                    const parts = mealDate.split(' ');
-                    
-                    if (parts.length === 2) {
-                      const monthStr = parts[0];
-                      const dayStr = parts[1];
-                      
-                      const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                      const monthIndex = shortMonths.findIndex(m => 
-                        monthStr.toLowerCase() === m.toLowerCase());
-                      
-                      const dayNum = parseInt(dayStr);
-                      
-                      if (monthIndex !== -1 && !isNaN(dayNum)) {
-                        const mealSpecificDate = new Date(
-                          torontoDate.getFullYear(), 
-                          monthIndex, 
-                          dayNum
-                        );
-                        
-                        const todayYMD = new Date(
-                          torontoDate.getFullYear(), 
-                          torontoDate.getMonth(), 
-                          torontoDate.getDate()
-                        );
-                        
-                        if (mealSpecificDate < todayYMD || mealSpecificDate.getTime() === todayYMD.getTime()) {
-                          return false;
-                        }
-                        
-                        return true;
-                      }
-                    }
-                  } catch (error) {
-                    console.error('Error checking day availability:', error);
-                  }
-                  
-                  return false;
-                } catch (error) {
-                  console.error('Error in checkDayAvailability:', error);
-                  return false;
-                }
-              };
-              
-              const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
-              setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
-            }
-            
-            // Success with optimized endpoint
-            console.log('✅ Loaded menu using optimized endpoint');
-            return currentDates;
-          }
-        } catch (optimizedError) {
-          console.log('⚠️ Optimized endpoint failed, falling back to parallel requests');
-          
-          // Fallback to parallel requests if optimized endpoint fails
-          const daysResponse = await fetch('/api/days?isActive=true');
-          const daysData = await daysResponse.json();
-          
-          if (daysData.success) {
-            const formattedDays: Record<string, DayData> = {};
-            
-            // 🚀 OPTIMIZATION #2: Fetch all combos in parallel
-            const comboPromises = daysData.data.map(async (day: any) => {
-              try {
-                const combosResponse = await fetch(`/api/days/${day.dayId}/combos`);
-                const combosData = await combosResponse.json();
+                }));
                 
-                if (combosData.success) {
-                  const formattedCombos = combosData.data.map((combo: any) => ({
-                    id: combo.comboId,
-                    name: combo.name,
-                    calories: combo.calories,
-                    tags: combo.tags,
-                    typeA: combo.typeA,
-                    typeB: combo.typeB
-                  }));
-                  
-                  return {
-                    dayId: day.dayId,
-                    dayData: {
-                      date: day.date,
-                      displayName: day.displayName,
-                      week: day.week,
-                      combos: formattedCombos
-                    }
-                  };
-                }
-                return null;
-              } catch (error) {
-                console.error(`Error fetching combos for ${day.dayId}:`, error);
-                return null;
-              }
-            });
-            
-            const comboResults = await Promise.all(comboPromises);
-            
-            comboResults.forEach((result) => {
-              if (result) {
-                formattedDays[result.dayId] = result.dayData;
-              }
-            });
-            
-            setDays(formattedDays);
-            
-            // Find the first available day for fallback path
-            if (Object.keys(formattedDays).length > 0) {
-              const checkDayAvailability = (day: string): boolean => {
-                try {
-                  const torontoOptions = { timeZone: 'America/Toronto' };
-                  const now = new Date();
-                  const torontoDateString = now.toLocaleString('en-US', torontoOptions);
-                  const torontoDate = new Date(torontoDateString);
-                  
-                  const dayData = formattedDays[day];
-                  if (!dayData || !dayData.date) return false;
-                  
-                  const mealDate = dayData.date;
-                  
-                  try {
-                    const parts = mealDate.split(' ');
-                    
-                    if (parts.length === 2) {
-                      const monthStr = parts[0];
-                      const dayStr = parts[1];
-                      
-                      const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                      const monthIndex = shortMonths.findIndex(m => 
-                        monthStr.toLowerCase() === m.toLowerCase());
-                      
-                      const dayNum = parseInt(dayStr);
-                      
-                      if (monthIndex !== -1 && !isNaN(dayNum)) {
-                        const mealSpecificDate = new Date(
-                          torontoDate.getFullYear(), 
-                          monthIndex, 
-                          dayNum
-                        );
-                        
-                        const todayYMD = new Date(
-                          torontoDate.getFullYear(), 
-                          torontoDate.getMonth(), 
-                          torontoDate.getDate()
-                        );
-                        
-                        if (mealSpecificDate < todayYMD || mealSpecificDate.getTime() === todayYMD.getTime()) {
-                          return false;
-                        }
-                        
-                        return true;
-                      }
-                    }
-                  } catch (error) {
-                    console.error('Error checking day availability:', error);
+                return {
+                  dayId: day.dayId,
+                  dayData: {
+                    date: day.date,
+                    displayName: day.displayName,
+                    week: day.week,
+                    combos: formattedCombos
                   }
-                  
-                  return false;
-                } catch (error) {
-                  console.error('Error in checkDayAvailability:', error);
-                  return false;
-                }
-              };
-              
-              const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
-              setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
+                };
+              }
+              return null;
+            } catch (error) {
+              console.error(`Error fetching combos for ${day.dayId}:`, error);
+              return null;
             }
+          });
+          
+          const comboResults = await Promise.all(comboPromises);
+          
+          comboResults.forEach((result) => {
+            if (result) {
+              formattedDays[result.dayId] = result.dayData;
+            }
+          });
+          
+          setDays(formattedDays);
+          
+          // Store the current dates for comparison (for update detection)
+          const currentDates = Object.keys(formattedDays)
+            .map(dayId => `${dayId}-${formattedDays[dayId].date}`)
+            .sort()
+            .join(',');
+          
+          // Find the first available day for fallback path
+          if (Object.keys(formattedDays).length > 0) {
+            const checkDayAvailability = (day: string): boolean => {
+              try {
+                const torontoOptions = { timeZone: 'America/Toronto' };
+                const now = new Date();
+                const torontoDateString = now.toLocaleString('en-US', torontoOptions);
+                const torontoDate = new Date(torontoDateString);
+                
+                const dayData = formattedDays[day];
+                if (!dayData || !dayData.date) return false;
+                
+                const mealDate = dayData.date;
+                
+                try {
+                  const parts = mealDate.split(' ');
+                  
+                  if (parts.length === 2) {
+                    const monthStr = parts[0];
+                    const dayStr = parts[1];
+                    
+                    const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const monthIndex = shortMonths.findIndex(m => 
+                      monthStr.toLowerCase() === m.toLowerCase());
+                    
+                    const dayNum = parseInt(dayStr);
+                    
+                    if (monthIndex !== -1 && !isNaN(dayNum)) {
+                      const mealSpecificDate = new Date(
+                        torontoDate.getFullYear(), 
+                        monthIndex, 
+                        dayNum
+                      );
+                      
+                      const todayYMD = new Date(
+                        torontoDate.getFullYear(), 
+                        torontoDate.getMonth(), 
+                        torontoDate.getDate()
+                      );
+                      
+                      if (mealSpecificDate < todayYMD || mealSpecificDate.getTime() === todayYMD.getTime()) {
+                        return false;
+                      }
+                      
+                      return true;
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error checking day availability:', error);
+                }
+                
+                return false;
+              } catch (error) {
+                console.error('Error in checkDayAvailability:', error);
+                return false;
+              }
+            };
             
-            return currentDates;
+            const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
+            setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
+          }
+          
+          return currentDates;
+        }
+      }
+      
+      // Load user data from localStorage first (for initial display)
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        
+        // Set initial voucher values from localStorage
+        setUserVouchers({
+          twoDish: user.twoDishVoucher || 0,
+          threeDish: user.threeDishVoucher || 0
+        });
+        
+        // Check user's region
+        if (user.address && user.address.province) {
+          setUserRegion(user.address.province);
+          
+          // If user's region is not in the supported list, show the dialog
+          if (!DAILY_DELIVERY_REGIONS.includes(user.address.province)) {
+            setShowRegionDialog(true);
           }
         }
         
-        // Load user data from localStorage first (for initial display)
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          
-          // Set initial voucher values from localStorage
-          setUserVouchers({
-            twoDish: user.twoDishVoucher || 0,
-            threeDish: user.threeDishVoucher || 0
-          });
-          
-          // Check user's region
-          if (user.address && user.address.province) {
-            setUserRegion(user.address.province);
-            
-            // If user's region is not in the supported list, show the dialog
-            if (!DAILY_DELIVERY_REGIONS.includes(user.address.province)) {
-              setShowRegionDialog(true);
-            }
-          }
-          
-          // If user has _id, fetch complete user data with vouchers from API
-          if (user && user._id) {
-            await fetchUserData(user._id);
-          }
+        // If user has _id, fetch complete user data with vouchers from API
+        if (user && user._id) {
+          await fetchUserData(user._id);
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load data. Please try again.",
-          variant: "destructive"
-        });
       }
       
       return undefined;
     } catch (error) {
       console.error('Error in fetchMenuData:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive"
+      });
       return undefined;
     }
   };
