@@ -1046,15 +1046,14 @@ export default function WeeklyMealPage() {
                               </div>
                               
                               <div className="space-y-2 pt-3 border-t border-[#C2884E]/10">
-                                <div className="flex items-start gap-2 text-sm">
-                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                                  <span className="text-[#6B5F53]">
-                                    {plan.duration === 1 
-                                      ? (language === 'zh' ? '可转让' : 'Transferable')
-                                      : (language === 'zh' ? '非连续使用 | 用1周扣1周' : 'Use Week-by-Week | Pause & Resume Anytime')
-                                    }
-                                  </span>
-                                </div>
+                                {plan.duration !== 1 && (
+                                  <div className="flex items-start gap-2 text-sm">
+                                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                                    <span className="text-[#6B5F53]">
+                                      {language === 'zh' ? '非连续使用 | 用1周扣1周' : 'Use Week-by-Week | Pause & Resume Anytime'}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="flex items-start gap-2 text-sm">
                                   <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
                                   <span className="text-[#6B5F53]">
@@ -1083,6 +1082,7 @@ export default function WeeklyMealPage() {
                         {language === 'zh' ? '配送费/周 (2次配送)' : 'Delivery fee/week (2 deliveries)'}: 
                       </span>
                       <span className="font-medium text-[#6B5F53] ml-2">$11.99</span>
+                      <span className="text-[#8A7968] ml-1">(Hamilton/Burlington: $15.99)</span>
                     </div>
                   </div>
                 )}
