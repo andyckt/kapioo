@@ -1049,7 +1049,10 @@ export default function WeeklyMealPage() {
                                 <div className="flex items-start gap-2 text-sm">
                                   <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
                                   <span className="text-[#6B5F53]">
-                                    {language === 'zh' ? '可转让' : 'Transferable'}
+                                    {plan.duration === 1 
+                                      ? (language === 'zh' ? '可转让' : 'Transferable')
+                                      : (language === 'zh' ? '非连续使用 | 用1周扣1周' : 'Use Week-by-Week | Pause & Resume Anytime')
+                                    }
                                   </span>
                                 </div>
                                 <div className="flex items-start gap-2 text-sm">
