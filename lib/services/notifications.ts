@@ -501,7 +501,8 @@ export const sendDailyOrderStatusUpdateNotification = async (
   status: string,
   items: any[],
   previousStatus: string = 'pending',
-  language: 'zh' | 'en' = 'zh'
+  language: 'zh' | 'en' = 'zh',
+  orderCreatedAt?: Date
 ): Promise<void> => {
   try {
     // Get translations for the specified language
@@ -573,7 +574,7 @@ export const sendDailyOrderStatusUpdateNotification = async (
             </tr>
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.common.orderDate}:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString(locale)}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${orderCreatedAt ? new Date(orderCreatedAt).toLocaleDateString(locale) : new Date().toLocaleDateString(locale)}</td>
             </tr>
           </table>
         </div>
