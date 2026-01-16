@@ -837,11 +837,11 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
               {filteredPlans.map((plan) => (
                 <Card 
                   key={plan.id} 
-                  className={`overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl ${
+                  className={`overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl flex flex-col ${
                     plan.isPopular || plan.isRecommended ? 'border-[#C2884E]' : 'border-[#E5D6BC]'
                   }`}
                 >
-                  <div className="relative">
+                  <div className="relative flex flex-col flex-1">
                     {(plan.isPopular || plan.isRecommended) && (
                       <div className="absolute top-0 right-0 left-0 bg-[#C2884E] text-white text-center py-1.5 text-sm font-medium">
                         {language === 'zh' ? plan.tagZh : plan.tag}
@@ -854,7 +854,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       </CardTitle>
                     </CardHeader>
                     
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 flex-1">
                       <div className="text-center">
                         <div className="text-3xl font-bold text-[#C2884E]">
                           ${plan.totalPrice}
