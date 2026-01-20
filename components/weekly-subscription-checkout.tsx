@@ -235,19 +235,39 @@ export function WeeklySubscriptionCheckout({
   const handleCheckout = async () => {
     console.log("handleCheckout called")
     
-    // Validate delivery information
-    if (!formData.name || !formData.phone || !formData.area) {
-      toast({
-        title: language === 'zh' ? '出错了' : 'Error Occurred',
-        description: language === 'zh' ? '请填写所有必填的配送信息' : 'Please fill in all required delivery information',
-        variant: "destructive"
-      })
-      return
+    // CRITICAL FIX: Prevent duplicate orders by checking and setting loading state IMMEDIATELY
+    if (isLoading) {
+      console.log("⚠️ Order already in progress, ignoring duplicate click");
+      return;
     }
     
-    // Directly proceed to submit without showing address dialog
-    // Users can already see and edit their address in the form above
-    await handleSubmit()
+    // Set loading state BEFORE any validation or async operations
+    setIsLoading(true);
+    
+    try {
+      // Validate delivery information
+      if (!formData.name || !formData.phone || !formData.area) {
+        toast({
+          title: language === 'zh' ? '出错了' : 'Error Occurred',
+          description: language === 'zh' ? '请填写所有必填的配送信息' : 'Please fill in all required delivery information',
+          variant: "destructive"
+        })
+        setIsLoading(false);
+        return
+      }
+      
+      // Directly proceed to submit without showing address dialog
+      // Users can already see and edit their address in the form above
+      await handleSubmit()
+    } catch (error) {
+      console.error("Error in handleCheckout:", error);
+      toast({
+        title: language === 'zh' ? '订单失败' : 'Order Failed',
+        description: language === 'zh' ? '处理您的订单时出错' : 'Error processing your order',
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
   }
   
   // The actual submission function that will be called after address confirmation
@@ -275,11 +295,11 @@ export function WeeklySubscriptionCheckout({
         description: language === 'zh' ? '请填写完整的地址信息' : 'Please provide a complete address',
         variant: "destructive"
       })
+      setIsLoading(false);
       return
     }
     
-    // Show loading state
-    setIsLoading(true)
+    // Note: isLoading is now managed by handleCheckout, not here
     
     try {
       // Parse user data from localStorage
@@ -290,7 +310,7 @@ export function WeeklySubscriptionCheckout({
           description: language === 'zh' ? '您需要登录才能完成订阅' : 'You need to log in to complete your subscription',
           variant: "destructive"
         })
-        setIsLoading(false)
+        setIsLoading(false);
         return
       }
       
@@ -626,8 +646,8 @@ export function WeeklySubscriptionCheckout({
         description: language === 'zh' ? '处理您的订单时出错' : 'Error processing your order',
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
+      throw error; // Re-throw to be caught by handleCheckout
     }
   }
 
