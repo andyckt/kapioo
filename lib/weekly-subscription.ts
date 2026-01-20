@@ -287,9 +287,18 @@ export async function submitUserSubscription(data: {
     const result = await response.json();
     
     if (result.success) {
+      // Check if this is a duplicate order response
+      if (result.data?.isDuplicate) {
+        console.log(`ℹ️ Duplicate order detected: ${result.data.duplicateOf} (${result.data.timeSinceOriginal}s ago)`);
+        console.log('   Returning existing order instead of creating new one');
+      }
+      
       return {
         ...result.data,
-        remainingCredits: result.remainingCredits
+        remainingCredits: result.remainingCredits,
+        voucherDeducted: result.voucherDeducted,
+        updatedUser: result.updatedUser,
+        usedMealPlanType: result.usedMealPlanType
       };
     }
     

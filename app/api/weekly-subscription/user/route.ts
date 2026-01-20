@@ -219,6 +219,80 @@ export async function POST(request: Request) {
       );
     }
     
+    // ✅ IDEMPOTENCY CHECK: Prevent duplicate orders within 60 seconds
+    // This protects against accidental double-clicks or network retries
+    const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
+    
+    // Extract dayIds and weekOffsets from the request for comparison
+    const requestDayKeys = data.items.map((item: any) => 
+      `${item.dayId}-${item.weekOffset ?? 0}`
+    ).sort().join(',');
+    
+    console.log('🔍 IDEMPOTENCY CHECK: Looking for recent orders...');
+    console.log('   Request day keys:', requestDayKeys);
+    
+    // Find recent orders from this user
+    const recentOrders = await WeeklyOrder.find({
+      userId: user._id,
+      createdAt: { $gte: sixtySecondsAgo }
+    }).sort({ createdAt: -1 }).limit(5).lean();
+    
+    if (recentOrders.length > 0) {
+      console.log(`   Found ${recentOrders.length} recent order(s), checking for duplicates...`);
+      
+      // Check each recent order for exact match
+      for (const recentOrder of recentOrders) {
+        // Create comparable keys from the recent order's items
+        const recentDayKeys = recentOrder.items.map((item: any) => 
+          `${item.dayId}-${item.date}`
+        ).sort().join(',');
+        
+        // Compare items: check if dayIds, quantities, and optionIds match
+        const itemsMatch = data.items.length === recentOrder.items.length &&
+          data.items.every((dataItem: any) => {
+            return recentOrder.items.some((orderItem: any) => 
+              orderItem.dayId === dataItem.dayId &&
+              orderItem.quantity === dataItem.quantity &&
+              orderItem.optionId === dataItem.optionId
+            );
+          });
+        
+        if (itemsMatch) {
+          const timeSinceOrder = Math.round((Date.now() - new Date(recentOrder.createdAt).getTime()) / 1000);
+          console.log(`⚠️ DUPLICATE ORDER DETECTED!`);
+          console.log(`   Recent order: ${recentOrder.orderId}`);
+          console.log(`   Created: ${timeSinceOrder} seconds ago`);
+          console.log(`   Returning existing order instead of creating duplicate`);
+          
+          // Return the existing order instead of creating a new one
+          return NextResponse.json({
+            success: true,
+            data: {
+              orderId: recentOrder.orderId,
+              subscription: null,
+              isDuplicate: true,
+              duplicateOf: recentOrder.orderId,
+              message: 'Order already exists',
+              timeSinceOriginal: timeSinceOrder
+            },
+            remainingCredits: user.credits,
+            voucherDeducted: false,
+            updatedUser: {
+              credits: user.credits,
+              weeklySIXmeals: user.weeklySIXmeals,
+              weeklyEIGHTmeals: user.weeklyEIGHTmeals,
+              weeklyTENmeals: user.weeklyTENmeals,
+              weeklyTWELVEmeals: user.weeklyTWELVEmeals
+            }
+          });
+        }
+      }
+      
+      console.log('   No duplicate found, proceeding with order creation');
+    } else {
+      console.log('   No recent orders found, proceeding with order creation');
+    }
+    
     // NEW VALIDATION: Consecutive Dates Rule
     // Only validate on FIRST order (when deductVoucher = true)
     // This prevents validation from running on subsequent orders in multi-date checkout
