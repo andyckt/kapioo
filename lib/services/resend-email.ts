@@ -27,7 +27,7 @@ export const sendEmailWithResend = async (options: EmailOptions) => {
     
     // Send email using Resend
     const result = await resend.emails.send({
-      from: options.from || 'Kapioo <kapioomeal@gmail.com>', // Using Gmail address for familiarity
+      from: options.from || 'Kapioo <onboarding@resend.dev>', // Using Resend's verified test domain
       to: options.to,
       subject: options.subject,
       html: options.html,
