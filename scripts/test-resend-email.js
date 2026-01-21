@@ -29,7 +29,7 @@ const testEmail = async (recipientEmail) => {
     const resend = new Resend(process.env.RESEND_API_KEY);
     
     const result = await resend.emails.send({
-      from: 'Kapioo Test <onboarding@resend.dev>', // Use Resend's test domain
+      from: 'Kapioo <contact@kapioo.com>', // Use your verified domain
       to: recipientEmail,
       subject: '✅ Resend Integration Test - Kapioo',
       html: `
