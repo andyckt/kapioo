@@ -7,7 +7,7 @@ export interface EmailOptions {
   from?: string;
 }
 
-// Send an email
+// Send an email using Resend (professional transactional email service)
 export const sendEmail = async (options: EmailOptions) => {
   try {
     console.log('Sending email to:', options.to);
@@ -35,11 +35,11 @@ export const sendEmail = async (options: EmailOptions) => {
       console.log('Email sent successfully via API route');
       return result;
     } else {
-      console.log('Sending email from server environment');
-      // We're on the server, use the server-side email service
-      const { sendEmailFromServer } = await import('./server-email');
-      const result = await sendEmailFromServer(options);
-      console.log('Email sent successfully from server');
+      console.log('Sending email from server environment using Resend');
+      // We're on the server, use Resend for better deliverability
+      const { sendEmailWithResend } = await import('./resend-email');
+      const result = await sendEmailWithResend(options);
+      console.log('Email sent successfully via Resend');
       return result;
     }
   } catch (error) {

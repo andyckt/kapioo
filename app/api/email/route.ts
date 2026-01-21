@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { EmailOptions } from '@/lib/services/email';
-import { sendEmailFromServer } from '@/lib/services/server-email';
+import { sendEmailWithResend } from '@/lib/services/resend-email';
 
-// POST handler for sending emails
+// POST handler for sending emails using Resend
 export async function POST(request: Request) {
   try {
     const { to, subject, html, from } = await request.json();
@@ -15,9 +15,9 @@ export async function POST(request: Request) {
       );
     }
     
-    // Send email via the server-side service
+    // Send email via Resend for better deliverability
     const emailOptions: EmailOptions = { to, subject, html, from };
-    const result = await sendEmailFromServer(emailOptions);
+    const result = await sendEmailWithResend(emailOptions);
     
     return NextResponse.json({
       success: true,
