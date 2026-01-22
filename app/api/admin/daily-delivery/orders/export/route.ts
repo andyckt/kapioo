@@ -441,12 +441,32 @@ export async function GET(request: Request) {
       return map;
     }, {});
     
+    // Helper function to format user name with last 4 digits of phone
+    const formatUserNameWithPhone = (userName: string, phoneNumber: string): string => {
+      if (!userName) return 'Unknown';
+      if (!phoneNumber) return userName;
+      
+      // Extract last 4 digits from phone number (remove any non-digit characters)
+      const digitsOnly = phoneNumber.replace(/\D/g, '');
+      const lastFourDigits = digitsOnly.slice(-4);
+      
+      // Return formatted name if we have at least 4 digits
+      if (lastFourDigits.length === 4) {
+        return `${userName}-${lastFourDigits}`;
+      }
+      
+      return userName;
+    };
+    
     // Add user information to orders
     const ordersWithUserInfo = orders.map(order => {
       const user = userMap[order.userId.toString()];
+      const userName = user?.name || 'Unknown';
+      const formattedUserName = formatUserNameWithPhone(userName, order.phoneNumber);
+      
       return {
         ...order,
-        userName: user?.name || 'Unknown',
+        userName: formattedUserName,
         userEmail: user?.email || 'Unknown'
       };
     });
