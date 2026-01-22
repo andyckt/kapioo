@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
+import Day from '@/models/Day';
+import Combo from '@/models/Combo';
 
 // Define the interface for the DailyOrder document
 interface DailyOrderDocument extends mongoose.Document {
@@ -139,8 +141,37 @@ function formatAddress(address: any): string {
   return formattedAddress;
 }
 
+// Helper function to format a single combo with dishes
+function formatCombo(combo: any): string {
+  let comboText = combo.name || '套餐';
+  
+  // Add Type A (2-dish) dishes
+  if (combo.typeA && combo.typeA.dishes && combo.typeA.dishes.length > 0) {
+    combo.typeA.dishes.forEach((dish: string, index: number) => {
+      comboText += `\n${index + 1}. ${dish}`;
+    });
+  }
+  
+  // Add Type B (3-dish) - the 3rd dish with (3菜) label
+  if (combo.typeB && combo.typeB.dishes && combo.typeB.dishes.length > 0) {
+    // Find dishes that are only in Type B (not in Type A)
+    const typeADishes = combo.typeA?.dishes || [];
+    const uniqueTypeBDishes = combo.typeB.dishes.filter((dish: string) => !typeADishes.includes(dish));
+    
+    // Add the 3rd dish with (3菜) label
+    if (uniqueTypeBDishes.length > 0) {
+      const dishNumber = (combo.typeA?.dishes?.length || 0) + 1;
+      uniqueTypeBDishes.forEach((dish: string, index: number) => {
+        comboText += `\n${dishNumber + index}. ${dish} (3菜)`;
+      });
+    }
+  }
+  
+  return comboText;
+}
+
 // Helper function to convert an array to CSV with dish names as columns
-function convertToCSV(data: any[]): string {
+async function convertToCSV(data: any[]): Promise<string> {
   // First, collect all unique combo names and their dishes across all orders
   const comboDetailsMap = new Map<string, Set<string>>();
   
@@ -206,8 +237,47 @@ function convertToCSV(data: any[]): string {
   // Combine all headers: base headers, dish names with details, then date and status
   const headers = [...baseHeaders, ...comboDisplayNames, ...dateStatusHeaders];
   
-  // Create CSV content
-  let csvContent = headers.join(',') + '\n';
+  // Fetch combos for the day to show in the first row
+  let comboRow = '';
+  try {
+    // Get the delivery date from the first order
+    const firstDeliveryDate = data.length > 0 && data[0].items && data[0].items.length > 0 
+      ? data[0].items[0].date 
+      : null;
+    
+    if (firstDeliveryDate) {
+      // Find the Day document matching this delivery date
+      const day = await Day.findOne({ date: firstDeliveryDate }).lean();
+      
+      if (day) {
+        // Find all combos for this day
+        const combos = await Combo.find({ dayId: day.dayId }).lean();
+        
+        if (combos && combos.length > 0) {
+          // Escape CSV function
+          const escapeCSV = (text: string) => {
+            if (!text) return '';
+            if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+              return `"${text.replace(/"/g, '""')}"`;
+            }
+            return text;
+          };
+          
+          // Format each combo
+          const formattedCombos = combos.map((combo: any) => escapeCSV(formatCombo(combo)));
+          
+          // Create the combo row: combo1, combo2, then empty cells for remaining columns
+          const emptyColumns = new Array(headers.length - combos.length).fill('');
+          comboRow = [...formattedCombos, ...emptyColumns].join(',') + '\n';
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching combos for reference row:', error);
+  }
+  
+  // Create CSV content: combo row first, then headers, then data
+  let csvContent = comboRow + headers.join(',') + '\n';
   
   // Add data rows
   data.forEach(order => {
@@ -472,7 +542,7 @@ export async function GET(request: Request) {
     });
     
     // Convert to CSV
-    const csvContent = convertToCSV(ordersWithUserInfo);
+    const csvContent = await convertToCSV(ordersWithUserInfo);
     
     // Return CSV as a download
     return new NextResponse(csvContent, {
