@@ -131,6 +131,11 @@ function formatAddress(address: any): string {
     formattedAddress += `, ${address.country}`;
   }
   
+  // Add buzz code in brackets if provided
+  if (address.buzzCode) {
+    formattedAddress += ` (Buzz code: ${address.buzzCode})`;
+  }
+  
   return formattedAddress;
 }
 
