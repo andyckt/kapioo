@@ -1916,6 +1916,8 @@ export const sendWeeklyOrderSummaryEmail = async (
       date: string;
     }>;
     totalCredits: number;
+    mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek';
+    voucherDeducted?: boolean;
   }>,
   deliveryAddress: any,
   area: string,
@@ -1960,6 +1962,7 @@ export const sendWeeklyOrderSummaryEmail = async (
       selectedMeals: '已选餐点',
       total: '总计',
       credits: '积分',
+      meals: '分餐点',
       deliveryInfo: '配送信息',
       area: '区域',
       phone: '电话',
@@ -1972,7 +1975,10 @@ export const sendWeeklyOrderSummaryEmail = async (
       allRightsReserved: '保留所有权利。',
       sunday: '周日',
       tuesday: '周二',
-      grandTotal: '总计'
+      grandTotal: '总计',
+      vouchersUsed: '已使用',
+      voucher: '餐劵',
+      voucherCount: '张'
     },
     en: {
       orderSummary: 'Order Summary',
@@ -1982,6 +1988,7 @@ export const sendWeeklyOrderSummaryEmail = async (
       selectedMeals: 'Selected Meals',
       total: 'Total',
       credits: 'Credits',
+      meals: 'Meals',
       deliveryInfo: 'Delivery Information',
       area: 'Area',
       phone: 'Phone',
@@ -1994,7 +2001,10 @@ export const sendWeeklyOrderSummaryEmail = async (
       allRightsReserved: 'All rights reserved.',
       sunday: 'Sunday',
       tuesday: 'Tuesday',
-      grandTotal: 'Grand Total'
+      grandTotal: 'Grand Total',
+      vouchersUsed: 'Vouchers Used',
+      voucher: 'Voucher',
+      voucherCount: 'voucher(s)'
     }
   };
   
@@ -2002,6 +2012,38 @@ export const sendWeeklyOrderSummaryEmail = async (
   
   // Calculate grand total credits
   const grandTotalCredits = orders.reduce((total, order) => total + order.totalCredits, 0);
+  
+  // Calculate voucher usage summary
+  const voucherUsage: Record<string, number> = {};
+  orders.forEach(order => {
+    if (order.voucherDeducted && order.mealPlanType) {
+      const key = order.mealPlanType;
+      voucherUsage[key] = (voucherUsage[key] || 0) + 1;
+    }
+  });
+  
+  // Helper function to get voucher display name
+  const getVoucherName = (mealPlanType: string) => {
+    const names: Record<string, { zh: string; en: string }> = {
+      '6aweek': { zh: '6餐一周', en: '6-Meal Weekly' },
+      '8aweek': { zh: '8餐一周', en: '8-Meal Weekly' },
+      '10aweek': { zh: '10餐一周', en: '10-Meal Weekly' },
+      '12aweek': { zh: '12餐一周', en: '12-Meal Weekly' }
+    };
+    return names[mealPlanType]?.[language] || mealPlanType;
+  };
+  
+  // Generate voucher usage text
+  let voucherUsageText = '';
+  if (Object.keys(voucherUsage).length > 0) {
+    const voucherParts = Object.entries(voucherUsage).map(([type, count]) => {
+      const voucherName = getVoucherName(type);
+      return language === 'zh' 
+        ? `${voucherName}${t.voucher}: ${count}${t.voucherCount}`
+        : `${voucherName} ${t.voucher}: ${count} ${t.voucherCount}`;
+    });
+    voucherUsageText = voucherParts.join(', ');
+  }
   
   // Generate HTML for each order
   let ordersHtml = '';
@@ -2040,6 +2082,9 @@ export const sendWeeklyOrderSummaryEmail = async (
       `;
     });
     
+    // Calculate total meal count for this order
+    const orderMealCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    
     ordersHtml += `
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #C2884E;">
         <h4 style="color: #C2884E; margin-top: 0; font-size: 16px; margin-bottom: 15px;">
@@ -2049,7 +2094,7 @@ export const sendWeeklyOrderSummaryEmail = async (
         <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
           <span style="color: #666;">${t.total}: </span>
           <span style="color: #C2884E; font-weight: 500;">
-            ${order.totalCredits} ${t.credits}
+            ${orderMealCount}${t.meals}
           </span>
         </div>
       </div>
@@ -2083,14 +2128,16 @@ export const sendWeeklyOrderSummaryEmail = async (
         
         ${ordersHtml}
         
+        ${voucherUsageText ? `
         <div style="background-color: #fff; border-radius: 6px; padding: 15px; margin-top: 20px; border: 2px solid #C2884E;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold; color: #333; font-size: 16px;">${t.grandTotal}:</span>
+            <span style="font-weight: bold; color: #333; font-size: 16px;">${t.vouchersUsed}: </span>
             <span style="font-weight: bold; color: #C2884E; font-size: 16px;">
-              ${grandTotalCredits} ${t.credits}
+              ${voucherUsageText}
             </span>
           </div>
         </div>
+        ` : ''}
         
         <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">${t.deliveryInfo}</h4>
         <p style="color: #333; margin: 5px 0; font-size: 15px;">

@@ -647,7 +647,9 @@ export function WeeklySubscriptionCheckout({
           return {
             orderId: orderData.orderId,
             items: orderData.items,
-            totalCredits: orderData.creditCost || 0
+            totalCredits: orderData.creditCost || 0,
+            mealPlanType: result.usedMealPlanType,
+            voucherDeducted: result.voucherDeducted
           };
         });
         
