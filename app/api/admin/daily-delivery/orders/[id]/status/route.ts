@@ -165,8 +165,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       { new: true }
     );
     
-    // Send notification to user about status change (skip for 'delivered' status)
-    if (status !== 'delivered') {
+    // Send notification to user about status change (skip for 'confirmed' and 'delivered' status)
+    if (status !== 'confirmed' && status !== 'delivered') {
       try {
         const user = await User.findById(order.userId);
         if (user && user.email) {
