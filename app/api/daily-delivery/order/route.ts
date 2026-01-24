@@ -359,87 +359,28 @@ export async function POST(request: Request) {
       }, 3600000);
     }
     
-    // Send emails with a timeout to prevent function from hanging
-    // Wait for emails BUT with 8-second max timeout
-    console.log('⏰ Starting email sending process...');
-    const emailStartTime = Date.now();
+    // ✅ SKIP individual order confirmation emails
+    // Summary email will be sent from frontend after all orders are placed
+    console.log('⏭️ Skipping individual order confirmation email (summary email will be sent after all orders)');
     
+    // Still send admin notification for each order
     try {
-      await Promise.race([
-        // Send both emails in parallel
-        Promise.all([
-          sendDailyOrderConfirmationEmail(
-            user.email,
-            user.name,
-            {
-              orderId,
-              items: data.items,
-              voucherCost: totalVouchers,
-              deliveryAddress: data.deliveryAddress,
-              area: data.area,
-              phoneNumber: data.phoneNumber,
-              specialInstructions: data.specialInstructions
-            },
-            user.languagePreference || 'zh' // Pass user's language preference from database
-          ).then(() => {
-            const elapsed = Date.now() - emailStartTime;
-            console.log(`✅ User email sent successfully to ${user.email} (${elapsed}ms)`);
-          }).catch((emailError) => {
-            const elapsed = Date.now() - emailStartTime;
-            console.error(`❌ Error sending user email after ${elapsed}ms:`, emailError);
-            console.error('User email error details:', {
-              name: emailError?.name,
-              message: emailError?.message,
-              code: emailError?.code
-            });
-          }),
-          
-          sendAdminDailyOrderNotification({
-            orderId,
-            userId: user._id.toString(),
-            userName: user.name,
-            userEmail: user.email,
-            items: data.items,
-            voucherCost: totalVouchers,
-            area: data.area,
-            phoneNumber: data.phoneNumber,
-            deliveryAddress: data.deliveryAddress,
-            specialInstructions: data.specialInstructions
-          }).then(() => {
-            const elapsed = Date.now() - emailStartTime;
-            console.log(`✅ Admin email sent successfully (${elapsed}ms)`);
-          }).catch((emailError) => {
-            const elapsed = Date.now() - emailStartTime;
-            console.error(`❌ Error sending admin email after ${elapsed}ms:`, emailError);
-            console.error('Admin email error details:', {
-              name: emailError?.name,
-              message: emailError?.message,
-              code: emailError?.code
-            });
-          })
-        ]),
-        // Timeout after 8 seconds
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email timeout')), 8000)
-        )
-      ]);
-      
-      const totalElapsed = Date.now() - emailStartTime;
-      console.log(`✅ Email process completed in ${totalElapsed}ms`);
-      
-    } catch (error: any) {
-      const totalElapsed = Date.now() - emailStartTime;
-      
-      // If emails timeout or fail, log it but don't fail the order
-      if (error.message === 'Email timeout') {
-        console.log(`⏱️ Email sending timed out after ${totalElapsed}ms (max 8000ms)`);
-        console.log('⚠️ Order was successful but emails may not have been delivered');
-        console.log('💡 Check EMAIL_USER and EMAIL_PASS environment variables');
-      } else {
-        console.error(`❌ Error during email sending after ${totalElapsed}ms:`, error);
-        console.error('Email error name:', error?.name);
-        console.error('Email error message:', error?.message);
-      }
+      await sendAdminDailyOrderNotification({
+        orderId,
+        userId: user._id.toString(),
+        userName: user.name,
+        userEmail: user.email,
+        items: data.items,
+        voucherCost: totalVouchers,
+        area: data.area,
+        phoneNumber: data.phoneNumber,
+        deliveryAddress: data.deliveryAddress,
+        specialInstructions: data.specialInstructions
+      });
+      console.log(`✅ Admin notification sent for order ${orderId}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending admin notification:`, emailError);
+      // Don't fail the order if admin email fails
     }
 
     // Return response after email attempt (or timeout)

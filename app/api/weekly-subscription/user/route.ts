@@ -548,29 +548,11 @@ export async function POST(request: Request) {
       }
     }
     
-    // Send order confirmation email to user
-    try {
-      await sendWeeklyOrderConfirmationEmail(
-        user.email,
-        user.name,
-        {
-          orderId,
-          items: orderItems,
-          totalCredits: totalItems,
-          deliveryAddress: data.deliveryAddress,
-          area: data.area,
-          phoneNumber: data.phoneNumber,
-          specialInstructions: data.specialInstructions
-        },
-        user.languagePreference || 'zh' // Pass user's language preference from database
-      );
-      console.log(`Order confirmation email sent to ${user.email}`);
-    } catch (emailError) {
-      console.error('Error sending order confirmation email:', emailError);
-      // Don't fail the API call if email sending fails
-    }
+    // ✅ SKIP individual order confirmation email
+    // Summary email will be sent from frontend after all orders are placed
+    console.log('⏭️ Skipping individual order confirmation email (summary email will be sent after all orders)');
     
-    // Send notification to admin
+    // Still send admin notification for each order
     try {
       await sendAdminWeeklyOrderNotification({
         orderId,
@@ -584,7 +566,7 @@ export async function POST(request: Request) {
         deliveryAddress: data.deliveryAddress,
         specialInstructions: data.specialInstructions
       });
-      console.log('Admin notification email sent');
+      console.log(`✅ Admin notification sent for order ${orderId}`);
     } catch (emailError) {
       console.error('Error sending admin notification email:', emailError);
       // Don't fail the API call if email sending fails

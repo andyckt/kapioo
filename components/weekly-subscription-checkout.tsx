@@ -628,6 +628,67 @@ export function WeeklySubscriptionCheckout({
       setWeeklyTENmeals(totalRemainingTenMeals);
       setWeeklyTWELVEmeals(totalRemainingTwelveMeals);
       
+      // ✅ NEW: Send order summary email with ALL orders
+      console.log('📧 Sending order summary email...');
+      console.log('📧 Order results:', orderResults);
+      console.log('📧 Number of orders:', orderResults.length);
+      
+      try {
+        // Map order results to email format with safety checks
+        const orders = orderResults.map((result, index) => {
+          console.log(`📧 Processing order ${index + 1}:`, result);
+          
+          // submitUserSubscription returns { subscription, order, remainingCredits, ... }
+          // So we need to access result.order directly
+          const orderData = result.order || result;
+          
+          console.log(`📧 Order data for order ${index + 1}:`, orderData);
+          
+          return {
+            orderId: orderData.orderId,
+            items: orderData.items,
+            totalCredits: orderData.creditCost || 0
+          };
+        });
+        
+        console.log('📧 Mapped orders:', orders);
+        
+        const emailPayload = {
+          type: 'weekly',
+          userEmail: userData.email,
+          userName: userData.name,
+          orders: orders,
+          deliveryAddress: deliveryAddress,
+          area: formData.area,
+          phoneNumber: formData.phone,
+          specialInstructions: formData.specialInstructions,
+          language: userData.languagePreference || 'zh'
+        };
+        
+        console.log('📧 Email payload:', JSON.stringify(emailPayload, null, 2));
+        
+        const response = await fetch('/api/send-order-summary-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailPayload)
+        });
+        
+        console.log('📧 Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('📧 Email API response:', result);
+        
+        if (result.success) {
+          console.log('✅ Order summary email sent successfully');
+        } else {
+          console.error('❌ Email API returned error:', result.error);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send order summary email:', emailError);
+        console.error('❌ Error stack:', emailError);
+        // Don't fail the checkout if email fails
+      }
+      
       const orderCount = Object.keys(cartByDate).length;
       toast({
         title: language === 'zh' ? '订单完成' : 'Order Completed',

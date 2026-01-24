@@ -1628,3 +1628,509 @@ export const sendNextWeekMenuUpdateEmail = async (
     html,
   });
 };
+
+/**
+ * Send order summary email with multiple orders (Daily Delivery)
+ * This email is sent ONCE after all orders are placed
+ */
+export const sendDailyOrderSummaryEmail = async (
+  to: string,
+  userName: string,
+  orders: Array<{
+    orderId: string;
+    items: Array<{
+      day: string;
+      date: string;
+      comboId: string;
+      comboName: string;
+      type: string;
+      quantity: number;
+      voucherType: string;
+      dishes?: Array<{ dishId: string; name: string }>;
+    }>;
+    voucherCost: {
+      twoDish: number;
+      threeDish: number;
+    };
+  }>,
+  deliveryAddress: any,
+  area: string,
+  phoneNumber: string,
+  specialInstructions?: string,
+  language: 'zh' | 'en' = 'zh'
+) => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  // Helper function to translate combo names
+  const translateComboName = (comboName: string): string => {
+    if (language === 'zh') return comboName;
+    return comboName.replace(/套餐\s*(\d+)/g, 'Combo $1');
+  };
+  
+  // Fetch dish translations if language is English
+  let dishTranslations: Record<string, string> = {};
+  if (language === 'en') {
+    try {
+      const Dish = (await import('@/models/Dish')).default;
+      const connectToDatabase = (await import('@/lib/db')).default;
+      await connectToDatabase();
+      
+      const dishes = await Dish.find({ nameEn: { $exists: true, $ne: null } });
+      dishes.forEach((dish: any) => {
+        if (dish.name && dish.nameEn) {
+          dishTranslations[dish.name] = dish.nameEn;
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching dish translations for email:', error);
+    }
+  }
+  
+  // Helper function to translate dish names
+  const translateDishName = (dishName: string): string => {
+    if (language === 'zh') return dishName;
+    return dishTranslations[dishName] || dishName;
+  };
+  
+  // Language-specific text
+  const text = {
+    zh: {
+      orderSummary: '订单汇总',
+      thankYou: '感谢您的订购！您的订单已成功提交。',
+      ordersPlaced: (count: number) => `已成功下单 ${count} 个订单`,
+      orderNumber: '订单号',
+      selectedMeals: '已选餐点',
+      total: '总计',
+      twoDishVoucher: '2菜餐券',
+      threeDishVoucher: '3菜餐券',
+      deliveryInfo: '配送信息',
+      area: '区域',
+      phone: '电话',
+      address: '地址',
+      specialInstructions: '特别说明',
+      unit: '单元',
+      buzzCode: '门禁码',
+      viewMyOrders: '查看我的订单',
+      contactSupport: '如有任何问题，请联系我们的客服团队。',
+      allRightsReserved: '保留所有权利。',
+      twoDish: '2菜',
+      threeDish: '3菜',
+      grandTotal: '总计'
+    },
+    en: {
+      orderSummary: 'Order Summary',
+      thankYou: 'Thank you for your order! Your orders have been successfully submitted.',
+      ordersPlaced: (count: number) => `${count} Orders Placed Successfully`,
+      orderNumber: 'Order Number',
+      selectedMeals: 'Selected Meals',
+      total: 'Total',
+      twoDishVoucher: '2-Dish Vouchers',
+      threeDishVoucher: '3-Dish Vouchers',
+      deliveryInfo: 'Delivery Information',
+      area: 'Area',
+      phone: 'Phone',
+      address: 'Address',
+      specialInstructions: 'Special Instructions',
+      unit: 'Unit',
+      buzzCode: 'Buzz Code',
+      viewMyOrders: 'View My Orders',
+      contactSupport: 'If you have any questions, please contact our customer service team.',
+      allRightsReserved: 'All rights reserved.',
+      twoDish: '2 Dishes',
+      threeDish: '3 Dishes',
+      grandTotal: 'Grand Total'
+    }
+  };
+  
+  const t = text[language];
+  
+  // Calculate grand totals
+  const grandTotal = orders.reduce((totals, order) => {
+    totals.twoDish += order.voucherCost.twoDish;
+    totals.threeDish += order.voucherCost.threeDish;
+    return totals;
+  }, { twoDish: 0, threeDish: 0 });
+  
+  // Generate HTML for each order
+  let ordersHtml = '';
+  orders.forEach((order, index) => {
+    // Group items by day for this order
+    const deliveryDays = order.items.reduce((acc: any, item) => {
+      const dayKey = `${item.day}-${item.date}`;
+      if (!acc[dayKey]) {
+        acc[dayKey] = { day: item.day, date: item.date, items: [] };
+      }
+      acc[dayKey].items.push(item);
+      return acc;
+    }, {});
+    
+    let orderItemsHtml = '';
+    Object.values(deliveryDays).forEach((day: any) => {
+      const dayParts = day.day.split('-');
+      const dayName = dayParts[0].charAt(0).toUpperCase() + dayParts[0].slice(1);
+      
+      orderItemsHtml += `
+        <div style="margin-bottom: 10px;">
+          <h5 style="color: #C2884E; margin: 0 0 8px; font-size: 14px;">${dayName} (${day.date})</h5>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${day.items.map((item: any) => {
+              const translatedComboName = translateComboName(item.comboName);
+              return `
+              <li style="padding: 6px 0; border-bottom: 1px dashed #eaeaea;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #333; font-size: 14px;">${translatedComboName} (${item.type === 'A' ? t.twoDish : t.threeDish})</span>
+                  <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
+                </div>
+                ${item.dishes && item.dishes.length > 0 ? `
+                <div style="margin-top: 4px; padding-left: 12px;">
+                  ${item.dishes.map((dish: any) => {
+                    const dishName = typeof dish === 'string' ? dish : dish.name;
+                    const translatedDishName = translateDishName(dishName);
+                    return `
+                    <div style="display: flex; align-items: center; margin-bottom: 2px;">
+                      <div style="width: 3px; height: 3px; border-radius: 50%; background-color: #C2884E; opacity: 0.6; margin-right: 6px;"></div>
+                      <span style="color: #6B5F53; font-size: 12px;">${translatedDishName}</span>
+                    </div>
+                    `;
+                  }).join('')}
+                </div>
+                ` : ''}
+              </li>
+              `;
+            }).join('')}
+          </ul>
+        </div>
+      `;
+    });
+    
+    ordersHtml += `
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #C2884E;">
+        <h4 style="color: #C2884E; margin-top: 0; font-size: 16px; margin-bottom: 15px;">
+          ${t.orderNumber}: ${order.orderId}
+        </h4>
+        ${orderItemsHtml}
+        <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
+          <span style="color: #666;">${t.total}: </span>
+          <span style="color: #C2884E; font-weight: 500;">
+            ${t.twoDishVoucher}: ${order.voucherCost.twoDish}, 
+            ${t.threeDishVoucher}: ${order.voucherCost.threeDish}
+          </span>
+        </div>
+      </div>
+    `;
+  });
+  
+  // Format address
+  const addr = deliveryAddress;
+  let formattedAddress = '';
+  if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
+  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
+  if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">${t.orderSummary}</h2>
+      <p style="color: #666; text-align: center; font-size: 14px; margin-bottom: 25px;">
+        ${t.ordersPlaced(orders.length)}
+      </p>
+      
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
+        ${userName}, ${t.thankYou}
+      </p>
+      
+      <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px; margin-bottom: 20px;">${t.selectedMeals}</h3>
+        
+        ${ordersHtml}
+        
+        <div style="background-color: #fff; border-radius: 6px; padding: 15px; margin-top: 20px; border: 2px solid #C2884E;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #333; font-size: 16px;">${t.grandTotal}:</span>
+            <span style="font-weight: bold; color: #C2884E; font-size: 16px;">
+              ${t.twoDishVoucher}: ${grandTotal.twoDish}, 
+              ${t.threeDishVoucher}: ${grandTotal.threeDish}
+            </span>
+          </div>
+        </div>
+        
+        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">${t.deliveryInfo}</h4>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.area}:</strong> ${area}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.phone}:</strong> ${phoneNumber}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.address}:</strong> ${formattedAddress}
+        </p>
+        ${specialInstructions ? `
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.specialInstructions}:</strong> ${specialInstructions}
+        </p>
+        ` : ''}
+      </div>
+      
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(194, 136, 78, 0.3);">
+          ${t.viewMyOrders}
+        </a>
+      </div>
+      
+      <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #eee; text-align: center;">
+        <p style="color: #999; font-size: 13px; margin-bottom: 5px;">
+          ${t.contactSupport}
+        </p>
+        <p style="color: #bbb; font-size: 12px; margin-top: 15px;">
+          © ${new Date().getFullYear()} Kapioo. ${t.allRightsReserved}
+        </p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to,
+    subject: language === 'zh' 
+      ? `[Kapioo] 订单汇总 - ${orders.length}个订单已确认` 
+      : `[Kapioo] Order Summary - ${orders.length} Orders Confirmed`,
+    html,
+  });
+};
+
+/**
+ * Send order summary email with multiple orders (Weekly Subscription)
+ * This email is sent ONCE after all orders are placed
+ */
+export const sendWeeklyOrderSummaryEmail = async (
+  to: string,
+  userName: string,
+  orders: Array<{
+    orderId: string;
+    items: Array<{
+      optionName: string;
+      quantity: number;
+      dayId: string;
+      date: string;
+    }>;
+    totalCredits: number;
+  }>,
+  deliveryAddress: any,
+  area: string,
+  phoneNumber: string,
+  specialInstructions?: string,
+  language: 'zh' | 'en' = 'zh'
+) => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  // Fetch meal option translations if language is English
+  let mealOptionTranslations: Record<string, string> = {};
+  if (language === 'en') {
+    try {
+      const WeeklyMealOption = (await import('@/models/WeeklyMealOption')).default;
+      const connectToDatabase = (await import('@/lib/db')).default;
+      await connectToDatabase();
+      
+      const mealOptions = await WeeklyMealOption.find({ nameEn: { $exists: true, $ne: null } });
+      mealOptions.forEach((option: any) => {
+        if (option.name && option.nameEn) {
+          mealOptionTranslations[option.name] = option.nameEn;
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching meal option translations for email:', error);
+    }
+  }
+  
+  // Helper function to translate meal option names
+  const translateOptionName = (optionName: string): string => {
+    if (language === 'zh') return optionName;
+    return mealOptionTranslations[optionName] || optionName;
+  };
+  
+  // Language-specific text
+  const text = {
+    zh: {
+      orderSummary: '订单汇总',
+      thankYou: '感谢您的订购！您的订单已成功提交。',
+      ordersPlaced: (count: number) => `已成功下单 ${count} 个订单`,
+      orderNumber: '订单号',
+      selectedMeals: '已选餐点',
+      total: '总计',
+      credits: '积分',
+      deliveryInfo: '配送信息',
+      area: '区域',
+      phone: '电话',
+      address: '地址',
+      specialInstructions: '特别说明',
+      unit: '单元',
+      buzzCode: '门禁码',
+      viewMyOrders: '查看我的订单',
+      contactSupport: '如有任何问题，请联系我们的客服团队。',
+      allRightsReserved: '保留所有权利。',
+      sunday: '周日',
+      tuesday: '周二',
+      grandTotal: '总计'
+    },
+    en: {
+      orderSummary: 'Order Summary',
+      thankYou: 'Thank you for your order! Your orders have been successfully submitted.',
+      ordersPlaced: (count: number) => `${count} Orders Placed Successfully`,
+      orderNumber: 'Order Number',
+      selectedMeals: 'Selected Meals',
+      total: 'Total',
+      credits: 'Credits',
+      deliveryInfo: 'Delivery Information',
+      area: 'Area',
+      phone: 'Phone',
+      address: 'Address',
+      specialInstructions: 'Special Instructions',
+      unit: 'Unit',
+      buzzCode: 'Buzz Code',
+      viewMyOrders: 'View My Orders',
+      contactSupport: 'If you have any questions, please contact our customer service team.',
+      allRightsReserved: 'All rights reserved.',
+      sunday: 'Sunday',
+      tuesday: 'Tuesday',
+      grandTotal: 'Grand Total'
+    }
+  };
+  
+  const t = text[language];
+  
+  // Calculate grand total credits
+  const grandTotalCredits = orders.reduce((total, order) => total + order.totalCredits, 0);
+  
+  // Generate HTML for each order
+  let ordersHtml = '';
+  orders.forEach((order) => {
+    // Group items by day for this order
+    const deliveryDays = order.items.reduce((acc: any, item) => {
+      const dayKey = `${item.dayId}-${item.date}`;
+      if (!acc[dayKey]) {
+        acc[dayKey] = { dayId: item.dayId, date: item.date, items: [] };
+      }
+      acc[dayKey].items.push(item);
+      return acc;
+    }, {});
+    
+    let orderItemsHtml = '';
+    Object.values(deliveryDays).forEach((day: any) => {
+      const dayName = day.dayId === 'sunday' ? t.sunday : t.tuesday;
+      
+      orderItemsHtml += `
+        <div style="margin-bottom: 10px;">
+          <h5 style="color: #C2884E; margin: 0 0 8px; font-size: 14px;">${dayName} (${day.date})</h5>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${day.items.map((item: any) => {
+              const translatedOptionName = translateOptionName(item.optionName);
+              return `
+              <li style="padding: 6px 0; border-bottom: 1px dashed #eaeaea;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #333; font-size: 14px;">${translatedOptionName}</span>
+                  <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
+                </div>
+              </li>
+              `;
+            }).join('')}
+          </ul>
+        </div>
+      `;
+    });
+    
+    ordersHtml += `
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #C2884E;">
+        <h4 style="color: #C2884E; margin-top: 0; font-size: 16px; margin-bottom: 15px;">
+          ${t.orderNumber}: ${order.orderId}
+        </h4>
+        ${orderItemsHtml}
+        <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
+          <span style="color: #666;">${t.total}: </span>
+          <span style="color: #C2884E; font-weight: 500;">
+            ${order.totalCredits} ${t.credits}
+          </span>
+        </div>
+      </div>
+    `;
+  });
+  
+  // Format address
+  const addr = deliveryAddress;
+  let formattedAddress = '';
+  if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
+  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
+  if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">${t.orderSummary}</h2>
+      <p style="color: #666; text-align: center; font-size: 14px; margin-bottom: 25px;">
+        ${t.ordersPlaced(orders.length)}
+      </p>
+      
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
+        ${userName}, ${t.thankYou}
+      </p>
+      
+      <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px; margin-bottom: 20px;">${t.selectedMeals}</h3>
+        
+        ${ordersHtml}
+        
+        <div style="background-color: #fff; border-radius: 6px; padding: 15px; margin-top: 20px; border: 2px solid #C2884E;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #333; font-size: 16px;">${t.grandTotal}:</span>
+            <span style="font-weight: bold; color: #C2884E; font-size: 16px;">
+              ${grandTotalCredits} ${t.credits}
+            </span>
+          </div>
+        </div>
+        
+        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">${t.deliveryInfo}</h4>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.area}:</strong> ${area}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.phone}:</strong> ${phoneNumber}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.address}:</strong> ${formattedAddress}
+        </p>
+        ${specialInstructions ? `
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>${t.specialInstructions}:</strong> ${specialInstructions}
+        </p>
+        ` : ''}
+      </div>
+      
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${baseUrl}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(194, 136, 78, 0.3);">
+          ${t.viewMyOrders}
+        </a>
+      </div>
+      
+      <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #eee; text-align: center;">
+        <p style="color: #999; font-size: 13px; margin-bottom: 5px;">
+          ${t.contactSupport}
+        </p>
+        <p style="color: #bbb; font-size: 12px; margin-top: 15px;">
+          © ${new Date().getFullYear()} Kapioo. ${t.allRightsReserved}
+        </p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to,
+    subject: language === 'zh' 
+      ? `[Kapioo] 订单汇总 - ${orders.length}个订单已确认` 
+      : `[Kapioo] Order Summary - ${orders.length} Orders Confirmed`,
+    html,
+  });
+};
