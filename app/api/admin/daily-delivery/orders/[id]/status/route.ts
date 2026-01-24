@@ -165,24 +165,26 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       { new: true }
     );
     
-    // Send notification to user about status change
-    try {
-      const user = await User.findById(order.userId);
-      if (user && user.email) {
-        await sendDailyOrderStatusUpdateNotification(
-          user.email,
-          user.name,
-          id,
-          status,
-          order.items,
-          order.status, // Previous status
-          user.languagePreference || 'zh', // Pass user's language preference from database
-          order.createdAt // Pass the actual order creation date
-        );
+    // Send notification to user about status change (skip for 'delivered' status)
+    if (status !== 'delivered') {
+      try {
+        const user = await User.findById(order.userId);
+        if (user && user.email) {
+          await sendDailyOrderStatusUpdateNotification(
+            user.email,
+            user.name,
+            id,
+            status,
+            order.items,
+            order.status, // Previous status
+            user.languagePreference || 'zh', // Pass user's language preference from database
+            order.createdAt // Pass the actual order creation date
+          );
+        }
+      } catch (notificationError) {
+        console.error('Failed to send status update notification:', notificationError);
+        // Don't fail the API call if notification sending fails
       }
-    } catch (notificationError) {
-      console.error('Failed to send status update notification:', notificationError);
-      // Don't fail the API call if notification sending fails
     }
     
     return NextResponse.json({
