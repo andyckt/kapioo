@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +8,7 @@ import { CheckCircle, Mail, AlertCircle } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import Link from 'next/link'
 
-export default function UnsubscribePage() {
+function UnsubscribeContent() {
   const searchParams = useSearchParams()
   const { language } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
@@ -188,5 +188,23 @@ export default function UnsubscribePage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+export default function UnsubscribePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FBF7F2] flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-8">
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C2884E]"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <UnsubscribeContent />
+    </Suspense>
   )
 }
