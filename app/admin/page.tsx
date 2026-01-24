@@ -13,7 +13,7 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -82,6 +82,7 @@ import { NotificationType } from '@/lib/services/notifications';
 import { WeekYearDisplay } from "@/components/week-year-display"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
+import { NextWeekMenuEmail } from "@/components/next-week-menu-email"
 import { MealVoucherManagement } from "@/components/meal-voucher-management"
 import { ViewAllOrders } from "@/components/view-all-orders"
 import { ViewWeeklyOrders } from "@/components/view-weekly-orders"
@@ -104,7 +105,8 @@ export default function AdminDashboardPage() {
       isHeading: true,
       children: [
         { id: "daily-delivery", label: "Daily Delivery", icon: <Truck className="h-4 w-4" /> },
-        { id: "weekly-subscription", label: "Weekly Delivery", icon: <Gift className="h-4 w-4" /> }
+        { id: "weekly-subscription", label: "Weekly Delivery", icon: <Gift className="h-4 w-4" /> },
+        { id: "next-week-menu-email", label: "Next Week Menu Update Email", icon: <Mail className="h-4 w-4" /> }
       ]
     },
     { 
@@ -1801,6 +1803,19 @@ export default function AdminDashboardPage() {
                 className="space-y-6"
               >
                 <WeeklySubscriptionManagement />
+              </motion.div>
+            )}
+
+            {activeTab === "next-week-menu-email" && (
+              <motion.div
+                key="next-week-menu-email"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <NextWeekMenuEmail />
               </motion.div>
             )}
 

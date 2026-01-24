@@ -473,6 +473,32 @@ export const weeklyMenuUpdateTranslations = {
   }
 };
 
+// Next Week Menu Update translations (NEW)
+export const nextWeekMenuUpdateTranslations = {
+  zh: {
+    subject: '[Kapioo] 下周菜单已更新 - 探索我们的新菜品！',
+    title: '下周菜单已更新！',
+    greeting: (name: string) => `亲爱的 ${name}，`,
+    mainMessage: 'Kapioo 下周的菜单已更新了喔～',
+    description: '这个周我们为您精心准备了全新的美味菜品，期待为您带来更多惊喜。',
+    subHeading: '快去看看下周吃什么吧！',
+    ctaButton: '立即查看菜单',
+    footerNote: '感谢您选择 Kapioo！',
+    unsubscribe: '取消订阅'
+  },
+  en: {
+    subject: '[Kapioo] Next Week Menu Updated - Explore Our New Dishes!',
+    title: 'Next Week Menu Updated!',
+    greeting: (name: string) => `Dear ${name},`,
+    mainMessage: 'Kapioo\'s menu for next week has been updated!',
+    description: 'This week we have carefully prepared fresh new delicious dishes and look forward to bringing you more delightful surprises.',
+    subHeading: 'Check out what\'s on the menu for next week!',
+    ctaButton: 'View Menu Now',
+    footerNote: 'Thank you for choosing Kapioo!',
+    unsubscribe: 'Unsubscribe'
+  }
+};
+
 /**
  * Helper function to get translations for a specific language
  */
@@ -483,7 +509,8 @@ export function getTranslations(language: Language = 'zh') {
     account: accountTranslations[language],
     weekly: weeklyTranslations[language],
     menuUpdate: menuUpdateTranslations[language],
-    weeklyMenuUpdate: weeklyMenuUpdateTranslations[language]
+    weeklyMenuUpdate: weeklyMenuUpdateTranslations[language],
+    nextWeekMenuUpdate: nextWeekMenuUpdateTranslations[language]
   };
 }
 

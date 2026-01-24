@@ -46,6 +46,14 @@ export interface IUser extends Document {
   resetPasswordCode?: string;
   resetPasswordExpires?: Date;
   languagePreference: 'zh' | 'en';
+  emailPreferences?: {
+    nextWeekMenuUpdates?: boolean;
+    weeklyMenuUpdates?: boolean;
+    dailyMenuUpdates?: boolean;
+    orderUpdates?: boolean;
+    marketing?: boolean;
+  };
+  emailStatus?: 'active' | 'bounced' | 'blocked' | 'invalid';
   setPassword: (password: string) => Promise<void>;
   comparePassword: (candidatePassword: string) => Promise<boolean>;
   generateVerificationCode: () => { code: string, expires: Date };
@@ -152,6 +160,35 @@ const UserSchema: Schema = new Schema(
       type: String,
       enum: ['zh', 'en'],
       default: 'zh'
+    },
+    // Email preferences (for unsubscribe functionality)
+    emailPreferences: {
+      nextWeekMenuUpdates: {
+        type: Boolean,
+        default: true
+      },
+      weeklyMenuUpdates: {
+        type: Boolean,
+        default: true
+      },
+      dailyMenuUpdates: {
+        type: Boolean,
+        default: true
+      },
+      orderUpdates: {
+        type: Boolean,
+        default: true
+      },
+      marketing: {
+        type: Boolean,
+        default: true
+      }
+    },
+    // Email delivery status (for bounce tracking)
+    emailStatus: {
+      type: String,
+      enum: ['active', 'bounced', 'blocked', 'invalid'],
+      default: 'active'
     }
   },
   { 
