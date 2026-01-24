@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { sendDailyOrderSummaryEmail, sendWeeklyOrderSummaryEmail } from '@/lib/services/email';
+import { sendDailyOrderSummaryEmail, sendWeeklyOrderSummaryEmail, sendAdminDailyOrderSummaryEmail, sendAdminWeeklyOrderSummaryEmail } from '@/lib/services/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
       type, // 'daily' or 'weekly'
       userEmail,
       userName,
+      userId,
       orders,
       deliveryAddress,
       area,
@@ -71,6 +72,19 @@ export async function POST(request: Request) {
           specialInstructions,
           language || 'zh'
         );
+        
+        // Also send admin summary email
+        console.log('📧 [API] Calling sendAdminDailyOrderSummaryEmail...');
+        await sendAdminDailyOrderSummaryEmail(
+          userName,
+          userEmail,
+          userId,
+          orders,
+          deliveryAddress,
+          area,
+          phoneNumber,
+          specialInstructions
+        );
       } else if (type === 'weekly') {
         console.log('📧 [API] Calling sendWeeklyOrderSummaryEmail...');
         await sendWeeklyOrderSummaryEmail(
@@ -83,6 +97,19 @@ export async function POST(request: Request) {
           specialInstructions,
           language || 'zh'
         );
+        
+        // Also send admin summary email
+        console.log('📧 [API] Calling sendAdminWeeklyOrderSummaryEmail...');
+        await sendAdminWeeklyOrderSummaryEmail(
+          userName,
+          userEmail,
+          userId,
+          orders,
+          deliveryAddress,
+          area,
+          phoneNumber,
+          specialInstructions
+        );
       } else {
         console.error('❌ [API] Invalid type:', type);
         return NextResponse.json(
@@ -91,11 +118,11 @@ export async function POST(request: Request) {
         );
       }
       
-      console.log(`✅ [API] Order summary email sent successfully to ${userEmail}`);
+      console.log(`✅ [API] Order summary emails sent successfully to user (${userEmail}) and admin`);
       
       return NextResponse.json({
         success: true,
-        message: 'Order summary email sent successfully'
+        message: 'Order summary emails sent successfully'
       });
       
     } catch (emailError: any) {

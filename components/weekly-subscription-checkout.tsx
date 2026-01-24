@@ -659,6 +659,7 @@ export function WeeklySubscriptionCheckout({
           type: 'weekly',
           userEmail: userData.email,
           userName: userData.name,
+          userId: userData._id,
           orders: orders,
           deliveryAddress: deliveryAddress,
           area: formData.area,

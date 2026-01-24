@@ -204,7 +204,7 @@ export const sendPasswordResetEmail = async (to: string, code: string, language:
 
 // Send notification to admin for credit purchase requests
 export const sendAdminNotification = async (subject: string, message: string) => {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   
   const html = `
@@ -257,7 +257,7 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
     buzzCode?: string;
   } | null;
 }) => {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const adminDashboardLink = `${baseUrl}/admin?tab=credit-requests`;
 
@@ -404,7 +404,7 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
     buzzCode?: string;
   } | null;
 }) => {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const adminDashboardLink = `${baseUrl}/admin?tab=meal-vouchers`;
 
@@ -926,7 +926,7 @@ export const sendAdminWeeklyOrderNotification = async (orderDetails: {
   deliveryAddress: any;
   specialInstructions?: string;
 }) => {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const adminDashboardLink = `${baseUrl}/admin?tab=weekly-orders`;
 
@@ -1296,7 +1296,7 @@ export const sendAdminDailyOrderNotification = async (orderDetails: {
   deliveryAddress: any;
   specialInstructions?: string;
 }) => {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kapioo.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const adminDashboardLink = `${baseUrl}/admin?tab=daily-orders`;
 
@@ -2178,6 +2178,392 @@ export const sendWeeklyOrderSummaryEmail = async (
     subject: language === 'zh' 
       ? `[Kapioo] 订单汇总 - ${orders.length}个订单已确认` 
       : `[Kapioo] Order Summary - ${orders.length} Orders Confirmed`,
+    html,
+  });
+};
+/**
+ * Send admin summary email with multiple daily delivery orders
+ * This email is sent ONCE to admin after all orders are placed
+ */
+export const sendAdminDailyOrderSummaryEmail = async (
+  userName: string,
+  userEmail: string,
+  userId: string,
+  orders: Array<{
+    orderId: string;
+    items: Array<{
+      day: string;
+      date: string;
+      comboId: string;
+      comboName: string;
+      type: string;
+      quantity: number;
+      voucherType: string;
+      dishes?: Array<{ dishId: string; name: string }>;
+    }>;
+    voucherCost: {
+      twoDish: number;
+      threeDish: number;
+    };
+  }>,
+  deliveryAddress: any,
+  area: string,
+  phoneNumber: string,
+  specialInstructions?: string
+) => {
+  const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const adminDashboardLink = `${baseUrl}/admin?tab=daily-orders`;
+  
+  // Calculate total vouchers across all orders
+  const totalTwoDish = orders.reduce((sum, order) => sum + order.voucherCost.twoDish, 0);
+  const totalThreeDish = orders.reduce((sum, order) => sum + order.voucherCost.threeDish, 0);
+  
+  // Generate HTML for each order
+  let ordersHtml = '';
+  orders.forEach((order) => {
+    // Format delivery days and items for this order
+    const deliveryDays = order.items.reduce((acc: any, item) => {
+      const dayKey = `${item.day}-${item.date}`;
+      if (!acc[dayKey]) {
+        acc[dayKey] = {
+          day: item.day,
+          date: item.date,
+          items: []
+        };
+      }
+      acc[dayKey].items.push(item);
+      return acc;
+    }, {});
+    
+    let deliveryItemsHtml = '';
+    Object.values(deliveryDays).forEach((day: any) => {
+      const dayParts = day.day.split('-');
+      const dayName = dayParts[0].charAt(0).toUpperCase() + dayParts[0].slice(1);
+      
+      deliveryItemsHtml += `
+        <div style="margin-bottom: 15px;">
+          <h5 style="color: #C2884E; margin: 0 0 10px; font-size: 14px;">${dayName} (${day.date})</h5>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${day.items.map((item: any) => `
+              <li style="padding: 8px 0; border-bottom: 1px dashed #eaeaea;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #333; font-size: 14px;">${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'})</span>
+                  <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
+                </div>
+                ${item.dishes && item.dishes.length > 0 ? `
+                <div style="margin-top: 5px; padding-left: 15px;">
+                  ${item.dishes.map((dish: any) => `
+                    <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                      <div style="width: 4px; height: 4px; border-radius: 50%; background-color: #C2884E; opacity: 0.6; margin-right: 8px;"></div>
+                      <span style="color: #6B5F53; font-size: 13px;">${dish.name || dish}</span>
+                    </div>
+                  `).join('')}
+                </div>
+                ` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    });
+    
+    ordersHtml += `
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #C2884E;">
+        <h4 style="color: #C2884E; margin-top: 0; font-size: 16px; margin-bottom: 15px;">
+          订单号: ${order.orderId}
+        </h4>
+        ${deliveryItemsHtml}
+        <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
+          <span style="color: #666;">本订单使用: </span>
+          <span style="color: #C2884E; font-weight: 500;">
+            2菜餐券: ${order.voucherCost.twoDish}张, 3菜餐券: ${order.voucherCost.threeDish}张
+          </span>
+        </div>
+      </div>
+    `;
+  });
+  
+  // Format address
+  const addr = deliveryAddress;
+  let formattedAddress = '';
+  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
+  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
+  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">新的每日直送订单汇总</h2>
+      <p style="color: #666; text-align: center; font-size: 14px; margin-bottom: 25px;">
+        用户一次性下单 ${orders.length} 个订单
+      </p>
+      
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+        用户 <strong>${userName}</strong> (${userEmail}) 提交了 ${orders.length} 个每日直送订单。
+      </p>
+      
+      <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px; margin-bottom: 15px;">用户信息</h3>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>用户ID:</strong> ${userId}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>用户名:</strong> ${userName}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>邮箱:</strong> ${userEmail}
+        </p>
+        
+        <h3 style="color: #C2884E; margin: 20px 0 15px; font-size: 18px;">订单详情</h3>
+        
+        ${ordersHtml}
+        
+        <div style="background-color: #fff; border-radius: 6px; padding: 15px; margin-top: 20px; border: 2px solid #C2884E;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #333; font-size: 16px;">总计使用: </span>
+            <span style="font-weight: bold; color: #C2884E; font-size: 16px;">
+              2菜餐券: ${totalTwoDish}张, 3菜餐券: ${totalThreeDish}张
+            </span>
+          </div>
+        </div>
+        
+        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">配送信息</h4>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>区域:</strong> ${area}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>电话:</strong> ${phoneNumber}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>地址:</strong> ${formattedAddress}
+        </p>
+        ${specialInstructions ? `
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>特别说明:</strong> ${specialInstructions}
+        </p>
+        ` : ''}
+      </div>
+      
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${adminDashboardLink}" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(194, 136, 78, 0.3);">
+          前往管理后台查看订单
+        </a>
+      </div>
+      
+      <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #eee; text-align: center;">
+        <p style="color: #bbb; font-size: 12px; margin-top: 15px;">
+          © ${new Date().getFullYear()} Kapioo. 保留所有权利。
+        </p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to: adminEmail,
+    subject: `新的每日直送订单汇总 - ${orders.length}个订单已提交 (用户: ${userName})`,
+    html,
+  });
+};
+
+/**
+ * Send admin summary email with multiple weekly subscription orders
+ * This email is sent ONCE to admin after all orders are placed
+ */
+export const sendAdminWeeklyOrderSummaryEmail = async (
+  userName: string,
+  userEmail: string,
+  userId: string,
+  orders: Array<{
+    orderId: string;
+    items: Array<{
+      optionName: string;
+      quantity: number;
+      dayId: string;
+      date: string;
+    }>;
+    totalCredits: number;
+    mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek';
+    voucherDeducted?: boolean;
+  }>,
+  deliveryAddress: any,
+  area: string,
+  phoneNumber: string,
+  specialInstructions?: string
+) => {
+  const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const adminDashboardLink = `${baseUrl}/admin?tab=weekly-orders`;
+  
+  // Calculate voucher usage summary
+  const voucherUsage: Record<string, number> = {};
+  orders.forEach(order => {
+    if (order.voucherDeducted && order.mealPlanType) {
+      const key = order.mealPlanType;
+      voucherUsage[key] = (voucherUsage[key] || 0) + 1;
+    }
+  });
+  
+  // Helper function to get voucher display name
+  const getVoucherName = (mealPlanType: string) => {
+    const names: Record<string, string> = {
+      '6aweek': '6餐一周',
+      '8aweek': '8餐一周',
+      '10aweek': '10餐一周',
+      '12aweek': '12餐一周'
+    };
+    return names[mealPlanType] || mealPlanType;
+  };
+  
+  // Generate voucher usage text
+  let voucherUsageText = '';
+  if (Object.keys(voucherUsage).length > 0) {
+    const voucherParts = Object.entries(voucherUsage).map(([type, count]) => {
+      const voucherName = getVoucherName(type);
+      return `${voucherName}餐劵: ${count}张`;
+    });
+    voucherUsageText = voucherParts.join(', ');
+  }
+  
+  // Generate HTML for each order
+  let ordersHtml = '';
+  orders.forEach((order) => {
+    // Group items by day for this order
+    const deliveryDays = order.items.reduce((acc: any, item) => {
+      const dayKey = `${item.dayId}-${item.date}`;
+      if (!acc[dayKey]) {
+        acc[dayKey] = { dayId: item.dayId, date: item.date, items: [] };
+      }
+      acc[dayKey].items.push(item);
+      return acc;
+    }, {});
+    
+    let orderItemsHtml = '';
+    Object.values(deliveryDays).forEach((day: any) => {
+      const dayName = day.dayId === 'sunday' ? '周日' : '周二';
+      
+      orderItemsHtml += `
+        <div style="margin-bottom: 10px;">
+          <h5 style="color: #C2884E; margin: 0 0 8px; font-size: 14px;">${dayName} (${day.date})</h5>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${day.items.map((item: any) => `
+              <li style="padding: 6px 0; border-bottom: 1px dashed #eaeaea;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #333; font-size: 14px;">${item.optionName}</span>
+                  <span style="color: #C2884E; font-weight: 500;">x${item.quantity}</span>
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    });
+    
+    // Calculate meal count for this order
+    const orderMealCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    ordersHtml += `
+      <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #C2884E;">
+        <h4 style="color: #C2884E; margin-top: 0; font-size: 16px; margin-bottom: 15px;">
+          订单号: ${order.orderId}
+        </h4>
+        ${orderItemsHtml}
+        <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
+          <span style="color: #666;">本订单: </span>
+          <span style="color: #C2884E; font-weight: 500;">
+            ${orderMealCount}分餐点
+          </span>
+        </div>
+      </div>
+    `;
+  });
+  
+  // Format address
+  const addr = deliveryAddress;
+  let formattedAddress = '';
+  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
+  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
+  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+  
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">新的每周订单汇总</h2>
+      <p style="color: #666; text-align: center; font-size: 14px; margin-bottom: 25px;">
+        用户一次性下单 ${orders.length} 个订单
+      </p>
+      
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+        用户 <strong>${userName}</strong> (${userEmail}) 提交了 ${orders.length} 个每周订单。
+      </p>
+      
+      <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="color: #C2884E; margin-top: 0; font-size: 18px; margin-bottom: 15px;">用户信息</h3>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>用户ID:</strong> ${userId}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>用户名:</strong> ${userName}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>邮箱:</strong> ${userEmail}
+        </p>
+        
+        <h3 style="color: #C2884E; margin: 20px 0 15px; font-size: 18px;">订单详情</h3>
+        
+        ${ordersHtml}
+        
+        ${voucherUsageText ? `
+        <div style="background-color: #fff; border-radius: 6px; padding: 15px; margin-top: 20px; border: 2px solid #C2884E;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #333; font-size: 16px;">总计使用: </span>
+            <span style="font-weight: bold; color: #C2884E; font-size: 16px;">
+              ${voucherUsageText}
+            </span>
+          </div>
+        </div>
+        ` : ''}
+        
+        <h4 style="color: #C2884E; margin: 20px 0 10px; font-size: 16px;">配送信息</h4>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>区域:</strong> ${area}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>电话:</strong> ${phoneNumber}
+        </p>
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>地址:</strong> ${formattedAddress}
+        </p>
+        ${specialInstructions ? `
+        <p style="color: #333; margin: 5px 0; font-size: 15px;">
+          <strong>特别说明:</strong> ${specialInstructions}
+        </p>
+        ` : ''}
+      </div>
+      
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${adminDashboardLink}" style="display: inline-block; background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(194, 136, 78, 0.3);">
+          前往管理后台查看订单
+        </a>
+      </div>
+      
+      <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #eee; text-align: center;">
+        <p style="color: #bbb; font-size: 12px; margin-top: 15px;">
+          © ${new Date().getFullYear()} Kapioo. 保留所有权利。
+        </p>
+      </div>
+    </div>
+  `;
+  
+  return sendEmail({
+    to: adminEmail,
+    subject: `新的每周订单汇总 - ${orders.length}个订单已提交 (用户: ${userName})`,
     html,
   });
 };

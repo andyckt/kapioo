@@ -553,6 +553,7 @@ export function DailyDeliveryCheckout({
           type: 'daily',
           userEmail: userData.email,
           userName: userData.name,
+          userId: userData._id,
           orders: orders,
           deliveryAddress: editingAddress ? addressFormData : userData.address,
           area: formData.area,

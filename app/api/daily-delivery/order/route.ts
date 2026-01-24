@@ -363,25 +363,9 @@ export async function POST(request: Request) {
     // Summary email will be sent from frontend after all orders are placed
     console.log('⏭️ Skipping individual order confirmation email (summary email will be sent after all orders)');
     
-    // Still send admin notification for each order
-    try {
-      await sendAdminDailyOrderNotification({
-        orderId,
-        userId: user._id.toString(),
-        userName: user.name,
-        userEmail: user.email,
-        items: data.items,
-        voucherCost: totalVouchers,
-        area: data.area,
-        phoneNumber: data.phoneNumber,
-        deliveryAddress: data.deliveryAddress,
-        specialInstructions: data.specialInstructions
-      });
-      console.log(`✅ Admin notification sent for order ${orderId}`);
-    } catch (emailError) {
-      console.error(`❌ Error sending admin notification:`, emailError);
-      // Don't fail the order if admin email fails
-    }
+    // ✅ SKIP individual admin notification emails
+    // Admin summary email will be sent from frontend after all orders are placed
+    console.log('⏭️ Skipping individual admin notification email (admin summary email will be sent after all orders)');
 
     // Return response after email attempt (or timeout)
     return NextResponse.json(
