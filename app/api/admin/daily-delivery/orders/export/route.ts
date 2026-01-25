@@ -240,18 +240,29 @@ async function convertToCSV(data: any[]): Promise<string> {
   // Fetch combos for the day to show in the first row
   let comboRow = '';
   try {
-    // Get the delivery date from the first order
+    // Get the day ID from the first order item (e.g., "thursday-w2", "sunday-w1")
+    const firstDayId = data.length > 0 && data[0].items && data[0].items.length > 0 
+      ? data[0].items[0].day 
+      : null;
+    
     const firstDeliveryDate = data.length > 0 && data[0].items && data[0].items.length > 0 
       ? data[0].items[0].date 
       : null;
     
-    if (firstDeliveryDate) {
-      // Find the Day document matching this delivery date
-      const day = await Day.findOne({ date: firstDeliveryDate }).lean();
+    console.log('🔍 CSV Export Debug - First day ID:', firstDayId);
+    console.log('🔍 CSV Export Debug - First delivery date:', firstDeliveryDate);
+    console.log('🔍 CSV Export Debug - Data length:', data.length);
+    
+    if (firstDayId) {
+      // Find the Day document using dayId
+      const day = await Day.findOne({ dayId: firstDayId }).lean();
+      console.log('🔍 CSV Export Debug - Found day:', day);
       
       if (day) {
         // Find all combos for this day
         const combos = await Combo.find({ dayId: day.dayId }).lean();
+        console.log('🔍 CSV Export Debug - Found combos:', combos?.length, 'combos');
+        console.log('🔍 CSV Export Debug - Combo details:', JSON.stringify(combos, null, 2));
         
         if (combos && combos.length > 0) {
           // Escape CSV function
@@ -265,15 +276,23 @@ async function convertToCSV(data: any[]): Promise<string> {
           
           // Format each combo
           const formattedCombos = combos.map((combo: any) => escapeCSV(formatCombo(combo)));
+          console.log('🔍 CSV Export Debug - Formatted combos:', formattedCombos);
           
           // Create the combo row: combo1, combo2, then empty cells for remaining columns
           const emptyColumns = new Array(headers.length - combos.length).fill('');
           comboRow = [...formattedCombos, ...emptyColumns].join(',') + '\n';
+          console.log('🔍 CSV Export Debug - Combo row created:', comboRow.substring(0, 200));
+        } else {
+          console.log('⚠️ CSV Export Debug - No combos found for dayId:', day.dayId);
         }
+      } else {
+        console.log('⚠️ CSV Export Debug - No day found for dayId:', firstDayId);
       }
+    } else {
+      console.log('⚠️ CSV Export Debug - No day ID found in data');
     }
   } catch (error) {
-    console.error('Error fetching combos for reference row:', error);
+    console.error('❌ Error fetching combos for reference row:', error);
   }
   
   // Create CSV content: combo row first, then headers, then data
