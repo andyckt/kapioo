@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import User from '@/models/User';
 import Day from '@/models/Day';
 import Combo from '@/models/Combo';
+import * as XLSX from 'xlsx';
 
 // Define the interface for the DailyOrder document
 interface DailyOrderDocument extends mongoose.Document {
@@ -170,23 +171,30 @@ function formatCombo(combo: any): string {
   return comboText;
 }
 
-// Helper function to convert an array to CSV with dish names as columns
-async function convertToCSV(data: any[]): Promise<string> {
-  // First, collect all unique combo names and their dishes across all orders
+// Helper function to convert orders for a specific date to worksheet data
+async function convertToWorksheetData(data: any[], targetDate: string): Promise<any[][]> {
+  // Filter orders to only include items for the target date
+  const filteredData = data.map(order => ({
+    ...order,
+    items: order.items.filter((item: any) => item.date === targetDate)
+  })).filter(order => order.items.length > 0);
+
+  if (filteredData.length === 0) {
+    return [];
+  }
+
+  // Collect all unique combo names and their dishes
   const comboDetailsMap = new Map<string, Set<string>>();
   
-  data.forEach(order => {
+  filteredData.forEach(order => {
     order.items.forEach((item: any) => {
       if (item.comboName) {
-        // Create a key for the combo (name + type)
         const comboKey = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
         
-        // Initialize the set of dishes for this combo if it doesn't exist
         if (!comboDetailsMap.has(comboKey)) {
           comboDetailsMap.set(comboKey, new Set<string>());
         }
         
-        // Add dishes to the set if they exist
         if (item.dishes && Array.isArray(item.dishes) && item.dishes.length > 0) {
           item.dishes.forEach((dish: string) => {
             comboDetailsMap.get(comboKey)?.add(dish);
@@ -200,20 +208,16 @@ async function convertToCSV(data: any[]): Promise<string> {
   const comboKeys: string[] = [];
   const comboDisplayNames: string[] = [];
   
-  // Sort the combo keys and create display names with dish details
   Array.from(comboDetailsMap.keys()).sort().forEach(comboKey => {
     const dishes = comboDetailsMap.get(comboKey) || new Set<string>();
     const dishList = Array.from(dishes).join(' + ');
     
-    // Add the basic key to our keys array
     comboKeys.push(comboKey);
-    
-    // Create a display name with dishes for the header
     const displayName = dishList ? `${comboKey}: ${dishList}` : comboKey;
     comboDisplayNames.push(displayName);
   });
   
-  // Define base headers (without date and status)
+  // Define base headers
   const baseHeaders = [
     'Order ID',
     'User Name',
@@ -223,7 +227,7 @@ async function convertToCSV(data: any[]): Promise<string> {
     'Area'
   ];
   
-  // Define date and status headers to appear after dish names
+  // Define date and status headers
   const dateStatusHeaders = [
     'Status',
     'Delivery Date',
@@ -234,113 +238,61 @@ async function convertToCSV(data: any[]): Promise<string> {
     'Special Instructions'
   ];
   
-  // Combine all headers: base headers, dish names with details, then date and status
+  // Combine all headers
   const headers = [...baseHeaders, ...comboDisplayNames, ...dateStatusHeaders];
   
   // Fetch combos for the day to show in the first row
-  let comboRow = '';
+  const worksheetData: any[][] = [];
+  
   try {
-    // Get the day ID from the first order item (e.g., "thursday-w2", "sunday-w1")
-    const firstDayId = data.length > 0 && data[0].items && data[0].items.length > 0 
-      ? data[0].items[0].day 
+    const firstDayId = filteredData.length > 0 && filteredData[0].items && filteredData[0].items.length > 0 
+      ? filteredData[0].items[0].day 
       : null;
-    
-    const firstDeliveryDate = data.length > 0 && data[0].items && data[0].items.length > 0 
-      ? data[0].items[0].date 
-      : null;
-    
-    console.log('🔍 CSV Export Debug - First day ID:', firstDayId);
-    console.log('🔍 CSV Export Debug - First delivery date:', firstDeliveryDate);
-    console.log('🔍 CSV Export Debug - Data length:', data.length);
     
     if (firstDayId) {
-      // Find the Day document using dayId
       const day = await Day.findOne({ dayId: firstDayId }).lean();
-      console.log('🔍 CSV Export Debug - Found day:', day);
       
       if (day) {
-        // Find all combos for this day
         const combos = await Combo.find({ dayId: day.dayId }).lean();
-        console.log('🔍 CSV Export Debug - Found combos:', combos?.length, 'combos');
-        console.log('🔍 CSV Export Debug - Combo details:', JSON.stringify(combos, null, 2));
         
         if (combos && combos.length > 0) {
-          // Escape CSV function
-          const escapeCSV = (text: string) => {
-            if (!text) return '';
-            if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-              return `"${text.replace(/"/g, '""')}"`;
-            }
-            return text;
-          };
-          
-          // Format each combo
-          const formattedCombos = combos.map((combo: any) => escapeCSV(formatCombo(combo)));
-          console.log('🔍 CSV Export Debug - Formatted combos:', formattedCombos);
-          
-          // Create the combo row: combo1, combo2, then empty cells for remaining columns
+          const formattedCombos = combos.map((combo: any) => formatCombo(combo));
           const emptyColumns = new Array(headers.length - combos.length).fill('');
-          comboRow = [...formattedCombos, ...emptyColumns].join(',') + '\n';
-          console.log('🔍 CSV Export Debug - Combo row created:', comboRow.substring(0, 200));
-        } else {
-          console.log('⚠️ CSV Export Debug - No combos found for dayId:', day.dayId);
+          worksheetData.push([...formattedCombos, ...emptyColumns]);
         }
-      } else {
-        console.log('⚠️ CSV Export Debug - No day found for dayId:', firstDayId);
       }
-    } else {
-      console.log('⚠️ CSV Export Debug - No day ID found in data');
     }
   } catch (error) {
     console.error('❌ Error fetching combos for reference row:', error);
   }
   
-  // Create CSV content: combo row first, then headers, then data
-  let csvContent = comboRow + headers.join(',') + '\n';
+  // Add headers
+  worksheetData.push(headers);
   
   // Add data rows
-  data.forEach(order => {
-    // Format date ordered
+  filteredData.forEach(order => {
     const dateCreated = new Date(order.createdAt).toISOString().split('T')[0];
-    
-    // Format delivery date and day
     const deliveryDate = order.items && order.items.length > 0 ? order.items[0].date : 'N/A';
     const deliveryDay = order.items && order.items.length > 0 ? 
       (order.items[0].day ? order.items[0].day.split('-')[0] : 'N/A') : 'N/A';
     
-    // Format address
     const address = formatAddress(order.deliveryAddress);
     
-    // Escape special characters in text fields
-    const escapeCSV = (text: string) => {
-      if (!text) return '';
-      // If the text contains commas, quotes, or newlines, wrap it in quotes
-      if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-        // Replace any double quotes with two double quotes
-        return `"${text.replace(/"/g, '""')}"`;
-      }
-      return text;
-    };
-    
-    // Create base row with proper escaping (without date and status)
     const baseRow = [
-      escapeCSV(order.orderId),
-      escapeCSV(order.userName || ''),
-      escapeCSV(order.userEmail || ''),
-      escapeCSV(order.phoneNumber || ''),
-      escapeCSV(address),
-      escapeCSV(order.area || '')
+      order.orderId,
+      order.userName || '',
+      order.userEmail || '',
+      order.phoneNumber || '',
+      address,
+      order.area || ''
     ];
     
-    // Create a map of combo key to quantity for this order
+    // Create a map of combo key to quantity
     const comboQuantities: Record<string, number> = {};
-    
-    // Initialize all combo quantities to 0
     comboKeys.forEach(comboKey => {
       comboQuantities[comboKey] = 0;
     });
     
-    // Fill in the quantities for combos in this order
     order.items.forEach((item: any) => {
       if (item.comboName && item.quantity) {
         const comboKey = `${item.comboName} (${item.type === 'A' ? '2-dish' : '3-dish'})`;
@@ -350,39 +302,31 @@ async function convertToCSV(data: any[]): Promise<string> {
       }
     });
     
-    // Add combo quantities to the row, only showing non-zero values
     const comboQuantitiesRow = comboKeys.map(comboKey => {
       const quantity = comboQuantities[comboKey] || 0;
-      // Return empty string if quantity is 0, otherwise return the quantity
       return quantity > 0 ? quantity : '';
     });
     
-    // Create date and status row
     const dateStatusRow = [
-      escapeCSV(order.status),
-      escapeCSV(deliveryDate),
-      escapeCSV(deliveryDay),
-      escapeCSV(dateCreated),
+      order.status,
+      deliveryDate,
+      deliveryDay,
+      dateCreated,
       order.voucherCost?.twoDish || 0,
       order.voucherCost?.threeDish || 0,
-      escapeCSV(order.specialInstructions || '')
+      order.specialInstructions || ''
     ];
     
-    // Combine all rows: base row, combo quantities, then date and status
     const fullRow = [...baseRow, ...comboQuantitiesRow, ...dateStatusRow];
-    
-    csvContent += fullRow.join(',') + '\n';
+    worksheetData.push(fullRow);
   });
   
-  return csvContent;
+  return worksheetData;
 }
 
-// GET handler - export all orders to CSV
+// GET handler - export all orders to Excel with multiple sheets
 export async function GET(request: Request) {
   try {
-    // In a production environment, you should implement proper authentication
-    // to ensure only admins can access this endpoint
-    
     await connectToDatabase();
     
     // Get query parameters
@@ -391,93 +335,76 @@ export async function GET(request: Request) {
     const search = url.searchParams.get('search');
     const area = url.searchParams.get('area');
     const deliveryDate = url.searchParams.get('deliveryDate');
+    const deliveryDateEnd = url.searchParams.get('deliveryDateEnd');
     const comboName = url.searchParams.get('comboName');
     
     // Build query
     const query: any = {};
     
-    // Filter by status if provided
     if (status) {
       query.status = status;
     }
     
-    // Filter by area if provided
     if (area) {
       query.area = area;
     }
     
-    // Helper function to parse and format dates in various formats
-    function parseAndFormatDate(dateStr: string): string {
-      try {
-        // First try standard parsing
-        const dateObj = new Date(dateStr);
-        if (!isNaN(dateObj.getTime())) {
-          // Get month and day parts
-          const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
-          const day = dateObj.getDate();
-          // Format with leading zero for days under 10
-          const formattedDay = day < 10 ? `0${day}` : `${day}`;
-          return `${month} ${formattedDay}`;
+    // Filter by delivery date range if provided
+    if (deliveryDate) {
+      if (deliveryDateEnd) {
+        // Date range filtering
+        const [startYear, startMonth, startDay] = deliveryDate.split('-').map(Number);
+        const [endYear, endMonth, endDay] = deliveryDateEnd.split('-').map(Number);
+        
+        const startDate = new Date(startYear, startMonth - 1, startDay);
+        const endDate = new Date(endYear, endMonth - 1, endDay);
+        
+        // Generate all dates in the range
+        const dateFormats: string[] = [];
+        const currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+          const dayNum = currentDate.getDate();
+          const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+          const formattedWithoutZero = `${monthName} ${dayNum}`;
+          dateFormats.push(formattedWithZero, formattedWithoutZero);
+          
+          currentDate.setDate(currentDate.getDate() + 1);
         }
         
-        // Handle 'MM DD' format (e.g., '04 01' for April 1)
-        const mmDdMatch = dateStr.match(/^(\d{1,2})\s+(\d{1,2})$/);
-        if (mmDdMatch) {
-          const month = parseInt(mmDdMatch[1]) - 1; // JS months are 0-indexed
-          const day = parseInt(mmDdMatch[2]);
-          if (month >= 0 && month < 12 && day >= 1 && day <= 31) {
-            const year = new Date().getFullYear();
-            const dateObj = new Date(year, month, day);
-            // Get month name
-            const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-            // Format with leading zero for days under 10
-            const formattedDay = day < 10 ? `0${day}` : `${day}`;
-            return `${monthName} ${formattedDay}`;
+        const uniqueDateFormats = [...new Set(dateFormats)];
+        
+        query['items'] = {
+          $elemMatch: {
+            date: { $in: uniqueDateFormats }
           }
-        }
+        };
+      } else {
+        // Single date filtering
+        const [year, month, day] = deliveryDate.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
         
-        // If all parsing attempts fail, return the original string
-        // This allows direct matching of database formats like 'Oct 26'
-        return dateStr;
-      } catch (e) {
-        console.error('Error parsing date:', dateStr, e);
-        return dateStr;
+        const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+        const dayNum = dateObj.getDate();
+        
+        const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+        const formattedWithoutZero = `${monthName} ${dayNum}`;
+        
+        query['items'] = {
+          $elemMatch: {
+            date: { $in: [formattedWithZero, formattedWithoutZero] }
+          }
+        };
       }
     }
     
-    // Filter by delivery date if provided
-    if (deliveryDate) {
-      // Parse the date string components to avoid timezone issues
-      // Input format: "YYYY-MM-DD" (e.g., "2026-01-13")
-      const [year, month, day] = deliveryDate.split('-').map(Number);
-      // Create date object in local timezone (not UTC)
-      const dateObj = new Date(year, month - 1, day);
-      
-      // Format the date as a string in the format used in the database (e.g., 'Jan 13')
-      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-      const dayNum = dateObj.getDate();
-      
-      // Database may have inconsistent formats: "Feb 1" vs "Feb 01"
-      // Query for both formats to ensure we match all orders
-      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
-      const formattedWithoutZero = `${monthName} ${dayNum}`;
-      
-      // Use $elemMatch with $in to match either format
-      query['items'] = {
-        $elemMatch: {
-          date: { $in: [formattedWithZero, formattedWithoutZero] }
-        }
-      };
-    }
-    
-    // Filter by combo name if provided
     if (comboName && comboName !== 'all') {
       query['items.comboName'] = comboName;
     }
     
     // Search functionality
     if (search) {
-      // First, try to find users matching the search term
       const searchRegex = new RegExp(search, 'i');
       const matchingUsers = await User.find({
         $or: [
@@ -487,27 +414,23 @@ export async function GET(request: Request) {
         ]
       }).select('_id').lean();
       
-      // Extract user IDs from the matching users
       const matchingUserIds = matchingUsers.map(user => user._id);
       
-      // Build the search query with multiple conditions
       query.$or = [
-        { orderId: searchRegex },                         // Search by order ID
-        { 'items.comboName': searchRegex },               // Search by combo name
-        { 'items.day': searchRegex },                     // Search by day name
-        { 'items.date': searchRegex },                    // Search by date
-        { 'deliveryAddress.streetAddress': searchRegex }, // Search by street address
-        { 'deliveryAddress.postalCode': searchRegex },    // Search by postal code
-        { phoneNumber: searchRegex },                     // Search by phone number
-        { area: searchRegex }                             // Search by area
+        { orderId: searchRegex },
+        { 'items.comboName': searchRegex },
+        { 'items.day': searchRegex },
+        { 'items.date': searchRegex },
+        { 'deliveryAddress.streetAddress': searchRegex },
+        { 'deliveryAddress.postalCode': searchRegex },
+        { phoneNumber: searchRegex },
+        { area: searchRegex }
       ];
       
-      // Add user IDs to the search if we found matching users
       if (matchingUserIds.length > 0) {
         query.$or.push({ userId: { $in: matchingUserIds } });
       }
       
-      // If search is a valid ObjectId, also search by userId directly
       if (mongoose.Types.ObjectId.isValid(search)) {
         query.$or.push({ userId: search });
       }
@@ -535,11 +458,9 @@ export async function GET(request: Request) {
       if (!userName) return 'Unknown';
       if (!phoneNumber) return userName;
       
-      // Extract last 4 digits from phone number (remove any non-digit characters)
       const digitsOnly = phoneNumber.replace(/\D/g, '');
       const lastFourDigits = digitsOnly.slice(-4);
       
-      // Return formatted name if we have at least 4 digits
       if (lastFourDigits.length === 4) {
         return `${userName}-${lastFourDigits}`;
       }
@@ -560,14 +481,51 @@ export async function GET(request: Request) {
       };
     });
     
-    // Convert to CSV
-    const csvContent = await convertToCSV(ordersWithUserInfo);
+    // Collect all unique delivery dates from orders
+    const uniqueDates = new Set<string>();
+    ordersWithUserInfo.forEach(order => {
+      order.items.forEach((item: any) => {
+        if (item.date) {
+          uniqueDates.add(item.date);
+        }
+      });
+    });
     
-    // Return CSV as a download
-    return new NextResponse(csvContent, {
+    // Sort dates chronologically
+    const sortedDates = Array.from(uniqueDates).sort((a, b) => {
+      const dateA = new Date(a + ', 2026');
+      const dateB = new Date(b + ', 2026');
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    console.log(`📊 Creating Excel file with ${sortedDates.length} sheet(s) for dates:`, sortedDates);
+    
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    
+    // Create a sheet for each date
+    for (const date of sortedDates) {
+      const worksheetData = await convertToWorksheetData(ordersWithUserInfo, date);
+      
+      if (worksheetData.length > 0) {
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        
+        // Sanitize sheet name (Excel has 31 char limit and doesn't allow certain characters)
+        const sheetName = date.replace(/[:\\/?*\[\]]/g, '-').substring(0, 31);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        
+        console.log(`✅ Created sheet: ${sheetName} with ${worksheetData.length - 2} orders`);
+      }
+    }
+    
+    // Generate Excel file buffer
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
+    // Return Excel file as a download
+    return new NextResponse(excelBuffer, {
       headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="daily-delivery-orders-${new Date().toISOString().split('T')[0]}.csv"`
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="daily-delivery-orders-${new Date().toISOString().split('T')[0]}.xlsx"`
       }
     });
   } catch (error) {

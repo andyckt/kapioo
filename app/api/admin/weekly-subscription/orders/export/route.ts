@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
+import * as XLSX from 'xlsx';
 
 // Define the interface for the WeeklyOrder document
 interface WeeklyOrderDocument extends mongoose.Document {
@@ -119,12 +120,22 @@ function formatAddress(address: any): string {
   return formattedAddress;
 }
 
-// Helper function to convert an array to CSV with dish names as columns
-function convertToCSV(data: any[]): string {
-  // First, collect all unique dish names across all orders
+// Helper function to convert orders for a specific date to worksheet data
+function convertToWorksheetData(data: any[], targetDate: string): any[][] {
+  // Filter orders to only include items for the target date
+  const filteredData = data.map(order => ({
+    ...order,
+    items: order.items.filter((item: any) => item.date === targetDate)
+  })).filter(order => order.items.length > 0);
+
+  if (filteredData.length === 0) {
+    return [];
+  }
+
+  // Collect all unique dish names
   const allDishNames = new Set<string>();
   
-  data.forEach(order => {
+  filteredData.forEach(order => {
     order.items.forEach((item: any) => {
       if (item.optionName) {
         allDishNames.add(item.optionName);
@@ -135,7 +146,7 @@ function convertToCSV(data: any[]): string {
   // Convert to array and sort
   const uniqueDishNames = Array.from(allDishNames).sort();
   
-  // Define base headers (without date and status)
+  // Define base headers
   const baseHeaders = [
     'Order ID',
     'User Name',
@@ -145,7 +156,7 @@ function convertToCSV(data: any[]): string {
     'Area'
   ];
   
-  // Define date and status headers to appear after dish names
+  // Define date and status headers
   const dateStatusHeaders = [
     'Status',
     'Delivery Date',
@@ -153,233 +164,139 @@ function convertToCSV(data: any[]): string {
     'Date Ordered'
   ];
   
-  // Combine all headers: base headers, dish names, then date and status
+  // Combine all headers
   const headers = [...baseHeaders, ...uniqueDishNames, ...dateStatusHeaders];
   
-  // Create CSV content
-  let csvContent = headers.join(',') + '\n';
+  // Create worksheet data
+  const worksheetData: any[][] = [];
+  
+  // Add headers
+  worksheetData.push(headers);
   
   // Add data rows
-  data.forEach(order => {
-    // Format date ordered
+  filteredData.forEach(order => {
     const dateCreated = new Date(order.createdAt).toISOString().split('T')[0];
-    
-    // Format delivery date and day
     const deliveryDate = order.items && order.items.length > 0 ? order.items[0].date : 'N/A';
     const deliveryDay = order.items && order.items.length > 0 ? order.items[0].dayId.split('-')[0] : 'N/A';
     
-    // Format address
     const address = formatAddress(order.deliveryAddress);
     
-    // Escape special characters in text fields
-    const escapeCSV = (text: string) => {
-      if (!text) return '';
-      // If the text contains commas, quotes, or newlines, wrap it in quotes
-      if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-        // Replace any double quotes with two double quotes
-        return `"${text.replace(/"/g, '""')}"`;
-      }
-      return text;
-    };
+    const baseRow = [
+      order.orderId,
+      order.userName || '',
+      order.userEmail || '',
+      order.phoneNumber || '',
+      address,
+      order.area || ''
+    ];
     
-    // Create a map of dish name to quantity for this order
+    // Create a map of dish name to quantity
     const dishQuantities: Record<string, number> = {};
-    
-    // Initialize all dish quantities to 0
     uniqueDishNames.forEach(dishName => {
       dishQuantities[dishName] = 0;
     });
     
-    // Fill in the quantities for dishes in this order
     order.items.forEach((item: any) => {
       if (item.optionName && item.quantity) {
         dishQuantities[item.optionName] = (dishQuantities[item.optionName] || 0) + item.quantity;
       }
     });
     
-    // Create base row with proper escaping (without date and status)
-    const baseRow = [
-      escapeCSV(order.orderId),
-      escapeCSV(order.userName || ''),
-      escapeCSV(order.userEmail || ''),
-      escapeCSV(order.phoneNumber || ''),
-      escapeCSV(address),
-      escapeCSV(order.area || '')
-    ];
-    
-    // Add dish quantities to the row, only showing non-zero values
     const dishQuantitiesRow = uniqueDishNames.map(dishName => {
       const quantity = dishQuantities[dishName] || 0;
-      // Return empty string if quantity is 0, otherwise return the quantity
       return quantity > 0 ? quantity : '';
     });
     
-    // Create date and status row
     const dateStatusRow = [
-      escapeCSV(order.status),
-      escapeCSV(deliveryDate),
-      escapeCSV(deliveryDay),
-      escapeCSV(dateCreated)
+      order.status,
+      deliveryDate,
+      deliveryDay,
+      dateCreated
     ];
     
-    // Combine all rows: base row, dish quantities, then date and status
     const fullRow = [...baseRow, ...dishQuantitiesRow, ...dateStatusRow];
-    
-    csvContent += fullRow.join(',') + '\n';
+    worksheetData.push(fullRow);
   });
   
-  return csvContent;
+  return worksheetData;
 }
 
-// GET handler - export all orders to CSV
+// GET handler - export all orders to Excel with multiple sheets
 export async function GET(request: Request) {
   try {
-    // In a production environment, you should implement proper authentication
-    // to ensure only admins can access this endpoint
-    
     await connectToDatabase();
     
     // Get query parameters
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
     const search = url.searchParams.get('search');
-    const startDate = url.searchParams.get('startDate');
-    const endDate = url.searchParams.get('endDate');
     const area = url.searchParams.get('area');
-    const mealPlanType = url.searchParams.get('mealPlanType');
     const deliveryDate = url.searchParams.get('deliveryDate');
-    const deliveryStartDate = url.searchParams.get('deliveryStartDate');
-    const deliveryEndDate = url.searchParams.get('deliveryEndDate');
+    const deliveryDateEnd = url.searchParams.get('deliveryDateEnd');
     
     // Build query
     const query: any = {};
     
-    // Filter by status if provided
     if (status) {
       query.status = status;
     }
     
-    // Filter by area if provided
     if (area) {
       query.area = area;
     }
     
-    // Filter by meal plan type if provided
-    if (mealPlanType) {
-      query.mealPlanType = mealPlanType;
-    }
-    
-    // Helper function to parse and format dates in various formats
-    function parseAndFormatDate(dateStr: string): string {
-      try {
-        // First try standard parsing
-        const dateObj = new Date(dateStr);
-        if (!isNaN(dateObj.getTime())) {
-          // Get month and day parts
-          const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
-          const day = dateObj.getDate();
-          // Format with leading zero for days under 10
-          const formattedDay = day < 10 ? `0${day}` : `${day}`;
-          return `${month} ${formattedDay}`;
-        }
-        
-        // Handle 'MM DD' format (e.g., '04 01' for April 1)
-        const mmDdMatch = dateStr.match(/^(\d{1,2})\s+(\d{1,2})$/);
-        if (mmDdMatch) {
-          const month = parseInt(mmDdMatch[1]) - 1; // JS months are 0-indexed
-          const day = parseInt(mmDdMatch[2]);
-          if (month >= 0 && month < 12 && day >= 1 && day <= 31) {
-            const year = new Date().getFullYear();
-            const dateObj = new Date(year, month, day);
-            // Get month name
-            const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-            // Format with leading zero for days under 10
-            const formattedDay = day < 10 ? `0${day}` : `${day}`;
-            return `${monthName} ${formattedDay}`;
-          }
-        }
-        
-        // If all parsing attempts fail, return the original string
-        // This allows direct matching of database formats like 'Oct 26'
-        return dateStr;
-      } catch (e) {
-        console.error('Error parsing date:', dateStr, e);
-        return dateStr;
-      }
-    }
-    
-    // Filter by single delivery date if provided (takes precedence over date range)
+    // Filter by delivery date range if provided
     if (deliveryDate) {
-      // Parse the date string components to avoid timezone issues
-      // Input format: "YYYY-MM-DD" (e.g., "2026-01-13")
-      const [year, month, day] = deliveryDate.split('-').map(Number);
-      // Create date object in local timezone (not UTC)
-      const dateObj = new Date(year, month - 1, day);
-      
-      // Format the date as a string in the format used in the database (e.g., 'Jan 13')
-      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-      const dayNum = dateObj.getDate();
-      
-      // Database may have inconsistent formats: "Feb 1" vs "Feb 01"
-      // Query for both formats to ensure we match all orders
-      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
-      const formattedWithoutZero = `${monthName} ${dayNum}`;
-      
-      // Use $elemMatch with $in to match either format
-      query['items'] = {
-        $elemMatch: {
-          date: { $in: [formattedWithZero, formattedWithoutZero] }
+      if (deliveryDateEnd) {
+        // Date range filtering
+        const [startYear, startMonth, startDay] = deliveryDate.split('-').map(Number);
+        const [endYear, endMonth, endDay] = deliveryDateEnd.split('-').map(Number);
+        
+        const startDate = new Date(startYear, startMonth - 1, startDay);
+        const endDate = new Date(endYear, endMonth - 1, endDay);
+        
+        // Generate all dates in the range
+        const dateFormats: string[] = [];
+        const currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+          const dayNum = currentDate.getDate();
+          const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+          const formattedWithoutZero = `${monthName} ${dayNum}`;
+          dateFormats.push(formattedWithZero, formattedWithoutZero);
+          
+          currentDate.setDate(currentDate.getDate() + 1);
         }
-      };
-    }
-    // Filter by delivery date range if provided (only if single deliveryDate is not provided)
-    else if (deliveryStartDate || deliveryEndDate) {
-      // Create a date range filter for items.date
-      const dateFilter: any = {};
-      
-      if (deliveryStartDate) {
-        // Parse and format the date string to match database format
-        const formattedStartDate = parseAndFormatDate(deliveryStartDate);
-        dateFilter.$gte = formattedStartDate;
-        console.log(`Filtering delivery dates >= ${formattedStartDate}`);
-      }
-      
-      if (deliveryEndDate) {
-        // Parse and format the date string to match database format
-        const formattedEndDate = parseAndFormatDate(deliveryEndDate);
-        dateFilter.$lte = formattedEndDate;
-        console.log(`Filtering delivery dates <= ${formattedEndDate}`);
-      }
-      
-      // Use $elemMatch to find documents where at least one item in the items array matches our date criteria
-      if (Object.keys(dateFilter).length > 0) {
+        
+        const uniqueDateFormats = [...new Set(dateFormats)];
+        
         query['items'] = {
           $elemMatch: {
-            date: dateFilter
+            date: { $in: uniqueDateFormats }
+          }
+        };
+      } else {
+        // Single date filtering
+        const [year, month, day] = deliveryDate.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        
+        const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+        const dayNum = dateObj.getDate();
+        
+        const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+        const formattedWithoutZero = `${monthName} ${dayNum}`;
+        
+        query['items'] = {
+          $elemMatch: {
+            date: { $in: [formattedWithZero, formattedWithoutZero] }
           }
         };
       }
     }
     
-    // Filter by date range if provided
-    if (startDate || endDate) {
-      query.createdAt = {};
-      
-      if (startDate) {
-        query.createdAt.$gte = new Date(startDate);
-      }
-      
-      if (endDate) {
-        // Add one day to include the end date fully
-        const endDateObj = new Date(endDate);
-        endDateObj.setDate(endDateObj.getDate() + 1);
-        query.createdAt.$lt = endDateObj;
-      }
-    }
-    
     // Search functionality
     if (search) {
-      // First, try to find users matching the search term
       const searchRegex = new RegExp(search, 'i');
       const matchingUsers = await User.find({
         $or: [
@@ -389,25 +306,21 @@ export async function GET(request: Request) {
         ]
       }).select('_id').lean();
       
-      // Extract user IDs from the matching users
       const matchingUserIds = matchingUsers.map(user => user._id);
       
-      // Build the search query with multiple conditions
       query.$or = [
-        { orderId: searchRegex },                         // Search by order ID
-        { 'items.optionName': searchRegex },              // Search by meal option name
-        { 'deliveryAddress.streetAddress': searchRegex }, // Search by street address
-        { 'deliveryAddress.postalCode': searchRegex },    // Search by postal code
-        { phoneNumber: searchRegex },                     // Search by phone number
-        { area: searchRegex }                             // Search by area
+        { orderId: searchRegex },
+        { 'items.optionName': searchRegex },
+        { 'deliveryAddress.streetAddress': searchRegex },
+        { 'deliveryAddress.postalCode': searchRegex },
+        { phoneNumber: searchRegex },
+        { area: searchRegex }
       ];
       
-      // Add user IDs to the search if we found matching users
       if (matchingUserIds.length > 0) {
         query.$or.push({ userId: { $in: matchingUserIds } });
       }
       
-      // If search is a valid ObjectId, also search by userId directly
       if (mongoose.Types.ObjectId.isValid(search)) {
         query.$or.push({ userId: search });
       }
@@ -440,14 +353,51 @@ export async function GET(request: Request) {
       };
     });
     
-    // Convert to CSV
-    const csvContent = convertToCSV(ordersWithUserInfo);
+    // Collect all unique delivery dates from orders
+    const uniqueDates = new Set<string>();
+    ordersWithUserInfo.forEach(order => {
+      order.items.forEach((item: any) => {
+        if (item.date) {
+          uniqueDates.add(item.date);
+        }
+      });
+    });
     
-    // Return CSV as a download
-    return new NextResponse(csvContent, {
+    // Sort dates chronologically
+    const sortedDates = Array.from(uniqueDates).sort((a, b) => {
+      const dateA = new Date(a + ', 2026');
+      const dateB = new Date(b + ', 2026');
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    console.log(`📊 Creating Excel file with ${sortedDates.length} sheet(s) for dates:`, sortedDates);
+    
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    
+    // Create a sheet for each date
+    for (const date of sortedDates) {
+      const worksheetData = convertToWorksheetData(ordersWithUserInfo, date);
+      
+      if (worksheetData.length > 0) {
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        
+        // Sanitize sheet name (Excel has 31 char limit and doesn't allow certain characters)
+        const sheetName = date.replace(/[:\\/?*\[\]]/g, '-').substring(0, 31);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        
+        console.log(`✅ Created sheet: ${sheetName} with ${worksheetData.length - 1} orders`);
+      }
+    }
+    
+    // Generate Excel file buffer
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
+    // Return Excel file as a download
+    return new NextResponse(excelBuffer, {
       headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="weekly-subscription-orders-${new Date().toISOString().split('T')[0]}.csv"`
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="weekly-subscription-orders-${new Date().toISOString().split('T')[0]}.xlsx"`
       }
     });
   } catch (error) {

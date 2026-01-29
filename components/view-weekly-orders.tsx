@@ -371,7 +371,7 @@ export function ViewWeeklyOrders() {
   // Load orders when component mounts or filters change
   useEffect(() => {
     fetchOrders()
-  }, [filters.status, filters.area, filters.search, filters.deliveryDate])
+  }, [filters.status, filters.area, filters.search, filters.deliveryDate, filters.deliveryDateEnd])
   
   // Load areas and delivery dates when component mounts
   useEffect(() => {
@@ -716,7 +716,13 @@ export function ViewWeeklyOrders() {
                 </div>
                 {filters.deliveryDate && filters.deliveryDateEnd && (
                   <p className="text-xs text-muted-foreground">
-                    Showing orders from {new Date(filters.deliveryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to {new Date(filters.deliveryDateEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    Showing orders from {(() => {
+                      const [year, month, day] = filters.deliveryDate.split('-').map(Number);
+                      return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    })()} to {(() => {
+                      const [year, month, day] = filters.deliveryDateEnd.split('-').map(Number);
+                      return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    })()}
                   </p>
                 )}
               </div>
