@@ -108,6 +108,7 @@ export async function GET(request: Request) {
     const search = url.searchParams.get('search');
     const area = url.searchParams.get('area');
     const deliveryDate = url.searchParams.get('deliveryDate');
+    const deliveryDateEnd = url.searchParams.get('deliveryDateEnd');
     const comboName = url.searchParams.get('comboName');
     const skip = (page - 1) * limit;
     
@@ -165,27 +166,53 @@ export async function GET(request: Request) {
     
     // Filter by delivery date if provided
     if (deliveryDate) {
-      // Parse the date string components to avoid timezone issues
-      // Input format: "YYYY-MM-DD" (e.g., "2026-01-13")
-      const [year, month, day] = deliveryDate.split('-').map(Number);
-      // Create date object in local timezone (not UTC)
-      const dateObj = new Date(year, month - 1, day);
-      
-      // Format the date as a string in the format used in the database (e.g., 'Jan 13')
-      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-      const dayNum = dateObj.getDate();
-      
-      // Database may have inconsistent formats: "Feb 1" vs "Feb 01"
-      // Query for both formats to ensure we match all orders
-      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
-      const formattedWithoutZero = `${monthName} ${dayNum}`;
-      
-      // Use $elemMatch with $in to match either format
-      query['items'] = {
-        $elemMatch: {
-          date: { $in: [formattedWithZero, formattedWithoutZero] }
+      if (deliveryDateEnd) {
+        // Date range filtering
+        const [startYear, startMonth, startDay] = deliveryDate.split('-').map(Number);
+        const [endYear, endMonth, endDay] = deliveryDateEnd.split('-').map(Number);
+        
+        const startDate = new Date(startYear, startMonth - 1, startDay);
+        const endDate = new Date(endYear, endMonth - 1, endDay);
+        
+        // Generate all dates in the range
+        const dateFormats: string[] = [];
+        const currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+          const dayNum = currentDate.getDate();
+          const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+          const formattedWithoutZero = `${monthName} ${dayNum}`;
+          dateFormats.push(formattedWithZero, formattedWithoutZero);
+          
+          currentDate.setDate(currentDate.getDate() + 1);
         }
-      };
+        
+        // Remove duplicates
+        const uniqueDateFormats = [...new Set(dateFormats)];
+        
+        query['items'] = {
+          $elemMatch: {
+            date: { $in: uniqueDateFormats }
+          }
+        };
+      } else {
+        // Single date filtering (existing logic)
+        const [year, month, day] = deliveryDate.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        
+        const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+        const dayNum = dateObj.getDate();
+        
+        const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+        const formattedWithoutZero = `${monthName} ${dayNum}`;
+        
+        query['items'] = {
+          $elemMatch: {
+            date: { $in: [formattedWithZero, formattedWithoutZero] }
+          }
+        };
+      }
     }
     
     // Filter by combo name if provided

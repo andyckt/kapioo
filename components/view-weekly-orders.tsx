@@ -125,7 +125,8 @@ export function ViewWeeklyOrders() {
     status: 'all',
     search: '',
     area: '',
-    deliveryDate: ''
+    deliveryDate: '',
+    deliveryDateEnd: ''
   })
   const [deliveryDates, setDeliveryDates] = useState<Array<{date: string, day: string, display: string}>>([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -170,6 +171,11 @@ export function ViewWeeklyOrders() {
       // Add delivery date filter if provided
       if (filters.deliveryDate) {
         params.append('deliveryDate', filters.deliveryDate)
+      }
+      
+      // Add delivery date end filter if provided
+      if (filters.deliveryDateEnd) {
+        params.append('deliveryDateEnd', filters.deliveryDateEnd)
       }
       
       const response = await fetch(`/api/admin/weekly-subscription/orders?${params.toString()}`)
@@ -331,6 +337,11 @@ export function ViewWeeklyOrders() {
       // Add delivery date filter if provided
       if (filters.deliveryDate) {
         params.append('deliveryDate', filters.deliveryDate)
+      }
+      
+      // Add delivery date end filter if provided
+      if (filters.deliveryDateEnd) {
+        params.append('deliveryDateEnd', filters.deliveryDateEnd)
       }
 
       // Create a link to download the CSV
@@ -674,19 +685,40 @@ export function ViewWeeklyOrders() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryDate">Delivery Date</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="deliveryDate"
-                    type="date"
-                    className="pl-8"
-                    value={filters.deliveryDate}
-                    onChange={(e) => {
-                      setFilters({...filters, deliveryDate: e.target.value});
-                    }}
-                  />
+                <Label htmlFor="deliveryDate">Delivery Date Range</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative">
+                    <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="deliveryDate"
+                      type="date"
+                      placeholder="Start date"
+                      className="pl-8"
+                      value={filters.deliveryDate}
+                      onChange={(e) => {
+                        setFilters({...filters, deliveryDate: e.target.value});
+                      }}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="deliveryDateEnd"
+                      type="date"
+                      placeholder="End date"
+                      className="pl-8"
+                      value={filters.deliveryDateEnd}
+                      onChange={(e) => {
+                        setFilters({...filters, deliveryDateEnd: e.target.value});
+                      }}
+                    />
+                  </div>
                 </div>
+                {filters.deliveryDate && filters.deliveryDateEnd && (
+                  <p className="text-xs text-muted-foreground">
+                    Showing orders from {new Date(filters.deliveryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to {new Date(filters.deliveryDateEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -849,19 +881,41 @@ export function ViewWeeklyOrders() {
                                 // Filter items by delivery date if filter is active
                                 const itemsToDisplay = filters.deliveryDate 
                                   ? order.items.filter((item: any) => {
-                                      // Convert filter date to database format for comparison
                                       if (!filters.deliveryDate) return true;
-                                      const [year, month, day] = filters.deliveryDate.split('-').map(Number);
-                                      const dateObj = new Date(year, month - 1, day);
-                                      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-                                      const dayNum = dateObj.getDate();
                                       
-                                      // Database has inconsistent formats: "Feb 1" vs "Feb 01"
-                                      // So we need to match BOTH formats
-                                      const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
-                                      const formattedWithoutZero = `${monthName} ${dayNum}`;
-                                      
-                                      return item.date === formattedWithZero || item.date === formattedWithoutZero;
+                                      // Handle date range filtering
+                                      if (filters.deliveryDateEnd) {
+                                        const [startYear, startMonth, startDay] = filters.deliveryDate.split('-').map(Number);
+                                        const [endYear, endMonth, endDay] = filters.deliveryDateEnd.split('-').map(Number);
+                                        
+                                        const startDate = new Date(startYear, startMonth - 1, startDay);
+                                        const endDate = new Date(endYear, endMonth - 1, endDay);
+                                        
+                                        // Generate all valid date formats in the range
+                                        const validDates: string[] = [];
+                                        const currentDate = new Date(startDate);
+                                        
+                                        while (currentDate <= endDate) {
+                                          const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+                                          const dayNum = currentDate.getDate();
+                                          validDates.push(`${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`);
+                                          validDates.push(`${monthName} ${dayNum}`);
+                                          currentDate.setDate(currentDate.getDate() + 1);
+                                        }
+                                        
+                                        return validDates.includes(item.date);
+                                      } else {
+                                        // Single date filtering
+                                        const [year, month, day] = filters.deliveryDate.split('-').map(Number);
+                                        const dateObj = new Date(year, month - 1, day);
+                                        const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                                        const dayNum = dateObj.getDate();
+                                        
+                                        const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
+                                        const formattedWithoutZero = `${monthName} ${dayNum}`;
+                                        
+                                        return item.date === formattedWithZero || item.date === formattedWithoutZero;
+                                      }
                                     })
                                   : order.items;
                                 
