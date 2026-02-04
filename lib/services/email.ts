@@ -142,9 +142,13 @@ export const sendVerificationEmail = async (to: string, code: string, language: 
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
         ${t.account.verificationRequired}:
       </p>
-      <div style="background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); border-radius: 8px; padding: 20px; margin: 30px auto; text-align: center; width: 60%;">
-        <p style="letter-spacing: 8px; font-size: 32px; font-weight: bold; color: white; margin: 0; text-align: center;">${code}</p>
-      </div>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 30px auto; width: 60%; max-width: 360px;">
+        <tr>
+          <td bgcolor="#C2884E" style="background-color: #C2884E; border-radius: 8px; padding: 20px; text-align: center; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 8px; line-height: 1.4;">
+            ${code}
+          </td>
+        </tr>
+      </table>
       <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center;">
         ${t.account.codeExpiresIn}
       </p>
@@ -179,9 +183,13 @@ export const sendPasswordResetEmail = async (to: string, code: string, language:
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
         ${t.account.resetPasswordPrompt}. ${t.account.enterResetCode}:
       </p>
-      <div style="background: linear-gradient(135deg, #C2884E 0%, #D1A46C 100%); border-radius: 8px; padding: 20px; margin: 30px auto; text-align: center; width: 60%;">
-        <p style="letter-spacing: 8px; font-size: 32px; font-weight: bold; color: white; margin: 0; text-align: center;">${code}</p>
-      </div>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 30px auto; width: 60%; max-width: 360px;">
+        <tr>
+          <td bgcolor="#C2884E" style="background-color: #C2884E; border-radius: 8px; padding: 20px; text-align: center; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 8px; line-height: 1.4;">
+            ${code}
+          </td>
+        </tr>
+      </table>
       <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center;">
         ${t.account.resetCodeExpiresIn}. ${t.account.didNotRequest}.
       </p>
