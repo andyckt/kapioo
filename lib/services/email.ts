@@ -53,8 +53,9 @@ export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// AWS S3 hosted logo URL
-const LOGO_URL = 'https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/src/Kapioo.png';
+// Kapioo logo hosted on kapioo.com domain for better email deliverability
+// This is the same image that was previously on S3, now hosted on our domain
+const LOGO_URL = 'https://www.kapioo.com/kapioo-logo.png';
 
 // Send a welcome email to new users
 export const sendWelcomeEmail = async (to: string, name: string, language: Language = 'zh') => {
