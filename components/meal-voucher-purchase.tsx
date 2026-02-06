@@ -63,7 +63,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [selectedPlan, setSelectedPlan] = useState<VoucherPlan | null>(null)
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
-  const [referenceNumber, setReferenceNumber] = useState('')
+  const [interacEmail, setInteracEmail] = useState('')
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
   const router = useRouter()
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
@@ -319,10 +319,10 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       return
     }
     
-    if (!referenceNumber) {
+    if (!interacEmail) {
       toast({
-        title: language === 'zh' ? "缺少参考号码" : "Missing reference number",
-        description: language === 'zh' ? "请输入电子转账参考号码" : "Please enter the e-Transfer reference number",
+        title: language === 'zh' ? "缺少电子转账邮箱" : "Missing e-Transfer email",
+        description: language === 'zh' ? "请输入您用于发送电子转账的电子邮件地址" : "Please enter the email you used to send the e-Transfer",
         variant: "destructive"
       })
       return
@@ -371,7 +371,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           originalPrice: selectedPlan.price, // Store original price before tax
           taxRate: 0.13, // 13% tax rate
           imageProof: imageProofUrl,
-          referenceNumber: referenceNumber,
+          referenceNumber: interacEmail,
           notes: notes || undefined
         })
       })
@@ -759,21 +759,25 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             </div>
           </div>
 
-          {/* Reference Number Section */}
+          {/* INTERAC Email Section */}
           <div className="space-y-3">
             <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '参考号码' : 'Reference Number'}
+              {language === 'zh' ? 'INTERAC 电子转账邮箱' : 'INTERAC e-Transfer Email'}
               <span className="text-red-500">*</span>
             </h3>
             <Input
-              id="referenceNumber"
-              placeholder={language === 'zh' ? '输入电子转账参考号码' : 'Enter e-Transfer reference number'}
-              value={referenceNumber}
-              onChange={(e) => setReferenceNumber(e.target.value)}
+              id="interacEmail"
+              type="email"
+              placeholder={language === 'zh' ? '输入您用于发送电子转账的邮箱' : 'Enter the email you used to send the e-Transfer'}
+              value={interacEmail}
+              onChange={(e) => setInteracEmail(e.target.value)}
               className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
               required
             />
+            <p className="text-xs text-[#8A7968]">
+              {language === 'zh' ? '我们将使用此邮箱来匹配您的付款和订单。' : "We'll use this to match your payment to your order."}
+            </p>
           </div>
 
           {/* Notes Section */}

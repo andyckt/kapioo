@@ -64,7 +64,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect' | 'upload'>('mealSelect')
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
-  const [referenceNumber, setReferenceNumber] = useState('')
+  const [interacEmail, setInteracEmail] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'wechat' | 'emt' | null>('emt') // Default to EMT
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   const [showAddressDialog, setShowAddressDialog] = useState(false)
@@ -619,7 +619,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedPlan || !paymentProof || !referenceNumber) {
+    if (!selectedPlan || !paymentProof || !interacEmail) {
       let errorTitle = language === 'zh' ? '请完成所有必填项' : 'Please complete all required fields'
       let errorDescription = ''
       
@@ -627,8 +627,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         errorDescription = language === 'zh' ? '请选择一个套餐' : 'Please select a plan'
       } else if (!paymentProof) {
         errorDescription = language === 'zh' ? '请上传付款凭证' : 'Please upload your payment proof'
-      } else if (!referenceNumber) {
-        errorDescription = language === 'zh' ? '请输入电子转账参考号码' : 'Please enter the e-Transfer reference number'
+      } else if (!interacEmail) {
+        errorDescription = language === 'zh' ? '请输入您用于发送电子转账的电子邮件地址' : 'Please enter the email you used to send the e-Transfer'
       }
       
       toast({
@@ -689,7 +689,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           duration: selectedPlan.duration,
           planDescription: planDescription,
           imageProof: imageUrl,
-          referenceNumber: referenceNumber,
+          referenceNumber: interacEmail,
           notes,
           mealPlanType,
           mealPlanQuantity: selectedPlan.duration, // 1, 2, or 4 weeks
@@ -728,7 +728,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     setPurchaseStep('planSelect')
     setSelectedPlan(null)
     setPaymentProof(null)
-    setReferenceNumber('')
+    setInteracEmail('')
     setNotes('')
   }
 
@@ -1308,18 +1308,22 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   
                   
                   <div>
-                    <Label htmlFor="referenceNumber" className="text-[#6B5F53] font-medium">
-                      {language === 'zh' ? '参考号码' : 'Reference Number'}
+                    <Label htmlFor="interacEmail" className="text-[#6B5F53] font-medium">
+                      {language === 'zh' ? 'INTERAC 电子转账邮箱' : 'INTERAC e-Transfer Email'}
                       <span className="text-red-500 ml-1">*</span>
                     </Label>
                     <Input
-                      id="referenceNumber"
-                      value={referenceNumber}
-                      onChange={(e) => setReferenceNumber(e.target.value)}
-                      placeholder={language === 'zh' ? '输入电子转账参考号码' : 'Enter e-Transfer reference number'}
+                      id="interacEmail"
+                      type="email"
+                      value={interacEmail}
+                      onChange={(e) => setInteracEmail(e.target.value)}
+                      placeholder={language === 'zh' ? '输入您用于发送电子转账的邮箱' : 'Enter the email you used to send the e-Transfer'}
                       className="mt-2"
                       required
                     />
+                    <p className="text-xs text-[#8A7968] mt-1">
+                      {language === 'zh' ? '我们将使用此邮箱来匹配您的付款和订单。' : "We'll use this to match your payment to your order."}
+                    </p>
                   </div>
                   
                   <div>
