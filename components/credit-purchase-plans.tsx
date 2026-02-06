@@ -651,11 +651,12 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         : `${selectedPlan.mealsPerWeek} meals/week: ${selectedPlan.duration} ${selectedPlan.duration === 1 ? 'week' : 'weeks'}`;
       
       // Determine meal plan type based on selected plan
-      let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek';
+      let mealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek';
       if (selectedPlan.mealsPerWeek === 6) mealPlanType = '6aweek';
       else if (selectedPlan.mealsPerWeek === 8) mealPlanType = '8aweek';
       else if (selectedPlan.mealsPerWeek === 10) mealPlanType = '10aweek';
-      else mealPlanType = '12aweek';
+      else if (selectedPlan.mealsPerWeek === 12) mealPlanType = '12aweek';
+      else mealPlanType = '16aweek';
       
       // Calculate the final amount based on payment method
       const deliveryFee = getDeliveryFee(userRegion || '');
