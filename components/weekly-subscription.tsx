@@ -23,6 +23,7 @@ interface WeeklySubscriptionProps {
   weeklyEIGHTmeals?: number;
   weeklyTENmeals?: number;
   weeklyTWELVEmeals?: number;
+  weeklySIXTEENmeals?: number;
   onVoucherUpdate?: () => void;
 }
 
@@ -32,6 +33,7 @@ export default function WeeklySubscription({
   weeklyEIGHTmeals: propEightMeals,
   weeklyTENmeals: propTenMeals,
   weeklyTWELVEmeals: propTwelveMeals,
+  weeklySIXTEENmeals: propSixteenMeals,
   onVoucherUpdate
 }: WeeklySubscriptionProps) {
   const { t, language } = useLanguage()
@@ -51,6 +53,7 @@ export default function WeeklySubscription({
   const [weeklyEIGHTmeals, setWeeklyEIGHTmeals] = useState<number>(propEightMeals || 0)
   const [weeklyTENmeals, setWeeklyTENmeals] = useState<number>(propTenMeals || 0)
   const [weeklyTWELVEmeals, setWeeklyTWELVEmeals] = useState<number>(propTwelveMeals || 0)
+  const [weeklySIXTEENmeals, setWeeklySIXTEENmeals] = useState<number>(propSixteenMeals || 0)
   // No longer need activeTab state
   
   // Address confirmation dialog state
@@ -224,7 +227,10 @@ export default function WeeklySubscription({
     if (propTwelveMeals !== undefined) {
       setWeeklyTWELVEmeals(propTwelveMeals);
     }
-  }, [propCredits, propSixMeals, propEightMeals, propTenMeals, propTwelveMeals]);
+    if (propSixteenMeals !== undefined) {
+      setWeeklySIXTEENmeals(propSixteenMeals);
+    }
+  }, [propCredits, propSixMeals, propEightMeals, propTenMeals, propTwelveMeals, propSixteenMeals]);
 
   // Fetch delivery days and meal options from API
   useEffect(() => {
@@ -552,6 +558,7 @@ export default function WeeklySubscription({
     if (weeklyEIGHTmeals > 0) availableMealPlans.push(8);
     if (weeklyTENmeals > 0) availableMealPlans.push(10);
     if (weeklyTWELVEmeals > 0) availableMealPlans.push(12);
+    if (weeklySIXTEENmeals > 0) availableMealPlans.push(16);
     
     // Check if the total items matches any available meal plan
     if (availableMealPlans.length === 0) {
@@ -768,6 +775,17 @@ export default function WeeklySubscription({
                 </span>
               </div>
             )}
+            
+            {weeklySIXTEENmeals > 0 && (
+              <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full">
+                <span className="text-sm font-medium text-[#6B5F53]">
+                  {language === 'zh' ? '16餐一周' : '16 Meals/Week'}: 
+                </span>
+                <span className="text-sm font-bold text-[#C2884E]">
+                  {weeklySIXTEENmeals}{language === 'zh' ? '张' : ''}
+                </span>
+              </div>
+            )}
           </div>
           
           {/* Checkout button */}
@@ -802,6 +820,8 @@ export default function WeeklySubscription({
           setWeeklyTENmeals={setWeeklyTENmeals}
           weeklyTWELVEmeals={weeklyTWELVEmeals}
           setWeeklyTWELVEmeals={setWeeklyTWELVEmeals}
+          weeklySIXTEENmeals={weeklySIXTEENmeals}
+          setWeeklySIXTEENmeals={setWeeklySIXTEENmeals}
           deliveryDays={deliveryDays}
         />
       ) : isLoading ? (

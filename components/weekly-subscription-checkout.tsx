@@ -64,6 +64,8 @@ interface WeeklySubscriptionCheckoutProps {
   setWeeklyTENmeals: (value: number) => void
   weeklyTWELVEmeals: number
   setWeeklyTWELVEmeals: (value: number) => void
+  weeklySIXTEENmeals: number
+  setWeeklySIXTEENmeals: (value: number) => void
   deliveryDays: DeliveryDay[]
 }
 
@@ -81,6 +83,8 @@ export function WeeklySubscriptionCheckout({
   setWeeklyTENmeals,
   weeklyTWELVEmeals,
   setWeeklyTWELVEmeals,
+  weeklySIXTEENmeals,
+  setWeeklySIXTEENmeals,
   deliveryDays
 }: WeeklySubscriptionCheckoutProps) {
   const { t, language } = useLanguage()
@@ -364,6 +368,7 @@ export function WeeklySubscriptionCheckout({
       const freshEightMeals = freshUser.weeklyEIGHTmeals || 0;
       const freshTenMeals = freshUser.weeklyTENmeals || 0;
       const freshTwelveMeals = freshUser.weeklyTWELVEmeals || 0;
+      const freshSixteenMeals = freshUser.weeklySIXTEENmeals || 0;
       
       // CRITICAL FIX: Fetch fresh delivery days from database before checkout
       // This prevents stale dates if admin rolled forward while user was browsing
@@ -436,6 +441,7 @@ export function WeeklySubscriptionCheckout({
       let totalRemainingEightMeals = freshEightMeals; // Use fresh data
       let totalRemainingTenMeals = freshTenMeals; // Use fresh data
       let totalRemainingTwelveMeals = freshTwelveMeals; // Use fresh data
+      let totalRemainingSixteenMeals = freshSixteenMeals; // Use fresh data
       
       // Determine the meal plan type based on total items across all dates
       const allCartItems = Object.values(cartByDate).flat();
@@ -445,7 +451,7 @@ export function WeeklySubscriptionCheckout({
       
       // Choose the meal plan type based on the total items in the entire cart
       // CRITICAL: Use fresh data from database, not stale props
-      let selectedMealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | undefined;
+      let selectedMealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek' | undefined;
       if (totalItemsAcrossAllDates === 6 && freshSixMeals > 0) {
         selectedMealPlanType = '6aweek';
         console.log('Selected meal plan type: 6aweek (freshSixMeals:', freshSixMeals, ')');
@@ -458,6 +464,9 @@ export function WeeklySubscriptionCheckout({
       } else if (totalItemsAcrossAllDates === 12 && freshTwelveMeals > 0) {
         selectedMealPlanType = '12aweek';
         console.log('Selected meal plan type: 12aweek (freshTwelveMeals:', freshTwelveMeals, ')');
+      } else if (totalItemsAcrossAllDates === 16 && freshSixteenMeals > 0) {
+        selectedMealPlanType = '16aweek';
+        console.log('Selected meal plan type: 16aweek (freshSixteenMeals:', freshSixteenMeals, ')');
       } else {
         // This shouldn't happen because we validate in the previous screen,
         // but just in case, set a fallback based on what's available
@@ -474,6 +483,9 @@ export function WeeklySubscriptionCheckout({
         } else if (freshTwelveMeals > 0) {
           selectedMealPlanType = '12aweek';
           console.log('Fallback: Selected 12aweek (freshTwelveMeals:', freshTwelveMeals, ')');
+        } else if (freshSixteenMeals > 0) {
+          selectedMealPlanType = '16aweek';
+          console.log('Fallback: Selected 16aweek (freshSixteenMeals:', freshSixteenMeals, ')');
         }
       }
       
@@ -488,6 +500,8 @@ export function WeeklySubscriptionCheckout({
         hasEnoughMeals = freshTenMeals >= 1;
       } else if (selectedMealPlanType === '12aweek') {
         hasEnoughMeals = freshTwelveMeals >= 1;
+      } else if (selectedMealPlanType === '16aweek') {
+        hasEnoughMeals = freshSixteenMeals >= 1;
       }
       
       console.log('Validation check - selectedMealPlanType:', selectedMealPlanType, 'hasEnoughMeals:', hasEnoughMeals);
@@ -497,7 +511,8 @@ export function WeeklySubscriptionCheckout({
           freshSixMeals,
           freshEightMeals,
           freshTenMeals,
-          freshTwelveMeals
+          freshTwelveMeals,
+          freshSixteenMeals
         });
         throw new Error(language === 'zh' ? '餐券不足，请先购买餐券' : 'Insufficient meal plans, please purchase more');
       }
@@ -556,6 +571,8 @@ export function WeeklySubscriptionCheckout({
               totalRemainingTenMeals = firstResult.updatedUser.weeklyTENmeals;
             } else if (firstResult.usedMealPlanType === '12aweek') {
               totalRemainingTwelveMeals = firstResult.updatedUser.weeklyTWELVEmeals;
+            } else if (firstResult.usedMealPlanType === '16aweek') {
+              totalRemainingSixteenMeals = firstResult.updatedUser.weeklySIXTEENmeals;
             } else {
               totalRemainingCredits = firstResult.updatedUser.credits;
             }
@@ -611,7 +628,8 @@ export function WeeklySubscriptionCheckout({
         totalRemainingSixMeals,
         totalRemainingEightMeals,
         totalRemainingTenMeals,
-        totalRemainingTwelveMeals
+        totalRemainingTwelveMeals,
+        totalRemainingSixteenMeals
       });
       
       userData.credits = totalRemainingCredits;
@@ -619,6 +637,7 @@ export function WeeklySubscriptionCheckout({
       userData.weeklyEIGHTmeals = totalRemainingEightMeals;
       userData.weeklyTENmeals = totalRemainingTenMeals;
       userData.weeklyTWELVEmeals = totalRemainingTwelveMeals;
+      userData.weeklySIXTEENmeals = totalRemainingSixteenMeals;
       localStorage.setItem('user', JSON.stringify(userData));
       
       // Update state with new values
@@ -627,6 +646,7 @@ export function WeeklySubscriptionCheckout({
       setWeeklyEIGHTmeals(totalRemainingEightMeals);
       setWeeklyTENmeals(totalRemainingTenMeals);
       setWeeklyTWELVEmeals(totalRemainingTwelveMeals);
+      setWeeklySIXTEENmeals(totalRemainingSixteenMeals);
       
       // ✅ NEW: Send order summary email with ALL orders
       console.log('📧 Sending order summary email...');

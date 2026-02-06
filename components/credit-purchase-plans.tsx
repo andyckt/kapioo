@@ -41,10 +41,10 @@ interface CreditPurchasePlansProps {
   // Define plan types
 interface PlanOption {
   id: string;
-  duration: 1 | 2 | 4;
+  duration: 1 | 2 | 4 | 8;
   durationLabel: string;
   durationLabelZh: string;
-  mealsPerWeek: 6 | 8 | 10 | 12;
+  mealsPerWeek: 6 | 8 | 10 | 12 | 16;
   totalPrice: number;
   pricePerMeal: number;
   isPopular?: boolean;
@@ -59,7 +59,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12>(6)
+  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12 | 16>(6)
   const [selectedPlan, setSelectedPlan] = useState<PlanOption | null>(null)
   const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect' | 'upload'>('mealSelect')
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
@@ -80,8 +80,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'One week credit', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 6, 
-      totalPrice: 103, 
-      pricePerMeal: 17.16 
+      totalPrice: 112, 
+      pricePerMeal: 18.67 
     },
     // 1 week options - 8 meals/week
     { 
@@ -90,8 +90,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'One week credit', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 8, 
-      totalPrice: 137, 
-      pricePerMeal: 17.13
+      totalPrice: 148, 
+      pricePerMeal: 18.50
     },
     // 1 week options - 10 meals/week
     { 
@@ -100,8 +100,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'One week credit', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 10, 
-      totalPrice: 170, 
-      pricePerMeal: 17.00 
+      totalPrice: 183, 
+      pricePerMeal: 18.30 
     },
     // 1 week options - 12 meals/week
     { 
@@ -110,8 +110,18 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'One week credit', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 12, 
-      totalPrice: 203, 
-      pricePerMeal: 16.92 
+      totalPrice: 217, 
+      pricePerMeal: 18.08 
+    },
+    // 1 week options - 16 meals/week
+    { 
+      id: 'week1-16', 
+      duration: 1, 
+      durationLabel: 'One week credit', 
+      durationLabelZh: '1周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 286, 
+      pricePerMeal: 17.88 
     },
     
     // 2 week options - 6 meals/week
@@ -121,8 +131,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Two weeks credit', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 6, 
-      totalPrice: 186, 
-      pricePerMeal: 15.50,
+      totalPrice: 219, 
+      pricePerMeal: 18.25,
       isRecommended: true,
       tag: 'First Time Recommended',
       tagZh: '首次推荐'
@@ -134,8 +144,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Two weeks credit', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 8, 
-      totalPrice: 246, 
-      pricePerMeal: 15.38,
+      totalPrice: 290, 
+      pricePerMeal: 18.13,
       isRecommended: true,
       tag: 'First Time Recommended',
       tagZh: '首次推荐'
@@ -147,8 +157,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Two weeks credit', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 10, 
-      totalPrice: 304, 
-      pricePerMeal: 15.20,
+      totalPrice: 359, 
+      pricePerMeal: 17.95,
       isRecommended: true,
       tag: 'First Time Recommended',
       tagZh: '首次推荐'
@@ -160,8 +170,21 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Two weeks credit', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 12, 
-      totalPrice: 364, 
-      pricePerMeal: 15.17,
+      totalPrice: 428, 
+      pricePerMeal: 17.83,
+      isRecommended: true,
+      tag: 'First Time Recommended',
+      tagZh: '首次推荐'
+    },
+    // 2 week options - 16 meals/week
+    { 
+      id: 'week2-16', 
+      duration: 2, 
+      durationLabel: 'Two weeks credit', 
+      durationLabelZh: '2周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 562, 
+      pricePerMeal: 17.56,
       isRecommended: true,
       tag: 'First Time Recommended',
       tagZh: '首次推荐'
@@ -174,8 +197,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Four weeks credit', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 6, 
-      totalPrice: 360, 
-      pricePerMeal: 15.00
+      totalPrice: 398, 
+      pricePerMeal: 16.58
     },
     // 4 week options - 8 meals/week
     { 
@@ -184,8 +207,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Four weeks credit', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 8, 
-      totalPrice: 477, 
-      pricePerMeal: 14.91
+      totalPrice: 525, 
+      pricePerMeal: 16.41
     },
     // 4 week options - 10 meals/week
     { 
@@ -194,8 +217,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Four weeks credit', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 10, 
-      totalPrice: 592, 
-      pricePerMeal: 14.80
+      totalPrice: 648, 
+      pricePerMeal: 16.20
     },
     // 4 week options - 12 meals/week
     { 
@@ -204,8 +227,84 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       durationLabel: 'Four weeks credit', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 12, 
-      totalPrice: 709, 
-      pricePerMeal: 14.77
+      totalPrice: 765, 
+      pricePerMeal: 15.94
+    },
+    // 4 week options - 16 meals/week
+    { 
+      id: 'week4-16', 
+      duration: 4, 
+      durationLabel: 'Four weeks credit', 
+      durationLabelZh: '4周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 998, 
+      pricePerMeal: 15.59
+    },
+    
+    // 8 week options - 6 meals/week
+    { 
+      id: 'week8-6', 
+      duration: 8, 
+      durationLabel: 'Eight weeks credit', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 6, 
+      totalPrice: 744, 
+      pricePerMeal: 15.50,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 8 meals/week
+    { 
+      id: 'week8-8', 
+      duration: 8, 
+      durationLabel: 'Eight weeks credit', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 8, 
+      totalPrice: 979, 
+      pricePerMeal: 15.30,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 10 meals/week
+    { 
+      id: 'week8-10', 
+      duration: 8, 
+      durationLabel: 'Eight weeks credit', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 10, 
+      totalPrice: 1210, 
+      pricePerMeal: 15.13,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 12 meals/week
+    { 
+      id: 'week8-12', 
+      duration: 8, 
+      durationLabel: 'Eight weeks credit', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 12, 
+      totalPrice: 1428, 
+      pricePerMeal: 14.88,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 16 meals/week
+    { 
+      id: 'week8-16', 
+      duration: 8, 
+      durationLabel: 'Eight weeks credit', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 1870, 
+      pricePerMeal: 14.61,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
     },
   ]
 
@@ -249,7 +348,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           
           if (matchingPlan) {
             // Set the meals per week based on the plan
-            setSelectedMealsPerWeek(matchingPlan.mealsPerWeek as 6 | 8 | 10 | 12)
+            setSelectedMealsPerWeek(matchingPlan.mealsPerWeek as 6 | 8 | 10 | 12 | 16)
             
             // Auto-select the plan and move to upload step
             setTimeout(() => {
@@ -266,7 +365,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
               
               // Set the meals per week based on the stored plan
               if (planData.mealsPerWeek) {
-                setSelectedMealsPerWeek(planData.mealsPerWeek as 6 | 8 | 10 | 12)
+                setSelectedMealsPerWeek(planData.mealsPerWeek as 6 | 8 | 10 | 12 | 16)
               }
               
               // Find the specific plan by ID
@@ -372,7 +471,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   }
 
   // Handle meal count selection
-  const handleMealCountSelect = (mealCount: 6 | 8 | 10 | 12) => {
+  const handleMealCountSelect = (mealCount: 6 | 8 | 10 | 12 | 16) => {
     setSelectedMealsPerWeek(mealCount)
     setPurchaseStep('planSelect')
   }
@@ -752,7 +851,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             </h3>
             
             {/* Meals per week selector */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <Card 
                 className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
                 onClick={() => handleMealCountSelect(6)}
@@ -799,6 +898,16 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                   <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
                 </CardContent>
               </Card>
+              
+              <Card 
+                className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
+                onClick={() => handleMealCountSelect(16)}
+              >
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">16</h3>
+                  <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
+                </CardContent>
+              </Card>
             </div>
             
             {/* Additional information */}
@@ -833,7 +942,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             </div>
             
             {/* Plan options */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {filteredPlans.map((plan) => (
                 <Card 
                   key={plan.id} 

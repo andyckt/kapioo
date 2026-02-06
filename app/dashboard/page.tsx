@@ -336,7 +336,8 @@ export default function DashboardPage() {
                 weeklySIXmeals: user.weeklySIXmeals,
                 weeklyEIGHTmeals: user.weeklyEIGHTmeals,
                 weeklyTENmeals: user.weeklyTENmeals,
-                weeklyTWELVEmeals: user.weeklyTWELVEmeals
+                weeklyTWELVEmeals: user.weeklyTWELVEmeals,
+                weeklySIXTEENmeals: user.weeklySIXTEENmeals
               });
               setUserData(user);
               setCredits(user.credits || 0);
@@ -1235,7 +1236,8 @@ export default function DashboardPage() {
                       (userData?.weeklySIXmeals || 0) === 0 && 
                       ((userData as any)?.weeklyEIGHTmeals || 0) === 0 && 
                       (userData?.weeklyTENmeals || 0) === 0 && 
-                      ((userData as any)?.weeklyTWELVEmeals || 0) === 0 && (
+                      ((userData as any)?.weeklyTWELVEmeals || 0) === 0 && 
+                      ((userData as any)?.weeklySIXTEENmeals || 0) === 0 && (
                       <AnimatePresence mode="wait">
                         {!showServiceSelection ? (
                           // Step 1: No Credits Message
@@ -1374,7 +1376,8 @@ export default function DashboardPage() {
                     
                     {/* Weekly Delivery Vouchers Card - Show only if user has vouchers > 0 */}
                     {userData && (userData?.weeklySIXmeals > 0 || (userData as any)?.weeklyEIGHTmeals > 0 || 
-                      userData?.weeklyTENmeals > 0 || (userData as any)?.weeklyTWELVEmeals > 0) && (
+                      userData?.weeklyTENmeals > 0 || (userData as any)?.weeklyTWELVEmeals > 0 || 
+                      (userData as any)?.weeklySIXTEENmeals > 0) && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1433,6 +1436,16 @@ export default function DashboardPage() {
                                     </div>
                                   </div>
                                 )}
+                                
+                                {(userData as any)?.weeklySIXTEENmeals > 0 && (
+                                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
+                                    <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '16 meals/week' : '16餐一周'}:</span>
+                                    <div className="flex items-center">
+                                      <span className="text-xl font-bold text-[#C2884E]">{(userData as any)?.weeklySIXTEENmeals}</span>
+                                      <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
@@ -1464,7 +1477,8 @@ export default function DashboardPage() {
                     {userData && 
                       ((userData?.twoDishVoucher || 0) === 0 && (userData?.threeDishVoucher || 0) === 0) &&
                       ((userData?.weeklySIXmeals || 0) > 0 || ((userData as any)?.weeklyEIGHTmeals || 0) > 0 || 
-                       (userData?.weeklyTENmeals || 0) > 0 || ((userData as any)?.weeklyTWELVEmeals || 0) > 0) && (
+                       (userData?.weeklyTENmeals || 0) > 0 || ((userData as any)?.weeklyTWELVEmeals || 0) > 0 || 
+                       ((userData as any)?.weeklySIXTEENmeals || 0) > 0) && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1867,11 +1881,23 @@ export default function DashboardPage() {
                                 </div>
                               )}
                               
+                              {(userData as any).weeklySIXTEENmeals !== undefined && (userData as any).weeklySIXTEENmeals > 0 && (
+                                <div className="flex items-center gap-1.5 bg-[#F5EDE4] px-3 py-1.5 rounded-full border border-[#C2884E]/20">
+                                  <span className="text-sm font-medium text-[#6B5F53]">
+                                    {language === 'zh' ? '16餐一周' : '16 Meals/Week'}: 
+                                  </span>
+                                  <span className="text-sm font-bold text-[#C2884E]">
+                                    {(userData as any).weeklySIXTEENmeals}{language === 'zh' ? '张' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              
                               {/* Show message if no coupons */}
                               {(!userData.weeklySIXmeals || userData.weeklySIXmeals === 0) && 
                                (!(userData as any).weeklyEIGHTmeals || (userData as any).weeklyEIGHTmeals === 0) &&
                                (!userData.weeklyTENmeals || userData.weeklyTENmeals === 0) &&
-                               (!(userData as any).weeklyTWELVEmeals || (userData as any).weeklyTWELVEmeals === 0) && (
+                               (!(userData as any).weeklyTWELVEmeals || (userData as any).weeklyTWELVEmeals === 0) &&
+                               (!(userData as any).weeklySIXTEENmeals || (userData as any).weeklySIXTEENmeals === 0) && (
                                 <div className="text-sm text-[#6B5F53]/60 italic">
                                   {language === 'zh' ? '暂无可用餐券' : 'No coupons available'}
                                 </div>
@@ -2166,6 +2192,7 @@ export default function DashboardPage() {
                                     transaction.description.includes('weeklyEIGHTmeals') ? '/8weekly' :
                                     transaction.description.includes('weeklyTENmeals') ? '/10weekly' :
                                     transaction.description.includes('weeklyTWELVEmeals') ? '/12weekly' :
+                                    transaction.description.includes('weeklySIXTEENmeals') ? '/16weekly' :
                                     ''
                                   ) : ''}
                                 </div>
@@ -2609,6 +2636,7 @@ export default function DashboardPage() {
                     weeklyEIGHTmeals={(userData as any)?.weeklyEIGHTmeals}
                     weeklyTENmeals={userData?.weeklyTENmeals}
                     weeklyTWELVEmeals={(userData as any)?.weeklyTWELVEmeals}
+                    weeklySIXTEENmeals={(userData as any)?.weeklySIXTEENmeals}
                     onVoucherUpdate={() => {
                       // Refresh user data after successful order
                       if (userData?._id) {

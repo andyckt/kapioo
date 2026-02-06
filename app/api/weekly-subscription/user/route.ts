@@ -361,6 +361,9 @@ export async function POST(request: Request) {
       } else if (mealPlanType === '12aweek') {
         hasEnoughMeals = user.weeklyTWELVEmeals >= 1;
         availableMeals = user.weeklyTWELVEmeals;
+      } else if (mealPlanType === '16aweek') {
+        hasEnoughMeals = user.weeklySIXTEENmeals >= 1;
+        availableMeals = user.weeklySIXTEENmeals;
       } else {
         // Legacy fallback to credits
         hasEnoughMeals = user.credits >= totalItems;
@@ -515,6 +518,7 @@ export async function POST(request: Request) {
                          mealPlanType === '8aweek' ? 'weeklyEIGHTmeals' :
                          mealPlanType === '10aweek' ? 'weeklyTENmeals' :
                          mealPlanType === '12aweek' ? 'weeklyTWELVEmeals' :
+                         mealPlanType === '16aweek' ? 'weeklySIXTEENmeals' :
                          'credits';
       
       const updateObj: any = {

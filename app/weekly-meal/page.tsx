@@ -34,10 +34,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // Define plan types
 interface PlanOption {
   id: string;
-  duration: 1 | 2 | 4;
+  duration: 1 | 2 | 4 | 8;
   durationLabel: string;
   durationLabelZh: string;
-  mealsPerWeek: 6 | 8 | 10 | 12;
+  mealsPerWeek: 6 | 8 | 10 | 12 | 16;
   totalPrice: number;
   pricePerMeal: number;
   isPopular?: boolean;
@@ -49,7 +49,7 @@ interface PlanOption {
 export default function WeeklyMealPage() {
   const router = useRouter()
   const { t, language } = useLanguage()
-  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12>(6)
+  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12 | 16>(6)
   const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect'>('mealSelect')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
@@ -156,8 +156,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'One week plan', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 6, 
-      totalPrice: 103, 
-      pricePerMeal: 17.16 
+      totalPrice: 112, 
+      pricePerMeal: 18.67 
     },
     // 1 week options - 8 meals/week
     { 
@@ -166,8 +166,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'One week plan', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 8, 
-      totalPrice: 137, 
-      pricePerMeal: 17.13
+      totalPrice: 148, 
+      pricePerMeal: 18.50
     },
     // 1 week options - 10 meals/week
     { 
@@ -176,8 +176,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'One week plan', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 10, 
-      totalPrice: 170, 
-      pricePerMeal: 17.00 
+      totalPrice: 183, 
+      pricePerMeal: 18.30 
     },
     // 1 week options - 12 meals/week
     { 
@@ -186,8 +186,18 @@ export default function WeeklyMealPage() {
       durationLabel: 'One week plan', 
       durationLabelZh: '1周次卡券', 
       mealsPerWeek: 12, 
-      totalPrice: 203, 
-      pricePerMeal: 16.92 
+      totalPrice: 217, 
+      pricePerMeal: 18.08 
+    },
+    // 1 week options - 16 meals/week
+    { 
+      id: 'week1-16', 
+      duration: 1, 
+      durationLabel: 'One week plan', 
+      durationLabelZh: '1周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 286, 
+      pricePerMeal: 17.88 
     },
     
     // 2 week options - 6 meals/week
@@ -197,8 +207,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'Two weeks plan', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 6, 
-      totalPrice: 186, 
-      pricePerMeal: 15.50,
+      totalPrice: 219, 
+      pricePerMeal: 18.25,
       isRecommended: true,
       tag: 'Best value',
       tagZh: '首次推荐'
@@ -210,8 +220,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'Two weeks plan', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 8, 
-      totalPrice: 246, 
-      pricePerMeal: 15.38,
+      totalPrice: 290, 
+      pricePerMeal: 18.13,
       isRecommended: true,
       tag: 'First Time Recommended',
       tagZh: '首次推荐'
@@ -223,8 +233,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'Two weeks plan', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 10, 
-      totalPrice: 304, 
-      pricePerMeal: 15.20,
+      totalPrice: 359, 
+      pricePerMeal: 17.95,
       isRecommended: true,
       tag: 'Most popular',
       tagZh: '首次推荐'
@@ -236,8 +246,21 @@ export default function WeeklyMealPage() {
       durationLabel: 'Two weeks plan', 
       durationLabelZh: '2周次卡券', 
       mealsPerWeek: 12, 
-      totalPrice: 364, 
-      pricePerMeal: 15.17,
+      totalPrice: 428, 
+      pricePerMeal: 17.83,
+      isRecommended: true,
+      tag: 'First Time Recommended',
+      tagZh: '首次推荐'
+    },
+    // 2 week options - 16 meals/week
+    { 
+      id: 'week2-16', 
+      duration: 2, 
+      durationLabel: 'Two weeks plan', 
+      durationLabelZh: '2周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 562, 
+      pricePerMeal: 17.56,
       isRecommended: true,
       tag: 'First Time Recommended',
       tagZh: '首次推荐'
@@ -250,8 +273,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'Four weeks plan', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 6, 
-      totalPrice: 360, 
-      pricePerMeal: 15.00,
+      totalPrice: 398, 
+      pricePerMeal: 16.58,
       isPopular: true,
       tag: 'Best long-term choice',
       tagZh: '长期最佳选择'
@@ -263,8 +286,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'Four weeks plan', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 8, 
-      totalPrice: 477, 
-      pricePerMeal: 14.91,
+      totalPrice: 525, 
+      pricePerMeal: 16.41,
       isPopular: true,
       tag: 'Best long-term choice',
       tagZh: '长期最佳选择'
@@ -276,8 +299,8 @@ export default function WeeklyMealPage() {
       durationLabel: 'Four weeks plan', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 10, 
-      totalPrice: 592, 
-      pricePerMeal: 14.80,
+      totalPrice: 648, 
+      pricePerMeal: 16.20,
       isPopular: true,
       tag: 'Best long-term choice',
       tagZh: '长期最佳选择'
@@ -289,11 +312,90 @@ export default function WeeklyMealPage() {
       durationLabel: 'Four weeks plan', 
       durationLabelZh: '4周次卡券', 
       mealsPerWeek: 12, 
-      totalPrice: 709, 
-      pricePerMeal: 14.77,
+      totalPrice: 765, 
+      pricePerMeal: 15.94,
       isPopular: true,
       tag: 'Best long-term choice',
       tagZh: '长期最佳选择'
+    },
+    // 4 week options - 16 meals/week
+    { 
+      id: 'week4-16', 
+      duration: 4, 
+      durationLabel: 'Four weeks plan', 
+      durationLabelZh: '4周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 998, 
+      pricePerMeal: 15.59,
+      isPopular: true,
+      tag: 'Best long-term choice',
+      tagZh: '长期最佳选择'
+    },
+    
+    // 8 week options - 6 meals/week
+    { 
+      id: 'week8-6', 
+      duration: 8, 
+      durationLabel: 'Eight weeks plan', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 6, 
+      totalPrice: 744, 
+      pricePerMeal: 15.50,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 8 meals/week
+    { 
+      id: 'week8-8', 
+      duration: 8, 
+      durationLabel: 'Eight weeks plan', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 8, 
+      totalPrice: 979, 
+      pricePerMeal: 15.30,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 10 meals/week
+    { 
+      id: 'week8-10', 
+      duration: 8, 
+      durationLabel: 'Eight weeks plan', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 10, 
+      totalPrice: 1210, 
+      pricePerMeal: 15.13,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 12 meals/week
+    { 
+      id: 'week8-12', 
+      duration: 8, 
+      durationLabel: 'Eight weeks plan', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 12, 
+      totalPrice: 1428, 
+      pricePerMeal: 14.88,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
+    },
+    // 8 week options - 16 meals/week
+    { 
+      id: 'week8-16', 
+      duration: 8, 
+      durationLabel: 'Eight weeks plan', 
+      durationLabelZh: '8周次卡券', 
+      mealsPerWeek: 16, 
+      totalPrice: 1870, 
+      pricePerMeal: 14.61,
+      isPopular: true,
+      tag: 'Best value',
+      tagZh: '最超值'
     },
   ]
 
@@ -301,7 +403,7 @@ export default function WeeklyMealPage() {
   const filteredPlans = planOptions.filter(plan => plan.mealsPerWeek === selectedMealsPerWeek)
 
   // Handle meal count selection
-  const handleMealCountSelect = (mealCount: 6 | 8 | 10 | 12) => {
+  const handleMealCountSelect = (mealCount: 6 | 8 | 10 | 12 | 16) => {
     setSelectedMealsPerWeek(mealCount)
     setPurchaseStep('planSelect')
   }
@@ -921,7 +1023,7 @@ export default function WeeklyMealPage() {
                     </h3>
                     
                     {/* Meals per week selector */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                       <Card 
                         className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
                         onClick={() => handleMealCountSelect(6)}
@@ -968,6 +1070,16 @@ export default function WeeklyMealPage() {
                           <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
                         </CardContent>
                       </Card>
+                      
+                      <Card 
+                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
+                        onClick={() => handleMealCountSelect(16)}
+                      >
+                        <CardContent className="p-6 text-center">
+                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">16</h3>
+                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
+                        </CardContent>
+                      </Card>
                     </div>
                     
                     {/* Additional information */}
@@ -995,7 +1107,7 @@ export default function WeeklyMealPage() {
                     </div>
                     
                     {/* Plan options */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {filteredPlans.map((plan) => (
                         <Card 
                           key={plan.id} 

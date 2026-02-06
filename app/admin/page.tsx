@@ -156,6 +156,7 @@ export default function AdminDashboardPage() {
   const [approvedEightMeals, setApprovedEightMeals] = useState(0)
   const [approvedTenMeals, setApprovedTenMeals] = useState(0)
   const [approvedTwelveMeals, setApprovedTwelveMeals] = useState(0)
+  const [approvedSixteenMeals, setApprovedSixteenMeals] = useState(0)
   const [adminNotes, setAdminNotes] = useState('')
   const [processingRequest, setProcessingRequest] = useState(false)
   const [addCreditsOpen, setAddCreditsOpen] = useState(false)
@@ -581,6 +582,7 @@ export default function AdminDashboardPage() {
     setApprovedEightMeals(0);
     setApprovedTenMeals(0);
     setApprovedTwelveMeals(0);
+    setApprovedSixteenMeals(0);
     
     // Determine suggested values based on meal plan type and quantity
     if (request.mealPlanType && request.mealPlanQuantity) {
@@ -598,6 +600,9 @@ export default function AdminDashboardPage() {
           break;
         case '12aweek':
           setApprovedTwelveMeals(quantity);
+          break;
+        case '16aweek':
+          setApprovedSixteenMeals(quantity);
           break;
       }
     } else if (request.planDescription) {
@@ -660,6 +665,8 @@ export default function AdminDashboardPage() {
           setApprovedTenMeals(quantity);
         } else if (mealsPerWeek === 12) {
           setApprovedTwelveMeals(quantity);
+        } else if (mealsPerWeek === 16) {
+          setApprovedSixteenMeals(quantity);
         }
       }
       
@@ -683,7 +690,7 @@ export default function AdminDashboardPage() {
     setProcessingRequest(true);
     try {
       // Calculate total approved plans for display
-      const totalApproved = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals;
+      const totalApproved = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedSixteenMeals;
       
       // Check if at least one plan type has a value
       if (totalApproved <= 0) {
@@ -708,6 +715,7 @@ export default function AdminDashboardPage() {
           approvedEightMeals,
           approvedTenMeals,
           approvedTwelveMeals,
+          approvedSixteenMeals,
           adminNotes
         })
       });
@@ -721,6 +729,7 @@ export default function AdminDashboardPage() {
         if (approvedEightMeals > 0) description += `${approvedEightMeals} x 8-meal plans, `;
         if (approvedTenMeals > 0) description += `${approvedTenMeals} x 10-meal plans, `;
         if (approvedTwelveMeals > 0) description += `${approvedTwelveMeals} x 12-meal plans, `;
+        if (approvedSixteenMeals > 0) description += `${approvedSixteenMeals} x 16-meal plans, `;
         
         // Remove trailing comma and space
         description = description.replace(/, $/, '');
@@ -3927,6 +3936,20 @@ export default function AdminDashboardPage() {
                         min="0"
                       />
                     </div>
+                    
+                    <div>
+                      <Label htmlFor="approved-sixteen-meals" className="text-sm font-medium">
+                        16 Meals/Week
+                      </Label>
+                      <Input
+                        id="approved-sixteen-meals"
+                        type="number"
+                        value={approvedSixteenMeals}
+                        onChange={(e) => setApprovedSixteenMeals(parseInt(e.target.value) || 0)}
+                        className="mt-1"
+                        min="0"
+                      />
+                    </div>
                   </div>
                   
                 </div>
@@ -3988,7 +4011,7 @@ export default function AdminDashboardPage() {
               </Button>
               <Button 
                 onClick={confirmApproveRequest} 
-                disabled={processingRequest || (approvedSixMeals <= 0 && approvedEightMeals <= 0 && approvedTenMeals <= 0 && approvedTwelveMeals <= 0)}
+                disabled={processingRequest || (approvedSixMeals <= 0 && approvedEightMeals <= 0 && approvedTenMeals <= 0 && approvedTwelveMeals <= 0 && approvedSixteenMeals <= 0)}
                 className="bg-green-600 hover:bg-green-700 px-6 gap-2"
               >
                 {processingRequest ? (

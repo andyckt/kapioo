@@ -17,8 +17,9 @@ export interface ICreditPurchaseRequest extends Document {
   approvedEightMeals?: number;
   approvedTenMeals?: number;
   approvedTwelveMeals?: number;
-  mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek'; // Type of meal plan
-  mealPlanQuantity?: number; // Number of plans (e.g., 1, 2, 4 weeks)
+  approvedSixteenMeals?: number;
+  mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek'; // Type of meal plan
+  mealPlanQuantity?: number; // Number of plans (e.g., 1, 2, 4, 8 weeks)
   notes?: string; // Additional notes from user or admin
   adminNotes?: string; // Notes from admin (for internal use)
   planDescription?: string; // Description of the selected plan
@@ -91,9 +92,12 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
   approvedTwelveMeals: {
     type: Number
   },
+  approvedSixteenMeals: {
+    type: Number
+  },
   mealPlanType: {
     type: String,
-    enum: ['6aweek', '8aweek', '10aweek', '12aweek']
+    enum: ['6aweek', '8aweek', '10aweek', '12aweek', '16aweek']
   },
   mealPlanQuantity: {
     type: Number

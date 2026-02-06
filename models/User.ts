@@ -38,6 +38,7 @@ export interface IUser extends Document {
   weeklyEIGHTmeals: number; // Weekly subscription for 8 meals
   weeklyTENmeals: number;  // Weekly subscription for 10 meals
   weeklyTWELVEmeals: number; // Weekly subscription for 12 meals
+  weeklySIXTEENmeals: number; // Weekly subscription for 16 meals
   phone?: string;
   address?: IAddress;
   verificationCode?: string;
@@ -127,6 +128,10 @@ const UserSchema: Schema = new Schema(
       default: 0
     },
     weeklyTWELVEmeals: {
+      type: Number,
+      default: 0
+    },
+    weeklySIXTEENmeals: {
       type: Number,
       default: 0
     },

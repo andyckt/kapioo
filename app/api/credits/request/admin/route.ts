@@ -106,13 +106,15 @@ export async function POST(request: Request) {
         const approvedEightMeals = data.approvedEightMeals || 0;
         const approvedTenMeals = data.approvedTenMeals || 0;
         const approvedTwelveMeals = data.approvedTwelveMeals || 0;
+        const approvedSixteenMeals = data.approvedSixteenMeals || 0;
         
         // For backward compatibility, also get approvedCredits
         const approvedCredits = data.approvedCredits || 0;
         
         // Check if at least one meal plan type has a value or approvedCredits is provided
         if (approvedSixMeals <= 0 && approvedEightMeals <= 0 && 
-            approvedTenMeals <= 0 && approvedTwelveMeals <= 0 && approvedCredits <= 0) {
+            approvedTenMeals <= 0 && approvedTwelveMeals <= 0 && 
+            approvedSixteenMeals <= 0 && approvedCredits <= 0) {
           return NextResponse.json(
             { success: false, error: 'At least one meal plan type must have a value' },
             { status: 400 }
@@ -125,6 +127,7 @@ export async function POST(request: Request) {
         creditRequest.approvedEightMeals = approvedEightMeals;
         creditRequest.approvedTenMeals = approvedTenMeals;
         creditRequest.approvedTwelveMeals = approvedTwelveMeals;
+        creditRequest.approvedSixteenMeals = approvedSixteenMeals;
         creditRequest.approvedCredits = approvedCredits; // For backward compatibility
         creditRequest.adminNotes = data.adminNotes || '';
         creditRequest.approvedAt = new Date();
@@ -134,7 +137,7 @@ export async function POST(request: Request) {
         const transactionId = await Transaction.generateTransactionId('Add');
         
         // Calculate total plans for transaction amount
-        const totalPlans = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedCredits;
+        const totalPlans = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedSixteenMeals + approvedCredits;
         
         const transaction = new Transaction({
           userId: user._id,
@@ -157,6 +160,9 @@ export async function POST(request: Request) {
         }
         if (approvedTwelveMeals > 0) {
           user.weeklyTWELVEmeals = (user.weeklyTWELVEmeals || 0) + approvedTwelveMeals;
+        }
+        if (approvedSixteenMeals > 0) {
+          user.weeklySIXTEENmeals = (user.weeklySIXTEENmeals || 0) + approvedSixteenMeals;
         }
         
         // For backward compatibility, also update credits field if approvedCredits is provided
