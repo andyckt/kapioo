@@ -1114,14 +1114,33 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Format date helper
+  // Format date helper - displays in Toronto timezone
   const formatDate = (date: Date | string) => {
     try {
       const dateObj = date instanceof Date ? date : new Date(date);
       return dateObj.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
+        timeZone: 'America/Toronto'
+      });
+    } catch (e) {
+      return String(date);
+    }
+  }
+
+  // Format date and time helper - displays in Toronto timezone with time
+  const formatDateTime = (date: Date | string) => {
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return dateObj.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'America/Toronto'
       });
     } catch (e) {
       return String(date);
@@ -1599,7 +1618,9 @@ export default function AdminDashboardPage() {
                                 </td>
                                 <td className="p-4">{user.phone || "-"}</td>
                                 <td className="p-4">{user.address?.province || "-"}</td>
-                                <td className="p-4">{user.joined ? formatDate(user.joined) : "-"}</td>
+                                <td className="p-4" title={user.joined ? formatDateTime(user.joined) : "-"}>
+                                  {user.joined ? formatDate(user.joined) : "-"}
+                                </td>
                                 <td className="p-4">{user.dailyOrdersCount || 0}</td>
                                 <td className="p-4">{user.weeklyOrdersCount || 0}</td>
                                 <td className="p-4">
@@ -1687,8 +1708,10 @@ export default function AdminDashboardPage() {
                                     <p className="text-xs font-medium">{user.weeklyOrdersCount || 0}</p>
                                   </div>
                                   <div className="col-span-2">
-                                    <p className="text-xs text-muted-foreground">Joined</p>
-                                    <p className="text-xs font-medium">{user.joined ? formatDate(user.joined) : "-"}</p>
+                                    <p className="text-xs text-muted-foreground">Joined (Toronto)</p>
+                                    <p className="text-xs font-medium" title={user.joined ? formatDateTime(user.joined) : "-"}>
+                                      {user.joined ? formatDate(user.joined) : "-"}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
@@ -3258,10 +3281,10 @@ export default function AdminDashboardPage() {
                       <p className="font-medium">{selectedUser.phone}</p>
                     </div>
                     <div>
-                      <Label className="text-sm text-muted-foreground">Joined</Label>
-                      <p className="font-medium">{selectedUser.joined instanceof Date 
-                        ? selectedUser.joined.toLocaleDateString() 
-                        : String(selectedUser.joined)}</p>
+                      <Label className="text-sm text-muted-foreground">Joined (Toronto Time)</Label>
+                      <p className="font-medium">{selectedUser.joined 
+                        ? formatDateTime(selectedUser.joined)
+                        : '-'}</p>
                     </div>
                   </div>
                   <div>
