@@ -476,25 +476,25 @@ export const weeklyMenuUpdateTranslations = {
 // Next Week Menu Update translations (NEW)
 export const nextWeekMenuUpdateTranslations = {
   zh: {
-    subject: '[Kapioo] 下周菜单已上线 - 探索我们的新菜品！',
-    title: '下周菜单已上线！',
+    subject: '[Kapioo] 请查看下周菜单，不要忘记选餐喔～',
+    title: '下周菜单准备好了',
     greeting: (name: string) => `亲爱的 ${name}，`,
-    mainMessage: 'Kapioo 下周的菜单已上线了喔～',
-    description: '这个周我们为您精心准备了全新的美味菜品，期待为您带来更多惊喜。',
-    subHeading: '快去看看下周吃什么吧！',
-    ctaButton: '立即查看菜单',
-    footerNote: '感谢您选择 Kapioo！',
+    mainMessage: 'Kapioo 下周的菜单已可以查阅了喔～',
+    description: '下周我们为您精心准备了全新的美味菜品，期待为您带来更多惊喜。',
+    subHeading: '',
+    ctaButton: '查看下周菜单',
+    footerNote: '',
     unsubscribe: '取消订阅'
   },
   en: {
-    subject: '[Kapioo] Next Week Menu is Live! - Explore Our New Dishes!',
-    title: 'Next Week Menu is Live!',
+    subject: '[Kapioo] Next week\'s menu is up, order now~',
+    title: 'Next Week Menu is updated.',
     greeting: (name: string) => `Dear ${name},`,
-    mainMessage: 'Kapioo\'s menu for next week is now live!',
+    mainMessage: 'Kapioo\'s menu for next week is ready to be viewed.',
     description: 'This week we have carefully prepared fresh new delicious dishes and look forward to bringing you more delightful surprises.',
-    subHeading: 'Check out what\'s on the menu for next week!',
-    ctaButton: 'View Menu Now',
-    footerNote: 'Thank you for choosing Kapioo!',
+    subHeading: '',
+    ctaButton: 'View Next Week Menu',
+    footerNote: '',
     unsubscribe: 'Unsubscribe'
   }
 };

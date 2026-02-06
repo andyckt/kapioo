@@ -1598,12 +1598,8 @@ export const sendNextWeekMenuUpdateEmail = async (
         ${t.nextWeekMenuUpdate.mainMessage}
       </p>
       
-      <p style="color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 15px;">
+      <p style="color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 30px;">
         ${t.nextWeekMenuUpdate.description}
-      </p>
-      
-      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 30px; font-weight: 500;">
-        ${t.nextWeekMenuUpdate.subHeading}
       </p>
       
       <div style="text-align: center; margin: 35px 0;">
@@ -1613,19 +1609,11 @@ export const sendNextWeekMenuUpdateEmail = async (
       </div>
       
       <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #eee; text-align: center;">
-        <p style="color: #999; font-size: 14px; margin-bottom: 10px;">
-          ${t.nextWeekMenuUpdate.footerNote}
-        </p>
         <p style="color: #999; font-size: 13px; margin-bottom: 5px;">
           ${t.common.contactSupport}
         </p>
         <p style="color: #bbb; font-size: 12px; margin-top: 15px;">
           © ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}
-        </p>
-        <p style="margin-top: 15px;">
-          <a href="${unsubscribeUrl}" style="color: #999; font-size: 12px; text-decoration: underline;">
-            ${t.nextWeekMenuUpdate.unsubscribe}
-          </a>
         </p>
       </div>
     </div>
