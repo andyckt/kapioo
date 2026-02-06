@@ -2765,7 +2765,7 @@ export default function AdminDashboardPage() {
                                     <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
                                     {request.referenceNumber && (
                                       <div className="text-xs text-blue-600 font-medium mt-1">
-                                        Ref No: {request.referenceNumber}
+                                        INTERAC Email: {request.referenceNumber}
                                       </div>
                                     )}
                                     {request.status === 'approved' && (
@@ -2778,7 +2778,7 @@ export default function AdminDashboardPage() {
                                     {request.referenceNumber ? (
                                       <div className="font-medium">{request.referenceNumber}</div>
                                     ) : (
-                                      <div className="text-xs text-muted-foreground">No reference number</div>
+                                      <div className="text-xs text-muted-foreground">No INTERAC email</div>
                                     )}
                                   </td>
                                   <td className="p-4">{new Date(request.createdAt).toLocaleDateString('en-US', { 
@@ -3868,9 +3868,9 @@ export default function AdminDashboardPage() {
                     </div>
                     
                     <div>
-                      <Label className="text-xs text-muted-foreground">Reference Number</Label>
+                      <Label className="text-xs text-muted-foreground">INTERAC Email</Label>
                       <p className="font-medium">
-                        {selectedRequest.referenceNumber || 'No reference number provided'}
+                        {selectedRequest.referenceNumber || 'No INTERAC email provided'}
                       </p>
                     </div>
                   </div>

@@ -523,7 +523,7 @@ export function MealVoucherManagement() {
                           <div>${request.amount}</div>
                           {request.referenceNumber && (
                             <div className="text-xs text-blue-600 font-medium mt-1">
-                              Ref No: {request.referenceNumber}
+                              INTERAC Email: {request.referenceNumber}
                             </div>
                           )}
                         </td>
@@ -621,10 +621,10 @@ export function MealVoucherManagement() {
 
                       {/* Compact Info Grid */}
                       <div className="space-y-1.5 text-xs">
-                        {/* Reference Number */}
+                        {/* INTERAC Email */}
                         {request.referenceNumber && (
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground w-12 flex-shrink-0">Ref:</span>
+                            <span className="text-muted-foreground w-12 flex-shrink-0">Email:</span>
                             <span className="font-mono font-medium truncate">{request.referenceNumber}</span>
                           </div>
                         )}
@@ -793,8 +793,8 @@ export function MealVoucherManagement() {
                           <dd className="font-medium text-[#C2884E]">${selectedRequest.amount}</dd>
                         </div>
                         <div className="flex justify-between">
-                          <dt className="font-medium text-[#6B5F53]">Reference Number:</dt>
-                          <dd className="font-medium">{selectedRequest.referenceNumber || 'No reference number'}</dd>
+                          <dt className="font-medium text-[#6B5F53]">INTERAC Email:</dt>
+                          <dd className="font-medium">{selectedRequest.referenceNumber || 'No INTERAC email'}</dd>
                         </div>
                       </dl>
                     </CardContent>
