@@ -68,72 +68,62 @@ export async function POST(request: Request) {
             message: `Starting to send emails to ${totalUsers} users...`
           });
           
-          // Process in batches of 50
-          const batchSize = 50;
-          const totalBatches = Math.ceil(totalUsers / batchSize);
+          // Process emails with rate limiting
+          // Resend limit: 6 requests per second
+          // We'll send 5 emails per second to be safe (200ms delay between emails)
+          const delayBetweenEmails = 200; // milliseconds
           
-          for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            const start = batchIndex * batchSize;
-            const end = Math.min(start + batchSize, totalUsers);
-            const batch = users.slice(start, end);
+          for (let i = 0; i < totalUsers; i++) {
+            const user = users[i];
             
-            sendProgress({
-              type: 'batch_start',
-              currentBatch: batchIndex + 1,
-              totalBatches,
-              message: `Processing batch ${batchIndex + 1} of ${totalBatches}...`
-            });
+            try {
+              await sendNextWeekMenuUpdateEmail(
+                user.email,
+                user.name,
+                user._id.toString(),
+                user.languagePreference || 'zh'
+              );
+              emailsSent++;
+              
+              sendProgress({
+                type: 'email_sent',
+                emailsSent,
+                emailsFailed,
+                totalUsers,
+                progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100)
+              });
+            } catch (error) {
+              emailsFailed++;
+              failedEmails.push({
+                email: user.email,
+                name: user.name,
+                error: error instanceof Error ? error.message : 'Unknown error'
+              });
+              
+              sendProgress({
+                type: 'email_failed',
+                emailsSent,
+                emailsFailed,
+                totalUsers,
+                progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
+                failedEmail: user.email
+              });
+            }
             
-            // Send emails in parallel within the batch
-            const batchPromises = batch.map(async (user) => {
-              try {
-                await sendNextWeekMenuUpdateEmail(
-                  user.email,
-                  user.name,
-                  user._id.toString(),
-                  user.languagePreference || 'zh'
-                );
-                emailsSent++;
-                
-                sendProgress({
-                  type: 'email_sent',
-                  emailsSent,
-                  emailsFailed,
-                  totalUsers,
-                  progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100)
-                });
-              } catch (error) {
-                emailsFailed++;
-                failedEmails.push({
-                  email: user.email,
-                  name: user.name,
-                  error: error instanceof Error ? error.message : 'Unknown error'
-                });
-                
-                sendProgress({
-                  type: 'email_failed',
-                  emailsSent,
-                  emailsFailed,
-                  totalUsers,
-                  progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
-                  failedEmail: user.email
-                });
-              }
-            });
+            // Wait between emails to respect rate limit (5 emails per second)
+            if (i < totalUsers - 1) {
+              await new Promise(resolve => setTimeout(resolve, delayBetweenEmails));
+            }
             
-            await Promise.all(batchPromises);
-            
-            sendProgress({
-              type: 'batch_complete',
-              currentBatch: batchIndex + 1,
-              totalBatches,
-              emailsSent,
-              emailsFailed
-            });
-            
-            // Wait 2 seconds between batches to avoid rate limiting
-            if (batchIndex < totalBatches - 1) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
+            // Send batch progress update every 50 emails
+            if ((i + 1) % 50 === 0 || i === totalUsers - 1) {
+              sendProgress({
+                type: 'batch_complete',
+                currentBatch: Math.floor(i / 50) + 1,
+                totalBatches: Math.ceil(totalUsers / 50),
+                emailsSent,
+                emailsFailed
+              });
             }
           }
           
