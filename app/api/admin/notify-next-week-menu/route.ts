@@ -4,6 +4,9 @@ import User from '@/models/User';
 import { sendNextWeekMenuUpdateEmail } from '@/lib/services/email';
 
 export const dynamic = 'force-dynamic';
+// Increase timeout for bulk email sending (max 300s on Vercel Pro/Enterprise)
+// For development, this helps prevent timeouts during long-running operations
+export const maxDuration = 300;
 
 // POST handler - send next week menu update to users
 export async function POST(request: Request) {
@@ -141,7 +144,11 @@ export async function POST(request: Request) {
               });
               
               if (batchIndex < totalBatches - 1) {
-                await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+                // Send keep-alive heartbeat every 200ms during the 1-second delay
+                for (let i = 0; i < 5; i++) {
+                  await new Promise(resolve => setTimeout(resolve, 200));
+                  controller.enqueue(encoder.encode(`: heartbeat\n\n`));
+                }
               }
             }
             
@@ -218,6 +225,7 @@ export async function POST(request: Request) {
           const totalBatches = Math.ceil(totalUsers / emailsPerBatch);
           
           // Send initial progress
+          console.log(`[Email Sending] Starting to send emails to ${totalUsers} users in ${totalBatches} batches`);
           sendProgress({
             type: 'start',
             totalUsers,
@@ -234,6 +242,7 @@ export async function POST(request: Request) {
             const end = Math.min(start + emailsPerBatch, totalUsers);
             const batch = users.slice(start, end);
             
+            console.log(`[Email Sending] Batch ${batchIndex + 1}/${totalBatches}: Processing ${batch.length} emails`);
             sendProgress({
               type: 'batch_start',
               currentBatch: batchIndex + 1,
@@ -298,12 +307,19 @@ export async function POST(request: Request) {
             });
             
             // Wait 1 second between batches to respect rate limit (5 emails per second)
+            // Send heartbeat messages during the delay to keep the SSE connection alive
             if (batchIndex < totalBatches - 1) {
-              await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+              // Send keep-alive heartbeat every 200ms during the 1-second delay
+              for (let i = 0; i < 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 200));
+                // Send heartbeat comment (SSE standard for keep-alive)
+                controller.enqueue(encoder.encode(`: heartbeat\n\n`));
+              }
             }
           }
           
           // Send completion message
+          console.log(`[Email Sending] Completed! Sent: ${emailsSent}, Failed: ${emailsFailed}, Total: ${totalUsers}`);
           sendProgress({
             type: 'complete',
             emailsSent,
@@ -315,6 +331,7 @@ export async function POST(request: Request) {
           
           controller.close();
         } catch (error) {
+          console.error('[Email Sending] Error:', error);
           sendProgress({
             type: 'error',
             message: error instanceof Error ? error.message : 'Unknown error occurred'
