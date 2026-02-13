@@ -280,6 +280,56 @@ export function NextWeekMenuEmail() {
     }
   }
   
+  // Handle "Test Batch" - sends 15 test emails to verify rate limiting
+  const handleTestBatch = async () => {
+    setShowProgressDialog(true)
+    
+    try {
+      const response = await fetch('/api/admin/notify-next-week-menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testBatchMode: true })
+      })
+      
+      // Handle SSE stream
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      
+      while (reader) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.substring(6))
+            
+            setProgress(prev => ({
+              ...prev,
+              emailsSent: data.emailsSent || prev.emailsSent,
+              emailsFailed: data.emailsFailed || prev.emailsFailed,
+              totalUsers: data.totalUsers || prev.totalUsers,
+              progress: data.progress || prev.progress,
+              currentBatch: data.currentBatch || prev.currentBatch,
+              totalBatches: data.totalBatches || prev.totalBatches,
+              isComplete: data.type === 'complete',
+              failedEmails: data.failedEmails || prev.failedEmails
+            }))
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error sending test batch:', error)
+      toast({
+        title: "Error",
+        description: "Failed to send test batch",
+        variant: "destructive"
+      })
+    }
+  }
+  
   // Handle search
   const handleSearch = () => {
     setPage(1)
@@ -305,7 +355,7 @@ export function NextWeekMenuEmail() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Button 1: Send to all users */}
             <Card className="border-2 border-[#C2884E]/20 hover:border-[#C2884E]/40 transition-colors">
               <CardHeader>
@@ -353,7 +403,31 @@ export function NextWeekMenuEmail() {
               </CardContent>
             </Card>
             
-            {/* Button 3: Send test email */}
+            {/* Button 3: Test Batch (NEW) */}
+            <Card className="border-2 border-purple-200 hover:border-purple-300 transition-colors">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TestTube className="h-5 w-5" />
+                  Test Batch
+                </CardTitle>
+                <CardDescription>
+                  Test with 15 emails to verify rate limiting
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={handleTestBatch}
+                  variant="outline"
+                  className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+                  disabled={isLoading}
+                >
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Test Batch (15 emails)
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Button 4: Send test email */}
             <Card className="border-2 border-green-200 hover:border-green-300 transition-colors">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
