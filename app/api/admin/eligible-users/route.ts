@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const search = url.searchParams.get('search') || '';
+    const idsOnly = url.searchParams.get('idsOnly') === 'true'; // New parameter
     const skip = (page - 1) * limit;
     
     await connectToDatabase();
@@ -29,6 +30,21 @@ export async function GET(request: Request) {
         { name: searchRegex },
         { email: searchRegex }
       ];
+    }
+    
+    // If idsOnly requested, return all IDs without pagination
+    if (idsOnly) {
+      const allUserIds = await User.find(query)
+        .select('_id')
+        .lean();
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          ids: allUserIds.map((u: any) => u._id.toString()),
+          total: allUserIds.length
+        }
+      });
     }
     
     // Fetch users with pagination

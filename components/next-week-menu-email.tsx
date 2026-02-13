@@ -170,18 +170,42 @@ export function NextWeekMenuEmail() {
     setSelectedUserIds(newSelected)
   }
   
-  // Select/Deselect all on current page
-  const toggleSelectAll = () => {
-    if (users.every(u => selectedUserIds.has(u._id))) {
-      // Deselect all on current page
-      const newSelected = new Set(selectedUserIds)
-      users.forEach(u => newSelected.delete(u._id))
-      setSelectedUserIds(newSelected)
-    } else {
-      // Select all on current page
-      const newSelected = new Set(selectedUserIds)
-      users.forEach(u => newSelected.add(u._id))
-      setSelectedUserIds(newSelected)
+  // Select/Deselect all users (entire database, not just current page)
+  const toggleSelectAll = async () => {
+    // If all users are already selected, deselect all
+    if (selectedUserIds.size === totalUsers) {
+      setSelectedUserIds(new Set())
+      return
+    }
+    
+    // Otherwise, fetch all user IDs and select them
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams({
+        idsOnly: 'true',
+        ...(searchTerm && { search: searchTerm })
+      })
+      
+      const response = await fetch(`/api/admin/eligible-users?${params}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        const allIds = new Set(data.data.ids)
+        setSelectedUserIds(allIds)
+        toast({
+          title: "All users selected",
+          description: `${data.data.total} users selected`
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching all user IDs:', error)
+      toast({
+        title: "Error",
+        description: "Failed to select all users",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
   
@@ -556,8 +580,18 @@ export function NextWeekMenuEmail() {
                 variant="outline" 
                 size="sm"
                 onClick={toggleSelectAll}
+                disabled={isLoading}
               >
-                {users.every(u => selectedUserIds.has(u._id)) ? 'Deselect All' : 'Select All'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : selectedUserIds.size === totalUsers ? (
+                  'Deselect All'
+                ) : (
+                  `Select All (${totalUsers})`
+                )}
               </Button>
             </div>
             
