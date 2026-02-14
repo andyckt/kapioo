@@ -101,47 +101,111 @@ export function NextWeekMenuEmail() {
     setShowSummaryDialog(true)
   }
   
-  // Confirm send to all
+  // Confirm send to all (with chunked processing for Vercel Hobby compatibility)
   const confirmSendToAll = async () => {
     setShowSummaryDialog(false)
     setShowProgressDialog(true)
     
     try {
-      const response = await fetch('/api/admin/notify-next-week-menu', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}) // No userIds = send to all
+      // For Hobby plan: Use chunked processing to avoid timeouts
+      // Fetch all eligible user IDs first
+      const eligibleResponse = await fetch('/api/admin/eligible-users?idsOnly=true')
+      const eligibleData = await eligibleResponse.json()
+      
+      if (!eligibleData.success || !eligibleData.data.ids) {
+        throw new Error('Failed to fetch eligible users')
+      }
+      
+      const allUserIds = eligibleData.data.ids
+      const totalUsers = allUserIds.length
+      
+      // Split into chunks of 50 users (each chunk completes in ~10s, safe for Hobby plan)
+      const chunkSize = 50
+      const chunks: string[][] = []
+      for (let i = 0; i < allUserIds.length; i += chunkSize) {
+        chunks.push(allUserIds.slice(i, i + chunkSize))
+      }
+      
+      const totalBatches = chunks.length
+      let emailsSent = 0
+      let emailsFailed = 0
+      const failedEmails: Array<{ email: string; name: string; error: string }> = []
+      
+      // Initialize progress
+      setProgress({
+        emailsSent: 0,
+        emailsFailed: 0,
+        totalUsers,
+        progress: 0,
+        currentBatch: 0,
+        totalBatches,
+        isComplete: false,
+        failedEmails: []
       })
       
-      // Handle SSE stream
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      
-      while (reader) {
-        const { done, value } = await reader.read()
-        if (done) break
+      // Process each chunk sequentially
+      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+        const chunk = chunks[chunkIndex]
         
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.substring(6))
+        try {
+          const response = await fetch('/api/admin/notify-next-week-menu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userIds: chunk })
+          })
+          
+          // Handle SSE stream for this chunk
+          const reader = response.body?.getReader()
+          const decoder = new TextDecoder()
+          
+          while (reader) {
+            const { done, value } = await reader.read()
+            if (done) break
             
-            setProgress(prev => ({
-              ...prev,
-              emailsSent: data.emailsSent || prev.emailsSent,
-              emailsFailed: data.emailsFailed || prev.emailsFailed,
-              totalUsers: data.totalUsers || prev.totalUsers,
-              progress: data.progress || prev.progress,
-              currentBatch: data.currentBatch || prev.currentBatch,
-              totalBatches: data.totalBatches || prev.totalBatches,
-              isComplete: data.type === 'complete',
-              failedEmails: data.failedEmails || prev.failedEmails
-            }))
+            const chunkData = decoder.decode(value)
+            const lines = chunkData.split('\n')
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = JSON.parse(line.substring(6))
+                
+                // Aggregate progress across all chunks
+                if (data.type === 'complete') {
+                  emailsSent += data.emailsSent || 0
+                  emailsFailed += data.emailsFailed || 0
+                  if (data.failedEmails) {
+                    failedEmails.push(...data.failedEmails)
+                  }
+                }
+              }
+            }
           }
+        } catch (chunkError) {
+          console.error(`Error processing chunk ${chunkIndex + 1}:`, chunkError)
+          emailsFailed += chunk.length
+        }
+        
+        // Update progress after each chunk
+        setProgress({
+          emailsSent,
+          emailsFailed,
+          totalUsers,
+          progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
+          currentBatch: chunkIndex + 1,
+          totalBatches,
+          isComplete: chunkIndex === chunks.length - 1,
+          failedEmails
+        })
+        
+        // Small delay between chunks to avoid overwhelming server
+        if (chunkIndex < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500))
         }
       }
+      
+      // Mark as complete
+      setProgress(prev => ({ ...prev, isComplete: true }))
+      
     } catch (error) {
       console.error('Error sending emails:', error)
       toast({
@@ -149,6 +213,7 @@ export function NextWeekMenuEmail() {
         description: "Failed to send emails",
         variant: "destructive"
       })
+      setProgress(prev => ({ ...prev, isComplete: true }))
     }
   }
   
@@ -388,7 +453,8 @@ export function NextWeekMenuEmail() {
                   Send to All Users
                 </CardTitle>
                 <CardDescription>
-                  Send to all eligible users (excludes unsubscribed, bounced, invalid)
+                  Send to all eligible users (excludes unsubscribed, bounced, invalid).
+                  Uses chunked processing - keep this tab open until complete.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -674,6 +740,12 @@ export function NextWeekMenuEmail() {
                 ? 'Email sending process has finished'
                 : `Batch ${progress.currentBatch} of ${progress.totalBatches}`}
             </DialogDescription>
+            {!progress.isComplete && (
+              <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Please keep this tab open until sending completes
+              </p>
+            )}
           </DialogHeader>
           
           <div className="space-y-4">
