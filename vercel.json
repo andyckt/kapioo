@@ -91,6 +91,10 @@
     "app/api/upload/**/*": {
       "maxDuration": 60,
       "memory": 1024
+    },
+    "app/api/admin/notify-next-week-menu/route": {
+      "maxDuration": 300,
+      "memory": 1024
     }
   }
 } 

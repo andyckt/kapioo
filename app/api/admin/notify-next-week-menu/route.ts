@@ -219,9 +219,12 @@ export async function POST(request: Request) {
           
           // Process emails with rate limiting
           // Resend limit: 6 requests per second
-          // Strategy: Send 5 emails in parallel, then wait 1 second before next batch
-          const emailsPerBatch = 5;
-          const delayBetweenBatches = 1000; // 1 second
+          // Optimized strategy for production (Vercel timeout constraints):
+          // Send 12 emails in parallel, then wait 2 seconds before next batch
+          // This averages to 6 emails/second (exactly at limit)
+          // Total time for 441 users: ~74 seconds (441/12 * 2s)
+          const emailsPerBatch = 12;
+          const delayBetweenBatches = 2000; // 2 seconds
           const totalBatches = Math.ceil(totalUsers / emailsPerBatch);
           
           // Send initial progress
@@ -306,11 +309,12 @@ export async function POST(request: Request) {
               progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100)
             });
             
-            // Wait 1 second between batches to respect rate limit (5 emails per second)
+            // Wait between batches to respect rate limit
             // Send heartbeat messages during the delay to keep the SSE connection alive
             if (batchIndex < totalBatches - 1) {
-              // Send keep-alive heartbeat every 200ms during the 1-second delay
-              for (let i = 0; i < 5; i++) {
+              // Send keep-alive heartbeat every 200ms during the delay
+              const heartbeatCount = Math.ceil(delayBetweenBatches / 200);
+              for (let i = 0; i < heartbeatCount; i++) {
                 await new Promise(resolve => setTimeout(resolve, 200));
                 // Send heartbeat comment (SSE standard for keep-alive)
                 controller.enqueue(encoder.encode(`: heartbeat\n\n`));
