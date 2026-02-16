@@ -4,11 +4,9 @@ import User from '@/models/User';
 import { sendNextWeekMenuUpdateEmail } from '@/lib/services/email';
 
 export const dynamic = 'force-dynamic';
-// Increase timeout for bulk email sending (max 300s on Vercel Pro/Enterprise)
-// For development, this helps prevent timeouts during long-running operations
-export const maxDuration = 300;
 
 // POST handler - send next week menu update to users
+// Note: With chunked processing on frontend, each request completes in ~10s (well within Hobby plan's 60s limit)
 export async function POST(request: Request) {
   try {
     const { userIds, testMode, testEmail, testBatchMode } = await request.json();
