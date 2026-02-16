@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { Check, X, ArrowLeft, Loader2 } from "lucide-react"
+import { Check, X, ArrowLeft, Loader2, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function VerifyEmailPage() {
   const router = useRouter()
@@ -111,6 +112,20 @@ export default function VerifyEmailPage() {
               <CardTitle className="text-xl text-center">验证您的邮箱</CardTitle>
             </CardHeader>
             <CardContent className="text-center pb-6">
+              {/* Maintenance Warning */}
+              <Alert className="mb-6 border-amber-500 bg-amber-50 text-left">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm text-amber-800">
+                  <p className="font-semibold mb-1">⚠️ 系统维护通知 / System Maintenance Notice</p>
+                  <p className="mb-2">
+                    <span className="font-medium">中文：</span>我们正在进行后端维护，验证码邮件发送功能暂时受影响。维护预计将在今晚9点或更早结束。给您带来不便，敬请谅解。
+                  </p>
+                  <p>
+                    <span className="font-medium">English:</span> We are performing backend maintenance. The verification code email function is temporarily affected. Maintenance is expected to end by 9 PM or earlier. We apologize for any inconvenience.
+                  </p>
+                </AlertDescription>
+              </Alert>
+              
               <p className="text-muted-foreground mb-6">
                 请输入您收到的6位数验证码以完成邮箱验证
               </p>
