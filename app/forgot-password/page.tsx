@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { ArrowLeft, Check, RefreshCw } from "lucide-react"
+import { ArrowLeft, Check, RefreshCw, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -22,7 +23,7 @@ export default function ForgotPasswordPage() {
   
   const router = useRouter()
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   const validateEmail = () => {
     let isValid = true
@@ -167,6 +168,22 @@ export default function ForgotPasswordPage() {
             ) : (
               <form onSubmit={handleRequestReset} className="p-7 sm:p-8 bg-white shadow-lg rounded-xl">
                 <div className="grid gap-5">
+                  {/* Maintenance Warning */}
+                  <Alert className="border-amber-500 bg-amber-50">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-sm text-amber-800">
+                      <p className="font-semibold mb-1">
+                        {language === 'zh' ? '⚠️ 系统维护通知' : '⚠️ System Maintenance Notice'}
+                      </p>
+                      <p>
+                        {language === 'zh' 
+                          ? '我们正在进行后端维护，验证码邮件发送功能暂时受影响。维护预计将在今晚9点或更早结束。给您带来不便，敬请谅解。'
+                          : 'We are performing backend maintenance. The verification code email function is temporarily affected. Maintenance is expected to end by 9 PM or earlier. We apologize for any inconvenience.'
+                        }
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                  
                   <div className="grid gap-2.5">
                     <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
                     <Input
