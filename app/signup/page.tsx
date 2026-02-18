@@ -324,13 +324,12 @@ export default function SignupPage() {
                       type="button"
                       onClick={() => setLanguagePreference('zh')}
                       className={cn(
-                        "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center gap-2",
+                        "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center",
                         languagePreference === 'zh'
                           ? "border-[#C2884E] bg-[#FFF6EF] text-[#C2884E] font-medium"
                           : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                       )}
                     >
-                      <span className="text-xl">🇨🇳</span>
                       <span className="text-sm">中文</span>
                     </button>
                     <button
