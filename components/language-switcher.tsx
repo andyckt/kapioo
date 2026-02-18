@@ -39,13 +39,13 @@ export function LanguageSwitcher() {
       <DropdownMenuContent align="end">
         <DropdownMenuItem 
           onClick={() => setLanguage('zh')}
-          className={language === 'zh' ? 'bg-accent font-medium' : ''}
+          className={`justify-center ${language === 'zh' ? 'bg-accent font-medium' : ''}`}
         >
           {t('chinese')}
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => setLanguage('en')}
-          className={language === 'en' ? 'bg-accent font-medium' : ''}
+          className={`justify-center ${language === 'en' ? 'bg-accent font-medium' : ''}`}
         >
           🇨🇦 {t('english')}
         </DropdownMenuItem>
