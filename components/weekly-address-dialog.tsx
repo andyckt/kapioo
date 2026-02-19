@@ -114,6 +114,13 @@ export function WeeklyAddressDialog({
       province: region
     }))
   }
+
+  // Ensure wheel/trackpad scrolling works inside the area dropdown
+  const handleRegionListWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.scrollTop += e.deltaY
+  }
   
   // Handle form submission
   const handleAddressSubmit = async () => {
@@ -191,13 +198,19 @@ export function WeeklyAddressDialog({
                     <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
+                <PopoverContent
+                  align="start"
+                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                >
                   <Command>
                     <CommandInput 
                       placeholder={language === 'zh' ? '搜索区域...' : 'Search regions...'}
                       className="h-9"
                     />
-                    <CommandList>
+                    <CommandList
+                      className="max-h-[260px] overflow-y-scroll overflow-x-hidden visible-scrollbar overscroll-contain"
+                      onWheel={handleRegionListWheel}
+                    >
                       <CommandEmpty>
                         {language === 'zh' ? '没有找到匹配的区域' : 'No regions found'}
                       </CommandEmpty>

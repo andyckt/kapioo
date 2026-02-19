@@ -131,6 +131,26 @@ body {
   display: none; /* Chrome, Safari and Opera */
 }
 
+/* Force visible vertical scrollbar for long dropdown lists */
+.visible-scrollbar {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+}
+
+.visible-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.visible-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.visible-scrollbar::-webkit-scrollbar-thumb {
+  background: #c2884e;
+  border-radius: 9999px;
+  border: 2px solid #f3f4f6;
+}
+
 /* Custom animations */
 @keyframes shine {
   from {
