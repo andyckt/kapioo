@@ -348,6 +348,75 @@ export default function DailyDelivery() {
   // Function to fetch menu data (extracted for reuse)
   const fetchMenuData = async () => {
     try {
+      const pickDefaultAvailableDay = (formattedDays: Record<string, DayData>): string => {
+        const dayIds = Object.keys(formattedDays)
+        if (dayIds.length === 0) return ''
+
+        const torontoNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
+        const currentHour = torontoNow.getHours()
+        const currentMinute = torontoNow.getMinutes()
+        const todayYMD = new Date(
+          torontoNow.getFullYear(),
+          torontoNow.getMonth(),
+          torontoNow.getDate()
+        )
+        const tomorrowYMD = new Date(
+          torontoNow.getFullYear(),
+          torontoNow.getMonth(),
+          torontoNow.getDate() + 1
+        )
+
+        const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+        const parseMealDate = (mealDate: string): Date | null => {
+          const parts = mealDate.split(' ')
+          if (parts.length !== 2) return null
+
+          const monthIndex = shortMonths.findIndex(
+            month => month.toLowerCase() === parts[0].toLowerCase()
+          )
+          const dayNum = parseInt(parts[1], 10)
+
+          if (monthIndex === -1 || Number.isNaN(dayNum)) return null
+
+          let year = torontoNow.getFullYear()
+          // Handle year boundary (e.g. Jan menu while current month is Dec).
+          if (monthIndex < torontoNow.getMonth() - 1) {
+            year += 1
+          }
+
+          return new Date(year, monthIndex, dayNum)
+        }
+
+        const availableDays = dayIds
+          .map((dayId) => {
+            const parsedDate = parseMealDate(formattedDays[dayId]?.date || '')
+            return { dayId, parsedDate }
+          })
+          .filter((entry): entry is { dayId: string; parsedDate: Date } => {
+            if (!entry.parsedDate) return false
+
+            // Same availability rules as ordering:
+            // 1) Past or today is unavailable
+            if (entry.parsedDate.getTime() <= todayYMD.getTime()) return false
+
+            // 2) Tomorrow becomes unavailable after daily cutoff time
+            if (
+              entry.parsedDate.getTime() === tomorrowYMD.getTime() &&
+              (currentHour > cutoffTime.hour || (currentHour === cutoffTime.hour && currentMinute > cutoffTime.minute))
+            ) {
+              return false
+            }
+
+            return true
+          })
+          // Pick the nearest upcoming delivery date (earliest future date)
+          .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
+
+        return availableDays[0]?.dayId || dayIds[0]
+      }
+
       // 🚀 OPTIMIZATION #1: Try the optimized single-request endpoint first
       try {
         const optimizedResponse = await fetch('/api/days/active-with-combos');
@@ -381,68 +450,9 @@ export default function DailyDelivery() {
             .sort()
             .join(',');
           
-          // Find the first available day
+          // Preselect the nearest upcoming available delivery date
           if (Object.keys(formattedDays).length > 0) {
-            // Use the same availability logic
-            const checkDayAvailability = (day: string): boolean => {
-              try {
-                const torontoOptions = { timeZone: 'America/Toronto' };
-                const now = new Date();
-                const torontoDateString = now.toLocaleString('en-US', torontoOptions);
-                const torontoDate = new Date(torontoDateString);
-                
-                const dayData = formattedDays[day];
-                if (!dayData || !dayData.date) return false;
-                
-                const mealDate = dayData.date;
-                
-                try {
-                  const parts = mealDate.split(' ');
-                  
-                  if (parts.length === 2) {
-                    const monthStr = parts[0];
-                    const dayStr = parts[1];
-                    
-                    const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const monthIndex = shortMonths.findIndex(m => 
-                      monthStr.toLowerCase() === m.toLowerCase());
-                    
-                    const dayNum = parseInt(dayStr);
-                    
-                    if (monthIndex !== -1 && !isNaN(dayNum)) {
-                      const mealSpecificDate = new Date(
-                        torontoDate.getFullYear(), 
-                        monthIndex, 
-                        dayNum
-                      );
-                      
-                      const todayYMD = new Date(
-                        torontoDate.getFullYear(), 
-                        torontoDate.getMonth(), 
-                        torontoDate.getDate()
-                      );
-                      
-                      if (mealSpecificDate < todayYMD || mealSpecificDate.getTime() === todayYMD.getTime()) {
-                        return false;
-                      }
-                      
-                      return true;
-                    }
-                  }
-                } catch (error) {
-                  console.error('Error checking day availability:', error);
-                }
-                
-                return false;
-              } catch (error) {
-                console.error('Error in checkDayAvailability:', error);
-                return false;
-              }
-            };
-            
-            const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
-            setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
+            setSelectedDay(pickDefaultAvailableDay(formattedDays));
           }
           
           // Success with optimized endpoint
@@ -508,67 +518,9 @@ export default function DailyDelivery() {
             .sort()
             .join(',');
           
-          // Find the first available day for fallback path
+          // Preselect the nearest upcoming available delivery date
           if (Object.keys(formattedDays).length > 0) {
-            const checkDayAvailability = (day: string): boolean => {
-              try {
-                const torontoOptions = { timeZone: 'America/Toronto' };
-                const now = new Date();
-                const torontoDateString = now.toLocaleString('en-US', torontoOptions);
-                const torontoDate = new Date(torontoDateString);
-                
-                const dayData = formattedDays[day];
-                if (!dayData || !dayData.date) return false;
-                
-                const mealDate = dayData.date;
-                
-                try {
-                  const parts = mealDate.split(' ');
-                  
-                  if (parts.length === 2) {
-                    const monthStr = parts[0];
-                    const dayStr = parts[1];
-                    
-                    const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const monthIndex = shortMonths.findIndex(m => 
-                      monthStr.toLowerCase() === m.toLowerCase());
-                    
-                    const dayNum = parseInt(dayStr);
-                    
-                    if (monthIndex !== -1 && !isNaN(dayNum)) {
-                      const mealSpecificDate = new Date(
-                        torontoDate.getFullYear(), 
-                        monthIndex, 
-                        dayNum
-                      );
-                      
-                      const todayYMD = new Date(
-                        torontoDate.getFullYear(), 
-                        torontoDate.getMonth(), 
-                        torontoDate.getDate()
-                      );
-                      
-                      if (mealSpecificDate < todayYMD || mealSpecificDate.getTime() === todayYMD.getTime()) {
-                        return false;
-                      }
-                      
-                      return true;
-                    }
-                  }
-                } catch (error) {
-                  console.error('Error checking day availability:', error);
-                }
-                
-                return false;
-              } catch (error) {
-                console.error('Error in checkDayAvailability:', error);
-                return false;
-              }
-            };
-            
-            const availableDay = Object.keys(formattedDays).find(checkDayAvailability);
-            setSelectedDay(availableDay || Object.keys(formattedDays)[0]);
+            setSelectedDay(pickDefaultAvailableDay(formattedDays));
           }
           
           return currentDates;
