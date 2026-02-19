@@ -6,27 +6,16 @@ import { motion } from "framer-motion"
 import { MapPin, Check } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
+import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from '@/lib/constants/areas'
 
-// Location types - same as in location-meal-plans.tsx
+// Location types - using centralized constants
 type Location = 
-  | "Downtown Toronto" 
-  | "Midtown" 
-  | "North York" 
-  | "Markham" 
-  | "Richmond Hill"
-  | "Thornhill"
-  | "Vaughan" 
-  | "Mississauga" 
-  | "Oakville" 
-  | "Aurora" 
-  | "Newmarket" 
-  | "Hamilton" 
-  | "Burlington"
-  | "Scarborough"
+  | typeof DAILY_DELIVERY_AREAS[number]
+  | typeof WEEKLY_ONLY_AREAS[number]
 
-// Group locations by service availability
-const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
-const WEEKLY_ONLY_LOCATIONS: Location[] = ["Scarborough", "Thornhill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
+// Group locations by service availability - using centralized constants
+const FULL_SERVICE_LOCATIONS = [...DAILY_DELIVERY_AREAS] as Location[]
+const WEEKLY_ONLY_LOCATIONS_TYPED = [...WEEKLY_ONLY_AREAS] as Location[]
 
 export default function StarterPage() {
   const router = useRouter()
@@ -53,11 +42,11 @@ export default function StarterPage() {
   // Check if location has weekly delivery service
   const hasWeeklyDelivery = (location: Location | null) => {
     if (!location) return false
-    return FULL_SERVICE_LOCATIONS.includes(location) || WEEKLY_ONLY_LOCATIONS.includes(location)
+    return FULL_SERVICE_LOCATIONS.includes(location) || WEEKLY_ONLY_LOCATIONS_TYPED.includes(location)
   }
   
   // All locations
-  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
+  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS_TYPED]
   
   // Format location display names (no longer needed - using actual names)
   const getLocationDisplayName = (location: Location | null): string => {

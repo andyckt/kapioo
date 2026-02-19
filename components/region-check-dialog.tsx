@@ -11,15 +11,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { MapPin } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
+import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
 
-// Define the supported regions for daily delivery
-const DAILY_DELIVERY_REGIONS = [
-  "Downtown Toronto",
-  "Midtown", 
-  "North York", 
-  "Markham", 
-  "Richmond Hill"
-]
+// Use centralized daily delivery areas
+const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
 
 interface RegionCheckDialogProps {
   open: boolean

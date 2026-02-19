@@ -4,6 +4,7 @@ import React from 'react'
 import { MapPin } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { cn } from '@/lib/utils'
+import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 
 interface AvailableAreasProps {
   className?: string
@@ -12,27 +13,8 @@ interface AvailableAreasProps {
 export function AvailableAreas({ className }: AvailableAreasProps) {
   const { language } = useLanguage()
   
-  // Available service areas - full list
-  const serviceAreas = [
-    'Downtown Toronto', 
-    'Midtown', 
-    'Scarborough', 
-    'North York', 
-    'East York',
-    'York',
-    'Etobicoke',
-    'Markham', 
-    'Richmond Hill',
-    'Thornhill',
-    'Aurora', 
-    'Newmarket',
-    'Vaughan (including Maple, Concord, King)', 
-    'Mississauga', 
-    'Oakville',
-    'Brampton',
-    'Hamilton',
-    'Burlington'
-  ]
+  // Use centralized area list
+  const serviceAreas = ALL_WEEKLY_AREAS
 
   return (
     <div className={cn("mb-8", className)}>

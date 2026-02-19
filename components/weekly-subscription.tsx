@@ -16,6 +16,7 @@ import { getUserWeeklySubscription, sortDeliveryDays, getAdjacentDates, validate
 import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
 import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
+import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 
 interface WeeklySubscriptionProps {
   userCredits?: number;
@@ -710,7 +711,7 @@ export default function WeeklySubscription({
           currentRegion={userRegion}
           onRegionChange={handleRegionChange}
           onProceed={proceedToCheckout}
-          isValidRegion={["Downtown Toronto", "Midtown", "Scarborough", "North York", "East York", "York", "Etobicoke", "Markham", "Richmond Hill", "Thornhill", "Aurora", "Newmarket", "Vaughan (including Maple, Concord, King)", "Mississauga", "Oakville", "Brampton", "Hamilton", "Burlington"].includes(userRegion || '')}
+          isValidRegion={ALL_WEEKLY_AREAS.includes(userRegion as any)}
           existingAddress={(() => {
             const storedUser = localStorage.getItem('user')
             if (storedUser) {

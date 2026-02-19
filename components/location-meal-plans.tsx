@@ -6,27 +6,16 @@ import { motion } from "framer-motion"
 import { ChevronDown } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { useRouter } from "next/navigation"
+import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from '@/lib/constants/areas'
 
-// Location types
+// Location types - using centralized constants
 type Location = 
-  | "Downtown Toronto" 
-  | "Midtown" 
-  | "North York" 
-  | "Markham" 
-  | "Richmond Hill"
-  | "Thornhill"
-  | "Vaughan" 
-  | "Mississauga" 
-  | "Oakville" 
-  | "Aurora" 
-  | "Newmarket" 
-  | "Hamilton" 
-  | "Burlington"
-  | "Scarborough"
+  | typeof DAILY_DELIVERY_AREAS[number]
+  | typeof WEEKLY_ONLY_AREAS[number]
 
-// Group locations by service availability
-const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
-const WEEKLY_ONLY_LOCATIONS: Location[] = ["Scarborough", "Thornhill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
+// Group locations by service availability - using centralized constants
+const FULL_SERVICE_LOCATIONS = [...DAILY_DELIVERY_AREAS] as Location[]
+const WEEKLY_ONLY_LOCATIONS_TYPED = [...WEEKLY_ONLY_AREAS] as Location[]
 
 // Meal plan types
 interface MealPlan {
@@ -113,7 +102,7 @@ export default function LocationMealPlans() {
   }
   
   // All locations
-  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
+  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS_TYPED]
   
   return (
     <section className="pt-12 md:pt-16 pb-20 md:pb-20 px-4 bg-gradient-to-b from-[#fff6ef] to-white relative overflow-visible">

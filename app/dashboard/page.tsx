@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast"
 import { NotificationBell } from "@/components/notification-bell"
 import { MealDetail } from "@/components/meal-detail"
 import { ReferralCard } from "@/components/referral-card"
+import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS, ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 import { DeliveryTracking } from "@/components/delivery-tracking"
 // import { SupportChat } from "@/components/support-chat"
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -55,26 +56,8 @@ const CreditPurchaseHistory = dynamic(() => import("@/components/credit-purchase
 import { OrderSectionNavigation } from "@/components/order-section-navigation"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
 
-// Valid delivery areas for weekly meal service
-const VALID_DELIVERY_AREAS = [
-  "Downtown Toronto", 
-  "Midtown", 
-  "Scarborough", 
-  "North York", 
-  "East York",
-  "York",
-  "Etobicoke",
-  "Markham", 
-  "Richmond Hill",
-  "Aurora", 
-  "Newmarket",
-  "Vaughan (including Maple, Concord, King)", 
-  "Mississauga", 
-  "Oakville",
-  "Brampton",
-  "Hamilton",
-  "Burlington"
-];
+// Valid delivery areas - using centralized constants
+const VALID_DELIVERY_AREAS = ALL_WEEKLY_AREAS;
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -85,8 +68,8 @@ export default function DashboardPage() {
   const [customizeMeal, setCustomizeMeal] = useState(null)
   const [showServiceSelection, setShowServiceSelection] = useState(false)
   
-  // Daily delivery regions
-  const DAILY_DELIVERY_REGIONS = ['Downtown Toronto', 'Midtown', 'North York', 'Markham', 'Richmond Hill']
+  // Daily delivery regions - using centralized constants
+  const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
   
   // Function to check if user's area has daily delivery service
   const hasAreaDailyDelivery = (userAddress?: any): boolean => {
@@ -114,30 +97,18 @@ export default function DashboardPage() {
   const [orderStatsLoading, setOrderStatsLoading] = useState(true)
   const [selectedLocation, setSelectedLocation] = useState("Downtown")
   
-  // Define location types
+  // Define location types - now using centralized constants
   type Location = 
     | "Downtown" 
-    | "Downtown Toronto"
-    | "Midtown" 
-    | "North York" 
-    | "Markham" 
-    | "Richmond Hill"
-    | "Thornhill"
-    | "Vaughan" 
-    | "Mississauga" 
-    | "Oakville" 
-    | "Aurora" 
-    | "Newmarket"
-    | "Hamilton"
-    | "Burlington"
-    | "Scarborough"
+    | typeof DAILY_DELIVERY_AREAS[number]
+    | typeof WEEKLY_ONLY_AREAS[number]
   
-  // Group locations by service availability
-  const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
-  const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington", "Scarborough", "Thornhill"]
+  // Group locations by service availability - using centralized constants
+  const FULL_SERVICE_LOCATIONS = [...DAILY_DELIVERY_AREAS] as Location[]
+  const WEEKLY_ONLY_LOCATIONS_TYPED = [...WEEKLY_ONLY_AREAS] as Location[]
   
   // All locations
-  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]
+  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS_TYPED]
   
   // Location display names
   const getLocationDisplayName = (location: Location): string => {

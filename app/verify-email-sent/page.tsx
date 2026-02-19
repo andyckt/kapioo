@@ -15,28 +15,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
+import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 
-// Define available service areas
-const serviceAreas = [
-  'Downtown Toronto', 
-  'Midtown', 
-  'Scarborough', 
-  'North York', 
-  'East York',
-  'York',
-  'Etobicoke',
-  'Markham', 
-  'Richmond Hill',
-  'Thornhill',
-  'Aurora', 
-  'Newmarket',
-  'Vaughan (including Maple, Concord, King)', 
-  'Mississauga', 
-  'Oakville', 
-  'Brampton',
-  'Hamilton',
-  'Burlington'
-]
+// Use centralized area list
+const serviceAreas = ALL_WEEKLY_AREAS
 
 export default function VerifyEmailSentPage() {
   const router = useRouter()

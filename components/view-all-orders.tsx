@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, Search, Filter, RefreshCcw, MoreHorizontal, Download, Calendar, X, Check, CheckSquare, Users, ShoppingCart, Eye, Ticket, Trash2 } from "lucide-react"
+import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -292,35 +293,13 @@ export function ViewAllOrders() {
       if (data.success && data.areas && data.areas.length > 0) {
         setAreas(data.areas)
       } else {
-        // Provide default areas if none are returned from the API
-        setAreas([
-          'Downtown',
-          'Midtown',
-          'North York',
-          'Markham',
-          'Richmond Hill',
-          'Thornhill',
-          'Scarborough',
-          'Etobicoke',
-          'Mississauga',
-          'Vaughan'
-        ])
+        // Use centralized area list as default
+        setAreas([...ALL_WEEKLY_AREAS])
       }
     } catch (error) {
       console.error('Error fetching areas:', error)
-      // Set default areas on error
-      setAreas([
-        'Downtown',
-        'Midtown',
-        'North York',
-        'Markham',
-        'Richmond Hill',
-        'Thornhill',
-        'Scarborough',
-        'Etobicoke',
-        'Mississauga',
-        'Vaughan'
-      ])
+      // Use centralized area list as default on error
+      setAreas([...ALL_WEEKLY_AREAS])
     }
   }
 

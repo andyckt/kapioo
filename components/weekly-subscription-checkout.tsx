@@ -28,28 +28,10 @@ import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { CartItem, DeliveryDay, submitUserSubscription, validateSelectedDates, sortDeliveryDays } from '@/lib/weekly-subscription'
+import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 
-// Define the supported regions for weekly delivery
-const WEEKLY_DELIVERY_REGIONS = [
-  "Downtown Toronto", 
-  "Midtown", 
-  "Scarborough", 
-  "North York", 
-  "East York",
-  "York",
-  "Etobicoke",
-  "Markham", 
-  "Richmond Hill",
-  "Thornhill",
-  "Aurora", 
-  "Newmarket",
-  "Vaughan (including Maple, Concord, King)", 
-  "Mississauga", 
-  "Oakville",
-  "Brampton",
-  "Hamilton",
-  "Burlington"
-]
+// Use centralized area list
+const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
 
 interface WeeklySubscriptionCheckoutProps {
   cart: CartItem[]

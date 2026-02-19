@@ -28,28 +28,10 @@ import { Label } from "@/components/ui/label"
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/hooks/use-toast'
+import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 
-// Define the supported regions for weekly delivery
-const WEEKLY_DELIVERY_REGIONS = [
-  "Downtown Toronto", 
-  "Midtown", 
-  "Scarborough", 
-  "North York", 
-  "East York", 
-  "York", 
-  "Etobicoke", 
-  "Markham", 
-  "Richmond Hill", 
-  "Thornhill",
-  "Aurora", 
-  "Newmarket", 
-  "Vaughan (including Maple, Concord, King)", 
-  "Mississauga", 
-  "Oakville", 
-  "Brampton", 
-  "Hamilton", 
-  "Burlington"
-]
+// Use centralized area list
+const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
 
 interface AddressData {
   unitNumber?: string

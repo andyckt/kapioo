@@ -28,15 +28,10 @@ import { Label } from "@/components/ui/label"
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/hooks/use-toast'
+import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
 
-// Define the supported regions for daily delivery
-const DAILY_DELIVERY_REGIONS = [
-  "Downtown Toronto",
-  "Midtown", 
-  "North York", 
-  "Markham", 
-  "Richmond Hill"
-]
+// Use centralized daily delivery areas
+const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
 
 interface RegionCheckDialogRechargeProps {
   open: boolean

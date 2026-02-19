@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
+import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -87,8 +88,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78 }
   ]
 
-  // Available service areas
-  const DAILY_DELIVERY_REGIONS = ['Downtown Toronto', 'Midtown', 'North York', 'Markham', 'Richmond Hill']
+  // Use centralized daily delivery areas
+  const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
