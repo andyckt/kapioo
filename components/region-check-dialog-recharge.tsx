@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { 
   Dialog,
   DialogContent,
@@ -64,8 +64,10 @@ export function RegionCheckDialogRecharge({
   const { toast } = useToast()
   const [selectedRegion, setSelectedRegion] = useState<string>(isValidRegion && currentRegion ? currentRegion : "")
   const [popoverOpen, setPopoverOpen] = useState(false)
+  const [addressRegionPopoverOpen, setAddressRegionPopoverOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState<'region' | 'address'>(isValidRegion ? 'address' : 'region')
+  const canGoBackToRegionStep = !isValidRegion
   
   // Address fields
   const [addressData, setAddressData] = useState<AddressData>({
@@ -75,6 +77,23 @@ export function RegionCheckDialogRecharge({
     country: existingAddress?.country || 'Canada', // Always Canada
     buzzCode: existingAddress?.buzzCode || ''
   })
+
+  // Keep dialog state in sync whenever it opens or the region validity changes.
+  useEffect(() => {
+    if (!open) return
+
+    setStep(isValidRegion ? 'address' : 'region')
+    setSelectedRegion(isValidRegion && currentRegion ? currentRegion : "")
+    setAddressData({
+      unitNumber: existingAddress?.unitNumber || '',
+      streetAddress: existingAddress?.streetAddress || '',
+      postalCode: existingAddress?.postalCode || '',
+      country: existingAddress?.country || 'Canada',
+      buzzCode: existingAddress?.buzzCode || ''
+    })
+    setPopoverOpen(false)
+    setAddressRegionPopoverOpen(false)
+  }, [open, isValidRegion, currentRegion, existingAddress])
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
@@ -113,8 +132,7 @@ export function RegionCheckDialogRecharge({
   }
 
   const handleCompleteAddress = async () => {
-    // Use the current region if we're in valid region mode, otherwise use selected region
-    const regionToUse = isValidRegion ? currentRegion : selectedRegion
+    const regionToUse = selectedRegion || currentRegion
     
     if (!regionToUse) return
     
@@ -139,6 +157,11 @@ export function RegionCheckDialogRecharge({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleBackToRegionStep = () => {
+    if (!canGoBackToRegionStep) return
+    setStep('region')
   }
 
   const renderRegionStep = () => (
@@ -250,14 +273,51 @@ export function RegionCheckDialogRecharge({
         
         {/* Display selected area */}
         <div className="bg-[#F5EDE4]/50 p-3 rounded-lg border border-[#C2884E]/20">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
             <MapPin className="h-4 w-4 text-[#C2884E]" />
             <span className="text-sm text-[#6B5F53]">
               {language === 'zh' ? '已选择区域：' : 'Selected Area:'} 
               <span className="font-semibold text-[#C2884E] ml-1">
-                {isValidRegion ? currentRegion : selectedRegion}
+                {selectedRegion || currentRegion || (language === 'zh' ? '未设置' : 'Not set')}
               </span>
             </span>
+            {isValidRegion && (
+              <Popover open={addressRegionPopoverOpen} onOpenChange={setAddressRegionPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs px-2">
+                    {language === 'zh' ? '更新区域' : 'Update Area'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] min-w-[240px]">
+                  <Command>
+                    <CommandInput placeholder={language === 'zh' ? "搜索区域..." : "Search area..."} />
+                    <CommandList className="max-h-[200px] overflow-y-auto">
+                      <CommandEmpty>{language === 'zh' ? "未找到匹配的区域" : "No matching areas found"}</CommandEmpty>
+                      <CommandGroup>
+                        {DAILY_DELIVERY_REGIONS.map((region) => (
+                          <CommandItem
+                            key={region}
+                            value={region}
+                            onSelect={() => {
+                              setSelectedRegion(region)
+                              setAddressRegionPopoverOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                (selectedRegion || currentRegion) === region ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {region}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
         </div>
         
@@ -318,14 +378,18 @@ export function RegionCheckDialogRecharge({
       
       {/* Fixed button bar at bottom */}
       <div className="flex justify-between space-x-3 px-4 sm:px-6 py-3 border-t border-[#C2884E]/10 bg-white">
-        <Button 
-          variant="outline" 
-          onClick={() => setStep('region')}
-          className="flex items-center text-sm px-3 py-1 h-9"
-        >
-          <ArrowLeft className="mr-1 h-3 w-3" />
-          {language === 'zh' ? '返回' : 'Back'}
-        </Button>
+        {canGoBackToRegionStep ? (
+          <Button 
+            variant="outline" 
+            onClick={handleBackToRegionStep}
+            className="flex items-center text-sm px-3 py-1 h-9"
+          >
+            <ArrowLeft className="mr-1 h-3 w-3" />
+            {language === 'zh' ? '返回' : 'Back'}
+          </Button>
+        ) : (
+          <div />
+        )}
         <Button 
           className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white text-sm px-3 py-1 h-9"
           onClick={handleCompleteAddress}
