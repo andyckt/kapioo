@@ -122,6 +122,7 @@ export default function DashboardPage() {
     | "North York" 
     | "Markham" 
     | "Richmond Hill"
+    | "Thornhill"
     | "Vaughan" 
     | "Mississauga" 
     | "Oakville" 
@@ -133,7 +134,7 @@ export default function DashboardPage() {
   
   // Group locations by service availability
   const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
-  const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington", "Scarborough"]
+  const WEEKLY_ONLY_LOCATIONS: Location[] = ["Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington", "Scarborough", "Thornhill"]
   
   // All locations
   const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS]

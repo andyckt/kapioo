@@ -23,6 +23,7 @@ export function AvailableAreas({ className }: AvailableAreasProps) {
     'Etobicoke',
     'Markham', 
     'Richmond Hill',
+    'Thornhill',
     'Aurora', 
     'Newmarket',
     'Vaughan (including Maple, Concord, King)', 

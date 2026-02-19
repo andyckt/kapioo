@@ -14,6 +14,7 @@ type Location =
   | "North York" 
   | "Markham" 
   | "Richmond Hill"
+  | "Thornhill"
   | "Vaughan" 
   | "Mississauga" 
   | "Oakville" 
@@ -25,7 +26,7 @@ type Location =
 
 // Group locations by service availability
 const FULL_SERVICE_LOCATIONS: Location[] = ["Downtown Toronto", "Midtown", "North York", "Markham", "Richmond Hill"]
-const WEEKLY_ONLY_LOCATIONS: Location[] = ["Scarborough", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
+const WEEKLY_ONLY_LOCATIONS: Location[] = ["Scarborough", "Thornhill", "Vaughan", "Mississauga", "Oakville", "Aurora", "Newmarket", "Hamilton", "Burlington"]
 
 export default function StarterPage() {
   const router = useRouter()

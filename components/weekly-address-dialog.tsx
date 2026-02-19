@@ -40,6 +40,7 @@ const WEEKLY_DELIVERY_REGIONS = [
   "Etobicoke", 
   "Markham", 
   "Richmond Hill", 
+  "Thornhill",
   "Aurora", 
   "Newmarket", 
   "Vaughan (including Maple, Concord, King)", 
