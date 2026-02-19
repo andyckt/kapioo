@@ -77,7 +77,7 @@ export function LanguagePreferenceDialog() {
                 type="button"
                 onFocus={(e) => e.currentTarget.blur()}
               >
-                <div className="flex items-center gap-3 w-full pointer-events-none">
+                <div className="flex items-center justify-center gap-3 w-full pointer-events-none">
                   <span className="text-2xl">🇨🇦</span>
                   <p className="text-base font-medium text-[#6B5F53]">English</p>
                 </div>
