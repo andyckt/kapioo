@@ -500,19 +500,20 @@ export function MealVoucherManagement() {
             </div>
             
             {/* Desktop Table View */}
-            <div className="hidden md:block rounded-md border">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-medium">Request ID</th>
-                    <th className="text-left p-4 font-medium">User</th>
-                    <th className="text-left p-4 font-medium">Vouchers</th>
-                    <th className="text-left p-4 font-medium">Amount</th>
-                    <th className="text-left p-4 font-medium hidden lg:table-cell">Date</th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                    <th className="text-center p-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
+            <div className="hidden md:block rounded-md border overflow-hidden">
+              <div className="origin-top-left" style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '117.65%' }}>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-4 font-medium">Request ID</th>
+                      <th className="text-left p-4 font-medium">User</th>
+                      <th className="text-left p-4 font-medium">Vouchers</th>
+                      <th className="text-left p-4 font-medium">Amount</th>
+                      <th className="text-left p-4 font-medium">Date</th>
+                      <th className="text-left p-4 font-medium">Status</th>
+                      <th className="text-center p-4 font-medium">Actions</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
@@ -546,7 +547,7 @@ export function MealVoucherManagement() {
                             </div>
                           )}
                         </td>
-                        <td className="p-4 align-middle hidden lg:table-cell">{formatDate(request.createdAt)}</td>
+                        <td className="p-4 align-middle">{formatDate(request.createdAt)}</td>
                         <td className="p-4 align-middle">{getStatusBadge(request.status)}</td>
                         <td className="p-4 align-middle text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -592,7 +593,8 @@ export function MealVoucherManagement() {
                     </tr>
                   )}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
 
             {/* Mobile Card View */}
