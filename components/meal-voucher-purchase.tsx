@@ -222,7 +222,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     setAppliedPromoCode(null)
     setPromoBreakdown(null)
     setPromoError('')
-    setCheckoutRequestId('')
   }, [selectedPlan?.id])
 
   // Handle region change

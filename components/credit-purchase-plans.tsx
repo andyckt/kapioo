@@ -86,7 +86,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [promoBreakdown, setPromoBreakdown] = useState<PromoPreviewBreakdown | null>(null)
   const [promoError, setPromoError] = useState('')
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
-  
+
   // Define plan options based on the image provided
   const planOptions: PlanOption[] = [
     // 1 week options - 6 meals/week
@@ -696,7 +696,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     setPromoBreakdown(null)
     setAppliedPromoCode(null)
     setPromoError('')
-    setCheckoutRequestId('')
   }, [selectedPlan?.id, paymentMethod, userRegion])
   
   // Go back to meal count selection
@@ -842,7 +841,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     setPaymentProof(null)
     setInteracEmail('')
     setNotes('')
-    setCheckoutRequestId('')
     setPromoCodeInput('')
     setAppliedPromoCode(null)
     setPromoBreakdown(null)

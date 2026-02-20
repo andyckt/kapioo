@@ -46,7 +46,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
   // Fetch voucher purchase requests
   const fetchRequests = async (page = 1) => {
     if (!userId) return;
-    
+
     setIsLoading(true);
     try {
       const response = await fetch(`/api/voucher-requests?userId=${userId}&page=${page}&limit=${pagination.limit}`);

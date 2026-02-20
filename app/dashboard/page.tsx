@@ -96,7 +96,7 @@ export default function DashboardPage() {
   const [totalOrders, setTotalOrders] = useState(0)
   const [orderStatsLoading, setOrderStatsLoading] = useState(true)
   const [selectedLocation, setSelectedLocation] = useState("Downtown")
-  
+
   // Define location types - now using centralized constants
   type Location = 
     | "Downtown" 
