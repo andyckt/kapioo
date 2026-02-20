@@ -89,7 +89,6 @@ const PromoCodeSchema = new Schema<IPromoCode>(
   }
 );
 
-PromoCodeSchema.index({ code: 1 }, { unique: true });
 PromoCodeSchema.index({ active: 1, expiresAt: 1 });
 
 const PromoCode: IPromoCodeModel =
