@@ -5,8 +5,8 @@ import User from '@/models/User';
 import { sendNextWeekMenuUpdateEmail } from '@/lib/services/email';
 
 const LOCK_TTL_MS = 5 * 60_000;
-const CHUNK_SIZE = 20;
-const SEND_INTERVAL_MS = 250; // 4 req/s baseline, below 6 req/s limit.
+const CHUNK_SIZE = 20; // Process 20 users per run (triggered every minute by Cron-Job.org)
+const SEND_INTERVAL_MS = 250; // 4 req/s baseline, below 6 req/s limit
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

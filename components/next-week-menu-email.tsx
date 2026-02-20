@@ -42,6 +42,7 @@ export function NextWeekMenuEmail() {
     failedEmails: [] as Array<{ email: string; name: string; error: string }>
   })
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const stopPolling = () => {
     if (pollTimerRef.current) {
@@ -96,6 +97,57 @@ export function NextWeekMenuEmail() {
       stopPolling()
     }
   }, [])
+  
+  // Manual trigger for processing (for Hobby plan)
+  const handleManualProcess = async () => {
+    setIsProcessing(true)
+    try {
+      const response = await fetch('/api/admin/trigger-email-processing', {
+        method: 'POST'
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Immediately poll to update progress
+        if (progress.jobId) {
+          const statusResponse = await fetch(`/api/admin/next-week-email-jobs/${progress.jobId}`)
+          const statusResult = await statusResponse.json()
+          
+          if (statusResult.success) {
+            const data = statusResult.data
+            setProgress(prev => ({
+              ...prev,
+              emailsSent: data.sentCount,
+              emailsFailed: data.failedCount,
+              progress: data.progress,
+              isComplete: data.status === 'completed'
+            }))
+          }
+        }
+        
+        toast({
+          title: "Processing triggered",
+          description: result.message || `Processed ${result.data?.processedThisRun || 0} users`
+        })
+      } else {
+        toast({
+          title: "Processing failed",
+          description: result.error || "Failed to trigger processing",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Error triggering processing:', error)
+      toast({
+        title: "Error",
+        description: "Failed to trigger processing",
+        variant: "destructive"
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
   
   // Fetch summary for "Send to all users"
   const fetchSummary = async () => {
@@ -756,10 +808,31 @@ export function NextWeekMenuEmail() {
                 : `Job status: ${progress.status || 'processing'}`}
             </DialogDescription>
             {!progress.isComplete && (
-              <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Please keep this tab open until sending completes
-              </p>
+              <div className="space-y-2 mt-2">
+                <p className="text-sm text-amber-600 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  On Hobby plan: Cron runs once daily at 9 AM. Click "Process Now" to manually process more emails.
+                </p>
+                <Button
+                  onClick={handleManualProcess}
+                  disabled={isProcessing}
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Process Now (30 more emails)
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </DialogHeader>
           
