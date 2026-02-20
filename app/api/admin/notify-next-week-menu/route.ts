@@ -1,17 +1,25 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
+import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
 import { sendNextWeekMenuUpdateEmail } from '@/lib/services/email';
 
 export const dynamic = 'force-dynamic';
 
-// POST handler - send next week menu update to users
-// Note: With chunked processing on frontend, each request completes in ~10s (well within Hobby plan's 60s limit)
+const ELIGIBLE_USER_QUERY = {
+  isVerified: true,
+  emailStatus: { $ne: 'bounced' },
+  email: { $exists: true, $ne: '', $ne: null },
+  'emailPreferences.nextWeekMenuUpdates': { $ne: false }
+};
+
+// POST handler - enqueue next week menu update job
+// (test mode remains immediate for convenience)
 export async function POST(request: Request) {
   try {
     const { userIds, testMode, testEmail, testBatchMode } = await request.json();
-    
-    // Handle test mode - send single test email
+
+    // Single test email still sends immediately.
     if (testMode && testEmail) {
       await sendNextWeekMenuUpdateEmail(
         testEmail,
@@ -19,342 +27,102 @@ export async function POST(request: Request) {
         'test-user-id',
         'zh'
       );
-      
+
       return NextResponse.json({
         success: true,
         message: 'Test email sent successfully'
       });
     }
-    
-    // Handle test batch mode - send to a small batch to test rate limiting
+
+    // Test batch mode still runs immediately and returns summary.
     if (testBatchMode) {
-      const testUsers = [
-        { email: 'kapioomeal@gmail.com', name: 'Test User 1', _id: 'test-1', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 2', _id: 'test-2', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 3', _id: 'test-3', languagePreference: 'en' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 4', _id: 'test-4', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 5', _id: 'test-5', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 6', _id: 'test-6', languagePreference: 'en' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 7', _id: 'test-7', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 8', _id: 'test-8', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 9', _id: 'test-9', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 10', _id: 'test-10', languagePreference: 'en' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 11', _id: 'test-11', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 12', _id: 'test-12', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 13', _id: 'test-13', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 14', _id: 'test-14', languagePreference: 'zh' },
-        { email: 'kapioomeal@gmail.com', name: 'Test User 15', _id: 'test-15', languagePreference: 'en' }
-      ];
-      
-      // Use the SSE stream logic with test users
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        async start(controller) {
-          const sendProgress = (data: any) => {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-          };
-          
-          try {
-            const totalUsers = testUsers.length;
-            let emailsSent = 0;
-            let emailsFailed = 0;
-            const failedEmails: Array<{ email: string; name: string; error: string }> = [];
-            
-            const emailsPerBatch = 5;
-            const delayBetweenBatches = 1000;
-            const totalBatches = Math.ceil(totalUsers / emailsPerBatch);
-            
-            sendProgress({
-              type: 'start',
-              totalUsers,
-              currentBatch: 0,
-              totalBatches,
-              emailsSent: 0,
-              emailsFailed: 0,
-              progress: 0,
-              message: `[TEST MODE] Starting to send emails to ${totalUsers} test users...`
-            });
-            
-            for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-              const start = batchIndex * emailsPerBatch;
-              const end = Math.min(start + emailsPerBatch, totalUsers);
-              const batch = testUsers.slice(start, end);
-              
-              sendProgress({
-                type: 'batch_start',
-                currentBatch: batchIndex + 1,
-                totalBatches,
-                emailsSent,
-                emailsFailed,
-                progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
-                message: `[TEST MODE] Processing batch ${batchIndex + 1} of ${totalBatches}...`
-              });
-              
-              const batchPromises = batch.map(async (user) => {
-                try {
-                  await sendNextWeekMenuUpdateEmail(
-                    user.email,
-                    user.name,
-                    user._id.toString(),
-                    user.languagePreference || 'zh'
-                  );
-                  emailsSent++;
-                  
-                  sendProgress({
-                    type: 'email_sent',
-                    emailsSent,
-                    emailsFailed,
-                    totalUsers,
-                    currentBatch: batchIndex + 1,
-                    totalBatches,
-                    progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100)
-                  });
-                } catch (error) {
-                  emailsFailed++;
-                  failedEmails.push({
-                    email: user.email,
-                    name: user.name,
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                  });
-                  
-                  sendProgress({
-                    type: 'email_failed',
-                    emailsSent,
-                    emailsFailed,
-                    totalUsers,
-                    currentBatch: batchIndex + 1,
-                    totalBatches,
-                    progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
-                    failedEmail: user.email
-                  });
-                }
-              });
-              
-              await Promise.all(batchPromises);
-              
-              sendProgress({
-                type: 'batch_complete',
-                currentBatch: batchIndex + 1,
-                totalBatches,
-                emailsSent,
-                emailsFailed,
-                progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100)
-              });
-              
-              if (batchIndex < totalBatches - 1) {
-                // Send keep-alive heartbeat every 200ms during the 1-second delay
-                for (let i = 0; i < 5; i++) {
-                  await new Promise(resolve => setTimeout(resolve, 200));
-                  controller.enqueue(encoder.encode(`: heartbeat\n\n`));
-                }
-              }
-            }
-            
-            sendProgress({
-              type: 'complete',
-              emailsSent,
-              emailsFailed,
-              totalUsers,
-              failedEmails,
-              message: `[TEST MODE] Completed! Sent ${emailsSent} emails, ${emailsFailed} failed.`
-            });
-            
-            controller.close();
-          } catch (error) {
-            sendProgress({
-              type: 'error',
-              message: error instanceof Error ? error.message : 'Unknown error occurred'
-            });
-            controller.close();
-          }
-        }
-      });
-      
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    }
-    
-    await connectToDatabase();
-    
-    // Build query for eligible users
-    const query: any = {
-      isVerified: true, // Only send to verified users
-      emailStatus: { $ne: 'bounced' }, // Exclude bounced emails
-      email: { $exists: true, $ne: '', $ne: null }, // Must have valid email
-      'emailPreferences.nextWeekMenuUpdates': { $ne: false } // Not unsubscribed
-    };
-    
-    // If specific userIds provided (from "Select users" option), filter by them
-    if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-      query._id = { $in: userIds };
-    }
-    
-    // Fetch eligible users
-    const users = await User.find(query)
-      .select('_id name email languagePreference')
-      .lean();
-    
-    console.log(`📧 Sending next week menu update to ${users.length} users`);
-    
-    // Set up Server-Sent Events for progress tracking
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        const sendProgress = (data: any) => {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-        };
-        
+      const testUsers = Array.from({ length: 15 }, (_, idx) => ({
+        email: 'kapioomeal@gmail.com',
+        name: `Test User ${idx + 1}`,
+        _id: `test-${idx + 1}`,
+        languagePreference: idx % 3 === 0 ? 'en' : 'zh'
+      }));
+
+      let emailsSent = 0;
+      let emailsFailed = 0;
+      const failedEmails: Array<{ email: string; name: string; error: string }> = [];
+
+      for (const user of testUsers) {
         try {
-          const totalUsers = users.length;
-          let emailsSent = 0;
-          let emailsFailed = 0;
-          const failedEmails: Array<{ email: string; name: string; error: string }> = [];
-          
-          // Process emails with rate limiting
-          // Resend limit: 6 requests per second
-          // Optimized strategy for production (Vercel timeout constraints):
-          // Send 12 emails in parallel, then wait 2 seconds before next batch
-          // This averages to 6 emails/second (exactly at limit)
-          // Total time for 441 users: ~74 seconds (441/12 * 2s)
-          const emailsPerBatch = 12;
-          const delayBetweenBatches = 2000; // 2 seconds
-          const totalBatches = Math.ceil(totalUsers / emailsPerBatch);
-          
-          // Send initial progress
-          console.log(`[Email Sending] Starting to send emails to ${totalUsers} users in ${totalBatches} batches`);
-          sendProgress({
-            type: 'start',
-            totalUsers,
-            currentBatch: 0,
-            totalBatches,
-            emailsSent: 0,
-            emailsFailed: 0,
-            progress: 0,
-            message: `Starting to send emails to ${totalUsers} users...`
-          });
-          
-          for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            const start = batchIndex * emailsPerBatch;
-            const end = Math.min(start + emailsPerBatch, totalUsers);
-            const batch = users.slice(start, end);
-            
-            console.log(`[Email Sending] Batch ${batchIndex + 1}/${totalBatches}: Processing ${batch.length} emails`);
-            sendProgress({
-              type: 'batch_start',
-              currentBatch: batchIndex + 1,
-              totalBatches,
-              emailsSent,
-              emailsFailed,
-              progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
-              message: `Processing batch ${batchIndex + 1} of ${totalBatches}...`
-            });
-            
-            // Send emails in parallel within this small batch (5 emails max)
-            const batchPromises = batch.map(async (user) => {
-              try {
-                await sendNextWeekMenuUpdateEmail(
-                  user.email,
-                  user.name,
-                  user._id.toString(),
-                  user.languagePreference || 'zh'
-                );
-                emailsSent++;
-                
-                sendProgress({
-                  type: 'email_sent',
-                  emailsSent,
-                  emailsFailed,
-                  totalUsers,
-                  currentBatch: batchIndex + 1,
-                  totalBatches,
-                  progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100)
-                });
-              } catch (error) {
-                emailsFailed++;
-                failedEmails.push({
-                  email: user.email,
-                  name: user.name,
-                  error: error instanceof Error ? error.message : 'Unknown error'
-                });
-                
-                sendProgress({
-                  type: 'email_failed',
-                  emailsSent,
-                  emailsFailed,
-                  totalUsers,
-                  currentBatch: batchIndex + 1,
-                  totalBatches,
-                  progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
-                  failedEmail: user.email
-                });
-              }
-            });
-            
-            // Wait for all emails in this batch to complete
-            await Promise.all(batchPromises);
-            
-            sendProgress({
-              type: 'batch_complete',
-              currentBatch: batchIndex + 1,
-              totalBatches,
-              emailsSent,
-              emailsFailed,
-              progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100)
-            });
-            
-            // Wait between batches to respect rate limit
-            // Send heartbeat messages during the delay to keep the SSE connection alive
-            if (batchIndex < totalBatches - 1) {
-              // Send keep-alive heartbeat every 200ms during the delay
-              const heartbeatCount = Math.ceil(delayBetweenBatches / 200);
-              for (let i = 0; i < heartbeatCount; i++) {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                // Send heartbeat comment (SSE standard for keep-alive)
-                controller.enqueue(encoder.encode(`: heartbeat\n\n`));
-              }
-            }
-          }
-          
-          // Send completion message
-          console.log(`[Email Sending] Completed! Sent: ${emailsSent}, Failed: ${emailsFailed}, Total: ${totalUsers}`);
-          sendProgress({
-            type: 'complete',
-            emailsSent,
-            emailsFailed,
-            totalUsers,
-            failedEmails,
-            message: `Completed! Sent ${emailsSent} emails, ${emailsFailed} failed.`
-          });
-          
-          controller.close();
+          await sendNextWeekMenuUpdateEmail(
+            user.email,
+            user.name,
+            user._id,
+            user.languagePreference
+          );
+          emailsSent++;
         } catch (error) {
-          console.error('[Email Sending] Error:', error);
-          sendProgress({
-            type: 'error',
-            message: error instanceof Error ? error.message : 'Unknown error occurred'
+          emailsFailed++;
+          failedEmails.push({
+            email: user.email,
+            name: user.name,
+            error: error instanceof Error ? error.message : 'Unknown error'
           });
-          controller.close();
         }
       }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Test batch completed',
+        data: {
+          totalUsers: testUsers.length,
+          emailsSent,
+          emailsFailed,
+          failedEmails
+        }
+      });
+    }
+
+    await connectToDatabase();
+
+    const query: Record<string, unknown> = { ...ELIGIBLE_USER_QUERY };
+    const selectedIds = Array.isArray(userIds) ? userIds : [];
+    const criteriaType = selectedIds.length > 0 ? 'selected' : 'all';
+
+    if (criteriaType === 'selected') {
+      query._id = { $in: selectedIds };
+    }
+
+    const users = await User.find(query).select('_id').lean();
+    const eligibleUserIds = users.map((user: any) => String(user._id));
+
+    if (eligibleUserIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No eligible users found for this job' },
+        { status: 400 }
+      );
+    }
+
+    const job = await NextWeekMenuEmailJob.create({
+      status: 'pending',
+      criteriaType,
+      userIds: eligibleUserIds,
+      totalUsers: eligibleUserIds.length,
+      cursor: 0,
+      sentCount: 0,
+      failedCount: 0,
+      failedEmails: []
     });
-    
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
+
+    return NextResponse.json({
+      success: true,
+      message: 'Email job queued',
+      data: {
+        jobId: String(job._id),
+        status: job.status,
+        totalUsers: job.totalUsers,
+        progress: 0
+      }
     });
-    
   } catch (error) {
     console.error('Error in notify-next-week-menu route:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to send notifications' },
+      { success: false, error: 'Failed to create email job' },
       { status: 500 }
     );
   }
@@ -364,39 +132,27 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     await connectToDatabase();
-    
-    // Count total users
+
     const totalUsers = await User.countDocuments();
-    
-    // Count eligible users (will receive email)
-    const eligibleUsers = await User.countDocuments({
-      isVerified: true,
-      emailStatus: { $ne: 'bounced' },
-      email: { $exists: true, $ne: '', $ne: null },
-      'emailPreferences.nextWeekMenuUpdates': { $ne: false }
-    });
-    
-    // Count excluded users by reason
+
+    const eligibleUsers = await User.countDocuments(ELIGIBLE_USER_QUERY);
+
     const unsubscribed = await User.countDocuments({
       'emailPreferences.nextWeekMenuUpdates': false
     });
-    
+
     const bounced = await User.countDocuments({
       emailStatus: 'bounced'
     });
-    
+
     const invalid = await User.countDocuments({
-      $or: [
-        { email: { $exists: false } },
-        { email: '' },
-        { email: null }
-      ]
+      $or: [{ email: { $exists: false } }, { email: '' }, { email: null }]
     });
-    
+
     const unverified = await User.countDocuments({
       isVerified: false
     });
-    
+
     return NextResponse.json({
       success: true,
       data: {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -30,6 +30,8 @@ export function NextWeekMenuEmail() {
   
   // Progress tracking
   const [progress, setProgress] = useState({
+    jobId: '',
+    status: 'idle',
     emailsSent: 0,
     emailsFailed: 0,
     totalUsers: 0,
@@ -39,6 +41,61 @@ export function NextWeekMenuEmail() {
     isComplete: false,
     failedEmails: [] as Array<{ email: string; name: string; error: string }>
   })
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopPolling = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+  }
+
+  const startJobPolling = (jobId: string, fallbackTotalUsers = 0) => {
+    stopPolling()
+
+    const pollOnce = async () => {
+      try {
+        const response = await fetch(`/api/admin/next-week-email-jobs/${jobId}`)
+        const result = await response.json()
+
+        if (!result.success) {
+          return
+        }
+
+        const data = result.data
+        const isComplete = data.status === 'completed' || data.status === 'failed'
+
+        setProgress((prev) => ({
+          ...prev,
+          jobId,
+          status: data.status,
+          emailsSent: data.sentCount ?? prev.emailsSent,
+          emailsFailed: data.failedCount ?? prev.emailsFailed,
+          totalUsers: data.totalUsers || fallbackTotalUsers || prev.totalUsers,
+          progress: data.progress ?? prev.progress,
+          isComplete,
+          failedEmails: Array.isArray(data.failedEmails) ? data.failedEmails : prev.failedEmails
+        }))
+
+        if (isComplete) {
+          stopPolling()
+        }
+      } catch (error) {
+        console.error('Error polling email job status:', error)
+      }
+    }
+
+    void pollOnce()
+    pollTimerRef.current = setInterval(() => {
+      void pollOnce()
+    }, 2000)
+  }
+
+  useEffect(() => {
+    return () => {
+      stopPolling()
+    }
+  }, [])
   
   // Fetch summary for "Send to all users"
   const fetchSummary = async () => {
@@ -105,107 +162,38 @@ export function NextWeekMenuEmail() {
   const confirmSendToAll = async () => {
     setShowSummaryDialog(false)
     setShowProgressDialog(true)
-    
+
     try {
-      // For Hobby plan: Use chunked processing to avoid timeouts
-      // Fetch all eligible user IDs first
-      const eligibleResponse = await fetch('/api/admin/eligible-users?idsOnly=true')
-      const eligibleData = await eligibleResponse.json()
-      
-      if (!eligibleData.success || !eligibleData.data.ids) {
-        throw new Error('Failed to fetch eligible users')
-      }
-      
-      const allUserIds = eligibleData.data.ids
-      const totalUsers = allUserIds.length
-      
-      // Split into chunks of 50 users (each chunk completes in ~10s, safe for Hobby plan)
-      const chunkSize = 50
-      const chunks: string[][] = []
-      for (let i = 0; i < allUserIds.length; i += chunkSize) {
-        chunks.push(allUserIds.slice(i, i + chunkSize))
-      }
-      
-      const totalBatches = chunks.length
-      let emailsSent = 0
-      let emailsFailed = 0
-      const failedEmails: Array<{ email: string; name: string; error: string }> = []
-      
-      // Initialize progress
       setProgress({
+        jobId: '',
+        status: 'pending',
         emailsSent: 0,
         emailsFailed: 0,
-        totalUsers,
+        totalUsers: summary?.eligibleUsers || 0,
         progress: 0,
         currentBatch: 0,
-        totalBatches,
+        totalBatches: 0,
         isComplete: false,
         failedEmails: []
       })
-      
-      // Process each chunk sequentially
-      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-        const chunk = chunks[chunkIndex]
-        
-        try {
-          const response = await fetch('/api/admin/notify-next-week-menu', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userIds: chunk })
-          })
-          
-          // Handle SSE stream for this chunk
-          const reader = response.body?.getReader()
-          const decoder = new TextDecoder()
-          
-          while (reader) {
-            const { done, value } = await reader.read()
-            if (done) break
-            
-            const chunkData = decoder.decode(value)
-            const lines = chunkData.split('\n')
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = JSON.parse(line.substring(6))
-                
-                // Aggregate progress across all chunks
-                if (data.type === 'complete') {
-                  emailsSent += data.emailsSent || 0
-                  emailsFailed += data.emailsFailed || 0
-                  if (data.failedEmails) {
-                    failedEmails.push(...data.failedEmails)
-                  }
-                }
-              }
-            }
-          }
-        } catch (chunkError) {
-          console.error(`Error processing chunk ${chunkIndex + 1}:`, chunkError)
-          emailsFailed += chunk.length
-        }
-        
-        // Update progress after each chunk
-        setProgress({
-          emailsSent,
-          emailsFailed,
-          totalUsers,
-          progress: Math.round((emailsSent + emailsFailed) / totalUsers * 100),
-          currentBatch: chunkIndex + 1,
-          totalBatches,
-          isComplete: chunkIndex === chunks.length - 1,
-          failedEmails
-        })
-        
-        // Small delay between chunks to avoid overwhelming server
-        if (chunkIndex < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
+
+      const response = await fetch('/api/admin/next-week-email-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create email job')
       }
-      
-      // Mark as complete
-      setProgress(prev => ({ ...prev, isComplete: true }))
-      
+
+      const jobId = result.data?.jobId
+      if (!jobId) {
+        throw new Error('Email job id missing')
+      }
+
+      startJobPolling(jobId, result.data?.totalUsers || summary?.eligibleUsers || 0)
     } catch (error) {
       console.error('Error sending emails:', error)
       toast({
@@ -213,7 +201,7 @@ export function NextWeekMenuEmail() {
         description: "Failed to send emails",
         variant: "destructive"
       })
-      setProgress(prev => ({ ...prev, isComplete: true }))
+      setProgress((prev) => ({ ...prev, status: 'failed', isComplete: true }))
     }
   }
   
@@ -287,43 +275,38 @@ export function NextWeekMenuEmail() {
     
     setShowSelectUsersDialog(false)
     setShowProgressDialog(true)
-    
+
     try {
-      const response = await fetch('/api/admin/notify-next-week-menu', {
+      setProgress({
+        jobId: '',
+        status: 'pending',
+        emailsSent: 0,
+        emailsFailed: 0,
+        totalUsers: selectedUserIds.size,
+        progress: 0,
+        currentBatch: 0,
+        totalBatches: 0,
+        isComplete: false,
+        failedEmails: []
+      })
+
+      const response = await fetch('/api/admin/next-week-email-jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userIds: Array.from(selectedUserIds) })
       })
-      
-      // Handle SSE stream (same as sendToAll)
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      
-      while (reader) {
-        const { done, value } = await reader.read()
-        if (done) break
-        
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.substring(6))
-            
-            setProgress(prev => ({
-              ...prev,
-              emailsSent: data.emailsSent || prev.emailsSent,
-              emailsFailed: data.emailsFailed || prev.emailsFailed,
-              totalUsers: data.totalUsers || prev.totalUsers,
-              progress: data.progress || prev.progress,
-              currentBatch: data.currentBatch || prev.currentBatch,
-              totalBatches: data.totalBatches || prev.totalBatches,
-              isComplete: data.type === 'complete',
-              failedEmails: data.failedEmails || prev.failedEmails
-            }))
-          }
-        }
+
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create email job')
       }
+
+      const jobId = result.data?.jobId
+      if (!jobId) {
+        throw new Error('Email job id missing')
+      }
+
+      startJobPolling(jobId, result.data?.totalUsers || selectedUserIds.size)
     } catch (error) {
       console.error('Error sending emails:', error)
       toast({
@@ -374,41 +357,45 @@ export function NextWeekMenuEmail() {
     setShowProgressDialog(true)
     
     try {
+      setProgress({
+        jobId: '',
+        status: 'processing',
+        emailsSent: 0,
+        emailsFailed: 0,
+        totalUsers: 15,
+        progress: 0,
+        currentBatch: 0,
+        totalBatches: 0,
+        isComplete: false,
+        failedEmails: []
+      })
+
       const response = await fetch('/api/admin/notify-next-week-menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ testBatchMode: true })
       })
-      
-      // Handle SSE stream
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      
-      while (reader) {
-        const { done, value } = await reader.read()
-        if (done) break
-        
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.substring(6))
-            
-            setProgress(prev => ({
-              ...prev,
-              emailsSent: data.emailsSent || prev.emailsSent,
-              emailsFailed: data.emailsFailed || prev.emailsFailed,
-              totalUsers: data.totalUsers || prev.totalUsers,
-              progress: data.progress || prev.progress,
-              currentBatch: data.currentBatch || prev.currentBatch,
-              totalBatches: data.totalBatches || prev.totalBatches,
-              isComplete: data.type === 'complete',
-              failedEmails: data.failedEmails || prev.failedEmails
-            }))
-          }
-        }
+
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to run test batch')
       }
+
+      const data = result.data || {}
+      const total = data.totalUsers || 15
+      const sent = data.emailsSent || 0
+      const failed = data.emailsFailed || 0
+
+      setProgress((prev) => ({
+        ...prev,
+        status: failed > 0 ? 'failed' : 'completed',
+        emailsSent: sent,
+        emailsFailed: failed,
+        totalUsers: total,
+        progress: total > 0 ? Math.round(((sent + failed) / total) * 100) : 100,
+        isComplete: true,
+        failedEmails: data.failedEmails || []
+      }))
     } catch (error) {
       console.error('Error sending test batch:', error)
       toast({
@@ -417,6 +404,22 @@ export function NextWeekMenuEmail() {
         variant: "destructive"
       })
     }
+  }
+
+  // Select/Deselect users from current page only
+  const toggleSelectPage = () => {
+    const currentPageIds = users.map((user) => user._id)
+    const allCurrentSelected =
+      currentPageIds.length > 0 &&
+      currentPageIds.every((id) => selectedUserIds.has(id))
+
+    const nextSelected = new Set(selectedUserIds)
+    if (allCurrentSelected) {
+      currentPageIds.forEach((id) => nextSelected.delete(id))
+    } else {
+      currentPageIds.forEach((id) => nextSelected.add(id))
+    }
+    setSelectedUserIds(nextSelected)
   }
   
   // Handle search
@@ -642,23 +645,35 @@ export function NextWeekMenuEmail() {
               <span className="font-medium">
                 Selected: {selectedUserIds.size} of {totalUsers} users
               </span>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={toggleSelectAll}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : selectedUserIds.size === totalUsers ? (
-                  'Deselect All'
-                ) : (
-                  `Select All (${totalUsers})`
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSelectPage}
+                  disabled={isLoading || users.length === 0}
+                >
+                  {users.length > 0 && users.every((u) => selectedUserIds.has(u._id))
+                    ? 'Deselect this page'
+                    : 'Select this page'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={toggleSelectAll}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : selectedUserIds.size === totalUsers ? (
+                    'Deselect All'
+                  ) : (
+                    `Select All (${totalUsers})`
+                  )}
+                </Button>
+              </div>
             </div>
             
             {/* User list */}
@@ -738,7 +753,7 @@ export function NextWeekMenuEmail() {
             <DialogDescription>
               {progress.isComplete 
                 ? 'Email sending process has finished'
-                : `Batch ${progress.currentBatch} of ${progress.totalBatches}`}
+                : `Job status: ${progress.status || 'processing'}`}
             </DialogDescription>
             {!progress.isComplete && (
               <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">

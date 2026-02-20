@@ -86,9 +86,18 @@
       "permanent": false
     }
   ],
-  "crons": [],
+  "crons": [
+    {
+      "path": "/api/cron/process-next-week-email-jobs",
+      "schedule": "* * * * *"
+    }
+  ],
   "functions": {
     "app/api/upload/**/*": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/cron/process-next-week-email-jobs/route": {
       "maxDuration": 60,
       "memory": 1024
     }
