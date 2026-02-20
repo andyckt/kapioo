@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
+import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -54,6 +54,16 @@ interface MealVoucherPurchaseProps {
   onSuccess?: () => void;
 }
 
+interface PromoPreviewBreakdown {
+  currency: 'CAD';
+  originalSubtotal: number;
+  discountAmount: number;
+  discountedSubtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  finalTotal: number;
+}
+
 export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchaseProps = {}) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
@@ -72,6 +82,12 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
   const [selectedRegion, setSelectedRegion] = useState<string>("")
   const [popoverOpen, setPopoverOpen] = useState(false)
+  const [promoCodeInput, setPromoCodeInput] = useState('')
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null)
+  const [promoBreakdown, setPromoBreakdown] = useState<PromoPreviewBreakdown | null>(null)
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [promoError, setPromoError] = useState('')
+  const [checkoutRequestId, setCheckoutRequestId] = useState('')
 
   // Define voucher plans
   const twoDishPlans: VoucherPlan[] = [
@@ -90,6 +106,20 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
 
   // Use centralized daily delivery areas
   const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
+
+  const defaultPricing = selectedPlan
+    ? {
+        currency: 'CAD' as const,
+        originalSubtotal: selectedPlan.price,
+        discountAmount: 0,
+        discountedSubtotal: selectedPlan.price,
+        taxRate: 0.13,
+        taxAmount: parseFloat((selectedPlan.price * 0.13).toFixed(2)),
+        finalTotal: parseFloat((selectedPlan.price * 1.13).toFixed(2))
+      }
+    : null
+
+  const effectivePricing = promoBreakdown || defaultPricing
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,6 +215,13 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       }
     }
   }, [])
+
+  useEffect(() => {
+    setAppliedPromoCode(null)
+    setPromoBreakdown(null)
+    setPromoError('')
+    setCheckoutRequestId('')
+  }, [selectedPlan?.id])
 
   // Handle region change
   const handleRegionChange = async (region: string, addressData?: any): Promise<void> => {
@@ -333,6 +370,67 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     await handleSubmitPurchase()
   }
 
+  const createRequestId = () => {
+    return `VPR-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  }
+
+  const handleApplyPromo = async () => {
+    if (!selectedPlan) return
+    const code = promoCodeInput.trim().toUpperCase()
+    if (!code) {
+      setPromoError(language === 'zh' ? '请输入优惠码' : 'Please enter a promo code')
+      return
+    }
+
+    const userData = localStorage.getItem('user')
+    if (!userData) {
+      setPromoError(language === 'zh' ? '请先登录' : 'Please log in first')
+      return
+    }
+
+    const user = JSON.parse(userData)
+    setIsApplyingPromo(true)
+    setPromoError('')
+    try {
+      const response = await fetch('/api/promo-codes/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          userId: user._id,
+          purchaseType: 'daily_topup',
+          paymentMethod: 'emt',
+          subtotal: selectedPlan.price,
+          taxRate: 0.13
+        })
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to apply promo code')
+      }
+      setAppliedPromoCode(code)
+      setPromoBreakdown(result.data.breakdown)
+      setPromoCodeInput(code)
+      toast({
+        title: language === 'zh' ? '优惠码已应用' : 'Promo code applied',
+        description: language === 'zh' ? '折扣将在税前应用。' : 'Discount is applied before tax.'
+      })
+    } catch (error: any) {
+      setAppliedPromoCode(null)
+      setPromoBreakdown(null)
+      setPromoError(error?.message || (language === 'zh' ? '优惠码无效' : 'Invalid promo code'))
+    } finally {
+      setIsApplyingPromo(false)
+    }
+  }
+
+  const handleRemovePromo = () => {
+    setAppliedPromoCode(null)
+    setPromoBreakdown(null)
+    setPromoCodeInput('')
+    setPromoError('')
+  }
+
   // Handle purchase submission
   const handleSubmitPurchase = async () => {
     if (!selectedPlan || !paymentProof) {
@@ -357,6 +455,10 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       }
       
       const user = JSON.parse(userData)
+      const requestId = checkoutRequestId || createRequestId()
+      if (!checkoutRequestId) {
+        setCheckoutRequestId(requestId)
+      }
       
       // 3. Submit the voucher purchase request
       const response = await fetch('/api/voucher-requests', {
@@ -366,20 +468,24 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
         },
         body: JSON.stringify({
           userId: user._id,
+          requestId,
           type: selectedPlan.type,
           quantity: selectedPlan.quantity,
-          amount: parseFloat((selectedPlan.price * 1.13).toFixed(2)), // Add 13% tax for EMT payment with 2 decimal precision
-          originalPrice: selectedPlan.price, // Store original price before tax
-          taxRate: 0.13, // 13% tax rate
+          amount: effectivePricing?.finalTotal,
+          originalPrice: effectivePricing?.originalSubtotal,
+          taxRate: effectivePricing?.taxRate,
           imageProof: imageProofUrl,
           referenceNumber: interacEmail,
-          notes: notes || undefined
+          notes: notes || undefined,
+          promoCode: appliedPromoCode || undefined
         })
       })
       
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to submit purchase request')
+        throw new Error(
+          errorData.error || errorData.errorCode || 'Failed to submit purchase request'
+        )
       }
       
       // 4. Handle success
@@ -681,18 +787,56 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 </div>
                 <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
                   <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '小计' : 'Subtotal'}</p>
-                  <p className="font-medium text-[#6B5F53]">${selectedPlan?.price}</p>
+                  <p className="font-medium text-[#6B5F53]">${effectivePricing?.originalSubtotal.toFixed(2) || '0.00'}</p>
                 </div>
+                {effectivePricing && effectivePricing.discountAmount > 0 ? (
+                  <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
+                    <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '优惠折扣' : 'Promo Discount'}</p>
+                    <p className="font-medium text-green-700">-${effectivePricing.discountAmount.toFixed(2)}</p>
+                  </div>
+                ) : null}
                 <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
                   <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '税费 (13%)' : 'Tax (13%)'}</p>
-                  <p className="font-medium text-[#6B5F53]">${selectedPlan ? (selectedPlan.price * 0.13).toFixed(2) : '0.00'}</p>
+                  <p className="font-medium text-[#6B5F53]">${effectivePricing?.taxAmount.toFixed(2) || '0.00'}</p>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium text-[#6B5F53]">{language === 'zh' ? '总金额' : 'Total Amount'}</p>
-                  <p className="font-bold text-[#C2884E]">${selectedPlan ? (selectedPlan.price * 1.13).toFixed(2) : '0.00'}</p>
+                  <p className="font-bold text-[#C2884E]">${effectivePricing?.finalTotal.toFixed(2) || '0.00'}</p>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Promo Code */}
+          <div className="space-y-3">
+            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
+              <Ticket className="h-4 w-4 text-[#C2884E]" />
+              {language === 'zh' ? '优惠码（税前折扣）' : 'Promo Code (applied before tax)'}
+            </h3>
+            <div className="flex gap-2">
+              <Input
+                value={promoCodeInput}
+                onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                placeholder={language === 'zh' ? '输入优惠码' : 'Enter promo code'}
+                className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+              />
+              {appliedPromoCode ? (
+                <Button type="button" variant="outline" onClick={handleRemovePromo}>
+                  {language === 'zh' ? '移除' : 'Remove'}
+                </Button>
+              ) : (
+                <Button type="button" onClick={handleApplyPromo} disabled={isApplyingPromo}>
+                  {isApplyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : language === 'zh' ? '应用' : 'Apply'}
+                </Button>
+              )}
+            </div>
+            {appliedPromoCode ? (
+              <p className="text-xs text-green-700">
+                {language === 'zh' ? '已应用优惠码：' : 'Applied promo code: '}
+                <span className="font-semibold">{appliedPromoCode}</span>
+              </p>
+            ) : null}
+            {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
           </div>
 
           {/* Upload Section */}
@@ -1151,7 +1295,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           currentRegion={userRegion}
           onRegionChange={handleRegionChange}
           onProceed={() => setPurchaseStep('upload')}
-          isValidRegion={DAILY_DELIVERY_REGIONS.includes(userRegion || '')}
+          isValidRegion={isDailyDeliveryArea(userRegion || '')}
           existingAddress={(() => {
             const storedUser = localStorage.getItem('user')
             if (storedUser) {

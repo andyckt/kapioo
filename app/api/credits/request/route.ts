@@ -2,7 +2,17 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
 import User from '@/models/User';
+import mongoose from 'mongoose';
+import PromoCode from '@/models/PromoCode';
+import PromoCodeRedemption from '@/models/PromoCodeRedemption';
 import { sendAdminCreditRequestNotification, sendUserCreditRequestConfirmation } from '@/lib/services/email';
+import {
+  PromoErrorCode,
+  calculatePromoBreakdown,
+  normalizePhone,
+  normalizePromoCode,
+  validatePromoForPreview
+} from '@/lib/promo-code';
 
 // POST handler - create a new credit purchase request
 export async function POST(request: Request) {
@@ -12,13 +22,11 @@ export async function POST(request: Request) {
     console.log('Credit request data:', JSON.stringify(data));
     
     // Validate required fields
-    if (!data.userId || !data.amount || !data.imageProof || !data.paymentMethod || !data.originalPrice || !data.referenceNumber) {
+    if (!data.userId || !data.imageProof || !data.paymentMethod || !data.referenceNumber) {
       console.log('Missing required fields:', { 
         userId: !!data.userId, 
-        amount: !!data.amount, 
         imageProof: !!data.imageProof,
         paymentMethod: !!data.paymentMethod,
-        originalPrice: !!data.originalPrice,
         referenceNumber: !!data.referenceNumber
       });
       return NextResponse.json(
@@ -45,27 +53,199 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    const mealPriceMap: Record<number, Record<number, number>> = {
+      1: { 6: 112, 8: 148, 10: 183, 12: 217, 16: 286 },
+      2: { 6: 219, 8: 290, 10: 359, 12: 428, 16: 562 },
+      4: { 6: 398, 8: 525, 10: 648, 12: 765, 16: 998 },
+      8: { 6: 744, 8: 979, 10: 1210, 12: 1428, 16: 1870 }
+    };
+
+    const duration = Number(data.mealPlanQuantity || data.duration);
+    const mealsPerWeek = Number(data.mealsPerWeek || String(data.mealPlanType || '').replace('aweek', ''));
+    const planBasePrice = mealPriceMap[duration]?.[mealsPerWeek];
+
+    if (!planBasePrice) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid weekly plan combination' },
+        { status: 400 }
+      );
+    }
+
+    const deliveryFeePerWeek =
+      user.address?.province === 'Hamilton' || user.address?.province === 'Burlington' ? 15.99 : 9.99;
+    const originalSubtotal = parseFloat((planBasePrice + deliveryFeePerWeek * duration).toFixed(2));
+
+    const taxRate = 0.13;
+    const effectivePaymentMethod = data.paymentMethod as 'wechat' | 'emt';
+    const normalizedPromoCode = normalizePromoCode(data.promoCode || '');
+    let promoDoc: any = null;
+
+    let pricing = {
+      currency: 'CAD' as const,
+      originalSubtotal,
+      discountAmount: 0,
+      discountedSubtotal: originalSubtotal,
+      taxRate: effectivePaymentMethod === 'emt' ? taxRate : 0,
+      taxAmount: 0,
+      finalTotal: 0
+    };
+
+    if (effectivePaymentMethod === 'wechat') {
+      // Existing WeChat path: 10% off, no promo allowed.
+      pricing.discountAmount = parseFloat((originalSubtotal * 0.1).toFixed(2));
+      pricing.discountedSubtotal = parseFloat((originalSubtotal - pricing.discountAmount).toFixed(2));
+      pricing.taxAmount = 0;
+      pricing.finalTotal = pricing.discountedSubtotal;
+      if (normalizedPromoCode) {
+        return NextResponse.json(
+          {
+            success: false,
+            errorCode: PromoErrorCode.PAYMENT_METHOD_NOT_ELIGIBLE,
+            error: 'Promo code is only valid for EMT payment on weekly top-up.'
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (normalizedPromoCode) {
+        promoDoc = await PromoCode.findOne({ code: normalizedPromoCode });
+        const preview = await validatePromoForPreview({
+          promo: promoDoc,
+          input: {
+            code: normalizedPromoCode,
+            userPhone: user.phone,
+            purchaseType: 'weekly_topup',
+            paymentMethod: 'emt',
+            subtotal: originalSubtotal
+          },
+          taxRate
+        });
+
+        if (!preview.ok) {
+          return NextResponse.json(
+            {
+              success: false,
+              errorCode: preview.errorCode || PromoErrorCode.INVALID_CODE,
+              error: preview.message || 'Promo code is not valid'
+            },
+            { status: 400 }
+          );
+        }
+        pricing = preview.breakdown!;
+      } else {
+        pricing = calculatePromoBreakdown({
+          subtotal: originalSubtotal,
+          taxRate,
+          discountType: 'fixed',
+          discountValue: 0
+        });
+      }
+    }
     
     // Generate request ID
-    const requestId = await CreditPurchaseRequest.generateRequestId();
-    
-    // Create new credit purchase request
-    const newRequest = new CreditPurchaseRequest({
-      requestId,
-      userId: data.userId,
-      amount: data.amount,
-      paymentMethod: data.paymentMethod,
-      originalPrice: data.originalPrice,
-      imageProof: data.imageProof,
-      referenceNumber: data.referenceNumber,
-      notes: data.notes || '',
-      planDescription: data.planDescription || '', // Store plan description
-      mealPlanType: data.mealPlanType, // Store meal plan type (6aweek, 8aweek, etc.)
-      mealPlanQuantity: data.mealPlanQuantity, // Store number of plans (1, 2, or 4 weeks)
-      status: 'pending'
-    });
-    
-    const savedRequest = await newRequest.save();
+    const requestId = data.requestId || (await CreditPurchaseRequest.generateRequestId());
+    const existingRequest = await CreditPurchaseRequest.findOne({ requestId });
+    if (existingRequest) {
+      return NextResponse.json({
+        success: true,
+        data: existingRequest
+      });
+    }
+
+    let savedRequest: any;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        if (promoDoc) {
+          const normalizedPhone = normalizePhone(user.phone);
+          if (!normalizedPhone) {
+            throw new Error(PromoErrorCode.PHONE_REQUIRED_FOR_PROMO);
+          }
+
+          const alreadyUsed = await PromoCodeRedemption.exists({
+            promoCodeId: promoDoc._id,
+            userPhoneNormalized: normalizedPhone
+          }).session(session);
+          if (alreadyUsed) {
+            throw new Error(PromoErrorCode.ALREADY_USED);
+          }
+
+          if (promoDoc.maxUses !== undefined && promoDoc.maxUses !== null) {
+            const usageUpdated = await PromoCode.findOneAndUpdate(
+              { _id: promoDoc._id, usageCount: { $lt: promoDoc.maxUses } },
+              { $inc: { usageCount: 1 } },
+              { new: true, session }
+            );
+            if (!usageUpdated) {
+              throw new Error(PromoErrorCode.MAX_USES_REACHED);
+            }
+          } else {
+            await PromoCode.updateOne({ _id: promoDoc._id }, { $inc: { usageCount: 1 } }, { session });
+          }
+
+          await PromoCodeRedemption.create(
+            [
+              {
+                promoCodeId: promoDoc._id,
+                promoCode: promoDoc.code,
+                userId: user._id,
+                userPhoneNormalized: normalizedPhone,
+                requestId,
+                purchaseType: 'weekly_topup',
+                currency: pricing.currency,
+                originalSubtotal: pricing.originalSubtotal,
+                discountAmount: pricing.discountAmount,
+                discountedSubtotal: pricing.discountedSubtotal,
+                taxAmount: pricing.taxAmount,
+                finalTotal: pricing.finalTotal
+              }
+            ],
+            { session }
+          );
+        }
+
+        const created = await CreditPurchaseRequest.create(
+          [
+            {
+              requestId,
+              userId: data.userId,
+              amount: pricing.finalTotal,
+              paymentMethod: effectivePaymentMethod,
+              originalPrice: pricing.originalSubtotal,
+              currency: pricing.currency,
+              originalSubtotal: pricing.originalSubtotal,
+              finalTotal: pricing.finalTotal,
+              promoCode: promoDoc?.code,
+              promoDiscountType: promoDoc?.discountType,
+              promoDiscountValue: promoDoc?.discountValue,
+              promoDiscountAmount: pricing.discountAmount,
+              promoId: promoDoc?._id,
+              imageProof: data.imageProof,
+              referenceNumber: data.referenceNumber,
+              notes: data.notes || '',
+              planDescription: data.planDescription || '',
+              mealPlanType: data.mealPlanType,
+              mealPlanQuantity: duration,
+              status: 'pending'
+            }
+          ],
+          { session }
+        );
+        savedRequest = created[0];
+      });
+    } catch (txError: any) {
+      const code = txError?.message as PromoErrorCode;
+      if (Object.values(PromoErrorCode).includes(code)) {
+        return NextResponse.json(
+          { success: false, errorCode: code, error: code.replaceAll('_', ' ') },
+          { status: 400 }
+        );
+      }
+      throw txError;
+    } finally {
+      await session.endSession();
+    }
     
     // Send notification to admin
     try {
@@ -86,9 +266,9 @@ export async function POST(request: Request) {
         userId: user._id.toString(),
         userName: user.name || user.userID,
         userEmail: user.email,
-        amount: data.amount,
-        paymentMethod: data.paymentMethod,
-        originalPrice: data.originalPrice,
+        amount: savedRequest.amount,
+        paymentMethod: effectivePaymentMethod,
+        originalPrice: savedRequest.originalPrice,
         imageProofUrl: data.imageProof,
         referenceNumber: data.referenceNumber,
         notes: data.notes,
@@ -109,9 +289,9 @@ export async function POST(request: Request) {
         userId: user._id.toString(),
         userName: user.name || user.userID,
         userEmail: user.email,
-        amount: data.amount,
-        paymentMethod: data.paymentMethod,
-        originalPrice: data.originalPrice,
+        amount: savedRequest.amount,
+        paymentMethod: effectivePaymentMethod,
+        originalPrice: savedRequest.originalPrice,
         referenceNumber: data.referenceNumber,
         planDescription: data.planDescription || '',
         requestId: requestId

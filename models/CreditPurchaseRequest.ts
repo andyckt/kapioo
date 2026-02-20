@@ -7,6 +7,15 @@ export interface ICreditPurchaseRequest extends Document {
   amount: number; // Amount transferred
   paymentMethod: 'wechat' | 'emt'; // Payment method used: WeChat or EMT
   originalPrice: number; // Original price before any discount/tax
+  currency?: 'CAD';
+  originalSubtotal?: number;
+  finalTotal?: number;
+  promoCode?: string;
+  promoDiscountType?: 'percentage' | 'fixed';
+  promoDiscountValue?: number;
+  promoDiscountAmount?: number;
+  promoId?: mongoose.Types.ObjectId;
+  promoErrorCode?: string;
   imageProof: string; // URL to the uploaded proof image
   referenceNumber: string; // Payment reference number
   status: 'pending' | 'approved' | 'declined';
@@ -58,6 +67,37 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
   originalPrice: {
     type: Number,
     required: true
+  },
+  currency: {
+    type: String,
+    enum: ['CAD'],
+    default: 'CAD'
+  },
+  originalSubtotal: {
+    type: Number
+  },
+  finalTotal: {
+    type: Number
+  },
+  promoCode: {
+    type: String
+  },
+  promoDiscountType: {
+    type: String,
+    enum: ['percentage', 'fixed']
+  },
+  promoDiscountValue: {
+    type: Number
+  },
+  promoDiscountAmount: {
+    type: Number
+  },
+  promoId: {
+    type: Schema.Types.ObjectId,
+    ref: 'PromoCode'
+  },
+  promoErrorCode: {
+    type: String
   },
   imageProof: {
     type: String,

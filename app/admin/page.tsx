@@ -13,7 +13,7 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail, Tag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -87,6 +87,7 @@ import { MealVoucherManagement } from "@/components/meal-voucher-management"
 import { ViewAllOrders } from "@/components/view-all-orders"
 import { ViewWeeklyOrders } from "@/components/view-weekly-orders"
 import { SettingsManagement } from "@/components/settings-management"
+import { PromoCodeManagement } from "@/components/promo-code-management"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -116,6 +117,7 @@ export default function AdminDashboardPage() {
       isHeading: true,
       children: [
         { id: "credit-requests", label: "Weekly Request", icon: <DollarSign className="h-4 w-4" /> },
+        { id: "promo-codes", label: "Promo Codes", icon: <Tag className="h-4 w-4" /> },
         { id: "meal-vouchers", label: "2Dish 3Dish Voucher", icon: <CreditCard className="h-4 w-4" /> },
         { id: "credits", label: "Manual +/- credit", icon: <CreditCard className="h-4 w-4" /> }
       ]
@@ -2575,6 +2577,19 @@ export default function AdminDashboardPage() {
                 <MealVoucherManagement />
               </motion.div>
             )}
+
+            {activeTab === "promo-codes" && (
+              <motion.div
+                key="promo-codes"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <PromoCodeManagement />
+              </motion.div>
+            )}
             
             {activeTab === "view-all-orders" && (
               <motion.div
@@ -2786,6 +2801,11 @@ export default function AdminDashboardPage() {
                                   <td className="p-4">
                                     <div>${request.amount.toFixed(2)}</div>
                                     <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
+                                    {request.promoCode && (
+                                      <div className="text-xs text-green-700 font-medium mt-1">
+                                        Promo: {request.promoCode} (-${(request.promoDiscountAmount || 0).toFixed(2)})
+                                      </div>
+                                    )}
                                     {request.referenceNumber && (
                                       <div className="text-xs text-blue-600 font-medium mt-1">
                                         INTERAC Email: {request.referenceNumber}
@@ -3617,7 +3637,7 @@ export default function AdminDashboardPage() {
                     </div>
                     
                     <div className="border-t pt-4 col-span-1 sm:col-span-2 mt-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div>
                           <Label className="text-xs text-muted-foreground">Original Price</Label>
                           <p className="font-medium text-base">
@@ -3642,6 +3662,18 @@ export default function AdminDashboardPage() {
                           <Label className="text-xs text-muted-foreground">Final Amount</Label>
                           <p className="font-medium text-base">
                             <span className="text-lg">${selectedRequest.amount.toFixed(2)}</span>
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Promo Code</Label>
+                          <p className="font-medium text-base">
+                            {selectedRequest.promoCode ? (
+                              <span className="text-green-700">
+                                {selectedRequest.promoCode} (-${(selectedRequest.promoDiscountAmount || 0).toFixed(2)})
+                              </span>
+                            ) : (
+                              'None'
+                            )}
                           </p>
                         </div>
                       </div>

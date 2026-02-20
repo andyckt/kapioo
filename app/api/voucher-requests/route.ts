@@ -3,7 +3,16 @@ import connectToDatabase from '@/lib/db';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
 import User from '@/models/User';
 import mongoose from 'mongoose';
+import PromoCode from '@/models/PromoCode';
+import PromoCodeRedemption from '@/models/PromoCodeRedemption';
 import { sendAdminVoucherRequestNotification, sendUserVoucherRequestConfirmation } from '@/lib/services/email';
+import {
+  PromoErrorCode,
+  calculatePromoBreakdown,
+  normalizePhone,
+  normalizePromoCode,
+  validatePromoForPreview
+} from '@/lib/promo-code';
 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
@@ -64,10 +73,19 @@ export async function POST(request: NextRequest) {
     
     // Parse request body
     const body = await request.json();
-    const { userId, type, quantity, amount, imageProof, referenceNumber, notes } = body;
+    const {
+      userId,
+      type,
+      quantity,
+      imageProof,
+      referenceNumber,
+      notes,
+      promoCode,
+      requestId: clientRequestId
+    } = body;
     
     // Validate required fields
-    if (!userId || !type || !quantity || !amount || !imageProof || !referenceNumber) {
+    if (!userId || !type || !quantity || !imageProof || !referenceNumber) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -82,10 +100,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate quantity and amount
-    if (quantity <= 0 || amount <= 0) {
+    // Validate quantity
+    if (quantity <= 0) {
       return NextResponse.json(
-        { success: false, error: 'Quantity and amount must be positive numbers' },
+        { success: false, error: 'Quantity must be a positive number' },
         { status: 400 }
       );
     }
@@ -99,24 +117,169 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate a unique request ID
-    const requestId = await VoucherPurchaseRequest.generateRequestId();
-    
-    // Create the voucher purchase request
-    const newRequest = new VoucherPurchaseRequest({
-      requestId,
-      userId: new mongoose.Types.ObjectId(userId),
-      type,
-      quantity,
-      amount,
-      imageProof,
-      referenceNumber,
-      notes,
-      status: 'pending'
-    });
-    
-    // Save the request to the database
-    await newRequest.save();
+    const voucherPriceMap: Record<'twoDish' | 'threeDish', Record<number, number>> = {
+      twoDish: { 6: 131, 10: 195, 22: 356, 46: 712 },
+      threeDish: { 6: 150, 10: 228, 22: 417, 46: 818 }
+    };
+
+    const voucherType = type as 'twoDish' | 'threeDish';
+    const baseSubtotal = voucherPriceMap[voucherType]?.[Number(quantity)];
+    if (!baseSubtotal) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid plan quantity for selected voucher type' },
+        { status: 400 }
+      );
+    }
+
+    const requestId = clientRequestId || (await VoucherPurchaseRequest.generateRequestId());
+    const existingRequest = await VoucherPurchaseRequest.findOne({ requestId });
+    if (existingRequest) {
+      return NextResponse.json({
+        success: true,
+        data: existingRequest,
+        message: 'Voucher purchase request already submitted'
+      });
+    }
+
+    const taxRate = 0.13;
+    let promoDoc: any = null;
+    let promoBreakdown = {
+      currency: 'CAD' as const,
+      originalSubtotal: baseSubtotal,
+      discountAmount: 0,
+      discountedSubtotal: baseSubtotal,
+      taxRate,
+      taxAmount: parseFloat((baseSubtotal * taxRate).toFixed(2)),
+      finalTotal: parseFloat((baseSubtotal * (1 + taxRate)).toFixed(2))
+    };
+    const normalizedPromoCode = normalizePromoCode(promoCode || '');
+
+    if (normalizedPromoCode) {
+      promoDoc = await PromoCode.findOne({ code: normalizedPromoCode });
+      const preview = await validatePromoForPreview({
+        promo: promoDoc,
+        input: {
+          code: normalizedPromoCode,
+          userPhone: user.phone,
+          purchaseType: 'daily_topup',
+          paymentMethod: 'emt',
+          subtotal: baseSubtotal
+        },
+        taxRate
+      });
+
+      if (!preview.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            errorCode: preview.errorCode || PromoErrorCode.INVALID_CODE,
+            error: preview.message || 'Promo code is not valid'
+          },
+          { status: 400 }
+        );
+      }
+
+      promoBreakdown = preview.breakdown!;
+    }
+
+    const session = await mongoose.startSession();
+    let newRequest: any = null;
+    try {
+      await session.withTransaction(async () => {
+        if (promoDoc) {
+          const normalizedPhone = normalizePhone(user.phone);
+          if (!normalizedPhone) {
+            throw new Error(PromoErrorCode.PHONE_REQUIRED_FOR_PROMO);
+          }
+
+          const alreadyUsed = await PromoCodeRedemption.exists({
+            promoCodeId: promoDoc._id,
+            userPhoneNormalized: normalizedPhone
+          }).session(session);
+
+          if (alreadyUsed) {
+            throw new Error(PromoErrorCode.ALREADY_USED);
+          }
+
+          if (promoDoc.maxUses !== undefined && promoDoc.maxUses !== null) {
+            const usageUpdated = await PromoCode.findOneAndUpdate(
+              {
+                _id: promoDoc._id,
+                usageCount: { $lt: promoDoc.maxUses }
+              },
+              { $inc: { usageCount: 1 } },
+              { new: true, session }
+            );
+
+            if (!usageUpdated) {
+              throw new Error(PromoErrorCode.MAX_USES_REACHED);
+            }
+          } else {
+            await PromoCode.updateOne({ _id: promoDoc._id }, { $inc: { usageCount: 1 } }, { session });
+          }
+
+          await PromoCodeRedemption.create(
+            [
+              {
+                promoCodeId: promoDoc._id,
+                promoCode: promoDoc.code,
+                userId: new mongoose.Types.ObjectId(userId),
+                userPhoneNormalized: normalizedPhone,
+                requestId,
+                purchaseType: 'daily_topup',
+                currency: promoBreakdown.currency,
+                originalSubtotal: promoBreakdown.originalSubtotal,
+                discountAmount: promoBreakdown.discountAmount,
+                discountedSubtotal: promoBreakdown.discountedSubtotal,
+                taxAmount: promoBreakdown.taxAmount,
+                finalTotal: promoBreakdown.finalTotal
+              }
+            ],
+            { session }
+          );
+        }
+
+        newRequest = await VoucherPurchaseRequest.create(
+          [
+            {
+              requestId,
+              userId: new mongoose.Types.ObjectId(userId),
+              type,
+              quantity,
+              amount: promoBreakdown.finalTotal,
+              originalPrice: promoBreakdown.originalSubtotal,
+              taxRate,
+              currency: promoBreakdown.currency,
+              originalSubtotal: promoBreakdown.originalSubtotal,
+              finalTotal: promoBreakdown.finalTotal,
+              promoCode: promoDoc?.code,
+              promoDiscountType: promoDoc?.discountType,
+              promoDiscountValue: promoDoc?.discountValue,
+              promoDiscountAmount: promoBreakdown.discountAmount,
+              promoId: promoDoc?._id,
+              imageProof,
+              referenceNumber,
+              notes,
+              status: 'pending'
+            }
+          ],
+          { session }
+        );
+      });
+    } catch (txError: any) {
+      const code = txError?.message as PromoErrorCode;
+      if (Object.values(PromoErrorCode).includes(code)) {
+        return NextResponse.json(
+          { success: false, errorCode: code, error: code.replaceAll('_', ' ') },
+          { status: 400 }
+        );
+      }
+      throw txError;
+    } finally {
+      await session.endSession();
+    }
+
+    const createdRequest = Array.isArray(newRequest) ? newRequest[0] : newRequest;
     
     // Send notification to admin
     try {
@@ -137,7 +300,7 @@ export async function POST(request: NextRequest) {
         userEmail: user.email,
         type,
         quantity,
-        amount,
+        amount: createdRequest.amount,
         imageProofUrl: imageProof,
         referenceNumber,
         notes,
@@ -159,7 +322,7 @@ export async function POST(request: NextRequest) {
         userEmail: user.email,
         type,
         quantity,
-        amount,
+        amount: createdRequest.amount,
         referenceNumber,
         notes,
         requestId
@@ -172,7 +335,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      data: newRequest,
+      data: createdRequest,
       message: 'Voucher purchase request submitted successfully'
     }, { status: 201 });
   } catch (error) {

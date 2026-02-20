@@ -17,7 +17,8 @@ import {
   Star,
   ChevronRight,
   ChevronLeft,
-  Info
+  Info,
+  Ticket
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
@@ -53,6 +54,16 @@ interface PlanOption {
   tagZh?: string;
 }
 
+interface PromoPreviewBreakdown {
+  currency: 'CAD';
+  originalSubtotal: number;
+  discountAmount: number;
+  discountedSubtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  finalTotal: number;
+}
+
 export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansProps) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
@@ -70,6 +81,12 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [showAddressDialog, setShowAddressDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string>("")
   const [selectedPlanTemp, setSelectedPlanTemp] = useState<PlanOption | null>(null)
+  const [promoCodeInput, setPromoCodeInput] = useState('')
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null)
+  const [promoBreakdown, setPromoBreakdown] = useState<PromoPreviewBreakdown | null>(null)
+  const [promoError, setPromoError] = useState('')
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [checkoutRequestId, setCheckoutRequestId] = useState('')
   
   // Define plan options based on the image provided
   const planOptions: PlanOption[] = [
@@ -572,6 +589,82 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     // Standard delivery fee for all other areas
     return 11.99;
   }
+
+  const createRequestId = () => `CR-REQ-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+
+  const baseSubtotal =
+    selectedPlan ? selectedPlan.totalPrice + getDeliveryFee(userRegion || '') * selectedPlan.duration : 0
+
+  const defaultPricing: PromoPreviewBreakdown | null = selectedPlan
+    ? {
+        currency: 'CAD',
+        originalSubtotal: parseFloat(baseSubtotal.toFixed(2)),
+        discountAmount: 0,
+        discountedSubtotal: parseFloat(baseSubtotal.toFixed(2)),
+        taxRate: paymentMethod === 'emt' ? 0.13 : 0,
+        taxAmount: paymentMethod === 'emt' ? parseFloat((baseSubtotal * 0.13).toFixed(2)) : 0,
+        finalTotal:
+          paymentMethod === 'emt'
+            ? parseFloat((baseSubtotal * 1.13).toFixed(2))
+            : parseFloat((baseSubtotal * 0.9).toFixed(2))
+      }
+    : null
+
+  const effectivePricing = promoBreakdown || defaultPricing
+
+  const handleApplyPromo = async () => {
+    if (!selectedPlan) return
+    if (paymentMethod !== 'emt') {
+      setPromoError(language === 'zh' ? '优惠码仅支持 EMT 付款方式' : 'Promo code only supports EMT payment')
+      return
+    }
+    const code = promoCodeInput.trim().toUpperCase()
+    if (!code) {
+      setPromoError(language === 'zh' ? '请输入优惠码' : 'Please enter a promo code')
+      return
+    }
+
+    setIsApplyingPromo(true)
+    setPromoError('')
+    try {
+      const response = await fetch('/api/promo-codes/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          userId,
+          purchaseType: 'weekly_topup',
+          paymentMethod: 'emt',
+          subtotal: parseFloat(baseSubtotal.toFixed(2)),
+          taxRate: 0.13
+        })
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to apply promo code')
+      }
+      setPromoBreakdown(result.data.breakdown)
+      setAppliedPromoCode(code)
+      setPromoCodeInput(code)
+      toast({
+        title: language === 'zh' ? '优惠码已应用' : 'Promo code applied',
+        description: language === 'zh' ? '折扣将在税前应用。' : 'Discount is applied before tax.'
+      })
+    } catch (error: any) {
+      setAppliedPromoCode(null)
+      setPromoBreakdown(null)
+      setPromoError(error?.message || (language === 'zh' ? '优惠码无效' : 'Invalid promo code'))
+    } finally {
+      setIsApplyingPromo(false)
+    }
+  }
+
+  const handleRemovePromo = () => {
+    setPromoBreakdown(null)
+    setAppliedPromoCode(null)
+    setPromoCodeInput('')
+    setPromoError('')
+  }
   
   // Handle plan selection
   const handlePlanSelect = (plan: PlanOption) => {
@@ -590,6 +683,13 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     // Show address confirmation dialog
     setShowAddressDialog(true)
   }
+
+  useEffect(() => {
+    setPromoBreakdown(null)
+    setAppliedPromoCode(null)
+    setPromoError('')
+    setCheckoutRequestId('')
+  }, [selectedPlan?.id, paymentMethod, userRegion])
   
   // Go back to meal count selection
   const handleBackToMealSelect = () => {
@@ -661,7 +761,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       // Calculate the final amount based on payment method
       const deliveryFee = getDeliveryFee(userRegion || '');
       const originalPrice = selectedPlan.totalPrice + (deliveryFee * selectedPlan.duration); // Plan price + delivery fee
-      let finalAmount = originalPrice;
+      let finalAmount = effectivePricing?.finalTotal ?? originalPrice;
       
       // If no payment method is selected, default to 'emt'
       const effectivePaymentMethod = paymentMethod || 'emt';
@@ -669,9 +769,16 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       if (effectivePaymentMethod === 'wechat') {
         // WeChat gets 10% discount
         finalAmount = parseFloat((originalPrice * 0.9).toFixed(2));
+        if (appliedPromoCode) {
+          throw new Error(language === 'zh' ? '微信支付不支持优惠码' : 'Promo code is not available for WeChat payment')
+        }
       } else if (effectivePaymentMethod === 'emt') {
-        // EMT has 13% tax
-        finalAmount = parseFloat((originalPrice * 1.13).toFixed(2));
+        finalAmount = effectivePricing?.finalTotal ?? parseFloat((originalPrice * 1.13).toFixed(2));
+      }
+
+      const requestId = checkoutRequestId || createRequestId()
+      if (!checkoutRequestId) {
+        setCheckoutRequestId(requestId)
       }
       
       // Submit request to backend
@@ -682,8 +789,9 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         },
         body: JSON.stringify({
           userId,
+          requestId,
           amount: finalAmount,
-          originalPrice: originalPrice,
+          originalPrice: effectivePricing?.originalSubtotal ?? originalPrice,
           paymentMethod: effectivePaymentMethod,
           mealsPerWeek: selectedPlan.mealsPerWeek,
           duration: selectedPlan.duration,
@@ -692,14 +800,15 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           referenceNumber: interacEmail,
           notes,
           mealPlanType,
-          mealPlanQuantity: selectedPlan.duration, // 1, 2, or 4 weeks
+          mealPlanQuantity: selectedPlan.duration,
+          promoCode: appliedPromoCode || undefined
         }),
       })
       
       const result = await response.json()
       
       if (!result.success) {
-        throw new Error(result.error || 'Failed to submit request')
+        throw new Error(result.error || result.errorCode || 'Failed to submit request')
       }
       
       // Show success message
@@ -730,6 +839,11 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     setPaymentProof(null)
     setInteracEmail('')
     setNotes('')
+    setCheckoutRequestId('')
+    setPromoCodeInput('')
+    setAppliedPromoCode(null)
+    setPromoBreakdown(null)
+    setPromoError('')
   }
 
   return (
@@ -1109,10 +1223,23 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                           {language === 'zh' ? '税费 (HST 13%)' : 'Tax (HST 13%)'}
                         </div>
                         <div className="text-[13px] text-[#8A7968]">
-                          ${(((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 0.13).toFixed(2)}
+                          ${paymentMethod === 'emt' ? (effectivePricing?.taxAmount.toFixed(2) || '0.00') : '0.00'}
                         </div>
                       </div>
                     </div>
+
+                    {effectivePricing && effectivePricing.discountAmount > 0 ? (
+                      <div className="px-3 py-2">
+                        <div className="flex justify-between items-center">
+                          <div className="text-[13px] font-medium text-green-600">
+                            {language === 'zh' ? '优惠折扣' : 'Promo Discount'}
+                          </div>
+                          <div className="font-medium text-green-600">
+                            -${effectivePricing.discountAmount.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                     
                     {/* WeChat Discount - commented out 
                     <div className="px-3 py-2">
@@ -1135,7 +1262,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                             {language === 'zh' ? '总计 (EMT付款)' : 'Total (EMT payment)'}
                           </div>
                           <div className="font-bold text-lg text-[#C2884E]">
-                            ${parseFloat((((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 1.13).toFixed(2))}
+                            ${(effectivePricing?.finalTotal ?? parseFloat((baseSubtotal * 1.13).toFixed(2))).toFixed(2)}
                           </div>
                         </div>
                         {/* WeChat payment total - commented out 
@@ -1184,10 +1311,41 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '金额' : 'Amount'}</p>
-                        <p className="font-medium text-[#C2884E]">${(((selectedPlan?.totalPrice || 0) + getDeliveryFee(userRegion || '') * (selectedPlan?.duration || 0)) * 1.13).toFixed(2)}</p>
+                        <p className="font-medium text-[#C2884E]">${(effectivePricing?.finalTotal ?? parseFloat((baseSubtotal * 1.13).toFixed(2))).toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Promo code (EMT only) */}
+                <div className="mb-6 space-y-2">
+                  <Label className="text-[#6B5F53] font-medium flex items-center gap-2">
+                    <Ticket className="h-4 w-4 text-[#C2884E]" />
+                    {language === 'zh' ? '优惠码（税前折扣，仅 EMT）' : 'Promo Code (before tax, EMT only)'}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={promoCodeInput}
+                      onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                      placeholder={language === 'zh' ? '输入优惠码' : 'Enter promo code'}
+                      disabled={paymentMethod !== 'emt'}
+                    />
+                    {appliedPromoCode ? (
+                      <Button type="button" variant="outline" onClick={handleRemovePromo}>
+                        {language === 'zh' ? '移除' : 'Remove'}
+                      </Button>
+                    ) : (
+                      <Button type="button" onClick={handleApplyPromo} disabled={isApplyingPromo || paymentMethod !== 'emt'}>
+                        {isApplyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : language === 'zh' ? '应用' : 'Apply'}
+                      </Button>
+                    )}
+                  </div>
+                  {appliedPromoCode ? (
+                    <p className="text-xs text-green-700">
+                      {language === 'zh' ? '已应用优惠码：' : 'Applied promo code: '}<span className="font-semibold">{appliedPromoCode}</span>
+                    </p>
+                  ) : null}
+                  {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
                 </div>
                 
                 <div className="space-y-4">

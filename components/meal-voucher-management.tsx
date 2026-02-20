@@ -47,6 +47,11 @@ interface VoucherPurchaseRequest {
   type: 'twoDish' | 'threeDish';
   quantity: number;
   amount: number;
+  referenceNumber?: string;
+  originalSubtotal?: number;
+  finalTotal?: number;
+  promoCode?: string;
+  promoDiscountAmount?: number;
   imageProof: string;
   notes?: string;
   status: 'pending' | 'approved' | 'declined';
@@ -521,6 +526,11 @@ export function MealVoucherManagement() {
                         </td>
                         <td className="p-4 align-middle">
                           <div>${request.amount}</div>
+                          {request.promoCode && (
+                            <div className="text-xs text-green-700 mt-1">
+                              Promo: {request.promoCode} (-${request.promoDiscountAmount || 0})
+                            </div>
+                          )}
                           {request.referenceNumber && (
                             <div className="text-xs text-blue-600 font-medium mt-1">
                               INTERAC Email: {request.referenceNumber}
@@ -792,6 +802,14 @@ export function MealVoucherManagement() {
                           <dt className="font-medium text-[#6B5F53]">Amount:</dt>
                           <dd className="font-medium text-[#C2884E]">${selectedRequest.amount}</dd>
                         </div>
+                        {selectedRequest.promoCode && (
+                          <div className="flex justify-between">
+                            <dt className="font-medium text-[#6B5F53]">Promo:</dt>
+                            <dd className="font-medium text-green-700">
+                              {selectedRequest.promoCode} (-${selectedRequest.promoDiscountAmount || 0})
+                            </dd>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <dt className="font-medium text-[#6B5F53]">INTERAC Email:</dt>
                           <dd className="font-medium">{selectedRequest.referenceNumber || 'No INTERAC email'}</dd>
