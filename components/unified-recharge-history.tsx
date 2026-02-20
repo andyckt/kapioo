@@ -283,7 +283,7 @@ export function UnifiedRechargeHistory({
                       )}
                       {request.referenceNumber && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          <span className="font-medium">{language === 'zh' ? '参考号:' : 'Ref:'}</span> {request.referenceNumber}
+                          <span className="font-medium">{language === 'zh' ? 'INTERAC 电子转账邮箱:' : 'INTERAC e-Transfer Email:'}</span> {request.referenceNumber}
                         </p>
                       )}
                     </div>
@@ -520,7 +520,7 @@ export function UnifiedRechargeHistory({
                   {selectedRequest.referenceNumber && (
                     <div>
                       <p className="text-sm font-medium">
-                        {language === 'zh' ? '参考号码' : 'Reference Number'}
+                        {language === 'zh' ? 'INTERAC 电子转账邮箱' : 'INTERAC e-Transfer Email'}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {selectedRequest.referenceNumber}

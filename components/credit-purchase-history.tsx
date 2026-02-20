@@ -203,7 +203,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                       )}
                       {request.referenceNumber && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          <span className="font-medium">{language === 'en' ? 'Ref:' : '参考号:'}</span> {request.referenceNumber}
+                          <span className="font-medium">{language === 'en' ? 'INTERAC e-Transfer Email:' : 'INTERAC 电子转账邮箱:'}</span> {request.referenceNumber}
                         </p>
                       )}
                     </div>
@@ -431,7 +431,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                   {selectedRequest.referenceNumber && (
                     <div>
                       <p className="text-sm font-medium">
-                        {language === 'en' ? 'Reference Number' : '参考号码'}
+                        {language === 'en' ? 'INTERAC e-Transfer Email' : 'INTERAC 电子转账邮箱'}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {selectedRequest.referenceNumber}
