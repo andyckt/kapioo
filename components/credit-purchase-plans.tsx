@@ -611,6 +611,11 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     : null
 
   const effectivePricing = promoBreakdown || defaultPricing
+  const totalMealsInSelectedPlan = selectedPlan ? selectedPlan.mealsPerWeek * selectedPlan.duration : 0
+  const discountedUnitPrice =
+    selectedPlan && effectivePricing && totalMealsInSelectedPlan > 0
+      ? effectivePricing.discountedSubtotal / totalMealsInSelectedPlan
+      : null
 
   const handleApplyPromo = async () => {
     if (!selectedPlan) return
@@ -1194,8 +1199,21 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       </div>
                       <div className="text-right">
                         <p className="text-base text-[#C2884E]">${selectedPlan?.totalPrice}</p>
-                        <p className="text-xs text-muted-foreground">
-                          ${selectedPlan?.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                        <p className="text-xs text-muted-foreground flex items-center justify-end gap-2">
+                          {appliedPromoCode && discountedUnitPrice ? (
+                            <>
+                              <span className="line-through opacity-60">
+                                ${selectedPlan?.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                              </span>
+                              <span className="font-semibold text-green-700">
+                                ${discountedUnitPrice.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                              </span>
+                            </>
+                          ) : (
+                            <span>
+                              ${selectedPlan?.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1216,18 +1234,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     </div>
                     
                     
-                    {/* Tax (HST) */}
-                    <div className="px-3 py-2">
-                      <div className="flex justify-between items-center">
-                        <div className="text-[13px] text-[#8A7968]">
-                          {language === 'zh' ? '税费 (HST 13%)' : 'Tax (HST 13%)'}
-                        </div>
-                        <div className="text-[13px] text-[#8A7968]">
-                          ${paymentMethod === 'emt' ? (effectivePricing?.taxAmount.toFixed(2) || '0.00') : '0.00'}
-                        </div>
-                      </div>
-                    </div>
-
                     {effectivePricing && effectivePricing.discountAmount > 0 ? (
                       <div className="px-3 py-2">
                         <div className="flex justify-between items-center">
@@ -1240,6 +1246,18 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                         </div>
                       </div>
                     ) : null}
+
+                    {/* Tax (HST) */}
+                    <div className="px-3 py-2">
+                      <div className="flex justify-between items-center">
+                        <div className="text-[13px] text-[#8A7968]">
+                          {language === 'zh' ? '税费 (HST 13%)' : 'Tax (HST 13%)'}
+                        </div>
+                        <div className="text-[13px] text-[#8A7968]">
+                          ${paymentMethod === 'emt' ? (effectivePricing?.taxAmount.toFixed(2) || '0.00') : '0.00'}
+                        </div>
+                      </div>
+                    </div>
                     
                     {/* WeChat Discount - commented out 
                     <div className="px-3 py-2">
@@ -1321,7 +1339,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                 <div className="mb-6 space-y-2">
                   <Label className="text-[#6B5F53] font-medium flex items-center gap-2">
                     <Ticket className="h-4 w-4 text-[#C2884E]" />
-                    {language === 'zh' ? '优惠码（税前折扣，仅 EMT）' : 'Promo Code (before tax, EMT only)'}
+                    {language === 'zh' ? '优惠码' : 'Promo Code'}
                   </Label>
                   <div className="flex gap-2">
                     <Input

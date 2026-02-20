@@ -205,6 +205,18 @@ export function UnifiedRechargeHistory({
     }
   };
 
+  const getPaymentBreakdown = (request: any) => {
+    const subtotal = Number(request.originalSubtotal ?? request.originalPrice ?? request.amount ?? 0);
+    const promoDiscount = Number(request.promoDiscountAmount ?? 0);
+    const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+    const finalTotal = Number(request.finalTotal ?? request.amount ?? 0);
+    const taxAmount =
+      request.requestType === 'weekly' && request.paymentMethod !== 'emt'
+        ? 0
+        : Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
+    return { subtotal, promoDiscount, taxAmount, finalTotal };
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -264,6 +276,11 @@ export function UnifiedRechargeHistory({
                         {language === 'zh' ? '支付金额' : 'Amount Paid'}
                       </p>
                       <p className="text-muted-foreground">${request.amount?.toFixed(2)}</p>
+                      {request.promoCode && (
+                        <p className="text-xs text-green-700 mt-1">
+                          {language === 'zh' ? '优惠码:' : 'Promo:'} {request.promoCode} (-${Number(request.promoDiscountAmount || 0).toFixed(2)})
+                        </p>
+                      )}
                       {request.referenceNumber && (
                         <p className="text-xs text-muted-foreground mt-1">
                           <span className="font-medium">{language === 'zh' ? '参考号:' : 'Ref:'}</span> {request.referenceNumber}
@@ -470,6 +487,34 @@ export function UnifiedRechargeHistory({
                     <p className="text-sm text-muted-foreground">
                       ${selectedRequest.amount?.toFixed(2)}
                     </p>
+                  </div>
+
+                  <div className="rounded-md border p-3 bg-muted/20">
+                    {(() => {
+                      const breakdown = getPaymentBreakdown(selectedRequest);
+                      return (
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex justify-between">
+                            <span>{language === 'zh' ? '小计' : 'Subtotal'}</span>
+                            <span>${breakdown.subtotal.toFixed(2)}</span>
+                          </div>
+                          {selectedRequest.promoCode ? (
+                            <div className="flex justify-between text-green-700">
+                              <span>{language === 'zh' ? '优惠折扣' : 'Promo Discount'} ({selectedRequest.promoCode})</span>
+                              <span>- ${breakdown.promoDiscount.toFixed(2)}</span>
+                            </div>
+                          ) : null}
+                          <div className="flex justify-between">
+                            <span>{language === 'zh' ? '税费' : 'Tax'}</span>
+                            <span>${breakdown.taxAmount.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between font-semibold pt-1 border-t">
+                            <span>{language === 'zh' ? '总金额' : 'Final Total'}</span>
+                            <span>${breakdown.finalTotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   
                   {selectedRequest.referenceNumber && (

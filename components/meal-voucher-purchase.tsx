@@ -120,6 +120,9 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     : null
 
   const effectivePricing = promoBreakdown || defaultPricing
+  const discountedUnitPrice = selectedPlan && effectivePricing
+    ? effectivePricing.discountedSubtotal / selectedPlan.quantity
+    : null
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -749,8 +752,21 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold text-[#C2884E]">${selectedPlan.price}</p>
-                  <p className="text-xs text-muted-foreground">
-                    ${selectedPlan.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                  <p className="text-xs text-muted-foreground flex items-center justify-end gap-2">
+                    {appliedPromoCode && discountedUnitPrice ? (
+                      <>
+                        <span className="line-through opacity-60">
+                          ${selectedPlan.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                        </span>
+                        <span className="font-semibold text-green-700">
+                          ${discountedUnitPrice.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                        </span>
+                      </>
+                    ) : (
+                      <span>
+                        ${selectedPlan.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -811,7 +827,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           <div className="space-y-3">
             <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
               <Ticket className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '优惠码（税前折扣）' : 'Promo Code (applied before tax)'}
+              {language === 'zh' ? '优惠码' : 'Promo Code'}
             </h3>
             <div className="flex gap-2">
               <Input

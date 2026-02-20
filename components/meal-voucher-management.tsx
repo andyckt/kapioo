@@ -61,6 +61,15 @@ interface VoucherPurchaseRequest {
   adminNotes?: string;
 }
 
+const getDailyPaymentBreakdown = (request: VoucherPurchaseRequest) => {
+  const subtotal = Number(request.originalSubtotal ?? request.amount ?? 0);
+  const promoDiscount = Number(request.promoDiscountAmount ?? 0);
+  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+  const finalTotal = Number(request.finalTotal ?? request.amount ?? 0);
+  const taxAmount = Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
+  return { subtotal, promoDiscount, taxAmount, finalTotal };
+}
+
 // No mock data - we'll fetch real data from the API
 
 export function MealVoucherManagement() {
@@ -762,6 +771,35 @@ export function MealVoucherManagement() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-3">
+                      {selectedRequest && (
+                        <div className="mb-3 rounded-md bg-[#FBF7F2] p-3 border border-[#C2884E]/10">
+                          {(() => {
+                            const breakdown = getDailyPaymentBreakdown(selectedRequest);
+                            return (
+                              <dl className="space-y-1 text-sm">
+                                <div className="flex justify-between">
+                                  <dt className="font-medium text-[#6B5F53]">Subtotal:</dt>
+                                  <dd>${breakdown.subtotal.toFixed(2)}</dd>
+                                </div>
+                                {selectedRequest.promoCode ? (
+                                  <div className="flex justify-between text-green-700">
+                                    <dt className="font-medium">Promo Discount:</dt>
+                                    <dd>- ${breakdown.promoDiscount.toFixed(2)}</dd>
+                                  </div>
+                                ) : null}
+                                <div className="flex justify-between">
+                                  <dt className="font-medium text-[#6B5F53]">Tax:</dt>
+                                  <dd>${breakdown.taxAmount.toFixed(2)}</dd>
+                                </div>
+                                <div className="flex justify-between border-t pt-1 font-semibold">
+                                  <dt className="text-[#6B5F53]">Final Total:</dt>
+                                  <dd className="text-[#C2884E]">${breakdown.finalTotal.toFixed(2)}</dd>
+                                </div>
+                              </dl>
+                            );
+                          })()}
+                        </div>
+                      )}
                       <dl className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <dt className="font-medium text-[#6B5F53]">Name:</dt>
@@ -800,13 +838,13 @@ export function MealVoucherManagement() {
                         </div>
                         <div className="flex justify-between">
                           <dt className="font-medium text-[#6B5F53]">Amount:</dt>
-                          <dd className="font-medium text-[#C2884E]">${selectedRequest.amount}</dd>
+                          <dd className="font-medium text-[#C2884E]">${Number(selectedRequest.amount).toFixed(2)}</dd>
                         </div>
                         {selectedRequest.promoCode && (
                           <div className="flex justify-between">
                             <dt className="font-medium text-[#6B5F53]">Promo:</dt>
                             <dd className="font-medium text-green-700">
-                              {selectedRequest.promoCode} (-${selectedRequest.promoDiscountAmount || 0})
+                              {selectedRequest.promoCode} (-${Number(selectedRequest.promoDiscountAmount || 0).toFixed(2)})
                             </dd>
                           </div>
                         )}

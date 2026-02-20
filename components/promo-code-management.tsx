@@ -26,6 +26,17 @@ interface PromoCodeRow {
   expiresAt?: string
 }
 
+interface PromoAppliedRequest {
+  _id: string
+  requestId: string
+  purchaseType: 'daily_topup' | 'weekly_topup'
+  consumedAt: string
+  discountAmount: number
+  originalSubtotal: number
+  finalTotal: number
+  request?: any
+}
+
 export function PromoCodeManagement() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -41,6 +52,9 @@ export function PromoCodeManagement() {
   const [appliesTo, setAppliesTo] = useState<'daily_topup' | 'weekly_topup' | 'all'>('all')
   const [promoOnlyEmt, setPromoOnlyEmt] = useState(true)
   const [oneUsePerUser, setOneUsePerUser] = useState(true)
+  const [expandedPromoId, setExpandedPromoId] = useState<string | null>(null)
+  const [isLoadingAppliedRequests, setIsLoadingAppliedRequests] = useState(false)
+  const [appliedRequestsByPromo, setAppliedRequestsByPromo] = useState<Record<string, PromoAppliedRequest[]>>({})
 
   const fetchPromoCodes = async () => {
     setIsLoading(true)
@@ -132,6 +146,40 @@ export function PromoCodeManagement() {
         description: error?.message || 'Failed to update promo code',
         variant: 'destructive'
       })
+    }
+  }
+
+  const fetchAppliedRequests = async (promoId: string) => {
+    setIsLoadingAppliedRequests(true)
+    try {
+      const response = await fetch(`/api/admin/promo-codes/${promoId}/redemptions`)
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to fetch applied requests')
+      }
+      setAppliedRequestsByPromo((prev) => ({
+        ...prev,
+        [promoId]: result.data.items || []
+      }))
+    } catch (error: any) {
+      toast({
+        title: 'Load failed',
+        description: error?.message || 'Failed to load applied requests',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsLoadingAppliedRequests(false)
+    }
+  }
+
+  const toggleAppliedRequests = async (promoId: string) => {
+    if (expandedPromoId === promoId) {
+      setExpandedPromoId(null)
+      return
+    }
+    setExpandedPromoId(promoId)
+    if (!appliedRequestsByPromo[promoId]) {
+      await fetchAppliedRequests(promoId)
     }
   }
 
@@ -249,6 +297,45 @@ export function PromoCodeManagement() {
                   Used: {promo.usageCountFromRedemptions ?? promo.usageCount}
                   {promo.maxUses ? ` / ${promo.maxUses}` : ''}
                 </div>
+                <div className="mt-3">
+                  <Button variant="outline" size="sm" onClick={() => toggleAppliedRequests(promo._id)}>
+                    {expandedPromoId === promo._id ? 'Hide Applied Requests' : 'View Applied Requests'}
+                  </Button>
+                </div>
+
+                {expandedPromoId === promo._id ? (
+                  <div className="mt-3 rounded-md border p-3">
+                    {isLoadingAppliedRequests && !appliedRequestsByPromo[promo._id] ? (
+                      <div className="text-sm text-muted-foreground">Loading applied requests...</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {(appliedRequestsByPromo[promo._id] || []).length === 0 ? (
+                          <div className="text-sm text-muted-foreground">No requests have applied this code yet.</div>
+                        ) : (
+                          (appliedRequestsByPromo[promo._id] || []).map((item) => (
+                            <div key={item._id} className="rounded border p-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="text-sm font-medium">
+                                  {item.requestId} ({item.purchaseType === 'weekly_topup' ? 'Weekly' : 'Daily'})
+                                </div>
+                                <Badge variant="outline">{item.request?.status || 'unknown'}</Badge>
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                User: {item.request?.userId?.name || 'Unknown'} {item.request?.userId?.email ? `(${item.request.userId.email})` : ''}
+                              </div>
+                              <div className="mt-1 text-xs">
+                                Subtotal: ${Number(item.originalSubtotal).toFixed(2)} · Discount: -${Number(item.discountAmount).toFixed(2)} · Final: ${Number(item.finalTotal).toFixed(2)}
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Applied at: {new Date(item.consumedAt).toLocaleString()}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ))}
             {!isLoading && promoCodes.length === 0 ? (

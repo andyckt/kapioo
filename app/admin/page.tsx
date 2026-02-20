@@ -3637,33 +3637,14 @@ export default function AdminDashboardPage() {
                     </div>
                     
                     <div className="border-t pt-4 col-span-1 sm:col-span-2 mt-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
                         <div>
-                          <Label className="text-xs text-muted-foreground">Original Price</Label>
+                          <Label className="text-xs text-muted-foreground">Subtotal</Label>
                           <p className="font-medium text-base">
-                            ${selectedRequest.originalPrice ? selectedRequest.originalPrice.toFixed(2) : '0.00'}
+                            ${Number(selectedRequest.originalSubtotal ?? selectedRequest.originalPrice ?? 0).toFixed(2)}
                           </p>
                         </div>
-                        
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            {selectedRequest.paymentMethod === 'wechat' ? 'Discount' : 'Tax'}
-                          </Label>
-                          <p className="font-medium text-base">
-                            {selectedRequest.paymentMethod === 'wechat' ? (
-                              <span className="text-green-600">-10%</span>
-                            ) : (
-                              <span className="text-amber-600">+13%</span>
-                            )}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Final Amount</Label>
-                          <p className="font-medium text-base">
-                            <span className="text-lg">${selectedRequest.amount.toFixed(2)}</span>
-                          </p>
-                        </div>
+
                         <div>
                           <Label className="text-xs text-muted-foreground">Promo Code</Label>
                           <p className="font-medium text-base">
@@ -3674,6 +3655,36 @@ export default function AdminDashboardPage() {
                             ) : (
                               'None'
                             )}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Promo Discount</Label>
+                          <p className="font-medium text-base text-green-700">
+                            -${Number(selectedRequest.promoDiscountAmount || 0).toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Tax</Label>
+                          <p className="font-medium text-base text-amber-600">
+                            ${Math.max(
+                              0,
+                              Number(
+                                (
+                                  Number(selectedRequest.finalTotal ?? selectedRequest.amount ?? 0) -
+                                  Math.max(
+                                    0,
+                                    Number(selectedRequest.originalSubtotal ?? selectedRequest.originalPrice ?? 0) -
+                                      Number(selectedRequest.promoDiscountAmount || 0)
+                                  )
+                                ).toFixed(2)
+                              )
+                            ).toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Final Amount</Label>
+                          <p className="font-medium text-base">
+                            <span className="text-lg">${Number(selectedRequest.finalTotal ?? selectedRequest.amount ?? 0).toFixed(2)}</span>
                           </p>
                         </div>
                       </div>

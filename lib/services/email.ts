@@ -251,6 +251,11 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   amount: number;
   paymentMethod: 'wechat' | 'emt';
   originalPrice: number;
+  originalSubtotal?: number;
+  finalTotal?: number;
+  taxRate?: number;
+  promoCode?: string;
+  promoDiscountAmount?: number;
   imageProofUrl: string;
   referenceNumber?: string;
   notes?: string;
@@ -269,6 +274,13 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const adminDashboardLink = `${baseUrl}/admin?tab=credit-requests`;
+  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
+  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
+  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
+  const taxAmount = requestDetails.paymentMethod === 'emt'
+    ? Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)))
+    : 0;
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -283,8 +295,10 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
         ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>原始价格:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
-        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>实际付款:</strong> $${requestDetails.amount.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>小计:</strong> $${subtotal.toFixed(2)}</li>
+        ${requestDetails.promoCode ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>优惠折扣 (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>税费:</strong> $${taxAmount.toFixed(2)}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>实际付款:</strong> $${finalTotal.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
         ${requestDetails.planDescription ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
         
@@ -333,6 +347,11 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   amount: number;
   paymentMethod: 'wechat' | 'emt';
   originalPrice: number;
+  originalSubtotal?: number;
+  finalTotal?: number;
+  taxRate?: number;
+  promoCode?: string;
+  promoDiscountAmount?: number;
   requestId: string;
   referenceNumber?: string;
   planDescription?: string;
@@ -344,6 +363,13 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   const paymentNote = requestDetails.paymentMethod === 'wechat' 
     ? `(${t.account.wechatDiscount})` 
     : `(${t.account.taxIncluded})`;
+  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
+  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
+  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
+  const taxAmount = requestDetails.paymentMethod === 'emt'
+    ? Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)))
+    : 0;
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -362,8 +388,10 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.requestId}:</strong> ${requestDetails.requestId}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.paymentMethod}:</strong> ${paymentMethodText}</li>
           ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.referenceNumber}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.originalPrice}:</strong> $${requestDetails.originalPrice.toFixed(2)}</li>
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.actualPayment}:</strong> $${requestDetails.amount.toFixed(2)} ${paymentNote}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '小计' : 'Subtotal'}:</strong> $${subtotal.toFixed(2)}</li>
+          ${requestDetails.promoCode ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '优惠折扣' : 'Promo Discount'} (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '税费' : 'Tax'}:</strong> $${taxAmount.toFixed(2)}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.actualPayment}:</strong> $${finalTotal.toFixed(2)} ${paymentNote}</li>
           ${requestDetails.planDescription ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.selectedPlan}:</strong> ${requestDetails.planDescription}</li>` : ''}
           <li style="padding: 10px 0;"><strong>${t.account.status}:</strong> <span style="color: #F59E0B; font-weight: 500;">${t.account.pendingReview}</span></li>
         </ul>
@@ -399,6 +427,11 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   type: 'twoDish' | 'threeDish';
   quantity: number;
   amount: number;
+  originalSubtotal?: number;
+  finalTotal?: number;
+  taxRate?: number;
+  promoCode?: string;
+  promoDiscountAmount?: number;
   imageProofUrl: string;
   referenceNumber?: string;
   notes?: string;
@@ -418,6 +451,11 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   const adminDashboardLink = `${baseUrl}/admin?tab=meal-vouchers`;
 
   const voucherTypeText = requestDetails.type === 'twoDish' ? '2菜餐券' : '3菜餐券';
+  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.amount ?? 0);
+  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
+  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
+  const taxAmount = Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -433,7 +471,10 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>餐券类型:</strong> ${voucherTypeText}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>餐券数量:</strong> ${requestDetails.quantity}</li>
         ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款金额:</strong> $${requestDetails.amount}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>小计:</strong> $${subtotal.toFixed(2)}</li>
+        ${requestDetails.promoCode ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>优惠折扣 (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>税费:</strong> $${taxAmount.toFixed(2)}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款金额:</strong> $${finalTotal.toFixed(2)}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>备注:</strong> ${requestDetails.notes || '无'}</li>
         
         ${requestDetails.userAddress ? `
@@ -481,6 +522,11 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   type: 'twoDish' | 'threeDish';
   quantity: number;
   amount: number;
+  originalSubtotal?: number;
+  finalTotal?: number;
+  taxRate?: number;
+  promoCode?: string;
+  promoDiscountAmount?: number;
   requestId: string;
   referenceNumber?: string;
   notes?: string;
@@ -491,6 +537,11 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   const voucherTypeText = requestDetails.type === 'twoDish' ? t.account.twoDishMeal : t.account.threeDishMeal;
   const notesLabel = language === 'zh' ? '备注' : 'Notes';
   const paymentAmountLabel = language === 'zh' ? '付款金额' : 'Payment Amount';
+  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.amount ?? 0);
+  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
+  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
+  const taxAmount = Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
   const adminWillReviewVouchers = language === 'zh'
     ? '我们的管理员将尽快审核您的请求。一旦审核通过，餐券将立即添加到您的账户中，您将收到确认邮件'
     : 'Our administrator will review your request as soon as possible. Once approved, vouchers will be added to your account immediately and you will receive a confirmation email';
@@ -513,7 +564,10 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.voucherType}:</strong> ${voucherTypeText}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.voucherQuantity}:</strong> ${requestDetails.quantity}</li>
           ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.referenceNumber}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${paymentAmountLabel}:</strong> $${requestDetails.amount.toFixed(2)}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '小计' : 'Subtotal'}:</strong> $${subtotal.toFixed(2)}</li>
+          ${requestDetails.promoCode ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '优惠折扣' : 'Promo Discount'} (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '税费' : 'Tax'}:</strong> $${taxAmount.toFixed(2)}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${paymentAmountLabel}:</strong> $${finalTotal.toFixed(2)}</li>
           ${requestDetails.notes ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${notesLabel}:</strong> ${requestDetails.notes}</li>` : ''}
           <li style="padding: 10px 0;"><strong>${t.account.status}:</strong> <span style="color: #F59E0B; font-weight: 500;">${t.account.pendingReview}</span></li>
         </ul>
