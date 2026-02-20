@@ -612,9 +612,15 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
 
   const effectivePricing = promoBreakdown || defaultPricing
   const totalMealsInSelectedPlan = selectedPlan ? selectedPlan.mealsPerWeek * selectedPlan.duration : 0
+  
+  // Calculate unit price using only the meal price portion (excluding delivery fee)
   const discountedUnitPrice =
     selectedPlan && effectivePricing && totalMealsInSelectedPlan > 0
-      ? effectivePricing.discountedSubtotal / totalMealsInSelectedPlan
+      ? (() => {
+          const deliveryFeeTotal = getDeliveryFee(userRegion || '') * selectedPlan.duration
+          const mealPriceOnly = effectivePricing.discountedSubtotal - deliveryFeeTotal
+          return mealPriceOnly / totalMealsInSelectedPlan
+        })()
       : null
 
   const handleApplyPromo = async () => {
