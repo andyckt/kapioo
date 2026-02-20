@@ -357,6 +357,25 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    const toSafeNumber = (value: unknown) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const normalizedRequests = requests.map((request: any) => {
+      const plain = typeof request?.toObject === 'function' ? request.toObject() : request;
+      return {
+        ...plain,
+        amount: toSafeNumber(plain?.amount),
+        originalPrice: toSafeNumber(plain?.originalPrice),
+        originalSubtotal: toSafeNumber(plain?.originalSubtotal),
+        finalTotal: toSafeNumber(plain?.finalTotal),
+        promoDiscountValue: toSafeNumber(plain?.promoDiscountValue),
+        promoDiscountAmount: toSafeNumber(plain?.promoDiscountAmount),
+        mealPlanQuantity: toSafeNumber(plain?.mealPlanQuantity)
+      };
+    });
     
     // Get total count for pagination
     const totalRequests = await CreditPurchaseRequest.countDocuments(query);
@@ -364,7 +383,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ 
       success: true, 
       data: {
-        requests,
+        requests: normalizedRequests,
         page,
         limit,
         total: totalRequests,

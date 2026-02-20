@@ -32,6 +32,11 @@ export function UnifiedRechargeHistory({
 }: UnifiedRechargeHistoryProps) {
   const { t, language } = useLanguage();
   const { toast } = useToast();
+  const toNumber = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const formatMoney = (value: unknown) => toNumber(value).toFixed(2);
   
   // Combined requests array
   const [requests, setRequests] = useState<any[]>([]);
@@ -206,10 +211,10 @@ export function UnifiedRechargeHistory({
   };
 
   const getPaymentBreakdown = (request: any) => {
-    const subtotal = Number(request.originalSubtotal ?? request.originalPrice ?? request.amount ?? 0);
-    const promoDiscount = Number(request.promoDiscountAmount ?? 0);
+    const subtotal = toNumber(request.originalSubtotal ?? request.originalPrice ?? request.amount);
+    const promoDiscount = toNumber(request.promoDiscountAmount);
     const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
-    const finalTotal = Number(request.finalTotal ?? request.amount ?? 0);
+    const finalTotal = toNumber(request.finalTotal ?? request.amount);
     const taxAmount =
       request.requestType === 'weekly' && request.paymentMethod !== 'emt'
         ? 0
@@ -275,7 +280,7 @@ export function UnifiedRechargeHistory({
                       <p className="font-medium">
                         {language === 'zh' ? '支付金额' : 'Amount Paid'}
                       </p>
-                      <p className="text-muted-foreground">${request.amount?.toFixed(2)}</p>
+                      <p className="text-muted-foreground">${formatMoney(request.amount)}</p>
                       {request.promoCode && (
                         <p className="text-xs text-green-700 mt-1">
                           {language === 'zh' ? '优惠码:' : 'Promo:'} {request.promoCode} (-${Number(request.promoDiscountAmount || 0).toFixed(2)})
@@ -485,7 +490,7 @@ export function UnifiedRechargeHistory({
                       {language === 'zh' ? '支付金额' : 'Amount Paid'}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ${selectedRequest.amount?.toFixed(2)}
+                      ${formatMoney(selectedRequest.amount)}
                     </p>
                   </div>
 

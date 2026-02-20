@@ -27,6 +27,11 @@ interface VoucherPurchaseHistoryProps {
 export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurchaseHistoryProps) {
   const { t, language } = useLanguage();
   const { toast } = useToast();
+  const toNumber = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const formatMoney = (value: unknown) => toNumber(value).toFixed(2);
   const [requests, setRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -147,10 +152,10 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
   };
 
   const getDailyBreakdown = (request: any) => {
-    const subtotal = Number(request.originalSubtotal ?? request.originalPrice ?? request.amount ?? 0);
-    const promoDiscount = Number(request.promoDiscountAmount ?? 0);
+    const subtotal = toNumber(request.originalSubtotal ?? request.originalPrice ?? request.amount);
+    const promoDiscount = toNumber(request.promoDiscountAmount);
     const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
-    const finalTotal = Number(request.finalTotal ?? request.amount ?? 0);
+    const finalTotal = toNumber(request.finalTotal ?? request.amount);
     const taxAmount = Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
     return { subtotal, promoDiscount, taxAmount, finalTotal };
   };
@@ -195,7 +200,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
                       <p className="font-medium">
                         {language === 'en' ? 'Amount Paid' : '支付金额'}
                       </p>
-                      <p className="text-muted-foreground">${request.amount?.toFixed(2)}</p>
+                      <p className="text-muted-foreground">${formatMoney(request.amount)}</p>
                       {request.promoCode && (
                         <p className="text-xs text-green-700 mt-1">
                           {language === 'en' ? 'Promo:' : '优惠码:'} {request.promoCode} (-${Number(request.promoDiscountAmount || 0).toFixed(2)})
@@ -378,7 +383,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
                       {language === 'en' ? 'Amount Paid' : '支付金额'}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ${selectedRequest.amount?.toFixed(2)}
+                      ${formatMoney(selectedRequest.amount)}
                     </p>
                   </div>
 

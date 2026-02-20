@@ -43,13 +43,33 @@ export async function GET(request: NextRequest) {
       .skip(skip)
       .limit(limit)
       .populate('userId', 'name email');
+
+    const toSafeNumber = (value: unknown) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const normalizedRequests = requests.map((request: any) => {
+      const plain = typeof request?.toObject === 'function' ? request.toObject() : request;
+      return {
+        ...plain,
+        amount: toSafeNumber(plain?.amount),
+        originalPrice: toSafeNumber(plain?.originalPrice),
+        originalSubtotal: toSafeNumber(plain?.originalSubtotal),
+        finalTotal: toSafeNumber(plain?.finalTotal),
+        promoDiscountValue: toSafeNumber(plain?.promoDiscountValue),
+        promoDiscountAmount: toSafeNumber(plain?.promoDiscountAmount),
+        quantity: toSafeNumber(plain?.quantity),
+        taxRate: toSafeNumber(plain?.taxRate)
+      };
+    });
     
     // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / limit);
     
     return NextResponse.json({
       success: true,
-      data: requests,
+      data: normalizedRequests,
       pagination: {
         total: totalCount,
         page,
