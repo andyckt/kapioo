@@ -1612,28 +1612,18 @@ export const sendWeeklyMenuUpdateEmail = async (to: string, userName: string, la
 };
 
 /**
- * Send next week menu update notification to a user
- * This email goes to ALL users (not just those with vouchers/plans)
+ * Build next week menu update email content without sending.
+ * Useful for bulk/batch workflows where we render many emails first.
  */
-export const sendNextWeekMenuUpdateEmail = async (
-  to: string, 
-  userName: string, 
-  userId: string,
+export const buildNextWeekMenuUpdateEmail = (
+  to: string,
+  userName: string,
+  _userId: string,
   language: Language = 'zh'
-) => {
+): EmailOptions => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const t = getTranslations(language);
-  
-  // Generate unsubscribe token (simple hash of email + secret)
-  const crypto = require('crypto');
-  const unsubscribeToken = crypto
-    .createHash('sha256')
-    .update(`${to}-next-week-menu-${process.env.NEXTAUTH_SECRET || 'kapioo-secret'}`)
-    .digest('hex')
-    .substring(0, 32);
-  
-  const unsubscribeUrl = `${baseUrl}/unsubscribe?type=next-week-menu&email=${encodeURIComponent(to)}&token=${unsubscribeToken}`;
-  
+
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
@@ -1672,12 +1662,26 @@ export const sendNextWeekMenuUpdateEmail = async (
       </div>
     </div>
   `;
-  
-  return sendEmail({
+
+  return {
     to,
     subject: t.nextWeekMenuUpdate.subject,
-    html,
-  });
+    html
+  };
+};
+
+/**
+ * Send next week menu update notification to a user
+ * This email goes to ALL users (not just those with vouchers/plans)
+ */
+export const sendNextWeekMenuUpdateEmail = async (
+  to: string, 
+  userName: string, 
+  userId: string,
+  language: Language = 'zh'
+) => {
+  const options = buildNextWeekMenuUpdateEmail(to, userName, userId, language);
+  return sendEmail(options);
 };
 
 /**

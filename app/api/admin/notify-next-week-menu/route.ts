@@ -2,14 +2,18 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
-import { sendNextWeekMenuUpdateEmail } from '@/lib/services/email';
+import {
+  buildNextWeekMenuUpdateEmail,
+  sendNextWeekMenuUpdateEmail
+} from '@/lib/services/email';
+import { sendBatchEmailsWithResend } from '@/lib/services/resend-email';
 
 export const dynamic = 'force-dynamic';
 
 const ELIGIBLE_USER_QUERY = {
   isVerified: true,
   emailStatus: { $ne: 'bounced' },
-  email: { $exists: true, $ne: '', $ne: null },
+  email: { $exists: true, $nin: ['', null] },
   'emailPreferences.nextWeekMenuUpdates': { $ne: false }
 };
 
@@ -36,7 +40,12 @@ export async function POST(request: Request) {
 
     // Test batch mode still runs immediately and returns summary.
     if (testBatchMode) {
-      const testUsers = Array.from({ length: 15 }, (_, idx) => ({
+      const testUsers: Array<{
+        email: string;
+        name: string;
+        _id: string;
+        languagePreference: 'en' | 'zh';
+      }> = Array.from({ length: 15 }, (_, idx) => ({
         email: 'kapioomeal@gmail.com',
         name: `Test User ${idx + 1}`,
         _id: `test-${idx + 1}`,
@@ -47,21 +56,27 @@ export async function POST(request: Request) {
       let emailsFailed = 0;
       const failedEmails: Array<{ email: string; name: string; error: string }> = [];
 
-      for (const user of testUsers) {
-        try {
-          await sendNextWeekMenuUpdateEmail(
-            user.email,
-            user.name,
-            user._id,
-            user.languagePreference
-          );
+      const payloads = testUsers.map((user) =>
+        buildNextWeekMenuUpdateEmail(
+          user.email,
+          user.name,
+          user._id,
+          user.languagePreference
+        )
+      );
+      const sendResults = await sendBatchEmailsWithResend(payloads);
+
+      for (let i = 0; i < testUsers.length; i++) {
+        const user = testUsers[i];
+        const result = sendResults[i];
+        if (result?.success) {
           emailsSent++;
-        } catch (error) {
+        } else {
           emailsFailed++;
           failedEmails.push({
             email: user.email,
             name: user.name,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: result?.error || 'Unknown error'
           });
         }
       }

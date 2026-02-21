@@ -46,6 +46,9 @@ export async function POST(request: Request) {
       failedEmails: [],
       createdBy
     });
+    console.info(
+      `[NextWeekEmailJobCreate] jobId=${String(job._id)} criteria=${job.criteriaType} total=${job.totalUsers} selectedInput=${userIds.length}`
+    );
 
     return NextResponse.json({
       success: true,

@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
 import User from '@/models/User';
-import { sendNextWeekMenuUpdateEmail } from '@/lib/services/email';
+import { buildNextWeekMenuUpdateEmail } from '@/lib/services/email';
+import { sendBatchEmailsWithResend } from '@/lib/services/resend-email';
 
 const LOCK_TTL_MS = 5 * 60_000;
-const CHUNK_SIZE = 20; // Process 20 users per run (triggered every minute by Cron-Job.org)
-const SEND_INTERVAL_MS = 250; // 4 req/s baseline, below 6 req/s limit
+const CHUNK_SIZE = 60; // Process up to 60 users per run
+const RESEND_BATCH_SIZE = 60; // Use Resend batch API with 60 recipients/request
+const BATCH_INTERVAL_MS = 500; // Small pause only when multiple batch requests are needed
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -60,6 +62,9 @@ async function processJobs(request: Request) {
     const startCursor = job.cursor;
     const targetCursor = Math.min(startCursor + CHUNK_SIZE, job.totalUsers);
     const targetUserIds = job.userIds.slice(startCursor, targetCursor);
+    console.info(
+      `[NextWeekEmailWorker] acquired jobId=${String(job._id)} status=${job.status} startCursor=${startCursor} targetCursor=${targetCursor} total=${job.totalUsers}`
+    );
 
     const users = await User.find({ _id: { $in: targetUserIds } })
       .select('_id name email languagePreference')
@@ -76,42 +81,75 @@ async function processJobs(request: Request) {
       occurredAt: Date;
     }> = [];
 
+    const batchPayloads: Array<{ to: string; subject: string; html: string; from?: string }> = [];
+    const batchMetadata: Array<{ userId: string; email: string; name?: string }> = [];
+
     for (let i = 0; i < targetUserIds.length; i++) {
-      const userId = targetUserIds[i];
+      const userId = String(targetUserIds[i]);
       const user = userMap.get(String(userId));
 
       if (!user || !user.email) {
         failedDelta++;
         failedEntries.push({
-          userId: String(userId),
+          userId,
           name: user?.name,
           email: user?.email,
           error: 'User missing or has invalid email',
           occurredAt: new Date()
         });
       } else {
-        try {
-          await sendNextWeekMenuUpdateEmail(
+        batchPayloads.push(
+          buildNextWeekMenuUpdateEmail(
             user.email,
             user.name || 'Kapioo User',
             String(user._id),
             user.languagePreference || 'zh'
-          );
+          )
+        );
+        batchMetadata.push({
+          userId: String(user._id),
+          email: user.email,
+          name: user.name
+        });
+      }
+    }
+    console.info(
+      `[NextWeekEmailWorker] prepared jobId=${String(job._id)} candidates=${targetUserIds.length} sendable=${batchPayloads.length} immediateFailures=${failedDelta}`
+    );
+
+    for (let start = 0; start < batchPayloads.length; start += RESEND_BATCH_SIZE) {
+      const payloadSlice = batchPayloads.slice(start, start + RESEND_BATCH_SIZE);
+      const metadataSlice = batchMetadata.slice(start, start + RESEND_BATCH_SIZE);
+      console.info(
+        `[NextWeekEmailWorker] sending batch jobId=${String(job._id)} batchStart=${start} batchSize=${payloadSlice.length}`
+      );
+      const sendResults = await sendBatchEmailsWithResend(payloadSlice);
+
+      for (let i = 0; i < metadataSlice.length; i++) {
+        const metadata = metadataSlice[i];
+        const result = sendResults[i];
+
+        if (result?.success) {
           sentDelta++;
-        } catch (error) {
+        } else {
           failedDelta++;
           failedEntries.push({
-            userId: String(user._id),
-            email: user.email,
-            name: user.name,
-            error: error instanceof Error ? error.message : 'Unknown send error',
+            userId: metadata.userId,
+            email: metadata.email,
+            name: metadata.name,
+            error: result?.error || 'Unknown batch send error',
             occurredAt: new Date()
           });
         }
       }
+      const batchFailed = sendResults.filter((result) => !result?.success).length;
+      const batchSent = sendResults.length - batchFailed;
+      console.info(
+        `[NextWeekEmailWorker] batch complete jobId=${String(job._id)} batchStart=${start} sent=${batchSent} failed=${batchFailed}`
+      );
 
-      if (i < targetUserIds.length - 1) {
-        await sleep(SEND_INTERVAL_MS);
+      if (start + RESEND_BATCH_SIZE < batchPayloads.length) {
+        await sleep(BATCH_INTERVAL_MS);
       }
     }
 
@@ -154,6 +192,10 @@ async function processJobs(request: Request) {
         { status: 409 }
       );
     }
+
+    console.info(
+      `[NextWeekEmailWorker] checkpoint jobId=${String(job._id)} cursor=${updatedJob.cursor}/${updatedJob.totalUsers} sent=${updatedJob.sentCount} failed=${updatedJob.failedCount} status=${updatedJob.status}`
+    );
 
     return NextResponse.json({
       success: true,
