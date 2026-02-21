@@ -428,7 +428,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           userId,
           purchaseType: 'weekly_topup',
           paymentMethod: 'emt',
-          subtotal: parseFloat(baseSubtotal.toFixed(2)),
+          mealSubtotal: parseFloat((selectedPlan.totalPrice || 0).toFixed(2)),
+          deliveryFeeTotal: parseFloat((getDeliveryFee(userRegion || '') * (selectedPlan.duration || 0)).toFixed(2)),
           taxRate: 0.13
         })
       })

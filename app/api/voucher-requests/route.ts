@@ -191,7 +191,8 @@ export async function POST(request: NextRequest) {
           userPhone: user.phone,
           purchaseType: 'daily_topup',
           paymentMethod: 'emt',
-          subtotal: baseSubtotal
+          mealSubtotal: baseSubtotal,
+          deliveryFeeTotal: 0
         },
         taxRate
       });

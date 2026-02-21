@@ -124,7 +124,8 @@ export async function POST(request: Request) {
             userPhone: user.phone,
             purchaseType: 'weekly_topup',
             paymentMethod: 'emt',
-            subtotal: pricingSubtotal
+            mealSubtotal,
+            deliveryFeeTotal
           },
           taxRate
         });
@@ -142,7 +143,8 @@ export async function POST(request: Request) {
         pricing = preview.breakdown!;
       } else {
         pricing = calculatePromoBreakdown({
-          subtotal: pricingSubtotal,
+          mealSubtotal,
+          deliveryFeeTotal,
           taxRate,
           discountType: 'fixed',
           discountValue: 0

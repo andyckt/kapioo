@@ -22,7 +22,10 @@ export interface PromoValidationInput {
   purchaseType: PromoPurchaseType;
   paymentMethod: PromoPaymentMethod;
   userPhone?: string;
-  subtotal: number;
+  mealSubtotal: number;
+  deliveryFeeTotal?: number;
+  // Backward compatibility for older callers; maps to mealSubtotal when provided.
+  subtotal?: number;
   now?: Date;
 }
 
@@ -56,22 +59,25 @@ export function roundMoney(value: number): number {
 }
 
 export function calculatePromoBreakdown(params: {
-  subtotal: number;
+  mealSubtotal: number;
+  deliveryFeeTotal?: number;
   taxRate: number;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
 }): PricingBreakdown {
-  const originalSubtotal = roundMoney(Math.max(0, params.subtotal));
+  const mealSubtotal = roundMoney(Math.max(0, params.mealSubtotal));
+  const deliveryFeeTotal = roundMoney(Math.max(0, params.deliveryFeeTotal || 0));
+  const originalSubtotal = roundMoney(mealSubtotal + deliveryFeeTotal);
   const taxRate = params.taxRate;
 
   let rawDiscount = 0;
   if (params.discountType === 'percentage') {
-    rawDiscount = (originalSubtotal * params.discountValue) / 100;
+    rawDiscount = (mealSubtotal * params.discountValue) / 100;
   } else {
     rawDiscount = params.discountValue;
   }
 
-  const discountAmount = roundMoney(Math.min(Math.max(rawDiscount, 0), originalSubtotal));
+  const discountAmount = roundMoney(Math.min(Math.max(rawDiscount, 0), mealSubtotal));
   const discountedSubtotal = roundMoney(Math.max(originalSubtotal - discountAmount, 0));
   const taxAmount = roundMoney(discountedSubtotal * taxRate);
   const finalTotal = roundMoney(discountedSubtotal + taxAmount);
@@ -178,7 +184,8 @@ export async function validatePromoForPreview(params: {
   return {
     ok: true,
     breakdown: calculatePromoBreakdown({
-      subtotal: input.subtotal,
+      mealSubtotal: Math.max(0, Number(input.mealSubtotal ?? input.subtotal ?? 0)),
+      deliveryFeeTotal: Math.max(0, Number(input.deliveryFeeTotal || 0)),
       taxRate,
       discountType: promo.discountType,
       discountValue: promo.discountValue

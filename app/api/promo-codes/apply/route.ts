@@ -19,10 +19,11 @@ export async function POST(request: Request) {
     const userId = body.userId as string;
     const purchaseType = body.purchaseType as PromoPurchaseType;
     const paymentMethod = body.paymentMethod as PromoPaymentMethod;
-    const subtotal = Number(body.subtotal);
+    const mealSubtotal = Number(body.mealSubtotal ?? body.subtotal);
+    const deliveryFeeTotal = Number(body.deliveryFeeTotal ?? 0);
     const taxRate = Number(body.taxRate ?? 0.13);
 
-    if (!code || !userId || !purchaseType || !paymentMethod || Number.isNaN(subtotal)) {
+    if (!code || !userId || !purchaseType || !paymentMethod || Number.isNaN(mealSubtotal) || Number.isNaN(deliveryFeeTotal)) {
       return NextResponse.json(
         { success: false, errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR, error: 'Missing required fields' },
         { status: 400 }
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
         userPhone: user.phone,
         purchaseType,
         paymentMethod,
-        subtotal
+        mealSubtotal,
+        deliveryFeeTotal
       },
       taxRate
     });

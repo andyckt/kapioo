@@ -396,7 +396,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           userId: user._id,
           purchaseType: 'daily_topup',
           paymentMethod: 'emt',
-          subtotal: selectedPlan.price,
+          mealSubtotal: selectedPlan.price,
+          deliveryFeeTotal: 0,
           taxRate: 0.13
         })
       })
