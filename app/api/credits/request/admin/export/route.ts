@@ -83,7 +83,9 @@ function convertToCSV(requests: any[]) {
     'Approved Six Meals',
     'Approved Eight Meals',
     'Approved Ten Meals',
-    'Approved Twelve Meals'
+    'Approved Twelve Meals',
+    'Approved Sixteen Meals',
+    'Approved Plans'
   ];
   
   // Start with headers
@@ -118,7 +120,9 @@ function convertToCSV(requests: any[]) {
       request.approvedSixMeals || '',
       request.approvedEightMeals || '',
       request.approvedTenMeals || '',
-      request.approvedTwelveMeals || ''
+      request.approvedTwelveMeals || '',
+      request.approvedSixteenMeals || '',
+      escapeCsvField(JSON.stringify(request.approvedPlans || []))
     ];
     
     csvContent += row.join(',') + '\n';

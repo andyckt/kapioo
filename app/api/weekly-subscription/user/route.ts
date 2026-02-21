@@ -7,6 +7,7 @@ import WeeklyOrder from '@/models/WeeklyOrder';
 import User from '@/models/User';
 import { nanoid } from 'nanoid';
 import { sendWeeklyOrderConfirmationEmail, sendAdminWeeklyOrderNotification } from '@/lib/services/email';
+import { toWeeklyPlanId } from '@/lib/plans/service';
 
 // Types for consecutive date validation
 interface DeliveryDayForValidation {
@@ -282,7 +283,9 @@ export async function POST(request: Request) {
               weeklySIXmeals: user.weeklySIXmeals,
               weeklyEIGHTmeals: user.weeklyEIGHTmeals,
               weeklyTENmeals: user.weeklyTENmeals,
-              weeklyTWELVEmeals: user.weeklyTWELVEmeals
+              weeklyTWELVEmeals: user.weeklyTWELVEmeals,
+              weeklySIXTEENmeals: user.weeklySIXTEENmeals,
+              planBalances: user.planBalances || {}
             }
           });
         }
@@ -525,6 +528,13 @@ export async function POST(request: Request) {
         $inc: {}
       };
       updateObj.$inc[updateField] = mealPlanType === 'legacy' ? -totalItems : -1;
+      if (mealPlanType !== 'legacy') {
+        const weeklyMeals = Number(String(mealPlanType).replace('aweek', ''));
+        if (Number.isFinite(weeklyMeals)) {
+          const planBalanceKey = `planBalances.${toWeeklyPlanId(weeklyMeals, 1)}`;
+          updateObj.$inc[planBalanceKey] = -1;
+        }
+      }
       
       // Update phone number if provided in order
       if (data.phoneNumber && data.phoneNumber.trim()) {
@@ -573,7 +583,9 @@ export async function POST(request: Request) {
           weeklySIXmeals: updatedUser.weeklySIXmeals,
           weeklyEIGHTmeals: updatedUser.weeklyEIGHTmeals,
           weeklyTENmeals: updatedUser.weeklyTENmeals,
-          weeklyTWELVEmeals: updatedUser.weeklyTWELVEmeals
+          weeklyTWELVEmeals: updatedUser.weeklyTWELVEmeals,
+          weeklySIXTEENmeals: updatedUser.weeklySIXTEENmeals,
+          planBalances: updatedUser.planBalances || {}
         },
         usedMealPlanType: mealPlanType,
         voucherDeducted: shouldDeductVoucher // Include whether a voucher was deducted

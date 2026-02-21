@@ -21,6 +21,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/lib/language-context'
+import { listDailyPlans } from '@/lib/plans/service'
 import {
   Tooltip,
   TooltipContent,
@@ -138,20 +139,39 @@ export default function DailyDeliveryPage() {
     fetchDishTranslations();
   }, [])
   
-  // Define voucher plans
-  const twoDishPlans: VoucherPlan[] = [
-    { id: 'two-6', type: 'twoDish', quantity: 6, price: 131, pricePerMeal: 21.83 },
-    { id: 'two-10', type: 'twoDish', quantity: 10, price: 195, pricePerMeal: 19.50, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
-    { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18, displayQuantity: '20', originalQuantity: '22', displayPricePerMeal: '17.8', originalPricePerMeal: '16.18' },
-    { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48, displayQuantity: '40', originalQuantity: '46', displayPricePerMeal: '17.8', originalPricePerMeal: '15.48' }
-  ]
+  const allDailyPlans: VoucherPlan[] = listDailyPlans().map((plan) => {
+    const isTwentyPack = plan.credits === 22
+    const isFortyPack = plan.credits === 46
+    const displayQuantity = isTwentyPack ? '20' : isFortyPack ? '40' : undefined
+    const originalQuantity = isTwentyPack || isFortyPack ? String(plan.credits) : undefined
+    const displayPricePerMeal =
+      plan.dishType === 'twoDish'
+        ? isTwentyPack || isFortyPack
+          ? '17.8'
+          : undefined
+        : isTwentyPack
+          ? '20.85'
+          : isFortyPack
+            ? '20.45'
+            : undefined
 
-  const threeDishPlans: VoucherPlan[] = [
-    { id: 'three-6', type: 'threeDish', quantity: 6, price: 150, pricePerMeal: 25.00 },
-    { id: 'three-10', type: 'threeDish', quantity: 10, price: 228, pricePerMeal: 22.80, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
-    { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95, displayQuantity: '20', originalQuantity: '22', displayPricePerMeal: '20.85', originalPricePerMeal: '18.95' },
-    { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78, displayQuantity: '40', originalQuantity: '46', displayPricePerMeal: '20.45', originalPricePerMeal: '17.78' }
-  ]
+    return {
+      id: plan.id,
+      type: plan.dishType,
+      quantity: plan.credits,
+      price: plan.basePrice,
+      pricePerMeal: plan.pricePerMeal,
+      isPopular: Boolean(plan.tags),
+      savings: language === 'zh' ? plan.tags?.zh : plan.tags?.en,
+      displayQuantity,
+      originalQuantity,
+      displayPricePerMeal,
+      originalPricePerMeal: isTwentyPack || isFortyPack ? plan.pricePerMeal.toFixed(2) : undefined
+    }
+  })
+
+  const twoDishPlans: VoucherPlan[] = allDailyPlans.filter((plan) => plan.type === 'twoDish')
+  const threeDishPlans: VoucherPlan[] = allDailyPlans.filter((plan) => plan.type === 'threeDish')
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },

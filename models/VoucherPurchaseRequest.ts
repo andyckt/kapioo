@@ -4,6 +4,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IVoucherPurchaseRequest extends Document {
   requestId: string;
   userId: mongoose.Types.ObjectId;
+  planId?: string;
   type: 'twoDish' | 'threeDish';
   quantity: number;
   amount: number; // Final amount transferred via e-Transfer (including tax)
@@ -45,6 +46,9 @@ const VoucherPurchaseRequestSchema = new Schema<IVoucherPurchaseRequest>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  planId: {
+    type: String
   },
   type: {
     type: String,

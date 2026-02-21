@@ -4,6 +4,7 @@ import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { sendEmail } from '@/lib/services/email';
 import { getTranslations, type Language } from '@/lib/email-translations';
+import { toWeeklyPlanId } from '@/lib/plans/service';
 
 // Define the route params interface
 interface RouteParams {
@@ -37,7 +38,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       'weeklySIXmeals', 
       'weeklyEIGHTmeals', 
       'weeklyTENmeals', 
-      'weeklyTWELVEmeals'
+      'weeklyTWELVEmeals',
+      'weeklySIXTEENmeals'
     ];
     
     if (!allowedFields.includes(field)) {
@@ -91,9 +93,23 @@ export async function POST(request: Request, { params }: RouteParams) {
     const updateOperation = operation === 'add' ? amount : -amount;
     console.log(`[${requestId}] Applying atomic update: $inc { ${field}: ${updateOperation} }`);
     
+    const weeklyMealFieldToCount: Record<string, number> = {
+      weeklySIXmeals: 6,
+      weeklyEIGHTmeals: 8,
+      weeklyTENmeals: 10,
+      weeklyTWELVEmeals: 12,
+      weeklySIXTEENmeals: 16
+    };
+
+    const incPayload: Record<string, number> = { [field]: updateOperation };
+    if (weeklyMealFieldToCount[field]) {
+      const planBalanceKey = `planBalances.${toWeeklyPlanId(weeklyMealFieldToCount[field], 1)}`;
+      incPayload[planBalanceKey] = updateOperation;
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
-      { $inc: { [field]: updateOperation } },
+      { $inc: incPayload },
       { new: true } // Return the updated document
     );
     
@@ -141,6 +157,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       case 'weeklyTWELVEmeals':
         voucherTypeName = '12-Meal Weekly Subscription';
         shortVoucherName = '12weekly';
+        break;
+      case 'weeklySIXTEENmeals':
+        voucherTypeName = '16-Meal Weekly Subscription';
+        shortVoucherName = '16weekly';
         break;
       default:
         voucherTypeName = field;
@@ -196,6 +216,10 @@ export async function POST(request: Request, { params }: RouteParams) {
           case 'weeklyTWELVEmeals':
             voucherTypeName = t.account.weeklyTwelveMeals;
             emailSubject = t.account.weeklyTwelveMealsAdded;
+            break;
+          case 'weeklySIXTEENmeals':
+            voucherTypeName = t.account.weeklySixteenMeals;
+            emailSubject = t.account.weeklySixteenMealsAdded;
             break;
           default:
             voucherTypeName = language === 'zh' ? '餐券' : 'Vouchers';

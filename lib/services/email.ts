@@ -1,5 +1,6 @@
 import { getTranslations, type Language } from '@/lib/email-translations';
 import { buildCanonicalBreakdown } from '@/lib/price-breakdown';
+import { buildPlanLabel, getWeeklyPlanBy } from '@/lib/plans/service';
 
 export interface EmailOptions {
   to: string;
@@ -2022,7 +2023,7 @@ export const sendWeeklyOrderSummaryEmail = async (
       date: string;
     }>;
     totalCredits: number;
-    mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek';
+    mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek';
     voucherDeducted?: boolean;
   }>,
   deliveryAddress: any,
@@ -2130,13 +2131,11 @@ export const sendWeeklyOrderSummaryEmail = async (
   
   // Helper function to get voucher display name
   const getVoucherName = (mealPlanType: string) => {
-    const names: Record<string, { zh: string; en: string }> = {
-      '6aweek': { zh: '6餐一周', en: '6-Meal Weekly' },
-      '8aweek': { zh: '8餐一周', en: '8-Meal Weekly' },
-      '10aweek': { zh: '10餐一周', en: '10-Meal Weekly' },
-      '12aweek': { zh: '12餐一周', en: '12-Meal Weekly' }
-    };
-    return names[mealPlanType]?.[language] || mealPlanType;
+    const weeklyMeals = Number(String(mealPlanType).replace('aweek', ''));
+    const weeklyPlan = Number.isFinite(weeklyMeals) ? getWeeklyPlanBy(weeklyMeals, 1) : null;
+    if (!weeklyPlan) return mealPlanType;
+    const label = buildPlanLabel(weeklyPlan, language).split(':')[0];
+    return label;
   };
   
   // Generate voucher usage text
@@ -2492,7 +2491,7 @@ export const sendAdminWeeklyOrderSummaryEmail = async (
       date: string;
     }>;
     totalCredits: number;
-    mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek';
+    mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek';
     voucherDeducted?: boolean;
   }>,
   deliveryAddress: any,
@@ -2515,13 +2514,10 @@ export const sendAdminWeeklyOrderSummaryEmail = async (
   
   // Helper function to get voucher display name
   const getVoucherName = (mealPlanType: string) => {
-    const names: Record<string, string> = {
-      '6aweek': '6餐一周',
-      '8aweek': '8餐一周',
-      '10aweek': '10餐一周',
-      '12aweek': '12餐一周'
-    };
-    return names[mealPlanType] || mealPlanType;
+    const weeklyMeals = Number(String(mealPlanType).replace('aweek', ''));
+    const weeklyPlan = Number.isFinite(weeklyMeals) ? getWeeklyPlanBy(weeklyMeals, 1) : null;
+    if (!weeklyPlan) return mealPlanType;
+    return buildPlanLabel(weeklyPlan, 'zh').split(':')[0];
   };
   
   // Generate voucher usage text

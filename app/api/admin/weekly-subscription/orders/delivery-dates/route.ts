@@ -15,7 +15,7 @@ interface WeeklyOrderDocument extends mongoose.Document {
   }>;
   status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
   creditCost: number;
-  mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek';
+  mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek';
   specialInstructions?: string;
   deliveryAddress: {
     unitNumber?: string;
@@ -65,7 +65,7 @@ const WeeklyOrderSchema = new mongoose.Schema({
   },
   mealPlanType: {
     type: String,
-    enum: ['6aweek', '8aweek', '10aweek', '12aweek']
+    enum: ['6aweek', '8aweek', '10aweek', '12aweek', '16aweek']
   },
   specialInstructions: String,
   deliveryAddress: {

@@ -267,6 +267,7 @@ export const accountTranslations = {
     weeklyEightMealsAdded: '8餐一周已添加',
     weeklyTenMealsAdded: '10餐一周已添加',
     weeklyTwelveMealsAdded: '12餐一周已添加',
+    weeklySixteenMealsAdded: '16餐一周已添加',
     transactionDetails: '交易详情',
     transactionId: '交易编号',
     date: '日期',
@@ -279,6 +280,7 @@ export const accountTranslations = {
     weeklyEightMeals: '8餐一周',
     weeklyTenMeals: '10餐一周',
     weeklyTwelveMeals: '12餐一周',
+    weeklySixteenMeals: '16餐一周',
     
     // Request confirmation
     requestSubmitted: '请求已提交',
@@ -366,6 +368,7 @@ export const accountTranslations = {
     weeklyEightMealsAdded: '8-Meal Weekly Plan Added',
     weeklyTenMealsAdded: '10-Meal Weekly Plan Added',
     weeklyTwelveMealsAdded: '12-Meal Weekly Plan Added',
+    weeklySixteenMealsAdded: '16-Meal Weekly Plan Added',
     transactionDetails: 'Transaction Details',
     transactionId: 'Transaction ID',
     date: 'Date',
@@ -378,6 +381,7 @@ export const accountTranslations = {
     weeklyEightMeals: '8-Meal Weekly',
     weeklyTenMeals: '10-Meal Weekly',
     weeklyTwelveMeals: '12-Meal Weekly',
+    weeklySixteenMeals: '16-Meal Weekly',
     
     // Request confirmation
     requestSubmitted: 'Request Submitted',

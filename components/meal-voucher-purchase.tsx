@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
+import { listDailyPlans } from '@/lib/plans/service'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -88,20 +89,18 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
   const [promoError, setPromoError] = useState('')
 
-  // Define voucher plans
-  const twoDishPlans: VoucherPlan[] = [
-    { id: 'two-6', type: 'twoDish', quantity: 6, price: 131, pricePerMeal: 21.83 },
-    { id: 'two-10', type: 'twoDish', quantity: 10, price: 195, pricePerMeal: 19.50, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
-    { id: 'two-22', type: 'twoDish', quantity: 22, price: 356, pricePerMeal: 16.18 },
-    { id: 'two-46', type: 'twoDish', quantity: 46, price: 712, pricePerMeal: 15.48 }
-  ]
+  const allDailyPlans: VoucherPlan[] = listDailyPlans().map((plan) => ({
+    id: plan.id,
+    type: plan.dishType,
+    quantity: plan.credits,
+    price: plan.basePrice,
+    pricePerMeal: plan.pricePerMeal,
+    isPopular: Boolean(plan.tags),
+    savings: language === 'zh' ? plan.tags?.zh : plan.tags?.en
+  }))
 
-  const threeDishPlans: VoucherPlan[] = [
-    { id: 'three-6', type: 'threeDish', quantity: 6, price: 150, pricePerMeal: 25.00 },
-    { id: 'three-10', type: 'threeDish', quantity: 10, price: 228, pricePerMeal: 22.80, isPopular: true, savings: language === 'zh' ? '首次推荐' : 'First Time Recommend!' },
-    { id: 'three-22', type: 'threeDish', quantity: 22, price: 417, pricePerMeal: 18.95 },
-    { id: 'three-46', type: 'threeDish', quantity: 46, price: 818, pricePerMeal: 17.78 }
-  ]
+  const twoDishPlans: VoucherPlan[] = allDailyPlans.filter((plan) => plan.type === 'twoDish')
+  const threeDishPlans: VoucherPlan[] = allDailyPlans.filter((plan) => plan.type === 'threeDish')
 
   // Use centralized daily delivery areas
   const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
@@ -464,6 +463,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           userId: user._id,
           type: selectedPlan.type,
           quantity: selectedPlan.quantity,
+          planId: selectedPlan.id,
           amount: effectivePricing?.finalTotal,
           originalPrice: effectivePricing?.originalSubtotal,
           taxRate: effectivePricing?.taxRate,

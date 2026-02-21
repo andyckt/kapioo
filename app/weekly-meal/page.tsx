@@ -24,6 +24,7 @@ import {
 import Link from "next/link"
 import { useLanguage } from "@/lib/language-context"
 import { getUserWeeklySubscription } from "@/lib/weekly-subscription"
+import { listWeeklyPlans } from "@/lib/plans/service"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -147,257 +148,26 @@ export default function WeeklyMealPage() {
     }
   }, [menuDialogOpen, activeWeek, language])
 
-  // Define plan options based on the credit-purchase-plans component
-  const planOptions: PlanOption[] = [
-    // 1 week options - 6 meals/week
-    { 
-      id: 'week1-6', 
-      duration: 1, 
-      durationLabel: 'One week plan', 
-      durationLabelZh: '1周次卡券', 
-      mealsPerWeek: 6, 
-      totalPrice: 112, 
-      pricePerMeal: 18.67 
-    },
-    // 1 week options - 8 meals/week
-    { 
-      id: 'week1-8', 
-      duration: 1, 
-      durationLabel: 'One week plan', 
-      durationLabelZh: '1周次卡券', 
-      mealsPerWeek: 8, 
-      totalPrice: 148, 
-      pricePerMeal: 18.50
-    },
-    // 1 week options - 10 meals/week
-    { 
-      id: 'week1-10', 
-      duration: 1, 
-      durationLabel: 'One week plan', 
-      durationLabelZh: '1周次卡券', 
-      mealsPerWeek: 10, 
-      totalPrice: 183, 
-      pricePerMeal: 18.30 
-    },
-    // 1 week options - 12 meals/week
-    { 
-      id: 'week1-12', 
-      duration: 1, 
-      durationLabel: 'One week plan', 
-      durationLabelZh: '1周次卡券', 
-      mealsPerWeek: 12, 
-      totalPrice: 217, 
-      pricePerMeal: 18.08 
-    },
-    // 1 week options - 16 meals/week
-    { 
-      id: 'week1-16', 
-      duration: 1, 
-      durationLabel: 'One week plan', 
-      durationLabelZh: '1周次卡券', 
-      mealsPerWeek: 16, 
-      totalPrice: 286, 
-      pricePerMeal: 17.88 
-    },
-    
-    // 2 week options - 6 meals/week
-    { 
-      id: 'week2-6', 
-      duration: 2, 
-      durationLabel: 'Two weeks plan', 
-      durationLabelZh: '2周次卡券', 
-      mealsPerWeek: 6, 
-      totalPrice: 219, 
-      pricePerMeal: 18.25,
-      isRecommended: true,
-      tag: 'Best value',
-      tagZh: '首次推荐'
-    },
-    // 2 week options - 8 meals/week
-    { 
-      id: 'week2-8', 
-      duration: 2, 
-      durationLabel: 'Two weeks plan', 
-      durationLabelZh: '2周次卡券', 
-      mealsPerWeek: 8, 
-      totalPrice: 290, 
-      pricePerMeal: 18.13,
-      isRecommended: true,
-      tag: 'First Time Recommended',
-      tagZh: '首次推荐'
-    },
-    // 2 week options - 10 meals/week
-    { 
-      id: 'week2-10', 
-      duration: 2, 
-      durationLabel: 'Two weeks plan', 
-      durationLabelZh: '2周次卡券', 
-      mealsPerWeek: 10, 
-      totalPrice: 359, 
-      pricePerMeal: 17.95,
-      isRecommended: true,
-      tag: 'Most popular',
-      tagZh: '首次推荐'
-    },
-    // 2 week options - 12 meals/week
-    { 
-      id: 'week2-12', 
-      duration: 2, 
-      durationLabel: 'Two weeks plan', 
-      durationLabelZh: '2周次卡券', 
-      mealsPerWeek: 12, 
-      totalPrice: 428, 
-      pricePerMeal: 17.83,
-      isRecommended: true,
-      tag: 'First Time Recommended',
-      tagZh: '首次推荐'
-    },
-    // 2 week options - 16 meals/week
-    { 
-      id: 'week2-16', 
-      duration: 2, 
-      durationLabel: 'Two weeks plan', 
-      durationLabelZh: '2周次卡券', 
-      mealsPerWeek: 16, 
-      totalPrice: 562, 
-      pricePerMeal: 17.56,
-      isRecommended: true,
-      tag: 'First Time Recommended',
-      tagZh: '首次推荐'
-    },
-    
-    // 4 week options - 6 meals/week
-    { 
-      id: 'week4-6', 
-      duration: 4, 
-      durationLabel: 'Four weeks plan', 
-      durationLabelZh: '4周次卡券', 
-      mealsPerWeek: 6, 
-      totalPrice: 398, 
-      pricePerMeal: 16.58,
-      isPopular: true,
-      tag: 'Best long-term choice',
-      tagZh: '长期最佳选择'
-    },
-    // 4 week options - 8 meals/week
-    { 
-      id: 'week4-8', 
-      duration: 4, 
-      durationLabel: 'Four weeks plan', 
-      durationLabelZh: '4周次卡券', 
-      mealsPerWeek: 8, 
-      totalPrice: 525, 
-      pricePerMeal: 16.41,
-      isPopular: true,
-      tag: 'Best long-term choice',
-      tagZh: '长期最佳选择'
-    },
-    // 4 week options - 10 meals/week
-    { 
-      id: 'week4-10', 
-      duration: 4, 
-      durationLabel: 'Four weeks plan', 
-      durationLabelZh: '4周次卡券', 
-      mealsPerWeek: 10, 
-      totalPrice: 648, 
-      pricePerMeal: 16.20,
-      isPopular: true,
-      tag: 'Best long-term choice',
-      tagZh: '长期最佳选择'
-    },
-    // 4 week options - 12 meals/week
-    { 
-      id: 'week4-12', 
-      duration: 4, 
-      durationLabel: 'Four weeks plan', 
-      durationLabelZh: '4周次卡券', 
-      mealsPerWeek: 12, 
-      totalPrice: 765, 
-      pricePerMeal: 15.94,
-      isPopular: true,
-      tag: 'Best long-term choice',
-      tagZh: '长期最佳选择'
-    },
-    // 4 week options - 16 meals/week
-    { 
-      id: 'week4-16', 
-      duration: 4, 
-      durationLabel: 'Four weeks plan', 
-      durationLabelZh: '4周次卡券', 
-      mealsPerWeek: 16, 
-      totalPrice: 998, 
-      pricePerMeal: 15.59,
-      isPopular: true,
-      tag: 'Best long-term choice',
-      tagZh: '长期最佳选择'
-    },
-    
-    // 8 week options - 6 meals/week
-    { 
-      id: 'week8-6', 
-      duration: 8, 
-      durationLabel: 'Eight weeks plan', 
-      durationLabelZh: '8周次卡券', 
-      mealsPerWeek: 6, 
-      totalPrice: 744, 
-      pricePerMeal: 15.50,
-      isPopular: true,
-      tag: 'Best value',
-      tagZh: '最超值'
-    },
-    // 8 week options - 8 meals/week
-    { 
-      id: 'week8-8', 
-      duration: 8, 
-      durationLabel: 'Eight weeks plan', 
-      durationLabelZh: '8周次卡券', 
-      mealsPerWeek: 8, 
-      totalPrice: 979, 
-      pricePerMeal: 15.30,
-      isPopular: true,
-      tag: 'Best value',
-      tagZh: '最超值'
-    },
-    // 8 week options - 10 meals/week
-    { 
-      id: 'week8-10', 
-      duration: 8, 
-      durationLabel: 'Eight weeks plan', 
-      durationLabelZh: '8周次卡券', 
-      mealsPerWeek: 10, 
-      totalPrice: 1210, 
-      pricePerMeal: 15.13,
-      isPopular: true,
-      tag: 'Best value',
-      tagZh: '最超值'
-    },
-    // 8 week options - 12 meals/week
-    { 
-      id: 'week8-12', 
-      duration: 8, 
-      durationLabel: 'Eight weeks plan', 
-      durationLabelZh: '8周次卡券', 
-      mealsPerWeek: 12, 
-      totalPrice: 1428, 
-      pricePerMeal: 14.88,
-      isPopular: true,
-      tag: 'Best value',
-      tagZh: '最超值'
-    },
-    // 8 week options - 16 meals/week
-    { 
-      id: 'week8-16', 
-      duration: 8, 
-      durationLabel: 'Eight weeks plan', 
-      durationLabelZh: '8周次卡券', 
-      mealsPerWeek: 16, 
-      totalPrice: 1870, 
-      pricePerMeal: 14.61,
-      isPopular: true,
-      tag: 'Best value',
-      tagZh: '最超值'
-    },
-  ]
+  const durationLabels: Record<number, { en: string; zh: string }> = {
+    1: { en: 'One week plan', zh: '1周次卡券' },
+    2: { en: 'Two weeks plan', zh: '2周次卡券' },
+    4: { en: 'Four weeks plan', zh: '4周次卡券' },
+    8: { en: 'Eight weeks plan', zh: '8周次卡券' }
+  }
+
+  const planOptions: PlanOption[] = listWeeklyPlans().map((plan) => ({
+    id: plan.id,
+    duration: plan.weeks as 1 | 2 | 4 | 8,
+    durationLabel: durationLabels[plan.weeks]?.en || `${plan.weeks} weeks plan`,
+    durationLabelZh: durationLabels[plan.weeks]?.zh || `${plan.weeks}周次卡券`,
+    mealsPerWeek: plan.mealsPerWeek as 6 | 8 | 10 | 12 | 16,
+    totalPrice: plan.basePrice,
+    pricePerMeal: plan.pricePerMeal,
+    isRecommended: plan.weeks === 2,
+    isPopular: plan.weeks === 8,
+    tag: plan.tags?.en,
+    tagZh: plan.tags?.zh
+  }))
 
   // Get filtered plans based on selected meals per week
   const filteredPlans = planOptions.filter(plan => plan.mealsPerWeek === selectedMealsPerWeek)

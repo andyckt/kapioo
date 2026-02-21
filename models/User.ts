@@ -39,6 +39,7 @@ export interface IUser extends Document {
   weeklyTENmeals: number;  // Weekly subscription for 10 meals
   weeklyTWELVEmeals: number; // Weekly subscription for 12 meals
   weeklySIXTEENmeals: number; // Weekly subscription for 16 meals
+  planBalances?: Record<string, number>;
   phone?: string;
   address?: IAddress;
   verificationCode?: string;
@@ -134,6 +135,11 @@ const UserSchema: Schema = new Schema(
     weeklySIXTEENmeals: {
       type: Number,
       default: 0
+    },
+    planBalances: {
+      type: Map,
+      of: Number,
+      default: {}
     },
     phone: { 
       type: String 

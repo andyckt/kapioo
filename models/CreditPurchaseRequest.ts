@@ -4,6 +4,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface ICreditPurchaseRequest extends Document {
   requestId: string;
   userId: mongoose.Types.ObjectId;
+  planId?: string;
   amount: number; // Amount transferred
   paymentMethod: 'wechat' | 'emt'; // Payment method used: WeChat or EMT
   originalPrice: number; // Original price before any discount/tax
@@ -31,6 +32,7 @@ export interface ICreditPurchaseRequest extends Document {
   approvedTenMeals?: number;
   approvedTwelveMeals?: number;
   approvedSixteenMeals?: number;
+  approvedPlans?: Array<{ planId: string; quantity: number }>;
   mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek'; // Type of meal plan
   mealPlanQuantity?: number; // Number of plans (e.g., 1, 2, 4, 8 weeks)
   notes?: string; // Additional notes from user or admin
@@ -58,6 +60,9 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  planId: {
+    type: String
   },
   amount: {
     type: Number,
@@ -151,6 +156,12 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
   approvedSixteenMeals: {
     type: Number
   },
+  approvedPlans: [
+    {
+      planId: { type: String, required: true },
+      quantity: { type: Number, required: true }
+    }
+  ],
   mealPlanType: {
     type: String,
     enum: ['6aweek', '8aweek', '10aweek', '12aweek', '16aweek']

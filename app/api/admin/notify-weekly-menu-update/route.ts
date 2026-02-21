@@ -14,6 +14,7 @@ interface UserDocument extends mongoose.Document {
   weeklyEIGHTmeals: number;
   weeklyTENmeals: number;
   weeklyTWELVEmeals: number;
+  weeklySIXTEENmeals: number;
 }
 
 // Define User schema
@@ -25,7 +26,8 @@ const UserSchema = new mongoose.Schema({
   weeklySIXmeals: { type: Number, default: 0 },
   weeklyEIGHTmeals: { type: Number, default: 0 },
   weeklyTENmeals: { type: Number, default: 0 },
-  weeklyTWELVEmeals: { type: Number, default: 0 }
+  weeklyTWELVEmeals: { type: Number, default: 0 },
+  weeklySIXTEENmeals: { type: Number, default: 0 }
 });
 
 // Response type for streaming updates
@@ -60,15 +62,16 @@ export async function POST(request: Request) {
         // Get or create User model
         const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema);
         
-        // Find all users who have any weekly meal plan (6, 8, 10, or 12 meals/week)
+        // Find all users who have any weekly meal plan
         const usersWithWeeklyPlans = await User.find({
           $or: [
             { weeklySIXmeals: { $gt: 0 } },       // 6 meals/week
             { weeklyEIGHTmeals: { $gt: 0 } },     // 8 meals/week
             { weeklyTENmeals: { $gt: 0 } },       // 10 meals/week
-            { weeklyTWELVEmeals: { $gt: 0 } }     // 12 meals/week
+            { weeklyTWELVEmeals: { $gt: 0 } },    // 12 meals/week
+            { weeklySIXTEENmeals: { $gt: 0 } }    // 16 meals/week
           ]
-        }).select('email name language weeklySIXmeals weeklyEIGHTmeals weeklyTENmeals weeklyTWELVEmeals');
+        }).select('email name language weeklySIXmeals weeklyEIGHTmeals weeklyTENmeals weeklyTWELVEmeals weeklySIXTEENmeals');
         
         if (usersWithWeeklyPlans.length === 0) {
           sendUpdate({ 
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
         
         sendUpdate({ 
           type: 'progress', 
-          message: `Found ${usersWithWeeklyPlans.length} users with weekly meal plans (6/8/10/12 meals/week)`,
+          message: `Found ${usersWithWeeklyPlans.length} users with weekly meal plans`,
           data: { totalUsers: usersWithWeeklyPlans.length }
         });
         

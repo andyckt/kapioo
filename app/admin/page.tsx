@@ -691,8 +691,16 @@ export default function AdminDashboardPage() {
     
     setProcessingRequest(true);
     try {
+      const approvedPlans = [
+        { planId: 'weekly-6x1', quantity: approvedSixMeals },
+        { planId: 'weekly-8x1', quantity: approvedEightMeals },
+        { planId: 'weekly-10x1', quantity: approvedTenMeals },
+        { planId: 'weekly-12x1', quantity: approvedTwelveMeals },
+        { planId: 'weekly-16x1', quantity: approvedSixteenMeals }
+      ].filter((entry) => entry.quantity > 0);
+
       // Calculate total approved plans for display
-      const totalApproved = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedSixteenMeals;
+      const totalApproved = approvedPlans.reduce((sum, entry) => sum + entry.quantity, 0);
       
       // Check if at least one plan type has a value
       if (totalApproved <= 0) {
@@ -718,6 +726,7 @@ export default function AdminDashboardPage() {
           approvedTenMeals,
           approvedTwelveMeals,
           approvedSixteenMeals,
+          approvedPlans,
           adminNotes
         })
       });
@@ -725,16 +734,12 @@ export default function AdminDashboardPage() {
       const result = await response.json();
       
       if (result.success) {
-        // Create description of what was approved
-        let description = '';
-        if (approvedSixMeals > 0) description += `${approvedSixMeals} x 6-meal plans, `;
-        if (approvedEightMeals > 0) description += `${approvedEightMeals} x 8-meal plans, `;
-        if (approvedTenMeals > 0) description += `${approvedTenMeals} x 10-meal plans, `;
-        if (approvedTwelveMeals > 0) description += `${approvedTwelveMeals} x 12-meal plans, `;
-        if (approvedSixteenMeals > 0) description += `${approvedSixteenMeals} x 16-meal plans, `;
-        
-        // Remove trailing comma and space
-        description = description.replace(/, $/, '');
+        const description = approvedPlans
+          .map((entry) => {
+            const meals = String(entry.planId).match(/^weekly-(\d+)x/)?.[1] || '?';
+            return `${entry.quantity} x ${meals}-meal plans`;
+          })
+          .join(', ');
         
         toast({
           title: "Request approved",

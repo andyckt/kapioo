@@ -13,6 +13,7 @@ import {
   normalizePromoCode,
   validatePromoForPreview
 } from '@/lib/promo-code';
+import { derivePlanIdFromDaily, getDailyPlanBy, getDailyPlanById, toDailyPlanId } from '@/lib/plans/service';
 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
@@ -145,13 +146,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const voucherPriceMap: Record<'twoDish' | 'threeDish', Record<number, number>> = {
-      twoDish: { 6: 131, 10: 195, 22: 356, 46: 712 },
-      threeDish: { 6: 150, 10: 228, 22: 417, 46: 818 }
-    };
-
     const voucherType = type as 'twoDish' | 'threeDish';
-    const baseSubtotal = voucherPriceMap[voucherType]?.[Number(quantity)];
+    const planId =
+      body.planId ||
+      (Number.isFinite(Number(quantity)) ? toDailyPlanId(voucherType, Number(quantity)) : derivePlanIdFromDaily(voucherType, Number(quantity)));
+    const dailyPlan = getDailyPlanById(planId) || getDailyPlanBy(voucherType, Number(quantity));
+    const baseSubtotal = dailyPlan?.basePrice;
     if (!baseSubtotal) {
       return NextResponse.json(
         { success: false, error: 'Invalid plan quantity for selected voucher type' },
@@ -272,6 +272,7 @@ export async function POST(request: NextRequest) {
             {
               requestId,
               userId: new mongoose.Types.ObjectId(userId),
+              planId: dailyPlan?.id,
               type,
               quantity,
               amount: promoBreakdown.finalTotal,

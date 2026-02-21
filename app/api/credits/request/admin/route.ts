@@ -5,6 +5,7 @@ import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 import { sendCreditPurchaseStatusEmail } from '@/lib/services/email';
+import { toWeeklyPlanId } from '@/lib/plans/service';
 
 // GET handler - get all credit purchase requests with filtering and pagination
 export async function GET(request: Request) {
@@ -122,12 +123,21 @@ export async function POST(request: Request) {
         }
         
         // Update request status
+        const approvedPlans = [
+          { planId: toWeeklyPlanId(6, 1), quantity: approvedSixMeals },
+          { planId: toWeeklyPlanId(8, 1), quantity: approvedEightMeals },
+          { planId: toWeeklyPlanId(10, 1), quantity: approvedTenMeals },
+          { planId: toWeeklyPlanId(12, 1), quantity: approvedTwelveMeals },
+          { planId: toWeeklyPlanId(16, 1), quantity: approvedSixteenMeals }
+        ].filter((entry) => entry.quantity > 0);
+
         creditRequest.status = 'approved';
         creditRequest.approvedSixMeals = approvedSixMeals;
         creditRequest.approvedEightMeals = approvedEightMeals;
         creditRequest.approvedTenMeals = approvedTenMeals;
         creditRequest.approvedTwelveMeals = approvedTwelveMeals;
         creditRequest.approvedSixteenMeals = approvedSixteenMeals;
+        creditRequest.approvedPlans = approvedPlans;
         creditRequest.approvedCredits = approvedCredits; // For backward compatibility
         creditRequest.adminNotes = data.adminNotes || '';
         creditRequest.approvedAt = new Date();
@@ -164,6 +174,24 @@ export async function POST(request: Request) {
         if (approvedSixteenMeals > 0) {
           user.weeklySIXTEENmeals = (user.weeklySIXTEENmeals || 0) + approvedSixteenMeals;
         }
+
+        const currentPlanBalances =
+          user.planBalances instanceof Map
+            ? Object.fromEntries(user.planBalances.entries())
+            : (user.planBalances || {});
+
+        const incrementPlanBalance = (meals: number, qty: number) => {
+          if (qty <= 0) return;
+          const key = toWeeklyPlanId(meals, 1);
+          currentPlanBalances[key] = (Number(currentPlanBalances[key]) || 0) + qty;
+        };
+
+        incrementPlanBalance(6, approvedSixMeals);
+        incrementPlanBalance(8, approvedEightMeals);
+        incrementPlanBalance(10, approvedTenMeals);
+        incrementPlanBalance(12, approvedTwelveMeals);
+        incrementPlanBalance(16, approvedSixteenMeals);
+        user.planBalances = currentPlanBalances as any;
         
         // For backward compatibility, also update credits field if approvedCredits is provided
         if (approvedCredits > 0) {
@@ -218,7 +246,9 @@ export async function POST(request: Request) {
               weeklySIXmeals: user.weeklySIXmeals,
               weeklyEIGHTmeals: user.weeklyEIGHTmeals,
               weeklyTENmeals: user.weeklyTENmeals,
-              weeklyTWELVEmeals: user.weeklyTWELVEmeals
+              weeklyTWELVEmeals: user.weeklyTWELVEmeals,
+              weeklySIXTEENmeals: user.weeklySIXTEENmeals,
+              planBalances: user.planBalances || {}
             }
           }
         });

@@ -13,6 +13,13 @@ import {
   normalizePromoCode,
   validatePromoForPreview
 } from '@/lib/promo-code';
+import {
+  derivePlanIdFromWeeklyType,
+  getWeeklyPlanBy,
+  getWeeklyPlanById,
+  getWeeklyDeliveryFee,
+  toWeeklyPlanId
+} from '@/lib/plans/service';
 
 // POST handler - create a new credit purchase request
 export async function POST(request: Request) {
@@ -54,16 +61,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const mealPriceMap: Record<number, Record<number, number>> = {
-      1: { 6: 112, 8: 148, 10: 183, 12: 217, 16: 286 },
-      2: { 6: 219, 8: 290, 10: 359, 12: 428, 16: 562 },
-      4: { 6: 398, 8: 525, 10: 648, 12: 765, 16: 998 },
-      8: { 6: 744, 8: 979, 10: 1210, 12: 1428, 16: 1870 }
-    };
-
     const duration = Number(data.mealPlanQuantity || data.duration);
     const mealsPerWeek = Number(data.mealsPerWeek || String(data.mealPlanType || '').replace('aweek', ''));
-    const planBasePrice = mealPriceMap[duration]?.[mealsPerWeek];
+    const requestedPlanId =
+      data.planId ||
+      (Number.isFinite(mealsPerWeek) && Number.isFinite(duration)
+        ? toWeeklyPlanId(mealsPerWeek, duration)
+        : derivePlanIdFromWeeklyType(data.mealPlanType, duration));
+    const weeklyPlan = requestedPlanId ? getWeeklyPlanById(requestedPlanId) : getWeeklyPlanBy(mealsPerWeek, duration);
+    const planBasePrice = weeklyPlan?.basePrice;
 
     if (!planBasePrice) {
       return NextResponse.json(
@@ -73,8 +79,7 @@ export async function POST(request: Request) {
     }
 
     const mealSubtotal = parseFloat(planBasePrice.toFixed(2));
-    const deliveryFeePerWeek =
-      user.address?.province === 'Hamilton' || user.address?.province === 'Burlington' ? 15.99 : 11.99;
+    const deliveryFeePerWeek = getWeeklyDeliveryFee(user.address?.province || '');
     const deliveryFeeTotal = parseFloat((deliveryFeePerWeek * duration).toFixed(2));
     const pricingSubtotal = parseFloat((mealSubtotal + deliveryFeeTotal).toFixed(2));
 
@@ -212,6 +217,7 @@ export async function POST(request: Request) {
             {
               requestId,
               userId: data.userId,
+              planId: weeklyPlan?.id,
               amount: pricing.finalTotal,
               paymentMethod: effectivePaymentMethod,
               originalPrice: pricing.originalSubtotal,
