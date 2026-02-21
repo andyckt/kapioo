@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       data: {
         jobId: String(job._id),
         status: job.status,
+        isTerminal: false,
         criteriaType: job.criteriaType,
         totalUsers: job.totalUsers,
         sentCount: job.sentCount,
@@ -81,6 +82,7 @@ export async function GET() {
       data: jobs.map((job: any) => ({
         jobId: String(job._id),
         status: job.status,
+        isTerminal: job.status === 'completed' || job.status === 'failed',
         criteriaType: job.criteriaType,
         totalUsers: job.totalUsers,
         sentCount: job.sentCount,

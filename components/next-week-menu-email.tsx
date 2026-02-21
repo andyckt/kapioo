@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Mail, Send, Users, TestTube, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Mail, Send, Users, TestTube, Loader2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
+
+type QueueStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
 export function NextWeekMenuEmail() {
   const { toast } = useToast()
@@ -31,19 +33,15 @@ export function NextWeekMenuEmail() {
   // Progress tracking
   const [progress, setProgress] = useState({
     jobId: '',
-    status: 'idle',
+    status: 'idle' as QueueStatus,
     emailsSent: 0,
     emailsFailed: 0,
     totalUsers: 0,
     progress: 0,
-    currentBatch: 0,
-    totalBatches: 0,
     isComplete: false,
     failedEmails: [] as Array<{ email: string; name: string; error: string }>
   })
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-
   const stopPolling = () => {
     if (pollTimerRef.current) {
       clearInterval(pollTimerRef.current)
@@ -64,7 +62,7 @@ export function NextWeekMenuEmail() {
         }
 
         const data = result.data
-        const isComplete = data.status === 'completed' || data.status === 'failed'
+        const isComplete = Boolean(data.isTerminal) || data.status === 'completed' || data.status === 'failed'
 
         setProgress((prev) => ({
           ...prev,
@@ -97,55 +95,19 @@ export function NextWeekMenuEmail() {
       stopPolling()
     }
   }, [])
-  
-  // Manual trigger for processing (for Hobby plan)
-  const handleManualProcess = async () => {
-    setIsProcessing(true)
-    try {
-      const response = await fetch('/api/admin/trigger-email-processing', {
-        method: 'POST'
-      })
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        // Immediately poll to update progress
-        if (progress.jobId) {
-          const statusResponse = await fetch(`/api/admin/next-week-email-jobs/${progress.jobId}`)
-          const statusResult = await statusResponse.json()
-          
-          if (statusResult.success) {
-            const data = statusResult.data
-            setProgress(prev => ({
-              ...prev,
-              emailsSent: data.sentCount,
-              emailsFailed: data.failedCount,
-              progress: data.progress,
-              isComplete: data.status === 'completed'
-            }))
-          }
-        }
-        
-        toast({
-          title: "Processing triggered",
-          description: result.message || `Processed ${result.data?.processedThisRun || 0} users`
-        })
-      } else {
-        toast({
-          title: "Processing failed",
-          description: result.error || "Failed to trigger processing",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      console.error('Error triggering processing:', error)
-      toast({
-        title: "Error",
-        description: "Failed to trigger processing",
-        variant: "destructive"
-      })
-    } finally {
-      setIsProcessing(false)
+
+  const getStatusLabel = (status: QueueStatus) => {
+    switch (status) {
+      case 'pending':
+        return 'Queued'
+      case 'processing':
+        return 'Processing'
+      case 'completed':
+        return 'Completed'
+      case 'failed':
+        return 'Failed'
+      default:
+        return 'Idle'
     }
   }
   
@@ -210,7 +172,7 @@ export function NextWeekMenuEmail() {
     setShowSummaryDialog(true)
   }
   
-  // Confirm send to all (with chunked processing for Vercel Hobby compatibility)
+  // Confirm send to all (creates async job that cron will process)
   const confirmSendToAll = async () => {
     setShowSummaryDialog(false)
     setShowProgressDialog(true)
@@ -223,8 +185,6 @@ export function NextWeekMenuEmail() {
         emailsFailed: 0,
         totalUsers: summary?.eligibleUsers || 0,
         progress: 0,
-        currentBatch: 0,
-        totalBatches: 0,
         isComplete: false,
         failedEmails: []
       })
@@ -336,8 +296,6 @@ export function NextWeekMenuEmail() {
         emailsFailed: 0,
         totalUsers: selectedUserIds.size,
         progress: 0,
-        currentBatch: 0,
-        totalBatches: 0,
         isComplete: false,
         failedEmails: []
       })
@@ -416,8 +374,6 @@ export function NextWeekMenuEmail() {
         emailsFailed: 0,
         totalUsers: 15,
         progress: 0,
-        currentBatch: 0,
-        totalBatches: 0,
         isComplete: false,
         failedEmails: []
       })
@@ -509,7 +465,7 @@ export function NextWeekMenuEmail() {
                 </CardTitle>
                 <CardDescription>
                   Send to all eligible users (excludes unsubscribed, bounced, invalid).
-                  Uses chunked processing - keep this tab open until complete.
+                  Job is processed automatically in background by cron.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -800,44 +756,20 @@ export function NextWeekMenuEmail() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {progress.isComplete ? 'Sending Complete' : 'Sending Emails...'}
+              {progress.isComplete ? 'Job Complete' : 'Email Job Running'}
             </DialogTitle>
             <DialogDescription>
               {progress.isComplete 
-                ? 'Email sending process has finished'
-                : `Job status: ${progress.status || 'processing'}`}
+                ? 'Queue processing has finished for this job.'
+                : `Queue status: ${getStatusLabel(progress.status)} (auto-processing in background)`}
             </DialogDescription>
-            {!progress.isComplete && (
-              <div className="space-y-2 mt-2">
-                <p className="text-sm text-amber-600 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  On Hobby plan: Cron runs once daily at 9 AM. Click "Process Now" to manually process more emails.
-                </p>
-                <Button
-                  onClick={handleManualProcess}
-                  disabled={isProcessing}
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Process Now (30 more emails)
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
           </DialogHeader>
           
           <div className="space-y-4">
             <Progress value={progress.progress} className="w-full" />
+            <p className="text-sm text-[#6B5F53]">
+              Job progress: {progress.progress}% ({progress.emailsSent + progress.emailsFailed}/{progress.totalUsers})
+            </p>
             
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="bg-green-50 rounded-lg p-3">
@@ -875,14 +807,13 @@ export function NextWeekMenuEmail() {
           </div>
           
           <DialogFooter>
-            {progress.isComplete && (
-              <Button 
-                onClick={() => setShowProgressDialog(false)}
-                className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
-              >
-                Close
-              </Button>
-            )}
+            <Button
+              variant={progress.isComplete ? 'default' : 'outline'}
+              onClick={() => setShowProgressDialog(false)}
+              className={progress.isComplete ? 'bg-gradient-to-r from-[#C2884E] to-[#D1A46C]' : ''}
+            >
+              {progress.isComplete ? 'Close' : 'Hide'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

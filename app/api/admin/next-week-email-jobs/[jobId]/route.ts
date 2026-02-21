@@ -32,6 +32,7 @@ export async function GET(_request: Request, { params }: Params) {
       data: {
         jobId: String(job._id),
         status: job.status,
+        isTerminal: job.status === 'completed' || job.status === 'failed',
         criteriaType: job.criteriaType,
         totalUsers: job.totalUsers,
         sentCount: job.sentCount,

@@ -5,8 +5,9 @@ import User from '@/models/User';
 import { sendNextWeekMenuUpdateEmail } from '@/lib/services/email';
 
 const LOCK_TTL_MS = 5 * 60_000;
-const CHUNK_SIZE = 20; // Process 20 users per run (triggered every minute by Cron-Job.org)
+const CHUNK_SIZE = 10; // Keep conservative for timeout-safe runs on Hobby.
 const SEND_INTERVAL_MS = 250; // 4 req/s baseline, below 6 req/s limit
+const HEARTBEAT_EVERY = 3; // Refresh lock while processing to avoid overlap takeover.
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -25,14 +26,16 @@ const acquireJobLock = async (lockOwner: string) => {
       $expr: { $lt: ['$cursor', '$totalUsers'] },
       $or: [{ lockExpiresAt: null }, { lockExpiresAt: { $lte: now } }]
     },
-    {
-      $set: {
-        status: 'processing',
-        lockOwner,
-        lockExpiresAt: new Date(now.getTime() + LOCK_TTL_MS),
-        startedAt: now
+    [
+      {
+        $set: {
+          status: 'processing',
+          lockOwner,
+          lockExpiresAt: new Date(now.getTime() + LOCK_TTL_MS),
+          startedAt: { $ifNull: ['$startedAt', now] }
+        }
       }
-    },
+    ],
     {
       sort: { createdAt: 1 },
       new: true
@@ -66,29 +69,35 @@ async function processJobs(request: Request) {
       .lean();
     const userMap = new Map(users.map((user: any) => [String(user._id), user]));
 
-    let sentDelta = 0;
-    let failedDelta = 0;
-    const failedEntries: Array<{
-      userId?: string;
-      email?: string;
-      name?: string;
-      error: string;
-      occurredAt: Date;
-    }> = [];
-
+    let processedCount = 0;
+    let lockLost = false;
     for (let i = 0; i < targetUserIds.length; i++) {
       const userId = targetUserIds[i];
       const user = userMap.get(String(userId));
+      let recipientUpdate: Record<string, any> = {
+        $inc: {},
+        $set: {
+          cursor: startCursor + i + 1,
+          lastProcessedAt: new Date()
+        }
+      };
+      let sendFailedEntry: {
+        userId?: string;
+        email?: string;
+        name?: string;
+        error: string;
+        occurredAt: Date;
+      } | null = null;
 
       if (!user || !user.email) {
-        failedDelta++;
-        failedEntries.push({
+        recipientUpdate.$inc.failedCount = 1;
+        sendFailedEntry = {
           userId: String(userId),
           name: user?.name,
           email: user?.email,
           error: 'User missing or has invalid email',
           occurredAt: new Date()
-        });
+        };
       } else {
         try {
           await sendNextWeekMenuUpdateEmail(
@@ -97,43 +106,75 @@ async function processJobs(request: Request) {
             String(user._id),
             user.languagePreference || 'zh'
           );
-          sentDelta++;
+          recipientUpdate.$inc.sentCount = 1;
         } catch (error) {
-          failedDelta++;
-          failedEntries.push({
+          recipientUpdate.$inc.failedCount = 1;
+          sendFailedEntry = {
             userId: String(user._id),
             email: user.email,
             name: user.name,
             error: error instanceof Error ? error.message : 'Unknown send error',
             occurredAt: new Date()
-          });
+          };
         }
       }
+
+      if (sendFailedEntry) {
+        recipientUpdate.$push = { failedEmails: sendFailedEntry };
+      }
+
+      // Heartbeat lock renewal while processing recipients.
+      if ((i + 1) % HEARTBEAT_EVERY === 0 || i === targetUserIds.length - 1) {
+        recipientUpdate.$set.lockExpiresAt = new Date(Date.now() + LOCK_TTL_MS);
+      }
+
+      const checkpointed = await NextWeekMenuEmailJob.findOneAndUpdate(
+        { _id: job._id, lockOwner },
+        recipientUpdate,
+        { new: true }
+      );
+
+      if (!checkpointed) {
+        lockLost = true;
+        break;
+      }
+
+      processedCount++;
 
       if (i < targetUserIds.length - 1) {
         await sleep(SEND_INTERVAL_MS);
       }
     }
 
-    const nextCursor = targetCursor;
-    const isComplete = nextCursor >= job.totalUsers;
+    if (lockLost) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Job lock lost during recipient checkpointing'
+        },
+        { status: 409 }
+      );
+    }
+
+    const refreshedJob = await NextWeekMenuEmailJob.findById(job._id).lean();
+    if (!refreshedJob) {
+      return NextResponse.json(
+        { success: false, error: 'Email job not found after processing' },
+        { status: 404 }
+      );
+    }
+
+    const isComplete = refreshedJob.cursor >= refreshedJob.totalUsers;
 
     const updateQuery: any = { _id: job._id, lockOwner };
     const updatePayload: any = {
       $set: {
-        cursor: nextCursor,
-        sentCount: job.sentCount + sentDelta,
-        failedCount: job.failedCount + failedDelta,
         status: isComplete ? 'completed' : 'processing',
         lastProcessedAt: new Date(),
         lockOwner: null,
         lockExpiresAt: null
       }
     };
-
-    if (failedEntries.length > 0) {
-      updatePayload.$push = { failedEmails: { $each: failedEntries } };
-    }
 
     if (isComplete) {
       updatePayload.$set.completedAt = new Date();
@@ -159,9 +200,7 @@ async function processJobs(request: Request) {
       success: true,
       data: {
         jobId: String(updatedJob._id),
-        processedThisRun: targetUserIds.length,
-        sentDelta,
-        failedDelta,
+        processedThisRun: processedCount,
         status: updatedJob.status,
         cursor: updatedJob.cursor,
         totalUsers: updatedJob.totalUsers,
