@@ -379,18 +379,26 @@ export async function GET(request: Request) {
       return Number.isFinite(parsed) ? parsed : 0;
     };
 
+    const normalizeAmountField = (value: unknown, fallback: number) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    };
+
     const normalizedRequests = requests.map((request: any) => {
       const plain = typeof request?.toObject === 'function' ? request.toObject() : request;
+      const normalizedAmount = toSafeNumber(plain?.amount);
+      const normalizedSubtotal = normalizeAmountField(plain?.originalSubtotal, normalizedAmount);
+      const normalizedFinalTotal = normalizeAmountField(plain?.finalTotal, normalizedAmount);
       return {
         ...plain,
-        amount: toSafeNumber(plain?.amount),
+        amount: normalizedAmount,
         originalPrice: toSafeNumber(plain?.originalPrice),
-        originalSubtotal: toSafeNumber(plain?.originalSubtotal),
+        originalSubtotal: normalizedSubtotal,
         mealSubtotal: toSafeNumber(plain?.mealSubtotal),
         deliveryFeePerWeek: toSafeNumber(plain?.deliveryFeePerWeek),
         deliveryFeeTotal: toSafeNumber(plain?.deliveryFeeTotal),
         taxAmount: toSafeNumber(plain?.taxAmount),
-        finalTotal: toSafeNumber(plain?.finalTotal),
+        finalTotal: normalizedFinalTotal,
         promoDiscountValue: toSafeNumber(plain?.promoDiscountValue),
         promoDiscountAmount: toSafeNumber(plain?.promoDiscountAmount),
         mealPlanQuantity: toSafeNumber(plain?.mealPlanQuantity)

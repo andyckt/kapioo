@@ -49,14 +49,22 @@ export async function GET(request: NextRequest) {
       return Number.isFinite(parsed) ? parsed : 0;
     };
 
+    const normalizeAmountField = (value: unknown, fallback: number) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    };
+
     const normalizedRequests = requests.map((request: any) => {
       const plain = typeof request?.toObject === 'function' ? request.toObject() : request;
+      const normalizedAmount = toSafeNumber(plain?.amount);
+      const normalizedSubtotal = normalizeAmountField(plain?.originalSubtotal, normalizedAmount);
+      const normalizedFinalTotal = normalizeAmountField(plain?.finalTotal, normalizedAmount);
       return {
         ...plain,
-        amount: toSafeNumber(plain?.amount),
+        amount: normalizedAmount,
         originalPrice: toSafeNumber(plain?.originalPrice),
-        originalSubtotal: toSafeNumber(plain?.originalSubtotal),
-        finalTotal: toSafeNumber(plain?.finalTotal),
+        originalSubtotal: normalizedSubtotal,
+        finalTotal: normalizedFinalTotal,
         promoDiscountValue: toSafeNumber(plain?.promoDiscountValue),
         promoDiscountAmount: toSafeNumber(plain?.promoDiscountAmount),
         quantity: toSafeNumber(plain?.quantity),
