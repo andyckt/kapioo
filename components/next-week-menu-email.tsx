@@ -39,9 +39,13 @@ export function NextWeekMenuEmail() {
     currentBatch: 0,
     totalBatches: 0,
     isComplete: false,
-    failedEmails: [] as Array<{ email: string; name: string; error: string }>
+    failedEmails: [] as Array<{ email: string; name: string; error: string }>,
+    startedAt: null as Date | null,
+    lastProcessedAt: null as Date | null,
+    completedAt: null as Date | null,
   })
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
   const stopPolling = () => {
     if (pollTimerRef.current) {
       clearInterval(pollTimerRef.current)
@@ -73,7 +77,10 @@ export function NextWeekMenuEmail() {
           totalUsers: data.totalUsers || fallbackTotalUsers || prev.totalUsers,
           progress: data.progress ?? prev.progress,
           isComplete,
-          failedEmails: Array.isArray(data.failedEmails) ? data.failedEmails : prev.failedEmails
+          failedEmails: Array.isArray(data.failedEmails) ? data.failedEmails : prev.failedEmails,
+          startedAt: data.startedAt ? new Date(data.startedAt) : prev.startedAt,
+          lastProcessedAt: data.lastProcessedAt ? new Date(data.lastProcessedAt) : prev.lastProcessedAt,
+          completedAt: data.completedAt ? new Date(data.completedAt) : prev.completedAt,
         }))
 
         if (isComplete) {
@@ -95,6 +102,69 @@ export function NextWeekMenuEmail() {
       stopPolling()
     }
   }, [])
+
+  // Update current time every second for live time calculations
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Helper functions for time calculations
+  const formatDuration = (ms: number) => {
+    const seconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`
+    } else {
+      return `${seconds}s`
+    }
+  }
+
+  const getElapsedTime = () => {
+    if (!progress.startedAt) return '0s'
+    const elapsed = currentTime.getTime() - progress.startedAt.getTime()
+    return formatDuration(elapsed)
+  }
+
+  const getEstimatedTimeRemaining = () => {
+    if (!progress.startedAt || progress.emailsSent === 0 || progress.isComplete) return 'Calculating...'
+    
+    const elapsed = currentTime.getTime() - progress.startedAt.getTime()
+    const emailsProcessed = progress.emailsSent + progress.emailsFailed
+    const emailsRemaining = progress.totalUsers - emailsProcessed
+    
+    if (emailsRemaining <= 0) return 'Almost done...'
+    
+    const avgTimePerEmail = elapsed / emailsProcessed
+    const estimatedMs = avgTimePerEmail * emailsRemaining
+    
+    return formatDuration(estimatedMs)
+  }
+
+  const getProcessingSpeed = () => {
+    if (!progress.startedAt || progress.emailsSent === 0) return '0'
+    
+    const elapsed = (currentTime.getTime() - progress.startedAt.getTime()) / 1000 // in seconds
+    const emailsProcessed = progress.emailsSent + progress.emailsFailed
+    const emailsPerMinute = (emailsProcessed / elapsed) * 60
+    
+    return emailsPerMinute.toFixed(1)
+  }
+
+  const getTimeSinceLastUpdate = () => {
+    if (!progress.lastProcessedAt) return 'Never'
+    const diff = currentTime.getTime() - progress.lastProcessedAt.getTime()
+    
+    if (diff < 5000) return 'Just now'
+    if (diff < 60000) return `${Math.floor(diff / 1000)}s ago`
+    return `${Math.floor(diff / 60000)}m ago`
+  }
   
   // Fetch summary for "Send to all users"
   const fetchSummary = async () => {
@@ -744,49 +814,164 @@ export function NextWeekMenuEmail() {
       
       {/* Progress Dialog */}
       <Dialog open={showProgressDialog} onOpenChange={setShowProgressDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {progress.isComplete ? 'Sending Complete' : 'Sending Emails...'}
+            <DialogTitle className="flex items-center gap-2">
+              {progress.isComplete ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Sending Complete
+                </>
+              ) : (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin text-[#C2884E]" />
+                  Sending Emails...
+                </>
+              )}
             </DialogTitle>
             <DialogDescription>
               {progress.isComplete 
-                ? 'Email sending process has finished'
-                : `Job status: ${progress.status || 'processing'} (auto-processing in background)`}
+                ? `Completed ${progress.completedAt ? `at ${progress.completedAt.toLocaleTimeString()}` : 'successfully'}`
+                : 'Processing in background via automated cron job'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            <Progress value={progress.progress} className="w-full" />
-            
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-green-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-green-600">
-                  {progress.emailsSent}
-                </div>
-                <div className="text-sm text-green-700">Sent</div>
+            {/* Progress Bar with Percentage */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Progress</span>
+                <span className="text-[#6B5F53]">{progress.progress}%</span>
               </div>
-              <div className="bg-red-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-red-600">
-                  {progress.emailsFailed}
-                </div>
-                <div className="text-sm text-red-700">Failed</div>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-blue-600">
-                  {progress.totalUsers}
-                </div>
-                <div className="text-sm text-blue-700">Total</div>
-              </div>
+              <Progress value={progress.progress} className="w-full h-3" />
             </div>
             
+            {/* Main Stats Grid */}
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div className="text-3xl font-bold text-green-600">
+                  {progress.emailsSent}
+                </div>
+                <div className="text-sm text-green-700 font-medium">Sent Successfully</div>
+              </div>
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <div className="text-3xl font-bold text-red-600">
+                  {progress.emailsFailed}
+                </div>
+                <div className="text-sm text-red-700 font-medium">Failed</div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="text-3xl font-bold text-blue-600">
+                  {progress.totalUsers}
+                </div>
+                <div className="text-sm text-blue-700 font-medium">Total Users</div>
+              </div>
+            </div>
+
+            {/* Detailed Information */}
+            {!progress.isComplete && (
+              <div className="bg-gradient-to-r from-[#F5EDE4] to-[#FFF6EF] rounded-lg p-4 space-y-3 border border-[#C2884E]/20">
+                <h4 className="font-semibold text-[#C2884E] flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Real-Time Monitoring
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[#6B5F53]">Time Elapsed:</span>
+                    <span className="font-semibold text-[#333]">{getElapsedTime()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B5F53]">Est. Remaining:</span>
+                    <span className="font-semibold text-[#333]">{getEstimatedTimeRemaining()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B5F53]">Processing Speed:</span>
+                    <span className="font-semibold text-[#333]">{getProcessingSpeed()} emails/min</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B5F53]">Last Update:</span>
+                    <span className="font-semibold text-[#333]">{getTimeSinceLastUpdate()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B5F53]">Remaining:</span>
+                    <span className="font-semibold text-[#333]">{progress.totalUsers - (progress.emailsSent + progress.emailsFailed)} emails</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B5F53]">Status:</span>
+                    <span className="font-semibold text-[#333] capitalize">{progress.status}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Completion Summary */}
+            {progress.isComplete && (
+              <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                <h4 className="font-semibold text-green-800 flex items-center gap-2 mb-3">
+                  <CheckCircle className="h-4 w-4" />
+                  Completion Summary
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Total Time:</span>
+                    <span className="font-semibold text-green-900">
+                      {progress.startedAt && progress.completedAt 
+                        ? formatDuration(progress.completedAt.getTime() - progress.startedAt.getTime())
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Success Rate:</span>
+                    <span className="font-semibold text-green-900">
+                      {progress.totalUsers > 0 
+                        ? `${((progress.emailsSent / progress.totalUsers) * 100).toFixed(1)}%`
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Started:</span>
+                    <span className="font-semibold text-green-900">
+                      {progress.startedAt?.toLocaleTimeString() || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Completed:</span>
+                    <span className="font-semibold text-green-900">
+                      {progress.completedAt?.toLocaleTimeString() || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Important Notice */}
+            {!progress.isComplete && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium mb-1">You can safely close this dialog!</p>
+                  <p className="text-amber-700">
+                    The email sending process runs automatically on the server via Cron-Job.org. 
+                    Even if you close this tab or browser, emails will continue sending in the background. 
+                    You can come back anytime to check progress.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Failed Emails Section */}
             {progress.failedEmails.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-40 overflow-auto">
-                <h4 className="font-medium text-red-800 mb-2">Failed Emails:</h4>
-                <div className="space-y-1 text-sm">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 className="font-semibold text-red-800 flex items-center gap-2 mb-3">
+                  <XCircle className="h-4 w-4" />
+                  Failed Emails ({progress.failedEmails.length})
+                </h4>
+                <div className="space-y-2 text-sm max-h-40 overflow-y-auto">
                   {progress.failedEmails.map((failed, index) => (
-                    <div key={index} className="text-red-700">
-                      • {failed.name} ({failed.email}): {failed.error}
+                    <div key={index} className="bg-white rounded p-2 border border-red-100">
+                      <div className="font-medium text-red-900">{failed.name}</div>
+                      <div className="text-red-700">{failed.email}</div>
+                      <div className="text-red-600 text-xs mt-1">Error: {failed.error}</div>
                     </div>
                   ))}
                 </div>
@@ -794,13 +979,13 @@ export function NextWeekMenuEmail() {
             )}
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant={progress.isComplete ? 'default' : 'outline'}
               onClick={() => setShowProgressDialog(false)}
               className={progress.isComplete ? 'bg-gradient-to-r from-[#C2884E] to-[#D1A46C]' : ''}
             >
-              {progress.isComplete ? 'Close' : 'Hide'}
+              {progress.isComplete ? 'Close' : 'Hide (Continues in Background)'}
             </Button>
           </DialogFooter>
         </DialogContent>
