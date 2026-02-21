@@ -72,9 +72,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const mealSubtotal = parseFloat(planBasePrice.toFixed(2));
     const deliveryFeePerWeek =
-      user.address?.province === 'Hamilton' || user.address?.province === 'Burlington' ? 15.99 : 9.99;
-    const originalSubtotal = parseFloat((planBasePrice + deliveryFeePerWeek * duration).toFixed(2));
+      user.address?.province === 'Hamilton' || user.address?.province === 'Burlington' ? 15.99 : 11.99;
+    const deliveryFeeTotal = parseFloat((deliveryFeePerWeek * duration).toFixed(2));
+    const pricingSubtotal = parseFloat((mealSubtotal + deliveryFeeTotal).toFixed(2));
 
     const taxRate = 0.13;
     const effectivePaymentMethod = data.paymentMethod as 'wechat' | 'emt';
@@ -83,9 +85,9 @@ export async function POST(request: Request) {
 
     let pricing = {
       currency: 'CAD' as const,
-      originalSubtotal,
+      originalSubtotal: pricingSubtotal,
       discountAmount: 0,
-      discountedSubtotal: originalSubtotal,
+      discountedSubtotal: pricingSubtotal,
       taxRate: effectivePaymentMethod === 'emt' ? taxRate : 0,
       taxAmount: 0,
       finalTotal: 0
@@ -93,8 +95,8 @@ export async function POST(request: Request) {
 
     if (effectivePaymentMethod === 'wechat') {
       // Existing WeChat path: 10% off, no promo allowed.
-      pricing.discountAmount = parseFloat((originalSubtotal * 0.1).toFixed(2));
-      pricing.discountedSubtotal = parseFloat((originalSubtotal - pricing.discountAmount).toFixed(2));
+      pricing.discountAmount = parseFloat((pricingSubtotal * 0.1).toFixed(2));
+      pricing.discountedSubtotal = parseFloat((pricingSubtotal - pricing.discountAmount).toFixed(2));
       pricing.taxAmount = 0;
       pricing.finalTotal = pricing.discountedSubtotal;
       if (normalizedPromoCode) {
@@ -117,7 +119,7 @@ export async function POST(request: Request) {
             userPhone: user.phone,
             purchaseType: 'weekly_topup',
             paymentMethod: 'emt',
-            subtotal: originalSubtotal
+            subtotal: pricingSubtotal
           },
           taxRate
         });
@@ -135,7 +137,7 @@ export async function POST(request: Request) {
         pricing = preview.breakdown!;
       } else {
         pricing = calculatePromoBreakdown({
-          subtotal: originalSubtotal,
+          subtotal: pricingSubtotal,
           taxRate,
           discountType: 'fixed',
           discountValue: 0
@@ -215,6 +217,10 @@ export async function POST(request: Request) {
               originalPrice: pricing.originalSubtotal,
               currency: pricing.currency,
               originalSubtotal: pricing.originalSubtotal,
+              mealSubtotal,
+              deliveryFeePerWeek,
+              deliveryFeeTotal,
+              taxAmount: pricing.taxAmount,
               finalTotal: pricing.finalTotal,
               promoCode: promoDoc?.code,
               promoDiscountType: promoDoc?.discountType,
@@ -272,6 +278,10 @@ export async function POST(request: Request) {
         originalSubtotal: savedRequest.originalSubtotal,
         finalTotal: savedRequest.finalTotal,
         taxRate: savedRequest.taxRate,
+        taxAmount: savedRequest.taxAmount,
+        mealSubtotal: savedRequest.mealSubtotal,
+        deliveryFeePerWeek: savedRequest.deliveryFeePerWeek,
+        deliveryFeeTotal: savedRequest.deliveryFeeTotal,
         promoCode: savedRequest.promoCode,
         promoDiscountAmount: savedRequest.promoDiscountAmount,
         imageProofUrl: data.imageProof,
@@ -279,6 +289,7 @@ export async function POST(request: Request) {
         notes: data.notes,
         planDescription: data.planDescription || '',
         requestId: requestId,
+        mealPlanQuantity: duration,
         userAddress: userAddress
       });
       console.log('Admin notification sent successfully');
@@ -300,10 +311,15 @@ export async function POST(request: Request) {
         originalSubtotal: savedRequest.originalSubtotal,
         finalTotal: savedRequest.finalTotal,
         taxRate: savedRequest.taxRate,
+        taxAmount: savedRequest.taxAmount,
+        mealSubtotal: savedRequest.mealSubtotal,
+        deliveryFeePerWeek: savedRequest.deliveryFeePerWeek,
+        deliveryFeeTotal: savedRequest.deliveryFeeTotal,
         promoCode: savedRequest.promoCode,
         promoDiscountAmount: savedRequest.promoDiscountAmount,
         referenceNumber: data.referenceNumber,
         planDescription: data.planDescription || '',
+        mealPlanQuantity: duration,
         requestId: requestId
       }, user.languagePreference || 'zh'); // Pass user's language preference
       console.log('User confirmation email sent successfully');
@@ -370,6 +386,10 @@ export async function GET(request: Request) {
         amount: toSafeNumber(plain?.amount),
         originalPrice: toSafeNumber(plain?.originalPrice),
         originalSubtotal: toSafeNumber(plain?.originalSubtotal),
+        mealSubtotal: toSafeNumber(plain?.mealSubtotal),
+        deliveryFeePerWeek: toSafeNumber(plain?.deliveryFeePerWeek),
+        deliveryFeeTotal: toSafeNumber(plain?.deliveryFeeTotal),
+        taxAmount: toSafeNumber(plain?.taxAmount),
         finalTotal: toSafeNumber(plain?.finalTotal),
         promoDiscountValue: toSafeNumber(plain?.promoDiscountValue),
         promoDiscountAmount: toSafeNumber(plain?.promoDiscountAmount),

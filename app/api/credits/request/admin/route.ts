@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('userId', 'name email userID'); // Populate user details
+      .populate('userId', 'name email userID address.province'); // Populate user details
     
     // Get total count for pagination
     const totalRequests = await CreditPurchaseRequest.countDocuments(query);

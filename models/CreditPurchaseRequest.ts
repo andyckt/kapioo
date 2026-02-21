@@ -14,6 +14,10 @@ export interface ICreditPurchaseRequest extends Document {
   promoDiscountType?: 'percentage' | 'fixed';
   promoDiscountValue?: number;
   promoDiscountAmount?: number;
+  mealSubtotal?: number;
+  deliveryFeePerWeek?: number;
+  deliveryFeeTotal?: number;
+  taxAmount?: number;
   promoId?: mongoose.Types.ObjectId;
   promoErrorCode?: string;
   imageProof: string; // URL to the uploaded proof image
@@ -90,6 +94,18 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
     type: Number
   },
   promoDiscountAmount: {
+    type: Number
+  },
+  mealSubtotal: {
+    type: Number
+  },
+  deliveryFeePerWeek: {
+    type: Number
+  },
+  deliveryFeeTotal: {
+    type: Number
+  },
+  taxAmount: {
     type: Number
   },
   promoId: {

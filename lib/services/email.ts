@@ -252,8 +252,12 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   paymentMethod: 'wechat' | 'emt';
   originalPrice: number;
   originalSubtotal?: number;
+  mealSubtotal?: number;
+  deliveryFeePerWeek?: number;
+  deliveryFeeTotal?: number;
   finalTotal?: number;
   taxRate?: number;
+  taxAmount?: number;
   promoCode?: string;
   promoDiscountAmount?: number;
   imageProofUrl: string;
@@ -270,16 +274,28 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
     country?: string;
     buzzCode?: string;
   } | null;
+  mealPlanQuantity?: number;
 }) => {
   const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const adminDashboardLink = `${baseUrl}/admin?tab=credit-requests`;
-  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
+  const combinedSubtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
+  const deliveryFeePerWeek = Number(requestDetails.deliveryFeePerWeek ?? 0);
+  const deliveryFeeTotal = Number(requestDetails.deliveryFeeTotal ?? 0);
+  const mealSubtotal =
+    requestDetails.mealSubtotal !== undefined
+      ? Number(requestDetails.mealSubtotal)
+      : Math.max(0, combinedSubtotal - deliveryFeeTotal);
   const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
-  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+  const discountedSubtotal = Math.max(0, combinedSubtotal - promoDiscount);
   const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
   const taxAmount = requestDetails.paymentMethod === 'emt'
-    ? Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)))
+    ? Math.max(
+        0,
+        Number(
+          (requestDetails.taxAmount ?? Number((finalTotal - discountedSubtotal).toFixed(2)))
+        )
+      )
     : 0;
 
   const html = `
@@ -295,8 +311,9 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
         ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>小计:</strong> $${subtotal.toFixed(2)}</li>
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>小计:</strong> $${mealSubtotal.toFixed(2)}</li>
         ${requestDetails.promoCode ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>优惠折扣 (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>配送费:</strong> $${deliveryFeeTotal.toFixed(2)}${deliveryFeePerWeek > 0 ? ` ($${deliveryFeePerWeek.toFixed(2)} × ${requestDetails.mealPlanQuantity || 1} 周)` : ''}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>税费:</strong> $${taxAmount.toFixed(2)}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>实际付款:</strong> $${finalTotal.toFixed(2)} ${requestDetails.paymentMethod === 'wechat' ? '(含10%折扣)' : '(含13%税费)'}</li>
         ${requestDetails.planDescription ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>所选套餐:</strong> ${requestDetails.planDescription}</li>` : ''}
@@ -348,13 +365,18 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   paymentMethod: 'wechat' | 'emt';
   originalPrice: number;
   originalSubtotal?: number;
+  mealSubtotal?: number;
+  deliveryFeePerWeek?: number;
+  deliveryFeeTotal?: number;
   finalTotal?: number;
   taxRate?: number;
+  taxAmount?: number;
   promoCode?: string;
   promoDiscountAmount?: number;
   requestId: string;
   referenceNumber?: string;
   planDescription?: string;
+  mealPlanQuantity?: number;
 }, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const t = getTranslations(language);
@@ -363,12 +385,23 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   const paymentNote = requestDetails.paymentMethod === 'wechat' 
     ? `(${t.account.wechatDiscount})` 
     : `(${t.account.taxIncluded})`;
-  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
+  const combinedSubtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
+  const deliveryFeePerWeek = Number(requestDetails.deliveryFeePerWeek ?? 0);
+  const deliveryFeeTotal = Number(requestDetails.deliveryFeeTotal ?? 0);
+  const mealSubtotal =
+    requestDetails.mealSubtotal !== undefined
+      ? Number(requestDetails.mealSubtotal)
+      : Math.max(0, combinedSubtotal - deliveryFeeTotal);
   const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
-  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
+  const discountedSubtotal = Math.max(0, combinedSubtotal - promoDiscount);
   const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
   const taxAmount = requestDetails.paymentMethod === 'emt'
-    ? Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)))
+    ? Math.max(
+        0,
+        Number(
+          (requestDetails.taxAmount ?? Number((finalTotal - discountedSubtotal).toFixed(2)))
+        )
+      )
     : 0;
   
   const html = `
@@ -388,8 +421,9 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.requestId}:</strong> ${requestDetails.requestId}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.paymentMethod}:</strong> ${paymentMethodText}</li>
           ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.referenceNumber}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
-          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '小计' : 'Subtotal'}:</strong> $${subtotal.toFixed(2)}</li>
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '小计' : 'Subtotal'}:</strong> $${mealSubtotal.toFixed(2)}</li>
           ${requestDetails.promoCode ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '优惠折扣' : 'Promo Discount'} (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
+          <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '配送费' : 'Delivery fee'}:</strong> $${deliveryFeeTotal.toFixed(2)}${deliveryFeePerWeek > 0 ? ` ($${deliveryFeePerWeek.toFixed(2)} × ${requestDetails.mealPlanQuantity || 1} ${language === 'zh' ? '周' : 'weeks'})` : ''}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '税费' : 'Tax'}:</strong> $${taxAmount.toFixed(2)}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.actualPayment}:</strong> $${finalTotal.toFixed(2)} ${paymentNote}</li>
           ${requestDetails.planDescription ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.selectedPlan}:</strong> ${requestDetails.planDescription}</li>` : ''}

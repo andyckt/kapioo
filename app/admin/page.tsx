@@ -3637,11 +3637,18 @@ export default function AdminDashboardPage() {
                     </div>
                     
                     <div className="border-t pt-4 col-span-1 sm:col-span-2 mt-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
                         <div>
                           <Label className="text-xs text-muted-foreground">Subtotal</Label>
                           <p className="font-medium text-base">
-                            ${Number(selectedRequest.originalSubtotal ?? selectedRequest.originalPrice ?? 0).toFixed(2)}
+                            ${Number(
+                              selectedRequest.mealSubtotal ??
+                              Math.max(
+                                0,
+                                Number(selectedRequest.originalSubtotal ?? selectedRequest.originalPrice ?? 0) -
+                                  Number(selectedRequest.deliveryFeeTotal ?? 0)
+                              )
+                            ).toFixed(2)}
                           </p>
                         </div>
 
@@ -3664,11 +3671,21 @@ export default function AdminDashboardPage() {
                           </p>
                         </div>
                         <div>
+                          <Label className="text-xs text-muted-foreground">Delivery Fee</Label>
+                          <p className="font-medium text-base text-blue-700">
+                            ${Number(selectedRequest.deliveryFeeTotal || 0).toFixed(2)}
+                            {Number(selectedRequest.deliveryFeePerWeek || 0) > 0 && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                (${Number(selectedRequest.deliveryFeePerWeek || 0).toFixed(2)} x {Number(selectedRequest.mealPlanQuantity || 1)}w)
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
                           <Label className="text-xs text-muted-foreground">Tax</Label>
                           <p className="font-medium text-base text-amber-600">
-                            ${Math.max(
-                              0,
-                              Number(
+                            ${Math.max(0, Number(
+                              selectedRequest.taxAmount ??
                                 (
                                   Number(selectedRequest.finalTotal ?? selectedRequest.amount ?? 0) -
                                   Math.max(
@@ -3676,9 +3693,8 @@ export default function AdminDashboardPage() {
                                     Number(selectedRequest.originalSubtotal ?? selectedRequest.originalPrice ?? 0) -
                                       Number(selectedRequest.promoDiscountAmount || 0)
                                   )
-                                ).toFixed(2)
-                              )
-                            ).toFixed(2)}
+                                )
+                            )).toFixed(2)}
                           </p>
                         </div>
                         <div>
