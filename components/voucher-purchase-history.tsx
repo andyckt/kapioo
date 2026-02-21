@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
+import { buildCanonicalBreakdown } from "@/lib/price-breakdown"
 import {
   Dialog,
   DialogContent,
@@ -152,12 +153,15 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
   };
 
   const getDailyBreakdown = (request: any) => {
-    const subtotal = toNumber(request.originalSubtotal ?? request.originalPrice ?? request.amount);
-    const promoDiscount = toNumber(request.promoDiscountAmount);
-    const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
-    const finalTotal = toNumber(request.finalTotal ?? request.amount);
-    const taxAmount = Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
-    return { subtotal, promoDiscount, taxAmount, finalTotal };
+    return buildCanonicalBreakdown({
+      requestType: 'daily',
+      amount: request.amount,
+      originalPrice: request.originalPrice,
+      originalSubtotal: request.originalSubtotal,
+      finalTotal: request.finalTotal,
+      promoDiscountAmount: request.promoDiscountAmount,
+      taxAmount: request.taxAmount
+    });
   };
 
   return (
@@ -394,7 +398,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
                         <div className="space-y-1.5 text-sm">
                           <div className="flex justify-between">
                             <span>{language === 'en' ? 'Subtotal' : '小计'}</span>
-                            <span>${breakdown.subtotal.toFixed(2)}</span>
+                            <span>${breakdown.mealSubtotal.toFixed(2)}</span>
                           </div>
                           {selectedRequest.promoCode ? (
                             <div className="flex justify-between text-green-700">

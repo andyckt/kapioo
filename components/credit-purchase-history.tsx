@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
+import { buildCanonicalBreakdown } from "@/lib/price-breakdown"
 import {
   Dialog,
   DialogContent,
@@ -149,15 +150,34 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
   };
 
   const getWeeklyBreakdown = (request: any) => {
-    const subtotal = toNumber(request.originalSubtotal ?? request.originalPrice ?? request.amount);
-    const promoDiscount = toNumber(request.promoDiscountAmount);
-    const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
-    const finalTotal = toNumber(request.finalTotal ?? request.amount);
-    const taxAmount =
-      request.paymentMethod === 'emt'
-        ? Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)))
-        : 0;
-    return { subtotal, promoDiscount, taxAmount, finalTotal };
+    const breakdown = buildCanonicalBreakdown({
+      requestType: 'weekly',
+      paymentMethod: request.paymentMethod,
+      amount: request.amount,
+      originalPrice: request.originalPrice,
+      originalSubtotal: request.originalSubtotal,
+      finalTotal: request.finalTotal,
+      promoDiscountAmount: request.promoDiscountAmount,
+      taxAmount: request.taxAmount,
+      mealSubtotal: request.mealSubtotal,
+      deliveryFeePerWeek: request.deliveryFeePerWeek,
+      deliveryFeeTotal: request.deliveryFeeTotal,
+      mealPlanQuantity: request.mealPlanQuantity
+    });
+    return breakdown;
+  };
+
+  const getMealsPerWeekLabel = (mealPlanType: string) => {
+    const mealMap: Record<string, string> = {
+      '6aweek': '6',
+      '8aweek': '8',
+      '10aweek': '10',
+      '12aweek': '12',
+      '16aweek': '16'
+    };
+    const mapped = mealMap[mealPlanType];
+    if (mapped) return mapped;
+    return '';
   };
 
   return (
@@ -379,7 +399,11 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                         <div className="space-y-1.5 text-sm">
                           <div className="flex justify-between">
                             <span>{language === 'en' ? 'Subtotal' : '小计'}</span>
-                            <span>${breakdown.subtotal.toFixed(2)}</span>
+                            <span>${breakdown.mealSubtotal.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>{language === 'en' ? 'Delivery fee' : '配送费'}</span>
+                            <span>${breakdown.deliveryFeeTotal.toFixed(2)}</span>
                           </div>
                           {selectedRequest.promoCode ? (
                             <div className="flex justify-between text-green-700">
@@ -464,17 +488,11 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                         {selectedRequest.mealPlanType && selectedRequest.mealPlanQuantity ? (
                           language === 'zh' ? (
                             <>
-                              {selectedRequest.mealPlanType === '6aweek' ? '6' : 
-                               selectedRequest.mealPlanType === '8aweek' ? '8' : 
-                               selectedRequest.mealPlanType === '10aweek' ? '10' : 
-                               selectedRequest.mealPlanType === '12aweek' ? '12' : ''}餐一周: {selectedRequest.mealPlanQuantity}星期
+                              {getMealsPerWeekLabel(selectedRequest.mealPlanType)}餐一周: {selectedRequest.mealPlanQuantity}星期
                             </>
                           ) : (
                             <>
-                              {selectedRequest.mealPlanType === '6aweek' ? '6' : 
-                               selectedRequest.mealPlanType === '8aweek' ? '8' : 
-                               selectedRequest.mealPlanType === '10aweek' ? '10' : 
-                               selectedRequest.mealPlanType === '12aweek' ? '12' : ''} meals/week: {selectedRequest.mealPlanQuantity} {selectedRequest.mealPlanQuantity === 1 ? 'week' : 'weeks'}
+                              {getMealsPerWeekLabel(selectedRequest.mealPlanType)} meals/week: {selectedRequest.mealPlanQuantity} {selectedRequest.mealPlanQuantity === 1 ? 'week' : 'weeks'}
                             </>
                           )
                         ) : selectedRequest.approvedCredits ? (

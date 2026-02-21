@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
+import { buildCanonicalBreakdown } from "@/lib/price-breakdown"
 import {
   Dialog,
   DialogContent,
@@ -211,15 +212,21 @@ export function UnifiedRechargeHistory({
   };
 
   const getPaymentBreakdown = (request: any) => {
-    const subtotal = toNumber(request.originalSubtotal ?? request.originalPrice ?? request.amount);
-    const promoDiscount = toNumber(request.promoDiscountAmount);
-    const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
-    const finalTotal = toNumber(request.finalTotal ?? request.amount);
-    const taxAmount =
-      request.requestType === 'weekly' && request.paymentMethod !== 'emt'
-        ? 0
-        : Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
-    return { subtotal, promoDiscount, taxAmount, finalTotal };
+    const breakdown = buildCanonicalBreakdown({
+      requestType: request.requestType === 'weekly' ? 'weekly' : 'daily',
+      paymentMethod: request.paymentMethod,
+      amount: request.amount,
+      originalPrice: request.originalPrice,
+      originalSubtotal: request.originalSubtotal,
+      finalTotal: request.finalTotal,
+      promoDiscountAmount: request.promoDiscountAmount,
+      taxAmount: request.taxAmount,
+      mealSubtotal: request.mealSubtotal,
+      deliveryFeePerWeek: request.deliveryFeePerWeek,
+      deliveryFeeTotal: request.deliveryFeeTotal,
+      mealPlanQuantity: request.mealPlanQuantity ?? request.duration
+    });
+    return breakdown;
   };
 
   return (
@@ -501,8 +508,14 @@ export function UnifiedRechargeHistory({
                         <div className="space-y-1.5 text-sm">
                           <div className="flex justify-between">
                             <span>{language === 'zh' ? '小计' : 'Subtotal'}</span>
-                            <span>${breakdown.subtotal.toFixed(2)}</span>
+                            <span>${breakdown.mealSubtotal.toFixed(2)}</span>
                           </div>
+                          {selectedRequest.requestType === 'weekly' ? (
+                            <div className="flex justify-between">
+                              <span>{language === 'zh' ? '配送费' : 'Delivery fee'}</span>
+                              <span>${breakdown.deliveryFeeTotal.toFixed(2)}</span>
+                            </div>
+                          ) : null}
                           {selectedRequest.promoCode ? (
                             <div className="flex justify-between text-green-700">
                               <span>{language === 'zh' ? '优惠折扣' : 'Promo Discount'} ({selectedRequest.promoCode})</span>

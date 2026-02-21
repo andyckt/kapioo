@@ -1,4 +1,5 @@
 import { getTranslations, type Language } from '@/lib/email-translations';
+import { buildCanonicalBreakdown } from '@/lib/price-breakdown';
 
 export interface EmailOptions {
   to: string;
@@ -279,24 +280,26 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   const adminEmail = process.env.ADMIN_EMAIL || 'kapioomeal@gmail.com';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const adminDashboardLink = `${baseUrl}/admin?tab=credit-requests`;
-  const combinedSubtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
-  const deliveryFeePerWeek = Number(requestDetails.deliveryFeePerWeek ?? 0);
-  const deliveryFeeTotal = Number(requestDetails.deliveryFeeTotal ?? 0);
-  const mealSubtotal =
-    requestDetails.mealSubtotal !== undefined
-      ? Number(requestDetails.mealSubtotal)
-      : Math.max(0, combinedSubtotal - deliveryFeeTotal);
-  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
-  const discountedSubtotal = Math.max(0, combinedSubtotal - promoDiscount);
-  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
-  const taxAmount = requestDetails.paymentMethod === 'emt'
-    ? Math.max(
-        0,
-        Number(
-          (requestDetails.taxAmount ?? Number((finalTotal - discountedSubtotal).toFixed(2)))
-        )
-      )
-    : 0;
+  const breakdown = buildCanonicalBreakdown({
+    requestType: 'weekly',
+    paymentMethod: requestDetails.paymentMethod,
+    amount: requestDetails.amount,
+    originalPrice: requestDetails.originalPrice,
+    originalSubtotal: requestDetails.originalSubtotal,
+    finalTotal: requestDetails.finalTotal,
+    promoDiscountAmount: requestDetails.promoDiscountAmount,
+    taxAmount: requestDetails.taxAmount,
+    mealSubtotal: requestDetails.mealSubtotal,
+    deliveryFeePerWeek: requestDetails.deliveryFeePerWeek,
+    deliveryFeeTotal: requestDetails.deliveryFeeTotal,
+    mealPlanQuantity: requestDetails.mealPlanQuantity
+  });
+  const mealSubtotal = breakdown.mealSubtotal;
+  const deliveryFeePerWeek = breakdown.deliveryFeePerWeek;
+  const deliveryFeeTotal = breakdown.deliveryFeeTotal;
+  const promoDiscount = breakdown.promoDiscount;
+  const taxAmount = breakdown.taxAmount;
+  const finalTotal = breakdown.finalTotal;
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -385,24 +388,26 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   const paymentNote = requestDetails.paymentMethod === 'wechat' 
     ? `(${t.account.wechatDiscount})` 
     : `(${t.account.taxIncluded})`;
-  const combinedSubtotal = Number(requestDetails.originalSubtotal ?? requestDetails.originalPrice ?? requestDetails.amount ?? 0);
-  const deliveryFeePerWeek = Number(requestDetails.deliveryFeePerWeek ?? 0);
-  const deliveryFeeTotal = Number(requestDetails.deliveryFeeTotal ?? 0);
-  const mealSubtotal =
-    requestDetails.mealSubtotal !== undefined
-      ? Number(requestDetails.mealSubtotal)
-      : Math.max(0, combinedSubtotal - deliveryFeeTotal);
-  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
-  const discountedSubtotal = Math.max(0, combinedSubtotal - promoDiscount);
-  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
-  const taxAmount = requestDetails.paymentMethod === 'emt'
-    ? Math.max(
-        0,
-        Number(
-          (requestDetails.taxAmount ?? Number((finalTotal - discountedSubtotal).toFixed(2)))
-        )
-      )
-    : 0;
+  const breakdown = buildCanonicalBreakdown({
+    requestType: 'weekly',
+    paymentMethod: requestDetails.paymentMethod,
+    amount: requestDetails.amount,
+    originalPrice: requestDetails.originalPrice,
+    originalSubtotal: requestDetails.originalSubtotal,
+    finalTotal: requestDetails.finalTotal,
+    promoDiscountAmount: requestDetails.promoDiscountAmount,
+    taxAmount: requestDetails.taxAmount,
+    mealSubtotal: requestDetails.mealSubtotal,
+    deliveryFeePerWeek: requestDetails.deliveryFeePerWeek,
+    deliveryFeeTotal: requestDetails.deliveryFeeTotal,
+    mealPlanQuantity: requestDetails.mealPlanQuantity
+  });
+  const mealSubtotal = breakdown.mealSubtotal;
+  const deliveryFeePerWeek = breakdown.deliveryFeePerWeek;
+  const deliveryFeeTotal = breakdown.deliveryFeeTotal;
+  const promoDiscount = breakdown.promoDiscount;
+  const taxAmount = breakdown.taxAmount;
+  const finalTotal = breakdown.finalTotal;
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -485,11 +490,17 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   const adminDashboardLink = `${baseUrl}/admin?tab=meal-vouchers`;
 
   const voucherTypeText = requestDetails.type === 'twoDish' ? '2菜餐券' : '3菜餐券';
-  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.amount ?? 0);
-  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
-  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
-  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
-  const taxAmount = Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
+  const breakdown = buildCanonicalBreakdown({
+    requestType: 'daily',
+    amount: requestDetails.amount,
+    originalSubtotal: requestDetails.originalSubtotal,
+    finalTotal: requestDetails.finalTotal,
+    promoDiscountAmount: requestDetails.promoDiscountAmount
+  });
+  const subtotal = breakdown.mealSubtotal;
+  const promoDiscount = breakdown.promoDiscount;
+  const taxAmount = breakdown.taxAmount;
+  const finalTotal = breakdown.finalTotal;
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -571,11 +582,17 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   const voucherTypeText = requestDetails.type === 'twoDish' ? t.account.twoDishMeal : t.account.threeDishMeal;
   const notesLabel = language === 'zh' ? '备注' : 'Notes';
   const paymentAmountLabel = language === 'zh' ? '付款金额' : 'Payment Amount';
-  const subtotal = Number(requestDetails.originalSubtotal ?? requestDetails.amount ?? 0);
-  const promoDiscount = Number(requestDetails.promoDiscountAmount ?? 0);
-  const discountedSubtotal = Math.max(0, subtotal - promoDiscount);
-  const finalTotal = Number(requestDetails.finalTotal ?? requestDetails.amount ?? 0);
-  const taxAmount = Math.max(0, Number((finalTotal - discountedSubtotal).toFixed(2)));
+  const breakdown = buildCanonicalBreakdown({
+    requestType: 'daily',
+    amount: requestDetails.amount,
+    originalSubtotal: requestDetails.originalSubtotal,
+    finalTotal: requestDetails.finalTotal,
+    promoDiscountAmount: requestDetails.promoDiscountAmount
+  });
+  const subtotal = breakdown.mealSubtotal;
+  const promoDiscount = breakdown.promoDiscount;
+  const taxAmount = breakdown.taxAmount;
+  const finalTotal = breakdown.finalTotal;
   const adminWillReviewVouchers = language === 'zh'
     ? '我们的管理员将尽快审核您的请求。一旦审核通过，餐券将立即添加到您的账户中，您将收到确认邮件'
     : 'Our administrator will review your request as soon as possible. Once approved, vouchers will be added to your account immediately and you will receive a confirmation email';
