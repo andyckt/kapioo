@@ -1,0 +1,29 @@
+---
+description: How to safely add or change daily/weekly plan options
+alwaysApply: true
+---
+
+# Plan Catalog Update Playbook
+
+When adding or changing any plan option, use the centralized catalog flow.
+
+## Source of Truth
+
+- Weekly and daily options must be defined in `lib/plans/catalog.ts`.
+- Reuse helpers in `lib/plans/service.ts` instead of hardcoded IDs, prices, durations, or meal counts.
+- Keep `planId` consistent with naming conventions (`weekly-{meals}x{weeks}`, `daily-{type}-{credits}`).
+
+## Required Update Checklist
+
+1. Update plan entries in `lib/plans/catalog.ts` (`active`, price, sort, tags as needed).
+2. Verify UI screens read plans from service helpers (no local hardcoded arrays).
+3. Verify request-creation APIs persist `planId` and derive pricing from service helpers.
+4. Verify admin approve/export and email labels include the new option where applicable.
+5. Verify balance logic supports the option via `planBalances` and compatibility fallbacks.
+6. Run validation (`npm run lint` and `npx tsc --noEmit` if feasible) and test one daily + one weekly request path.
+
+## Guardrails
+
+- Do not duplicate plan definitions across components/APIs.
+- Prefer extending catalog/service/balance utilities over adding one-off conditional branches.
+- If legacy data needs backfill for new fields, add/update a script under `scripts/`.
