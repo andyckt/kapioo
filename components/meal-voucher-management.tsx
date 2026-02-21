@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -84,6 +84,15 @@ export function MealVoucherManagement() {
   const [processingRequest, setProcessingRequest] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageLimit] = useState(10)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    pages: 1
+  })
   const [isExporting, setIsExporting] = useState(false)
   const [dateRange, setDateRange] = useState<{
     startDate: Date | undefined;
@@ -93,20 +102,60 @@ export function MealVoucherManagement() {
     endDate: undefined
   })
 
-  // Fetch requests when component mounts or active tab changes
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim())
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [searchQuery])
+
+  // Reset page to 1 when filters/search change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, debouncedSearchQuery, dateRange.startDate, dateRange.endDate])
+
+  // Fetch voucher purchase requests from API
+  const fetchVoucherRequests = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (activeTab !== 'all') params.append('status', activeTab)
+      params.append('page', String(currentPage))
+      params.append('limit', String(pageLimit))
+      if (debouncedSearchQuery) params.append('search', debouncedSearchQuery)
+      if (dateRange.startDate) params.append('startDate', format(dateRange.startDate, 'yyyy-MM-dd'))
+      if (dateRange.endDate) params.append('endDate', format(dateRange.endDate, 'yyyy-MM-dd'))
+      const queryString = params.toString() ? `?${params.toString()}` : ''
+      const response = await fetch(`/api/voucher-requests${queryString}`)
+      if (!response.ok) throw new Error('Failed to fetch voucher purchase requests')
+      const data = await response.json()
+      if (data.success) {
+        setRequests(data.data)
+        setPagination({
+          total: Number(data.pagination?.total ?? 0),
+          page: Number(data.pagination?.page ?? currentPage),
+          limit: Number(data.pagination?.limit ?? pageLimit),
+          pages: Number(data.pagination?.pages ?? 1)
+        })
+      } else {
+        throw new Error(data.error ?? 'Failed to fetch voucher purchase requests')
+      }
+    } catch (err) {
+      console.error('Error fetching voucher purchase requests:', err)
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to fetch voucher purchase requests',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [activeTab, currentPage, pageLimit, debouncedSearchQuery, dateRange.startDate, dateRange.endDate, toast])
+
+  // Fetch requests whenever query criteria changes
   useEffect(() => {
     fetchVoucherRequests()
-  }, [activeTab])
-
-  // Filter requests based on search query (tab filtering is done on the server)
-  const filteredRequests = requests.filter(request => {
-    const matchesSearch = 
-      request.requestId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (request.userId?.name && request.userId.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (request.userId?.email && request.userId.email.toLowerCase().includes(searchQuery.toLowerCase()))
-    
-    return matchesSearch
-  })
+  }, [fetchVoucherRequests])
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -120,56 +169,6 @@ export function MealVoucherManagement() {
     })
   }
 
-  // Fetch voucher purchase requests from API
-  const fetchVoucherRequests = async () => {
-    setIsLoading(true)
-    
-    try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      
-      // Add status filter if not "all"
-      if (activeTab !== 'all') {
-        params.append('status', activeTab);
-      }
-      
-      // Add date range if provided
-      if (dateRange.startDate) {
-        params.append('startDate', format(dateRange.startDate, 'yyyy-MM-dd'));
-      }
-      
-      if (dateRange.endDate) {
-        params.append('endDate', format(dateRange.endDate, 'yyyy-MM-dd'));
-      }
-      
-      // Create query string
-      const queryString = params.toString() ? `?${params.toString()}` : '';
-      
-      const response = await fetch(`/api/voucher-requests${queryString}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch voucher purchase requests');
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setRequests(data.data);
-      } else {
-        throw new Error(data.error || 'Failed to fetch voucher purchase requests');
-      }
-    } catch (error) {
-      console.error('Error fetching voucher purchase requests:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : 'Failed to fetch voucher purchase requests',
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   // Handle refresh
   const handleRefresh = () => {
     fetchVoucherRequests();
@@ -268,7 +267,7 @@ export function MealVoucherManagement() {
         throw new Error(errorData.error || 'Failed to approve request');
       }
       
-      const data = await response.json();
+      await response.json();
       
       // Close the dialog and refresh the requests
       setApproveRequestOpen(false);
@@ -314,7 +313,7 @@ export function MealVoucherManagement() {
         throw new Error(errorData.error || 'Failed to decline request');
       }
       
-      const data = await response.json();
+      await response.json();
       
       // Close the dialog and refresh the requests
       setDeclineRequestOpen(false);
@@ -394,8 +393,6 @@ export function MealVoucherManagement() {
                       startDate: range?.from,
                       endDate: range?.to,
                     });
-                    // Fetch with new date range
-                    fetchVoucherRequests();
                   }}
                   numberOfMonths={2}
                   className="rounded-md border"
@@ -410,7 +407,6 @@ export function MealVoucherManagement() {
                   startDate: undefined,
                   endDate: undefined
                 });
-                fetchVoucherRequests();
               }}
               className="h-9 flex-1 sm:flex-none"
               disabled={!dateRange.startDate && !dateRange.endDate}
@@ -479,7 +475,15 @@ export function MealVoucherManagement() {
           </CardHeader>
           <CardContent>
             <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
-              <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+              <Tabs
+                defaultValue="all"
+                value={activeTab}
+                onValueChange={(value) => {
+                  setActiveTab(value);
+                  setCurrentPage(1);
+                }}
+                className="w-full sm:w-auto"
+              >
                 <TabsList className="grid grid-cols-4 w-full sm:w-auto">
                   <TabsTrigger value="all">All</TabsTrigger>
                   <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -494,7 +498,10 @@ export function MealVoucherManagement() {
                   placeholder="Search requests..."
                   className="pl-8 w-full sm:w-[250px]"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setCurrentPage(1)
+                  }}
                 />
               </div>
             </div>
@@ -521,8 +528,8 @@ export function MealVoucherManagement() {
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                       </td>
                     </tr>
-                  ) : filteredRequests.length > 0 ? (
-                    filteredRequests.map((request) => (
+                  ) : requests.length > 0 ? (
+                    requests.map((request) => (
                       <tr key={request.requestId} className="border-b hover:bg-muted/50">
                         <td className="p-4 align-middle">{request.requestId}</td>
                         <td className="p-4 align-middle">
@@ -605,8 +612,8 @@ export function MealVoucherManagement() {
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
                 </Card>
-              ) : filteredRequests.length > 0 ? (
-                filteredRequests.map((request) => (
+              ) : requests.length > 0 ? (
+                requests.map((request) => (
                   <Card 
                     key={request.requestId} 
                     className={`border-l-4 ${
@@ -713,6 +720,30 @@ export function MealVoucherManagement() {
                   </p>
                 </Card>
               )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Page {pagination.page} of {Math.max(pagination.pages, 1)} ({pagination.total} total)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoading || pagination.page <= 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoading || pagination.page >= Math.max(pagination.pages, 1)}
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.max(pagination.pages, 1)))}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

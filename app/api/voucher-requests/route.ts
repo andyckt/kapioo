@@ -24,9 +24,14 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
+    const search = String(searchParams.get('search') || '').trim();
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '10', 10);
-    const skip = (page - 1) * limit;
+    const safePage = Number.isFinite(page) && page > 0 ? page : 1;
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 100) : 10;
+    const skip = (safePage - 1) * safeLimit;
     
     // Build query
     const query: any = {};
@@ -36,13 +41,49 @@ export async function GET(request: NextRequest) {
     if (status && ['pending', 'approved', 'declined'].includes(status)) {
       query.status = status;
     }
+    if (startDate || endDate) {
+      const createdAt: Record<string, Date> = {};
+      if (startDate) {
+        const parsedStart = new Date(`${startDate}T00:00:00.000Z`);
+        if (!Number.isNaN(parsedStart.getTime())) {
+          createdAt.$gte = parsedStart;
+        }
+      }
+      if (endDate) {
+        const parsedEnd = new Date(`${endDate}T00:00:00.000Z`);
+        if (!Number.isNaN(parsedEnd.getTime())) {
+          // Inclusive end date (entire day)
+          createdAt.$lt = new Date(parsedEnd.getTime() + 24 * 60 * 60 * 1000);
+        }
+      }
+      if (Object.keys(createdAt).length > 0) {
+        query.createdAt = createdAt;
+      }
+    }
+
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      const matchedUsers = await User.find({
+        $or: [{ name: regex }, { email: regex }]
+      })
+        .select('_id')
+        .lean();
+      const matchedUserIds = matchedUsers.map((u: any) => u._id);
+
+      query.$or = [
+        { requestId: regex },
+        { referenceNumber: regex },
+        ...(matchedUserIds.length > 0 ? [{ userId: { $in: matchedUserIds } }] : [])
+      ];
+    }
     
     // Execute query with pagination
     const totalCount = await VoucherPurchaseRequest.countDocuments(query);
     const requests = await VoucherPurchaseRequest.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
+      .limit(safeLimit)
       .populate('userId', 'name email');
 
     const toSafeNumber = (value: unknown) => {
@@ -74,15 +115,15 @@ export async function GET(request: NextRequest) {
     });
     
     // Calculate pagination metadata
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(totalCount / safeLimit);
     
     return NextResponse.json({
       success: true,
       data: normalizedRequests,
       pagination: {
         total: totalCount,
-        page,
-        limit,
+        page: safePage,
+        limit: safeLimit,
         pages: totalPages
       }
     });
