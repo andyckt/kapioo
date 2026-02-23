@@ -36,6 +36,7 @@ type TranslationKey =
   | 'customerReviewsTag' | 'customerReviewsTitle' | 'customerReviewsSubtitle'
   | 'realFeedbackTag' | 'realFeedbackDesc1' | 'realFeedbackDesc2' | 'realFeedbackDesc3' | 'realFeedbackQuote'
   | 'satisfiedReviews' | 'averageRating' | 'repurchaseRate'
+  | 'mealsDelivered' | 'ranked1' | 'asianMealPrepCanada'
   | 'howItWorksTag' | 'howItWorksMainTitle' | 'howItWorksSubtitle'
   | 'step1Number' | 'step1MainTitle' | 'step1Subtitle' | 'step1Desc' | 'step1SubDesc'
   | 'step2Number' | 'step2MainTitle' | 'step2Subtitle' | 'step2Desc' | 'step2SubDesc'
@@ -221,6 +222,9 @@ const translations: TranslationsType = {
     satisfiedReviews: "满意评价",
     averageRating: "平均评分",
     repurchaseRate: "回购率",
+    mealsDelivered: "已送达餐数",
+    ranked1: "加拿大排名 1st",
+    asianMealPrepCanada: "中式健康餐",
     // How it works section
     howItWorksTag: "如何订阅",
     howItWorksMainTitle: "How Kapioo",
@@ -586,6 +590,9 @@ const translations: TranslationsType = {
     satisfiedReviews: "Satisfied Reviews",
     averageRating: "Average Rating",
     repurchaseRate: "Repurchase Rate",
+    mealsDelivered: "meals delivered",
+    ranked1: "Ranked #1",
+    asianMealPrepCanada: "Asian Meal Prep in Canada",
     // How it works section
     howItWorksTag: "How to Subscribe",
     howItWorksMainTitle: "How Kapioo",

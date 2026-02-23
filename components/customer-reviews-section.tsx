@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Star, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { useLanguage } from "@/lib/language-context"
@@ -191,19 +191,45 @@ export default function CustomerReviewsSection() {
               </p>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#C2884E]">500+</div>
-                <div className="text-sm text-[#6B5F53]">{t('satisfiedReviews')}</div>
+            {/* Stats - same as English version */}
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6 sm:gap-10 md:gap-16 pt-6">
+              <div className="text-center px-6 py-4 rounded-2xl bg-white/60 border border-[#C2884E]/5 shadow-sm">
+                <div className="text-2xl md:text-3xl font-bold text-[#C2884E]">800K+</div>
+                <div className="text-sm text-[#6B5F53] font-medium">{t('mealsDelivered')}</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#C2884E]">4.9</div>
-                <div className="text-sm text-[#6B5F53]">{t('averageRating')}</div>
+              <div className="flex items-center gap-1.5 px-6 py-4 rounded-2xl bg-white/60 border border-[#C2884E]/5 shadow-sm">
+                <div className="flex gap-0.5 items-center">
+                  {[...Array(5)].map((_, i) => (
+                    i < 4 ? (
+                      <Star
+                        key={i}
+                        className="w-5 h-5 fill-[#C2884E] text-[#C2884E]"
+                      />
+                    ) : (
+                      <span key={i} className="relative inline-block w-5 h-5">
+                        <Star className="absolute inset-0 w-5 h-5 text-[#C2884E]/30" />
+                        <span
+                          className="absolute inset-0 overflow-hidden"
+                          style={{ width: "80%" }}
+                        >
+                          <Star className="w-5 h-5 fill-[#C2884E] text-[#C2884E]" />
+                        </span>
+                      </span>
+                    )
+                  ))}
+                </div>
+                <span className="text-xl font-bold text-[#3f352b] ml-1">4.8</span>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#C2884E]">98%</div>
-                <div className="text-sm text-[#6B5F53]">{t('repurchaseRate')}</div>
+              <div className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-white/60 border border-[#C2884E]/5 shadow-sm">
+                <Award className="w-6 h-6 text-[#C2884E] flex-shrink-0" />
+                <div className="text-left">
+                  <div className="text-sm font-bold text-[#3f352b]">
+                    {t('ranked1')}
+                  </div>
+                  <div className="text-xs text-[#6B5F53]">
+                    {t('asianMealPrepCanada')}
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
