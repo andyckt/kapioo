@@ -25,21 +25,24 @@ const steps = [
     description:
       "Pick Daily Delivery or Weekly Meal Box depending on your schedule and area.",
     icon: CreditCard,
-    image: "/foodjpg/charlesdeluvio-wrfO9SWykdE-unsplash.jpg",
+    image: "/foodjpg/Kapioo%20picture%20choosing%20plan%20on%20website%20using%20phone.jpeg",
+    aspect: "3/4" as const,
   },
   {
     title: "Pick your meals",
     description:
-      "Select Combo A or B from our rotating menus. Cutoff is 11:59 AM the day before delivery.",
+      "Choose from our never-repeat rotating menu—always fresh and exciting. We'll be here for you through every season of life, with meals you'll never get tired of.",
     icon: UtensilsCrossed,
-    image: "/foodjpg/anh-nguyen-kcA-c3f_3FE-unsplash.jpg",
+    image: "/foodjpg/Kapioo%20picture%20pick%20your%20meals.jpeg",
+    aspect: "3/4" as const,
   },
   {
     title: "We cook & deliver",
     description:
       "Freshly cooked meals are delivered to your door during the delivery window.",
     icon: Truck,
-    image: "/foodjpg/omkar-jadhav-o5XB6XwTb1I-unsplash.jpg",
+    image: "/foodjpg/Kapioo%20chef%20cooking.jpeg",
+    aspect: "3/4" as const,
   },
 ];
 
@@ -191,17 +194,16 @@ export function HowItWorksContent() {
               </div>
               <motion.div
                 variants={fadeIn}
-                className="relative w-full lg:w-[380px] aspect-[4/3] rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10"
+                className="relative w-full lg:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10"
               >
                 <Image
-                  src="/images/_MG_E2616.jpg"
+                  src="/foodjpg/Kapioo%20daily%20meals%20product%20picture%20%232.JPG"
                   alt="Fresh Kapioo meals"
                   fill
                   className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 380px"
+                  sizes="(max-width: 1024px) 100vw, 280px"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
               </motion.div>
             </motion.div>
           </div>
@@ -230,9 +232,11 @@ export function HowItWorksContent() {
                     }`}
                   >
                     <div
-                      className={`flex-1 ${
-                        isEven ? "lg:text-left" : "lg:text-right"
-                      } text-center lg:text-left`}
+                      className={`flex-1 text-center ${
+                        isEven
+                          ? "lg:text-left"
+                          : "lg:text-right lg:pl-12"
+                      }`}
                     >
                       <div
                         className={`flex items-center gap-3 mb-4 justify-center ${
@@ -247,19 +251,26 @@ export function HowItWorksContent() {
                       <h2 className="text-2xl md:text-3xl font-semibold text-[#3f352b] mb-3">
                         {step.title}
                       </h2>
-                      <p className="text-[#6B5F53] leading-relaxed max-w-lg">
+                      <p
+                        className={`text-[#6B5F53] leading-relaxed max-w-lg ${
+                          !isEven ? "lg:ml-auto" : ""
+                        }`}
+                      >
                         {step.description}
                       </p>
                     </div>
                     <div className="flex-shrink-0 flex flex-col items-center gap-4">
                       <div className="relative group">
-                        <div className="w-28 h-28 rounded-2xl overflow-hidden shadow-lg ring-1 ring-[#C2884E]/10 group-hover:ring-[#C2884E]/30 transition-all duration-300">
+                        <div className={`relative rounded-2xl overflow-hidden shadow-lg ring-1 ring-[#C2884E]/10 group-hover:ring-[#C2884E]/30 transition-all duration-300 ${
+                          "aspect" in step && step.aspect === "3/4"
+                            ? "w-32 aspect-[3/4]"
+                            : "w-28 h-28"
+                        }`}>
                           <Image
                             src={step.image}
                             alt={step.title}
-                            width={112}
-                            height={112}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         </div>
                         <div className="absolute -bottom-3 -right-3 w-14 h-14 rounded-xl bg-white shadow-lg flex items-center justify-center border border-[#C2884E]/10 group-hover:scale-110 transition-transform">
