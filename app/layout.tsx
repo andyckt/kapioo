@@ -8,6 +8,7 @@ import { MaintenanceProvider } from "@/lib/maintenance-context"
 import { MaintenanceNotification } from "@/components/maintenance-notification"
 import { LanguagePreferenceDialog } from "@/components/language-preference-dialog"
 import { buildPageMetadata } from "@/lib/seo/metadata"
+import { cookies } from "next/headers"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -48,15 +49,21 @@ export const metadata = {
   themeColor: '#C2884E',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = await cookies()
+  const preferredLanguage = cookieStore.get("preferredLanguage")?.value
+  const initialLanguage = preferredLanguage === "zh" || preferredLanguage === "en"
+    ? preferredLanguage
+    : "en"
+
   return (
-    <html lang="zh" className="overflow-x-hidden">
+    <html lang="en" className="overflow-x-hidden">
       <body className={`${inter.className} overflow-x-hidden`}>
-        <LanguageProvider>
+        <LanguageProvider initialLanguage={initialLanguage}>
           <MaintenanceProvider>
             <AppInitializer />
             <LanguagePreferenceDialog />

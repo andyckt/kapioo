@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Language = 'zh' | 'en';
+const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
 
 // Define translation keys type to avoid indexing errors
 type TranslationKey = 
@@ -111,6 +112,10 @@ type LanguageContextType = {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: TranslationKey) => string;
+};
+type LanguageProviderProps = {
+  children: ReactNode;
+  initialLanguage?: Language;
 };
 
 // Create context with default values
@@ -861,9 +866,20 @@ const translations: TranslationsType = {
   }
 };
 
-export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize language from localStorage if available, otherwise default to Chinese
-  const [language, setLanguage] = useState<Language>(() => {
+export const LanguageProvider = ({ children, initialLanguage = 'en' }: LanguageProviderProps) => {
+  const persistLanguagePreference = (lang: Language) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('preferredLanguage', lang);
+    document.cookie = `preferredLanguage=${lang}; path=/; max-age=${ONE_YEAR_IN_SECONDS}; SameSite=Lax`;
+  };
+
+  // Initialize language from server cookie or localStorage/user profile
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (initialLanguage === 'zh' || initialLanguage === 'en') {
+      console.log('LanguageProvider Init: Using server language:', initialLanguage);
+      return initialLanguage;
+    }
+
     if (typeof window !== 'undefined') {
       // First check if user is logged in and has a language preference
       const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -874,8 +890,8 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
           const user = JSON.parse(userStr);
           if (user.languagePreference === 'zh' || user.languagePreference === 'en') {
             console.log('LanguageProvider Init: Using database language for authenticated user:', user.languagePreference);
-            // Also update preferredLanguage to match account preference
-            localStorage.setItem('preferredLanguage', user.languagePreference);
+            // Keep browser storage/cookie in sync with account preference.
+            persistLanguagePreference(user.languagePreference);
             return user.languagePreference;
           }
         } catch (error) {
@@ -887,12 +903,18 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
       const savedLanguage = localStorage.getItem('preferredLanguage');
       if (savedLanguage === 'zh' || savedLanguage === 'en') {
         console.log('LanguageProvider Init: Using localStorage language for non-authenticated user:', savedLanguage);
+        persistLanguagePreference(savedLanguage);
         return savedLanguage;
       }
     }
-    console.log('LanguageProvider Init: Using default language: zh');
-    return 'zh';
+    console.log('LanguageProvider Init: Using default language: en');
+    return 'en';
   });
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    persistLanguagePreference(lang);
+  };
   
   // Effect to sync language when user logs in or updates their profile
   useEffect(() => {
@@ -909,12 +931,21 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
               if (language !== user.languagePreference) {
                 console.log('LanguageProvider: Syncing language for authenticated user:', user.languagePreference);
                 setLanguage(user.languagePreference);
-                localStorage.setItem('preferredLanguage', user.languagePreference);
               }
             }
           } catch (error) {
             console.error('Error parsing user data:', error);
           }
+          return;
+        }
+
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        if (
+          (savedLanguage === 'zh' || savedLanguage === 'en') &&
+          language !== savedLanguage
+        ) {
+          console.log('LanguageProvider: Syncing language from localStorage:', savedLanguage);
+          setLanguage(savedLanguage);
         }
       };
       
