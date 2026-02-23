@@ -39,17 +39,17 @@ export default function Home() {
             <nav className="flex items-center space-x-1 sm:space-x-2">
               <Link
                 href="/how-it-works"
-                className="hidden md:inline-flex px-2 py-2 text-sm font-medium text-[#6B5F53] transition-colors hover:text-[#C2884E]"
+                className="hidden md:inline-flex px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform"
               >
                 How It Works
               </Link>
               <Link
                 href="/faq"
-                className="hidden md:inline-flex px-2 py-2 text-sm font-medium text-[#6B5F53] transition-colors hover:text-[#C2884E]"
+                className="hidden md:inline-flex px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform"
               >
                 FAQ
               </Link>
-              <Link href="/login" className="px-2 sm:px-4 py-2 text-sm font-medium transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform">
+              <Link href="/login" className="px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform">
                 {t('login')}
               </Link>
               <Button asChild size="sm" className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-105 transition-transform sm:size-default">
