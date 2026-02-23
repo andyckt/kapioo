@@ -31,6 +31,19 @@ const SUSPICIOUS_PATHS = [
   'sitemap.xml.php'
 ];
 
+const PRIVATE_NOINDEX_PATHS = [
+  '/login',
+  '/signup',
+  '/starter',
+  '/dashboard',
+  '/forgot-password',
+  '/reset-password',
+  '/reset-password-code',
+  '/verify-email',
+  '/verify-email-sent',
+  '/address',
+];
+
 export function middleware(request) {
   const pathname = request.nextUrl.pathname.toLowerCase();
   
@@ -52,11 +65,6 @@ export function middleware(request) {
     return new NextResponse(null, { status: 404 });
   }
   
-  // Skip middleware processing for dashboard routes
-  if (request.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.next();
-  }
-  
   const response = NextResponse.next({
     request: {
       // Clone the request headers and set a higher limit for body size
@@ -66,6 +74,14 @@ export function middleware(request) {
 
   // Add security headers
   response.headers.set('X-Content-Type-Options', 'nosniff');
+
+  // Prevent indexing for private/account routes only.
+  const shouldNoIndex = PRIVATE_NOINDEX_PATHS.some(
+    (privatePath) => pathname === privatePath || pathname.startsWith(`${privatePath}/`)
+  );
+  if (shouldNoIndex) {
+    response.headers.set('X-Robots-Tag', 'noindex, follow');
+  }
   
   return response;
 }
@@ -74,7 +90,7 @@ export function middleware(request) {
 export const config = {
   matcher: [
     '/api/upload',
-    // Exclude dashboard from middleware processing to avoid SSR issues
-    '/((?!dashboard).*)',
+    // Apply to non-API pages while excluding static assets.
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 }; 

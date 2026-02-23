@@ -7,12 +7,17 @@ import { LanguageProvider } from "@/lib/language-context"
 import { MaintenanceProvider } from "@/lib/maintenance-context"
 import { MaintenanceNotification } from "@/components/maintenance-notification"
 import { LanguagePreferenceDialog } from "@/components/language-preference-dialog"
+import { buildPageMetadata } from "@/lib/seo/metadata"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "Kapioo - Dietitian-Approved Chinese Fusion Meals, Delivered Fresh Daily in Toronto",
-  description: "A subscription-based food meal service with capybara-approved quality",
+  ...buildPageMetadata({
+    title: "Kapioo | Healthy Asian Comfort Meals in Toronto",
+    description:
+      "Freshly cooked Asian comfort meals delivered across Toronto and the GTA. Choose Daily Delivery or Weekly Meal Box with clear logistics.",
+    path: "/",
+  }),
   generator: 'v0.dev',
   icons: {
     icon: [

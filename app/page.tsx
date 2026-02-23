@@ -36,6 +36,18 @@ export default function Home() {
           <div className="flex items-center space-x-2">
             <LanguageSwitcher />
             <nav className="flex items-center space-x-1 sm:space-x-2">
+              <Link
+                href="/how-it-works"
+                className="hidden md:inline-flex px-2 py-2 text-sm font-medium text-[#6B5F53] transition-colors hover:text-[#C2884E]"
+              >
+                How It Works
+              </Link>
+              <Link
+                href="/faq"
+                className="hidden md:inline-flex px-2 py-2 text-sm font-medium text-[#6B5F53] transition-colors hover:text-[#C2884E]"
+              >
+                FAQ
+              </Link>
               <Link href="/login" className="px-2 sm:px-4 py-2 text-sm font-medium transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform">
                 {t('login')}
               </Link>
@@ -490,17 +502,12 @@ export default function Home() {
             {t('copyright')}
           </p>
           <div className="flex gap-3 sm:gap-4">
-            {/* 
-            <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
-              Terms
+            <Link href="/how-it-works" className="text-xs sm:text-sm font-medium hover:underline">
+              How It Works
             </Link>
-            <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
-              Privacy
+            <Link href="/faq" className="text-xs sm:text-sm font-medium hover:underline">
+              FAQ
             </Link>
-            <Link href="#" className="text-xs sm:text-sm font-medium hover:underline">
-              Contact
-            </Link>
-            */}
           </div>
         </div>
       </footer>

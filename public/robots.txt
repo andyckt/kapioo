@@ -7,4 +7,4 @@ Disallow: /admin/
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://kapioo.com/sitemap.xml 
+Sitemap: https://www.kapioo.com/sitemap.xml
