@@ -34,7 +34,6 @@ const SUSPICIOUS_PATHS = [
 const PRIVATE_NOINDEX_PATHS = [
   '/login',
   '/signup',
-  '/starter',
   '/dashboard',
   '/forgot-password',
   '/reset-password',
@@ -42,6 +41,8 @@ const PRIVATE_NOINDEX_PATHS = [
   '/verify-email',
   '/verify-email-sent',
   '/address',
+  '/weekly-meal',
+  '/daily-delivery',
 ];
 
 export function middleware(request) {
