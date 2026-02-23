@@ -176,6 +176,18 @@ export function HowItWorksContent() {
                   Simple ordering, clear logistics, and dependable delivery for
                   busy weekdays.
                 </motion.p>
+                <motion.div variants={fadeUp} className="mt-8">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
+                  >
+                    <Link href="/starter" className="flex items-center gap-2">
+                      View Menu and Order
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                </motion.div>
               </div>
               <motion.div
                 variants={fadeIn}
@@ -259,6 +271,21 @@ export function HowItWorksContent() {
                 );
               })}
             </motion.div>
+            <motion.div
+              variants={fadeUp}
+              className="flex justify-center mt-12 md:mt-16"
+            >
+              <Button
+                asChild
+                size="lg"
+                className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
+              >
+                <Link href="/starter" className="flex items-center gap-2">
+                  View Menu and Order
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </motion.div>
           </div>
         </section>
 
@@ -300,6 +327,21 @@ export function HowItWorksContent() {
                   );
                 })}
               </div>
+              <motion.div
+                variants={fadeUp}
+                className="flex justify-center mt-12 md:mt-16"
+              >
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
+                >
+                  <Link href="/starter" className="flex items-center gap-2">
+                    View Menu and Order
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
+              </motion.div>
             </motion.div>
           </div>
         </section>
@@ -343,6 +385,21 @@ export function HowItWorksContent() {
                   );
                 })}
               </div>
+              <motion.div
+                variants={fadeUp}
+                className="flex justify-center mt-12 md:mt-16"
+              >
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
+                >
+                  <Link href="/starter" className="flex items-center gap-2">
+                    View Menu and Order
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
+              </motion.div>
             </motion.div>
           </div>
         </section>
@@ -359,28 +416,14 @@ export function HowItWorksContent() {
               <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b]">
                 Ready to get started?
               </h2>
-              <p className="text-[#6B5F53] text-lg">
-                Choose the plan that fits your schedule.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex justify-center">
                 <Button
                   asChild
                   size="lg"
                   className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                 >
-                  <Link href="/weekly-meal" className="flex items-center gap-2">
-                    View Weekly Meal Box
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-[#C2884E] text-[#6B5F53] hover:bg-[#FFF0E0] px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
-                >
-                  <Link href="/daily-delivery" className="flex items-center gap-2">
-                    View Daily Delivery
+                  <Link href="/starter" className="flex items-center gap-2">
+                    View Menu and Order
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>

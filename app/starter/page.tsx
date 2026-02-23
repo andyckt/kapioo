@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { motion } from "framer-motion"
-import { MapPin, Check } from "lucide-react"
+import { MapPin, Check, ChevronLeft } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
+import { Button } from "@/components/ui/button"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
 import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from '@/lib/constants/areas'
 
@@ -56,6 +58,21 @@ export default function StarterPage() {
   
   return (
     <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/90">
+        <div className="container flex h-16 items-center px-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors rounded-full"
+            asChild
+          >
+            <Link href="/">
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{language === 'zh' ? '返回' : 'Back'}</span>
+            </Link>
+          </Button>
+        </div>
+      </header>
       <main className="flex-1 container max-w-5xl py-12 md:py-20 px-4">
         <div className="w-full max-w-3xl mx-auto">
           {/* Page Title */}
