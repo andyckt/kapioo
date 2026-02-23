@@ -10,12 +10,13 @@ import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import CustomerReviewsSection from "@/components/customer-reviews-section"
+import { EnglishReviewSection } from "@/components/english-review-section"
 import HowItWorksSection from "@/components/how-it-works-section"
 import LocationMealPlans from "@/components/location-meal-plans"
 import SectionNavigation from "@/components/section-navigation"
 
 export default function Home() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   return (
     <div className="flex min-h-screen flex-col">
@@ -487,9 +488,13 @@ export default function Home() {
           </div>
         </section>
         
-        {/* Customer Reviews Section */}
+        {/* Customer Reviews Section - English: premium design; Chinese: existing bilingual */}
         <div id="reviews">
-          <CustomerReviewsSection />
+          {language === "en" ? (
+            <EnglishReviewSection />
+          ) : (
+            <CustomerReviewsSection />
+          )}
         </div>
         
         {/* How It Works Section - Commented out as requested */}
