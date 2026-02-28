@@ -19,9 +19,30 @@ const faqs = [
       "We deliver across the GTA. Availability depends on the plan you choose and your delivery area.",
   },
   {
-    question: "What's the difference between Daily Delivery and Weekly Meal Box?",
-    answer:
-      "Daily Delivery is weekday lunch delivery and is available in selected areas. Weekly Meal Box is bulk meal delivery twice a week with wider coverage.",
+    question: "What's the difference between Daily Bento Series and Weekly Meal Box Series?",
+    answer: (
+      <div className="space-y-4 text-[#6B5F53]">
+        <div>
+          <p className="font-semibold text-[#3f352b] mb-1.5">Weekly Meal Box — maximum flexibility, still fresh</p>
+          <p className="leading-relaxed">
+            We deliver twice a week so you can stock your fridge with multiple meals and eat whenever it fits your schedule. Best for unpredictable workdays, gym nights, late dinners, and anyone who wants fewer deliveries but steady coverage.
+          </p>
+        </div>
+        <div>
+          <p className="font-semibold text-[#3f352b] mb-1.5">Daily Delivery Bento — fresh on the days you pick</p>
+          <p className="leading-relaxed">
+            Fresh meals delivered around lunchtime in select areas. Redeem meal credits on the days you want delivery (minimum 2 meals per delivery). Best if you prefer “cooked today” freshness and don’t want to keep a lot in the fridge.
+          </p>
+        </div>
+        <div className="rounded-xl border border-[#C2884E]/15 bg-[#FFFBF7] p-4 mt-4">
+          <p className="font-semibold text-[#3f352b] text-sm mb-2">Quick decision guide</p>
+          <ul className="space-y-1.5 text-sm leading-relaxed list-none">
+            <li><span className="text-[#C2884E] font-medium">“I want meals ready anytime this week”</span> → Weekly Meal Box</li>
+            <li><span className="text-[#C2884E] font-medium">“I want fresh delivery on specific days”</span> → Daily Delivery</li>
+          </ul>
+        </div>
+      </div>
+    ),
   },
   {
     question: "When is the order cutoff?",
@@ -44,7 +65,7 @@ const faqs = [
   {
     question: "How do payments work?",
     answer:
-      "You can purchase meal credits or a weekly plan, depending on the product you choose.",
+      "We accept e-Transfer only. After you transfer, upload your payment proof at checkout. Our team will review and approve it—once approved, credits appear in your account and you can use them to place orders.",
   },
   {
     question: "Can I pause or skip?",
@@ -58,7 +79,20 @@ const faqs = [
   },
   {
     question: "How do I contact support?",
-    answer: "Please DM us on Instagram or email support@kapioo.com.",
+    answer: (
+      <>
+        Contact us via{" "}
+        <a
+          href="https://www.instagram.com/kapioomeals/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#C2884E] font-medium underline hover:no-underline"
+        >
+          Instagram
+        </a>{" "}
+        or WeChat (kapioomeal06).
+      </>
+    ),
   },
 ];
 
