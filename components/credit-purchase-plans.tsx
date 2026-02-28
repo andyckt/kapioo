@@ -34,6 +34,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { WeeklyAddressDialog } from '@/components/weekly-address-dialog'
+import { ensureUserPhone, getStoredUser } from "@/lib/phone-helper"
 
 interface CreditPurchasePlansProps {
   userId: string;
@@ -77,6 +78,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
   const [interacEmail, setInteracEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'wechat' | 'emt' | null>('emt') // Default to EMT
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   const [showAddressDialog, setShowAddressDialog] = useState(false)
@@ -186,6 +188,14 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           }
         }
       }
+    }
+  }, [])
+
+  // Prefill phone from stored user profile if available
+  useEffect(() => {
+    const storedUser = getStoredUser()
+    if (storedUser?.phone) {
+      setPhone(storedUser.phone)
     }
   }, [])
 
@@ -533,8 +543,31 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     }
     
     setIsLoading(true)
-    
+
     try {
+      const isPromoUsed =
+        !!appliedPromoCode || promoCodeInput.trim() !== ''
+
+      // Ensure phone is present and saved when promo is used
+      const phoneResult = await ensureUserPhone({
+        userId,
+        phoneInput: phone,
+        requirePhone: isPromoUsed,
+      })
+
+      if (!phoneResult.ok) {
+        toast({
+          title: language === 'zh' ? '提交失败' : 'Submission Failed',
+          description:
+            language === 'zh'
+              ? phoneResult.errorMessage || '请检查您的手机号'
+              : phoneResult.errorMessage || 'Please check your phone number',
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return
+      }
+
       // Upload payment proof to S3
       const imageUrl = await uploadFileToS3(paymentProof)
       
@@ -613,7 +646,10 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       console.error('Error submitting purchase request:', error)
       toast({
         title: language === 'zh' ? '提交失败' : 'Submission Failed',
-        description: language === 'zh' ? '请稍后再试' : 'Please try again later',
+        description:
+          error instanceof Error && error.message
+            ? error.message
+            : (language === 'zh' ? '请稍后再试' : 'Please try again later'),
         variant: "destructive"
       })
     } finally {
@@ -1282,6 +1318,26 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                     />
                     <p className="text-xs text-[#8A7968] mt-1">
                       {language === 'zh' ? '我们将使用此邮箱来匹配您的付款和订单。' : "We'll use this to match your payment to your order."}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="phone" className="text-[#6B5F53] font-medium">
+                      {language === 'zh' ? '手机号（用于优惠码和联系）' : 'Phone number (for promos & contact)'}
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder={language === 'zh' ? '输入您的手机号' : 'Enter your phone number'}
+                      className="mt-2"
+                    />
+                    <p className="text-xs text-[#8A7968] mt-1">
+                      {language === 'zh'
+                        ? '用于验证优惠码和联系您的送餐信息。'
+                        : 'Used to verify promo eligibility and contact you about delivery.'}
                     </p>
                   </div>
                   
