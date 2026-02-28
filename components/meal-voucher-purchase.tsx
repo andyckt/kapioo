@@ -36,7 +36,8 @@ import {
   CalendarDays,
   Utensils,
   MessageSquare,
-  Ticket
+  Ticket,
+  Phone
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
@@ -960,7 +961,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           <div className="space-y-3">
             <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
               <Phone className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '手机号（用于优惠码和联系）' : 'Phone number (for promos & contact)'}
+              {language === 'zh' ? '手机号码' : 'Phone number'}
               <span className="text-red-500">*</span>
             </h3>
             <Input
@@ -971,11 +972,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               onChange={(e) => setPhone(e.target.value)}
               className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
             />
-            <p className="text-xs text-[#8A7968]">
-              {language === 'zh'
-                ? '用于验证优惠码和联系您的送餐信息。'
-                : 'Used to verify promo eligibility and contact you about delivery.'}
-            </p>
           </div>
 
           {/* Notes Section */}
