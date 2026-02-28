@@ -1323,7 +1323,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
 
                   <div>
                     <Label htmlFor="phone" className="text-[#6B5F53] font-medium">
-                      {language === 'zh' ? '手机号（用于优惠码和联系）' : 'Phone number (for promos & contact)'}
+                      {language === 'zh' ? '手机号码' : 'Phone number'}
                       <span className="text-red-500 ml-1">*</span>
                     </Label>
                     <Input
@@ -1334,11 +1334,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       placeholder={language === 'zh' ? '输入您的手机号' : 'Enter your phone number'}
                       className="mt-2"
                     />
-                    <p className="text-xs text-[#8A7968] mt-1">
-                      {language === 'zh'
-                        ? '用于验证优惠码和联系您的送餐信息。'
-                        : 'Used to verify promo eligibility and contact you about delivery.'}
-                    </p>
                   </div>
                   
                   <div>

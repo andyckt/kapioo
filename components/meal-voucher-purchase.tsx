@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
+import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
 import { listDailyPlans } from '@/lib/plans/service'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -76,6 +77,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
   const [interacEmail, setInteracEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
   const router = useRouter()
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
@@ -231,7 +233,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       if (!userData) {
         throw new Error('User not logged in')
       }
-      
+
       const user = JSON.parse(userData)
       
       // Update user's address with the new region and optional address data
@@ -442,6 +444,28 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     setIsLoading(true)
 
     try {
+      const isPromoUsed =
+        !!appliedPromoCode || promoCodeInput.trim() !== ''
+
+      const phoneResult = await ensureUserPhone({
+        userId: JSON.parse(localStorage.getItem('user') || '{}')._id,
+        phoneInput: phone,
+        requirePhone: isPromoUsed,
+      })
+
+      if (!phoneResult.ok) {
+        toast({
+          title: language === 'zh' ? '提交失败' : 'Submission failed',
+          description:
+            language === 'zh'
+              ? phoneResult.errorMessage || '请检查您的手机号'
+              : phoneResult.errorMessage || 'Please check your phone number',
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return
+      }
+
       // 1. Upload the file to S3
       const imageProofUrl = await uploadFileToS3(paymentProof)
       
@@ -932,6 +956,28 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             </p>
           </div>
 
+          {/* Phone Section */}
+          <div className="space-y-3">
+            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
+              <Phone className="h-4 w-4 text-[#C2884E]" />
+              {language === 'zh' ? '手机号（用于优惠码和联系）' : 'Phone number (for promos & contact)'}
+              <span className="text-red-500">*</span>
+            </h3>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder={language === 'zh' ? '输入您的手机号' : 'Enter your phone number'}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            />
+            <p className="text-xs text-[#8A7968]">
+              {language === 'zh'
+                ? '用于验证优惠码和联系您的送餐信息。'
+                : 'Used to verify promo eligibility and contact you about delivery.'}
+            </p>
+          </div>
+
           {/* Notes Section */}
           <div className="space-y-3">
             <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
@@ -1169,6 +1215,14 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [currentTwoDishVouchers, setCurrentTwoDishVouchers] = useState(0)
   const [currentThreeDishVouchers, setCurrentThreeDishVouchers] = useState(0)
   const [isLoadingVouchers, setIsLoadingVouchers] = useState(false)
+
+  // Prefill phone from stored user profile if available
+  useEffect(() => {
+    const storedUser = getStoredUser()
+    if (storedUser?.phone) {
+      setPhone(storedUser.phone)
+    }
+  }, [])
   
   // Track if component is mounted to prevent state updates after unmount
   const isMounted = useRef(true);
