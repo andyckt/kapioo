@@ -167,14 +167,13 @@ export function FaqContent() {
                 className="relative w-full lg:w-[320px] aspect-square rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 flex-shrink-0"
               >
                 <Image
-                  src="/foodjpg/kenny-eliason-SDprf7W3NUc-unsplash.jpg"
+                  src="/foodjpg/Kapioo%20product%20picture%20%231.jpeg"
                   alt="Fresh Kapioo meals"
                   fill
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 320px"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
               </motion.div>
             </motion.div>
           </div>

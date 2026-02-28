@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, CreditCard, UtensilsCrossed, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HeroCarousel } from "@/components/hero-carousel"
 import { motion } from "framer-motion"
@@ -485,6 +485,136 @@ export default function Home() {
                 <div className="w-full h-full rounded-full border-4 border-dashed border-[#C2884E]/30"></div>
               </motion.div>
             </div>
+          </div>
+        </section>
+
+        {/* How it works – 3 steps */}
+        <section id="how-it-works-steps" className="w-full py-16 md:py-24 lg:py-28 bg-white relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-20 left-[10%] w-[400px] h-[400px] bg-gradient-to-br from-[#C2884E]/8 to-transparent rounded-full blur-[80px]" />
+            <div className="absolute bottom-20 right-[10%] w-[500px] h-[500px] bg-gradient-to-bl from-[#D1A46C]/8 to-transparent rounded-full blur-[100px]" />
+            <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#C2884E_1px,transparent_1px)] [background-size:24px_24px]" />
+          </div>
+          <div className="container px-4 md:px-6 relative z-10 max-w-6xl mx-auto">
+            <motion.div
+              className="text-center max-w-3xl mx-auto mb-12 md:mb-20"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="inline-flex items-center justify-center mb-4">
+                <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full" />
+                <div className="px-4 py-1 mx-3 bg-[#C2884E]/5 rounded-full">
+                  <span className="text-sm font-medium text-[#C2884E]">{t('howItWorksTag')}</span>
+                </div>
+                <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full" />
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
+                  {t('howItWorksMainTitle')}
+                </span>
+                <span className="block text-[#6B5F53] font-semibold mt-1">{t('howItWorksSubtitle')}</span>
+              </h2>
+              <p className="text-lg text-[#6B5F53]/90 max-w-xl mx-auto">
+                {language === "zh" ? "选计划、选餐、送达——就这么简单。" : "Choose your plan, pick your meals, we deliver. That’s it."}
+              </p>
+            </motion.div>
+
+            <div className="space-y-20 md:space-y-28">
+              {[
+                {
+                  title: language === "zh" ? "选择计划" : "Choose your plan",
+                  description: language === "zh" ? "选择每日便当系列或周餐盒系列，根据你的日程和配送区域。" : "Pick the Daily Bento Series or the Weekly Meal Box Series—based on your schedule and delivery area.",
+                  image: "/foodjpg/Ordering%20Kapioo%20meals%20on%20website.jpeg",
+                  icon: CreditCard,
+                  align: "left",
+                },
+                {
+                  title: language === "zh" ? "选择餐品" : "Pick your meals",
+                  description: language === "zh" ? "从我们不断更新的菜单中挑选——常换常新，四季都吃不腻。" : "Choose from our never-repeat rotating menu—always fresh and exciting. We'll be here for you through every season of life, with meals you'll never get tired of.",
+                  image: "/foodjpg/Kapioo%20Meals%20in%20fridge.jpeg",
+                  icon: UtensilsCrossed,
+                  align: "right",
+                },
+                {
+                  title: language === "zh" ? "烹饪与配送" : "We cook & deliver",
+                  description: language === "zh" ? "新鲜现做，在配送时段送抵您家。" : "Freshly cooked meals are delivered to your door during the delivery window.",
+                  image: "/foodjpg/Kapioo%20Chef.jpg.jpeg",
+                  icon: Truck,
+                  align: "left",
+                },
+              ].map((step, index) => {
+                const Icon = step.icon;
+                const isEven = step.align === "left";
+                return (
+                  <motion.article
+                    key={step.title}
+                    initial={{ opacity: 0, y: 32 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-80px" }}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    className={`flex flex-col lg:flex-row gap-10 lg:gap-16 items-center ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"}`}
+                  >
+                    <div className={`flex-1 text-center ${isEven ? "lg:text-left" : "lg:text-right"}`}>
+                      <div className={`flex items-center gap-3 mb-4 justify-center ${isEven ? "lg:justify-start" : "lg:justify-end"}`}>
+                        <span className="text-5xl font-extralight text-[#C2884E]/20">0{index + 1}</span>
+                        <div className="w-px h-10 bg-[#C2884E]/20 rounded-full" />
+                      </div>
+                      <h3 className="text-2xl md:text-3xl font-semibold text-[#3f352b] mb-3">
+                        {step.title}
+                      </h3>
+                      <p className={`text-[#6B5F53] leading-relaxed max-w-lg ${!isEven ? "lg:ml-auto" : ""}`}>
+                        {step.description}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <div className="relative group">
+                        <div className="relative w-40 sm:w-44 aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 group-hover:ring-[#C2884E]/25 transition-all duration-300">
+                          <Image
+                            src={step.image}
+                            alt={step.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            sizes="(max-width: 640px) 160px, 176px"
+                          />
+                        </div>
+                        <div className="absolute -bottom-3 -right-3 w-14 h-14 rounded-xl bg-white shadow-lg flex items-center justify-center border border-[#C2884E]/10 group-hover:scale-105 transition-transform">
+                          <Icon className="w-7 h-7 text-[#C2884E]" />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.article>
+                );
+              })}
+            </div>
+
+            <motion.div
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-14 md:mt-20"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <Button
+                asChild
+                size="lg"
+                className="w-full sm:w-auto bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
+              >
+                <Link href="/starter" className="flex items-center justify-center gap-2">
+                  {language === "zh" ? "查看菜单并下单" : "View Menu and Order"}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto border-[#C2884E]/30 text-[#6B5F53] hover:bg-[#C2884E]/5 px-8 py-6 rounded-xl"
+              >
+                <Link href="/how-it-works">{language === "zh" ? "了解更多" : "Learn more"}</Link>
+              </Button>
+            </motion.div>
           </div>
         </section>
         

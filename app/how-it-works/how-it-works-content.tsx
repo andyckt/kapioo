@@ -16,16 +16,18 @@ import {
   ThermometerSun,
   Microwave,
   ArrowRight,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from "@/lib/constants/areas";
 
 const steps = [
   {
     title: "Choose your plan",
     description:
-      "Pick Daily Delivery or Weekly Meal Box depending on your schedule and area.",
+      "Pick the Daily Bento Series or the Weekly Meal Box Series—based on your schedule and delivery area.",
     icon: CreditCard,
-    image: "/foodjpg/Kapioo%20picture%20choosing%20plan%20on%20website%20using%20phone.jpeg",
+    image: "/foodjpg/Ordering%20Kapioo%20meals%20on%20website.jpeg",
     aspect: "3/4" as const,
   },
   {
@@ -33,7 +35,7 @@ const steps = [
     description:
       "Choose from our never-repeat rotating menu—always fresh and exciting. We'll be here for you through every season of life, with meals you'll never get tired of.",
     icon: UtensilsCrossed,
-    image: "/foodjpg/Kapioo%20picture%20pick%20your%20meals.jpeg",
+    image: "/foodjpg/Kapioo%20Meals%20in%20fridge.jpeg",
     aspect: "3/4" as const,
   },
   {
@@ -41,34 +43,38 @@ const steps = [
     description:
       "Freshly cooked meals are delivered to your door during the delivery window.",
     icon: Truck,
-    image: "/foodjpg/Kapioo%20chef%20cooking.jpeg",
+    image: "/foodjpg/Kapioo%20Chef.jpg.jpeg",
     aspect: "3/4" as const,
   },
 ];
 
 const whyKapioo = [
   {
-    text: "Fresh cooked meals (not frozen)",
+    title: "Fresh cooked meals",
+    text: "Not frozen—made fresh and delivered.",
     icon: Flame,
   },
   {
-    text: "Asian comfort flavors with balanced portions",
+    title: "Asian comfort flavors",
+    text: "Balanced portions you’ll look forward to.",
     icon: Leaf,
   },
   {
-    text: "Reliable delivery with clear cutoff times",
-    icon: Clock,
+    title: "Flexible Meal Credit Model",
+    text: "Top up meal credits, order when you want.",
+    icon: RefreshCw,
   },
   {
-    text: "Easy reordering with credits or plans",
-    icon: RefreshCw,
+    title: "Reliable delivery",
+    text: "Always on time, every time.",
+    icon: Clock,
   },
 ];
 
 const logistics = [
   {
     label: "Delivery windows",
-    detail: "Timing varies by area and plan. You'll see available windows during ordering.",
+    detail: "Daily Bento Series: 11am to 1pm (Monday to Friday, Saturday Off)\nWeekly Meal Box Series: 6pm to 10pm (Tuesday and Sunday)",
     icon: Truck,
   },
   {
@@ -167,7 +173,7 @@ export function HowItWorksContent() {
                   className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight"
                 >
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    Healthy Asian comfort meals,
+                    Asian wellness comfort meals,
                   </span>
                   <br />
                   <span className="text-[#6B5F53]">delivered in Toronto.</span>
@@ -176,8 +182,7 @@ export function HowItWorksContent() {
                   variants={fadeUp}
                   className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed"
                 >
-                  Simple ordering, clear logistics, and dependable delivery for
-                  busy weekdays.
+                  A few taps, your week of meals is handled. No hassle added.
                 </motion.p>
                 <motion.div variants={fadeUp} className="mt-8">
                   <Button
@@ -324,16 +329,21 @@ export function HowItWorksContent() {
                   const Icon = item.icon;
                   return (
                     <motion.div
-                      key={item.text}
+                      key={item.title}
                       variants={fadeUp}
-                      className="flex items-start gap-4 p-5 rounded-2xl bg-white/80 backdrop-blur-sm border border-[#C2884E]/5 shadow-sm hover:shadow-md hover:border-[#C2884E]/15 transition-all duration-300"
+                      className="flex items-start gap-4 p-5 md:p-6 rounded-2xl bg-white/80 backdrop-blur-sm border border-[#C2884E]/5 shadow-sm hover:shadow-md hover:border-[#C2884E]/15 transition-all duration-300"
                     >
-                      <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-[#C2884E]" />
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center">
+                        <Icon className="w-6 h-6 text-[#C2884E]" />
                       </div>
-                      <p className="text-[#6B5F53] font-medium pt-1.5">
-                        {item.text}
-                      </p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[#3f352b]">
+                          {item.title}
+                        </p>
+                        <p className="text-sm text-[#6B5F53] mt-1 leading-relaxed">
+                          {item.text}
+                        </p>
+                      </div>
                     </motion.div>
                   );
                 })}
@@ -384,18 +394,104 @@ export function HowItWorksContent() {
                       <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#C2884E]/5 flex items-center justify-center">
                         <Icon className="w-5 h-5 text-[#C2884E]" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold text-[#3f352b]">
                           {item.label}
                         </p>
-                        <p className="text-sm text-[#6B5F53] mt-0.5">
-                          {item.detail}
-                        </p>
+                        {item.label === "Delivery windows" ? (
+                          <div className="mt-3 space-y-3">
+                            <div>
+                              <p className="text-sm font-medium text-[#3f352b]">
+                                Daily Bento Series
+                              </p>
+                              <p className="text-sm text-[#6B5F53] mt-0.5">
+                                11am – 1pm · Monday – Friday (Saturday off)
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-[#3f352b]">
+                                Weekly Meal Box Series
+                              </p>
+                              <p className="text-sm text-[#6B5F53] mt-0.5">
+                                6pm – 10pm · Tuesday & Sunday
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#6B5F53] mt-0.5 whitespace-pre-line">
+                            {item.detail}
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                   );
                 })}
               </div>
+              <motion.div variants={fadeUp} className="mt-8 md:mt-10">
+                <div className="rounded-2xl border border-[#C2884E]/10 bg-[#FFFBF7] overflow-hidden">
+                  <div className="flex items-start gap-3 p-5 pb-0">
+                    <div className="w-10 h-10 rounded-lg bg-[#C2884E]/10 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-5 h-5 text-[#C2884E]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg md:text-xl font-semibold text-[#3f352b]">
+                        Where we deliver
+                      </h3>
+                      <p className="text-sm text-[#6B5F53] mt-1">
+                        We serve the GTA. Choose your plan and we’ll show availability for your address.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-0 md:gap-6 p-5 pt-6">
+                    {/* Daily Bento Series — both services */}
+                    <div className="rounded-xl border border-[#C2884E]/15 bg-white p-5 md:p-6 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#C2884E] flex-shrink-0" aria-hidden />
+                        <h4 className="text-base font-semibold text-[#3f352b]">
+                          Daily Bento Series + Weekly Meal Box Series
+                        </h4>
+                      </div>
+                      <ul className="space-y-2 mt-4" role="list">
+                        {DAILY_DELIVERY_AREAS.map((area) => (
+                          <li
+                            key={area}
+                            className="flex items-center gap-2 text-[#6B5F53] text-sm"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#C2884E]/60 flex-shrink-0" aria-hidden />
+                            {area}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Weekly Meal Box Series only */}
+                    <div className="rounded-xl border border-[#C2884E]/10 bg-white/80 p-5 md:p-6 mt-4 md:mt-0 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#A58D74] flex-shrink-0" aria-hidden />
+                        <h4 className="text-base font-semibold text-[#3f352b]">
+                          Weekly Meal Box Series (Only)
+                        </h4>
+                      </div>
+                      <ul className="space-y-2 mt-4" role="list">
+                        {WEEKLY_ONLY_AREAS.map((area) => (
+                          <li
+                            key={area}
+                            className="flex items-center gap-2 text-[#6B5F53] text-sm"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#A58D74]/60 flex-shrink-0" aria-hidden />
+                            {area}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-[#8A7968] px-5 pb-5 pt-2">
+                    Not sure which plan you’re in? <Link href="/starter" className="text-[#C2884E] font-medium hover:underline">View menu and order</Link> — we’ll show options for your location.
+                  </p>
+                </div>
+              </motion.div>
               <motion.div
                 variants={fadeUp}
                 className="flex justify-center mt-12 md:mt-16"
