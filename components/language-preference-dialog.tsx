@@ -11,16 +11,30 @@ export function LanguagePreferenceDialog() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Check if user has already set language preference
+    // If logged in, use profile language and do not show popup
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user?.languagePreference === 'zh' || user?.languagePreference === 'en') {
+          setLanguage(user.languagePreference);
+          localStorage.setItem('languagePreferenceSet', 'true');
+          localStorage.setItem('preferredLanguage', user.languagePreference);
+          return;
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+
+    // Not logged in: show popup if user hasn't set language preference yet
     const hasSetLanguage = localStorage.getItem('languagePreferenceSet');
-    
     if (!hasSetLanguage) {
-      // Show dialog after a short delay for better UX
       setTimeout(() => {
         setOpen(true);
       }, 300);
     }
-  }, []);
+  }, [setLanguage]);
 
   const handleLanguageSelect = (selectedLanguage: 'zh' | 'en') => {
     setLanguage(selectedLanguage);

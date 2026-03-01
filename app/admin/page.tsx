@@ -13,7 +13,7 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail, Tag } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail, Tag, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -88,6 +88,8 @@ import { ViewAllOrders } from "@/components/view-all-orders"
 import { ViewWeeklyOrders } from "@/components/view-weekly-orders"
 import { SettingsManagement } from "@/components/settings-management"
 import { PromoCodeManagement } from "@/components/promo-code-management"
+import { MealFeedbackManagement } from "@/components/meal-feedback-management"
+import { RatingDishManagement } from "@/components/rating-dish-management"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -130,6 +132,16 @@ export default function AdminDashboardPage() {
       children: [
         { id: "view-all-orders", label: "View Daily Delivery Orders", icon: <Eye className="h-4 w-4" /> },
         { id: "view-weekly-orders", label: "View Weekly Orders", icon: <CalendarIcon className="h-4 w-4" /> }
+      ]
+    },
+    { 
+      id: "meal-ratings-group", 
+      label: "Meal Ratings", 
+      icon: <Star className="h-4 w-4" />,
+      isHeading: true,
+      children: [
+        { id: "meal-feedback", label: "Feedback", icon: <Star className="h-4 w-4" /> },
+        { id: "rating-dishes", label: "Rating Setup", icon: <Package className="h-4 w-4" /> }
       ]
     },
     { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
@@ -3095,6 +3107,30 @@ export default function AdminDashboardPage() {
                     </div>
                   </CardFooter>
                 </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "meal-feedback" && (
+              <motion.div
+                key="meal-feedback"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MealFeedbackManagement />
+              </motion.div>
+            )}
+
+            {activeTab === "rating-dishes" && (
+              <motion.div
+                key="rating-dishes"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <RatingDishManagement />
               </motion.div>
             )}
 
