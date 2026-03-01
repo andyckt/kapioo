@@ -967,9 +967,9 @@ export const LanguageProvider = ({ children, initialLanguage = 'en' }: LanguageP
     }
   }, [language]);
   
-  // Translation function
+  // Translation function (fallback to key if missing to avoid undefined)
   const t = (key: TranslationKey): string => {
-    return translations[language][key];
+    return translations[language][key] ?? key;
   };
   
   return (

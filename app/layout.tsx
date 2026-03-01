@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/lib/language-context"
 import { MaintenanceProvider } from "@/lib/maintenance-context"
 import { MaintenanceNotification } from "@/components/maintenance-notification"
 import { LanguagePreferenceDialog } from "@/components/language-preference-dialog"
+import { ErrorBoundary } from "@/components/error-boundary"
 import { buildPageMetadata } from "@/lib/seo/metadata"
 import { cookies } from "next/headers"
 
@@ -65,15 +66,17 @@ export default async function RootLayout({
   return (
     <html lang="en" className="overflow-x-hidden">
       <body className={`${inter.className} overflow-x-hidden`}>
-        <LanguageProvider initialLanguage={initialLanguage}>
-          <MaintenanceProvider>
-            <AppInitializer />
-            <LanguagePreferenceDialog />
-            <MaintenanceNotification />
-            {children}
-            <Toaster />
-          </MaintenanceProvider>
-        </LanguageProvider>
+        <ErrorBoundary>
+          <LanguageProvider initialLanguage={initialLanguage}>
+            <MaintenanceProvider>
+              <AppInitializer />
+              <LanguagePreferenceDialog />
+              <MaintenanceNotification />
+              {children}
+              <Toaster />
+            </MaintenanceProvider>
+          </LanguageProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

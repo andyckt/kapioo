@@ -65,7 +65,6 @@ export default function DashboardPage() {
   const { t, language, setLanguage } = useLanguage()
   const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
-  const [overviewInView, setOverviewInView] = useState(false)
   const [customizeMeal, setCustomizeMeal] = useState(null)
   const [showServiceSelection, setShowServiceSelection] = useState(false)
   
@@ -208,16 +207,6 @@ export default function DashboardPage() {
   });
 
   // Effect to load meal selections from localStorage
-  // Overview entrance animation - delay in-view so cards animate in on tab visit/login
-  useEffect(() => {
-    if (activeTab === "overview") {
-      const id = requestAnimationFrame(() => setOverviewInView(true));
-      return () => cancelAnimationFrame(id);
-    } else {
-      setOverviewInView(false);
-    }
-  }, [activeTab]);
-
   useEffect(() => {
     try {
       const savedSelections = localStorage.getItem('selectedMeals');
@@ -1176,9 +1165,9 @@ export default function DashboardPage() {
                   animate={{ y: 0 }}
                   exit={{ y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className={`reveal-section ${overviewInView ? 'in-view' : ''} space-y-6`}
+                  className="space-y-6"
                 >
-                  <div className="reveal-item flex flex-col mt-4" style={{ transitionDelay: '0s' } as React.CSSProperties}>
+                  <div className="flex flex-col mt-4">
                     <div className="bg-gradient-to-r from-[#F8F0E5] to-[#FFF6EF] p-6 rounded-3xl shadow-sm border border-[#C2884E]/10">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                         <div className="flex flex-col mb-4 md:mb-0">
@@ -1298,7 +1287,7 @@ export default function DashboardPage() {
                     {/* Daily Delivery Vouchers Card - Show first if user has daily vouchers */}
                     {userData && ((userData?.twoDishVoucher || 0) > 0 || (userData?.threeDishVoucher || 0) > 0) && (
                       <div
-                        className="reveal-item"
+                        className=""
                         style={{ transitionDelay: '0.15s' } as React.CSSProperties}
                       >
                         <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
@@ -1357,7 +1346,7 @@ export default function DashboardPage() {
                       userData?.weeklyTENmeals > 0 || (userData as any)?.weeklyTWELVEmeals > 0 || 
                       (userData as any)?.weeklySIXTEENmeals > 0) && (
                       <div
-                        className="reveal-item"
+                        className=""
                         style={{ transitionDelay: '0.1s' } as React.CSSProperties}
                       >
                         <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
@@ -1456,7 +1445,7 @@ export default function DashboardPage() {
                        (userData?.weeklyTENmeals || 0) > 0 || ((userData as any)?.weeklyTWELVEmeals || 0) > 0 || 
                        ((userData as any)?.weeklySIXTEENmeals || 0) > 0) && (
                       <div
-                        className="reveal-item"
+                        className=""
                         style={{ transitionDelay: '0.2s' } as React.CSSProperties}
                       >
                         <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
@@ -1513,7 +1502,7 @@ export default function DashboardPage() {
                     {/* Upcoming Orders Card - Only show if upcomingDeliveries > 0 */}
                     {upcomingDeliveries > 0 && (
                       <div
-                        className="reveal-item"
+                        className=""
                         style={{ transitionDelay: '0.3s' } as React.CSSProperties}
                       >
                         <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
