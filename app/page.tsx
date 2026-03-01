@@ -3,7 +3,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import dynamic from "next/dynamic"
-import { ArrowRight, CreditCard, UtensilsCrossed, Truck } from "lucide-react"
+import { useState } from "react"
+import { ArrowRight, CreditCard, Menu, Truck, UtensilsCrossed } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HeroCarousel } from "@/components/hero-carousel"
 import { motion } from "framer-motion"
@@ -12,6 +13,7 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import SectionNavigation from "@/components/section-navigation"
 import { ScrollReveal } from "@/components/scroll-reveal"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 const LocationMealPlans = dynamic(
   () => import("@/components/location-meal-plans").then((m) => ({ default: m.default })),
@@ -29,7 +31,8 @@ const EnglishReviewSection = dynamic(
 )
 
 export default function Home() {
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   return (
     <div className="flex min-h-screen flex-col">
@@ -47,9 +50,11 @@ export default function Home() {
               <span className="inline-block font-bold text-[#C2884E] text-lg sm:text-xl transition-all duration-300 group-hover:scale-105 group-hover:tracking-wider">Kapioo</span>
             </Link>
           </div>
-          <div className="flex items-center space-x-2">
-            <LanguageSwitcher />
-            <nav className="flex items-center space-x-1 sm:space-x-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="hidden md:flex">
+              <LanguageSwitcher />
+            </div>
+            <nav className="flex items-center gap-1 sm:gap-2">
               <Link
                 href="/how-it-works"
                 className="hidden md:inline-flex px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform"
@@ -62,7 +67,10 @@ export default function Home() {
               >
                 {language === 'zh' ? '常问问题' : 'FAQ'}
               </Link>
-              <Link href="/login" className="px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform">
+              <Link
+                href="/login"
+                className="px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform"
+              >
                 {t('login')}
               </Link>
               <Button asChild size="sm" className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-105 transition-transform sm:size-default">
@@ -70,6 +78,92 @@ export default function Home() {
                   <span className="sm:block">{t('getStarted')}</span> <ArrowRight className="ml-1 h-4 w-4 hidden sm:inline-block" />
                 </Link>
               </Button>
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden rounded-xl"
+                    aria-label={language === "zh" ? "打开导航菜单" : "Open navigation menu"}
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[85vw] max-w-sm px-5 py-6 flex flex-col overflow-y-auto">
+                  <SheetHeader className="text-left">
+                    <SheetTitle>{language === "zh" ? "导航菜单" : "Navigation"}</SheetTitle>
+                    <SheetDescription>
+                      {language === "zh" ? "选择页面或切换语言" : "Browse pages and change language"}
+                    </SheetDescription>
+                  </SheetHeader>
+
+                  <div className="mt-6 space-y-2">
+                    <Link
+                      href="/how-it-works"
+                      className="block rounded-xl px-3 py-2.5 text-sm font-medium text-[#6B5F53] hover:bg-[#F5EDE4] transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {language === "zh" ? "如何订阅" : "How It Works"}
+                    </Link>
+                    <Link
+                      href="/faq"
+                      className="block rounded-xl px-3 py-2.5 text-sm font-medium text-[#6B5F53] hover:bg-[#F5EDE4] transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {language === "zh" ? "常问问题" : "FAQ"}
+                    </Link>
+                  </div>
+
+                  <div className="mt-5 border-t border-[#C2884E]/15 pt-4">
+                    <p className="mb-2 px-3 text-xs font-medium tracking-wide text-[#8A7968] uppercase">
+                      {language === "zh" ? "语言" : "Language"}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`justify-center border-[#C2884E]/20 ${language === "zh" ? "bg-[#F5EDE4] text-[#6B5F53]" : ""}`}
+                        onClick={() => {
+                          setLanguage("zh")
+                          setIsMobileMenuOpen(false)
+                        }}
+                      >
+                        中文
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`justify-center border-[#C2884E]/20 ${language === "en" ? "bg-[#F5EDE4] text-[#6B5F53]" : ""}`}
+                        onClick={() => {
+                          setLanguage("en")
+                          setIsMobileMenuOpen(false)
+                        }}
+                      >
+                        English
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto border-t border-[#C2884E]/15 pt-4 space-y-2">
+                    <Link
+                      href="/login"
+                      className="block rounded-xl border border-[#C2884E]/15 px-3 py-2.5 text-sm font-medium text-[#6B5F53] hover:bg-[#F5EDE4] transition-colors text-center"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {t("login")}
+                    </Link>
+                    <Button
+                      asChild
+                      size="sm"
+                      className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white"
+                    >
+                      <Link href="/starter" onClick={() => setIsMobileMenuOpen(false)}>
+                        {t("getStarted")}
+                      </Link>
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </nav>
           </div>
         </div>
