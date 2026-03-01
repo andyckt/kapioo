@@ -11,7 +11,8 @@
     "seed:atlas": "node scripts/seed-atlas.js",
     "update-transactions": "node scripts/update-transactions.js",
     "vercel-build": "next build",
-    "migrate:weekly": "tsx scripts/migrate-weekly-subscription.ts"
+    "migrate:weekly": "tsx scripts/migrate-weekly-subscription.ts",
+    "compress:images": "node scripts/compress-foodjpg.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",
@@ -86,6 +87,7 @@
     "@types/socket.io-client": "^1.4.36",
     "@types/uuid": "^10.0.0",
     "postcss": "^8",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.3",
     "typescript": "^5"

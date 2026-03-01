@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { ChevronLeft, ArrowRight, HelpCircle, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -134,15 +133,6 @@ function getFaqs(isZh: boolean) {
 }
 
 
-const stagger = {
-  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
-  hidden: {},
-};
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
-
 export function FaqContent() {
   const { language, setLanguage } = useLanguage();
   const isZh = language === "zh";
@@ -204,39 +194,25 @@ export function FaqContent() {
           </div>
 
           <div className="container relative z-10 max-w-6xl mx-auto px-4">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={stagger}
-              className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10"
-            >
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10">
               <div className="flex-1">
-                <motion.div
-                  variants={fadeUp}
-                  className="inline-flex items-center gap-2 mb-6"
-                >
+                <div className="inline-flex items-center gap-2 mb-6">
                   <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full" />
                   <span className="px-4 py-1.5 bg-[#C2884E]/5 rounded-full text-sm font-medium text-[#C2884E] flex items-center gap-2">
                     <HelpCircle className="w-4 h-4" />
                     FAQ
                   </span>
                   <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full" />
-                </motion.div>
-                <motion.h1
-                  variants={fadeUp}
-                  className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight"
-                >
+                </div>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
                     {isZh ? "常见问题" : "Frequently asked questions"}
                   </span>
-                </motion.h1>
-                <motion.p
-                  variants={fadeUp}
-                  className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed"
-                >
+                </h1>
+                <p className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed">
                   {isZh ? "下单前您需要了解的一切。" : "Everything you need to know before ordering with Kapioo."}
-                </motion.p>
-                <motion.div variants={fadeUp} className="mt-8">
+                </p>
+                <div className="mt-8">
                   <Button
                     asChild
                     size="lg"
@@ -247,12 +223,9 @@ export function FaqContent() {
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   </Button>
-                </motion.div>
+                </div>
               </div>
-              <motion.div
-                variants={fadeUp}
-                className="relative w-full lg:w-[320px] aspect-square rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 flex-shrink-0"
-              >
+              <div className="relative w-full lg:w-[320px] aspect-square rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 flex-shrink-0">
                 <Image
                   src="/foodjpg/Kapioo%20product%20picture%20holding%20meals.jpeg"
                   alt="Fresh Kapioo meals"
@@ -261,23 +234,18 @@ export function FaqContent() {
                   sizes="(max-width: 1024px) 100vw, 320px"
                   priority
                 />
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* FAQ Accordion */}
         <section className="py-16 md:py-24 px-4 bg-white/60">
           <div className="container max-w-3xl mx-auto">
-            <motion.div
-              initial="visible"
-              animate="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={stagger}
-            >
+            <div>
               <Accordion type="single" collapsible className="space-y-4">
                 {faqs.map((item, index) => (
-                  <motion.div key={item.question} variants={fadeUp}>
+                  <div key={item.question}>
                     <AccordionItem
                       value={`item-${index}`}
                       className="rounded-2xl border border-[#C2884E]/10 !border-b-[#C2884E]/10 bg-white px-5 py-1 shadow-sm hover:shadow-md hover:border-[#C2884E]/15 transition-all duration-300 data-[state=open]:border-[#C2884E]/20 data-[state=open]:shadow-md"
@@ -290,11 +258,7 @@ export function FaqContent() {
                       </AccordionContent>
                     </AccordionItem>
                     {index === 4 && (
-                      <motion.div
-                        key="cta-mid"
-                        variants={fadeUp}
-                        className="flex justify-center py-10"
-                      >
+                      <div key="cta-mid" className="flex justify-center py-10">
                         <Button
                           asChild
                           size="lg"
@@ -305,24 +269,19 @@ export function FaqContent() {
                             <ArrowRight className="w-4 h-4" />
                           </Link>
                         </Button>
-                      </motion.div>
+                      </div>
                     )}
-                  </motion.div>
+                  </div>
                 ))}
               </Accordion>
-            </motion.div>
+            </div>
           </div>
         </section>
 
         {/* CTA */}
         <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2]">
           <div className="container max-w-3xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="space-y-8"
-            >
+            <div className="space-y-8">
               <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b]">
                 {isZh ? "准备好开始了吗？" : "Ready to get started?"}
               </h2>
@@ -338,7 +297,7 @@ export function FaqContent() {
                   </Link>
                 </Button>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
       </main>

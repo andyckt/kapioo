@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import {
   ChevronLeft,
   CreditCard,
@@ -107,18 +106,6 @@ const logistics = [
   },
 ];
 
-const stagger = {
-  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
-  hidden: {},
-};
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0 },
-};
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-};
 
 export function HowItWorksContent() {
   const { language, setLanguage } = useLanguage();
@@ -224,40 +211,26 @@ export function HowItWorksContent() {
           </div>
 
           <div className="container relative z-10 max-w-6xl mx-auto px-4">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={stagger}
-              className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10"
-            >
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10">
               <div className="flex-1">
-                <motion.div
-                  variants={fadeUp}
-                  className="inline-flex items-center gap-2 mb-6"
-                >
+                <div className="inline-flex items-center gap-2 mb-6">
                   <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full" />
                   <span className="px-4 py-1.5 bg-[#C2884E]/5 rounded-full text-sm font-medium text-[#C2884E]">
                     {isZh ? "如何运作" : "How it works"}
                   </span>
                   <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full" />
-                </motion.div>
-                <motion.h1
-                  variants={fadeUp}
-                  className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight"
-                >
+                </div>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
                     {isZh ? "亚洲轻养 comfort 餐，" : "Asian wellness comfort meals,"}
                   </span>
                   <br />
                   <span className="text-[#6B5F53]">{isZh ? "多伦多配送到家。" : "delivered in Toronto."}</span>
-                </motion.h1>
-                <motion.p
-                  variants={fadeUp}
-                  className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed"
-                >
+                </h1>
+                <p className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed">
                   {isZh ? "点几下，一周的餐就搞定，省心省力。" : "A few taps, your week of meals is handled. No hassle added."}
-                </motion.p>
-                <motion.div variants={fadeUp} className="mt-8">
+                </p>
+                <div className="mt-8">
                   <Button
                     asChild
                     size="lg"
@@ -268,12 +241,9 @@ export function HowItWorksContent() {
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   </Button>
-                </motion.div>
+                </div>
               </div>
-              <motion.div
-                variants={fadeIn}
-                className="relative w-full lg:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10"
-              >
+              <div className="relative w-full lg:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10">
                 <Image
                   src="/foodjpg/Kapioo%20daily%20meals%20product%20picture%20%232.JPG"
                   alt="Fresh Kapioo meals"
@@ -282,29 +252,22 @@ export function HowItWorksContent() {
                   sizes="(max-width: 1024px) 100vw, 280px"
                   priority
                 />
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* 3 Steps */}
         <section className="py-16 md:py-24 px-4 bg-white/60">
           <div className="container max-w-6xl mx-auto">
-            <motion.div
-              initial="visible"
-              animate="visible"
-              viewport={{ once: true, margin: "-80px" }}
-              variants={stagger}
-              className="space-y-16 md:space-y-24"
-            >
+            <div className="space-y-16 md:space-y-24">
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isEven = index % 2 === 0;
 
                 return (
-                  <motion.article
+                  <article
                     key={`${step.title}-${index}`}
-                    variants={fadeUp}
                     className={`flex flex-col lg:flex-row gap-10 lg:gap-16 items-center ${
                       isEven ? "lg:flex-row" : "lg:flex-row-reverse"
                     }`}
@@ -348,6 +311,7 @@ export function HowItWorksContent() {
                             src={step.image}
                             alt={step.title}
                             fill
+                            sizes="128px"
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         </div>
@@ -356,14 +320,11 @@ export function HowItWorksContent() {
                         </div>
                       </div>
                     </div>
-                  </motion.article>
+                  </article>
                 );
               })}
-            </motion.div>
-            <motion.div
-              variants={fadeUp}
-              className="flex justify-center mt-12 md:mt-16"
-            >
+            </div>
+            <div className="flex justify-center mt-12 md:mt-16">
               <Button
                 asChild
                 size="lg"
@@ -374,7 +335,7 @@ export function HowItWorksContent() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
-            </motion.div>
+            </div>
           </div>
         </section>
 
@@ -385,25 +346,16 @@ export function HowItWorksContent() {
             <div className="absolute top-1/2 right-0 w-64 h-64 bg-[#D1A46C]/5 rounded-full blur-[60px]" />
           </div>
           <div className="container max-w-5xl mx-auto relative z-10">
-            <motion.div
-              initial="visible"
-              animate="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={stagger}
-            >
-              <motion.h2
-                variants={fadeUp}
-                className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-12"
-              >
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-12">
                 {isZh ? "为什么选 Kapioo" : "Why Kapioo"}
-              </motion.h2>
+              </h2>
               <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
                 {whyKapioo.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <motion.div
+                    <div
                       key={item.title}
-                      variants={fadeUp}
                       className="flex items-start gap-4 p-5 md:p-6 rounded-2xl bg-white/80 backdrop-blur-sm border border-[#C2884E]/5 shadow-sm hover:shadow-md hover:border-[#C2884E]/15 transition-all duration-300"
                     >
                       <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center">
@@ -417,14 +369,11 @@ export function HowItWorksContent() {
                           {item.text}
                         </p>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
-              <motion.div
-                variants={fadeUp}
-                className="flex justify-center mt-12 md:mt-16"
-              >
+              <div className="flex justify-center mt-12 md:mt-16">
                 <Button
                   asChild
                   size="lg"
@@ -432,36 +381,27 @@ export function HowItWorksContent() {
                 >
                   <Link href="/starter" className="flex items-center gap-2">
                     {isZh ? "查看菜单并下单" : "View Menu and Order"}
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </motion.div>
-            </motion.div>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* Delivery logistics */}
         <section className="py-16 md:py-24 px-4 bg-white">
           <div className="container max-w-5xl mx-auto">
-            <motion.div
-              initial="visible"
-              animate="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={stagger}
-            >
-              <motion.h2
-                variants={fadeUp}
-                className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-10"
-              >
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-10">
                 {isZh ? "配送说明" : "Delivery logistics"}
-              </motion.h2>
+              </h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 {logistics.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <motion.div
+                    <div
                       key={item.label}
-                      variants={fadeUp}
                       className="flex gap-4 p-5 rounded-xl border border-[#C2884E]/5 bg-[#FFFBF7] hover:border-[#C2884E]/10 transition-colors"
                     >
                       <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#C2884E]/5 flex items-center justify-center">
@@ -496,11 +436,11 @@ export function HowItWorksContent() {
                           </p>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
-              <motion.div variants={fadeUp} className="mt-8 md:mt-10">
+              <div className="mt-8 md:mt-10">
                 <div className="rounded-2xl border border-[#C2884E]/10 bg-[#FFFBF7] overflow-hidden">
                   <div className="flex items-start gap-3 p-5 pb-0">
                     <div className="w-10 h-10 rounded-lg bg-[#C2884E]/10 flex items-center justify-center flex-shrink-0">
@@ -564,11 +504,8 @@ export function HowItWorksContent() {
                     {isZh ? "不确定自己属于哪种计划？" : "Not sure which plan you're in?"} <Link href="/starter" className="text-[#C2884E] font-medium hover:underline">{isZh ? "查看菜单并下单" : "View menu and order"}</Link> — {isZh ? "我们会根据您的地址显示可选方案。" : "we'll show options for your location."}
                   </p>
                 </div>
-              </motion.div>
-              <motion.div
-                variants={fadeUp}
-                className="flex justify-center mt-12 md:mt-16"
-              >
+              </div>
+              <div className="flex justify-center mt-12 md:mt-16">
                 <Button
                   asChild
                   size="lg"
@@ -576,23 +513,18 @@ export function HowItWorksContent() {
                 >
                   <Link href="/starter" className="flex items-center gap-2">
                     {isZh ? "查看菜单并下单" : "View Menu and Order"}
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </motion.div>
-            </motion.div>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* CTA */}
         <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2]">
           <div className="container max-w-3xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="space-y-8"
-            >
+            <div className="space-y-8">
               <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b]">
                 {isZh ? "准备好开始了吗？" : "Ready to get started?"}
               </h2>
@@ -608,7 +540,7 @@ export function HowItWorksContent() {
                   </Link>
                 </Button>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
       </main>
