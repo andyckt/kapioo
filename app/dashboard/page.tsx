@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const { t, language, setLanguage } = useLanguage()
   const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
+  const [overviewInView, setOverviewInView] = useState(false)
   const [customizeMeal, setCustomizeMeal] = useState(null)
   const [showServiceSelection, setShowServiceSelection] = useState(false)
   
@@ -207,6 +208,16 @@ export default function DashboardPage() {
   });
 
   // Effect to load meal selections from localStorage
+  // Overview entrance animation - delay in-view so cards animate in on tab visit/login
+  useEffect(() => {
+    if (activeTab === "overview") {
+      const id = requestAnimationFrame(() => setOverviewInView(true));
+      return () => cancelAnimationFrame(id);
+    } else {
+      setOverviewInView(false);
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     try {
       const savedSelections = localStorage.getItem('selectedMeals');
@@ -932,8 +943,8 @@ export default function DashboardPage() {
                 {menuItems.map((item, index) => (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, x: -20, filter: "blur(8px)" }}
-                    animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ 
                       duration: 0.35, 
                       delay: 0.05 + index * 0.05, 
@@ -974,9 +985,8 @@ export default function DashboardPage() {
                         </motion.span>
                         {item.label}
                         {activeTab === item.id && (
-                          <motion.div 
-                            className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full"
-                            layoutId="activeTabIndicator"
+                          <div 
+                            className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full transition-opacity duration-200"
                           />
                         )}
                       </Button>
@@ -988,8 +998,8 @@ export default function DashboardPage() {
                         {item.children.map((child, childIndex) => (
                           <motion.div
                             key={child.id}
-                            initial={{ opacity: 0, x: -10, filter: "blur(4px)" }}
-                            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
                             transition={{ 
                               duration: 0.25, 
                               delay: 0.05 + (index + 1) * 0.05 + childIndex * 0.05, 
@@ -1017,9 +1027,8 @@ export default function DashboardPage() {
                               </motion.span>
                               {child.label}
                               {activeTab === child.id && (
-                                <motion.div 
-                                  className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full"
-                                  layoutId="activeChildTabIndicator"
+                                <div 
+                                  className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full transition-opacity duration-200"
                                 />
                               )}
                             </Button>
@@ -1030,8 +1039,8 @@ export default function DashboardPage() {
                   </motion.div>
                 ))}
                 <motion.div
-                  initial={{ opacity: 0, x: -20, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
                   transition={{ 
                     duration: 0.35, 
                     delay: 0.05 + menuItems.length * 0.05, 
@@ -1167,9 +1176,9 @@ export default function DashboardPage() {
                   animate={{ y: 0 }}
                   exit={{ y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className="space-y-6"
+                  className={`reveal-section ${overviewInView ? 'in-view' : ''} space-y-6`}
                 >
-                  <div className="flex flex-col mt-4">
+                  <div className="reveal-item flex flex-col mt-4" style={{ transitionDelay: '0s' } as React.CSSProperties}>
                     <div className="bg-gradient-to-r from-[#F8F0E5] to-[#FFF6EF] p-6 rounded-3xl shadow-sm border border-[#C2884E]/10">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                         <div className="flex flex-col mb-4 md:mb-0">
@@ -1222,7 +1231,6 @@ export default function DashboardPage() {
                             className="col-span-full"
                           >
                             <Card className="overflow-hidden border border-[#C2884E]/20 bg-gradient-to-br from-white to-[#FFF6EF] shadow-lg rounded-3xl">
-                              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"></div>
                               <CardContent className="p-8 text-center">
                                 <div className="flex flex-col items-center justify-center space-y-6">
                                   {/* Icon */}
@@ -1289,13 +1297,11 @@ export default function DashboardPage() {
                     {/* Show Daily first if user has both daily and weekly vouchers, otherwise show weekly first if only weekly */}
                     {/* Daily Delivery Vouchers Card - Show first if user has daily vouchers */}
                     {userData && ((userData?.twoDishVoucher || 0) > 0 || (userData?.threeDishVoucher || 0) > 0) && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
+                      <div
+                        className="reveal-item"
+                        style={{ transitionDelay: '0.15s' } as React.CSSProperties}
                       >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md hover:shadow-lg transition-all duration-300 group rounded-3xl">
-                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
+                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
                           <CardHeader className="pb-2">
                             <CardTitle className="text-base flex items-center text-[#6B5F53]">
                               <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
@@ -1325,7 +1331,7 @@ export default function DashboardPage() {
                               <div className="grid grid-cols-2 gap-2">
                                 <Button 
                                   variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
                                   onClick={() => setActiveTab("daily-delivery")}
                                 >
                                   <ShoppingCart className="h-4 w-4 mr-2" />
@@ -1333,7 +1339,7 @@ export default function DashboardPage() {
                                 </Button>
                                 <Button 
                                   variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
                                   onClick={() => setActiveTab("meal-vouchers")}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
@@ -1343,20 +1349,18 @@ export default function DashboardPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      </motion.div>
+                      </div>
                     )}
                     
                     {/* Weekly Delivery Vouchers Card - Show only if user has vouchers > 0 */}
                     {userData && (userData?.weeklySIXmeals > 0 || (userData as any)?.weeklyEIGHTmeals > 0 || 
                       userData?.weeklyTENmeals > 0 || (userData as any)?.weeklyTWELVEmeals > 0 || 
                       (userData as any)?.weeklySIXTEENmeals > 0) && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.1 }}
+                      <div
+                        className="reveal-item"
+                        style={{ transitionDelay: '0.1s' } as React.CSSProperties}
                       >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md hover:shadow-lg transition-all duration-300 group rounded-3xl">
-                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
+                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
                           <CardHeader className="pb-2">
                             <CardTitle className="text-base flex items-center text-[#6B5F53]">
                               <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
@@ -1424,7 +1428,7 @@ export default function DashboardPage() {
                               <div className="grid grid-cols-2 gap-2">
                                 <Button 
                                   variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
                                   onClick={() => setActiveTab("weekly-subscription")}
                                 >
                                   <ShoppingCart className="h-4 w-4 mr-2" />
@@ -1432,7 +1436,7 @@ export default function DashboardPage() {
                                 </Button>
                                 <Button 
                                   variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
                                   onClick={() => setActiveTab("credits")}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
@@ -1442,7 +1446,7 @@ export default function DashboardPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      </motion.div>
+                      </div>
                     )}
                     
                     {/* Daily Delivery Vouchers Card - Show after weekly if user has 0 daily vouchers but has weekly vouchers */}
@@ -1451,13 +1455,11 @@ export default function DashboardPage() {
                       ((userData?.weeklySIXmeals || 0) > 0 || ((userData as any)?.weeklyEIGHTmeals || 0) > 0 || 
                        (userData?.weeklyTENmeals || 0) > 0 || ((userData as any)?.weeklyTWELVEmeals || 0) > 0 || 
                        ((userData as any)?.weeklySIXTEENmeals || 0) > 0) && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
+                      <div
+                        className="reveal-item"
+                        style={{ transitionDelay: '0.2s' } as React.CSSProperties}
                       >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md hover:shadow-lg transition-all duration-300 group rounded-3xl">
-                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
+                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
                           <CardHeader className="pb-2">
                             <CardTitle className="text-base flex items-center text-[#6B5F53]">
                               <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
@@ -1487,7 +1489,7 @@ export default function DashboardPage() {
                               <div className="grid grid-cols-2 gap-2">
                                 <Button 
                                   variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
                                   onClick={() => setActiveTab("daily-delivery")}
                                 >
                                   <ShoppingCart className="h-4 w-4 mr-2" />
@@ -1495,7 +1497,7 @@ export default function DashboardPage() {
                                 </Button>
                                 <Button 
                                   variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
+                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
                                   onClick={() => setActiveTab("meal-vouchers")}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
@@ -1505,18 +1507,16 @@ export default function DashboardPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      </motion.div>
+                      </div>
                     )}
                     
                     {/* Upcoming Orders Card - Only show if upcomingDeliveries > 0 */}
                     {upcomingDeliveries > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.4 }}
+                      <div
+                        className="reveal-item"
+                        style={{ transitionDelay: '0.3s' } as React.CSSProperties}
                       >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md hover:shadow-lg transition-all duration-300 group rounded-3xl">
-                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] transform origin-left group-hover:scale-x-100 scale-x-0 transition-transform duration-500"></div>
+                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
                           <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-base flex items-center text-[#6B5F53]">
@@ -1547,7 +1547,7 @@ export default function DashboardPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      </motion.div>
+                      </div>
                     )}
                   </div>
                 </motion.div>
