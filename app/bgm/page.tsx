@@ -601,17 +601,7 @@ export default function BGMPage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    animate={{ 
-                      y: [0, -3, 0],
-                      transition: { 
-                        repeat: Infinity, 
-                        duration: 2,
-                        ease: "easeInOut" 
-                      }
-                    }}
-                  >
+                  <div className="transition-transform duration-200 hover:scale-105">
                     <Button
                       onClick={() => setShowSubmissionForm(true)}
                       className="relative overflow-hidden bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#D1A46C] hover:to-[#C2884E] text-white shadow-md hover:shadow-lg transition-all duration-300"
@@ -623,7 +613,7 @@ export default function BGMPage() {
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
                       </span>
                     </Button>
-                  </motion.div>
+                  </div>
                   
                   <Button
                     variant="outline"

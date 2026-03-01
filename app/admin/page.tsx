@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from "next/dynamic"
 import { Label } from "@/components/ui/label"
 import { CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,7 +19,10 @@ import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as Calendar
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
-import { AdminDashboardEnhanced } from "@/components/admin-dashboard-enhanced"
+const AdminDashboardEnhanced = dynamic(
+  () => import("@/components/admin-dashboard-enhanced").then((m) => ({ default: m.AdminDashboardEnhanced })),
+  { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
+)
 import {
   Dialog,
   DialogContent,
@@ -88,8 +92,14 @@ import { ViewAllOrders } from "@/components/view-all-orders"
 import { ViewWeeklyOrders } from "@/components/view-weekly-orders"
 import { SettingsManagement } from "@/components/settings-management"
 import { PromoCodeManagement } from "@/components/promo-code-management"
-import { MealFeedbackManagement } from "@/components/meal-feedback-management"
-import { RatingDishManagement } from "@/components/rating-dish-management"
+const MealFeedbackManagement = dynamic(
+  () => import("@/components/meal-feedback-management").then((m) => ({ default: m.MealFeedbackManagement })),
+  { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
+)
+const RatingDishManagement = dynamic(
+  () => import("@/components/rating-dish-management").then((m) => ({ default: m.RatingDishManagement })),
+  { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
+)
 
 export default function AdminDashboardPage() {
   const router = useRouter()

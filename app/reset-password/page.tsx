@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { motion } from "framer-motion"
 import { ArrowLeft, Eye, EyeOff, Check, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -293,12 +292,7 @@ function ResetPasswordForm() {
       </header>
       
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[450px]"
-        >
+        <div className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[450px] animate-fade-in-up">
           <div className="flex flex-col items-center space-y-5 text-center">
             <Link href="/" className="inline-flex items-center gap-3 group">
               <Image 
@@ -316,7 +310,7 @@ function ResetPasswordForm() {
           <Card className="w-full bg-white shadow-lg">
             {renderContent()}
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

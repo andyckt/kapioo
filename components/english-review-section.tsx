@@ -82,8 +82,8 @@ export function EnglishReviewSection() {
     <section className="relative py-20 md:py-28 px-4 overflow-hidden bg-gradient-to-b from-white via-[#FFFBF7] to-[#FBF7F2]">
       {/* Decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 right-[5%] w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-[100px]" />
-        <div className="absolute bottom-20 left-[5%] w-[400px] h-[400px] bg-gradient-to-tr from-[#D1A46C]/8 to-transparent rounded-full blur-[80px]" />
+        <div className="absolute top-20 right-[5%] w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-2xl" />
+        <div className="absolute bottom-20 left-[5%] w-[400px] h-[400px] bg-gradient-to-tr from-[#D1A46C]/8 to-transparent rounded-full blur-xl" />
         <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#C2884E_1px,transparent_1px)] [background-size:24px_24px]" />
       </div>
 

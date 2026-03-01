@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { motion } from "framer-motion"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -134,12 +133,7 @@ export default function AddressPage() {
         </div>
       </div>
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[500px]"
-        >
+        <div className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[500px] animate-fade-in-up">
           <div className="flex flex-col items-center space-y-5 text-center">
             <Link href="/" className="inline-flex items-center gap-3 group">
               <Image 
@@ -230,7 +224,7 @@ export default function AddressPage() {
           <p className="text-xs text-center text-muted-foreground">
             You can update your delivery address at any time from your account settings.
           </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from "@/lib/constants/areas";
 import { useLanguage } from "@/lib/language-context";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 const STEP_IMAGES = [
   "/foodjpg/Ordering%20Kapioo%20meals%20on%20website.jpeg",
@@ -205,15 +206,16 @@ export function HowItWorksContent() {
         {/* Hero */}
         <section className="relative overflow-hidden bg-gradient-to-b from-[#FFF6EF] via-[#FBF7F2] to-white pb-16 pt-8 md:pt-12">
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-[100px]" />
-            <div className="absolute bottom-20 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#D1A46C]/8 to-transparent rounded-full blur-[80px]" />
+            <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-2xl" />
+            <div className="absolute bottom-20 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#D1A46C]/8 to-transparent rounded-full blur-xl" />
             <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#C2884E_1px,transparent_1px)] [background-size:24px_24px]" />
           </div>
 
           <div className="container relative z-10 max-w-6xl mx-auto px-4">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10">
-              <div className="flex-1">
-                <div className="inline-flex items-center gap-2 mb-6">
+            <ScrollReveal rootMargin="0px 0px -20px 0px">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10">
+                <div className="flex-1 reveal-item">
+                  <div className="inline-flex items-center gap-2 mb-6">
                   <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full" />
                   <span className="px-4 py-1.5 bg-[#C2884E]/5 rounded-full text-sm font-medium text-[#C2884E]">
                     {isZh ? "如何运作" : "How it works"}
@@ -243,35 +245,38 @@ export function HowItWorksContent() {
                   </Button>
                 </div>
               </div>
-              <div className="relative w-full lg:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10">
-                <Image
-                  src="/foodjpg/Kapioo%20daily%20meals%20product%20picture%20%232.JPG"
-                  alt="Fresh Kapioo meals"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 280px"
-                  priority
-                />
+                <div className="relative w-full lg:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 reveal-item reveal-item-delay-2">
+                  <Image
+                    src="/foodjpg/Kapioo%20daily%20meals%20product%20picture%20%232.JPG"
+                    alt="Fresh Kapioo meals"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 280px"
+                    priority
+                  />
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
 
         {/* 3 Steps */}
         <section className="py-16 md:py-24 px-4 bg-white/60">
           <div className="container max-w-6xl mx-auto">
-            <div className="space-y-16 md:space-y-24">
-              {steps.map((step, index) => {
-                const Icon = step.icon;
-                const isEven = index % 2 === 0;
+            <ScrollReveal rootMargin="0px 0px -60px 0px">
+              <div className="space-y-16 md:space-y-24">
+                {steps.map((step, index) => {
+                  const Icon = step.icon;
+                  const isEven = index % 2 === 0;
 
-                return (
-                  <article
-                    key={`${step.title}-${index}`}
-                    className={`flex flex-col lg:flex-row gap-10 lg:gap-16 items-center ${
-                      isEven ? "lg:flex-row" : "lg:flex-row-reverse"
-                    }`}
-                  >
+                  return (
+                    <article
+                      key={`${step.title}-${index}`}
+                      className={`flex flex-col lg:flex-row gap-10 lg:gap-16 items-center reveal-item ${
+                        isEven ? "lg:flex-row" : "lg:flex-row-reverse"
+                      }`}
+                      style={{ transitionDelay: `${(index + 1) * 0.1}s` } as React.CSSProperties}
+                    >
                     <div
                       className={`flex-1 text-center ${
                         isEven
@@ -302,7 +307,7 @@ export function HowItWorksContent() {
                     </div>
                     <div className="flex-shrink-0 flex flex-col items-center gap-4">
                       <div className="relative group">
-                        <div className={`relative rounded-2xl overflow-hidden shadow-lg ring-1 ring-[#C2884E]/10 group-hover:ring-[#C2884E]/30 transition-all duration-300 ${
+                        <div className={`relative rounded-2xl overflow-hidden shadow-lg ring-1 ring-[#C2884E]/10 group-hover:ring-[#C2884E]/30 transition-[transform,box-shadow] duration-300 ${
                           "aspect" in step && step.aspect === "3/4"
                             ? "w-32 aspect-[3/4]"
                             : "w-28 h-28"
@@ -320,11 +325,11 @@ export function HowItWorksContent() {
                         </div>
                       </div>
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-            <div className="flex justify-center mt-12 md:mt-16">
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="flex justify-center mt-12 md:mt-16 reveal-item reveal-item-delay-4">
               <Button
                 asChild
                 size="lg"
@@ -335,28 +340,30 @@ export function HowItWorksContent() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
-            </div>
+              </div>
+            </ScrollReveal>
           </div>
         </section>
 
         {/* Why Kapioo */}
         <section className="relative py-16 md:py-24 px-4 bg-gradient-to-b from-[#FBF7F2] to-[#FFF6EF]">
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/2 left-0 w-64 h-64 bg-[#C2884E]/5 rounded-full blur-[60px]" />
-            <div className="absolute top-1/2 right-0 w-64 h-64 bg-[#D1A46C]/5 rounded-full blur-[60px]" />
+            <div className="absolute top-1/2 left-0 w-64 h-64 bg-[#C2884E]/5 rounded-full blur-xl" />
+            <div className="absolute top-1/2 right-0 w-64 h-64 bg-[#D1A46C]/5 rounded-full blur-xl" />
           </div>
           <div className="container max-w-5xl mx-auto relative z-10">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-12">
+            <ScrollReveal rootMargin="0px 0px -60px 0px">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-12 reveal-item">
                 {isZh ? "为什么选 Kapioo" : "Why Kapioo"}
               </h2>
               <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
-                {whyKapioo.map((item) => {
+                {whyKapioo.map((item, index) => {
                   const Icon = item.icon;
                   return (
                     <div
                       key={item.title}
-                      className="flex items-start gap-4 p-5 md:p-6 rounded-2xl bg-white/80 backdrop-blur-sm border border-[#C2884E]/5 shadow-sm hover:shadow-md hover:border-[#C2884E]/15 transition-all duration-300"
+                      className="flex items-start gap-4 p-5 md:p-6 rounded-2xl bg-white/80 backdrop-blur-sm border border-[#C2884E]/5 shadow-sm reveal-item transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-[#C2884E]/15"
+                      style={{ transitionDelay: `${(index + 1) * 0.08}s` } as React.CSSProperties}
                     >
                       <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center">
                         <Icon className="w-6 h-6 text-[#C2884E]" />
@@ -373,7 +380,7 @@ export function HowItWorksContent() {
                   );
                 })}
               </div>
-              <div className="flex justify-center mt-12 md:mt-16">
+              <div className="flex justify-center mt-12 md:mt-16 reveal-item reveal-item-delay-4">
                 <Button
                   asChild
                   size="lg"
@@ -381,28 +388,29 @@ export function HowItWorksContent() {
                 >
                   <Link href="/starter" className="flex items-center gap-2">
                     {isZh ? "查看菜单并下单" : "View Menu and Order"}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
 
         {/* Delivery logistics */}
         <section className="py-16 md:py-24 px-4 bg-white">
           <div className="container max-w-5xl mx-auto">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-10">
+            <ScrollReveal rootMargin="0px 0px -60px 0px">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-10 reveal-item">
                 {isZh ? "配送说明" : "Delivery logistics"}
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
-                {logistics.map((item) => {
+                {logistics.map((item, index) => {
                   const Icon = item.icon;
                   return (
                     <div
                       key={item.label}
-                      className="flex gap-4 p-5 rounded-xl border border-[#C2884E]/5 bg-[#FFFBF7] hover:border-[#C2884E]/10 transition-colors"
+                      className="flex gap-4 p-5 rounded-xl border border-[#C2884E]/5 bg-[#FFFBF7] reveal-item transition-colors duration-300 hover:border-[#C2884E]/10"
+                      style={{ transitionDelay: `${(index + 1) * 0.06}s` } as React.CSSProperties}
                     >
                       <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#C2884E]/5 flex items-center justify-center">
                         <Icon className="w-5 h-5 text-[#C2884E]" />
@@ -440,7 +448,7 @@ export function HowItWorksContent() {
                   );
                 })}
               </div>
-              <div className="mt-8 md:mt-10">
+              <div className="mt-8 md:mt-10 reveal-item reveal-item-delay-3">
                 <div className="rounded-2xl border border-[#C2884E]/10 bg-[#FFFBF7] overflow-hidden">
                   <div className="flex items-start gap-3 p-5 pb-0">
                     <div className="w-10 h-10 rounded-lg bg-[#C2884E]/10 flex items-center justify-center flex-shrink-0">
@@ -505,30 +513,7 @@ export function HowItWorksContent() {
                   </p>
                 </div>
               </div>
-              <div className="flex justify-center mt-12 md:mt-16">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
-                >
-                  <Link href="/starter" className="flex items-center gap-2">
-                    {isZh ? "查看菜单并下单" : "View Menu and Order"}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2]">
-          <div className="container max-w-3xl mx-auto text-center">
-            <div className="space-y-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b]">
-                {isZh ? "准备好开始了吗？" : "Ready to get started?"}
-              </h2>
-              <div className="flex justify-center">
+              <div className="flex justify-center mt-12 md:mt-16 reveal-item reveal-item-delay-4">
                 <Button
                   asChild
                   size="lg"
@@ -540,7 +525,32 @@ export function HowItWorksContent() {
                   </Link>
                 </Button>
               </div>
-            </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2]">
+          <div className="container max-w-3xl mx-auto text-center">
+            <ScrollReveal rootMargin="0px 0px -80px 0px">
+              <div className="space-y-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] reveal-item">
+                  {isZh ? "准备好开始了吗？" : "Ready to get started?"}
+                </h2>
+                <div className="flex justify-center reveal-item reveal-item-delay-2">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
+                >
+                  <Link href="/starter" className="flex items-center gap-2">
+                    {isZh ? "查看菜单并下单" : "View Menu and Order"}
+                    <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
         </section>
       </main>

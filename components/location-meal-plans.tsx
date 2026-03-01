@@ -142,12 +142,12 @@ export default function LocationMealPlans() {
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
               {t('mealPlanOptionsTitle')}
             </span>
-            <motion.div 
-              className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#C2884E]/0 via-[#C2884E]/70 to-[#C2884E]/0"
-              initial={{ width: 0, x: "50%" }}
-              animate={isVisible ? { width: "100%", x: 0 } : {}}
+            <motion.div
+              className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#C2884E]/0 via-[#C2884E]/70 to-[#C2884E]/0 origin-center"
+              initial={{ scaleX: 0 }}
+              animate={isVisible ? { scaleX: 1 } : {}}
               transition={{ duration: 1, delay: 0.7 }}
-            ></motion.div>
+            />
           </motion.h2>
           
           <motion.p 
@@ -245,10 +245,8 @@ export default function LocationMealPlans() {
                 router.push(plan.id === "weekly" ? "/weekly-meal" : "/daily-delivery");
               }}
             >
-              <motion.div 
-                className="relative h-full w-full overflow-hidden"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
+              <div 
+                className="relative h-full w-full overflow-hidden transition-transform duration-300 hover:scale-[1.02]"
               >
                 <Image 
                   src={plan.imagePath} 
@@ -258,8 +256,8 @@ export default function LocationMealPlans() {
                   objectPosition={plan.id === "weekly" ? "center bottom" : "center center"}
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-              </motion.div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+              </div>
               
               <div className="absolute inset-x-0 bottom-0 z-20 p-8">
                 <motion.div

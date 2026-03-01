@@ -17,6 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useLanguage } from "@/lib/language-context";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 function getFaqs(isZh: boolean) {
   const contactAnswer = (
@@ -188,14 +189,15 @@ export function FaqContent() {
         {/* Hero */}
         <section className="relative overflow-hidden bg-gradient-to-b from-[#FFF6EF] via-[#FBF7F2] to-white pb-14 pt-8 md:pt-12">
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-[100px]" />
-            <div className="absolute bottom-20 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#D1A46C]/8 to-transparent rounded-full blur-[80px]" />
+            <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-2xl" />
+            <div className="absolute bottom-20 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#D1A46C]/8 to-transparent rounded-full blur-xl" />
             <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#C2884E_1px,transparent_1px)] [background-size:24px_24px]" />
           </div>
 
           <div className="container relative z-10 max-w-6xl mx-auto px-4">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10">
-              <div className="flex-1">
+            <ScrollReveal rootMargin="0px 0px -20px 0px">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10">
+                <div className="flex-1 reveal-item">
                 <div className="inline-flex items-center gap-2 mb-6">
                   <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full" />
                   <span className="px-4 py-1.5 bg-[#C2884E]/5 rounded-full text-sm font-medium text-[#C2884E] flex items-center gap-2">
@@ -225,30 +227,31 @@ export function FaqContent() {
                   </Button>
                 </div>
               </div>
-              <div className="relative w-full lg:w-[320px] aspect-square rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 flex-shrink-0">
-                <Image
-                  src="/foodjpg/Kapioo%20product%20picture%20holding%20meals.jpeg"
-                  alt="Fresh Kapioo meals"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 320px"
-                  priority
-                />
+                <div className="relative w-full lg:w-[320px] aspect-square rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 flex-shrink-0 reveal-item reveal-item-delay-2">
+                  <Image
+                    src="/foodjpg/Kapioo%20product%20picture%20holding%20meals.jpeg"
+                    alt="Fresh Kapioo meals"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 320px"
+                    priority
+                  />
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
 
         {/* FAQ Accordion */}
         <section className="py-16 md:py-24 px-4 bg-white/60">
           <div className="container max-w-3xl mx-auto">
-            <div>
+            <ScrollReveal rootMargin="0px 0px -60px 0px">
               <Accordion type="single" collapsible className="space-y-4">
                 {faqs.map((item, index) => (
-                  <div key={item.question}>
+                  <div key={item.question} className="reveal-item" style={{ transitionDelay: `${index * 0.05}s` } as React.CSSProperties}>
                     <AccordionItem
                       value={`item-${index}`}
-                      className="rounded-2xl border border-[#C2884E]/10 !border-b-[#C2884E]/10 bg-white px-5 py-1 shadow-sm hover:shadow-md hover:border-[#C2884E]/15 transition-all duration-300 data-[state=open]:border-[#C2884E]/20 data-[state=open]:shadow-md"
+                      className="rounded-2xl border border-[#C2884E]/10 !border-b-[#C2884E]/10 bg-white px-5 py-1 shadow-sm transition-[transform,border-color] duration-300 hover:-translate-y-0.5 hover:border-[#C2884E]/15 data-[state=open]:border-[#C2884E]/20 data-[state=open]:shadow-md"
                     >
                       <AccordionTrigger className="py-5 text-left text-base md:text-lg font-semibold text-[#3f352b] hover:no-underline [&[data-state=open]]:text-[#C2884E]">
                         {item.question}
@@ -258,7 +261,7 @@ export function FaqContent() {
                       </AccordionContent>
                     </AccordionItem>
                     {index === 4 && (
-                      <div key="cta-mid" className="flex justify-center py-10">
+                      <div key="cta-mid" className="flex justify-center py-10 reveal-item reveal-item-delay-3">
                         <Button
                           asChild
                           size="lg"
@@ -274,18 +277,19 @@ export function FaqContent() {
                   </div>
                 ))}
               </Accordion>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
 
         {/* CTA */}
         <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2]">
           <div className="container max-w-3xl mx-auto text-center">
-            <div className="space-y-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b]">
-                {isZh ? "准备好开始了吗？" : "Ready to get started?"}
-              </h2>
-              <div className="flex justify-center">
+            <ScrollReveal rootMargin="0px 0px -80px 0px">
+              <div className="space-y-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] reveal-item">
+                  {isZh ? "准备好开始了吗？" : "Ready to get started?"}
+                </h2>
+                <div className="flex justify-center reveal-item reveal-item-delay-2">
                 <Button
                   asChild
                   size="lg"
@@ -294,10 +298,11 @@ export function FaqContent() {
                   <Link href="/starter" className="flex items-center gap-2">
                     {isZh ? "查看菜单并下单" : "View Menu and Order"}
                     <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
+                </Link>
+              </Button>
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
       </main>

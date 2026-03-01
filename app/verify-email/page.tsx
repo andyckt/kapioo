@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { motion } from "framer-motion"
 import { Check, X, ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -235,12 +234,7 @@ export default function VerifyEmailPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
       <div className="container flex flex-1 items-center justify-center py-8 md:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto flex w-full flex-col items-center justify-center space-y-6 sm:w-[500px]"
-        >
+        <div className="mx-auto flex w-full flex-col items-center justify-center space-y-6 sm:w-[500px] animate-fade-in-up">
           <Link href="/" className="inline-flex items-center gap-3 group">
             <Image 
               src="/未命名設計.png" 
@@ -255,7 +249,7 @@ export default function VerifyEmailPage() {
           <Card className="w-full bg-white shadow-lg">
             {renderContent()}
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

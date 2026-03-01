@@ -34,11 +34,7 @@ function TypingAnimation({ text }: { text: string }) {
       >
         {displayedText}
         {!isComplete && (
-          <motion.span
-            className="inline-block w-1 h-5 ml-0.5 bg-[#C2884E]/70"
-            animate={{ opacity: [1, 0, 1] }}
-            transition={{ duration: 0.8, repeat: Infinity }}
-          />
+          <span className="inline-block w-1 h-5 ml-0.5 bg-[#C2884E]/70 animate-pulse" />
         )}
       </motion.span>
     </div>

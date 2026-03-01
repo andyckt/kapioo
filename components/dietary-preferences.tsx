@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,7 +54,7 @@ export function DietaryPreferences() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+    <div className="animate-fade-in-up">
       <Card>
         <CardHeader>
           <CardTitle>Dietary Preferences</CardTitle>
@@ -94,7 +93,7 @@ export function DietaryPreferences() {
           <Button onClick={savePreferences}>Save Preferences</Button>
         </CardFooter>
       </Card>
-    </motion.div>
+    </div>
   )
 }
 
