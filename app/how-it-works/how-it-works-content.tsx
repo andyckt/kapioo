@@ -12,14 +12,27 @@ import {
   Leaf,
   Clock,
   RefreshCw,
-  Package,
   ThermometerSun,
   Microwave,
   ArrowRight,
   MapPin,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from "@/lib/constants/areas";
+import { useLanguage } from "@/lib/language-context";
+
+const STEP_IMAGES = [
+  "/foodjpg/Ordering%20Kapioo%20meals%20on%20website.jpeg",
+  "/foodjpg/Kapioo%20Meals%20in%20fridge.jpeg",
+  "/foodjpg/Kapioo%20Chef.jpg.jpeg",
+] as const;
 
 const steps = [
   {
@@ -108,6 +121,53 @@ const fadeIn = {
 };
 
 export function HowItWorksContent() {
+  const { language, setLanguage } = useLanguage();
+  const isZh = language === "zh";
+
+  const steps = [
+    {
+      title: isZh ? "选择计划" : "Choose your plan",
+      description: isZh
+        ? "选择每日便当系列或周餐盒系列，根据你的日程和配送区域。"
+        : "Pick the Daily Bento Series or the Weekly Meal Box Series—based on your schedule and delivery area.",
+      icon: CreditCard,
+      image: STEP_IMAGES[0],
+      aspect: "3/4" as const,
+    },
+    {
+      title: isZh ? "选择餐品" : "Pick your meals",
+      description: isZh
+        ? "从我们不断更新的菜单中挑选——常换常新，四季都吃不腻。"
+        : "Choose from our never-repeat rotating menu—always fresh and exciting. We'll be here for you through every season of life, with meals you'll never get tired of.",
+      icon: UtensilsCrossed,
+      image: STEP_IMAGES[1],
+      aspect: "3/4" as const,
+    },
+    {
+      title: isZh ? "烹饪与配送" : "We cook & deliver",
+      description: isZh
+        ? "新鲜现做，在配送时段送抵您家。"
+        : "Freshly cooked meals are delivered to your door during the delivery window.",
+      icon: Truck,
+      image: STEP_IMAGES[2],
+      aspect: "3/4" as const,
+    },
+  ];
+
+  const whyKapioo = [
+    { title: isZh ? "新鲜现做" : "Fresh cooked meals", text: isZh ? "非冷冻，当日现做、当日配送。" : "Not frozen—made fresh and delivered.", icon: Flame },
+    { title: isZh ? "亚洲风味" : "Asian comfort flavors", text: isZh ? "均衡份量，吃得满足。" : "Balanced portions you'll look forward to.", icon: Leaf },
+    { title: isZh ? "灵活餐券制" : "Flexible Meal Credit Model", text: isZh ? "先充值餐券，想订再订。" : "Top up meal credits, order when you want.", icon: RefreshCw },
+    { title: isZh ? "准时配送" : "Reliable delivery", text: isZh ? "准时送达，次次如此。" : "Always on time, every time.", icon: Clock },
+  ];
+
+  const logistics = [
+    { label: isZh ? "配送时段" : "Delivery windows", detail: "", icon: Truck, isDeliveryWindows: true },
+    { label: isZh ? "下单截止" : "Order cutoff", detail: isZh ? "配送日前一天上午 11:59。" : "11:59 AM the day before delivery.", icon: Clock, isDeliveryWindows: false },
+    { label: isZh ? "保鲜与储存" : "Freshness & storage", detail: isZh ? "冷藏保存，建议 3 天内食用。" : "Keep refrigerated. Best enjoyed within 3 days.", icon: ThermometerSun, isDeliveryWindows: false },
+    { label: isZh ? "加热方式" : "Reheating", detail: isZh ? "微波或明火加热，包装上有说明。" : "Microwave or stovetop. Instructions on each container.", icon: Microwave, isDeliveryWindows: false },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF6EF]">
       {/* Back + minimal nav */}
@@ -121,21 +181,34 @@ export function HowItWorksContent() {
           >
             <Link href="/">
               <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
+              <span className="hidden sm:inline">{isZh ? "返回" : "Back"}</span>
             </Link>
           </Button>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/faq"
-              className="text-sm font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors"
-            >
+          <nav className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-[#6B5F53] hover:text-[#C2884E]">
+                  <Globe className="h-5 w-5" />
+                  <span className="sr-only">{isZh ? "切换语言" : "Switch language"}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setLanguage("zh")} className={language === "zh" ? "bg-accent font-medium" : ""}>
+                  中文
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLanguage("en")} className={language === "en" ? "bg-accent font-medium" : ""}>
+                  English
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Link href="/faq" className="text-sm font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors">
               FAQ
             </Link>
             <Link
               href="/starter"
               className="text-sm font-medium text-white bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 px-4 py-2 rounded-full transition-all"
             >
-              Get Started
+              {isZh ? "立即开始" : "Get Started"}
             </Link>
           </nav>
         </div>
@@ -164,7 +237,7 @@ export function HowItWorksContent() {
                 >
                   <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full" />
                   <span className="px-4 py-1.5 bg-[#C2884E]/5 rounded-full text-sm font-medium text-[#C2884E]">
-                    How it works
+                    {isZh ? "如何运作" : "How it works"}
                   </span>
                   <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full" />
                 </motion.div>
@@ -173,16 +246,16 @@ export function HowItWorksContent() {
                   className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight"
                 >
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    Asian wellness comfort meals,
+                    {isZh ? "亚洲轻养 comfort 餐，" : "Asian wellness comfort meals,"}
                   </span>
                   <br />
-                  <span className="text-[#6B5F53]">delivered in Toronto.</span>
+                  <span className="text-[#6B5F53]">{isZh ? "多伦多配送到家。" : "delivered in Toronto."}</span>
                 </motion.h1>
                 <motion.p
                   variants={fadeUp}
                   className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed"
                 >
-                  A few taps, your week of meals is handled. No hassle added.
+                  {isZh ? "点几下，一周的餐就搞定，省心省力。" : "A few taps, your week of meals is handled. No hassle added."}
                 </motion.p>
                 <motion.div variants={fadeUp} className="mt-8">
                   <Button
@@ -191,7 +264,7 @@ export function HowItWorksContent() {
                     className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                   >
                     <Link href="/starter" className="flex items-center gap-2">
-                      View Menu and Order
+                      {isZh ? "查看菜单并下单" : "View Menu and Order"}
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   </Button>
@@ -218,8 +291,8 @@ export function HowItWorksContent() {
         <section className="py-16 md:py-24 px-4 bg-white/60">
           <div className="container max-w-6xl mx-auto">
             <motion.div
-              initial="hidden"
-              whileInView="visible"
+              initial="visible"
+              animate="visible"
               viewport={{ once: true, margin: "-80px" }}
               variants={stagger}
               className="space-y-16 md:space-y-24"
@@ -230,7 +303,7 @@ export function HowItWorksContent() {
 
                 return (
                   <motion.article
-                    key={step.title}
+                    key={`${step.title}-${index}`}
                     variants={fadeUp}
                     className={`flex flex-col lg:flex-row gap-10 lg:gap-16 items-center ${
                       isEven ? "lg:flex-row" : "lg:flex-row-reverse"
@@ -297,7 +370,7 @@ export function HowItWorksContent() {
                 className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
               >
                 <Link href="/starter" className="flex items-center gap-2">
-                  View Menu and Order
+                  {isZh ? "查看菜单并下单" : "View Menu and Order"}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
@@ -313,8 +386,8 @@ export function HowItWorksContent() {
           </div>
           <div className="container max-w-5xl mx-auto relative z-10">
             <motion.div
-              initial="hidden"
-              whileInView="visible"
+              initial="visible"
+              animate="visible"
               viewport={{ once: true, margin: "-60px" }}
               variants={stagger}
             >
@@ -322,7 +395,7 @@ export function HowItWorksContent() {
                 variants={fadeUp}
                 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-12"
               >
-                Why Kapioo
+                {isZh ? "为什么选 Kapioo" : "Why Kapioo"}
               </motion.h2>
               <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
                 {whyKapioo.map((item) => {
@@ -358,7 +431,7 @@ export function HowItWorksContent() {
                   className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                 >
                   <Link href="/starter" className="flex items-center gap-2">
-                    View Menu and Order
+                    {isZh ? "查看菜单并下单" : "View Menu and Order"}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
@@ -371,8 +444,8 @@ export function HowItWorksContent() {
         <section className="py-16 md:py-24 px-4 bg-white">
           <div className="container max-w-5xl mx-auto">
             <motion.div
-              initial="hidden"
-              whileInView="visible"
+              initial="visible"
+              animate="visible"
               viewport={{ once: true, margin: "-60px" }}
               variants={stagger}
             >
@@ -380,7 +453,7 @@ export function HowItWorksContent() {
                 variants={fadeUp}
                 className="text-2xl md:text-3xl font-bold text-[#3f352b] text-center mb-10"
               >
-                Delivery logistics
+                {isZh ? "配送说明" : "Delivery logistics"}
               </motion.h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 {logistics.map((item) => {
@@ -398,22 +471,22 @@ export function HowItWorksContent() {
                         <p className="font-semibold text-[#3f352b]">
                           {item.label}
                         </p>
-                        {item.label === "Delivery windows" ? (
+                        {"isDeliveryWindows" in item && item.isDeliveryWindows ? (
                           <div className="mt-3 space-y-3">
                             <div>
                               <p className="text-sm font-medium text-[#3f352b]">
-                                Daily Bento Series
+                                {isZh ? "每日便当系列" : "Daily Bento Series"}
                               </p>
                               <p className="text-sm text-[#6B5F53] mt-0.5">
-                                11am – 1pm · Monday – Friday (Saturday off)
+                                {isZh ? "11:00–13:00 · 周一至周五（周六休息）" : "11am – 1pm · Monday – Friday (Saturday off)"}
                               </p>
                             </div>
                             <div>
                               <p className="text-sm font-medium text-[#3f352b]">
-                                Weekly Meal Box Series
+                                {isZh ? "周餐盒系列" : "Weekly Meal Box Series"}
                               </p>
                               <p className="text-sm text-[#6B5F53] mt-0.5">
-                                6pm – 10pm · Tuesday & Sunday
+                                {isZh ? "18:00–22:00 · 周二与周日" : "6pm – 10pm · Tuesday & Sunday"}
                               </p>
                             </div>
                           </div>
@@ -435,10 +508,10 @@ export function HowItWorksContent() {
                     </div>
                     <div>
                       <h3 className="text-lg md:text-xl font-semibold text-[#3f352b]">
-                        Where we deliver
+                        {isZh ? "配送范围" : "Where we deliver"}
                       </h3>
                       <p className="text-sm text-[#6B5F53] mt-1">
-                        We serve the GTA. Choose your plan and we’ll show availability for your address.
+                        {isZh ? "我们服务大多伦多地区。选择计划后即可查看您地址是否在配送范围内。" : "We serve the GTA. Choose your plan and we'll show availability for your address."}
                       </p>
                     </div>
                   </div>
@@ -449,7 +522,7 @@ export function HowItWorksContent() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2.5 h-2.5 rounded-full bg-[#C2884E] flex-shrink-0" aria-hidden />
                         <h4 className="text-base font-semibold text-[#3f352b]">
-                          Daily Bento Series + Weekly Meal Box Series
+                          {isZh ? "每日便当系列 + 周餐盒系列" : "Daily Bento Series + Weekly Meal Box Series"}
                         </h4>
                       </div>
                       <ul className="space-y-2 mt-4" role="list">
@@ -470,7 +543,7 @@ export function HowItWorksContent() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2.5 h-2.5 rounded-full bg-[#A58D74] flex-shrink-0" aria-hidden />
                         <h4 className="text-base font-semibold text-[#3f352b]">
-                          Weekly Meal Box Series (Only)
+                          {isZh ? "仅周餐盒系列" : "Weekly Meal Box Series (Only)"}
                         </h4>
                       </div>
                       <ul className="space-y-2 mt-4" role="list">
@@ -488,7 +561,7 @@ export function HowItWorksContent() {
                   </div>
 
                   <p className="text-xs text-[#8A7968] px-5 pb-5 pt-2">
-                    Not sure which plan you’re in? <Link href="/starter" className="text-[#C2884E] font-medium hover:underline">View menu and order</Link> — we’ll show options for your location.
+                    {isZh ? "不确定自己属于哪种计划？" : "Not sure which plan you're in?"} <Link href="/starter" className="text-[#C2884E] font-medium hover:underline">{isZh ? "查看菜单并下单" : "View menu and order"}</Link> — {isZh ? "我们会根据您的地址显示可选方案。" : "we'll show options for your location."}
                   </p>
                 </div>
               </motion.div>
@@ -502,7 +575,7 @@ export function HowItWorksContent() {
                   className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                 >
                   <Link href="/starter" className="flex items-center gap-2">
-                    View Menu and Order
+                    {isZh ? "查看菜单并下单" : "View Menu and Order"}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
@@ -521,7 +594,7 @@ export function HowItWorksContent() {
               className="space-y-8"
             >
               <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b]">
-                Ready to get started?
+                {isZh ? "准备好开始了吗？" : "Ready to get started?"}
               </h2>
               <div className="flex justify-center">
                 <Button
@@ -530,7 +603,7 @@ export function HowItWorksContent() {
                   className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                 >
                   <Link href="/starter" className="flex items-center gap-2">
-                    View Menu and Order
+                    {isZh ? "查看菜单并下单" : "View Menu and Order"}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>

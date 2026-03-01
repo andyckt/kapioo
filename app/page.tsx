@@ -41,13 +41,13 @@ export default function Home() {
                 href="/how-it-works"
                 className="hidden md:inline-flex px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform"
               >
-                How It Works
+                {language === 'zh' ? '如何订阅' : 'How It Works'}
               </Link>
               <Link
                 href="/faq"
                 className="hidden md:inline-flex px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform"
               >
-                FAQ
+                {language === 'zh' ? '常问问题' : 'FAQ'}
               </Link>
               <Link href="/login" className="px-2 sm:px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#C2884E] hover:to-[#D1A46C] hover:scale-105 transition-transform">
                 {t('login')}
@@ -638,10 +638,10 @@ export default function Home() {
           </p>
           <div className="flex gap-3 sm:gap-4">
             <Link href="/how-it-works" className="text-xs sm:text-sm font-medium hover:underline">
-              How It Works
+              {language === 'zh' ? '如何订阅' : 'How It Works'}
             </Link>
             <Link href="/faq" className="text-xs sm:text-sm font-medium hover:underline">
-              FAQ
+              {language === 'zh' ? '常问问题' : 'FAQ'}
             </Link>
           </div>
         </div>
