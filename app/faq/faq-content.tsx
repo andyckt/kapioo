@@ -3,64 +3,136 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ChevronLeft, ArrowRight, HelpCircle } from "lucide-react";
+import { ChevronLeft, ArrowRight, HelpCircle, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useLanguage } from "@/lib/language-context";
 
-const faqs = [
-  {
-    question: "Where do you deliver?",
-    answer:
-      "We deliver across the GTA. Availability depends on the plan you choose and your delivery area.",
-  },
-  {
-    question: "What's the difference between Daily Delivery and Weekly Meal Box?",
-    answer:
-      "Daily Delivery is weekday lunch delivery and is available in selected areas. Weekly Meal Box is bulk meal delivery twice a week with wider coverage.",
-  },
-  {
-    question: "When is the order cutoff?",
-    answer: "The cutoff is 11:59 AM the day before delivery.",
-  },
-  {
-    question: "How long do meals stay fresh?",
-    answer: "Keep meals refrigerated. They are best enjoyed within 3 days.",
-  },
-  {
-    question: "Can I choose my meals?",
-    answer:
-      "Yes. You can pick from the available menu for your selected delivery day.",
-  },
-  {
-    question: "Do you have dietary options?",
-    answer:
-      "We offer balanced meals and rotating menus. If you have strict allergies or restrictions, please contact us before ordering.",
-  },
-  {
-    question: "How do payments work?",
-    answer:
-      "You can purchase meal credits or a weekly plan, depending on the product you choose.",
-  },
-  {
-    question: "Can I pause or skip?",
-    answer:
-      "Yes. Credits are flexible and you can choose delivery days based on your plan rules.",
-  },
-  {
-    question: "How do I heat the meals?",
-    answer:
-      "You can reheat by microwave or stovetop. Heating guidance is provided on the container or website.",
-  },
-  {
-    question: "How do I contact support?",
-    answer: "Please DM us on Instagram or email support@kapioo.com.",
-  },
-];
+function getFaqs(isZh: boolean) {
+  const contactAnswer = (
+    <>
+      {isZh ? "通过 " : "Contact us via "}
+      <a
+        href="https://www.instagram.com/kapioomeals/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[#C2884E] font-medium underline hover:no-underline"
+      >
+        Instagram
+      </a>
+      {isZh ? " 或微信 (kapioomeal06) 联系我们。" : " or WeChat (kapioomeal06)."}
+    </>
+  );
+
+  const differenceAnswer = (
+    <div className="space-y-4 text-[#6B5F53]">
+      <div>
+        <p className="font-semibold text-[#3f352b] mb-1.5">
+          {isZh ? "周餐盒系列 — 灵活省心，一样新鲜" : "Weekly Meal Box — maximum flexibility, still fresh"}
+        </p>
+        <p className="leading-relaxed">
+          {isZh
+            ? "每周配送两次，冰箱囤好一周的餐，想什么时候吃就什么时候吃。适合工作不定时、健身日晚餐、夜宵党，以及希望少收几次货但不断粮的你。"
+            : "We deliver twice a week so you can stock your fridge with multiple meals and eat whenever it fits your schedule. Best for unpredictable workdays, gym nights, late dinners, and anyone who wants fewer deliveries but steady coverage."}
+        </p>
+      </div>
+      <div>
+        <p className="font-semibold text-[#3f352b] mb-1.5">
+          {isZh ? "每日便当 — 指定日期，当日新鲜送达" : "Daily Delivery Bento — fresh on the days you pick"}
+        </p>
+        <p className="leading-relaxed">
+          {isZh
+            ? "选定区域午间送达。在您想要配送的日期用餐券兑换（每次至少 2 份）。适合想要「当天现做」新鲜度、不想在冰箱囤太多的人。"
+            : "Fresh meals delivered around lunchtime in select areas. Redeem meal credits on the days you want delivery (minimum 2 meals per delivery). Best if you prefer \"cooked today\" freshness and don't want to keep a lot in the fridge."}
+        </p>
+      </div>
+      <div className="rounded-xl border border-[#C2884E]/15 bg-[#FFFBF7] p-4 mt-4">
+        <p className="font-semibold text-[#3f352b] text-sm mb-2">
+          {isZh ? "快速选择" : "Quick decision guide"}
+        </p>
+        <ul className="space-y-1.5 text-sm leading-relaxed list-none">
+          <li>
+            <span className="text-[#C2884E] font-medium">
+              {isZh ? "「我这周随时想吃就有」" : "\"I want meals ready anytime this week\""}
+            </span> → {isZh ? "周餐盒系列" : "Weekly Meal Box"}
+          </li>
+          <li>
+            <span className="text-[#C2884E] font-medium">
+              {isZh ? "「我要指定某几天送新鲜」" : "\"I want fresh delivery on specific days\""}
+            </span> → {isZh ? "每日便当" : "Daily Delivery"}
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+
+  return [
+    {
+      question: isZh ? "你们配送哪些区域？" : "Where do you deliver?",
+      answer: isZh
+        ? "我们配送大多伦多地区。具体是否可达取决于您选择的计划和配送地址。"
+        : "We deliver across the GTA. Availability depends on the plan you choose and your delivery area.",
+    },
+    {
+      question: isZh ? "每日便当系列和周餐盒系列有什么区别？" : "What's the difference between Daily Bento Series and Weekly Meal Box Series?",
+      answer: differenceAnswer,
+    },
+    {
+      question: isZh ? "下单截止时间是几点？" : "When is the order cutoff?",
+      answer: isZh ? "配送日前一天上午 11:59 截止。" : "The cutoff is 11:59 AM the day before delivery.",
+    },
+    {
+      question: isZh ? "餐食可以保存多久？" : "How long do meals stay fresh?",
+      answer: isZh ? "请冷藏保存，建议 3 天内食用。" : "Keep meals refrigerated. They are best enjoyed within 3 days.",
+    },
+    {
+      question: isZh ? "可以自选餐品吗？" : "Can I choose my meals?",
+      answer: isZh
+        ? "可以。您可以在所选配送日的可选菜单中挑选。"
+        : "Yes. You can pick from the available menu for your selected delivery day.",
+    },
+    {
+      question: isZh ? "有忌口或特殊饮食选项吗？" : "Do you have dietary options?",
+      answer: isZh
+        ? "我们提供均衡餐品与轮换菜单。如有严重过敏或饮食限制，请在下单前联系我们。"
+        : "We offer balanced meals and rotating menus. If you have strict allergies or restrictions, please contact us before ordering.",
+    },
+    {
+      question: isZh ? "付款方式是什么？" : "How do payments work?",
+      answer: isZh
+        ? "我们目前仅支持 e-Transfer。您转账后，在结账页面上传付款凭证。我们会审核通过后把餐券充入您的账户，即可用餐券下单。"
+        : "We accept e-Transfer only. After you transfer, upload your payment proof at checkout. Our team will review and approve it—once approved, credits appear in your account and you can use them to place orders.",
+    },
+    {
+      question: isZh ? "可以暂停或跳过配送吗？" : "Can I pause or skip?",
+      answer: isZh
+        ? "可以。餐券灵活使用，您可根据计划规则选择配送日。"
+        : "Yes. Credits are flexible and you can choose delivery days based on your plan rules.",
+    },
+    {
+      question: isZh ? "如何加热餐食？" : "How do I heat the meals?",
+      answer: isZh
+        ? "微波或明火加热均可，包装或网站上有说明。"
+        : "You can reheat by microwave or stovetop. Heating guidance is provided on the container or website.",
+    },
+    {
+      question: isZh ? "如何联系客服？" : "How do I contact support?",
+      answer: contactAnswer,
+    },
+  ];
+}
+
 
 const stagger = {
   visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
@@ -72,6 +144,10 @@ const fadeUp = {
 };
 
 export function FaqContent() {
+  const { language, setLanguage } = useLanguage();
+  const isZh = language === "zh";
+  const faqs = getFaqs(isZh);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF6EF]">
       {/* Back + minimal nav */}
@@ -85,21 +161,34 @@ export function FaqContent() {
           >
             <Link href="/">
               <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
+              <span className="hidden sm:inline">{isZh ? "返回" : "Back"}</span>
             </Link>
           </Button>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/how-it-works"
-              className="text-sm font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors"
-            >
-              How It Works
+          <nav className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-[#6B5F53] hover:text-[#C2884E]">
+                  <Globe className="h-5 w-5" />
+                  <span className="sr-only">{isZh ? "切换语言" : "Switch language"}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setLanguage("zh")} className={language === "zh" ? "bg-accent font-medium" : ""}>
+                  中文
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLanguage("en")} className={language === "en" ? "bg-accent font-medium" : ""}>
+                  English
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Link href="/how-it-works" className="text-sm font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors">
+              {isZh ? "如何运作" : "How It Works"}
             </Link>
             <Link
               href="/starter"
               className="text-sm font-medium text-white bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 px-4 py-2 rounded-full transition-all"
             >
-              Get Started
+              {isZh ? "立即开始" : "Get Started"}
             </Link>
           </nav>
         </div>
@@ -138,16 +227,14 @@ export function FaqContent() {
                   className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight"
                 >
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    Frequently asked
+                    {isZh ? "常见问题" : "Frequently asked questions"}
                   </span>
-                  <br />
-                  <span className="text-[#6B5F53]">questions</span>
                 </motion.h1>
                 <motion.p
                   variants={fadeUp}
                   className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed"
                 >
-                  Everything you need to know before ordering with Kapioo.
+                  {isZh ? "下单前您需要了解的一切。" : "Everything you need to know before ordering with Kapioo."}
                 </motion.p>
                 <motion.div variants={fadeUp} className="mt-8">
                   <Button
@@ -156,7 +243,7 @@ export function FaqContent() {
                     className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                   >
                     <Link href="/starter" className="flex items-center gap-2">
-                      View Menu and Order
+                      {isZh ? "查看菜单并下单" : "View Menu and Order"}
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   </Button>
@@ -167,14 +254,13 @@ export function FaqContent() {
                 className="relative w-full lg:w-[320px] aspect-square rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 flex-shrink-0"
               >
                 <Image
-                  src="/foodjpg/kenny-eliason-SDprf7W3NUc-unsplash.jpg"
+                  src="/foodjpg/Kapioo%20product%20picture%20holding%20meals.jpeg"
                   alt="Fresh Kapioo meals"
                   fill
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 320px"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
               </motion.div>
             </motion.div>
           </div>
@@ -184,8 +270,8 @@ export function FaqContent() {
         <section className="py-16 md:py-24 px-4 bg-white/60">
           <div className="container max-w-3xl mx-auto">
             <motion.div
-              initial="hidden"
-              whileInView="visible"
+              initial="visible"
+              animate="visible"
               viewport={{ once: true, margin: "-60px" }}
               variants={stagger}
             >
@@ -215,7 +301,7 @@ export function FaqContent() {
                           className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                         >
                           <Link href="/starter" className="flex items-center gap-2">
-                            View Menu and Order
+                            {isZh ? "查看菜单并下单" : "View Menu and Order"}
                             <ArrowRight className="w-4 h-4" />
                           </Link>
                         </Button>
@@ -238,7 +324,7 @@ export function FaqContent() {
               className="space-y-8"
             >
               <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b]">
-                Ready to get started?
+                {isZh ? "准备好开始了吗？" : "Ready to get started?"}
               </h2>
               <div className="flex justify-center">
                 <Button
@@ -247,7 +333,7 @@ export function FaqContent() {
                   className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
                 >
                   <Link href="/starter" className="flex items-center gap-2">
-                    View Menu and Order
+                    {isZh ? "查看菜单并下单" : "View Menu and Order"}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
