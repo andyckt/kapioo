@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/language-context';
@@ -9,16 +9,8 @@ import { motion } from 'framer-motion';
 export function LanguagePreferenceDialog() {
   const { language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);
-  const hasLoggedInitRef = useRef(false);
 
   useEffect(() => {
-    if (!hasLoggedInitRef.current) {
-      hasLoggedInitRef.current = true;
-      // #region agent log
-      fetch('http://127.0.0.1:7408/ingest/6854f240-86f3-4121-a956-6e67bba27392',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2075ac'},body:JSON.stringify({sessionId:'2075ac',runId:'baseline',hypothesisId:'H2',location:'components/language-preference-dialog.tsx:useEffect:init',message:'LanguagePreferenceDialog mounted with dependency type checks',data:{dialogType:typeof Dialog,dialogContentType:typeof DialogContent,motionDivType:typeof motion?.div,buttonType:typeof Button,initialLanguage:language},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
-
     // If logged in, use profile language and do not show popup
     try {
       const userStr = localStorage.getItem('user');
