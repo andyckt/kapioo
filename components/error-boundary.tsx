@@ -26,6 +26,23 @@ export class ErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught:", error?.message)
     console.error("Component stack:", errorInfo.componentStack)
+    fetch("/api/client-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "ErrorBoundary",
+        errorName: error?.name,
+        errorMessage: error?.message,
+        componentStack: errorInfo?.componentStack,
+        path: typeof window !== "undefined" ? window.location.pathname : undefined,
+        href: typeof window !== "undefined" ? window.location.href : undefined,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #region agent log
+    fetch('http://127.0.0.1:7408/ingest/6854f240-86f3-4121-a956-6e67bba27392',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2075ac'},body:JSON.stringify({sessionId:'2075ac',runId:'baseline',hypothesisId:'H1',location:'components/error-boundary.tsx:componentDidCatch',message:'Root error boundary captured runtime error',data:{errorMessage:error?.message,errorName:error?.name,componentStack:errorInfo?.componentStack?.slice(0,800)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     this.setState((s) => ({ ...s, componentStack: errorInfo.componentStack }))
   }
 

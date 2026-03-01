@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import dynamic from "next/dynamic"
+import { useEffect, useRef } from "react"
 import { ArrowRight, CreditCard, UtensilsCrossed, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HeroCarousel } from "@/components/hero-carousel"
@@ -24,12 +25,21 @@ const CustomerReviewsSection = dynamic(
 )
 
 const EnglishReviewSection = dynamic(
-  () => import("@/components/english-review-section").then((m) => ({ default: m.default })),
+  () => import("@/components/english-review-section").then((m) => ({ default: m.EnglishReviewSection })),
   { loading: () => <div className="h-96 animate-pulse rounded-xl bg-[#FBF7F2]" /> }
 )
 
 export default function Home() {
   const { t, language } = useLanguage();
+  const hasLoggedInitRef = useRef(false)
+
+  useEffect(() => {
+    if (hasLoggedInitRef.current) return
+    hasLoggedInitRef.current = true
+    // #region agent log
+    fetch('http://127.0.0.1:7408/ingest/6854f240-86f3-4121-a956-6e67bba27392',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2075ac'},body:JSON.stringify({sessionId:'2075ac',runId:'baseline',hypothesisId:'H4',location:'app/page.tsx:Home:useEffect:init',message:'Home mounted with top-level component type checks',data:{language,languageSwitcherType:typeof LanguageSwitcher,sectionNavigationType:typeof SectionNavigation,heroCarouselType:typeof HeroCarousel,screenshotCarouselType:typeof ScreenshotCarousel,scrollRevealType:typeof ScrollReveal},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [language])
   
   return (
     <div className="flex min-h-screen flex-col">

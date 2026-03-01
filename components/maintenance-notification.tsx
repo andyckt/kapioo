@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ export function MaintenanceNotification() {
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [hasShown, setHasShown] = useState(false)
+  const hasLoggedInitRef = useRef(false)
   const { language } = useLanguage()
   const { isMaintenanceMode } = useMaintenanceMode()
   const wechatId = "kapioomeal06"
@@ -18,6 +19,13 @@ export function MaintenanceNotification() {
   // Show popup after a short delay if maintenance mode is active
   // AND after language preference has been set
   useEffect(() => {
+    if (!hasLoggedInitRef.current) {
+      hasLoggedInitRef.current = true
+      // #region agent log
+      fetch('http://127.0.0.1:7408/ingest/6854f240-86f3-4121-a956-6e67bba27392',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2075ac'},body:JSON.stringify({sessionId:'2075ac',runId:'baseline',hypothesisId:'H3',location:'components/maintenance-notification.tsx:useEffect:init',message:'MaintenanceNotification mounted with dependency type checks',data:{isMaintenanceMode,motionDivType:typeof motion?.div,animatePresenceType:typeof AnimatePresence,buttonType:typeof Button,language},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    }
+
     if (isMaintenanceMode && !hasShown) {
       // Check if language preference has been set
       const languagePreferenceSet = typeof window !== 'undefined' 
