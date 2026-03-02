@@ -1340,50 +1340,50 @@ export default function AdminDashboardPage() {
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[250px] sm:w-[300px]">
-                <SheetHeader>
+              <SheetContent side="left" className="w-[min(320px,90vw)] flex flex-col overflow-hidden">
+                <SheetHeader className="flex-shrink-0">
                   <SheetTitle className="flex items-center space-x-2">
                     <ShoppingCart className="h-6 w-6" />
                     <span>Kapioo Admin</span>
                   </SheetTitle>
                 </SheetHeader>
-                <nav className="mt-6 flex flex-col gap-2">
+                <nav className="mt-6 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 [-webkit-overflow-scrolling:touch]">
                   {sidebarMenuItems.map((item) => (
                     <div key={item.id}>
                       {item.isHeading ? (
-                        <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
+                        <div className="px-3 py-2 text-sm font-medium flex items-center gap-2 min-w-0">
                           {item.icon}
-                          <span className="ml-2">{item.label}</span>
+                          <span className="ml-2 min-w-0 flex-1 break-words text-left">{item.label}</span>
                         </div>
                       ) : (
                         <Button
                           variant={activeTab === item.id ? "default" : "ghost"}
-                          className="justify-start w-full"
+                          className="justify-start w-full whitespace-normal text-left min-w-0"
                           onClick={() => {
                             setActiveTab(item.id)
                             setMobileMenuOpen(false)
                           }}
                         >
                           {item.icon}
-                          <span className="ml-2">{item.label}</span>
+                          <span className="ml-2 min-w-0 flex-1 break-words">{item.label}</span>
                         </Button>
                       )}
                       
                       {/* Render children if they exist */}
                       {item.children && item.children.length > 0 && (
-                        <div className="pl-6 mt-1 border-l-2 border-muted ml-2">
+                        <div className="pl-6 mt-1 border-l-2 border-muted ml-2 min-w-0">
                           {item.children.map((child) => (
                             <Button
                               key={child.id}
                               variant={activeTab === child.id ? "default" : "ghost"}
-                              className="justify-start w-full text-sm"
+                              className="justify-start w-full text-sm whitespace-normal text-left min-w-0"
                               onClick={() => {
                                 setActiveTab(child.id)
                                 setMobileMenuOpen(false)
                               }}
                             >
                               {child.icon}
-                              <span className="ml-2">{child.label}</span>
+                              <span className="ml-2 min-w-0 flex-1 break-words">{child.label}</span>
                             </Button>
                           ))}
                         </div>
