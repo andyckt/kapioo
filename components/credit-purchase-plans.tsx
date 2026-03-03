@@ -934,14 +934,14 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                       <div className="space-y-2 pt-3 border-t border-[#C2884E]/10">
                         {plan.duration !== 1 && (
                           <div className="flex items-start gap-2 text-sm">
-                            <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                            <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
                             <span className="text-[#6B5F53]">
                               {language === 'zh' ? '非连续使用 | 用1周扣1周' : 'Use Week-by-Week | Pause & Resume Anytime'}
                             </span>
                           </div>
                         )}
                         <div className="flex items-start gap-2 text-sm">
-                          <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                          <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
                           <span className="text-[#6B5F53]">
                             {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
                           </span>

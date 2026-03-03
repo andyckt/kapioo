@@ -633,7 +633,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 {/* Show 首次推荐 as first tick if available */}
                 {plan.savings && (
                   <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
                     <span className="text-[#6B5F53]">{plan.savings}</span>
                   </div>
                 )}
@@ -641,7 +641,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 {/* Show 可转让 as first tick for plans without savings */}
                 {!plan.savings && (
                   <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
                     <span className="text-[#6B5F53]">
                       {language === 'zh' ? '可转让' : 'Transferable'}
                     </span>
@@ -651,18 +651,26 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                 {/* Show 可转让 as second tick for plans with savings */}
                 {plan.savings && (
                   <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                    <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
                     <span className="text-[#6B5F53]">
                       {language === 'zh' ? '可转让' : 'Transferable'}
                     </span>
                   </div>
                 )}
                 
-                {/* Show Valid for 1 year as the last tick */}
+                {/* Show Valid for 6 months */}
                 <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
+                  <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
                   <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '有效期1年' : 'Valid for 1 year'}
+                    {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
+                  </span>
+                </div>
+                
+                {/* Show refund policy */}
+                <div className="flex items-start gap-2 text-sm">
+                  <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
+                  <span className="text-[#6B5F53]">
+                    {language === 'zh' ? '购买后7天内可退款未用部分' : 'Unused portion refundable within 7 days of purchase'}
                   </span>
                 </div>
               </div>
@@ -1723,7 +1731,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                   {language === 'zh' ? '选择餐券套餐' : 'Choose Your Meal Plan'}
                 </h3>
                 {/* <div className="text-sm text-muted-foreground">
-                  {language === 'zh' ? '餐券有效期：1年' : 'Vouchers valid for: 1 year'}
+                  {language === 'zh' ? '餐券有效期：半年' : 'Vouchers valid for: 6 months'}
                 </div> */}
               </div>
             </div>
