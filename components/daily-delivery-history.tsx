@@ -75,7 +75,7 @@ function OrderStatus({ status }: { status: string }) {
 }
 
 // Format address for display
-function formatAddress(address: any, language: string) {
+function formatAddress(address: any, language: string, area?: string) {
   if (!address) return language === 'en' ? "No address provided" : "未提供地址";
   
   let formattedAddress = '';
@@ -86,8 +86,12 @@ function formatAddress(address: any, language: string) {
   
   formattedAddress += address.streetAddress || '';
   
-  if (address.province || address.postalCode) {
-    formattedAddress += `, ${address.province || ''} ${address.postalCode || ''}`;
+  if (area) {
+    formattedAddress += `, ${area}`;
+  }
+
+  if (address.postalCode) {
+    formattedAddress += ` ${address.postalCode}`;
   }
   
   if (address.country) {
@@ -277,7 +281,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                     <div>
                       <p className="font-medium">{t('deliveryAddress')}</p>
                       <p className="text-muted-foreground truncate max-w-full">
-                        {formatAddress(order.deliveryAddress, language)}
+                        {formatAddress(order.deliveryAddress, language, order.area)}
                       </p>
                     </div>
                     <div>
@@ -418,7 +422,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                               <div>
                                 <h3 className="font-semibold mb-1">{t('deliveryAddress')}</h3>
                                 <p className="text-muted-foreground">
-                                  {formatAddress(selectedOrder.deliveryAddress, language)}
+                                  {formatAddress(selectedOrder.deliveryAddress, language, selectedOrder.area)}
                                 </p>
                               </div>
                               

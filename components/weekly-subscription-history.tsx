@@ -75,7 +75,7 @@ function OrderStatus({ status }: { status: string }) {
 }
 
 // Format address for display
-function formatAddress(address: any, language: string) {
+function formatAddress(address: any, language: string, area?: string) {
   if (!address) return language === 'en' ? "No address provided" : "未提供地址";
   
   let formattedAddress = '';
@@ -86,8 +86,12 @@ function formatAddress(address: any, language: string) {
   
   formattedAddress += address.streetAddress || '';
   
-  if (address.province || address.postalCode) {
-    formattedAddress += `, ${address.province || ''} ${address.postalCode || ''}`;
+  if (area) {
+    formattedAddress += `, ${area}`;
+  }
+
+  if (address.postalCode) {
+    formattedAddress += ` ${address.postalCode}`;
   }
   
   if (address.country) {
@@ -278,7 +282,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                   <div className="mt-2 text-sm">
                     <p className="font-medium">{language === 'zh' ? '配送地址' : 'Delivery Address'}</p>
                     <p className="text-muted-foreground truncate max-w-full">
-                      {formatAddress(order.deliveryAddress, language)}
+                      {formatAddress(order.deliveryAddress, language, order.area)}
                     </p>
                   </div>
                 </CardContent>
@@ -404,7 +408,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                               <div>
                                 <h3 className="font-semibold mb-1">{language === 'zh' ? '配送地址' : 'Delivery Address'}</h3>
                                 <p className="text-muted-foreground">
-                                  {formatAddress(selectedOrder.deliveryAddress, language)}
+                                  {formatAddress(selectedOrder.deliveryAddress, language, selectedOrder.area)}
                                 </p>
                               </div>
                               

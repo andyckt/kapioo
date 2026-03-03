@@ -5,6 +5,10 @@ import User from '@/models/User';
 import Day from '@/models/Day';
 import Combo from '@/models/Combo';
 import * as XLSX from 'xlsx';
+import {
+  resolveEffectiveOrderCustomerInfo,
+  type OrderCustomerOverride
+} from '@/lib/orders/effective-customer-info';
 
 // Define the interface for the DailyOrder document
 interface DailyOrderDocument extends mongoose.Document {
@@ -39,6 +43,7 @@ interface DailyOrderDocument extends mongoose.Document {
   };
   phoneNumber: string;
   area: string;
+  orderCustomerOverride?: OrderCustomerOverride;
   confirmedAt?: Date;
   deliveredAt?: Date;
   refundedAt?: Date;
@@ -97,6 +102,23 @@ const DailyDeliveryOrderSchema = new mongoose.Schema({
   },
   phoneNumber: String,
   area: String,
+  orderCustomerOverride: {
+    name: String,
+    phoneNumber: String,
+    area: String,
+    specialInstructions: String,
+    deliveryAddress: {
+      unitNumber: String,
+      streetAddress: String,
+      city: String,
+      province: String,
+      postalCode: String,
+      country: String,
+      buzzCode: String
+    },
+    updatedAt: Date,
+    updatedBy: String
+  },
   confirmedAt: Date,
   deliveredAt: Date,
   refundedAt: Date,
@@ -276,15 +298,16 @@ async function convertToWorksheetData(data: any[], targetDate: string): Promise<
     const deliveryDay = order.items && order.items.length > 0 ? 
       (order.items[0].day ? order.items[0].day.split('-')[0] : 'N/A') : 'N/A';
     
-    const address = formatAddress(order.deliveryAddress);
+    const effectiveInfo = order.effectiveCustomerInfo || {};
+    const address = formatAddress(effectiveInfo.deliveryAddress || order.deliveryAddress);
     
     const baseRow = [
       order.orderId,
       order.userName || '',
       order.userEmail || '',
-      order.phoneNumber || '',
+      effectiveInfo.phoneNumber || order.phoneNumber || '',
       address,
-      order.area || ''
+      effectiveInfo.area || order.area || ''
     ];
     
     // Create a map of combo key to quantity
@@ -314,7 +337,7 @@ async function convertToWorksheetData(data: any[], targetDate: string): Promise<
       dateCreated,
       order.voucherCost?.twoDish || 0,
       order.voucherCost?.threeDish || 0,
-      order.specialInstructions || ''
+      effectiveInfo.specialInstructions || order.specialInstructions || ''
     ];
     
     const fullRow = [...baseRow, ...comboQuantitiesRow, ...dateStatusRow];
@@ -471,13 +494,15 @@ export async function GET(request: Request) {
     // Add user information to orders
     const ordersWithUserInfo = orders.map(order => {
       const user = userMap[order.userId.toString()];
-      const userName = user?.name || 'Unknown';
-      const formattedUserName = formatUserNameWithPhone(userName, order.phoneNumber);
+      const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user);
+      const userName = effectiveCustomerInfo.name || user?.name || 'Unknown';
+      const formattedUserName = formatUserNameWithPhone(userName, effectiveCustomerInfo.phoneNumber || order.phoneNumber);
       
       return {
         ...order,
         userName: formattedUserName,
-        userEmail: user?.email || 'Unknown'
+        userEmail: effectiveCustomerInfo.email || user?.email || 'Unknown',
+        effectiveCustomerInfo
       };
     });
     

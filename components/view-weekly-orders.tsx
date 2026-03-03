@@ -143,6 +143,22 @@ export function ViewWeeklyOrders() {
     orderId: '',
     returnCredits: false
   })
+  const [isOverrideDialogOpen, setIsOverrideDialogOpen] = useState(false)
+  const [overrideOrderId, setOverrideOrderId] = useState('')
+  const [isSavingOverride, setIsSavingOverride] = useState(false)
+  const [overrideForm, setOverrideForm] = useState({
+    name: '',
+    phoneNumber: '',
+    area: '',
+    specialInstructions: '',
+    deliveryAddress: {
+      unitNumber: '',
+      streetAddress: '',
+      postalCode: '',
+      country: '',
+      buzzCode: ''
+    }
+  })
 
   // Fetch orders with pagination and filters
   const fetchOrders = async (page = 1) => {
@@ -551,7 +567,7 @@ export function ViewWeeklyOrders() {
   }
   
   // Format address for display
-  const formatAddress = (address: any) => {
+  const formatAddress = (address: any, area?: string) => {
     if (!address) return "No address provided"
     
     let formattedAddress = ''
@@ -562,15 +578,111 @@ export function ViewWeeklyOrders() {
     
     formattedAddress += address.streetAddress || ''
     
-    if (address.city || address.province || address.postalCode) {
-      formattedAddress += `, ${address.city || ''} ${address.province || ''} ${address.postalCode || ''}`
+    if (area) {
+      formattedAddress += `, ${area}`
+    }
+
+    if (address.postalCode) {
+      formattedAddress += ` ${address.postalCode}`
     }
     
     if (address.country) {
       formattedAddress += `, ${address.country}`
     }
     
-    return formattedAddress
+    return formattedAddress.trim()
+  }
+
+  const getEffectiveCustomerInfo = (order: any) => {
+    const fallbackAddress = order?.deliveryAddress || {}
+    const fallbackUser = order?.user || {}
+    const fallback = {
+      name: fallbackUser.name || '',
+      email: fallbackUser.email || '',
+      phoneNumber: order?.phoneNumber || '',
+      area: order?.area || '',
+      specialInstructions: order?.specialInstructions || '',
+      deliveryAddress: fallbackAddress
+    }
+
+    return {
+      ...fallback,
+      ...(order?.effectiveCustomerInfo || {}),
+      deliveryAddress: {
+        unitNumber: order?.effectiveCustomerInfo?.deliveryAddress?.unitNumber ?? fallbackAddress.unitNumber ?? '',
+        streetAddress: order?.effectiveCustomerInfo?.deliveryAddress?.streetAddress ?? fallbackAddress.streetAddress ?? '',
+        postalCode: order?.effectiveCustomerInfo?.deliveryAddress?.postalCode ?? fallbackAddress.postalCode ?? '',
+        country: order?.effectiveCustomerInfo?.deliveryAddress?.country ?? fallbackAddress.country ?? '',
+        buzzCode: order?.effectiveCustomerInfo?.deliveryAddress?.buzzCode ?? fallbackAddress.buzzCode ?? ''
+      }
+    }
+  }
+
+  const getOrderUpdateLogs = (order: any) => {
+    if (!order || !Array.isArray(order.orderCustomerOverrideLogs)) return []
+    return [...order.orderCustomerOverrideLogs].sort((a: any, b: any) => {
+      const aTs = new Date(a?.updatedAt || 0).getTime()
+      const bTs = new Date(b?.updatedAt || 0).getTime()
+      return bTs - aTs
+    })
+  }
+
+  const openOverrideDialog = (order: any) => {
+    const effective = getEffectiveCustomerInfo(order)
+    setOverrideOrderId(order.orderId)
+    setOverrideForm({
+      name: effective.name || '',
+      phoneNumber: effective.phoneNumber || '',
+      area: effective.area || '',
+      specialInstructions: effective.specialInstructions || '',
+      deliveryAddress: {
+        unitNumber: effective.deliveryAddress?.unitNumber || '',
+        streetAddress: effective.deliveryAddress?.streetAddress || '',
+        postalCode: effective.deliveryAddress?.postalCode || '',
+        country: effective.deliveryAddress?.country || '',
+        buzzCode: effective.deliveryAddress?.buzzCode || ''
+      }
+    })
+    setIsOverrideDialogOpen(true)
+  }
+
+  const applyUpdatedOrder = (updatedOrder: any) => {
+    setOrders((prev) => prev.map((order) => (order.orderId === updatedOrder.orderId ? { ...order, ...updatedOrder } : order)))
+    setSelectedOrder((prev: any) => {
+      if (!prev || prev.orderId !== updatedOrder.orderId) return prev
+      return { ...prev, ...updatedOrder }
+    })
+  }
+
+  const submitOrderOnlyOverride = async () => {
+    if (!overrideOrderId) return
+    setIsSavingOverride(true)
+    try {
+      const response = await fetch(`/api/admin/weekly-subscription/orders/${overrideOrderId}/customer-info`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(overrideForm)
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save order-only override')
+      }
+
+      applyUpdatedOrder(data.data)
+      toast({
+        title: "Order-only override saved",
+        description: `Customer info updated for ${overrideOrderId} only. User profile was not changed.`
+      })
+      setIsOverrideDialogOpen(false)
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: error instanceof Error ? error.message : "Failed to save order-only override",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSavingOverride(false)
+    }
   }
 
   return (
@@ -831,14 +943,14 @@ export function ViewWeeklyOrders() {
                         </td>
                         <td className="p-4 align-middle">{order.orderId}</td>
                         <td className="p-4 align-middle">
-                          {order.user?.name || 'Unknown'}
-                          {order.user?.email && (
+                          {getEffectiveCustomerInfo(order).name || 'Unknown'}
+                          {getEffectiveCustomerInfo(order).email && (
                             <div className="flex items-center gap-1 mt-0.5">
-                              <span className="text-xs text-muted-foreground truncate">{order.user.email}</span>
+                              <span className="text-xs text-muted-foreground truncate">{getEffectiveCustomerInfo(order).email}</span>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  copyEmail(order.user.email)
+                                  copyEmail(getEffectiveCustomerInfo(order).email)
                                 }}
                                 className="flex-shrink-0 p-0.5 hover:bg-muted rounded transition-colors"
                                 title="Copy email"
@@ -944,7 +1056,7 @@ export function ViewWeeklyOrders() {
                         <td className="p-4 align-middle">
                           <OrderStatus status={order.status} />
                         </td>
-                        <td className="p-4 align-middle">{order.area || 'N/A'}</td>
+                        <td className="p-4 align-middle">{getEffectiveCustomerInfo(order).area || 'N/A'}</td>
                         <td className="p-4 text-right align-middle">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1047,6 +1159,20 @@ export function ViewWeeklyOrders() {
                                         <h3 className="font-semibold">Order Status</h3>
                                         <OrderStatus status={selectedOrder.status} />
                                       </div>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        {selectedOrder.hasOrderOnlyOverride ? (
+                                          <Badge variant="secondary">Order-only override active</Badge>
+                                        ) : (
+                                          <Badge variant="outline">Using original order snapshot</Badge>
+                                        )}
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => openOverrideDialog(selectedOrder)}
+                                        >
+                                          Edit order-only customer info
+                                        </Button>
+                                      </div>
                                     </div>
                                     
                                     {/* Order details section */}
@@ -1055,9 +1181,9 @@ export function ViewWeeklyOrders() {
                                       <div>
                                         <h3 className="font-semibold mb-1">Customer</h3>
                                         <p className="text-muted-foreground">
-                                          {selectedOrder.user?.name || 'Unknown'}
-                                          {selectedOrder.user?.email && (
-                                            <span className="block">{selectedOrder.user.email}</span>
+                                          {getEffectiveCustomerInfo(selectedOrder).name || 'Unknown'}
+                                          {getEffectiveCustomerInfo(selectedOrder).email && (
+                                            <span className="block">{getEffectiveCustomerInfo(selectedOrder).email}</span>
                                           )}
                                         </p>
                                       </div>
@@ -1097,14 +1223,14 @@ export function ViewWeeklyOrders() {
                                         <div>
                                           <h3 className="font-semibold mb-1">Area</h3>
                                           <p className="text-muted-foreground">
-                                            {selectedOrder.area || 'N/A'}
+                                            {getEffectiveCustomerInfo(selectedOrder).area || 'N/A'}
                                           </p>
                                         </div>
                                         
                                         <div>
                                           <h3 className="font-semibold mb-1">Phone Number</h3>
                                           <p className="text-muted-foreground">
-                                            {selectedOrder.phoneNumber || 'N/A'}
+                                            {getEffectiveCustomerInfo(selectedOrder).phoneNumber || 'N/A'}
                                           </p>
                                         </div>
                                       </div>
@@ -1112,16 +1238,44 @@ export function ViewWeeklyOrders() {
                                       <div>
                                         <h3 className="font-semibold mb-1">Delivery Address</h3>
                                         <p className="text-muted-foreground">
-                                          {formatAddress(selectedOrder.deliveryAddress)}
+                                          {formatAddress(getEffectiveCustomerInfo(selectedOrder).deliveryAddress, getEffectiveCustomerInfo(selectedOrder).area)}
                                         </p>
                                       </div>
                                       
-                                      {selectedOrder.specialInstructions && (
+                                      {getEffectiveCustomerInfo(selectedOrder).specialInstructions && (
                                         <div>
-                                          <h3 className="font-semibold mb-1">Special Instructions</h3>
+                                          <h3 className="font-semibold mb-1">Special Request</h3>
                                           <p className="text-muted-foreground">
-                                            {selectedOrder.specialInstructions}
+                                            {getEffectiveCustomerInfo(selectedOrder).specialInstructions}
                                           </p>
+                                        </div>
+                                      )}
+
+                                      {getOrderUpdateLogs(selectedOrder).length > 0 && (
+                                        <div>
+                                          <h3 className="font-semibold mb-1">Order Update Notes</h3>
+                                          <div className="space-y-2">
+                                            {getOrderUpdateLogs(selectedOrder).slice(0, 10).map((log: any, idx: number) => (
+                                              <div key={`${log.updatedAt || idx}-${idx}`} className="rounded border p-2 bg-muted/20">
+                                                <p className="text-xs font-medium">
+                                                  {new Date(log.updatedAt).toLocaleString()}
+                                                  {log.updatedBy ? ` • ${log.updatedBy}` : ''}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                  Updated: {Array.isArray(log.changedFields) && log.changedFields.length > 0 ? log.changedFields.join(', ') : 'customer info'}
+                                                </p>
+                                                {Array.isArray(log.changedDetails) && log.changedDetails.length > 0 && (
+                                                  <div className="mt-2 space-y-1">
+                                                    {log.changedDetails.map((detail: any, detailIdx: number) => (
+                                                      <p key={`${detail.field}-${detailIdx}`} className="text-xs text-muted-foreground">
+                                                        {detail.field}: {detail.from}{' -> '}{detail.to}
+                                                      </p>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
                                         </div>
                                       )}
                                     </div>
@@ -1174,14 +1328,14 @@ export function ViewWeeklyOrders() {
                         <Users className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{order.user?.name || 'Unknown'}</p>
-                        {order.user?.email && (
+                        <p className="text-sm font-medium truncate">{getEffectiveCustomerInfo(order).name || 'Unknown'}</p>
+                        {getEffectiveCustomerInfo(order).email && (
                           <div className="flex items-center gap-1">
-                            <p className="text-xs text-muted-foreground truncate flex-1">{order.user.email}</p>
+                            <p className="text-xs text-muted-foreground truncate flex-1">{getEffectiveCustomerInfo(order).email}</p>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                copyEmail(order.user.email)
+                                copyEmail(getEffectiveCustomerInfo(order).email)
                               }}
                               className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"
                               title="Copy email"
@@ -1205,7 +1359,7 @@ export function ViewWeeklyOrders() {
                             ({order.items && order.items.length > 0 && order.items[0].dayId ? order.items[0].dayId.split('-')[0] : ''})
                           </span>
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">{order.area || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{getEffectiveCustomerInfo(order).area || 'N/A'}</p>
                       </div>
                     </div>
 
@@ -1281,18 +1435,32 @@ export function ViewWeeklyOrders() {
                                   </div>
                                   <h3 className="font-semibold text-sm sm:text-base">Customer Information</h3>
                                 </div>
+                                <div className="mb-3 flex flex-wrap items-center gap-2">
+                                  {selectedOrder.hasOrderOnlyOverride ? (
+                                    <Badge variant="secondary">Order-only override active</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Using original order snapshot</Badge>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openOverrideDialog(selectedOrder)}
+                                  >
+                                    Edit order-only customer info
+                                  </Button>
+                                </div>
                                 <div className="space-y-2 text-sm">
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1">
                                     <span className="text-muted-foreground font-medium min-w-[60px]">Name:</span>
-                                    <span className="font-medium">{selectedOrder.user?.name || 'N/A'}</span>
+                                    <span className="font-medium">{getEffectiveCustomerInfo(selectedOrder).name || 'N/A'}</span>
                                   </div>
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1">
                                     <span className="text-muted-foreground font-medium min-w-[60px]">Email:</span>
-                                    <span className="text-xs sm:text-sm break-all">{selectedOrder.user?.email || 'N/A'}</span>
+                                    <span className="text-xs sm:text-sm break-all">{getEffectiveCustomerInfo(selectedOrder).email || 'N/A'}</span>
                                   </div>
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1">
                                     <span className="text-muted-foreground font-medium min-w-[60px]">Phone:</span>
-                                    <span>{selectedOrder.phoneNumber || 'N/A'}</span>
+                                    <span>{getEffectiveCustomerInfo(selectedOrder).phoneNumber || 'N/A'}</span>
                                   </div>
                                 </div>
                               </div>
@@ -1308,24 +1476,22 @@ export function ViewWeeklyOrders() {
                                 <div className="space-y-2 text-sm">
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1">
                                     <span className="text-muted-foreground font-medium min-w-[60px]">Area:</span>
-                                    <span className="font-medium">{selectedOrder.area || 'N/A'}</span>
+                                    <span className="font-medium">{getEffectiveCustomerInfo(selectedOrder).area || 'N/A'}</span>
                                   </div>
-                                  {selectedOrder.deliveryAddress && (
+                                  {getEffectiveCustomerInfo(selectedOrder).deliveryAddress && (
                                     <div className="mt-2 pt-2 border-t border-green-200/50">
                                       <p className="text-muted-foreground font-medium mb-1">Address:</p>
                                       <div className="pl-2 space-y-1">
                                         <p>
-                                          {selectedOrder.deliveryAddress.unitNumber && `${selectedOrder.deliveryAddress.unitNumber}, `}
-                                          {selectedOrder.deliveryAddress.streetAddress}
+                                          {getEffectiveCustomerInfo(selectedOrder).deliveryAddress.unitNumber && `${getEffectiveCustomerInfo(selectedOrder).deliveryAddress.unitNumber}, `}
+                                          {getEffectiveCustomerInfo(selectedOrder).deliveryAddress.streetAddress}
                                         </p>
-                                        <p>
-                                          {selectedOrder.deliveryAddress.city}, {selectedOrder.deliveryAddress.province}
-                                        </p>
-                                        <p>{selectedOrder.deliveryAddress.postalCode}</p>
-                                        {selectedOrder.deliveryAddress.buzzCode && (
+                                        <p>{getEffectiveCustomerInfo(selectedOrder).deliveryAddress.postalCode}</p>
+                                        <p>{getEffectiveCustomerInfo(selectedOrder).deliveryAddress.postalCode}</p>
+                                        {getEffectiveCustomerInfo(selectedOrder).deliveryAddress.buzzCode && (
                                           <p className="flex items-center gap-1">
                                             <span className="text-muted-foreground">Buzz:</span>
-                                            <span className="font-medium">{selectedOrder.deliveryAddress.buzzCode}</span>
+                                            <span className="font-medium">{getEffectiveCustomerInfo(selectedOrder).deliveryAddress.buzzCode}</span>
                                           </p>
                                         )}
                                       </div>
@@ -1376,16 +1542,16 @@ export function ViewWeeklyOrders() {
                               </div>
 
                               {/* Special Instructions */}
-                              {selectedOrder.specialInstructions && (
+                              {getEffectiveCustomerInfo(selectedOrder).specialInstructions && (
                                 <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/20 dark:to-amber-900/10 rounded-lg p-4 border border-amber-200/50">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
                                       <AlertCircle className="h-4 w-4 text-amber-600" />
                                     </div>
-                                    <h3 className="font-semibold text-sm sm:text-base">Special Instructions</h3>
+                                    <h3 className="font-semibold text-sm sm:text-base">Special Request</h3>
                                   </div>
                                   <p className="text-sm bg-white dark:bg-gray-900 p-3 rounded-lg border">
-                                    {selectedOrder.specialInstructions}
+                                    {getEffectiveCustomerInfo(selectedOrder).specialInstructions}
                                   </p>
                                 </div>
                               )}
@@ -1414,6 +1580,34 @@ export function ViewWeeklyOrders() {
                                   )}
                                 </div>
                               </div>
+
+                              {getOrderUpdateLogs(selectedOrder).length > 0 && (
+                                <div className="bg-gradient-to-br from-blue-50 to-blue-100/40 dark:from-blue-950/20 dark:to-blue-900/10 rounded-lg p-4 border border-blue-200/50">
+                                  <h3 className="font-semibold text-sm sm:text-base mb-2">Order Update Notes</h3>
+                                  <div className="space-y-2">
+                                    {getOrderUpdateLogs(selectedOrder).slice(0, 10).map((log: any, idx: number) => (
+                                      <div key={`${log.updatedAt || idx}-${idx}`} className="text-sm bg-white dark:bg-gray-900 p-3 rounded border">
+                                        <p className="font-medium">
+                                          {new Date(log.updatedAt).toLocaleString()}
+                                          {log.updatedBy ? ` • ${log.updatedBy}` : ''}
+                                        </p>
+                                        <p className="text-muted-foreground mt-1">
+                                          Updated: {Array.isArray(log.changedFields) && log.changedFields.length > 0 ? log.changedFields.join(', ') : 'customer info'}
+                                        </p>
+                                        {Array.isArray(log.changedDetails) && log.changedDetails.length > 0 && (
+                                          <div className="mt-2 space-y-1">
+                                            {log.changedDetails.map((detail: any, detailIdx: number) => (
+                                              <p key={`${detail.field}-${detailIdx}`} className="text-xs text-muted-foreground">
+                                                {detail.field}: {detail.from}{' -> '}{detail.to}
+                                              </p>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </>
                         ) : (
@@ -1483,6 +1677,153 @@ export function ViewWeeklyOrders() {
         </div>
       </CardContent>
       
+      <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
+        <DialogContent className="sm:max-w-[680px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Order-Only Customer Info</DialogTitle>
+            <DialogDescription>
+              This updates this order only and does not change user profile or future orders.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="override-name">Name</Label>
+              <Input
+                id="override-name"
+                value={overrideForm.name}
+                onChange={(e) => setOverrideForm((prev) => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="override-phone">Phone Number</Label>
+                <Input
+                  id="override-phone"
+                  value={overrideForm.phoneNumber}
+                  onChange={(e) => setOverrideForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="override-area">Area</Label>
+                <Select
+                  value={overrideForm.area || 'all'}
+                  onValueChange={(value) =>
+                    setOverrideForm((prev) => ({ ...prev, area: value === 'all' ? '' : value }))
+                  }
+                >
+                  <SelectTrigger id="override-area">
+                    <SelectValue placeholder="Select area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">No override (use original)</SelectItem>
+                    {areas.map((area) => (
+                      <SelectItem key={area} value={area}>{area}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="override-unit">Unit Number</Label>
+              <Input
+                id="override-unit"
+                value={overrideForm.deliveryAddress.unitNumber}
+                onChange={(e) =>
+                  setOverrideForm((prev) => ({
+                    ...prev,
+                    deliveryAddress: { ...prev.deliveryAddress, unitNumber: e.target.value }
+                  }))
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="override-street">Street Address</Label>
+              <Input
+                id="override-street"
+                value={overrideForm.deliveryAddress.streetAddress}
+                onChange={(e) =>
+                  setOverrideForm((prev) => ({
+                    ...prev,
+                    deliveryAddress: { ...prev.deliveryAddress, streetAddress: e.target.value }
+                  }))
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid gap-2 md:col-span-1">
+                <Label htmlFor="override-postal">Postal Code</Label>
+                <Input
+                  id="override-postal"
+                  value={overrideForm.deliveryAddress.postalCode}
+                  onChange={(e) =>
+                    setOverrideForm((prev) => ({
+                      ...prev,
+                      deliveryAddress: { ...prev.deliveryAddress, postalCode: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="grid gap-2 md:col-span-1">
+                <Label htmlFor="override-country">Country</Label>
+                <Input
+                  id="override-country"
+                  value={overrideForm.deliveryAddress.country}
+                  onChange={(e) =>
+                    setOverrideForm((prev) => ({
+                      ...prev,
+                      deliveryAddress: { ...prev.deliveryAddress, country: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="grid gap-2 md:col-span-1">
+                <Label htmlFor="override-buzz">Buzz Code</Label>
+                <Input
+                  id="override-buzz"
+                  value={overrideForm.deliveryAddress.buzzCode}
+                  onChange={(e) =>
+                    setOverrideForm((prev) => ({
+                      ...prev,
+                      deliveryAddress: { ...prev.deliveryAddress, buzzCode: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="override-special">Special Request</Label>
+              <Input
+                id="override-special"
+                value={overrideForm.specialInstructions}
+                onChange={(e) => setOverrideForm((prev) => ({ ...prev, specialInstructions: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOverrideDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitOrderOnlyOverride} disabled={isSavingOverride}>
+              {isSavingOverride ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Order-Only Override'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Order Dialog */}
       <Dialog open={deleteDialog.isOpen} onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, orderId: '', returnCredits: false })}>
         <DialogContent>

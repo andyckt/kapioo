@@ -11,6 +11,7 @@ const authOptions = {
 };
 import mongoose from 'mongoose';
 import { sendDailyOrderConfirmationEmail, sendAdminDailyOrderNotification } from '@/lib/services/email';
+import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
 
 // Define the interface for the DailyOrder document
 // Define item interface
@@ -427,6 +428,20 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    const user = await User.findById(userId).select('name email').lean();
+    const normalizedOrders = orders.map((order: any) => {
+      const plain = typeof order.toObject === 'function' ? order.toObject() : order;
+      const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plain, user);
+      return {
+        ...plain,
+        effectiveCustomerInfo,
+        phoneNumber: effectiveCustomerInfo.phoneNumber,
+        area: effectiveCustomerInfo.area,
+        deliveryAddress: effectiveCustomerInfo.deliveryAddress,
+        specialInstructions: effectiveCustomerInfo.specialInstructions
+      };
+    });
     
     // Get total count for pagination
     const totalOrders = await DailyDeliveryOrder.countDocuments(query);
@@ -434,7 +449,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       data: {
-        orders,
+        orders: normalizedOrders,
         page,
         limit,
         total: totalOrders,

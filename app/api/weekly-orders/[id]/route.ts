@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import WeeklyOrder from '@/models/WeeklyOrder';
+import User from '@/models/User';
 import mongoose from 'mongoose';
+import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
 
 // Interface for route params
 interface RouteParams {
@@ -32,9 +34,20 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
     
+    const user = await User.findById(order.userId).select('name email').lean();
+    const plainOrder = typeof (order as any).toObject === 'function' ? (order as any).toObject() : order;
+    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as any, user);
+
     return NextResponse.json({
       success: true,
-      data: order
+      data: {
+        ...plainOrder,
+        effectiveCustomerInfo,
+        phoneNumber: effectiveCustomerInfo.phoneNumber,
+        area: effectiveCustomerInfo.area,
+        deliveryAddress: effectiveCustomerInfo.deliveryAddress,
+        specialInstructions: effectiveCustomerInfo.specialInstructions
+      }
     });
   } catch (error: any) {
     console.error(`Error fetching weekly order ${params.id}:`, error);

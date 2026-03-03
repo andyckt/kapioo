@@ -3,6 +3,10 @@ import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
 import * as XLSX from 'xlsx';
+import {
+  resolveEffectiveOrderCustomerInfo,
+  type OrderCustomerOverride
+} from '@/lib/orders/effective-customer-info';
 
 // Define the interface for the WeeklyOrder document
 interface WeeklyOrderDocument extends mongoose.Document {
@@ -30,6 +34,7 @@ interface WeeklyOrderDocument extends mongoose.Document {
   };
   phoneNumber: string;
   area: string;
+  orderCustomerOverride?: OrderCustomerOverride;
   confirmedAt?: Date;
   deliveredAt?: Date;
   refundedAt?: Date;
@@ -80,6 +85,23 @@ const WeeklyOrderSchema = new mongoose.Schema({
   },
   phoneNumber: String,
   area: String,
+  orderCustomerOverride: {
+    name: String,
+    phoneNumber: String,
+    area: String,
+    specialInstructions: String,
+    deliveryAddress: {
+      unitNumber: String,
+      streetAddress: String,
+      city: String,
+      province: String,
+      postalCode: String,
+      country: String,
+      buzzCode: String
+    },
+    updatedAt: Date,
+    updatedBy: String
+  },
   confirmedAt: Date,
   deliveredAt: Date,
   refundedAt: Date,
@@ -197,16 +219,17 @@ function convertToWorksheetData(data: any[], targetDate: string): any[][] {
     const deliveryDate = order.items && order.items.length > 0 ? order.items[0].date : 'N/A';
     const deliveryDay = order.items && order.items.length > 0 ? order.items[0].dayId.split('-')[0] : 'N/A';
     
-    const address = formatAddress(order.deliveryAddress);
+    const effectiveInfo = order.effectiveCustomerInfo || {};
+    const address = formatAddress(effectiveInfo.deliveryAddress || order.deliveryAddress);
     
     const baseRow = [
       order.orderId,
       order.userName || '',
       order.userEmail || '',
-      order.phoneNumber || '',
+      effectiveInfo.phoneNumber || order.phoneNumber || '',
       address,
-      order.area || '',
-      normalizeSpecialInstructions(order.specialInstructions)
+      effectiveInfo.area || order.area || '',
+      normalizeSpecialInstructions(effectiveInfo.specialInstructions || order.specialInstructions)
     ];
     
     // Create a map of dish name to quantity
@@ -365,10 +388,12 @@ export async function GET(request: Request) {
     // Add user information to orders
     const ordersWithUserInfo = orders.map(order => {
       const user = userMap[order.userId.toString()];
+      const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user);
       return {
         ...order,
-        userName: user?.name || 'Unknown',
-        userEmail: user?.email || 'Unknown'
+        userName: effectiveCustomerInfo.name || user?.name || 'Unknown',
+        userEmail: effectiveCustomerInfo.email || user?.email || 'Unknown',
+        effectiveCustomerInfo
       };
     });
     

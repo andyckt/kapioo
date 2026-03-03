@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
+import {
+  getOrderOnlyOverrideMeta,
+  hasOrderCustomerOverride,
+  resolveEffectiveOrderCustomerInfo,
+  type OrderCustomerOverride,
+} from '@/lib/orders/effective-customer-info';
 
 // Define route params interface
 interface RouteParams {
@@ -32,6 +38,12 @@ interface DailyOrderDocument extends mongoose.Document {
   };
   phoneNumber: string;
   area: string;
+  orderCustomerOverride?: OrderCustomerOverride;
+  orderCustomerOverrideLogs?: Array<{
+    updatedAt: Date;
+    updatedBy: string;
+    changedFields: string[];
+  }>;
   confirmedAt?: Date;
   deliveredAt?: Date;
   refundedAt?: Date;
@@ -82,6 +94,30 @@ const DailyDeliveryOrderSchema = new mongoose.Schema({
   },
   phoneNumber: String,
   area: String,
+  orderCustomerOverride: {
+    name: String,
+    phoneNumber: String,
+    area: String,
+    specialInstructions: String,
+    deliveryAddress: {
+      unitNumber: String,
+      streetAddress: String,
+      city: String,
+      province: String,
+      postalCode: String,
+      country: String,
+      buzzCode: String
+    },
+    updatedAt: Date,
+    updatedBy: String
+  },
+  orderCustomerOverrideLogs: [
+    {
+      updatedAt: Date,
+      updatedBy: String,
+      changedFields: [String]
+    }
+  ],
   confirmedAt: Date,
   deliveredAt: Date,
   refundedAt: Date,
@@ -131,7 +167,10 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Add user info to the order
     const orderWithUserInfo = {
       ...order,
-      user
+      user,
+      effectiveCustomerInfo: resolveEffectiveOrderCustomerInfo(order as any, user),
+      hasOrderOnlyOverride: hasOrderCustomerOverride(order as any),
+      orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order as any)
     };
     
     return NextResponse.json({

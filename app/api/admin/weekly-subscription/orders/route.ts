@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
+import {
+  getOrderOnlyOverrideMeta,
+  hasOrderCustomerOverride,
+  resolveEffectiveOrderCustomerInfo,
+  type OrderCustomerOverride,
+} from '@/lib/orders/effective-customer-info';
 
 // Define the interface for the WeeklyOrder document
 interface WeeklyOrderDocument extends mongoose.Document {
@@ -22,6 +28,7 @@ interface WeeklyOrderDocument extends mongoose.Document {
   };
   phoneNumber: string;
   area: string;
+  orderCustomerOverride?: OrderCustomerOverride;
   confirmedAt?: Date;
   deliveredAt?: Date;
   refundedAt?: Date;
@@ -65,6 +72,23 @@ const WeeklyOrderSchema = new mongoose.Schema({
   },
   phoneNumber: String,
   area: String,
+  orderCustomerOverride: {
+    name: String,
+    phoneNumber: String,
+    area: String,
+    specialInstructions: String,
+    deliveryAddress: {
+      unitNumber: String,
+      streetAddress: String,
+      city: String,
+      province: String,
+      postalCode: String,
+      country: String,
+      buzzCode: String
+    },
+    updatedAt: Date,
+    updatedBy: String
+  },
   confirmedAt: Date,
   deliveredAt: Date,
   refundedAt: Date,
@@ -255,14 +279,21 @@ export async function GET(request: Request) {
     const ordersWithUserInfo = await Promise.all(orders.map(async (order: any) => {
       try {
         const user = await User.findById(order.userId).select('name email').lean();
+        const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user);
         return {
           ...order,
-          user
+          user,
+          effectiveCustomerInfo,
+          hasOrderOnlyOverride: hasOrderCustomerOverride(order),
+          orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order)
         };
       } catch (error) {
         return {
           ...order,
-          user: null
+          user: null,
+          effectiveCustomerInfo: resolveEffectiveOrderCustomerInfo(order, null),
+          hasOrderOnlyOverride: hasOrderCustomerOverride(order),
+          orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order)
         };
       }
     }));

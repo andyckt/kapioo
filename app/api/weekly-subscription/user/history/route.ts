@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import User from '@/models/User';
 import mongoose from 'mongoose';
+import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
 
 // GET handler - get user's weekly subscription order history
 export async function GET(request: Request) {
@@ -39,6 +40,19 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    const normalizedOrders = orders.map((order: any) => {
+      const plain = typeof order.toObject === 'function' ? order.toObject() : order;
+      const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plain, user);
+      return {
+        ...plain,
+        effectiveCustomerInfo,
+        phoneNumber: effectiveCustomerInfo.phoneNumber,
+        area: effectiveCustomerInfo.area,
+        deliveryAddress: effectiveCustomerInfo.deliveryAddress,
+        specialInstructions: effectiveCustomerInfo.specialInstructions
+      };
+    });
     
     // Get total count for pagination
     const totalOrders = await WeeklyOrder.countDocuments({ userId: user._id });
@@ -46,7 +60,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       data: {
-        orders,
+        orders: normalizedOrders,
         page,
         limit,
         total: totalOrders,
