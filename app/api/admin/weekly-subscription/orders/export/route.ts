@@ -120,6 +120,23 @@ function formatAddress(address: any): string {
   return formattedAddress;
 }
 
+function normalizeSpecialInstructions(value: unknown): string {
+  if (typeof value !== 'string') return '';
+
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  // Keep readable line breaks while avoiding excessive empty lines.
+  const normalized = trimmed.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+
+  // Prevent spreadsheet formula injection in exported cells.
+  if (/^[=+\-@]/.test(normalized)) {
+    return `'${normalized}`;
+  }
+
+  return normalized;
+}
+
 // Helper function to convert orders for a specific date to worksheet data
 function convertToWorksheetData(data: any[], targetDate: string): any[][] {
   // Filter orders to only include items for the target date
@@ -153,7 +170,8 @@ function convertToWorksheetData(data: any[], targetDate: string): any[][] {
     'Email',
     'Phone Number',
     'Delivery Address',
-    'Area'
+    'Area',
+    'Special Instructions'
   ];
   
   // Define date and status headers
@@ -187,7 +205,8 @@ function convertToWorksheetData(data: any[], targetDate: string): any[][] {
       order.userEmail || '',
       order.phoneNumber || '',
       address,
-      order.area || ''
+      order.area || '',
+      normalizeSpecialInstructions(order.specialInstructions)
     ];
     
     // Create a map of dish name to quantity
