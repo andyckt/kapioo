@@ -59,6 +59,17 @@ export const generateVerificationCode = (): string => {
 // This is the same image that was previously on S3, now hosted on our domain
 const LOGO_URL = 'https://www.kapioo.com/kapioo-logo.png';
 
+/** Format delivery address for emails. city/province removed — area shown separately. */
+function formatEmailAddress(addr: any, unitLabel: string, buzzLabel: string): string {
+  if (!addr) return '';
+  let out = '';
+  if (addr.unitNumber) out += `${unitLabel} ${addr.unitNumber}, `;
+  const parts = [addr.streetAddress, addr.postalCode, addr.country].filter((p) => p != null && p !== '');
+  out += parts.join(', ');
+  if (addr.buzzCode) out += ` (${buzzLabel}: ${addr.buzzCode})`;
+  return out;
+}
+
 // Send a welcome email to new users
 export const sendWelcomeEmail = async (to: string, name: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -329,7 +340,6 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
           <ul style="list-style: none; padding: 0; margin: 0;">
             ${requestDetails.userAddress.unitNumber ? `<li style="padding: 3px 0;"><strong>单元号码:</strong> ${requestDetails.userAddress.unitNumber}</li>` : ''}
             ${requestDetails.userAddress.streetAddress ? `<li style="padding: 3px 0;"><strong>街道地址:</strong> ${requestDetails.userAddress.streetAddress}</li>` : ''}
-            ${requestDetails.userAddress.city ? `<li style="padding: 3px 0;"><strong>城市:</strong> ${requestDetails.userAddress.city}</li>` : ''}
             ${requestDetails.userAddress.province ? `<li style="padding: 3px 0;"><strong>区域:</strong> ${requestDetails.userAddress.province}</li>` : ''}
             ${requestDetails.userAddress.postalCode ? `<li style="padding: 3px 0;"><strong>邮政编码:</strong> ${requestDetails.userAddress.postalCode}</li>` : ''}
             ${requestDetails.userAddress.country ? `<li style="padding: 3px 0;"><strong>国家:</strong> ${requestDetails.userAddress.country}</li>` : ''}
@@ -529,7 +539,6 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
           <ul style="list-style: none; padding: 0; margin: 0;">
             ${requestDetails.userAddress.unitNumber ? `<li style="padding: 3px 0;"><strong>单元号码:</strong> ${requestDetails.userAddress.unitNumber}</li>` : ''}
             ${requestDetails.userAddress.streetAddress ? `<li style="padding: 3px 0;"><strong>街道地址:</strong> ${requestDetails.userAddress.streetAddress}</li>` : ''}
-            ${requestDetails.userAddress.city ? `<li style="padding: 3px 0;"><strong>城市:</strong> ${requestDetails.userAddress.city}</li>` : ''}
             ${requestDetails.userAddress.province ? `<li style="padding: 3px 0;"><strong>区域:</strong> ${requestDetails.userAddress.province}</li>` : ''}
             ${requestDetails.userAddress.postalCode ? `<li style="padding: 3px 0;"><strong>邮政编码:</strong> ${requestDetails.userAddress.postalCode}</li>` : ''}
             ${requestDetails.userAddress.country ? `<li style="padding: 3px 0;"><strong>国家:</strong> ${requestDetails.userAddress.country}</li>` : ''}
@@ -942,12 +951,8 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
     `;
   });
 
-  // Format address
-  const addr = orderDetails.deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(orderDetails.deliveryAddress, t.unit, t.buzzCode);
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -1080,12 +1085,8 @@ export const sendAdminWeeklyOrderNotification = async (orderDetails: {
     `;
   });
 
-  // Format address
-  const addr = orderDetails.deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(orderDetails.deliveryAddress, '单元', '门禁码');
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -1321,12 +1322,8 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
     `;
   });
 
-  // Format address
-  const addr = orderDetails.deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(orderDetails.deliveryAddress, t.unit, t.buzzCode);
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -1463,12 +1460,8 @@ export const sendAdminDailyOrderNotification = async (orderDetails: {
     `;
   });
 
-  // Format address
-  const addr = orderDetails.deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(orderDetails.deliveryAddress, '单元', '门禁码');
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -1927,12 +1920,8 @@ export const sendDailyOrderSummaryEmail = async (
     `;
   });
   
-  // Format address
-  const addr = deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(deliveryAddress, t.unit, t.buzzCode);
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -2206,12 +2195,8 @@ export const sendWeeklyOrderSummaryEmail = async (
     `;
   });
   
-  // Format address
-  const addr = deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(deliveryAddress, t.unit, t.buzzCode);
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -2389,12 +2374,8 @@ export const sendAdminDailyOrderSummaryEmail = async (
     `;
   });
   
-  // Format address
-  const addr = deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(deliveryAddress, '单元', '门禁码');
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -2583,12 +2564,8 @@ export const sendAdminWeeklyOrderSummaryEmail = async (
     `;
   });
   
-  // Format address
-  const addr = deliveryAddress;
-  let formattedAddress = '';
-  if (addr.unitNumber) formattedAddress += `单元 ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
-  if (addr.buzzCode) formattedAddress += ` (门禁码: ${addr.buzzCode})`;
+  // Format address (city/province removed — area shown separately)
+  const formattedAddress = formatEmailAddress(deliveryAddress, '单元', '门禁码');
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">

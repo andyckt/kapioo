@@ -568,7 +568,8 @@ export function formatAddress(addr: any, language: Language = 'zh'): string {
   let formattedAddress = '';
   
   if (addr.unitNumber) formattedAddress += `${t.unit} ${addr.unitNumber}, `;
-  formattedAddress += `${addr.streetAddress}, ${addr.city || ''}, ${addr.province}, ${addr.postalCode}, ${addr.country}`;
+  const parts = [addr.streetAddress, addr.postalCode, addr.country].filter((p: any) => p != null && p !== '');
+  formattedAddress += parts.join(', ');
   if (addr.buzzCode) formattedAddress += ` (${t.buzzCode}: ${addr.buzzCode})`;
   
   return formattedAddress;

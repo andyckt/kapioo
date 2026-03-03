@@ -56,18 +56,10 @@ const formatAddress = (address: any): string => {
     parts.push(address.streetAddress);
   }
   
-  let cityStateZip = [
-    address.city || '',
-    address.province || '',
-    address.postalCode || ''
-  ].filter(Boolean).join(', ');
-  
-  if (cityStateZip) {
-    parts.push(cityStateZip);
-  }
-  
-  if (address.country) {
-    parts.push(address.country);
+  // city/province removed — area shown separately
+  const locationParts = [address.postalCode, address.country].filter((p) => p != null && p !== '');
+  if (locationParts.length > 0) {
+    parts.push(locationParts.join(', '));
   }
   
   if (address.buzzCode) {

@@ -129,6 +129,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
+    const user = order?.userId ? await User.findById(order.userId).select('name email').lean() : null;
+    const effectiveBefore = resolveEffectiveOrderCustomerInfo(order as any, user);
+
     const currentOverride: OrderCustomerOverride = order.orderCustomerOverride || {};
     const nextOverride: OrderCustomerOverride = {
       ...currentOverride,
@@ -142,7 +145,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (hasOwn(body, 'name')) {
       hasPatchField = true;
-      const previous = normalizeOptionalText(currentOverride.name);
+      const previous = normalizeOptionalText(effectiveBefore.name);
       nextOverride.name = normalizeOptionalText(body.name as string);
       if (toComparable(previous) !== toComparable(nextOverride.name)) {
         changedFields.push('name');
@@ -156,7 +159,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (hasOwn(body, 'phoneNumber')) {
       hasPatchField = true;
-      const previous = normalizePhoneNumber(currentOverride.phoneNumber);
+      const previous = normalizePhoneNumber(effectiveBefore.phoneNumber);
       nextOverride.phoneNumber = normalizePhoneNumber(body.phoneNumber as string);
       if (toComparable(previous) !== toComparable(nextOverride.phoneNumber)) {
         changedFields.push('phone number');
@@ -170,7 +173,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (hasOwn(body, 'area')) {
       hasPatchField = true;
-      const previous = normalizeOptionalText(currentOverride.area);
+      const previous = normalizeOptionalText(effectiveBefore.area);
       const normalizedArea = normalizeOptionalText(body.area as string);
       if (normalizedArea && !ALL_WEEKLY_AREAS.includes(normalizedArea as any)) {
         return NextResponse.json({ success: false, error: 'Invalid area value' }, { status: 400 });
@@ -188,7 +191,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (hasOwn(body, 'specialInstructions')) {
       hasPatchField = true;
-      const previous = normalizeOptionalText(currentOverride.specialInstructions);
+      const previous = normalizeOptionalText(effectiveBefore.specialInstructions);
       nextOverride.specialInstructions = normalizeOptionalText(body.specialInstructions as string);
       if (toComparable(previous) !== toComparable(nextOverride.specialInstructions)) {
         changedFields.push('special request');
@@ -202,7 +205,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (hasOwn(body, 'deliveryAddress')) {
       hasPatchField = true;
-      const previousAddress = currentOverride.deliveryAddress || {};
+      const previousAddress = effectiveBefore.deliveryAddress || {};
       if (body.deliveryAddress === null) {
         const hadAddressValues = Object.values(previousAddress).some((value) => Boolean(normalizeOptionalText(value)));
         nextOverride.deliveryAddress = {};
@@ -319,14 +322,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const updatedOrder = await WeeklyOrder.findOne({ orderId: id }).lean();
-    const user = updatedOrder?.userId ? await User.findById(updatedOrder.userId).select('name email').lean() : null;
-    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, user);
+    const updatedUser = updatedOrder?.userId ? await User.findById(updatedOrder.userId).select('name email').lean() : null;
+    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, updatedUser);
 
     return NextResponse.json({
       success: true,
       data: {
         ...updatedOrder,
-        user,
+        user: updatedUser,
         effectiveCustomerInfo,
         hasOrderOnlyOverride: hasOrderCustomerOverride(updatedOrder || {}),
         orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(updatedOrder || {}),
