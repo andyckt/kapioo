@@ -21,8 +21,9 @@ import {
   Plus,
   Minus
 } from "lucide-react"
-import Link from "next/link"
 import { useLanguage } from "@/lib/language-context"
+import { useSmartBack } from "@/hooks/use-smart-back"
+import { getWeeklyMealState, setWeeklyMealState } from "@/lib/plan-flow-state"
 import { getUserWeeklySubscription } from "@/lib/weekly-subscription"
 import { listWeeklyPlans } from "@/lib/plans/service"
 
@@ -50,8 +51,15 @@ interface PlanOption {
 export default function WeeklyMealPage() {
   const router = useRouter()
   const { t, language } = useLanguage()
-  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12 | 16>(6)
-  const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect'>('mealSelect')
+  const handleBack = useSmartBack()
+  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12 | 16>(() => {
+    const saved = getWeeklyMealState()
+    return saved ? saved.selectedMealsPerWeek : 6
+  })
+  const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect'>(() => {
+    const saved = getWeeklyMealState()
+    return saved ? saved.purchaseStep : 'mealSelect'
+  })
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
   const [isMenuLoading, setIsMenuLoading] = useState(false)
@@ -77,6 +85,11 @@ export default function WeeklyMealPage() {
   const [activeWeek, setActiveWeek] = useState(1)
   const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
   
+  // Persist selection so returning from signup shows same options
+  useEffect(() => {
+    setWeeklyMealState({ selectedMealsPerWeek, purchaseStep })
+  }, [selectedMealsPerWeek, purchaseStep])
+
   // Check if user is authenticated on component mount
   useEffect(() => {
     const authStatus = localStorage.getItem('isAuthenticated')
@@ -258,13 +271,11 @@ export default function WeeklyMealPage() {
         <Button 
           variant="ghost" 
           size="sm"
+          onClick={handleBack}
           className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors bg-white/80 backdrop-blur-sm rounded-full shadow-sm p-2 h-auto"
-          asChild
         >
-          <Link href="/">
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">{language === 'zh' ? '返回首页' : 'Back to Home'}</span>
-          </Link>
+          <ChevronLeft className="h-4 w-4" />
+          <span className="sr-only">{language === 'zh' ? '返回上一页' : 'Go back'}</span>
         </Button>
       </div>
       

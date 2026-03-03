@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { motion } from "framer-motion"
 import { MapPin, Check, ChevronLeft } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
+import { useSmartBack } from "@/hooks/use-smart-back"
 import { Button } from "@/components/ui/button"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
 import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from '@/lib/constants/areas'
+import { getStarterLocation, setStarterLocation } from '@/lib/plan-flow-state'
 
 // Location types - using centralized constants
 type Location = 
@@ -18,10 +19,16 @@ type Location =
 // Group locations by service availability - using centralized constants
 const FULL_SERVICE_LOCATIONS = [...DAILY_DELIVERY_AREAS] as Location[]
 const WEEKLY_ONLY_LOCATIONS_TYPED = [...WEEKLY_ONLY_AREAS] as Location[]
+const ALL_LOCATIONS: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS_TYPED]
 
 export default function StarterPage() {
   const router = useRouter()
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
+  const handleBack = useSmartBack()
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(() => {
+    if (typeof window === 'undefined') return null
+    const saved = getStarterLocation()
+    return saved && ALL_LOCATIONS.includes(saved as Location) ? (saved as Location) : null
+  })
   const [isLocationOpen, setIsLocationOpen] = useState(false)
   const [animationComplete, setAnimationComplete] = useState(false)
   const { language, t } = useLanguage()
@@ -63,13 +70,11 @@ export default function StarterPage() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={handleBack}
             className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors rounded-full"
-            asChild
           >
-            <Link href="/">
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{language === 'zh' ? '返回' : 'Back'}</span>
-            </Link>
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">{language === 'zh' ? '返回' : 'Back'}</span>
           </Button>
         </div>
       </header>
@@ -165,8 +170,14 @@ export default function StarterPage() {
               <ServiceSelectionCards 
                 showDaily={hasDailyDelivery(selectedLocation)}
                 showWeekly={hasWeeklyDelivery(selectedLocation)}
-                onSelectDaily={() => router.push("/daily-delivery")}
-                onSelectWeekly={() => router.push("/weekly-meal")}
+                onSelectDaily={() => {
+                  setStarterLocation(selectedLocation)
+                  router.push("/daily-delivery")
+                }}
+                onSelectWeekly={() => {
+                  setStarterLocation(selectedLocation)
+                  router.push("/weekly-meal")
+                }}
               />
             )}
             

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
+import { useSmartBack } from "@/hooks/use-smart-back"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -41,6 +42,7 @@ export default function SignupPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { t, language } = useLanguage()
+  const handleBack = useSmartBack()
   
   // State to store the plan identifier
   const [planIdentifier, setPlanIdentifier] = useState<string | null>(null)
@@ -186,13 +188,14 @@ export default function SignupPage() {
     <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
       <header className="w-full py-2 px-3 flex items-center justify-between">
         <div className="container flex justify-between items-center">
-          <Link 
-            href="/" 
+          <button
+            type="button"
+            onClick={handleBack}
             className="hidden sm:inline-flex items-center text-xs font-medium transition-colors hover:text-primary group"
           >
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
-            {t('backToHome')}
-          </Link>
+            {t('back')}
+          </button>
           <div className="hidden sm:block">
             <LanguageSwitcher />
           </div>

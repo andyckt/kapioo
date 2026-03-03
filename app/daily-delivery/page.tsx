@@ -17,10 +17,11 @@ import {
   Menu,
   Ticket
 } from 'lucide-react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/lib/language-context'
+import { useSmartBack } from '@/hooks/use-smart-back'
+import { getDailyDeliveryState, setDailyDeliveryState } from '@/lib/plan-flow-state'
 import { listDailyPlans } from '@/lib/plans/service'
 import {
   Tooltip,
@@ -78,8 +79,12 @@ interface DayData {
 export default function DailyDeliveryPage() {
   const router = useRouter()
   const { t, language } = useLanguage()
+  const handleBack = useSmartBack()
   const [activeTab, setActiveTab] = useState('description')
-  const [pricingTab, setPricingTab] = useState<'twoDish' | 'threeDish'>('twoDish')
+  const [pricingTab, setPricingTab] = useState<'twoDish' | 'threeDish'>(() => {
+    const saved = getDailyDeliveryState()
+    return saved ? saved.pricingTab : 'twoDish'
+  })
   const [dialogOpen, setDialogOpen] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
   const [weeklyMenu, setWeeklyMenu] = useState<Record<string, DayData>>({})
@@ -107,6 +112,11 @@ export default function DailyDeliveryPage() {
     return dishTranslations[dishName] || dishName
   }
   
+  // Persist pricing tab so returning from signup shows same options
+  useEffect(() => {
+    setDailyDeliveryState({ pricingTab })
+  }, [pricingTab])
+
   // Check if user is authenticated on component mount
   useEffect(() => {
     const authStatus = localStorage.getItem('isAuthenticated')
@@ -543,13 +553,11 @@ export default function DailyDeliveryPage() {
         <Button 
           variant="ghost" 
           size="sm"
+          onClick={handleBack}
           className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors bg-white/80 backdrop-blur-sm rounded-full shadow-sm p-2 h-auto"
-          asChild
         >
-          <Link href="/">
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">{language === 'zh' ? '返回首页' : 'Back to Home'}</span>
-          </Link>
+          <ChevronLeft className="h-4 w-4" />
+          <span className="sr-only">{language === 'zh' ? '返回上一页' : 'Go back'}</span>
         </Button>
       </div>
       
