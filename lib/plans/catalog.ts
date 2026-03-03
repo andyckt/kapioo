@@ -58,12 +58,12 @@ export const WEEKLY_PLANS: WeeklyPlanDefinition[] = [
 export const DAILY_PLANS: DailyPlanDefinition[] = [
   { id: 'daily-2dish-6', kind: 'daily', dishType: 'twoDish', credits: 6, basePrice: 131, pricePerMeal: 21.83, sort: 10, active: true },
   { id: 'daily-2dish-10', kind: 'daily', dishType: 'twoDish', credits: 10, basePrice: 195, pricePerMeal: 19.5, sort: 11, active: true, tags: { en: 'First Time Recommend!', zh: '首次推荐' } },
-  { id: 'daily-2dish-22', kind: 'daily', dishType: 'twoDish', credits: 22, basePrice: 356, pricePerMeal: 16.18, sort: 12, active: true, tags: { en: 'Most Cost-effective', zh: '最超值' } },
-  { id: 'daily-2dish-46', kind: 'daily', dishType: 'twoDish', credits: 46, basePrice: 712, pricePerMeal: 15.48, sort: 13, active: true, tags: { en: 'Most Cost-effective', zh: '最超值' } },
+  { id: 'daily-2dish-22', kind: 'daily', dishType: 'twoDish', credits: 22, basePrice: 356, pricePerMeal: 16.18, sort: 12, active: true },
+  { id: 'daily-2dish-46', kind: 'daily', dishType: 'twoDish', credits: 46, basePrice: 712, pricePerMeal: 15.48, sort: 13, active: true, tags: { en: 'Best Value', zh: '最超值' } },
   { id: 'daily-3dish-6', kind: 'daily', dishType: 'threeDish', credits: 6, basePrice: 150, pricePerMeal: 25, sort: 20, active: true },
   { id: 'daily-3dish-10', kind: 'daily', dishType: 'threeDish', credits: 10, basePrice: 228, pricePerMeal: 22.8, sort: 21, active: true, tags: { en: 'First Time Recommend!', zh: '首次推荐' } },
-  { id: 'daily-3dish-22', kind: 'daily', dishType: 'threeDish', credits: 22, basePrice: 417, pricePerMeal: 18.95, sort: 22, active: true, tags: { en: 'Most Cost-effective', zh: '最超值' } },
-  { id: 'daily-3dish-46', kind: 'daily', dishType: 'threeDish', credits: 46, basePrice: 818, pricePerMeal: 17.78, sort: 23, active: true, tags: { en: 'Most Cost-effective', zh: '最超值' } }
+  { id: 'daily-3dish-22', kind: 'daily', dishType: 'threeDish', credits: 22, basePrice: 417, pricePerMeal: 18.95, sort: 22, active: true },
+  { id: 'daily-3dish-46', kind: 'daily', dishType: 'threeDish', credits: 46, basePrice: 818, pricePerMeal: 17.78, sort: 23, active: true, tags: { en: 'Best Value', zh: '最超值' } }
 ];
 
 export const WEEKLY_DELIVERY_FEE_RULES = {

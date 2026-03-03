@@ -405,23 +405,16 @@ export default function DailyDeliveryPage() {
   // Render the plan cards
   const renderPlanCards = (plans: VoucherPlan[]) => {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
         {plans.map((plan) => (
           <motion.div
             key={plan.id}
             whileHover={{ y: -8, boxShadow: "0 10px 25px -5px rgba(194, 136, 78, 0.1), 0 8px 10px -6px rgba(194, 136, 78, 0.1)" }}
             transition={{ duration: 0.3 }}
-            className="relative rounded-xl border overflow-hidden group border-[#C2884E]/10 hover:border-[#C2884E]/30"
+            className="relative flex flex-col h-full rounded-xl border overflow-hidden group border-[#C2884E]/10 hover:border-[#C2884E]/30"
           >
-            {/* Popular badge */}
-            {plan.isPopular && (
-              <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
-                  {language === 'zh' ? '推荐' : 'Most Popular'}
-              </div>
-            )}
-            
-            {/* Savings badge */}
-            {plan.savings && !plan.isPopular && (
+            {/* Plan tag badge - shows actual tag from catalog */}
+            {plan.savings && (
               <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
                 {plan.savings}
               </div>
@@ -450,7 +443,7 @@ export default function DailyDeliveryPage() {
             </div>
             
             {/* Card content */}
-            <div className="p-5 bg-gradient-to-b from-white to-[#F5EDE4]/20">
+            <div className="flex flex-col flex-1 p-5 bg-gradient-to-b from-white to-[#F5EDE4]/20">
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
@@ -534,7 +527,7 @@ export default function DailyDeliveryPage() {
               </div>
               
               <Button
-                className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
+                className="w-full mt-auto bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
                 onClick={() => handlePlanSelect(plan)}
               >
                 {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
