@@ -12,38 +12,15 @@ export interface EmailOptions {
 // Send an email using Resend (professional transactional email service)
 export const sendEmail = async (options: EmailOptions) => {
   try {
-    console.log('Sending email to:', options.to);
-    console.log('Email subject:', options.subject);
-    
-    // Check if we're in a browser environment
     if (typeof window !== 'undefined') {
-      console.log('Sending email from browser environment via API route');
-      // We're in the browser, use the API route
-      const response = await fetch('/api/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(options),
-      });
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.error('Email API route returned error:', result.error);
-        throw new Error(result.error || 'Failed to send email via API');
-      }
-      
-      console.log('Email sent successfully via API route');
-      return result;
-    } else {
-      console.log('Sending email from server environment using Resend');
-      // We're on the server, use Resend for better deliverability
-      const { sendEmailWithResend } = await import('./resend-email');
-      const result = await sendEmailWithResend(options);
-      console.log('Email sent successfully via Resend');
-      return result;
+      throw new Error('sendEmail must be called from the server');
     }
+
+    console.log('Sending email from server environment using Resend');
+    const { sendEmailWithResend } = await import('./resend-email');
+    const result = await sendEmailWithResend(options);
+    console.log('Email sent successfully via Resend');
+    return result;
   } catch (error) {
     console.error('Error sending email:', error);
     throw error;

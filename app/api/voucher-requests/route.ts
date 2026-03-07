@@ -443,7 +443,7 @@ export async function POST(request: NextRequest) {
     
     // Send confirmation email to user
     try {
-      console.log('Sending confirmation email to user:', user.email);
+      console.log(`Sending voucher request confirmation for request ${requestId}`);
       await sendUserVoucherRequestConfirmation({
         userId: effectiveUserId,
         userName: user.name,

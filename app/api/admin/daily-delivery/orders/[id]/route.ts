@@ -229,7 +229,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         user.threeDishVoucher += threeDishReturned;
         await user.save();
         
-        console.log(`Returned vouchers to user ${user.email}: ${twoDishReturned} 2-dish, ${threeDishReturned} 3-dish`);
+        console.log(`Returned vouchers for order ${id}: ${twoDishReturned} 2-dish, ${threeDishReturned} 3-dish`);
       }
     }
     

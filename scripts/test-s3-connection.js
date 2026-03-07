@@ -2,13 +2,14 @@
 require('dotenv').config();
 const { S3Client, ListBucketsCommand } = require('@aws-sdk/client-s3');
 
-// Log the environment variables (without showing full secret key)
-console.log('Environment variables:');
-console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID || 'not set');
-console.log('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? '********' : 'not set');
-console.log('AWS_REGION:', process.env.AWS_REGION || 'not set');
-console.log('AWS_BUCKET_NAME:', process.env.AWS_BUCKET_NAME || 'not set');
-console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET || 'not set');
+console.log('Checking S3 environment configuration...');
+const configuredAwsVars = [
+  process.env.AWS_ACCESS_KEY_ID,
+  process.env.AWS_SECRET_ACCESS_KEY,
+  process.env.AWS_REGION,
+  process.env.AWS_S3_BUCKET,
+].filter(Boolean).length;
+console.log(`Configured AWS S3 variables: ${configuredAwsVars}/4`);
 
 // Configure S3 client
 const s3Client = new S3Client({
@@ -34,7 +35,7 @@ async function testConnection() {
       });
       
       // Check if our target bucket exists
-      const targetBucket = process.env.AWS_BUCKET_NAME || process.env.AWS_S3_BUCKET;
+      const targetBucket = process.env.AWS_S3_BUCKET;
       const bucketExists = response.Buckets.some(bucket => bucket.Name === targetBucket);
       
       if (bucketExists) {

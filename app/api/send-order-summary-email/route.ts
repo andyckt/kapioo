@@ -6,8 +6,6 @@ export const dynamic = 'force-dynamic';
 
 // POST handler - send order summary email
 export async function POST(request: Request) {
-  console.log('📧 [API] Received order summary email request');
-  
   try {
     const { actor, response } = await requireUser();
     if (!actor || response) {
@@ -46,7 +44,6 @@ export async function POST(request: Request) {
     }
     
     if (!userEmail) {
-      console.error('❌ [API] Missing userEmail');
       return NextResponse.json(
         { success: false, error: 'Missing userEmail field' },
         { status: 400 }
@@ -69,11 +66,10 @@ export async function POST(request: Request) {
       );
     }
     
-    console.log(`📧 [API] Validated - Sending ${type} order summary email to ${userEmail} for ${orders.length} orders`);
+    console.log(`Preparing ${type} order summary email for ${orders.length} orders`);
     
     try {
       if (type === 'daily') {
-        console.log('📧 [API] Calling sendDailyOrderSummaryEmail...');
         await sendDailyOrderSummaryEmail(
           userEmail,
           userName,
@@ -86,7 +82,6 @@ export async function POST(request: Request) {
         );
         
         // Also send admin summary email
-        console.log('📧 [API] Calling sendAdminDailyOrderSummaryEmail...');
         await sendAdminDailyOrderSummaryEmail(
           userName,
           userEmail,
@@ -98,7 +93,6 @@ export async function POST(request: Request) {
           specialInstructions
         );
       } else if (type === 'weekly') {
-        console.log('📧 [API] Calling sendWeeklyOrderSummaryEmail...');
         await sendWeeklyOrderSummaryEmail(
           userEmail,
           userName,
@@ -111,7 +105,6 @@ export async function POST(request: Request) {
         );
         
         // Also send admin summary email
-        console.log('📧 [API] Calling sendAdminWeeklyOrderSummaryEmail...');
         await sendAdminWeeklyOrderSummaryEmail(
           userName,
           userEmail,
@@ -130,7 +123,7 @@ export async function POST(request: Request) {
         );
       }
       
-      console.log(`✅ [API] Order summary emails sent successfully to user (${userEmail}) and admin`);
+      console.log('Order summary emails sent successfully');
       
       return NextResponse.json({
         success: true,

@@ -15,8 +15,10 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const readline = require('readline');
 
-// MongoDB connection string
-const MONGODB_URI = process.env.MONGODB_URI || 'your-mongodb-connection-string';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is required');
+}
 
 // Define schema
 const WeeklyOrderSchema = new mongoose.Schema({
@@ -80,7 +82,7 @@ async function applyFixes() {
       console.error('❌ Error: Some orders still need manual review!');
       console.log('   The following orders have "MANUAL_REVIEW_NEEDED":');
       invalidOrders.forEach(order => {
-        console.log(`   - ${order.orderId} (${order.userEmail})`);
+        console.log(`   - ${order.orderId}`);
       });
       console.log('\n   Please update fix-template.json with correct dates before running this script.\n');
       process.exit(1);
@@ -112,7 +114,7 @@ async function applyFixes() {
     for (const fix of fixTemplate) {
       try {
         console.log(`\n${'='.repeat(60)}`);
-        console.log(`Processing: ${fix.orderId} (${fix.userEmail})`);
+        console.log(`Processing: ${fix.orderId}`);
         console.log(`Action: ${fix.action}`);
 
         const originalOrder = await WeeklyOrder.findOne({ orderId: fix.orderId });

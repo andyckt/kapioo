@@ -1,3 +1,5 @@
+import { getAdminMfaCookieSecret } from "@/lib/env";
+
 const encoder = new TextEncoder();
 
 function toBase64Url(input: Uint8Array) {
@@ -43,12 +45,7 @@ export interface AdminMfaCookiePayload {
 }
 
 function getSigningSecret() {
-  return (
-    process.env.ADMIN_MFA_COOKIE_SECRET ||
-    process.env.AUTH_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    ""
-  );
+  return getAdminMfaCookieSecret();
 }
 
 export async function createSignedAdminMfaCookie(payload: AdminMfaCookiePayload) {

@@ -1,8 +1,12 @@
 // Script to add names to all users
 const mongoose = require('mongoose');
+require('dotenv').config({ path: require('path').join(__dirname, '../.env.local') });
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
-// Use the Atlas connection string directly
-const MONGODB_URI = "mongodb+srv://kamtocheung1104:N7H0LQ9L2bq5qQbo@kapiofood.otsn8px.mongodb.net/kapioo?retryWrites=true&w=majority&appName=kapiofood";
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is required');
+}
 
 // Create simplified user schema for this operation
 const userSchema = new mongoose.Schema({
@@ -45,7 +49,7 @@ async function updateUserNames() {
     
     // Update each user's name
     for (const user of users) {
-      console.log(`Current user: ${user.userID} (${user.email})`);
+      console.log(`Current user: ${user.userID}`);
       console.log(`  Existing name: ${user.name || 'Not set'}`);
       
       // Get the name for this user

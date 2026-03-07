@@ -114,7 +114,6 @@ export async function POST(request: Request) {
   try {
     console.log('Starting user creation process');
     const data = await request.json();
-    console.log('Received data:', { ...data, password: data.password ? '******' : undefined });
     
     // Validate required fields
     if (!data.name || !data.email || !data.password) {
@@ -130,7 +129,6 @@ export async function POST(request: Request) {
     console.log('Connected to database');
     
     // Check if user with this email already exists
-    console.log('Checking if email already exists:', data.email.toLowerCase());
     const existingUser = await User.findOne({ email: data.email.toLowerCase() });
     
     if (existingUser) {
@@ -184,7 +182,6 @@ export async function POST(request: Request) {
     // Only send verification email if the user is not already verified
     if (!data.isVerified) {
       try {
-        console.log('Sending verification email to:', user.email);
         await sendVerificationEmail(user.email, user.verificationCode || '', user.languagePreference || 'zh');
         console.log('Verification email sent successfully');
       } catch (emailError) {
@@ -209,7 +206,7 @@ export async function POST(request: Request) {
     // Using Promise without await so it doesn't block the response
     sendWelcomeEmail(user.email, user.name, user.languagePreference || 'zh')
       .then(() => {
-        console.log('✅ Welcome email sent successfully to:', user.email);
+        console.log('Welcome email sent successfully');
       })
       .catch((emailError) => {
         console.error('⚠️ Welcome email failed (non-blocking):', emailError);

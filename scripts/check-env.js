@@ -11,11 +11,9 @@ console.log('Checking environment variables...');
 
 // Check AWS S3 configuration
 console.log('\nAWS S3 Configuration:');
-console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? 'Set ✅' : 'Not set ❌');
-console.log('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? 'Set ✅' : 'Not set ❌');
-console.log('AWS_REGION:', process.env.AWS_REGION ? `Set (${process.env.AWS_REGION}) ✅` : 'Not set ❌');
-console.log('AWS_BUCKET_NAME:', process.env.AWS_BUCKET_NAME ? `Set (${process.env.AWS_BUCKET_NAME}) ✅` : 'Not set ❌');
-console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET ? `Set (${process.env.AWS_S3_BUCKET}) ✅` : 'Not set ❌');
+const requiredAwsVars = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION'];
+const configuredAwsVars = requiredAwsVars.filter((name) => Boolean(process.env[name]));
+console.log(`Configured required AWS variables: ${configuredAwsVars.length}/${requiredAwsVars.length}`);
 
 // Check if .env files exist
 console.log('\nEnvironment Files:');
@@ -35,7 +33,6 @@ envFiles.forEach(file => {
         line.startsWith('AWS_ACCESS_KEY_ID=') || 
         line.startsWith('AWS_SECRET_ACCESS_KEY=') || 
         line.startsWith('AWS_REGION=') || 
-        line.startsWith('AWS_BUCKET_NAME=') ||
         line.startsWith('AWS_S3_BUCKET=')
       );
       
@@ -56,7 +53,7 @@ envFiles.forEach(file => {
 
 console.log('\nRecommendation:');
 console.log('Make sure your .env.local file contains the following variables:');
-console.log('AWS_ACCESS_KEY_ID=AKIARWPFID2IE4FWA74X');
-console.log('AWS_SECRET_ACCESS_KEY=[your secret key]');
-console.log('AWS_REGION=ap-southeast-2');
-console.log('AWS_S3_BUCKET=meal-subscription-andy-photos');
+console.log('AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY_ID');
+console.log('AWS_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_ACCESS_KEY');
+console.log('AWS_REGION=YOUR_AWS_REGION');
+console.log('AWS_S3_BUCKET=YOUR_AWS_S3_BUCKET');

@@ -15,9 +15,12 @@ const path = require('path');
 
 // Load environment variables from .env.local
 require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// MongoDB connection string
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://kamtocheung1104:N7H0LQ9L2bq5qQbo@kapiofood.otsn8px.mongodb.net/kapioo?retryWrites=true&w=majority&appName=kapiofood';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is required');
+}
 
 // Configuration
 const DRY_RUN = process.argv.includes('--dry-run') || process.argv.includes('-d');

@@ -28,9 +28,9 @@ function deriveDailyPlanId(request) {
 
 async function run() {
   const apply = process.argv.includes('--apply');
-  const uri = process.env.MONGODB_URI || process.env.MONGO_URL;
+  const uri = process.env.MONGODB_URI;
   if (!uri) {
-    throw new Error('Missing MONGODB_URI / MONGO_URL');
+    throw new Error('Missing MONGODB_URI');
   }
 
   console.log(`[PlanMigration] mode=${apply ? 'APPLY' : 'DRY_RUN'}`);

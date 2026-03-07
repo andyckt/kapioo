@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+import { AUTH_SECRET } from '@/lib/env';
 import { verifySignedAdminMfaCookie } from '@/lib/security/signed-cookie';
 
 // This middleware increases the body size limit for API requests
@@ -116,7 +117,7 @@ export async function middleware(request) {
   
   const token = await getToken({
     req: request,
-    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+    secret: AUTH_SECRET,
   });
 
   const tokenUserId = token?.sub ? String(token.sub) : null;

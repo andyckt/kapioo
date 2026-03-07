@@ -52,12 +52,6 @@ export async function GET(request: Request) {
       collectionName: 'weeklymealOptions',
     });
     
-    // Log the MongoDB URI being used (without credentials)
-    const uriWithoutCredentials = process.env.MONGODB_URI 
-      ? process.env.MONGODB_URI.replace(/:\/\/[^@]*@/, '://***:***@')
-      : 'Not set';
-    console.log('MongoDB URI:', uriWithoutCredentials);
-    
     // Get all delivery days with their meal options
     const deliveryDays = await WeeklyDeliveryDay.find()
       .populate('options')

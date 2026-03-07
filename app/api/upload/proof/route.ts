@@ -2,16 +2,19 @@ import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
+import { getS3Config } from '@/lib/env';
 import { requireUser } from '@/lib/auth/guards';
 
-// Configure S3 client
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'ap-southeast-2',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-  }
-});
+function getS3Client() {
+  const { accessKeyId, secretAccessKey, region } = getS3Config();
+  return new S3Client({
+    region,
+    credentials: {
+      accessKeyId,
+      secretAccessKey
+    }
+  });
+}
 
 export async function POST(request: Request) {
   try {
@@ -20,19 +23,9 @@ export async function POST(request: Request) {
       return response;
     }
 
-    // Check if AWS credentials are configured
-    const awsBucketName = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME;
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !awsBucketName) {
-      console.error('AWS credentials or bucket name not configured');
-      console.error('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Not set');
-      console.error('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? 'Set' : 'Not set');
-      console.error('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET || 'Not set');
-      console.error('AWS_BUCKET_NAME:', process.env.AWS_BUCKET_NAME || 'Not set');
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+    const { bucket, region } = getS3Config();
+    const awsBucketName = bucket;
+    const s3Client = getS3Client();
 
     // Parse the form data
     const formData = await request.formData();
@@ -96,7 +89,7 @@ export async function POST(request: Request) {
     await s3Client.send(command);
 
     // Generate the URL for the uploaded file
-    const fileUrl = `https://${awsBucketName}.s3.${process.env.AWS_REGION || 'ap-southeast-2'}.amazonaws.com/${fileName}`;
+    const fileUrl = `https://${awsBucketName}.s3.${region}.amazonaws.com/${fileName}`;
 
     return NextResponse.json({
       success: true,

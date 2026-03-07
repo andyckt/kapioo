@@ -1,9 +1,26 @@
 // Direct script to seed MongoDB Atlas database
+require('dotenv').config({ path: require('path').join(__dirname, '../.env.local') });
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 
-// Use the Atlas connection string directly
-const MONGODB_URI = "mongodb+srv://kamtocheung1104:N7H0LQ9L2bq5qQbo@kapiofood.otsn8px.mongodb.net/kapioo?retryWrites=true&w=majority&appName=kapiofood";
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is required');
+}
+
+function getSeedPassword(userID) {
+  const password =
+    userID === 'admin'
+      ? process.env.SEED_ADMIN_PASSWORD || process.env.SEED_USER_PASSWORD
+      : process.env.SEED_USER_PASSWORD;
+
+  if (!password) {
+    throw new Error(`Missing seed password for ${userID}. Set SEED_USER_PASSWORD${userID === 'admin' ? ' or SEED_ADMIN_PASSWORD' : ''}.`);
+  }
+
+  return password;
+}
 
 // Initial seed data for meals
 const initialMeals = [
@@ -122,7 +139,7 @@ const initialUsers = [
     userID: "user123",
     name: "John Doe",
     email: "john@example.com",
-    password: "123456", // Will be hashed during seeding
+    password: getSeedPassword("user123"),
     credits: 50,
     joined: new Date("2023-01-15"),
     status: "Active",
@@ -140,7 +157,7 @@ const initialUsers = [
     userID: "user456",
     name: "Jane Smith",
     email: "jane@example.com",
-    password: "123456", // Will be hashed during seeding
+    password: getSeedPassword("user456"),
     credits: 25,
     joined: new Date("2023-02-20"),
     status: "Active",
@@ -157,7 +174,7 @@ const initialUsers = [
     userID: "user789",
     name: "Bob Johnson",
     email: "bob@example.com",
-    password: "123456", // Will be hashed during seeding
+    password: getSeedPassword("user789"),
     credits: 10,
     joined: new Date("2023-03-10"),
     status: "Inactive",
@@ -174,7 +191,7 @@ const initialUsers = [
     userID: "user101",
     name: "Alice Brown",
     email: "alice@example.com",
-    password: "123456", // Will be hashed during seeding
+    password: getSeedPassword("user101"),
     credits: 35,
     joined: new Date("2023-04-05"),
     status: "Active",
@@ -192,7 +209,7 @@ const initialUsers = [
     userID: "user202",
     name: "Charlie Davis",
     email: "charlie@example.com",
-    password: "123456", // Will be hashed during seeding
+    password: getSeedPassword("user202"),
     credits: 15,
     joined: new Date("2023-05-12"),
     status: "Active",
@@ -209,7 +226,7 @@ const initialUsers = [
     userID: "admin",
     name: "Admin User",
     email: "admin@kapioo.com",
-    password: "123456", // Will be hashed during seeding
+    password: getSeedPassword("admin"),
     credits: 999,
     joined: new Date("2023-01-01"),
     status: "Active",
@@ -373,7 +390,7 @@ async function seedUsers() {
 
 async function seedDatabase() {
   try {
-    console.log(`Connecting to MongoDB Atlas at ${MONGODB_URI}...`);
+    console.log('Connecting to MongoDB Atlas...');
     await mongoose.connect(MONGODB_URI);
     console.log('Connected to MongoDB Atlas');
     

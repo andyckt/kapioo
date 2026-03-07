@@ -5,7 +5,10 @@ const fs = require('fs');
 const path = require('path');
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kapioo';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is required');
+}
 
 // Define models directly in the script to avoid import issues
 const DaySchema = new mongoose.Schema({

@@ -27,16 +27,23 @@ function verifyWebhookSignature(payload: string, signature: string): boolean {
 // POST handler - receive email events from Resend
 export async function POST(request: Request) {
   const requestId = `resend-webhook-${Date.now()}`;
-  
-  console.log(`[${requestId}] 📥 Received Resend webhook`);
-  
+
   try {
+    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error(`[${requestId}] Webhook secret is not configured`);
+      return NextResponse.json(
+        { success: false, error: 'Webhook endpoint is not configured' },
+        { status: 503 }
+      );
+    }
+
     // Get raw body for signature verification
     const rawBody = await request.text();
     const signature = request.headers.get('svix-signature') || '';
     
-    // Verify webhook signature (if secret is configured)
-    if (process.env.RESEND_WEBHOOK_SECRET && !verifyWebhookSignature(rawBody, signature)) {
+    // Verify webhook signature
+    if (!verifyWebhookSignature(rawBody, signature)) {
       console.error(`[${requestId}] ❌ Invalid webhook signature`);
       return NextResponse.json(
         { success: false, error: 'Invalid signature' },
@@ -45,8 +52,7 @@ export async function POST(request: Request) {
     }
     
     const payload = JSON.parse(rawBody);
-    console.log(`[${requestId}] Event type:`, payload.type);
-    console.log(`[${requestId}] Email:`, payload.data?.to);
+    console.log(`[${requestId}] Event type: ${payload.type}`);
     
     await connectToDatabase();
     
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
             { email: payload.data.to.toLowerCase() },
             { $set: { emailStatus: 'bounced' } }
           );
-          console.log(`[${requestId}] ✅ Marked ${payload.data.to} as bounced`);
+          console.log(`[${requestId}] Updated bounced status`);
         }
         break;
         
@@ -72,7 +78,7 @@ export async function POST(request: Request) {
             { email: payload.data.to.toLowerCase() },
             { $set: { emailStatus: 'blocked' } }
           );
-          console.log(`[${requestId}] ✅ Marked ${payload.data.to} as blocked (spam complaint)`);
+          console.log(`[${requestId}] Updated blocked status after complaint`);
         }
         break;
         
@@ -83,12 +89,12 @@ export async function POST(request: Request) {
             { email: payload.data.to.toLowerCase(), emailStatus: { $ne: 'active' } },
             { $set: { emailStatus: 'active' } }
           );
-          console.log(`[${requestId}] ✅ Email delivered to ${payload.data.to}`);
+          console.log(`[${requestId}] Updated delivered status`);
         }
         break;
         
       case 'email.delivery_delayed':
-        console.log(`[${requestId}] ⚠️  Email delivery delayed for ${payload.data?.to}`);
+        console.log(`[${requestId}] Email delivery delayed`);
         break;
         
       default:

@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
 import connectToDatabase from "@/lib/db";
+import { AUTH_SECRET } from "@/lib/env";
 import User from "@/models/User";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 
@@ -20,7 +21,7 @@ function resolveUserRole(user: { role?: string; userID?: string }) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  secret: AUTH_SECRET,
   session: {
     strategy: "jwt",
     maxAge: 60 * 60 * 8,

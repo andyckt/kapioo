@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
+import { AUTH_SECRET } from '@/lib/env';
 import User from '@/models/User';
 import crypto from 'crypto';
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     // Verify token
     const expectedToken = crypto
       .createHash('sha256')
-      .update(`${email}-${type}-${process.env.NEXTAUTH_SECRET || 'kapioo-secret'}`)
+      .update(`${email}-${type}-${AUTH_SECRET}`)
       .digest('hex')
       .substring(0, 32);
     
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     
     await User.findByIdAndUpdate(user._id, { $set: updateObj });
     
-    console.log(`✅ User ${user.email} unsubscribed from ${type}`);
+    console.log(`Processed unsubscribe request for type=${type}`);
     
     return NextResponse.json({
       success: true,

@@ -12,9 +12,7 @@ const BATCH_INTERVAL_MS = 500; // Small pause only when multiple batch requests 
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const isAuthorizedCronCall = (request: Request) => {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true;
+const isAuthorizedCronCall = (request: Request, cronSecret: string) => {
   const authHeader = request.headers.get('authorization');
   return authHeader === `Bearer ${cronSecret}`;
 };
@@ -44,7 +42,16 @@ const acquireJobLock = async (lockOwner: string) => {
 
 async function processJobs(request: Request) {
   try {
-    if (!isAuthorizedCronCall(request)) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error('Cron endpoint secret is not configured');
+      return NextResponse.json(
+        { success: false, error: 'Cron endpoint is not configured' },
+        { status: 503 }
+      );
+    }
+
+    if (!isAuthorizedCronCall(request, cronSecret)) {
       return NextResponse.json({ success: false, error: 'Unauthorized cron call' }, { status: 401 });
     }
 

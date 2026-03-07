@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kapioo';
-
-// Debug log to see what connection string is being used
-console.log('Using MongoDB connection string:', MONGODB_URI);
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is required');
+}
 
 // Define connection cache type
 interface ConnectionCache {

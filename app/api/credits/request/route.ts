@@ -331,7 +331,7 @@ export async function POST(request: Request) {
     
     // Send confirmation email to user
     try {
-      console.log('Sending confirmation email to user:', user.email);
+      console.log(`Sending credit request confirmation for request ${requestId}`);
       await sendUserCreditRequestConfirmation({
         userId: user._id.toString(),
         userName: user.name || user.userID,
@@ -353,7 +353,7 @@ export async function POST(request: Request) {
         mealPlanQuantity: duration,
         requestId: requestId
       }, user.languagePreference || 'zh'); // Pass user's language preference
-      console.log('User confirmation email sent successfully');
+      console.log(`Credit request confirmation sent for request ${requestId}`);
     } catch (emailError) {
       console.error('Error sending user confirmation email:', emailError);
       // Continue with the process even if email fails

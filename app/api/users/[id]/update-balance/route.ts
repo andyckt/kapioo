@@ -313,7 +313,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           html
         });
         
-        console.log(`${voucherTypeName} added notification sent to ${updatedUser.email}`);
+        console.log(`${voucherTypeName} added notification sent`);
       } catch (emailError) {
         console.error('Error sending voucher added notification:', emailError);
         // Continue even if email fails

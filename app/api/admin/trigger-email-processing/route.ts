@@ -21,22 +21,27 @@ export async function POST(request: Request) {
       return response;
     }
 
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      return NextResponse.json(
+        { success: false, error: 'Email processing is not configured' },
+        { status: 503 }
+      );
+    }
+
     // Forward the request to the cron endpoint
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const cronUrl = `${baseUrl}/api/cron/process-next-week-email-jobs`;
     
-    const response = await fetch(cronUrl, {
+    const cronResponse = await fetch(cronUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Include authorization if CRON_SECRET is set
-        ...(process.env.CRON_SECRET && {
-          'Authorization': `Bearer ${process.env.CRON_SECRET}`
-        })
+        'Authorization': `Bearer ${cronSecret}`
       }
     });
     
-    const data = await response.json();
+    const data = await cronResponse.json();
     
     return NextResponse.json(data);
   } catch (error) {

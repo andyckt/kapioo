@@ -217,7 +217,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         user.credits += creditsReturned;
         await user.save();
         
-        console.log(`Returned credits to user ${user.email}: ${creditsReturned} credits`);
+        console.log(`Returned credits for weekly order ${id}: ${creditsReturned} credits`);
       }
     }
     

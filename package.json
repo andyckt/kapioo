@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:security": "node scripts/security-smoke-check.js",
+    "invalidate:sessions": "tsx scripts/invalidate-sessions.ts",
     "seed": "tsx scripts/seed-database.ts",
     "seed:atlas": "node scripts/seed-atlas.js",
     "update-transactions": "node scripts/update-transactions.js",

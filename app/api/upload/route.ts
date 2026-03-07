@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
+import { getS3Config } from '@/lib/env';
 import { requireUser } from '@/lib/auth/guards';
 
-// Initialize S3 client
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  }
-});
+function getS3Client() {
+  const { accessKeyId, secretAccessKey, region } = getS3Config();
+  return new S3Client({
+    region,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    }
+  });
+}
 
 // Helper function to get file extension from mime type
 function getFileExtension(mimeType: string): string {
@@ -38,17 +41,8 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    // Check if AWS credentials are configured
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_S3_BUCKET) {
-      console.error('AWS credentials not configured');
-      console.error('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Not set');
-      console.error('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? 'Set' : 'Not set');
-      console.error('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET ? 'Set' : 'Not set');
-      return NextResponse.json(
-        { success: false, error: 'AWS credentials not configured' },
-        { status: 500 }
-      );
-    }
+    const { bucket, region } = getS3Config();
+    const s3Client = getS3Client();
 
     // Parse the form data
     const formData = await request.formData();
@@ -124,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Upload to S3
     const uploadParams = {
-      Bucket: process.env.AWS_S3_BUCKET,
+      Bucket: bucket,
       Key: fileName,
       Body: buffer,
       ContentType: file.type
@@ -133,7 +127,7 @@ export async function POST(request: NextRequest) {
     await s3Client.send(new PutObjectCommand(uploadParams));
 
     // Generate the URL for the uploaded file
-    const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${fileName}`;
+    const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${fileName}`;
 
     return NextResponse.json({
       success: true,

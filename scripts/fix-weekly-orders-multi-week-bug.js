@@ -16,8 +16,10 @@
 const mongoose = require('mongoose');
 const readline = require('readline');
 
-// MongoDB connection string - update this with your connection string
-const MONGODB_URI = process.env.MONGODB_URI || 'your-mongodb-connection-string';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is required');
+}
 
 // Define schemas
 const WeeklyOrderSchema = new mongoose.Schema({

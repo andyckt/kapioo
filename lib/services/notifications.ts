@@ -150,7 +150,7 @@ export const sendNewOrderNotification = async (order: IOrder, user: IUser): Prom
       html
     });
     
-    console.log(`New order notification sent to customer: ${user.email}`);
+    console.log(`New order notification sent for order ${order.orderId}`);
   } catch (error) {
     console.error('Error sending new order notification to customer:', error);
   }
@@ -241,7 +241,7 @@ export const sendNewOrderAdminNotification = async (order: IOrder, user: IUser):
       html
     });
     
-    console.log(`New order notification sent to admin: ${adminEmail}`);
+    console.log(`Admin new order notification sent for order ${order.orderId}`);
   } catch (error) {
     console.error('Error sending new order notification to admin:', error);
   }
@@ -400,7 +400,7 @@ export const sendOrderStatusUpdateNotification = async (
       html
     });
     
-    console.log(`Order status update notification sent to customer: ${user.email}`);
+    console.log(`Order status update notification sent for order ${order.orderId}`);
   } catch (error) {
     console.error('Error sending order status update notification:', error);
   }
@@ -470,7 +470,7 @@ export const sendCreditsAddedNotification = async (
       html
     });
     
-    console.log(`Credits added notification sent to customer: ${user.email}`);
+    console.log(`Credits added notification sent for transaction ${transactionId}`);
   } catch (error) {
     console.error('Error sending credits added notification:', error);
   }
@@ -591,7 +591,7 @@ export const sendDailyOrderStatusUpdateNotification = async (
       html
     });
     
-    console.log(`Daily order status update notification sent to ${email} for order ${orderId}`);
+    console.log(`Daily order status update notification sent for order ${orderId}`);
   } catch (error) {
     console.error('Error sending daily order status update notification:', error);
   }

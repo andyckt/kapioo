@@ -3,19 +3,19 @@
 
 const requiredEnvVars = [
   'MONGODB_URI',
-  'EMAIL_USER',
-  'EMAIL_PASS',
+  'AUTH_SECRET',
+  'RESEND_API_KEY',
   'ADMIN_EMAIL',
   'NEXT_PUBLIC_BASE_URL',
   'AWS_ACCESS_KEY_ID',
   'AWS_SECRET_ACCESS_KEY',
   'AWS_REGION',
-  'AWS_S3_BUCKET_NAME'
+  'AWS_S3_BUCKET'
 ];
 // Check for missing environment variables during build/startup
 export function validateEnv() {
   const missing = requiredEnvVars.filter(
-    (envVar) => !(envVar in process.env)
+    (envVar) => !process.env[envVar]
   );
 
   if (missing.length > 0) {
@@ -32,16 +32,18 @@ export const config = {
   mongodb: {
     uri: process.env.MONGODB_URI || ''
   },
+  auth: {
+    secret: process.env.AUTH_SECRET || ''
+  },
   email: {
-    user: process.env.EMAIL_USER || '',
-    password: process.env.EMAIL_PASS || '',
+    resendApiKey: process.env.RESEND_API_KEY || '',
     adminEmail: process.env.ADMIN_EMAIL || ''
   },
   aws: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     region: process.env.AWS_REGION || '',
-    s3BucketName: process.env.AWS_S3_BUCKET_NAME || ''
+    s3BucketName: process.env.AWS_S3_BUCKET || ''
   },
   app: {
     baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
