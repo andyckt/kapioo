@@ -1,3 +1,4 @@
+import { mergeStoredUser } from "@/lib/client-user-cache";
 import { updateUser, type User } from "@/lib/utils";
 
 export interface EnsurePhoneOptions {
@@ -48,12 +49,11 @@ export async function ensureUserPhone(
   options: EnsurePhoneOptions
 ): Promise<EnsurePhoneResult> {
   const { userId, phoneInput, requirePhone } = options;
+  const normalizedPhone = normalizePhoneInput(phoneInput);
 
-  if (!requirePhone) {
+  if (!normalizedPhone && !requirePhone) {
     return { ok: true };
   }
-
-  const normalizedPhone = normalizePhoneInput(phoneInput);
 
   if (!normalizedPhone) {
     return {
@@ -79,8 +79,8 @@ export async function ensureUserPhone(
       };
     }
 
-    // Keep localStorage in sync so the rest of the app sees the new phone.
-    setStoredUser(updated);
+    // Merge to preserve richer cached user fields while updating phone.
+    mergeStoredUser(updated);
 
     return { ok: true, updatedUser: updated };
   } catch (error) {
