@@ -114,9 +114,18 @@ export async function middleware(request) {
     return new NextResponse(null, { status: 404 });
   }
   
+  const secureCookie =
+    request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production';
+  const sessionCookieName = secureCookie
+    ? '__Secure-authjs.session-token'
+    : 'authjs.session-token';
+
   const token = await getToken({
     req: request,
     secret: AUTH_SECRET,
+    secureCookie,
+    cookieName: sessionCookieName,
+    salt: sessionCookieName,
   });
 
   const tokenUserId = token?.sub ? String(token.sub) : null;
