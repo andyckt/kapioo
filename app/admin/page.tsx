@@ -249,22 +249,36 @@ export default function AdminDashboardPage() {
   }
 
   useEffect(() => {
-    // Check if admin is logged in - in a real app, this would verify the session
-    const user = localStorage.getItem('user')
-    if (!user) {
-      router.push("/login")
-      return
+    const verifyAdminSession = async () => {
+      try {
+        const response = await fetch('/api/auth/me', { cache: 'no-store' })
+        const result = await response.json()
+
+        if (!result?.authenticated) {
+          router.push('/login')
+          return
+        }
+
+        if (result.user?.role !== 'admin') {
+          toast({
+            title: "Access denied",
+            description: "You must be an admin to view this page",
+            variant: "destructive",
+          })
+          router.push('/dashboard')
+          return
+        }
+
+        if (result.requiresAdminMfa) {
+          router.push('/admin/mfa')
+        }
+      } catch (error) {
+        console.error('Failed to verify admin session:', error)
+        router.push('/login')
+      }
     }
-    
-    const userData = JSON.parse(user)
-    if (userData.userID !== 'admin') {
-      toast({
-        title: "Access denied",
-        description: "You must be an admin to view this page",
-        variant: "destructive",
-      })
-      router.push("/dashboard")
-    }
+
+    verifyAdminSession()
   }, [router, toast])
 
   // Fetch users when the tab is switched to 'users' or 'credits'

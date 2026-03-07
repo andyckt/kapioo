@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,25 +26,29 @@ export default function LoginPage() {
   const { t, setLanguage } = useLanguage()
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    const userDataStr = localStorage.getItem('user');
-    
-    if (isAuthenticated && userDataStr) {
+    const redirectIfAuthenticated = async () => {
       try {
-        const userData = JSON.parse(userDataStr);
-        if (userData.userID === 'admin') {
-          router.push('/admin');
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        const result = await response.json();
+
+        if (!result?.authenticated || !result?.user) {
+          return;
+        }
+
+        localStorage.setItem("user", JSON.stringify(result.user));
+        localStorage.setItem("isAuthenticated", "true");
+
+        if (result.user.role === "admin") {
+          router.push(result.requiresAdminMfa ? "/admin/mfa" : "/admin");
         } else {
-          router.push('/dashboard');
+          router.push("/dashboard");
         }
       } catch (error) {
-        console.error('Error parsing user data:', error);
-        // Clear potentially corrupted data
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('user');
+        console.error("Failed to check current auth session:", error);
       }
-    }
+    };
+
+    redirectIfAuthenticated();
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -51,50 +56,50 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Call the login API
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ login, password }),
+      const result = await signIn("credentials", {
+        login,
+        password,
+        redirect: false,
       });
 
-      const result = await response.json();
+      if (result?.error) {
+        toast({
+          title: t('loginFailed'),
+          description: t('invalidCredentials'),
+          variant: "destructive",
+        });
+        return;
+      }
 
-      if (result.success) {
-        // STEP 4: Set language preference FIRST before storing user data
-        // This prevents the LanguageProvider from reading the old session language
-        if (result.data.user.languagePreference && 
-            (result.data.user.languagePreference === 'zh' || result.data.user.languagePreference === 'en')) {
-          console.log('Login: Setting language from database:', result.data.user.languagePreference);
-          setLanguage(result.data.user.languagePreference);
-          localStorage.setItem('preferredLanguage', result.data.user.languagePreference);
+      const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
+      const sessionResult = await sessionResponse.json();
+
+      if (sessionResult?.authenticated && sessionResult?.user) {
+        if (
+          sessionResult.user.languagePreference &&
+          (sessionResult.user.languagePreference === 'zh' || sessionResult.user.languagePreference === 'en')
+        ) {
+          setLanguage(sessionResult.user.languagePreference);
+          localStorage.setItem('preferredLanguage', sessionResult.user.languagePreference);
         }
-        
-        // Now store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(result.data.user));
-        
-        // Set authentication state
+
+        localStorage.setItem('user', JSON.stringify(sessionResult.user));
         localStorage.setItem('isAuthenticated', 'true');
-        
-        // Show success toast
+
         toast({
           title: t('loginSuccess'),
-          description: t('welcomeBack') + result.data.user.name + '!',
+          description: t('welcomeBack') + sessionResult.user.name + '!',
         });
-        
-        // Redirect based on user ID (admin or regular user)
-        if (result.data.user.userID === 'admin') {
-          router.push('/admin');
+
+        if (sessionResult.user.role === 'admin') {
+          router.push(sessionResult.requiresAdminMfa ? '/admin/mfa' : '/admin');
         } else {
           router.push('/dashboard');
         }
       } else {
-        // Show general error toast
         toast({
           title: t('loginFailed'),
-          description: result.error || t('invalidCredentials'),
+          description: t('loginError'),
           variant: "destructive",
         });
       }

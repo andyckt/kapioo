@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Order from '@/models/Order';
 import User from '@/models/User';
@@ -15,6 +16,10 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
+    const { actor, response } = await requireSelfOrAdmin(id);
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     

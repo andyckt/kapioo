@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import { sendDailyOrderStatusUpdateNotification } from '@/lib/services/notifications';
@@ -89,8 +90,10 @@ const WeeklyOrderSchema = new mongoose.Schema({
 // PATCH handler - update weekly subscription order status
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    // In a production environment, you should implement proper authentication
-    // to ensure only admins can access this endpoint
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
     
     // First connect to the database
     await connectToDatabase();

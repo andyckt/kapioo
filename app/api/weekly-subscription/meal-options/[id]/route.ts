@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
@@ -41,6 +42,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { id } = await params;
     const data = await request.json();
     
@@ -85,6 +91,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { id } = await params;
     await connectToDatabase();
     

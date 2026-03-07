@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
@@ -6,6 +7,11 @@ import mongoose from 'mongoose';
 // GET handler - get transactions with optional userId filtering
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
     const page = parseInt(url.searchParams.get('page') || '1');
@@ -19,6 +25,23 @@ export async function GET(request: Request) {
     // Build query
     const query: any = {};
     if (userId) {
+      const isSelf =
+        String(actor.user._id) === String(userId) ||
+        String(actor.user.userID) === String(userId);
+      if (!isSelf && actor.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'You do not have access to these transactions' },
+          { status: 403 }
+        );
+      }
+
+      if (!isSelf && actor.role === 'admin') {
+        const { response: adminMfaResponse } = await requireAdminMfa(request);
+        if (adminMfaResponse) {
+          return adminMfaResponse;
+        }
+      }
+
       // Try to match userId in both ObjectId and string formats
       if (mongoose.Types.ObjectId.isValid(userId)) {
         query['$or'] = [
@@ -29,6 +52,16 @@ export async function GET(request: Request) {
         query.userId = userId;
       }
       console.log('Using userId query:', JSON.stringify(query));
+    } else if (actor.role !== 'admin') {
+      query['$or'] = [
+        { userId: actor.user._id },
+        { userId: String(actor.user._id) }
+      ];
+    } else {
+      const { response: adminMfaResponse } = await requireAdminMfa(request);
+      if (adminMfaResponse) {
+        return adminMfaResponse;
+      }
     }
     
     console.log('Executing transaction query:', JSON.stringify(query));

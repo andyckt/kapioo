@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Settings from '@/models/Settings';
 
@@ -6,6 +7,11 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function PUT(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const body = await request.json();
     const { date } = body;
 

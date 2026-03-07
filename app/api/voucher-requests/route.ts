@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
 import User from '@/models/User';
@@ -18,6 +19,11 @@ import { derivePlanIdFromDaily, getDailyPlanBy, getDailyPlanById, toDailyPlanId 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     // Get query parameters
@@ -36,7 +42,31 @@ export async function GET(request: NextRequest) {
     // Build query
     const query: any = {};
     if (userId) {
+      const isSelf =
+        String(actor.user._id) === String(userId) ||
+        String(actor.user.userID) === String(userId);
+      if (!isSelf && actor.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'You do not have access to these voucher requests' },
+          { status: 403 }
+        );
+      }
+
+      if (!isSelf && actor.role === 'admin') {
+        const { response: adminMfaResponse } = await requireAdminMfa(request);
+        if (adminMfaResponse) {
+          return adminMfaResponse;
+        }
+      }
+
       query.userId = userId;
+    } else if (actor.role !== 'admin') {
+      query.userId = actor.user._id;
+    } else {
+      const { response: adminMfaResponse } = await requireAdminMfa(request);
+      if (adminMfaResponse) {
+        return adminMfaResponse;
+      }
     }
     if (status && ['pending', 'approved', 'declined'].includes(status)) {
       query.status = status;
@@ -139,6 +169,11 @@ export async function GET(request: NextRequest) {
 // POST handler - create a new voucher purchase request
 export async function POST(request: NextRequest) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     // Parse request body
@@ -154,8 +189,25 @@ export async function POST(request: NextRequest) {
       requestId: clientRequestId
     } = body;
     
+    const effectiveUserId =
+      actor.role === 'admin' && userId
+        ? userId
+        : String(actor.user._id);
+
+    if (
+      actor.role !== 'admin' &&
+      userId &&
+      String(userId) !== String(actor.user._id) &&
+      String(userId) !== String(actor.user.userID)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'You cannot submit requests for another user' },
+        { status: 403 }
+      );
+    }
+
     // Validate required fields
-    if (!userId || !type || !quantity || !imageProof || !referenceNumber) {
+    if (!effectiveUserId || !type || !quantity || !imageProof || !referenceNumber) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -179,7 +231,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verify user exists
-    const user = await User.findById(userId);
+    const user = await User.findById(effectiveUserId);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -293,7 +345,7 @@ export async function POST(request: NextRequest) {
               {
                 promoCodeId: promoDoc._id,
                 promoCode: promoDoc.code,
-                userId: new mongoose.Types.ObjectId(userId),
+                userId: new mongoose.Types.ObjectId(effectiveUserId),
                 userPhoneNormalized: normalizedPhone,
                 requestId,
                 purchaseType: 'daily_topup',
@@ -313,7 +365,7 @@ export async function POST(request: NextRequest) {
           [
             {
               requestId,
-              userId: new mongoose.Types.ObjectId(userId),
+              userId: new mongoose.Types.ObjectId(effectiveUserId),
               planId: dailyPlan?.id,
               type,
               quantity,
@@ -366,7 +418,7 @@ export async function POST(request: NextRequest) {
       } : null;
       
       await sendAdminVoucherRequestNotification({
-        userId,
+        userId: effectiveUserId,
         userName: user.name,
         userEmail: user.email,
         type,
@@ -393,7 +445,7 @@ export async function POST(request: NextRequest) {
     try {
       console.log('Sending confirmation email to user:', user.email);
       await sendUserVoucherRequestConfirmation({
-        userId,
+        userId: effectiveUserId,
         userName: user.name,
         userEmail: user.email,
         type,

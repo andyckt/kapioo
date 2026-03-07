@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
@@ -119,8 +120,10 @@ const DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder ||
 // GET handler - get all orders with pagination and filtering
 export async function GET(request: Request) {
   try {
-    // In a production environment, you should implement proper authentication
-    // to ensure only admins can access this endpoint
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     

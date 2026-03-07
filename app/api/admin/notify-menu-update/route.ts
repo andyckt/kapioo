@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import { sendMenuUpdateEmail } from '@/lib/services/email';
@@ -36,6 +37,11 @@ interface ProgressUpdate {
  * Uses batch processing with real-time progress updates
  */
 export async function POST(request: Request) {
+  const { actor, response } = await requireAdminMfa(request);
+  if (!actor || response) {
+    return response;
+  }
+
   const encoder = new TextEncoder();
   
   const stream = new ReadableStream({

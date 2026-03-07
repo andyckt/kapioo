@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Dish from '@/models/Dish';
 
@@ -36,6 +37,11 @@ export async function PUT(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { name } = await params;
     const data = await request.json();
     await connectToDatabase();

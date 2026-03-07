@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
@@ -18,6 +19,10 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
+    const { actor, response } = await requireSelfOrAdmin(id);
+    if (!actor || response) {
+      return response;
+    }
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
@@ -187,6 +188,11 @@ export async function GET(request: Request) {
 // POST handler - create or update user subscription and create weekly order
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     
     console.log('🔍 API DEBUG: Received POST request with data:', JSON.stringify(data, null, 2));
@@ -200,18 +206,27 @@ export async function POST(request: Request) {
       );
     }
     
-    // Validate user ID - this would come from the client's localStorage in a real scenario
-    if (!data.userId) {
+    const effectiveUserId =
+      actor.role === 'admin' && data.userId
+        ? data.userId
+        : String(actor.user._id);
+
+    if (
+      actor.role !== 'admin' &&
+      data.userId &&
+      String(data.userId) !== String(actor.user._id) &&
+      String(data.userId) !== String(actor.user.userID)
+    ) {
       return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
+        { success: false, error: 'You cannot create subscriptions for another user' },
+        { status: 403 }
       );
     }
     
     await connectToDatabase();
     
     // Find the user by ID
-    const user = await User.findById(data.userId);
+    const user = await User.findById(effectiveUserId);
     
     if (!user) {
       return NextResponse.json(

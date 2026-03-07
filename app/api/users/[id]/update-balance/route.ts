@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { logAuditEvent } from '@/lib/security/audit';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { sendEmail } from '@/lib/services/email';
@@ -16,8 +18,10 @@ interface RouteParams {
 // POST handler - update user balance (credits or vouchers)
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    // No authentication check for simplicity
-    // In a production environment, you would want to add proper authentication
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
 
     const { id } = params;
     const { field, amount, operation, description } = await request.json();
@@ -177,6 +181,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
     
     await transaction.save();
+
+    await logAuditEvent({
+      actor,
+      action: operation === 'add' ? 'balance.add' : 'balance.deduct',
+      targetType: 'user-balance',
+      targetId: String(updatedUser._id),
+      metadata: {
+        field,
+        amount,
+        operation,
+        description: description || null,
+      },
+      request,
+    });
     
     // Send email notification when vouchers are added (not when deducted)
     if (operation === 'add' && field !== 'credits') {

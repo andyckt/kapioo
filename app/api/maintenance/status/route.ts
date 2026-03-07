@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import dbConnect from '@/lib/db';
 import Settings from '@/models/Settings';
 
@@ -37,6 +38,11 @@ export async function GET(request: NextRequest) {
 // POST - Update maintenance mode status
 export async function POST(request: NextRequest) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await dbConnect();
     
     const body = await request.json();

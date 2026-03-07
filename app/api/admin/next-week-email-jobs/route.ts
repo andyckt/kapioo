@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
@@ -12,6 +13,11 @@ const ELIGIBLE_USER_QUERY = {
 
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const body = await request.json().catch(() => ({}));
     const userIds = Array.isArray(body?.userIds) ? body.userIds : [];
     const createdBy = typeof body?.createdBy === 'string' ? body.createdBy : undefined;
@@ -71,8 +77,13 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const jobs = await NextWeekMenuEmailJob.find({})
       .sort({ createdAt: -1 })

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
 import User from '@/models/User';
@@ -24,14 +25,36 @@ import {
 // POST handler - create a new credit purchase request
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     console.log('Credit request POST received');
     const data = await request.json();
     console.log('Credit request data:', JSON.stringify(data));
+
+    const effectiveUserId =
+      actor.role === 'admin' && data.userId
+        ? data.userId
+        : String(actor.user._id);
+
+    if (
+      actor.role !== 'admin' &&
+      data.userId &&
+      String(data.userId) !== String(actor.user._id) &&
+      String(data.userId) !== String(actor.user.userID)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'You cannot submit requests for another user' },
+        { status: 403 }
+      );
+    }
     
     // Validate required fields
-    if (!data.userId || !data.imageProof || !data.paymentMethod || !data.referenceNumber) {
+    if (!effectiveUserId || !data.imageProof || !data.paymentMethod || !data.referenceNumber) {
       console.log('Missing required fields:', { 
-        userId: !!data.userId, 
+        userId: !!effectiveUserId, 
         imageProof: !!data.imageProof,
         paymentMethod: !!data.paymentMethod,
         referenceNumber: !!data.referenceNumber
@@ -53,7 +76,7 @@ export async function POST(request: Request) {
     await connectToDatabase();
     
     // Find user to ensure they exist
-    const user = await User.findById(data.userId);
+    const user = await User.findById(effectiveUserId);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -218,7 +241,7 @@ export async function POST(request: Request) {
           [
             {
               requestId,
-              userId: data.userId,
+              userId: effectiveUserId,
               planId: weeklyPlan?.id,
               amount: pricing.finalTotal,
               paymentMethod: effectivePaymentMethod,

@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Order from '@/models/Order';
 import mongoose from 'mongoose';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     // Get current counts of orders by status

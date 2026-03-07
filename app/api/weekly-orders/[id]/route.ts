@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import User from '@/models/User';
@@ -16,6 +17,10 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     
@@ -31,6 +36,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
+      );
+    }
+
+    if (actor.role !== 'admin' && String(order.userId) !== String(actor.user._id)) {
+      return NextResponse.json(
+        { success: false, error: 'You do not have access to this order' },
+        { status: 403 }
       );
     }
     
@@ -67,6 +79,10 @@ export async function GET(request: Request, { params }: RouteParams) {
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
     const data = await request.json();
     
     await connectToDatabase();

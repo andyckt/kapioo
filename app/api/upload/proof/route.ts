@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
+import { requireUser } from '@/lib/auth/guards';
+
 // Configure S3 client
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'ap-southeast-2',
@@ -13,6 +15,11 @@ const s3Client = new S3Client({
 
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     // Check if AWS credentials are configured
     const awsBucketName = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME;
     if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !awsBucketName) {
@@ -31,6 +38,18 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
+
+    if (
+      actor.role !== 'admin' &&
+      userId &&
+      String(userId) !== String(actor.user._id) &&
+      String(userId) !== String(actor.user.userID)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'You cannot upload proof for another user' },
+        { status: 403 }
+      );
+    }
 
     // Validate file
     if (!file) {
@@ -83,6 +102,7 @@ export async function POST(request: Request) {
       success: true,
       data: {
         url: fileUrl,
+        key: fileName,
         fileName: fileName
       }
     });

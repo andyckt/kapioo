@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import PromoCode from '@/models/PromoCode';
 
@@ -11,6 +12,11 @@ interface RouteParams {
 
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
+    const { actor, response } = await requireAdminMfa(_request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { id } = await params;
     const promo = await PromoCode.findById(id).lean();
@@ -28,6 +34,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { id } = await params;
 

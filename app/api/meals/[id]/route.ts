@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Meal from '@/models/Meal';
 
@@ -36,6 +37,11 @@ export async function GET(request: Request, { params }: Params) {
 // PUT handler - update a specific meal by ID
 export async function PUT(request: Request, { params }: Params) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const id = params.id;
     const data = await request.json();
     
@@ -68,6 +74,11 @@ export async function PUT(request: Request, { params }: Params) {
 // DELETE handler - delete a specific meal by ID
 export async function DELETE(request: Request, { params }: Params) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { id } = params;
     
     await connectToDatabase();

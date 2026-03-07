@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import { format } from 'date-fns';
 
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
     const startDate = url.searchParams.get('startDate');

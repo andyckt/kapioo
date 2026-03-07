@@ -26,11 +26,14 @@ export interface IUser extends Document {
   userID: string;
   name: string;       // Added as required
   nickname?: string;  // Added new field
+  role: 'user' | 'admin';
   email: string;
   password: string;   // Will store hashed password
   salt: string;       // For password hashing
+  passwordIterations?: number;
   joined: Date;
   status: string;
+  sessionVersion: number;
   credits: number;    // Legacy field, kept for backward compatibility
   twoDishVoucher: number;  // Voucher for two-dish meals
   threeDishVoucher: number; // Voucher for three-dish meals
@@ -47,6 +50,9 @@ export interface IUser extends Document {
   isVerified: boolean;
   resetPasswordCode?: string;
   resetPasswordExpires?: Date;
+  adminMfaCodeHash?: string;
+  adminMfaCodeExpires?: Date;
+  adminMfaCodeSentAt?: Date;
   languagePreference: 'zh' | 'en';
   emailPreferences?: {
     nextWeekMenuUpdates?: boolean;
@@ -80,6 +86,11 @@ const UserSchema: Schema = new Schema(
       type: String,
       trim: true
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
     email: { 
       type: String, 
       required: true, 
@@ -95,6 +106,10 @@ const UserSchema: Schema = new Schema(
       type: String,
       required: true
     },
+    passwordIterations: {
+      type: Number,
+      default: 310000
+    },
     joined: { 
       type: Date, 
       default: Date.now 
@@ -103,6 +118,10 @@ const UserSchema: Schema = new Schema(
       type: String, 
       default: 'Active',
       enum: ['Active', 'Inactive', 'Suspended']
+    },
+    sessionVersion: {
+      type: Number,
+      default: 1
     },
     credits: { 
       type: Number, 
@@ -166,6 +185,15 @@ const UserSchema: Schema = new Schema(
     resetPasswordExpires: {
       type: Date
     },
+    adminMfaCodeHash: {
+      type: String
+    },
+    adminMfaCodeExpires: {
+      type: Date
+    },
+    adminMfaCodeSentAt: {
+      type: Date
+    },
     // Language preference
     languagePreference: {
       type: String,
@@ -210,16 +238,14 @@ const UserSchema: Schema = new Schema(
 // Method to hash password
 UserSchema.methods.setPassword = async function(password: string) {
   try {
-    console.log('Setting password for user:', this.email);
-    console.log('Password received:', password ? 'Password provided' : 'No password provided');
-    
     // Generate a random salt
     this.salt = crypto.randomBytes(16).toString('hex');
-    console.log('Generated salt:', this.salt);
-    
+    this.passwordIterations = 310000;
+
     // Hash the password with the salt
-    this.password = crypto.pbkdf2Sync(password, this.salt, 1000, 64, 'sha512').toString('hex');
-    console.log('Password hashed successfully');
+    this.password = crypto
+      .pbkdf2Sync(password, this.salt, this.passwordIterations, 64, 'sha512')
+      .toString('hex');
   } catch (error) {
     console.error('Error in setPassword method:', error);
     throw error;
@@ -229,7 +255,10 @@ UserSchema.methods.setPassword = async function(password: string) {
 // Method to verify password
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
-    const hash = crypto.pbkdf2Sync(candidatePassword, this.salt, 1000, 64, 'sha512').toString('hex');
+    const iterations = Number(this.passwordIterations || 1000);
+    const hash = crypto
+      .pbkdf2Sync(candidatePassword, this.salt, iterations, 64, 'sha512')
+      .toString('hex');
     return this.password === hash;
   } catch (error) {
     console.error('Error in comparePassword method:', error);

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { logAuditEvent } from '@/lib/security/audit';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
 import User from '@/models/User';
 import mongoose from 'mongoose';
@@ -11,6 +13,11 @@ export async function GET(
   { params }: { params: { requestId: string } }
 ) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     const { requestId } = params;
@@ -23,6 +30,16 @@ export async function GET(
       return NextResponse.json(
         { success: false, error: 'Voucher purchase request not found' },
         { status: 404 }
+      );
+    }
+
+    if (
+      actor.role !== 'admin' &&
+      String((voucherRequest as any).userId?._id || (voucherRequest as any).userId) !== String(actor.user._id)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'You do not have access to this voucher request' },
+        { status: 403 }
       );
     }
     
@@ -45,6 +62,11 @@ export async function PUT(
   { params }: { params: { requestId: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     const { requestId } = params;
@@ -171,6 +193,20 @@ export async function PUT(
       // Commit the transaction
       await session.commitTransaction();
       session.endSession();
+
+      await logAuditEvent({
+        actor,
+        action: `voucher-request.${status}`,
+        targetType: 'voucher-request',
+        targetId: requestId,
+        metadata: {
+          status,
+          adminNotes: adminNotes || null,
+          voucherType: voucherRequest.type,
+          quantity: voucherRequest.quantity,
+        },
+        request,
+      });
       
       return NextResponse.json({
         success: true,

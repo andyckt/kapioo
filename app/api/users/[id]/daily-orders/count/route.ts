@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Order from '@/models/Order';
 import User from '@/models/User';
@@ -9,10 +10,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectToDatabase();
-    
-    // Extract userId from params
     const { id } = params;
+    const { actor, response } = await requireSelfOrAdmin(id);
+    if (!actor || response) {
+      return response;
+    }
+
+    await connectToDatabase();
     
     // Check if user exists
     const user = await User.findOne({

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyDeliveryHistory from '@/models/WeeklyDeliveryHistory';
 
@@ -8,6 +9,11 @@ export async function DELETE(
   { params }: { params: { historyId: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { historyId } = params;
     

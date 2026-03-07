@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
@@ -21,6 +22,11 @@ const ELIGIBLE_USER_QUERY = {
 // (test mode remains immediate for convenience)
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { userIds, testMode, testEmail, testBatchMode } = await request.json();
 
     // Single test email still sends immediately.
@@ -144,8 +150,13 @@ export async function POST(request: Request) {
 }
 
 // GET handler - get summary of eligible users
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
 
     const totalUsers = await User.countDocuments();

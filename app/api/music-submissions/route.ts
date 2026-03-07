@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import MusicSubmission from '@/models/MusicSubmission';
 
@@ -11,8 +12,13 @@ interface MusicSubmissionData {
 }
 
 // GET handler - Return all music submissions
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     // Fetch all music submissions from MongoDB, sorted by creation date (newest first)
@@ -69,6 +75,11 @@ export async function POST(request: Request) {
 // PATCH handler - Update a music submission status
 export async function PATCH(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     
     if (!data.submissionId || !data.status) {

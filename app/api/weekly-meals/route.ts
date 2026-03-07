@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyMeal from '@/models/WeeklyMeal';
 import Meal from '@/models/Meal';
@@ -149,6 +150,11 @@ export async function GET(request: Request) {
 // POST handler - assign a meal to a day of the current week
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     
     // Validate required fields

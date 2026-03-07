@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 // Since we're having issues with the auth imports, we'll comment them out for now
@@ -161,17 +162,10 @@ const idempotencyStore = new Map<string, any>();
 // POST handler - create a new daily order
 export async function POST(request: Request) {
   try {
-    // Since we've commented out the auth imports, we'll skip the authentication check for now
-    // This should be properly implemented in a production environment
-    /*
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
     }
-    */
 
     await connectToDatabase();
     
@@ -204,8 +198,25 @@ export async function POST(request: Request) {
       }
     }
     
+    const effectiveUserId =
+      actor.role === 'admin' && data.userId
+        ? data.userId
+        : String(actor.user._id);
+
+    if (
+      actor.role !== 'admin' &&
+      data.userId &&
+      String(data.userId) !== String(actor.user._id) &&
+      String(data.userId) !== String(actor.user.userID)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'You cannot create orders for another user' },
+        { status: 403 }
+      );
+    }
+
     // Validate required fields
-    if (!data.userId || !data.items || data.items.length === 0) {
+    if (!effectiveUserId || !data.items || data.items.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -213,7 +224,7 @@ export async function POST(request: Request) {
     }
     
     // Find the user
-    const user = await User.findById(data.userId);
+    const user = await User.findById(effectiveUserId);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -386,17 +397,10 @@ export async function POST(request: Request) {
 // GET handler - get all orders for the current user
 export async function GET(request: Request) {
   try {
-    // Since we've commented out the auth imports, we'll skip the authentication check for now
-    // This should be properly implemented in a production environment
-    /*
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
     }
-    */
 
     await connectToDatabase();
     
@@ -408,7 +412,26 @@ export async function GET(request: Request) {
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     
-    if (!userId) {
+    if (!userId && actor.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (
+      actor.role !== 'admin' &&
+      userId &&
+      String(userId) !== String(actor.user._id) &&
+      String(userId) !== String(actor.user.userID)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'You do not have access to these orders' },
+        { status: 403 }
+      );
+    }
+
+    if (!userId && actor.role === 'admin') {
       return NextResponse.json(
         { success: false, error: 'User ID is required' },
         { status: 400 }

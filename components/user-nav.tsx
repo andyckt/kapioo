@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { CreditCard, LogOut, Settings, User, ShoppingCart, Gem, Ticket } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -104,19 +105,17 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
     }
   }
   
-  const handleLogout = () => {
-    // STEP 5: Clear user data and authentication state from localStorage
-    console.log('Logout: Clearing authentication, keeping localStorage language');
+  const handleLogout = async () => {
+    await fetch('/api/auth/admin-mfa', { method: 'DELETE' }).catch(() => undefined)
     localStorage.removeItem('user')
     localStorage.removeItem('isAuthenticated')
-    // Note: We intentionally keep 'preferredLanguage' so users can continue 
-    // browsing in their preferred language when logged out
-    
+
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
     })
-    
+
+    await signOut({ redirect: false })
     router.push("/login")
   }
   

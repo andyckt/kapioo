@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
+import { requireUser } from '@/lib/auth/guards';
+
 // Initialize S3 client
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -31,6 +33,11 @@ function getFileExtension(mimeType: string): string {
 // POST handler for file uploads
 export async function POST(request: NextRequest) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     // Check if AWS credentials are configured
     if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_S3_BUCKET) {
       console.error('AWS credentials not configured');
@@ -120,8 +127,7 @@ export async function POST(request: NextRequest) {
       Bucket: process.env.AWS_S3_BUCKET,
       Key: fileName,
       Body: buffer,
-      ContentType: file.type,
-      ACL: 'public-read' as const // Make the file publicly accessible
+      ContentType: file.type
     };
 
     await s3Client.send(new PutObjectCommand(uploadParams));
@@ -132,6 +138,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       url: fileUrl,
+      key: fileName,
       message: 'File uploaded successfully'
     });
   } catch (error) {

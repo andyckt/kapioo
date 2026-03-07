@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Meal from '@/models/Meal';
 
@@ -21,6 +22,11 @@ export async function GET() {
 // POST handler - create a new meal
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     
     // Validate required fields

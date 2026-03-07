@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 
 /**
  * Manual trigger endpoint for processing email jobs
@@ -15,6 +16,11 @@ import { NextResponse } from 'next/server';
  */
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     // Forward the request to the cron endpoint
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const cronUrl = `${baseUrl}/api/cron/process-next-week-email-jobs`;

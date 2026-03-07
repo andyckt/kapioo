@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 
@@ -49,6 +50,11 @@ const WeeklyOrderSchema = new mongoose.Schema({
 });
 
 export async function GET(request: Request) {
+  const { actor, response } = await requireAdminMfa(request);
+  if (!actor || response) {
+    return response;
+  }
+
   const url = new URL(request.url);
   const dryRun = url.searchParams.get('dryRun') !== 'false'; // Default to true
   const apply = url.searchParams.get('apply') === 'true'; // Must explicitly set to true to apply changes

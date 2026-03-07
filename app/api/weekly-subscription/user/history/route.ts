@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import User from '@/models/User';
@@ -8,6 +9,11 @@ import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-custom
 // GET handler - get user's weekly subscription order history
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
@@ -21,6 +27,28 @@ export async function GET(request: Request) {
         { success: false, error: 'User ID is required' },
         { status: 400 }
       );
+    }
+
+    if (
+      actor.role !== 'admin' &&
+      String(userIdParam) !== String(actor.user._id) &&
+      String(userIdParam) !== String(actor.user.userID)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'You do not have access to this subscription history' },
+        { status: 403 }
+      );
+    }
+
+    if (
+      actor.role === 'admin' &&
+      String(userIdParam) !== String(actor.user._id) &&
+      String(userIdParam) !== String(actor.user.userID)
+    ) {
+      const { response: adminMfaResponse } = await requireAdminMfa(request);
+      if (adminMfaResponse) {
+        return adminMfaResponse;
+      }
     }
     
     await connectToDatabase();

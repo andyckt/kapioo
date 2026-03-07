@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/guards';
 import { sendDailyOrderSummaryEmail, sendWeeklyOrderSummaryEmail, sendAdminDailyOrderSummaryEmail, sendAdminWeeklyOrderSummaryEmail } from '@/lib/services/email';
 
 export const dynamic = 'force-dynamic';
@@ -8,10 +9,15 @@ export async function POST(request: Request) {
   console.log('📧 [API] Received order summary email request');
   
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     console.log('📧 [API] Request data:', JSON.stringify(data, null, 2));
     
-    const {
+    let {
       type, // 'daily' or 'weekly'
       userEmail,
       userName,
@@ -23,6 +29,12 @@ export async function POST(request: Request) {
       specialInstructions,
       language
     } = data;
+
+    if (actor.role !== 'admin') {
+      userEmail = actor.user.email;
+      userName = actor.user.name;
+      userId = String(actor.user._id);
+    }
     
     // Validate required fields
     if (!type) {

@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyMeal from '@/models/WeeklyMeal';
 
 // POST handler - update the week and year for all meals
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     console.log('[Update Week/Year API] Received request:', data);
     

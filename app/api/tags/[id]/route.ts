@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Tag from '@/models/Tag';
 
@@ -33,6 +34,11 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { id } = params;
     const data = await request.json();
@@ -82,6 +88,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { id } = params;
     

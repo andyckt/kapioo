@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import { handleOrderNotification, NotificationType } from '@/lib/services/notifications';
 import Order from '@/models/Order';
 import User from '@/models/User';
@@ -6,6 +7,11 @@ import connectToDatabase from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { notificationType, orderId, userId, previousStatus, transactionId, amount } = await request.json();
     
     // Validate input

@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 import { sendCreditPurchaseStatusEmail } from '@/lib/services/email';
+import { handleOrderNotification } from '@/lib/services/notifications';
 import { toWeeklyPlanId } from '@/lib/plans/service';
 
 // GET handler - get all credit purchase requests with filtering and pagination
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
     const page = parseInt(url.searchParams.get('page') || '1');
@@ -58,6 +65,11 @@ export async function GET(request: Request) {
 // POST handler - approve or decline a credit purchase request
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     
     // Validate required fields
@@ -216,19 +228,15 @@ export async function POST(request: Request) {
             user.languagePreference || 'zh' // Pass user's language preference
           );
           
-          // Also send the same notification as the "Add Credits" button
-          await fetch('/api/notifications', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              notificationType: 'credits_added',
-              userId: user._id,
-              transactionId: transaction.transactionId,
-              amount: approvedCredits
-            }),
-          });
+          // Send the same notification as the "Add Credits" button without relying on an internal HTTP call.
+          await handleOrderNotification(
+            'credits_added',
+            null,
+            user,
+            undefined,
+            transaction.transactionId,
+            approvedCredits
+          );
         } catch (emailError) {
           console.error('Error sending approval email:', emailError);
           // Continue even if email fails

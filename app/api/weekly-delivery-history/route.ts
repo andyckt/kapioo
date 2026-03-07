@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyDeliveryHistory from '@/models/WeeklyDeliveryHistory';
 
 // GET: Fetch all history entries
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     const url = new URL(request.url);
@@ -40,6 +46,11 @@ export async function GET(request: Request) {
 // POST: Create new history entry
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const data = await request.json();
     

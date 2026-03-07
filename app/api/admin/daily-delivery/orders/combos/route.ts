@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 
@@ -103,8 +104,10 @@ const DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder ||
 // GET handler - get all unique combo names from orders
 export async function GET(request: Request) {
   try {
-    // In a production environment, you should implement proper authentication
-    // to ensure only admins can access this endpoint
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     

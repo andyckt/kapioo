@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
 
@@ -10,6 +11,11 @@ type Params = {
 
 export async function GET(_request: Request, { params }: Params) {
   try {
+    const { actor, response } = await requireAdminMfa(_request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { jobId } = await params;
     await connectToDatabase();
 

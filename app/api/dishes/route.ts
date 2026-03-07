@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Dish from '@/models/Dish';
 
@@ -20,6 +21,11 @@ export async function GET(request: Request) {
 // POST - Create or update a dish (upsert)
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const data = await request.json();
     

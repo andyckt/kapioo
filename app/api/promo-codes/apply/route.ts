@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import PromoCode from '@/models/PromoCode';
 import User from '@/models/User';
@@ -12,11 +13,31 @@ import {
 
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const body = await request.json();
 
     const code = normalizePromoCode(body.code);
-    const userId = body.userId as string;
+    const userId = (body.userId as string) || String(actor.user._id);
+    if (
+      actor.role !== 'admin' &&
+      String(userId) !== String(actor.user._id) &&
+      String(userId) !== String(actor.user.userID)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR,
+          error: 'You cannot preview a promo code for another user'
+        },
+        { status: 403 }
+      );
+    }
+
     const purchaseType = body.purchaseType as PromoPurchaseType;
     const paymentMethod = body.paymentMethod as PromoPaymentMethod;
     const mealSubtotal = Number(body.mealSubtotal ?? body.subtotal);

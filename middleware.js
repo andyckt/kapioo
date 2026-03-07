@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+
+import { verifySignedAdminMfaCookie } from '@/lib/security/signed-cookie';
 
 // This middleware increases the body size limit for API requests
 // particularly useful for file uploads
@@ -45,7 +48,52 @@ const PRIVATE_NOINDEX_PATHS = [
   '/daily-delivery',
 ];
 
-export function middleware(request) {
+const AUTH_REQUIRED_PAGE_PATHS = [
+  '/dashboard',
+  '/address',
+];
+
+const ADMIN_PAGE_PATHS = ['/admin', '/maintain'];
+const ADMIN_MFA_PAGE = '/admin/mfa';
+
+const ADMIN_API_PATHS = [
+  '/api/admin',
+  '/api/credits/request/admin',
+  '/api/day-history',
+  '/api/notifications',
+  '/api/orders/stats',
+  '/api/settings',
+  '/api/users/count',
+  '/api/users/export',
+  '/api/users/with-order-counts',
+  '/api/voucher-requests/export',
+  '/api/credits/request/admin/export',
+  '/api/weekly-delivery-history',
+  '/api/weekly-meals/admin',
+];
+
+const AUTH_REQUIRED_API_PATHS = [
+  '/api/orders',
+  '/api/daily-delivery/order',
+  '/api/transactions',
+  '/api/voucher-requests',
+  '/api/credits/request',
+  '/api/promo-codes/apply',
+  '/api/send-order-summary-email',
+  '/api/weekly-subscription/user',
+  '/api/upload',
+  '/api/users/',
+];
+
+function matchesPath(pathname, prefixes) {
+  return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function buildApiError(message, status) {
+  return NextResponse.json({ success: false, error: message }, { status });
+}
+
+export async function middleware(request) {
   const pathname = request.nextUrl.pathname.toLowerCase();
   
   // Check for suspicious paths
@@ -66,6 +114,78 @@ export function middleware(request) {
     return new NextResponse(null, { status: 404 });
   }
   
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  });
+
+  const tokenUserId = token?.sub ? String(token.sub) : null;
+  const tokenRole = token?.role;
+  const tokenSessionVersion = Number(token?.sessionVersion || 1);
+  const adminMfaPayload = await verifySignedAdminMfaCookie(
+    request.cookies.get('kapioo_admin_mfa')?.value
+  );
+  const hasValidAdminMfa =
+    tokenRole === 'admin' &&
+    adminMfaPayload &&
+    adminMfaPayload.userId === tokenUserId &&
+    Number(adminMfaPayload.sessionVersion) === tokenSessionVersion;
+
+  const isApiRoute = pathname.startsWith('/api/');
+
+  const requiresAdminPage =
+    matchesPath(pathname, ADMIN_PAGE_PATHS) && pathname !== ADMIN_MFA_PAGE;
+  const requiresAdminApi = matchesPath(pathname, ADMIN_API_PATHS);
+  const requiresAuthenticatedPage = matchesPath(pathname, AUTH_REQUIRED_PAGE_PATHS);
+  const requiresAuthenticatedApi =
+    matchesPath(pathname, AUTH_REQUIRED_API_PATHS) && !requiresAdminApi;
+
+  if (pathname === ADMIN_MFA_PAGE || pathname.startsWith(`${ADMIN_MFA_PAGE}/`)) {
+    if (!tokenUserId) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    if (tokenRole !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
+  if (requiresAdminPage) {
+    if (!tokenUserId) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    if (tokenRole !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    if (!hasValidAdminMfa) {
+      return NextResponse.redirect(new URL('/admin/mfa', request.url));
+    }
+  }
+
+  if (requiresAuthenticatedPage && !tokenUserId) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  if (requiresAdminApi) {
+    if (!tokenUserId) {
+      return buildApiError('Unauthorized', 401);
+    }
+
+    if (tokenRole !== 'admin') {
+      return buildApiError('Admin access required', 403);
+    }
+
+    if (!hasValidAdminMfa) {
+      return buildApiError('Admin MFA verification required', 403);
+    }
+  }
+
+  if (requiresAuthenticatedApi && !tokenUserId) {
+    return buildApiError('Unauthorized', 401);
+  }
+
   const response = NextResponse.next({
     request: {
       // Clone the request headers and set a higher limit for body size
@@ -75,6 +195,16 @@ export function middleware(request) {
 
   // Add security headers
   response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  );
+  if (request.nextUrl.protocol === 'https:') {
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
 
   // Prevent indexing for private/account routes only.
   const shouldNoIndex = PRIVATE_NOINDEX_PATHS.some(
@@ -90,8 +220,7 @@ export function middleware(request) {
 // Apply this middleware to specific routes
 export const config = {
   matcher: [
-    '/api/upload',
-    // Apply to non-API pages while excluding static assets.
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
+    '/api/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 }; 

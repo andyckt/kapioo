@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
@@ -14,6 +15,11 @@ interface RouteParams {
 // POST handler - deduct credits from a user account
 export async function POST(request: Request, { params }: RouteParams) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { id } = params;
     const { credits, description = 'Credit Deduction' } = await request.json();
     

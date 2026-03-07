@@ -1,0 +1,173 @@
+import crypto from "crypto";
+import { NextRequest, NextResponse } from "next/server";
+
+import connectToDatabase from "@/lib/db";
+import { generateVerificationCode, sendAdminMfaCodeEmail } from "@/lib/services/email";
+import { logAuditEvent } from "@/lib/security/audit";
+import { createSignedAdminMfaCookie } from "@/lib/security/signed-cookie";
+import { requireAdmin } from "@/lib/auth/guards";
+
+const ADMIN_MFA_CODE_TTL_MS = 10 * 60 * 1000;
+const ADMIN_MFA_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const ADMIN_MFA_SEND_COOLDOWN_MS = 60 * 1000;
+
+function hashAdminMfaCode(code: string, userSalt: string) {
+  return crypto.createHash("sha256").update(`${code}:${userSalt}`).digest("hex");
+}
+
+export async function GET(request: NextRequest) {
+  const { actor, response } = await requireAdmin();
+  if (!actor || response) {
+    return response;
+  }
+
+  return NextResponse.json({
+    success: true,
+    requiresCode: true,
+    email: actor.user.email,
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const { actor, response } = await requireAdmin();
+  if (!actor || response) {
+    return response;
+  }
+
+  try {
+    await connectToDatabase();
+
+    const body = await request.json();
+    const action = String(body?.action || "send");
+
+    if (action === "send") {
+      const lastSentAt = actor.user.adminMfaCodeSentAt
+        ? new Date(actor.user.adminMfaCodeSentAt).getTime()
+        : 0;
+
+      if (lastSentAt && Date.now() - lastSentAt < ADMIN_MFA_SEND_COOLDOWN_MS) {
+        return NextResponse.json(
+          { success: false, error: "Please wait before requesting another code" },
+          { status: 429 }
+        );
+      }
+
+      const code = generateVerificationCode();
+      actor.user.adminMfaCodeHash = hashAdminMfaCode(code, actor.user.salt);
+      actor.user.adminMfaCodeExpires = new Date(Date.now() + ADMIN_MFA_CODE_TTL_MS);
+      actor.user.adminMfaCodeSentAt = new Date();
+      await actor.user.save();
+
+      await sendAdminMfaCodeEmail(
+        actor.user.email,
+        code,
+        actor.user.name || actor.user.userID || "Admin",
+        actor.user.languagePreference || "zh"
+      );
+
+      await logAuditEvent({
+        actor,
+        action: "admin-mfa.challenge-sent",
+        targetType: "admin-session",
+        targetId: String(actor.user._id),
+        request,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Admin MFA code sent successfully",
+      });
+    }
+
+    if (action === "verify") {
+      const code = String(body?.code || "").trim();
+      if (!code) {
+        return NextResponse.json(
+          { success: false, error: "Verification code is required" },
+          { status: 400 }
+        );
+      }
+
+      const codeExpiresAt = actor.user.adminMfaCodeExpires
+        ? new Date(actor.user.adminMfaCodeExpires).getTime()
+        : 0;
+
+      if (!actor.user.adminMfaCodeHash || !codeExpiresAt || codeExpiresAt < Date.now()) {
+        return NextResponse.json(
+          { success: false, error: "Verification code has expired" },
+          { status: 400 }
+        );
+      }
+
+      const hashedInput = hashAdminMfaCode(code, actor.user.salt);
+      if (hashedInput !== actor.user.adminMfaCodeHash) {
+        return NextResponse.json(
+          { success: false, error: "Invalid verification code" },
+          { status: 400 }
+        );
+      }
+
+      actor.user.adminMfaCodeHash = undefined;
+      actor.user.adminMfaCodeExpires = undefined;
+      await actor.user.save();
+
+      const cookieValue = await createSignedAdminMfaCookie({
+        userId: String(actor.user._id),
+        sessionVersion: actor.sessionVersion,
+        exp: Date.now() + ADMIN_MFA_SESSION_TTL_MS,
+      });
+
+      const apiResponse = NextResponse.json({
+        success: true,
+        message: "Admin MFA verified successfully",
+      });
+
+      apiResponse.cookies.set("kapioo_admin_mfa", cookieValue, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: ADMIN_MFA_SESSION_TTL_MS / 1000,
+      });
+
+      await logAuditEvent({
+        actor,
+        action: "admin-mfa.verified",
+        targetType: "admin-session",
+        targetId: String(actor.user._id),
+        request,
+      });
+
+      return apiResponse;
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Unsupported admin MFA action" },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error("Error handling admin MFA:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to process admin MFA request" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE() {
+  const response = NextResponse.json({
+    success: true,
+    message: "Admin MFA cleared",
+  });
+
+  response.cookies.set("kapioo_admin_mfa", "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
+
+  return response;
+}
+

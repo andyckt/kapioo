@@ -1,17 +1,34 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import User from '@/models/User';
 import { sendVerificationEmail } from '@/lib/services/email';
 
 export async function POST(request: Request) {
   try {
     const data = await request.json();
+    const ipAddress =
+      request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
     
     // Validate required fields
     if (!data.email || !data.name || !data.code) {
       return NextResponse.json(
         { success: false, error: 'Email, name, and verification code are required' },
         { status: 400 }
+      );
+    }
+
+    const rateLimitResult = checkRateLimit(
+      `send-verification:${ipAddress}:${String(data.email).toLowerCase()}`,
+      5,
+      15 * 60 * 1000
+    );
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many verification requests. Please try again later.' },
+        { status: 429 }
       );
     }
     

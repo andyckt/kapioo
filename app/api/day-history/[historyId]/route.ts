@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import DayHistory from '@/models/DayHistory';
 
@@ -7,6 +8,11 @@ export async function GET(
   { params }: { params: { historyId: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { historyId } = params;
     const history = await DayHistory.findOne({ historyId });
@@ -33,6 +39,11 @@ export async function DELETE(
   { params }: { params: { historyId: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { historyId } = params;
     

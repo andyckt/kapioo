@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
+import { requireAdmin, requireSelfOrAdmin } from '@/lib/auth/guards';
 import User from '@/models/User';
 
 // Interface for route params
@@ -13,13 +14,17 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
+    const { actor, response } = await requireSelfOrAdmin(id);
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     
-    // Find user excluding password and salt fields
+    // Find user excluding sensitive fields
     const user = await User.findOne({ 
       $or: [{ _id: id }, { userID: id }] 
-    }).select('-password -salt');
+    }).select('-password -salt -resetPasswordCode -resetPasswordExpires -verificationCode -verificationExpires -adminMfaCodeHash -adminMfaCodeExpires');
     
     if (!user) {
       return NextResponse.json(
@@ -42,6 +47,10 @@ export async function GET(request: Request, { params }: RouteParams) {
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
+    const { actor, response } = await requireSelfOrAdmin(id);
+    if (!actor || response) {
+      return response;
+    }
     const data = await request.json();
     
     await connectToDatabase();
@@ -69,8 +78,35 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       }
     }
     
-    // Handle userID update - check if new userID is already in use
+    const isAdmin = actor.role === 'admin';
+    const allowedSelfFields = new Set([
+      'name',
+      'nickname',
+      'email',
+      'phone',
+      'address',
+      'languagePreference',
+      'emailPreferences',
+      'password',
+    ]);
+
+    if (!isAdmin) {
+      Object.keys(data).forEach((key) => {
+        if (!allowedSelfFields.has(key)) {
+          delete data[key];
+        }
+      });
+    }
+
+    // Handle userID update - admin only
     if (data.userID && data.userID !== user.userID) {
+      if (!isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Only admins can change user ID' },
+          { status: 403 }
+        );
+      }
+
       const existingUserWithID = await User.findOne({ userID: data.userID });
       if (existingUserWithID) {
         return NextResponse.json(
@@ -89,7 +125,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     
     // Update user fields
     Object.keys(data).forEach((key) => {
-      if (key !== 'password' && key !== 'salt') {
+      if (
+        key !== 'password' &&
+        key !== 'salt' &&
+        key !== 'sessionVersion' &&
+        key !== 'role' &&
+        key !== 'adminMfaCodeHash' &&
+        key !== 'adminMfaCodeExpires'
+      ) {
         user[key] = data[key];
       }
     });
@@ -100,6 +143,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const userResponse = user.toObject();
     delete userResponse.password;
     delete userResponse.salt;
+    delete userResponse.resetPasswordCode;
+    delete userResponse.resetPasswordExpires;
+    delete userResponse.verificationCode;
+    delete userResponse.verificationExpires;
+    delete userResponse.adminMfaCodeHash;
+    delete userResponse.adminMfaCodeExpires;
     
     return NextResponse.json({ success: true, data: userResponse });
   } catch (error) {
@@ -115,6 +164,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
+    const { actor, response } = await requireAdmin();
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     

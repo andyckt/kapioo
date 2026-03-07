@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
@@ -110,6 +111,11 @@ let DailyDeliveryOrder: mongoose.Model<DailyOrderDocument>;
 // GET handler - get a specific order by ID
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const { id } = params;
     
     await connectToDatabase();
@@ -128,6 +134,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
+      );
+    }
+
+    if (actor.role !== 'admin' && String(order.userId) !== String(actor.user._id)) {
+      return NextResponse.json(
+        { success: false, error: 'You do not have access to this order' },
+        { status: 403 }
       );
     }
     

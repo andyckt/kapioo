@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
@@ -144,8 +145,10 @@ try {
 // GET handler - get a single order by ID
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    // In a production environment, you should implement proper authentication
-    // to ensure only admins can access this endpoint
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     
@@ -192,8 +195,10 @@ export async function GET(request: Request, { params }: RouteParams) {
 // Does NOT send email notification
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
-    // In a production environment, you should implement proper authentication
-    // to ensure only admins can access this endpoint
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
     
     await connectToDatabase();
     

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import Order from '@/models/Order';
@@ -55,6 +56,11 @@ const DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder ||
  */
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     
     const { searchParams } = new URL(request.url);

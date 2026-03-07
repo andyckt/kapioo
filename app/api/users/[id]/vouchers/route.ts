@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 
@@ -8,10 +9,13 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   try {
-    await connectToDatabase();
-    
-    // Access params in an async-safe way
     const id = context.params.id;
+    const { actor, response } = await requireSelfOrAdmin(id);
+    if (!actor || response) {
+      return response;
+    }
+
+    await connectToDatabase();
     
     // Find the user
     const user = await User.findById(id).select('twoDishVoucher threeDishVoucher');

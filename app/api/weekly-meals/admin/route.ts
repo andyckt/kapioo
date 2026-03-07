@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyMeal from '@/models/WeeklyMeal';
 import Meal from '@/models/Meal';
@@ -16,6 +17,11 @@ function getCurrentWeekYear() {
 // GET handler - return the current week's meals (including inactive) for admin
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const url = new URL(request.url);
     let week = parseInt(url.searchParams.get('week') || '0');
     let year = parseInt(url.searchParams.get('year') || '0');

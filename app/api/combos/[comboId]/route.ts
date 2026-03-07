@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Combo from '@/models/Combo';
 
@@ -33,6 +34,11 @@ export async function PUT(
   { params }: { params: { comboId: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { comboId } = params;
     const data = await request.json();
@@ -65,6 +71,11 @@ export async function DELETE(
   { params }: { params: { comboId: string } }
 ) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const { comboId } = params;
     

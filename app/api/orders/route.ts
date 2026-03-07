@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Order from '@/models/Order';
 import Transaction from '@/models/Transaction';
@@ -9,6 +10,11 @@ import { handleOrderNotification, NotificationType } from '@/lib/services/notifi
 // GET handler - get orders with optional userId filtering
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
     const status = url.searchParams.get('status');
@@ -25,6 +31,23 @@ export async function GET(request: Request) {
     
     // Filter by userId if provided
     if (userId) {
+      const isSelf =
+        String(actor.user._id) === String(userId) ||
+        String(actor.user.userID) === String(userId);
+      if (!isSelf && actor.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'You do not have access to these orders' },
+          { status: 403 }
+        );
+      }
+
+      if (!isSelf && actor.role === 'admin') {
+        const { response: adminMfaResponse } = await requireAdminMfa(request);
+        if (adminMfaResponse) {
+          return adminMfaResponse;
+        }
+      }
+
       if (mongoose.Types.ObjectId.isValid(userId)) {
         query['$or'] = [
           { userId: new mongoose.Types.ObjectId(userId) },
@@ -33,6 +56,16 @@ export async function GET(request: Request) {
       } else {
         query.userId = userId;
       }
+    } else if (actor.role !== 'admin') {
+      query['$or'] = [
+        { userId: actor.user._id },
+        { userId: String(actor.user._id) }
+      ];
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'User ID is required for admin order access' },
+        { status: 400 }
+      );
     }
     
     // Filter by status if provided
@@ -84,6 +117,11 @@ export async function GET(request: Request) {
 // POST handler - create a new order
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const {
       userId,
       selectedMeals,
@@ -93,11 +131,20 @@ export async function POST(request: Request) {
       phoneNumber
     } = await request.json();
     
-    // Validate input
-    if (!userId) {
+    const effectiveUserId =
+      actor.role === 'admin' && userId
+        ? userId
+        : String(actor.user._id);
+
+    if (
+      actor.role !== 'admin' &&
+      userId &&
+      String(userId) !== String(actor.user._id) &&
+      String(userId) !== String(actor.user.userID)
+    ) {
       return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
+        { success: false, error: 'You cannot create orders for another user' },
+        { status: 403 }
       );
     }
     
@@ -136,7 +183,7 @@ export async function POST(request: Request) {
     await connectToDatabase();
     
     // Find user
-    const user = await User.findById(userId);
+    const user = await User.findById(effectiveUserId);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -163,7 +210,7 @@ export async function POST(request: Request) {
       // Create new order
       const newOrder = new Order({
         orderId,
-        userId,
+        userId: effectiveUserId,
         selectedMeals,
         creditCost,
         specialInstructions,

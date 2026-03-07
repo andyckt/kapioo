@@ -183,6 +183,55 @@ export const sendVerificationEmail = async (to: string, code: string, language: 
   });
 };
 
+export const sendAdminMfaCodeEmail = async (
+  to: string,
+  code: string,
+  name: string,
+  language: Language = 'zh'
+) => {
+  const subject =
+    language === 'zh'
+      ? '管理员登录验证码 - Kapioo'
+      : 'Admin Login Verification Code - Kapioo';
+
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      </div>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">
+        ${language === 'zh' ? '管理员二次验证' : 'Admin Multi-Factor Verification'}
+      </h2>
+      <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 20px; text-align: center;">
+        ${language === 'zh'
+          ? `${name}，请输入以下验证码以继续访问管理后台。`
+          : `${name}, enter the verification code below to continue to the admin dashboard.`}
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 30px auto; width: 60%; max-width: 360px;">
+        <tr>
+          <td bgcolor="#C2884E" style="background-color: #C2884E; border-radius: 8px; padding: 20px; text-align: center; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 8px; line-height: 1.4;">
+            ${code}
+          </td>
+        </tr>
+      </table>
+      <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center;">
+        ${language === 'zh'
+          ? '验证码将在 10 分钟后失效。如果不是您本人操作，请立即重置管理员密码并检查系统访问日志。'
+          : 'This code expires in 10 minutes. If this was not you, reset the admin password immediately and review system access logs.'}
+      </p>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 13px;">
+        <p>&copy; ${new Date().getFullYear()} Kapioo. ${language === 'zh' ? '保留所有权利。' : 'All rights reserved.'}</p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject,
+    html,
+  });
+};
+
 // Send a password reset email with 6-digit code
 export const sendPasswordResetEmail = async (to: string, code: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';

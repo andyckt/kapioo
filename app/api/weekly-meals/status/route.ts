@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyMeal from '@/models/WeeklyMeal';
 import Meal from '@/models/Meal';
@@ -16,6 +17,11 @@ function getCurrentWeekYear() {
 // PATCH handler - update active status for a day
 export async function PATCH(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const data = await request.json();
     console.log('[Status API] Received request to update active status:', data);
     

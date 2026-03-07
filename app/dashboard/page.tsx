@@ -350,20 +350,21 @@ export default function DashboardPage() {
   }, [toast, activeTab, userData?._id])
 
   useEffect(() => {
-    // Check if user is logged in - get user from localStorage
-    const userDataStr = localStorage.getItem('user');
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    
-    if (!userDataStr && !isAuthenticated) {
-      router.push("/login");
-      return;
-    }
-
-    // Load user data
     async function loadUserData() {
       try {
+        const authResponse = await fetch('/api/auth/me', { cache: 'no-store' });
+        const authResult = await authResponse.json();
+
+        if (!authResult?.authenticated || !authResult?.user?._id) {
+          router.push("/login");
+          return;
+        }
+
+        localStorage.setItem('user', JSON.stringify(authResult.user));
+        localStorage.setItem('isAuthenticated', 'true');
+
         setUserLoading(true);
-        const userData = JSON.parse(userDataStr!);
+        const userData = authResult.user;
         
         // Check if userData has _id before proceeding
         if (!userData || !userData._id) {

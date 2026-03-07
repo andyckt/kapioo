@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import PromoCode from '@/models/PromoCode';
 import PromoCodeRedemption from '@/models/PromoCodeRedemption';
@@ -6,6 +7,11 @@ import { normalizePromoCode } from '@/lib/promo-code';
 
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
 
     const url = new URL(request.url);
@@ -44,6 +50,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     await connectToDatabase();
     const body = await request.json();
 

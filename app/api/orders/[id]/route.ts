@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { logAuditEvent } from '@/lib/security/audit';
 import Order from '@/models/Order';
 import mongoose from 'mongoose';
 import User from '@/models/User';
@@ -16,6 +18,11 @@ interface RouteParams {
 // GET handler - get order details
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const { id } = params;
     
     await connectToDatabase();
@@ -32,6 +39,18 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
+      );
+    }
+
+    const orderUserId =
+      typeof order.userId === 'object' && order.userId
+        ? String((order.userId as any)._id || order.userId)
+        : String(order.userId);
+
+    if (actor.role !== 'admin' && orderUserId !== String(actor.user._id)) {
+      return NextResponse.json(
+        { success: false, error: 'You do not have access to this order' },
+        { status: 403 }
       );
     }
     
@@ -69,6 +88,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 // PATCH handler - update order status
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const { id } = params;
     const { status, refundCredits } = await request.json();
     
@@ -149,6 +173,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           user,
           previousStatus
         );
+
+        await logAuditEvent({
+          actor,
+          action: 'order.refunded',
+          targetType: 'order',
+          targetId: order.orderId,
+          metadata: {
+            previousStatus,
+            refundCredits: true,
+            creditCost: order.creditCost,
+          },
+          request,
+        });
         
         return NextResponse.json({
           success: true,
@@ -218,6 +255,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           user,
           previousStatus
         );
+
+        await logAuditEvent({
+          actor,
+          action: 'order.cancelled',
+          targetType: 'order',
+          targetId: order.orderId,
+          metadata: {
+            previousStatus,
+            refundCredits,
+            creditCost: order.creditCost,
+          },
+          request,
+        });
         
         return NextResponse.json({
           success: true,
@@ -287,6 +337,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           );
         }
       }
+
+      await logAuditEvent({
+        actor,
+        action: `order.status.${status}`,
+        targetType: 'order',
+        targetId: order.orderId,
+        metadata: {
+          previousStatus,
+          refundCredits: Boolean(refundCredits),
+        },
+        request,
+      });
       
       return NextResponse.json({
         success: true,

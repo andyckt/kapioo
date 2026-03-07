@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import MusicVideo from '@/models/MusicVideo';
 
@@ -70,6 +71,11 @@ export async function GET() {
 // POST handler - Update music videos
 export async function POST(request: Request) {
   try {
+    const { actor, response } = await requireAdminMfa(request);
+    if (!actor || response) {
+      return response;
+    }
+
     const videos: MusicVideoData[] = await request.json();
     
     if (!Array.isArray(videos)) {
