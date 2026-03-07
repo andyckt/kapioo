@@ -23,18 +23,33 @@ export async function GET(request: NextRequest) {
         verifiedMfa.userId !== String(actor.user._id) ||
         verifiedMfa.sessionVersion !== actor.sessionVersion);
 
+    const u = actor.user;
+    const address = u.address
+      ? {
+          unitNumber: u.address.unitNumber || "",
+          streetAddress: u.address.streetAddress || "",
+          province: u.address.province || "",
+          postalCode: u.address.postalCode || "",
+          country: u.address.country || "Canada",
+          buzzCode: u.address.buzzCode || "",
+        }
+      : undefined;
+
     return NextResponse.json({
       success: true,
       authenticated: true,
       requiresAdminMfa,
       user: {
-        _id: String(actor.user._id),
-        userID: actor.user.userID,
-        name: actor.user.name,
-        email: actor.user.email,
+        _id: String(u._id),
+        userID: u.userID,
+        name: u.name,
+        email: u.email,
+        phone: u.phone || "",
         role: actor.role,
-        languagePreference: actor.user.languagePreference || "zh",
-        isVerified: Boolean(actor.user.isVerified),
+        languagePreference: u.languagePreference || "zh",
+        isVerified: Boolean(u.isVerified),
+        address,
+        area: u.area || address?.province || "",
       },
     });
   } catch (error) {

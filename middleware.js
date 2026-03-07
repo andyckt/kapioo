@@ -28,7 +28,6 @@ const SUSPICIOUS_PATHS = [
   'database.yml',
   'settings.py',
   '_profiler',
-  'credentials',
   '.sql',
   '.bak',
   '.backup',

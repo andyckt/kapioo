@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { mergeStoredUser } from "@/lib/client-user-cache"
 
 export default function AppInitializer() {
   useEffect(() => {
@@ -18,7 +19,7 @@ export default function AppInitializer() {
         const result = await response.json();
 
         if (result?.authenticated && result?.user) {
-          localStorage.setItem("user", JSON.stringify(result.user));
+          mergeStoredUser(result.user);
           localStorage.setItem("isAuthenticated", "true");
         } else {
           localStorage.removeItem("user");

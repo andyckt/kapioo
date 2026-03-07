@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 import { motion, AnimatePresence } from "framer-motion"
 import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail, Tag, Star } from "lucide-react"
 
@@ -1415,16 +1416,15 @@ export default function AdminDashboardPage() {
             <Button
               variant="ghost"
               className="text-red-500 hover:text-red-600 hover:bg-red-100"
-              onClick={() => {
-
-                // Remove all authentication-related items from localStorage
-                localStorage.removeItem('user');
-                localStorage.removeItem('isAuthenticated');
-                
+              onClick={async () => {
+                await fetch('/api/auth/admin-mfa', { method: 'DELETE' }).catch(() => undefined)
+                localStorage.removeItem('user')
+                localStorage.removeItem('isAuthenticated')
                 toast({
                   title: "Logged out",
                   description: "You have been logged out successfully",
                 })
+                await signOut({ redirect: false })
                 router.push("/login")
               }}
             >

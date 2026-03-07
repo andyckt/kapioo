@@ -11,11 +11,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { signIn } from "next-auth/react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
+import { mergeStoredUser } from "@/lib/client-user-cache"
 
 // Use centralized area list
 const serviceAreas = ALL_WEEKLY_AREAS
@@ -194,10 +196,41 @@ export default function VerifyEmailSentPage() {
       const data = await response.json()
       
       if (data.success) {
+        const signInResult = await signIn("credentials", {
+          login: pendingUser.email,
+          password: pendingUser.password,
+          redirect: false,
+        })
+
+        if (signInResult?.error) {
+          setVerificationStatus("error")
+          setErrorMessage(t('loginError'))
+          toast({
+            title: t('verificationFailed'),
+            description: t('loginError'),
+            variant: "destructive",
+          })
+          return
+        }
+
+        const authResponse = await fetch('/api/auth/me', { cache: 'no-store' })
+        const authData = await authResponse.json()
+
+        if (!authData?.authenticated || !authData?.user?._id) {
+          setVerificationStatus("error")
+          setErrorMessage(t('loginError'))
+          toast({
+            title: t('verificationFailed'),
+            description: t('loginError'),
+            variant: "destructive",
+          })
+          return
+        }
+
         setVerificationStatus("success")
         
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(data.data))
+        // Store canonical authenticated user state for the next onboarding step
+        mergeStoredUser(authData.user)
         
         // Store authentication state
         localStorage.setItem('isAuthenticated', 'true')

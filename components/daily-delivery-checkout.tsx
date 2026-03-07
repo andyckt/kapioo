@@ -45,6 +45,7 @@ import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { CartItem, DayData, submitDailyOrder, formatAddress } from '@/lib/daily-delivery'
+import { mergeStoredUser } from '@/lib/client-user-cache'
 
 // Define the supported regions for daily delivery
 const DAILY_DELIVERY_REGIONS = [
@@ -156,39 +157,55 @@ export function DailyDeliveryCheckout({
     { twoDish: 0, threeDish: 0 }
   )
   
-  // Load user data from localStorage on component mount
+  // Load user data from localStorage, with fallback fetch when address is missing
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
+    const applyUserToForm = (user: any) => {
       setUserData(user)
-      
-      // Initialize formData with user's info
       setFormData({
         name: user.name || "",
         phone: user.phone || "",
-        area: user.area || "",
+        area: user.area || user.address?.province || "",
         specialInstructions: ''
       })
-      
-      // Initialize address form data
       if (user.address) {
         setAddressFormData({
           unitNumber: user.address.unitNumber || "",
           streetAddress: user.address.streetAddress || "",
           province: user.address.province || "",
           postalCode: user.address.postalCode || "",
-          country: user.address.country || "Canada", // Always Canada
+          country: user.address.country || "Canada",
           buzzCode: user.address.buzzCode || ""
         })
-        
-        // Check if user's stored area is valid for daily delivery
         const userArea = user.address.province || ""
-        const isValid = DAILY_DELIVERY_REGIONS.includes(userArea)
-        setIsValidDeliveryArea(isValid)
+        setIsValidDeliveryArea(DAILY_DELIVERY_REGIONS.includes(userArea))
       } else {
-        // No address stored, mark as invalid
         setIsValidDeliveryArea(false)
+      }
+    }
+
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      applyUserToForm(user)
+
+      // If user has _id but no address (or empty), fetch full user from API (localStorage may be incomplete)
+      const needsAddress = !user.address || !user.address.streetAddress
+      if (user._id && needsAddress) {
+        fetch(`/api/users/${user._id}`)
+          .then((res) => res.json())
+          .then((result) => {
+            if (result?.success && result?.data) {
+              const fullUser = result.data
+              applyUserToForm(fullUser)
+              mergeStoredUser({
+                ...user,
+                address: fullUser.address,
+                phone: fullUser.phone,
+                area: fullUser.area || fullUser.address?.province,
+              })
+            }
+          })
+          .catch(() => {})
       }
     }
   }, [])
@@ -261,15 +278,10 @@ export function DailyDeliveryCheckout({
         
         if (result.success) {
           // Update localStorage
-          const storedUser = localStorage.getItem('user')
-          if (storedUser) {
-            const userObj = JSON.parse(storedUser)
-            const updatedUser = { 
-              ...userObj, 
-              address: { ...addressFormData } 
-            }
-            localStorage.setItem('user', JSON.stringify(updatedUser))
-          }
+          mergeStoredUser({
+            address: { ...addressFormData },
+            area: addressFormData.province || '',
+          })
           
           toast({
             title: language === 'zh' ? '地址已保存' : 'Address Saved',

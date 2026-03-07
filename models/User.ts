@@ -107,8 +107,9 @@ const UserSchema: Schema = new Schema(
       required: true
     },
     passwordIterations: {
-      type: Number,
-      default: 310000
+      type: Number
+      // No default: legacy users (e.g. seed-atlas) hashed with 1000; comparePassword
+      // uses (this.passwordIterations || 1000). New users get 310000 from setPassword.
     },
     joined: { 
       type: Date, 

@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { mergeStoredUser } from "@/lib/client-user-cache"
 
 export default function LoginPage() {
   const [login, setLogin] = useState("")
@@ -35,7 +36,7 @@ export default function LoginPage() {
           return;
         }
 
-        localStorage.setItem("user", JSON.stringify(result.user));
+        mergeStoredUser(result.user);
         localStorage.setItem("isAuthenticated", "true");
 
         if (result.user.role === "admin") {
@@ -83,7 +84,7 @@ export default function LoginPage() {
           localStorage.setItem('preferredLanguage', sessionResult.user.languagePreference);
         }
 
-        localStorage.setItem('user', JSON.stringify(sessionResult.user));
+        mergeStoredUser(sessionResult.user);
         localStorage.setItem('isAuthenticated', 'true');
 
         toast({

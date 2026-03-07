@@ -38,6 +38,7 @@ import { ThisWeekMeals } from "@/components/this-week-meals"
 // These components are dynamically imported above
 import { AvailableAreas } from "@/components/available-areas"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
+import { mergeStoredUser } from "@/lib/client-user-cache"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
@@ -360,7 +361,7 @@ export default function DashboardPage() {
           return;
         }
 
-        localStorage.setItem('user', JSON.stringify(authResult.user));
+        mergeStoredUser(authResult.user);
         localStorage.setItem('isAuthenticated', 'true');
 
         setUserLoading(true);
@@ -389,6 +390,29 @@ export default function DashboardPage() {
           
           setUserData(user);
           setCredits(user.credits || 0);
+          
+          // Sync full user (including address) to localStorage so checkout and other components get it
+          const userForStorage = {
+            _id: user._id,
+            userID: user.userID,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            languagePreference: user.languagePreference || 'zh',
+            isVerified: Boolean(user.isVerified),
+            phone: user.phone || '',
+            address: user.address,
+            area: user.area || user.address?.province || '',
+            credits: user.credits,
+            twoDishVoucher: user.twoDishVoucher,
+            threeDishVoucher: user.threeDishVoucher,
+            weeklySIXmeals: user.weeklySIXmeals,
+            weeklyEIGHTmeals: user.weeklyEIGHTmeals,
+            weeklyTENmeals: user.weeklyTENmeals,
+            weeklyTWELVEmeals: user.weeklyTWELVEmeals,
+            weeklySIXTEENmeals: user.weeklySIXTEENmeals,
+          };
+          mergeStoredUser(userForStorage);
           
           // STEP 1: Set language from database (primary source for authenticated users)
           if (user.languagePreference && (user.languagePreference === 'zh' || user.languagePreference === 'en')) {
@@ -645,7 +669,7 @@ export default function DashboardPage() {
         if (storedUser) {
           const userObj = JSON.parse(storedUser);
           const updatedUser = { ...userObj, ...personalInfo };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
+          mergeStoredUser(updatedUser);
           // Update language preference in localStorage for immediate effect
           localStorage.setItem('preferredLanguage', personalInfo.languagePreference);
         }
@@ -728,7 +752,7 @@ export default function DashboardPage() {
               buzzCode: addressInfo.buzzCode
             } 
           };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
+          mergeStoredUser(updatedUser);
         }
         
         toast({

@@ -29,6 +29,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { CartItem, DeliveryDay, submitUserSubscription, validateSelectedDates, sortDeliveryDays } from '@/lib/weekly-subscription'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
+import { mergeStoredUser } from '@/lib/client-user-cache'
 
 // Use centralized area list
 const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
@@ -95,31 +96,51 @@ export function WeeklySubscriptionCheckout({
   // Calculate total items and cost
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0)
   
-  // Load user data from localStorage on component mount
+  // Load user data from localStorage, with fallback fetch when address is missing
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
+    const applyUserToForm = (user: any) => {
       setUserData(user)
-      
-      // Initialize formData with user's info
       setFormData({
         name: user.name || "",
         phone: user.phone || "",
-        area: user.address?.province || "",
+        area: user.area || user.address?.province || "",
         specialInstructions: ''
       })
-      
-      // Initialize address form data
       if (user.address) {
         setAddressFormData({
           unitNumber: user.address.unitNumber || "",
           streetAddress: user.address.streetAddress || "",
           province: user.address.province || "",
           postalCode: user.address.postalCode || "",
-          country: "Canada", // Always force to Canada regardless of stored value
+          country: "Canada",
           buzzCode: user.address.buzzCode || ""
         })
+      }
+    }
+
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      applyUserToForm(user)
+
+      // If user has _id but no address (or empty), fetch full user from API (localStorage may be incomplete)
+      const needsAddress = !user.address || !user.address.streetAddress
+      if (user._id && needsAddress) {
+        fetch(`/api/users/${user._id}`)
+          .then((res) => res.json())
+          .then((result) => {
+            if (result?.success && result?.data) {
+              const fullUser = result.data
+              applyUserToForm(fullUser)
+              mergeStoredUser({
+                ...user,
+                address: fullUser.address,
+                phone: fullUser.phone,
+                area: fullUser.area || fullUser.address?.province,
+              })
+            }
+          })
+          .catch(() => {})
       }
     }
   }, [])
@@ -176,18 +197,13 @@ export function WeeklySubscriptionCheckout({
         
         if (result.success) {
           // Update localStorage
-          const storedUser = localStorage.getItem('user')
-          if (storedUser) {
-            const userObj = JSON.parse(storedUser)
-            const updatedUser = { 
-              ...userObj, 
-              address: { 
-                ...addressFormData,
-                country: 'Canada' // Always force to Canada
-              } 
-            }
-            localStorage.setItem('user', JSON.stringify(updatedUser))
-          }
+          mergeStoredUser({
+            address: {
+              ...addressFormData,
+              country: 'Canada',
+            },
+            area: addressFormData.province || '',
+          })
           
           toast({
             title: language === 'zh' ? '地址已保存' : 'Address Saved',
