@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Shield, Loader2 } from "lucide-react";
 
@@ -17,6 +17,7 @@ export default function AdminMfaPage() {
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [email, setEmail] = useState("");
+  const hasAutoSentRef = useRef(false);
 
   const sendCode = async () => {
     setSending(true);
@@ -68,7 +69,10 @@ export default function AdminMfaPage() {
           return;
         }
 
-        setEmail(result.user?.email || "");
+        setEmail(result.adminMfaEmail || result.user?.email || "kapioomeal@gmail.com");
+
+        if (hasAutoSentRef.current) return;
+        hasAutoSentRef.current = true;
         await sendCode();
       } catch (error) {
         console.error("Failed to initialize admin MFA:", error);

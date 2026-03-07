@@ -2,15 +2,16 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import connectToDatabase from "@/lib/db";
+import User from "@/models/User";
 import { generateVerificationCode, sendAdminMfaCodeEmail } from "@/lib/services/email";
 import { logAuditEvent } from "@/lib/security/audit";
 import { createSignedAdminMfaCookie } from "@/lib/security/signed-cookie";
 import { requireAdmin } from "@/lib/auth/guards";
 
 const ADMIN_MFA_CODE_TTL_MS = 10 * 60 * 1000;
-const ADMIN_MFA_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+/** MFA cookie lasts 7 days - same device/browser won't need to re-verify for a week */
+const ADMIN_MFA_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ADMIN_MFA_SEND_COOLDOWN_MS = 60 * 1000;
-
 function hashAdminMfaCode(code: string, userSalt: string) {
   return crypto.createHash("sha256").update(`${code}:${userSalt}`).digest("hex");
 }
@@ -21,10 +22,11 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
+  const adminMfaEmail = process.env.ADMIN_EMAIL || "kapioomeal@gmail.com";
   return NextResponse.json({
     success: true,
     requiresCode: true,
-    email: actor.user.email,
+    email: adminMfaEmail,
   });
 }
 
@@ -41,25 +43,41 @@ export async function POST(request: NextRequest) {
     const action = String(body?.action || "send");
 
     if (action === "send") {
-      const lastSentAt = actor.user.adminMfaCodeSentAt
-        ? new Date(actor.user.adminMfaCodeSentAt).getTime()
-        : 0;
+      const code = generateVerificationCode();
+      const now = new Date();
+      const cooldownCutoff = new Date(Date.now() - ADMIN_MFA_SEND_COOLDOWN_MS);
 
-      if (lastSentAt && Date.now() - lastSentAt < ADMIN_MFA_SEND_COOLDOWN_MS) {
+      const updated = await User.findOneAndUpdate(
+        {
+          _id: actor.user._id,
+          $or: [
+            { adminMfaCodeSentAt: { $exists: false } },
+            { adminMfaCodeSentAt: { $lt: cooldownCutoff } },
+          ],
+        },
+        {
+          $set: {
+            adminMfaCodeSentAt: now,
+            adminMfaCodeHash: hashAdminMfaCode(code, actor.user.salt),
+            adminMfaCodeExpires: new Date(Date.now() + ADMIN_MFA_CODE_TTL_MS),
+          },
+        },
+        { new: true }
+      );
+
+      if (!updated) {
         return NextResponse.json(
-          { success: false, error: "Please wait before requesting another code" },
+          {
+            success: false,
+            error: "Please wait before requesting another code",
+          },
           { status: 429 }
         );
       }
 
-      const code = generateVerificationCode();
-      actor.user.adminMfaCodeHash = hashAdminMfaCode(code, actor.user.salt);
-      actor.user.adminMfaCodeExpires = new Date(Date.now() + ADMIN_MFA_CODE_TTL_MS);
-      actor.user.adminMfaCodeSentAt = new Date();
-      await actor.user.save();
-
+      const adminMfaEmail = process.env.ADMIN_EMAIL || "kapioomeal@gmail.com";
       await sendAdminMfaCodeEmail(
-        actor.user.email,
+        adminMfaEmail,
         code,
         actor.user.name || actor.user.userID || "Admin",
         actor.user.languagePreference || "zh"

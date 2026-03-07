@@ -35,10 +35,12 @@ export async function GET(request: NextRequest) {
         }
       : undefined;
 
+    const adminMfaEmail = process.env.ADMIN_EMAIL || "kapioomeal@gmail.com";
     return NextResponse.json({
       success: true,
       authenticated: true,
       requiresAdminMfa,
+      adminMfaEmail: actor.role === "admin" ? adminMfaEmail : undefined,
       user: {
         _id: String(u._id),
         userID: u.userID,
