@@ -26,6 +26,15 @@ export default function LoginPage() {
   const { toast } = useToast()
   const { t, setLanguage } = useLanguage()
 
+  const navigateAfterLogin = (target: string) => {
+    if (typeof window !== "undefined") {
+      window.location.assign(target)
+      return
+    }
+
+    router.push(target)
+  }
+
   useEffect(() => {
     const redirectIfAuthenticated = async () => {
       try {
@@ -40,9 +49,9 @@ export default function LoginPage() {
         localStorage.setItem("isAuthenticated", "true");
 
         if (result.user.role === "admin") {
-          router.push(result.requiresAdminMfa ? "/admin/mfa" : "/admin");
+          navigateAfterLogin(result.requiresAdminMfa ? "/admin/mfa" : "/admin");
         } else {
-          router.push("/dashboard");
+          navigateAfterLogin("/dashboard");
         }
       } catch (error) {
         console.error("Failed to check current auth session:", error);
@@ -93,9 +102,9 @@ export default function LoginPage() {
         });
 
         if (sessionResult.user.role === 'admin') {
-          router.push(sessionResult.requiresAdminMfa ? '/admin/mfa' : '/admin');
+          navigateAfterLogin(sessionResult.requiresAdminMfa ? '/admin/mfa' : '/admin');
         } else {
-          router.push('/dashboard');
+          navigateAfterLogin('/dashboard');
         }
       } else {
         toast({
