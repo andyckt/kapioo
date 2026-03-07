@@ -87,7 +87,7 @@ const whyKapioo = [
 const logistics = [
   {
     label: "Delivery windows",
-    detail: "Daily Bento Series: 11am to 1pm (Monday to Friday, Saturday Off)\nWeekly Meal Box Series: 6pm to 10pm (Tuesday and Sunday)",
+    detail: "Daily Bento Series: 11am to 1pm (Monday to Friday & Sunday, Saturday off)\nWeekly Meal Box Series: 6pm to 10pm (Tuesday and Sunday)",
     icon: Truck,
   },
   {
@@ -426,7 +426,7 @@ export function HowItWorksContent() {
                                 {isZh ? "每日便当系列" : "Daily Bento Series"}
                               </p>
                               <p className="text-sm text-[#6B5F53] mt-0.5">
-                                {isZh ? "11:00–13:00 · 周一至周五（周六休息）" : "11am – 1pm · Monday – Friday (Saturday off)"}
+                                {isZh ? "11:00–13:00 · 周一至周五和周日（周六休息）" : "11am – 1pm · Monday – Friday & Sunday (Saturday off)"}
                               </p>
                             </div>
                             <div>
