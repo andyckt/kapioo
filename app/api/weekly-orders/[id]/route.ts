@@ -6,17 +6,15 @@ import User from '@/models/User';
 import mongoose from 'mongoose';
 import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
 
-// Interface for route params
+// Interface for route params (Next.js 15+: params is a Promise)
 interface RouteParams {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 // GET handler - get a specific weekly order by ID
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { actor, response } = await requireUser();
     if (!actor || response) {
       return response;
@@ -62,7 +60,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
     });
   } catch (error: any) {
-    console.error(`Error fetching weekly order ${params.id}:`, error);
+    const { id } = await params;
+    console.error(`Error fetching weekly order ${id}:`, error);
     
     return NextResponse.json(
       { 
@@ -78,7 +77,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 // PATCH handler - update a weekly order (e.g., change status)
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
@@ -129,7 +128,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       data: updatedOrder
     });
   } catch (error: any) {
-    console.error(`Error updating weekly order ${params.id}:`, error);
+    const { id } = await params;
+    console.error(`Error updating weekly order ${id}:`, error);
     
     return NextResponse.json(
       { 

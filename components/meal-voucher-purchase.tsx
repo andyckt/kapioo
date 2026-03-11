@@ -5,6 +5,7 @@ import heic2any from 'heic2any'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { mergeStoredUser } from '@/lib/client-user-cache'
 import { useLanguage } from '@/lib/language-context'
 import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
@@ -270,9 +271,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       const result = await response.json()
       
       if (result.success) {
-        // Update localStorage
-        user.address = updatedAddress
-        localStorage.setItem('user', JSON.stringify(user))
+        mergeStoredUser({ address: updatedAddress })
         
         // Update state
         setUserRegion(region)

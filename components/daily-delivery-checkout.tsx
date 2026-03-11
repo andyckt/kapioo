@@ -532,7 +532,10 @@ export function DailyDeliveryCheckout({
       if (userData && totalRemainingVouchers) {
         userData.twoDishVoucher = totalRemainingVouchers.twoDish;
         userData.threeDishVoucher = totalRemainingVouchers.threeDish;
-        localStorage.setItem('user', JSON.stringify(userData));
+        mergeStoredUser({
+          twoDishVoucher: totalRemainingVouchers.twoDish,
+          threeDishVoucher: totalRemainingVouchers.threeDish,
+        });
         setUserVouchers({
           twoDish: totalRemainingVouchers.twoDish,
           threeDish: totalRemainingVouchers.threeDish

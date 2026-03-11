@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/language-context';
 import { motion } from 'framer-motion';
@@ -50,15 +50,14 @@ export function LanguagePreferenceDialog() {
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <div className="bg-gradient-to-br from-[#FFF6EF] to-white p-6">
-          {/* Header */}
-          <div className="text-center mb-5">
-            <h3 className="text-base font-medium text-[#6B5F53]">
+          <DialogHeader className="text-center mb-5">
+            <DialogTitle className="text-base font-medium text-[#6B5F53]">
               Language Preference
-            </h3>
+            </DialogTitle>
             <p className="text-sm text-[#6B5F53]/70 mt-0.5">
               选择语言
             </p>
-          </div>
+          </DialogHeader>
 
           <div className="space-y-2.5">
             {/* Chinese Option */}

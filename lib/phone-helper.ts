@@ -1,4 +1,7 @@
-import { mergeStoredUser } from "@/lib/client-user-cache";
+import {
+  getStoredUser as getCachedUser,
+  mergeStoredUser,
+} from "@/lib/client-user-cache";
 import { updateUser, type User } from "@/lib/utils";
 
 export interface EnsurePhoneOptions {
@@ -14,30 +17,7 @@ export interface EnsurePhoneResult {
 }
 
 export function getStoredUser(): User | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const stored = localStorage.getItem("user");
-    if (!stored) return null;
-    return JSON.parse(stored) as User;
-  } catch (error) {
-    console.error("Failed to parse stored user from localStorage:", error);
-    return null;
-  }
-}
-
-export function setStoredUser(user: User): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    localStorage.setItem("user", JSON.stringify(user));
-  } catch (error) {
-    console.error("Failed to write user to localStorage:", error);
-  }
+  return getCachedUser() as User | null;
 }
 
 export function normalizePhoneInput(phone: string): string {

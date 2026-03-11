@@ -2,14 +2,29 @@
 
 import { signOut } from "next-auth/react";
 
-const USER_SCOPED_STORAGE_KEYS = ["user", "isAuthenticated"] as const;
+const USER_SCOPED_STORAGE_KEYS = [
+  "user",
+  "isAuthenticated",
+  "preferredLanguage",
+  "languagePreferenceSet",
+  "selectedMeals",
+  "selectedMealPlan",
+] as const;
 
-export async function performClientLogout(): Promise<void> {
-  await fetch("/api/auth/admin-mfa", { method: "DELETE" }).catch(() => undefined);
+export function clearClientUserState(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
 
   for (const key of USER_SCOPED_STORAGE_KEYS) {
     localStorage.removeItem(key);
   }
+}
+
+export async function performClientLogout(): Promise<void> {
+  await fetch("/api/auth/admin-mfa", { method: "DELETE" }).catch(() => undefined);
+
+  clearClientUserState();
 
   await signOut({ redirect: false });
 }

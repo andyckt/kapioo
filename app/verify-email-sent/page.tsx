@@ -330,10 +330,11 @@ export default function VerifyEmailSentPage() {
       const data = await response.json()
       
       if (data.success) {
-        // Update user data in localStorage
-        userData.address = userData.address || {}
-        userData.address.province = area
-        localStorage.setItem('user', JSON.stringify(userData))
+        mergeStoredUser({
+          address: {
+            province: area,
+          },
+        })
         
         // Determine which tab to redirect to based on the source page
         const targetTab = fromPage === 'daily-delivery' ? 'meal-vouchers' : 'credits'

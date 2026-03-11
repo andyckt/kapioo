@@ -428,15 +428,16 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
           </>
         ) : (
           <>
-
+            <DialogHeader>
+              <DialogTitle className="text-lg font-medium text-[#8A5A34]">
+                {language === 'en' ? 'Thank You!' : '谢谢！'}
+              </DialogTitle>
+            </DialogHeader>
             <div className="py-6">
               <div className="bg-[#F9F3EC] border border-[#D1A46C] rounded-lg p-6 text-center">
-                <div className="mx-auto w-16 h-16 rounded-full bg-[#F2E8D9] flex items-center justify-center mb-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-[#F2E8D9] flex items-center justify-center mb-2">
                   <Check className="h-8 w-8 text-[#C2884E]" />
                 </div>
-                <h3 className="text-lg font-medium text-[#8A5A34] mb-2">
-                  {language === 'en' ? 'Thank You!' : '谢谢！'}
-                </h3>
                 <p className="text-[#9B6B3F] mb-4">
                   {language === 'en'
                     ? 'Your request is now pending approval. We process in 30-60 mins during business hours Monday to Friday 11am to 8pm.'

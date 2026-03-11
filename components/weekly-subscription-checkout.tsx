@@ -637,7 +637,14 @@ export function WeeklySubscriptionCheckout({
       userData.weeklyTENmeals = totalRemainingTenMeals;
       userData.weeklyTWELVEmeals = totalRemainingTwelveMeals;
       userData.weeklySIXTEENmeals = totalRemainingSixteenMeals;
-      localStorage.setItem('user', JSON.stringify(userData));
+      mergeStoredUser({
+        credits: totalRemainingCredits,
+        weeklySIXmeals: totalRemainingSixMeals,
+        weeklyEIGHTmeals: totalRemainingEightMeals,
+        weeklyTENmeals: totalRemainingTenMeals,
+        weeklyTWELVEmeals: totalRemainingTwelveMeals,
+        weeklySIXTEENmeals: totalRemainingSixteenMeals,
+      });
       
       // Update state with new values
       setUserCredits(totalRemainingCredits);

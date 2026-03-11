@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
 import { listWeeklyPlans } from "@/lib/plans/service"
+import { mergeStoredUser } from "@/lib/client-user-cache"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -331,9 +332,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       const result = await response.json()
       
       if (result.success) {
-        // Update localStorage
-        user.address = updatedAddress
-        localStorage.setItem('user', JSON.stringify(user))
+        mergeStoredUser({ address: updatedAddress })
         
         // Update state
         setUserRegion(region)

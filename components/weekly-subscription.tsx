@@ -17,6 +17,7 @@ import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
 import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
+import { mergeStoredUser } from '@/lib/client-user-cache'
 
 interface WeeklySubscriptionProps {
   userCredits?: number;
@@ -656,9 +657,7 @@ export default function WeeklySubscription({
       const result = await response.json()
       
       if (result.success) {
-        // Update localStorage
-        user.address = updatedAddress
-        localStorage.setItem('user', JSON.stringify(user))
+        mergeStoredUser({ address: updatedAddress })
         
         // Update state
         setUserRegion(region)

@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 
 // Order status component with appropriate icon and color
 function OrderStatus({ status }: { status: string }) {
@@ -301,6 +302,9 @@ export function OrderHistory({ userId }: OrderHistoryProps) {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
+                      <VisuallyHidden>
+                        <DialogTitle>{t('viewDetails')}</DialogTitle>
+                      </VisuallyHidden>
                       {selectedOrder && selectedOrder.orderId === order.orderId ? (
                         <>
                           <DialogHeader>

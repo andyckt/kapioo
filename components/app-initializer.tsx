@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { mergeStoredUser } from "@/lib/client-user-cache"
+import { clearClientUserState } from "@/lib/client-logout"
 
 export default function AppInitializer() {
   useEffect(() => {
@@ -22,8 +23,7 @@ export default function AppInitializer() {
           mergeStoredUser(result.user);
           localStorage.setItem("isAuthenticated", "true");
         } else {
-          localStorage.removeItem("user");
-          localStorage.removeItem("isAuthenticated");
+          clearClientUserState();
         }
       } catch (error) {
         console.error("Failed to synchronize auth state:", error);

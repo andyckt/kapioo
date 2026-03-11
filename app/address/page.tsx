@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useLanguage } from "@/lib/language-context"
 
 export default function AddressPage() {
@@ -87,8 +88,8 @@ export default function AddressPage() {
       const result = await response.json();
 
       if (result.success) {
-        // Update user data in localStorage
-        localStorage.setItem('user', JSON.stringify(result.data));
+        // Merge the updated response so other cached fields survive address edits.
+        mergeStoredUser(result.data);
         
         // Show success toast
         toast({

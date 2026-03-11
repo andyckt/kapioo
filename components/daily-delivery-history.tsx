@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 
 // Order status component with appropriate icon and color
 function OrderStatus({ status }: { status: string }) {
@@ -302,6 +303,9 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
+                      <VisuallyHidden>
+                        <DialogTitle>{language === 'zh' ? '订单详情' : 'Order Details'}</DialogTitle>
+                      </VisuallyHidden>
                       {selectedOrder && selectedOrder.orderId === order.orderId ? (
                         <>
                           <DialogHeader>
