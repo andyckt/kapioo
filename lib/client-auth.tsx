@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
 
 import { mergeStoredUser } from "@/lib/client-user-cache";
 import { clearClientUserState } from "@/lib/client-logout";
@@ -96,7 +95,6 @@ function syncClientAuthCache(snapshot: ClientAuthSnapshot) {
 }
 
 export function ClientAuthProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
   const [authState, setAuthState] = useState<ClientAuthSnapshot>(EMPTY_AUTH_STATE);
   const [status, setStatus] = useState<"loading" | "ready">("loading");
 
@@ -112,9 +110,8 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    setStatus("loading");
     void refreshAuthState({ force: true });
-  }, [pathname, refreshAuthState]);
+  }, [refreshAuthState]);
 
   const contextValue = useMemo(
     () => ({
