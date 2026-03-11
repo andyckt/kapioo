@@ -25,6 +25,19 @@ interface MongoError extends Error {
   keyValue?: Record<string, any>;
 }
 
+function extractVideoId(value: string): string {
+  if (!value) return '';
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(value)) {
+    return value;
+  }
+
+  const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = value.match(regExp);
+
+  return match && match[2].length === 11 ? match[2] : '';
+}
+
 // GET handler - Return all music videos
 export async function GET() {
   try {
@@ -33,31 +46,34 @@ export async function GET() {
     // Fetch all music videos from MongoDB
     const videos = await MusicVideo.find({}).lean();
     
-    // If no videos found, return the default video
+    // Public GET must stay read-only; if canonical data is empty,
+    // return a temporary default payload instead of mutating the DB.
     if (!videos || videos.length === 0) {
-      // Create default video in DB for future use
-      try {
-        await MusicVideo.create(defaultVideo);
-        console.log('Created default music video in database');
-      } catch (error) {
-        // Ignore duplicate key errors
-        const mongoError = error as MongoError;
-        if (mongoError.code !== 11000) {
-          console.error('Error creating default music video:', error);
-        }
-      }
-      
       return NextResponse.json([defaultVideo]);
     }
-    
-    // Transform MongoDB documents to plain objects and ensure they have the expected format
-    const formattedVideos = videos.map(video => ({
+
+    // Normalize legacy stored values (full URLs, embed URLs) to bare YouTube IDs
+    // so the public player always receives an embed-safe `videoId`.
+    const formattedVideos = videos
+      .map(video => {
+        const normalizedVideoId = extractVideoId(String(video.videoId || ''));
+        if (!normalizedVideoId) {
+          return null;
+        }
+
+        return {
       id: video.id,
-      videoId: video.videoId,
-      title: video.title,
+      videoId: normalizedVideoId,
+      title: video.title || defaultVideo.title,
       description: video.description || ''
-    }));
-    
+        };
+      })
+      .filter(Boolean);
+
+    if (formattedVideos.length === 0) {
+      return NextResponse.json([defaultVideo]);
+    }
+
     return NextResponse.json(formattedVideos);
   } catch (error) {
     console.error('Error fetching music videos:', error);

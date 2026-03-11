@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import connectToDatabase from "@/lib/db";
 import { AUTH_SECRET } from "@/lib/env";
+import { resolveUserRole } from "@/lib/auth/session";
 import User from "@/models/User";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 
@@ -11,14 +12,6 @@ const credentialsSchema = z.object({
   login: z.string().trim().min(1),
   password: z.string().min(1),
 });
-
-function resolveUserRole(user: { role?: string; userID?: string }) {
-  if (user.role === "admin" || user.userID === "admin") {
-    return "admin" as const;
-  }
-
-  return "user" as const;
-}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: AUTH_SECRET,

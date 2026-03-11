@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import connectToDatabase from "@/lib/db";
+import {
+  ADMIN_MFA_COOKIE_NAME,
+  resolveUserRole,
+  type AuthenticatedRole,
+} from "@/lib/auth/session";
 import { verifySignedAdminMfaCookie } from "@/lib/security/signed-cookie";
 import User from "@/models/User";
-
-export type AuthenticatedRole = "user" | "admin";
 
 export interface AuthenticatedActor {
   user: any;
@@ -13,13 +16,11 @@ export interface AuthenticatedActor {
   sessionVersion: number;
 }
 
-function resolveRole(user: { role?: string; userID?: string }): AuthenticatedRole {
-  if (user.role === "admin" || user.userID === "admin") {
-    return "admin";
-  }
-
-  return "user";
-}
+type CookieCapableRequest = Request & {
+  cookies?: {
+    get(name: string): { value: string } | undefined;
+  };
+};
 
 export function unauthorizedResponse(message: string = "Unauthorized") {
   return NextResponse.json({ success: false, error: message }, { status: 401 });
@@ -47,7 +48,7 @@ export async function getAuthenticatedActor(): Promise<AuthenticatedActor | null
     return null;
   }
 
-  const role = resolveRole(user);
+  const role = resolveUserRole(user);
   if (user.role !== role) {
     user.role = role;
     await user.save();
@@ -85,31 +86,17 @@ export async function requireAdmin() {
   return { response: null, actor };
 }
 
-function extractCookieValue(request: Request, cookieName: string) {
-  const cookieHeader = request.headers.get("cookie");
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const cookie = cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${cookieName}=`));
-
-  if (!cookie) {
-    return null;
-  }
-
-  return decodeURIComponent(cookie.slice(cookieName.length + 1));
+function getRequestCookieValue(request: CookieCapableRequest, cookieName: string) {
+  return request.cookies?.get(cookieName)?.value ?? null;
 }
 
-export async function requireAdminMfa(request: Request) {
+export async function requireAdminMfa(request: CookieCapableRequest) {
   const { actor, response } = await requireAdmin();
   if (!actor || response) {
     return { response, actor: null };
   }
 
-  const mfaCookie = extractCookieValue(request, "kapioo_admin_mfa");
+  const mfaCookie = getRequestCookieValue(request, ADMIN_MFA_COOKIE_NAME);
   const mfaPayload = await verifySignedAdminMfaCookie(mfaCookie);
   if (
     !mfaPayload ||

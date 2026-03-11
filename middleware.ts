@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+import {
+  ADMIN_MFA_COOKIE_NAME,
+  getAuthSessionCookieName,
+} from '@/lib/auth/session';
 import { AUTH_SECRET } from '@/lib/env';
 import { isPublicApiReadRequest } from '@/lib/settings-access';
 import { verifySignedAdminMfaCookie } from '@/lib/security/signed-cookie';
@@ -54,7 +58,7 @@ const AUTH_REQUIRED_PAGE_PATHS = [
   '/address',
 ];
 
-const ADMIN_PAGE_PATHS = ['/admin', '/maintain'];
+const ADMIN_PAGE_PATHS = ['/admin', '/maintain', '/editmusic'];
 const ADMIN_MFA_PAGE = '/admin/mfa';
 
 const ADMIN_API_PATHS = [
@@ -86,22 +90,22 @@ const AUTH_REQUIRED_API_PATHS = [
   '/api/users/',
 ];
 
-function matchesPath(pathname, prefixes) {
+function matchesPath(pathname: string, prefixes: string[]) {
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-function buildApiError(message, status) {
+function buildApiError(message: string, status: number) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
-export async function middleware(request) {
+export async function middleware(request: any) {
   const pathname = request.nextUrl.pathname.toLowerCase();
-  
+
   // Check for suspicious paths
-  const isSuspicious = SUSPICIOUS_PATHS.some(suspiciousPath => 
+  const isSuspicious = SUSPICIOUS_PATHS.some(suspiciousPath =>
     pathname.includes(suspiciousPath)
   );
-  
+
   if (isSuspicious) {
     // Log the attack attempt
     console.warn('🚨 SECURITY: Suspicious request blocked', {
@@ -110,16 +114,14 @@ export async function middleware(request) {
       userAgent: request.headers.get('user-agent'),
       timestamp: new Date().toISOString()
     });
-    
+
     // Return 404 to not reveal that we detected the attack
     return new NextResponse(null, { status: 404 });
   }
-  
+
   const secureCookie =
     request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production';
-  const sessionCookieName = secureCookie
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
+  const sessionCookieName = getAuthSessionCookieName(secureCookie);
 
   const token = await getToken({
     req: request,
@@ -133,15 +135,13 @@ export async function middleware(request) {
   const tokenRole = token?.role;
   const tokenSessionVersion = Number(token?.sessionVersion || 1);
   const adminMfaPayload = await verifySignedAdminMfaCookie(
-    request.cookies.get('kapioo_admin_mfa')?.value
+    request.cookies.get(ADMIN_MFA_COOKIE_NAME)?.value
   );
   const hasValidAdminMfa =
     tokenRole === 'admin' &&
     adminMfaPayload &&
     adminMfaPayload.userId === tokenUserId &&
     Number(adminMfaPayload.sessionVersion) === tokenSessionVersion;
-
-  const isApiRoute = pathname.startsWith('/api/');
 
   const requiresAdminPage =
     matchesPath(pathname, ADMIN_PAGE_PATHS) && pathname !== ADMIN_MFA_PAGE;
@@ -211,9 +211,13 @@ export async function middleware(request) {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  const isBgmPage = pathname === '/bgm' || pathname.startsWith('/bgm/');
+  const contentSecurityPolicy = isBgmPage
+    ? "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; child-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    : "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    contentSecurityPolicy
   );
   if (request.nextUrl.protocol === 'https:') {
     response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
@@ -226,7 +230,7 @@ export async function middleware(request) {
   if (shouldNoIndex) {
     response.headers.set('X-Robots-Tag', 'noindex, follow');
   }
-  
+
   return response;
 }
 
@@ -236,4 +240,4 @@ export const config = {
     '/api/:path*',
     '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
-}; 
+};

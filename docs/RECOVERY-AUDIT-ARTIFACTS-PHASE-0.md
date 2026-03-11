@@ -466,3 +466,34 @@ The smallest fix set for the Phase 0 public-read / middleware-mismatch class is:
 
 For the specific Phase 0 bug class "public page calls a safe public GET, but middleware blocks it", the public surface is currently stabilized after the two fixes above.
 
+## Root-Cause Category: CSP / Security-Header Over-Hardening
+
+CSP or related browser security headers, applied during the hardening pass, can block legitimate frontend features that rely on third-party embeds or external scripts. When the default CSP restricts `script-src` and omits `frame-src`/`child-src` for external domains, pages that load external scripts or embed iframes (e.g., YouTube) will fail without path-specific exemptions.
+
+### Affected Pages / Features
+
+| Page/Feature | Third-party usage | CSP impact | Status |
+|--------------|-------------------|------------|--------|
+| `/bgm` | YouTube iframe embed (`youtube.com/embed/*`) + YouTube IFrame API script (`youtube.com/iframe_api`) + `img.youtube.com` thumbnails | Default CSP blocks script and frame; player blank | **PROVEN** — fixed with `/bgm`-specific CSP exemption |
+| `/editmusic` | `img.youtube.com` thumbnails only; no iframe or external script | `img-src 'self' data: https:` allows HTTPS images | **LIKELY OK** — no iframe; thumbnails work |
+| `/referral` | Vercel Analytics (commented out) | N/A | **UNVERIFIED** — not active |
+| Other pages | `framer-motion` (bundled), `Inter` font (self-hosted via next/font) | No external loads | **OK** |
+
+### Current CSP Configuration
+
+- **Default (all pages except `/bgm`)**: `script-src 'self' 'unsafe-inline' 'unsafe-eval'`; no `frame-src`/`child-src` for external domains (effectively `default-src 'self'`). Blocks external scripts and iframes.
+- **`/bgm` exemption**: Adds `https://www.youtube.com`, `https://s.ytimg.com` to `script-src`; adds `frame-src` and `child-src` for `youtube.com` and `youtube-nocookie.com`.
+
+### Proven vs Likely vs Unverified
+
+- **PROVEN**: `/bgm` — blank player until BGM-specific CSP exemption.
+- **LIKELY OK**: `/editmusic` — thumbnails only; no known CSP block.
+- **UNVERIFIED**: Future features (analytics, maps, reCAPTCHA, Stripe.js, inline video preview on `/editmusic`) — would require targeted CSP updates.
+
+### What to Audit Next
+
+1. **Before adding any new third-party integration** (analytics, maps, payments, captcha): Confirm required `script-src`, `frame-src`, `connect-src` (and `img-src` if applicable) and add path-specific CSP exemptions in middleware.
+2. **If `/editmusic` gains inline video preview**: Add YouTube `frame-src`/`script-src` for `/editmusic` (it is already admin-only; can share or mirror BGM exemption).
+3. **Enabling Vercel Analytics on `/referral`**: Add `script-src` and `connect-src` for Vercel domains per their docs.
+4. **Optional**: Document the path-based CSP exemption pattern (e.g. `isBgmPage`-style check) for consistency when adding future third-party integrations.
+

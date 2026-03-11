@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { ADMIN_MFA_COOKIE_NAME } from "@/lib/auth/session";
 import { verifySignedAdminMfaCookie } from "@/lib/security/signed-cookie";
 import { getAuthenticatedActor } from "@/lib/auth/guards";
 
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const adminMfaCookie = request.cookies.get("kapioo_admin_mfa")?.value;
+    const adminMfaCookie = request.cookies.get(ADMIN_MFA_COOKIE_NAME)?.value;
     const verifiedMfa = await verifySignedAdminMfaCookie(adminMfaCookie);
     const requiresAdminMfa =
       actor.role === "admin" &&

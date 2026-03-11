@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
+import { ADMIN_MFA_COOKIE_NAME } from "@/lib/auth/session";
 import connectToDatabase from "@/lib/db";
 import User from "@/models/User";
 import { generateVerificationCode, sendAdminMfaCodeEmail } from "@/lib/services/email";
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
         message: "Admin MFA verified successfully",
       });
 
-      apiResponse.cookies.set("kapioo_admin_mfa", cookieValue, {
+      apiResponse.cookies.set(ADMIN_MFA_COOKIE_NAME, cookieValue, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
@@ -173,12 +174,17 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
+  const { response: authResponse } = await requireAdmin();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const response = NextResponse.json({
     success: true,
     message: "Admin MFA cleared",
   });
 
-  response.cookies.set("kapioo_admin_mfa", "", {
+  response.cookies.set(ADMIN_MFA_COOKIE_NAME, "", {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

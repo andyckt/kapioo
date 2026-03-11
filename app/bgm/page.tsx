@@ -83,6 +83,7 @@ export default function BGMPage() {
           if (serverVideos && Array.isArray(serverVideos) && serverVideos.length > 0) {
             console.log('Loaded videos from server:', serverVideos.length);
             setMusicVideos(serverVideos);
+            setCurrentVideoIndex(0);
             localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
             hasValidVideos = true;
           } else {
@@ -105,19 +106,8 @@ export default function BGMPage() {
             if (parsedVideos && Array.isArray(parsedVideos) && parsedVideos.length > 0) {
               console.log('Loaded videos from localStorage:', parsedVideos.length);
               setMusicVideos(parsedVideos);
+              setCurrentVideoIndex(0);
               hasValidVideos = true;
-              
-              // Try to sync localStorage videos to server
-              try {
-                await fetch('/api/music-videos', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: storedVideos,
-                });
-                console.log('Synced localStorage videos to server');
-              } catch (syncError) {
-                console.error('Failed to sync localStorage videos to server:', syncError);
-              }
             }
           }
         } catch (error) {
@@ -129,17 +119,6 @@ export default function BGMPage() {
       if (!hasValidVideos) {
         console.log('Initializing with default video');
         initializeDefaultVideo();
-        
-        // Try to push default video to server
-        try {
-          await fetch('/api/music-videos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify([defaultVideo]),
-          });
-        } catch (error) {
-          console.error('Failed to push default video to server:', error);
-        }
       }
       
       setLoading(false);
@@ -185,23 +164,20 @@ export default function BGMPage() {
         const serverVideos = await response.json();
         if (serverVideos && Array.isArray(serverVideos) && serverVideos.length > 0) {
           setMusicVideos(serverVideos);
+          setCurrentVideoIndex(0);
           localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
           setMessage('音乐数据已同步');
           setTimeout(() => setMessage(''), 2000);
         } else {
-          // If server has no videos, we'll use what's in localStorage
+          // If server has no videos, use local fallback without mutating canonical server data.
           const storedVideos = localStorage.getItem('musicVideos');
           if (storedVideos) {
             try {
               const parsedVideos = JSON.parse(storedVideos);
               if (parsedVideos && Array.isArray(parsedVideos) && parsedVideos.length > 0) {
-                // Save back to server to initialize it
-                await fetch('/api/music-videos', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: storedVideos,
-                });
-                setMessage('已将本地音乐数据同步到服务器');
+                setMusicVideos(parsedVideos);
+                setCurrentVideoIndex(0);
+                setMessage('已使用本地缓存音乐');
                 setTimeout(() => setMessage(''), 2000);
               } else {
                 initializeDefaultVideo();
@@ -217,18 +193,6 @@ export default function BGMPage() {
           } else {
             setMessage('服务器上没有音乐数据，已恢复默认设置');
             initializeDefaultVideo();
-            
-            // Push default to server
-            try {
-              await fetch('/api/music-videos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify([defaultVideo]),
-              });
-            } catch (error) {
-              console.error('Error pushing default video to server:', error);
-            }
-            
             setTimeout(() => setMessage(''), 2000);
           }
         }
@@ -249,6 +213,7 @@ export default function BGMPage() {
 
   const initializeDefaultVideo = () => {
     setMusicVideos([defaultVideo]);
+    setCurrentVideoIndex(0);
     localStorage.setItem('musicVideos', JSON.stringify([defaultVideo]));
   };
 
