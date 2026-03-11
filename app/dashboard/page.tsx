@@ -38,6 +38,7 @@ import { ThisWeekMeals } from "@/components/this-week-meals"
 // These components are dynamically imported above
 import { AvailableAreas } from "@/components/available-areas"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
+import { performClientLogout } from "@/lib/client-logout"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
@@ -71,6 +72,15 @@ export default function DashboardPage() {
   
   // Daily delivery regions - using centralized constants
   const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
+
+  const handleLogout = async () => {
+    await performClientLogout()
+    toast({
+      title: language === 'en' ? "Logged out" : "已退出登录",
+      description: language === 'en' ? "You have been logged out successfully" : "您已成功退出登录",
+    })
+    router.push("/login")
+  }
   
   // Function to check if user's area has daily delivery service
   const hasAreaDailyDelivery = (userAddress?: any): boolean => {
@@ -1076,12 +1086,7 @@ export default function DashboardPage() {
                       
                       // Then proceed with logout after a short delay
                       setTimeout(() => {
-                        localStorage.removeItem('user');
-                        toast({
-                          title: language === 'en' ? "Logged out" : "已退出登录",
-                          description: language === 'en' ? "You have been logged out successfully" : "您已成功退出登录",
-                        });
-                        router.push("/login");
+                        void handleLogout();
                       }, 800);
                     }}
                   >

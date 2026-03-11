@@ -13,13 +13,13 @@ import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
 import { motion, AnimatePresence } from "framer-motion"
 import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail, Tag, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
+import { performClientLogout } from "@/lib/client-logout"
 const AdminDashboardEnhanced = dynamic(
   () => import("@/components/admin-dashboard-enhanced").then((m) => ({ default: m.AdminDashboardEnhanced })),
   { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
@@ -1417,14 +1417,11 @@ export default function AdminDashboardPage() {
               variant="ghost"
               className="text-red-500 hover:text-red-600 hover:bg-red-100"
               onClick={async () => {
-                await fetch('/api/auth/admin-mfa', { method: 'DELETE' }).catch(() => undefined)
-                localStorage.removeItem('user')
-                localStorage.removeItem('isAuthenticated')
+                await performClientLogout()
                 toast({
                   title: "Logged out",
                   description: "You have been logged out successfully",
                 })
-                await signOut({ redirect: false })
                 router.push("/login")
               }}
             >

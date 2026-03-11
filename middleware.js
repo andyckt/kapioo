@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 import { AUTH_SECRET } from '@/lib/env';
+import { isPublicApiReadRequest } from '@/lib/settings-access';
 import { verifySignedAdminMfaCookie } from '@/lib/security/signed-cookie';
 
 // This middleware increases the body size limit for API requests
@@ -144,10 +145,13 @@ export async function middleware(request) {
 
   const requiresAdminPage =
     matchesPath(pathname, ADMIN_PAGE_PATHS) && pathname !== ADMIN_MFA_PAGE;
-  const requiresAdminApi = matchesPath(pathname, ADMIN_API_PATHS);
+  const requiresAdminApi =
+    matchesPath(pathname, ADMIN_API_PATHS) && !isPublicApiReadRequest(request);
   const requiresAuthenticatedPage = matchesPath(pathname, AUTH_REQUIRED_PAGE_PATHS);
   const requiresAuthenticatedApi =
-    matchesPath(pathname, AUTH_REQUIRED_API_PATHS) && !requiresAdminApi;
+    matchesPath(pathname, AUTH_REQUIRED_API_PATHS) &&
+    !requiresAdminApi &&
+    !isPublicApiReadRequest(request);
 
   if (pathname === ADMIN_MFA_PAGE || pathname.startsWith(`${ADMIN_MFA_PAGE}/`)) {
     if (!tokenUserId) {

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { CreditCard, LogOut, Settings, User, ShoppingCart, Gem, Ticket } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -17,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { performClientLogout } from "@/lib/client-logout"
 import { useLanguage } from "@/lib/language-context"
 import { Badge } from "@/components/ui/badge"
 
@@ -106,16 +106,13 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   }
   
   const handleLogout = async () => {
-    await fetch('/api/auth/admin-mfa', { method: 'DELETE' }).catch(() => undefined)
-    localStorage.removeItem('user')
-    localStorage.removeItem('isAuthenticated')
+    await performClientLogout()
 
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
     })
 
-    await signOut({ redirect: false })
     router.push("/login")
   }
   

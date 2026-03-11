@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { isPublicSettingsKey } from '@/lib/settings-access';
 import Settings from '@/models/Settings';
 
 // GET all settings or a specific setting by key
 export async function GET(request: Request) {
   try {
-    const { actor, response } = await requireAdminMfa(request);
-    if (!actor || response) {
-      return response;
+    const url = new URL(request.url);
+    const key = url.searchParams.get('key');
+
+    if (!isPublicSettingsKey(key)) {
+      const { actor, response } = await requireAdminMfa(request);
+      if (!actor || response) {
+        return response;
+      }
     }
 
     await connectToDatabase();
-    
-    const url = new URL(request.url);
-    const key = url.searchParams.get('key');
     
     if (key) {
       // Get specific setting

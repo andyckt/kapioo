@@ -9,6 +9,7 @@ import User from '@/models/User';
 import { nanoid } from 'nanoid';
 import { sendWeeklyOrderConfirmationEmail, sendAdminWeeklyOrderNotification } from '@/lib/services/email';
 import { toWeeklyPlanId } from '@/lib/plans/service';
+import { format, addDays, addWeeks } from 'date-fns';
 
 // Types for consecutive date validation
 interface DeliveryDayForValidation {
@@ -22,6 +23,65 @@ interface DateValidationResult {
   error?: string;
   selectedDates?: string[];
   availableDates?: string[];
+}
+
+function getNextDeliveryDates() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+
+  const daysUntilSunday = (7 - dayOfWeek) % 7;
+  const daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
+
+  const nextSunday = daysUntilSunday === 0 ? addDays(today, 7) : addDays(today, daysUntilSunday);
+  const nextTuesday = daysUntilTuesday === 0 ? addDays(today, 7) : addDays(today, daysUntilTuesday);
+
+  const followingSunday = addWeeks(nextSunday, 1);
+  const followingTuesday = addWeeks(nextTuesday, 1);
+  const week3Sunday = addWeeks(nextSunday, 2);
+  const week3Tuesday = addWeeks(nextTuesday, 2);
+
+  return {
+    currentSunday: format(nextSunday, 'MMMM d'),
+    currentTuesday: format(nextTuesday, 'MMMM d'),
+    nextSunday: format(followingSunday, 'MMMM d'),
+    nextTuesday: format(followingTuesday, 'MMMM d'),
+    week3Sunday: format(week3Sunday, 'MMMM d'),
+    week3Tuesday: format(week3Tuesday, 'MMMM d')
+  };
+}
+
+async function ensureWeeklyDeliveryDays() {
+  const existingDeliveryDays = await WeeklyDeliveryDay.find()
+    .sort({ weekOffset: 1, day: 1 })
+    .lean();
+
+  const hasWeek3 = existingDeliveryDays.some((day: any) => day.weekOffset === 2);
+
+  if (existingDeliveryDays.length === 0) {
+    const dates = getNextDeliveryDates();
+    await WeeklyDeliveryDay.create([
+      { day: 'sunday', name: 'Sunday Delivery', date: dates.currentSunday, active: true, options: [], weekOffset: 0 },
+      { day: 'tuesday', name: 'Tuesday Delivery', date: dates.currentTuesday, active: true, options: [], weekOffset: 0 },
+      { day: 'sunday', name: 'Sunday Delivery', date: dates.nextSunday, active: true, options: [], weekOffset: 1 },
+      { day: 'tuesday', name: 'Tuesday Delivery', date: dates.nextTuesday, active: true, options: [], weekOffset: 1 },
+      { day: 'sunday', name: 'Sunday Delivery', date: dates.week3Sunday, active: true, options: [], weekOffset: 2 },
+      { day: 'tuesday', name: 'Tuesday Delivery', date: dates.week3Tuesday, active: true, options: [], weekOffset: 2 }
+    ]);
+    return;
+  }
+
+  if (!hasWeek3) {
+    const dates = getNextDeliveryDates();
+
+    try {
+      await WeeklyDeliveryDay.create([
+        { day: 'sunday', name: 'Sunday Delivery', date: dates.week3Sunday, active: true, options: [], weekOffset: 2 },
+        { day: 'tuesday', name: 'Tuesday Delivery', date: dates.week3Tuesday, active: true, options: [], weekOffset: 2 }
+      ]);
+    } catch (error) {
+      console.warn('Week 3 delivery day initialization skipped:', error);
+    }
+  }
 }
 
 // Helper function: Sort delivery days consistently (same as frontend)
@@ -137,6 +197,7 @@ export async function GET(request: Request) {
     }
     
     await connectToDatabase();
+    await ensureWeeklyDeliveryDays();
     
     // Get only active delivery days with active meal options
     const deliveryDays = await WeeklyDeliveryDay.find({ active: true })
@@ -153,7 +214,9 @@ export async function GET(request: Request) {
       name: day.name,
       date: day.date,
       weekOffset: day.weekOffset,
-      options: day.options.map((option: any) => ({
+      options: (Array.isArray(day.options) ? day.options : [])
+        .filter(Boolean)
+        .map((option: any) => ({
         id: option._id,
         name: option.name,
         nameEn: option.nameEn, // Include English name
