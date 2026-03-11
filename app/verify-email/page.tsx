@@ -11,9 +11,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { mergeStoredUser } from "@/lib/client-user-cache"
+import { useClientAuth } from "@/lib/client-auth"
 
 export default function VerifyEmailPage() {
   const router = useRouter()
+  const { refreshAuthState } = useClientAuth()
   
   const [email, setEmail] = useState("")
   const [code, setCode] = useState("")
@@ -94,10 +96,9 @@ export default function VerifyEmailPage() {
           return
         }
 
-        const authResponse = await fetch('/api/auth/me', { cache: 'no-store' })
-        const authData = await authResponse.json()
+        const authData = await refreshAuthState({ force: true })
 
-        if (!authData?.authenticated || !authData?.user?._id) {
+        if (!authData.authenticated || !authData.user?._id) {
           setVerificationState('error')
           setErrorMessage("登录失败，请重试")
           return

@@ -253,7 +253,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           NotificationType.ORDER_CANCELLED,
           order,
           user,
-          previousStatus
+          previousStatus,
+          undefined,
+          undefined,
+          order.creditCost
         );
 
         await logAuditEvent({

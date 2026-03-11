@@ -16,6 +16,7 @@ import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { mergeStoredUser } from "@/lib/client-user-cache"
+import { useClientAuth } from "@/lib/client-auth"
 
 export default function LoginPage() {
   const [login, setLogin] = useState("")
@@ -25,32 +26,20 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { t, setLanguage } = useLanguage()
+  const { status: authStatus, authenticated, user, requiresAdminMfa, refreshAuthState } = useClientAuth()
 
   useEffect(() => {
-    const redirectIfAuthenticated = async () => {
-      try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" });
-        const result = await response.json();
+    if (authStatus !== "ready" || !authenticated || !user) {
+      return;
+    }
 
-        if (!result?.authenticated || !result?.user) {
-          return;
-        }
+    if (user.role === "admin") {
+      router.push(requiresAdminMfa ? "/admin/mfa" : "/admin");
+      return;
+    }
 
-        mergeStoredUser(result.user);
-        localStorage.setItem("isAuthenticated", "true");
-
-        if (result.user.role === "admin") {
-          router.push(result.requiresAdminMfa ? "/admin/mfa" : "/admin");
-        } else {
-          router.push("/dashboard");
-        }
-      } catch (error) {
-        console.error("Failed to check current auth session:", error);
-      }
-    };
-
-    redirectIfAuthenticated();
-  }, [router]);
+    router.push("/dashboard");
+  }, [authStatus, authenticated, requiresAdminMfa, router, user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,10 +61,9 @@ export default function LoginPage() {
         return;
       }
 
-      const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
-      const sessionResult = await sessionResponse.json();
+      const sessionResult = await refreshAuthState({ force: true });
 
-      if (sessionResult?.authenticated && sessionResult?.user) {
+      if (sessionResult.authenticated && sessionResult.user) {
         if (
           sessionResult.user.languagePreference &&
           (sessionResult.user.languagePreference === 'zh' || sessionResult.user.languagePreference === 'en')

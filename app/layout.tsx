@@ -67,11 +67,12 @@ export default async function RootLayout({
       <body className={`${inter.className} overflow-x-hidden`}>
         <LanguageProvider initialLanguage={initialLanguage}>
           <MaintenanceProvider>
-            <AppInitializer />
-            <LanguagePreferenceDialog />
-            <MaintenanceNotification />
-            {children}
-            <Toaster />
+            <AppInitializer>
+              <LanguagePreferenceDialog />
+              <MaintenanceNotification />
+              {children}
+              <Toaster />
+            </AppInitializer>
           </MaintenanceProvider>
         </LanguageProvider>
       </body>

@@ -9,10 +9,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useClientAuth } from "@/lib/client-auth";
 
 export default function AdminMfaPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const {
+    status: authStatus,
+    authenticated,
+    user,
+    requiresAdminMfa,
+    adminMfaEmail,
+    refreshAuthState,
+  } = useClientAuth();
   const [code, setCode] = useState("");
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -50,37 +59,34 @@ export default function AdminMfaPage() {
 
   useEffect(() => {
     const initialize = async () => {
-      try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" });
-        const result = await response.json();
-
-        if (!result?.authenticated) {
-          router.replace("/login");
-          return;
-        }
-
-        if (result.user?.role !== "admin") {
-          router.replace("/dashboard");
-          return;
-        }
-
-        if (!result.requiresAdminMfa) {
-          router.replace("/admin");
-          return;
-        }
-
-        setEmail(result.adminMfaEmail || result.user?.email || "kapioomeal@gmail.com");
-
-        if (hasAutoSentRef.current) return;
-        hasAutoSentRef.current = true;
-        await sendCode();
-      } catch (error) {
-        console.error("Failed to initialize admin MFA:", error);
+      if (authStatus !== "ready") {
+        return;
       }
+
+      if (!authenticated) {
+        router.replace("/login");
+        return;
+      }
+
+      if (user?.role !== "admin") {
+        router.replace("/dashboard");
+        return;
+      }
+
+      if (!requiresAdminMfa) {
+        router.replace("/admin");
+        return;
+      }
+
+      setEmail(adminMfaEmail || user?.email || "kapioomeal@gmail.com");
+
+      if (hasAutoSentRef.current) return;
+      hasAutoSentRef.current = true;
+      await sendCode();
     };
 
-    initialize();
-  }, [router]);
+    void initialize();
+  }, [adminMfaEmail, authStatus, authenticated, requiresAdminMfa, router, user]);
 
   const handleVerify = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -103,6 +109,7 @@ export default function AdminMfaPage() {
         description: "You can now access the admin dashboard.",
       });
 
+      await refreshAuthState({ force: true });
       router.replace("/admin");
     } catch (error) {
       toast({

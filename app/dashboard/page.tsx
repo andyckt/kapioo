@@ -40,6 +40,7 @@ import { AvailableAreas } from "@/components/available-areas"
 import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
 import { performClientLogout } from "@/lib/client-logout"
 import { mergeStoredUser } from "@/lib/client-user-cache"
+import { useClientAuth } from "@/lib/client-auth"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
@@ -65,6 +66,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { t, language, setLanguage } = useLanguage()
+  const { status: authStatus, authenticated, user: authUser } = useClientAuth()
   const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
   const [customizeMeal, setCustomizeMeal] = useState(null)
@@ -363,19 +365,20 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadUserData() {
       try {
-        const authResponse = await fetch('/api/auth/me', { cache: 'no-store' });
-        const authResult = await authResponse.json();
+        if (authStatus !== "ready") {
+          return;
+        }
 
-        if (!authResult?.authenticated || !authResult?.user?._id) {
+        if (!authenticated || !authUser?._id) {
           router.push("/login");
           return;
         }
 
-        mergeStoredUser(authResult.user);
+        mergeStoredUser(authUser);
         localStorage.setItem('isAuthenticated', 'true');
 
         setUserLoading(true);
-        const userData = authResult.user;
+        const userData = authUser;
         
         // Check if userData has _id before proceeding
         if (!userData || !userData._id) {
@@ -481,7 +484,7 @@ export default function DashboardPage() {
     }
     
     loadUserData();
-  }, [router, toast]);
+  }, [authStatus, authenticated, authUser, router, toast]);
 
   useEffect(() => {
     if (activeTab === "credits" && userData) {

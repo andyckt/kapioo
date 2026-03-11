@@ -251,7 +251,8 @@ export const sendNewOrderAdminNotification = async (order: IOrder, user: IUser):
 export const sendOrderStatusUpdateNotification = async (
   order: IOrder, 
   user: IUser, 
-  previousStatus: string
+  previousStatus: string,
+  refundedCredits?: number
 ): Promise<void> => {
   try {
     let subject = '';
@@ -285,7 +286,9 @@ export const sendOrderStatusUpdateNotification = async (
       case 'cancelled':
         subject = `订单已取消 - Kapioo #${order.orderId}`;
         statusText = '已取消';
-        statusDescription = '您的订单已取消。';
+        statusDescription = refundedCredits && refundedCredits > 0
+          ? '您的订单已取消，餐卷已返还到您的账户。'
+          : '您的订单已取消。';
         statusColor = '#dc3545';
         break;
       
@@ -360,10 +363,10 @@ export const sendOrderStatusUpdateNotification = async (
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">联系电话:</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${order.phoneNumber || '未提供'}</td>
             </tr>
-            ${order.status === 'refunded' ? `
+            ${order.status === 'refunded' || (order.status === 'cancelled' && refundedCredits && refundedCredits > 0) ? `
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">退款餐卷:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${order.creditCost} 餐卷</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${refundedCredits ?? order.creditCost} 餐卷</td>
             </tr>
             ` : ''}
           </table>
@@ -603,7 +606,8 @@ export const handleOrderNotification = async (
   user: NotificationUser, // Use the more flexible type
   previousStatus?: string,
   transactionId?: string,
-  amount?: number
+  amount?: number,
+  refundedCredits?: number
 ): Promise<void> => {
   try {
     switch (notificationType) {
@@ -626,7 +630,8 @@ export const handleOrderNotification = async (
         await sendOrderStatusUpdateNotification(
           order, 
           user as IUser, 
-          previousStatus || 'pending'
+          previousStatus || 'pending',
+          refundedCredits
         );
         break;
         

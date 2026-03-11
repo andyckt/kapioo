@@ -77,6 +77,11 @@ const ADMIN_API_PATHS = [
   '/api/weekly-meals/admin',
 ];
 
+const LEGACY_AUTHJS_COOKIE_NAMES = [
+  'next-auth.session-token',
+  '__Secure-next-auth.session-token',
+];
+
 const AUTH_REQUIRED_API_PATHS = [
   '/api/orders',
   '/api/daily-delivery/order',
@@ -229,6 +234,20 @@ export async function middleware(request: any) {
   );
   if (shouldNoIndex) {
     response.headers.set('X-Robots-Tag', 'noindex, follow');
+  }
+
+  for (const legacyCookieName of LEGACY_AUTHJS_COOKIE_NAMES) {
+    if (!request.cookies.get(legacyCookieName)?.value) {
+      continue;
+    }
+
+    response.cookies.set(legacyCookieName, '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: legacyCookieName.startsWith('__Secure-'),
+      path: '/',
+      maxAge: 0,
+    });
   }
 
   return response;

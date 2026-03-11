@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 import { mergeStoredUser } from "@/lib/client-user-cache"
+import { useClientAuth } from "@/lib/client-auth"
 
 // Use centralized area list
 const serviceAreas = ALL_WEEKLY_AREAS
@@ -25,6 +26,7 @@ const serviceAreas = ALL_WEEKLY_AREAS
 export default function VerifyEmailSentPage() {
   const router = useRouter()
   const { language, t } = useLanguage()
+  const { refreshAuthState } = useClientAuth()
   const [userEmail, setUserEmail] = useState<string>("")
   const [userId, setUserId] = useState<string>("")
   const [verificationCode, setVerificationCode] = useState<string>("")
@@ -213,10 +215,9 @@ export default function VerifyEmailSentPage() {
           return
         }
 
-        const authResponse = await fetch('/api/auth/me', { cache: 'no-store' })
-        const authData = await authResponse.json()
+        const authData = await refreshAuthState({ force: true })
 
-        if (!authData?.authenticated || !authData?.user?._id) {
+        if (!authData.authenticated || !authData.user?._id) {
           setVerificationStatus("error")
           setErrorMessage(t('loginError'))
           toast({

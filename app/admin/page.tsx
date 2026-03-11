@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
 import { performClientLogout } from "@/lib/client-logout"
+import { useClientAuth } from "@/lib/client-auth"
 const AdminDashboardEnhanced = dynamic(
   () => import("@/components/admin-dashboard-enhanced").then((m) => ({ default: m.AdminDashboardEnhanced })),
   { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
@@ -105,6 +106,9 @@ const RatingDishManagement = dynamic(
 export default function AdminDashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { status: authStatus, authenticated, user, requiresAdminMfa } = useClientAuth()
+  const hasVerifiedAdminSession =
+    authStatus === "ready" && authenticated && user?.role === "admin" && !requiresAdminMfa
   const [activeTab, setActiveTab] = useState("users")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
@@ -250,40 +254,36 @@ export default function AdminDashboardPage() {
   }
 
   useEffect(() => {
-    const verifyAdminSession = async () => {
-      try {
-        const response = await fetch('/api/auth/me', { cache: 'no-store' })
-        const result = await response.json()
-
-        if (!result?.authenticated) {
-          router.push('/login')
-          return
-        }
-
-        if (result.user?.role !== 'admin') {
-          toast({
-            title: "Access denied",
-            description: "You must be an admin to view this page",
-            variant: "destructive",
-          })
-          router.push('/dashboard')
-          return
-        }
-
-        if (result.requiresAdminMfa) {
-          router.push('/admin/mfa')
-        }
-      } catch (error) {
-        console.error('Failed to verify admin session:', error)
-        router.push('/login')
-      }
+    if (authStatus !== "ready") {
+      return
     }
 
-    verifyAdminSession()
-  }, [router, toast])
+    if (!authenticated) {
+      router.push('/login')
+      return
+    }
+
+    if (user?.role !== 'admin') {
+      toast({
+        title: "Access denied",
+        description: "You must be an admin to view this page",
+        variant: "destructive",
+      })
+      router.push('/dashboard')
+      return
+    }
+
+    if (requiresAdminMfa) {
+      router.push('/admin/mfa')
+    }
+  }, [authStatus, authenticated, requiresAdminMfa, router, toast, user?.role])
 
   // Fetch users when the tab is switched to 'users' or 'credits'
   useEffect(() => {
+    if (!hasVerifiedAdminSession) {
+      return
+    }
+
     if (activeTab === 'users' || activeTab === 'credits') {
       fetchUsers(usersPagination.page, usersPagination.limit)
       fetchTotalUsersStats()
@@ -291,7 +291,7 @@ export default function AdminDashboardPage() {
       // Reset search results when tab changes
       setSearchResults([])
     }
-  }, [activeTab, usersPagination.page, usersPagination.limit])
+  }, [activeTab, hasVerifiedAdminSession, usersPagination.page, usersPagination.limit])
 
   const fetchUsers = async (
     page = 1, 
@@ -940,13 +940,21 @@ export default function AdminDashboardPage() {
   
   // Add effect to fetch credit requests when the tab is active
   useEffect(() => {
+    if (!hasVerifiedAdminSession) {
+      return
+    }
+
     if (activeTab === "credit-requests") {
       fetchCreditRequests();
     }
-  }, [activeTab]);
+  }, [activeTab, hasVerifiedAdminSession]);
   
   // Add effect to fetch transactions when the Credits tab is active
   useEffect(() => {
+    if (!hasVerifiedAdminSession) {
+      return
+    }
+
     if (activeTab === "credits") {
       console.log(`Credits tab is active, users data available: ${users.length} users`);
       
@@ -958,7 +966,7 @@ export default function AdminDashboardPage() {
       
       fetchTransactions();
     }
-  }, [activeTab, users.length, usersLoading]);
+  }, [activeTab, hasVerifiedAdminSession, users.length, usersLoading]);
   
   // Add function to handle pagination for transactions
   const handleTransactionPagination = (direction: 'prev' | 'next') => {
@@ -4383,6 +4391,10 @@ function MealManagement() {
 
   // Load meals on component mount
   useEffect(() => {
+    if (!hasVerifiedAdminSession) {
+      return
+    }
+
     async function loadData() {
       try {
         // Get current weekly meals - use admin version to include inactive days
@@ -4443,7 +4455,7 @@ function MealManagement() {
     }
     
     loadData();
-  }, [toast]);
+  }, [hasVerifiedAdminSession, toast]);
 
   // Handle input change
   const handleMealNameChange = (day: string, name: string) => {

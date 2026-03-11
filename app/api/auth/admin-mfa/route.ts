@@ -173,12 +173,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// DELETE clears the admin MFA cookie. No auth required: the operation only
+// sets a response cookie with maxAge=0. Non-admins never have this cookie,
+// so it is a harmless no-op for them. Requiring admin would cause 403 for
+// regular users during logout (performClientLogout runs for all users).
 export async function DELETE() {
-  const { response: authResponse } = await requireAdmin();
-  if (authResponse) {
-    return authResponse;
-  }
-
   const response = NextResponse.json({
     success: true,
     message: "Admin MFA cleared",
