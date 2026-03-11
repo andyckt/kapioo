@@ -44,9 +44,27 @@ export async function POST(request: NextRequest) {
     const action = String(body?.action || "send");
 
     if (action === "send") {
-      const code = generateVerificationCode();
       const now = new Date();
       const cooldownCutoff = new Date(Date.now() - ADMIN_MFA_SEND_COOLDOWN_MS);
+      const existingCodeExpiresAt = actor.user.adminMfaCodeExpires
+        ? new Date(actor.user.adminMfaCodeExpires).getTime()
+        : 0;
+      const existingCodeSentAt = actor.user.adminMfaCodeSentAt
+        ? new Date(actor.user.adminMfaCodeSentAt).getTime()
+        : 0;
+      const hasReusableRecentCode =
+        Boolean(actor.user.adminMfaCodeHash) &&
+        existingCodeExpiresAt > Date.now() &&
+        existingCodeSentAt >= cooldownCutoff.getTime();
+
+      if (hasReusableRecentCode) {
+        return NextResponse.json({
+          success: true,
+          message: "Admin MFA code already sent recently",
+        });
+      }
+
+      const code = generateVerificationCode();
 
       const updated = await User.findOneAndUpdate(
         {

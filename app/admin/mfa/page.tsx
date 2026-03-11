@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/lib/client-auth";
 
+const AUTO_SEND_COOLDOWN_MS = 60 * 1000;
+
 export default function AdminMfaPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -34,6 +36,8 @@ export default function AdminMfaPage() {
       const response = await fetch("/api/auth/admin-mfa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
         body: JSON.stringify({ action: "send" }),
       });
 
@@ -81,7 +85,21 @@ export default function AdminMfaPage() {
       setEmail(adminMfaEmail || user?.email || "kapioomeal@gmail.com");
 
       if (hasAutoSentRef.current) return;
+      const storageKey = user?._id ? `admin-mfa:auto-send:${user._id}` : null;
+      const lastAutoSentAt =
+        storageKey && typeof window !== "undefined"
+          ? Number(sessionStorage.getItem(storageKey) || 0)
+          : 0;
+
+      if (lastAutoSentAt && Date.now() - lastAutoSentAt < AUTO_SEND_COOLDOWN_MS) {
+        hasAutoSentRef.current = true;
+        return;
+      }
+
       hasAutoSentRef.current = true;
+      if (storageKey && typeof window !== "undefined") {
+        sessionStorage.setItem(storageKey, String(Date.now()));
+      }
       await sendCode();
     };
 
@@ -96,6 +114,8 @@ export default function AdminMfaPage() {
       const response = await fetch("/api/auth/admin-mfa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
         body: JSON.stringify({ action: "verify", code }),
       });
 
@@ -109,7 +129,13 @@ export default function AdminMfaPage() {
         description: "You can now access the admin dashboard.",
       });
 
-      await refreshAuthState({ force: true });
+      void refreshAuthState({ force: true });
+      if (typeof window !== "undefined" && user?._id) {
+        sessionStorage.removeItem(`admin-mfa:auto-send:${user._id}`);
+        window.location.replace("/admin");
+        return;
+      }
+
       router.replace("/admin");
     } catch (error) {
       toast({
