@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { CreditCard, LogOut, Settings, User, ShoppingCart, Gem, Ticket } from "lucide-react"
+import { useMemo, useState } from "react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Gem, Ticket } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -27,6 +27,8 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   const { t, language } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const { userData, upcomingDeliveries } = useUserProfile()
+
+  const displayName = userData?.name || userData?.userID || "User"
   
   const handleLogout = async () => {
     await performClientLogout()
@@ -41,13 +43,52 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   
   // Get initials for avatar
   const getInitials = (): string => {
-    if (!userData?.name) return "U"
-    
-    const nameParts = userData.name.split(' ')
+    if (!displayName) return "U"
+
+    const nameParts = displayName.trim().split(/\s+/)
     if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase()
-    
+
     return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase()
   }
+
+  const avatarSrc = useMemo(() => {
+    const initials = getInitials()
+    const palette = [
+      ["#C2884E", "#D1A46C"],
+      ["#8B5E3C", "#C2884E"],
+      ["#6B5F53", "#9A7B5F"],
+      ["#A66C3D", "#D4A373"],
+    ]
+    const colorIndex =
+      displayName.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length
+    const [startColor, endColor] = palette[colorIndex]
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+        <defs>
+          <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${startColor}" />
+            <stop offset="100%" stop-color="${endColor}" />
+          </linearGradient>
+        </defs>
+        <rect width="72" height="72" rx="36" fill="url(#avatarGradient)" />
+        <text
+          x="50%"
+          y="50%"
+          dy="0.35em"
+          text-anchor="middle"
+          fill="#FFFFFF"
+          font-family="Inter, Arial, sans-serif"
+          font-size="24"
+          font-weight="700"
+        >
+          ${initials}
+        </text>
+      </svg>
+    `.trim()
+
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  }, [displayName])
   
   const menuItems = [
     // { label: "Profile", icon: <User className="mr-2 h-4 w-4" />, tab: "profile" },
@@ -60,7 +101,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={`https://ui-avatars.com/api/?name=${userData?.name || 'User'}&background=random`} alt={userData?.name || 'User'} />
+            <AvatarImage src={avatarSrc} alt={displayName} />
             <AvatarFallback>{getInitials()}</AvatarFallback>
           </Avatar>
         </Button>
@@ -68,7 +109,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
       <DropdownMenuContent className="w-64" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{userData?.name || userData?.userID || 'User'}</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">{userData?.email || ''}</p>
           </div>
         </DropdownMenuLabel>
