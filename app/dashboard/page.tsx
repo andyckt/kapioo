@@ -1193,7 +1193,9 @@ export default function DashboardPage() {
                   {/* User Summary Cards - Premium Design */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
                     {/* Two-Step Flow: No Credits Message OR Service Selection Cards */}
-                    {userData && 
+                    {/* Only show after user data has fully loaded to avoid flicker (auth user may have 0s before API refresh) */}
+                    {userData && !userLoading &&
+                      (userData?.credits || 0) === 0 &&
                       (userData?.twoDishVoucher || 0) === 0 && 
                       (userData?.threeDishVoucher || 0) === 0 && 
                       (userData?.weeklySIXmeals || 0) === 0 && 

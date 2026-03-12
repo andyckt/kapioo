@@ -1,16 +1,22 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/language-context';
+import { useClientAuth } from '@/lib/client-auth';
 import { motion } from 'framer-motion';
 
 export function LanguagePreferenceDialog() {
-  const { language, setLanguage } = useLanguage();
+  const { setLanguage } = useLanguage();
+  const { status: authStatus } = useClientAuth();
   const [open, setOpen] = useState(false);
+  const hasOpenedRef = useRef(false);
 
   useEffect(() => {
+    // Wait for auth to be ready so we don't show during loading or before user is synced to localStorage
+    if (authStatus !== 'ready') return;
+
     // If logged in, use profile language and do not show popup
     try {
       const userStr = localStorage.getItem('user');
@@ -30,11 +36,26 @@ export function LanguagePreferenceDialog() {
     // Not logged in: show popup if user hasn't set language preference yet
     const hasSetLanguage = localStorage.getItem('languagePreferenceSet');
     if (!hasSetLanguage) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        // Re-check conditions before opening (user may have logged in during delay)
+        try {
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            if (user?.languagePreference === 'zh' || user?.languagePreference === 'en') return;
+          }
+          if (localStorage.getItem('languagePreferenceSet')) return;
+        } catch {
+          /* ignore */
+        }
+        // Only open once (guards against Strict Mode + any race)
+        if (hasOpenedRef.current) return;
+        hasOpenedRef.current = true;
         setOpen(true);
       }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [setLanguage]);
+  }, [authStatus, setLanguage]);
 
   const handleLanguageSelect = (selectedLanguage: 'zh' | 'en') => {
     setLanguage(selectedLanguage);

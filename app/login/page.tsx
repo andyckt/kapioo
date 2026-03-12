@@ -70,6 +70,7 @@ export default function LoginPage() {
         ) {
           setLanguage(sessionResult.user.languagePreference);
           localStorage.setItem('preferredLanguage', sessionResult.user.languagePreference);
+          localStorage.setItem('languagePreferenceSet', 'true');
         }
 
         mergeStoredUser(sessionResult.user);
