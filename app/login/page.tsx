@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,12 +34,16 @@ export default function LoginPage() {
     }
 
     if (user.role === "admin") {
-      router.push(requiresAdminMfa ? "/admin/mfa" : "/admin");
+      router.replace(requiresAdminMfa ? "/admin/mfa" : "/admin");
       return;
     }
 
-    router.push("/dashboard");
+    router.replace("/dashboard");
   }, [authStatus, authenticated, requiresAdminMfa, router, user]);
+
+  const shouldHideLoginForm =
+    authStatus === "loading" ||
+    (authStatus === "ready" && authenticated && !!user)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,9 +86,9 @@ export default function LoginPage() {
         });
 
         if (sessionResult.user.role === 'admin') {
-          router.push(sessionResult.requiresAdminMfa ? '/admin/mfa' : '/admin');
+          router.replace(sessionResult.requiresAdminMfa ? '/admin/mfa' : '/admin');
         } else {
-          router.push('/dashboard');
+          router.replace('/dashboard');
         }
       } else {
         toast({
@@ -103,6 +107,14 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (shouldHideLoginForm) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fff6ef]/50">
+        <Loader2 className="h-8 w-8 animate-spin text-[#C2884E]" />
+      </div>
+    )
   }
 
   return (

@@ -36,10 +36,10 @@ export default function AddressPage() {
         setUser(userData)
       } catch (error) {
         console.error('Error parsing user data:', error)
-        router.push('/login')
+        router.replace('/login')
       }
     } else {
-      router.push('/login')
+      router.replace('/login')
     }
   }, [router])
 

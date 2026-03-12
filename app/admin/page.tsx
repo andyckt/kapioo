@@ -261,7 +261,7 @@ export default function AdminDashboardPage() {
     }
 
     if (!authenticated) {
-      router.push('/login')
+      router.replace('/login')
       return
     }
 
@@ -271,12 +271,12 @@ export default function AdminDashboardPage() {
         description: "You must be an admin to view this page",
         variant: "destructive",
       })
-      router.push('/dashboard')
+      router.replace('/dashboard')
       return
     }
 
     if (requiresAdminMfa) {
-      router.push('/admin/mfa')
+      router.replace('/admin/mfa')
     }
   }, [authStatus, authenticated, requiresAdminMfa, router, toast, user?.role])
 

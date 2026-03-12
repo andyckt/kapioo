@@ -438,7 +438,7 @@ export default function DashboardPage() {
         }
 
         if (!authenticated || !authUser?._id) {
-          routerRef.current.push("/login");
+          routerRef.current.replace("/login");
           return;
         }
 
