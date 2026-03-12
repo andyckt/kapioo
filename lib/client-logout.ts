@@ -2,11 +2,11 @@
 
 import { signOut } from "next-auth/react";
 
+// Keys cleared on logout / when auth says not authenticated.
+// preferredLanguage and languagePreferenceSet are kept so guest language choice persists.
 const USER_SCOPED_STORAGE_KEYS = [
   "user",
   "isAuthenticated",
-  "preferredLanguage",
-  "languagePreferenceSet",
   "selectedMeals",
   "selectedMealPlan",
 ] as const;
