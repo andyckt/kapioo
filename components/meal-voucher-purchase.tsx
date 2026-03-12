@@ -450,7 +450,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       const phoneResult = await ensureUserPhone({
         userId: JSON.parse(localStorage.getItem('user') || '{}')._id,
         phoneInput: phone,
-        requirePhone: isPromoUsed,
+        requirePhone: true,
       })
 
       if (!phoneResult.ok) {

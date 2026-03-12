@@ -567,11 +567,11 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       const isPromoUsed =
         !!appliedPromoCode || promoCodeInput.trim() !== ''
 
-      // Ensure phone is present and saved when promo is used
+      // Phone is mandatory for all credit purchase requests
       const phoneResult = await ensureUserPhone({
         userId,
         phoneInput: phone,
-        requirePhone: isPromoUsed,
+        requirePhone: true,
       })
 
       if (!phoneResult.ok) {

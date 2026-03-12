@@ -54,8 +54,11 @@ Design so the effect runs only when it should. If you get this right, you won't 
 
 ## 7. Single source of truth
 
+**In general:** For every edit, consider whether single source of truth applies. Can this logic, data, or definition live in one place and be reused? Apply where it makes sense for efficiency and maintainability.
+
 - **Plans**: Use `lib/plans/catalog.ts` and service helpers. No hardcoded plan IDs, prices, or counts elsewhere (see plan-catalog-update-playbook).
 - **Shared data**: User profile, dish translations, settings — fetch once, pass down. No redundant fetches for the same data.
+- **Other**: Validation rules, error messages, constants — if the same logic appears in multiple places, centralize it in `lib/` or a shared module.
 
 ## 8. Structure
 

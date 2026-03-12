@@ -84,6 +84,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Phone is required for all credit requests
+    const normalizedUserPhone = normalizePhone(user.phone);
+    if (!normalizedUserPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Phone number is required for credit requests. Please add your phone number and try again.' },
+        { status: 400 }
+      );
+    }
+
     const duration = Number(data.mealPlanQuantity || data.duration);
     const mealsPerWeek = Number(data.mealsPerWeek || String(data.mealPlanType || '').replace('aweek', ''));
     const requestedPlanId =

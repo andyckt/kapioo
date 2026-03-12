@@ -238,7 +238,16 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-    
+
+    // Phone is required for all voucher requests
+    const normalizedUserPhone = normalizePhone(user.phone);
+    if (!normalizedUserPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Phone number is required for voucher requests. Please add your phone number and try again.' },
+        { status: 400 }
+      );
+    }
+
     const voucherType = type as 'twoDish' | 'threeDish';
     const planId =
       body.planId ||
