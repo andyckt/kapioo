@@ -5,17 +5,15 @@ import Order from '@/models/Order';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 
-// Interface for route params
+// Interface for route params (Next.js 15: params is a Promise)
 interface RouteParams {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 // GET handler - get order count for a specific user
 export async function GET(request: Request, { params }: RouteParams) {
+  const { id } = await params;
   try {
-    const { id } = params;
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
       return response;
@@ -46,7 +44,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       count
     });
   } catch (error: any) {
-    console.error(`Error counting orders for user ${params.id}:`, error);
+    console.error(`Error counting orders for user ${id}:`, error);
     return NextResponse.json(
       { success: false, error: 'Failed to count user orders', details: error.message },
       { status: 500 }
