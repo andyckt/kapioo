@@ -16,13 +16,14 @@ const DEFAULT_CUTOFF: CutoffTime = {
  * Fetch the cutoff time from settings
  * Returns default (11:59 AM) if fetch fails
  */
-export async function getCutoffTime(): Promise<CutoffTime> {
+export async function getCutoffTime(options?: { signal?: AbortSignal }): Promise<CutoffTime> {
   try {
     const response = await fetch('/api/settings?key=cutoffTime', {
       cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
-      }
+      },
+      signal: options?.signal,
     });
     
     if (!response.ok) {
@@ -41,6 +42,10 @@ export async function getCutoffTime(): Promise<CutoffTime> {
     
     return DEFAULT_CUTOFF;
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw error;
+    }
+
     console.warn('Error fetching cutoff time, using default:', error);
     return DEFAULT_CUTOFF;
   }

@@ -404,41 +404,6 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab !== "overview") return;
-
-    const controller = new AbortController();
-    async function loadMeals() {
-      try {
-        setIsLoading(true)
-        console.log('[Dashboard] Fetching weekly meals...');
-        const weeklyMeals = await getWeeklyMeals({ signal: controller.signal })
-        
-        console.log('[Dashboard] Meals received:', {
-          count: Object.keys(weeklyMeals).length,
-          days: Object.keys(weeklyMeals),
-          meals: weeklyMeals
-        });
-        
-        setMeals(weeklyMeals)
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') return;
-        console.error('[Dashboard] Error loading meals:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load this week's meals",
-          variant: "destructive"
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    console.log(`[Dashboard] Loading meals for tab: ${activeTab}`);
-    loadMeals()
-    return () => controller.abort();
-  }, [toast, activeTab])
-
-  useEffect(() => {
     const controller = new AbortController();
     async function loadCutoffTime() {
       try {
@@ -493,7 +458,37 @@ export default function DashboardPage() {
         }
 
         applyRef.current(initialUser, { syncForms: true });
-        const refreshedUser = await refreshRef.current({ syncForms: true, signal: controller.signal });
+        setIsLoading(true);
+        setOrderStatsLoading(true);
+        console.log('[Dashboard] Loading user profile, weekly meals, and order stats in parallel...');
+        const [refreshedUser, weeklyMeals, orderStatsResponse] = await Promise.all([
+          refreshRef.current({ syncForms: true, signal: controller.signal }),
+          getWeeklyMeals({ signal: controller.signal }),
+          fetch(`/api/users/${authUser._id}/orders/count`, {
+            signal: controller.signal,
+          }),
+        ]);
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        console.log('[Dashboard] Meals received:', {
+          count: Object.keys(weeklyMeals).length,
+          days: Object.keys(weeklyMeals),
+          meals: weeklyMeals
+        });
+        setMeals(weeklyMeals);
+
+        const orderStatsData = await orderStatsResponse.json();
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        if (orderStatsData.success && orderStatsData.data) {
+          setUpcomingDeliveries(orderStatsData.data.upcomingDeliveries || 0);
+          setTotalOrders(orderStatsData.data.totalOrders || 0);
+        }
+
         if (!refreshedUser) {
           if (controller.signal.aborted) return;
           console.error('Failed to fetch user data from API');
@@ -513,6 +508,8 @@ export default function DashboardPage() {
         });
       } finally {
         setUserLoading(false);
+        setIsLoading(false);
+        setOrderStatsLoading(false);
       }
     }
     
@@ -550,15 +547,6 @@ export default function DashboardPage() {
     }
   }, []);
   
-  // Effect to fetch total orders and upcoming deliveries when userData is loaded
-  useEffect(() => {
-    if (!userData?._id) return;
-
-    const controller = new AbortController();
-    void refreshOrderStats(userData._id, { signal: controller.signal });
-    return () => controller.abort();
-  }, [refreshOrderStats, userData?._id]);
-
   const userProfileContextValue = useMemo(() => ({
     userData,
     cutoffTime,

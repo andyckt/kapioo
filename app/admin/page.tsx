@@ -10,7 +10,7 @@ import { CardTitle } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
@@ -236,20 +236,22 @@ export default function AdminDashboardPage() {
   const [totalUsersLoading, setTotalUsersLoading] = useState(true)
 
   // Fetch total users count for the stats card
-  const fetchTotalUsersStats = async () => {
+  const fetchTotalUsersStats = async (opts?: { signal?: AbortSignal }) => {
     try {
       setTotalUsersLoading(true)
-      const response = await fetch('/api/users/count')
+      const response = await fetch('/api/users/count', { signal: opts?.signal })
+      if (opts?.signal?.aborted) return
       const data = await response.json()
-      
+      if (opts?.signal?.aborted) return
       if (data.success) {
         setTotalUsersCount(data.data.total)
         setUserGrowthRate(data.data.growthRate || 0)
       }
     } catch (error) {
+      if (opts?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return
       console.error('Error fetching total users stats:', error)
     } finally {
-      setTotalUsersLoading(false)
+      if (!opts?.signal?.aborted) setTotalUsersLoading(false)
     }
   }
 
@@ -278,26 +280,50 @@ export default function AdminDashboardPage() {
     }
   }, [authStatus, authenticated, requiresAdminMfa, router, toast, user?.role])
 
+  // Track last successful fetch to avoid duplicate fetches when switching users <-> credits
+  const lastUsersFetchKeyRef = useRef<string | null>(null)
+
   // Fetch users when the tab is switched to 'users' or 'credits'
   useEffect(() => {
-    if (!hasVerifiedAdminSession) {
+    if (!hasVerifiedAdminSession) return
+    if (activeTab !== 'users' && activeTab !== 'credits') return
+
+    const page = usersPagination.page
+    const limit = usersPagination.limit
+    const fetchKey = `${page}-${limit}`
+
+    // Skip refetch when switching between users and credits with same page/limit and we already have data
+    if (users.length > 0 && lastUsersFetchKeyRef.current === fetchKey) {
+      setSearchResults([])
       return
     }
 
-    if (activeTab === 'users' || activeTab === 'credits') {
-      fetchUsers(usersPagination.page, usersPagination.limit)
-      fetchTotalUsersStats()
-      
-      // Reset search results when tab changes
+    const controller = new AbortController()
+    const signal = controller.signal
+
+    const run = async () => {
       setSearchResults([])
+      try {
+        await Promise.all([
+          fetchUsers(page, limit, undefined, undefined, { signal }),
+          fetchTotalUsersStats({ signal })
+        ])
+        if (signal.aborted) return
+        lastUsersFetchKeyRef.current = fetchKey
+      } catch (e) {
+        if (signal.aborted || (e instanceof Error && e.name === 'AbortError')) return
+      }
     }
+    void run()
+    return () => controller.abort()
   }, [activeTab, hasVerifiedAdminSession, usersPagination.page, usersPagination.limit])
 
   const fetchUsers = async (
     page = 1, 
     limit = 10, 
     search?: string, 
-    searchType?: 'all' | 'name' | 'email' | 'userID'
+    searchType?: 'all' | 'name' | 'email' | 'userID',
+    opts?: { signal?: AbortSignal }
   ) => {
     try {
       console.log(`Fetching users, page: ${page}, limit: ${limit}, search: ${search || 'none'}, searchType: ${searchType || 'all'}`);
@@ -316,7 +342,7 @@ export default function AdminDashboardPage() {
           }
         }
         
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: opts?.signal });
         const result = await response.json();
         
         if (result.success && result.data) {
@@ -903,11 +929,13 @@ export default function AdminDashboardPage() {
   };
 
   // Add function to fetch transactions
-  const fetchTransactions = async (page = 1) => {
+  const fetchTransactions = async (page = 1, options?: { signal?: AbortSignal }) => {
     setTransactionsLoading(true);
     try {
       console.log(`Fetching transactions page ${page}, limit ${transactionsPagination.limit}`);
-      const response = await fetch(`/api/transactions?page=${page}&limit=${transactionsPagination.limit}`);
+      const response = await fetch(`/api/transactions?page=${page}&limit=${transactionsPagination.limit}`, {
+        signal: options?.signal,
+      });
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -916,6 +944,9 @@ export default function AdminDashboardPage() {
       }
       
       const data = await response.json();
+      if (options?.signal?.aborted) {
+        return;
+      }
       console.log('Transaction data received:', data);
       
       if (data.success) {
@@ -931,10 +962,15 @@ export default function AdminDashboardPage() {
         setTransactions([]);
       }
     } catch (error) {
+      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) {
+        return;
+      }
       console.error("Error fetching transactions:", error);
       setTransactions([]);
     } finally {
-      setTransactionsLoading(false);
+      if (!options?.signal?.aborted) {
+        setTransactionsLoading(false);
+      }
     }
   };
   
@@ -956,6 +992,7 @@ export default function AdminDashboardPage() {
     }
 
     if (activeTab === "credits") {
+      const controller = new AbortController();
       console.log(`Credits tab is active, users data available: ${users.length} users`);
       
       // If no users data is available yet and not currently loading, fetch users
@@ -964,9 +1001,10 @@ export default function AdminDashboardPage() {
         fetchUsers(usersPagination.page, usersPagination.limit);
       }
       
-      fetchTransactions();
+      void fetchTransactions(1, { signal: controller.signal });
+      return () => controller.abort();
     }
-  }, [activeTab, hasVerifiedAdminSession, users.length, usersLoading]);
+  }, [activeTab, hasVerifiedAdminSession]);
   
   // Add function to handle pagination for transactions
   const handleTransactionPagination = (direction: 'prev' | 'next') => {
@@ -4544,7 +4582,7 @@ function MealManagement() {
       console.log("[Admin] Saving all changes and refreshing menu...");
       
       // Refresh the weekly meals data
-      const updatedMeals = await getAdminWeeklyMeals();
+      const updatedMeals = await getAdminWeeklyMeals({ force: true });
       console.log("[Admin] Updated meals after refresh:", {
         count: Object.keys(updatedMeals).length,
         days: Object.keys(updatedMeals),
@@ -4688,7 +4726,7 @@ function MealManagement() {
         setTimeout(async () => {
           console.log(`[Admin] Refreshing data after toggling ${day}`);
           try {
-            const updatedMeals = await getAdminWeeklyMeals();
+            const updatedMeals = await getAdminWeeklyMeals({ force: true });
             console.log(`[Admin] Received updated meals after toggle:`, {
               days: Object.keys(updatedMeals),
               [day + "_active"]: updatedMeals[day]?.active
@@ -4783,7 +4821,7 @@ function MealManagement() {
         });
         
         // Refresh the data
-        const updatedMeals = await getAdminWeeklyMeals();
+        const updatedMeals = await getAdminWeeklyMeals({ force: true });
         setWeeklyMeals(updatedMeals);
         
         setShowWeekYearModal(false);

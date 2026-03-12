@@ -13,6 +13,7 @@ import {
   type DashboardUserData,
   useOptionalUserProfile,
 } from '@/lib/dashboard-user-profile'
+import { getCutoffTime, type CutoffTime } from '@/lib/cutoff-time'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
 import { RegionCheckDialog } from './region-check-dialog'
 import { 
@@ -46,6 +47,11 @@ type DayData = {
   displayName: string
   week: number
   combos: ComboItem[]
+}
+
+type MenuDataResult = {
+  currentDates: string
+  formattedDays: Record<string, DayData>
 }
 
 type CartItem = {
@@ -92,7 +98,8 @@ export default function DailyDelivery() {
   const [showRegionDialog, setShowRegionDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
   const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
-  const cutoffTime = sharedUserProfile?.cutoffTime ?? DEFAULT_DASHBOARD_CUTOFF_TIME
+  const [localCutoffTime, setLocalCutoffTime] = useState<CutoffTime>(DEFAULT_DASHBOARD_CUTOFF_TIME)
+  const cutoffTime = sharedUserProfile?.cutoffTime ?? localCutoffTime
   
   // State for menu update notification
   const [menuUpdateAvailable, setMenuUpdateAvailable] = useState(false)
@@ -125,37 +132,31 @@ export default function DailyDelivery() {
     "Richmond Hill"
   ]
   
-  // Fetch dish translations
-  useEffect(() => {
-    const controller = new AbortController()
-
-    const fetchDishTranslations = async () => {
-      try {
-        const response = await fetch('/api/dishes', {
-          signal: controller.signal,
+  const fetchDishTranslations = async (options?: { signal?: AbortSignal }): Promise<Record<string, string>> => {
+    try {
+      const response = await fetch('/api/dishes', {
+        signal: options?.signal,
+      });
+      const result = await response.json();
+      if (options?.signal?.aborted) return {}
+      
+      if (result.success && result.data) {
+        // Create a map of Chinese name -> English name
+        const translationsMap: Record<string, string> = {};
+        result.data.forEach((dish: any) => {
+          if (dish.nameEn) {
+            translationsMap[dish.name] = dish.nameEn;
+          }
         });
-        const result = await response.json();
-        if (controller.signal.aborted) return
-        
-        if (result.success && result.data) {
-          // Create a map of Chinese name -> English name
-          const translationsMap: Record<string, string> = {};
-          result.data.forEach((dish: any) => {
-            if (dish.nameEn) {
-              translationsMap[dish.name] = dish.nameEn;
-            }
-          });
-          setDishTranslations(translationsMap);
-        }
-      } catch (error) {
-        if ((error as Error).name === 'AbortError' || controller.signal.aborted) return
-        console.error('Error fetching dish translations:', error);
+        return translationsMap;
       }
-    };
-    
-    void fetchDishTranslations();
-    return () => controller.abort()
-  }, []);
+    } catch (error) {
+      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) return {}
+      console.error('Error fetching dish translations:', error);
+    }
+
+    return {}
+  };
   
   // Check if a day is in the past or today after ordering cutoff time
   const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
@@ -332,78 +333,90 @@ export default function DailyDelivery() {
     }
   };
 
-  // Function to fetch menu data (extracted for reuse)
-  const fetchMenuData = async (options?: { signal?: AbortSignal }) => {
-    try {
-      const pickDefaultAvailableDay = (formattedDays: Record<string, DayData>): string => {
-        const dayIds = Object.keys(formattedDays)
-        if (dayIds.length === 0) return ''
+  const pickDefaultAvailableDay = (
+    formattedDays: Record<string, DayData>,
+    effectiveCutoffTime: CutoffTime
+  ): string => {
+    const dayIds = Object.keys(formattedDays)
+    if (dayIds.length === 0) return ''
 
-        const torontoNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
-        const currentHour = torontoNow.getHours()
-        const currentMinute = torontoNow.getMinutes()
-        const todayYMD = new Date(
-          torontoNow.getFullYear(),
-          torontoNow.getMonth(),
-          torontoNow.getDate()
-        )
-        const tomorrowYMD = new Date(
-          torontoNow.getFullYear(),
-          torontoNow.getMonth(),
-          torontoNow.getDate() + 1
-        )
+    const torontoNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
+    const currentHour = torontoNow.getHours()
+    const currentMinute = torontoNow.getMinutes()
+    const todayYMD = new Date(
+      torontoNow.getFullYear(),
+      torontoNow.getMonth(),
+      torontoNow.getDate()
+    )
+    const tomorrowYMD = new Date(
+      torontoNow.getFullYear(),
+      torontoNow.getMonth(),
+      torontoNow.getDate() + 1
+    )
 
-        const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-        const parseMealDate = (mealDate: string): Date | null => {
-          const parts = mealDate.split(' ')
-          if (parts.length !== 2) return null
+    const parseMealDate = (mealDate: string): Date | null => {
+      const parts = mealDate.split(' ')
+      if (parts.length !== 2) return null
 
-          const monthIndex = shortMonths.findIndex(
-            month => month.toLowerCase() === parts[0].toLowerCase()
-          )
-          const dayNum = parseInt(parts[1], 10)
+      const monthIndex = shortMonths.findIndex(
+        month => month.toLowerCase() === parts[0].toLowerCase()
+      )
+      const dayNum = parseInt(parts[1], 10)
 
-          if (monthIndex === -1 || Number.isNaN(dayNum)) return null
+      if (monthIndex === -1 || Number.isNaN(dayNum)) return null
 
-          let year = torontoNow.getFullYear()
-          // Handle year boundary (e.g. Jan menu while current month is Dec).
-          if (monthIndex < torontoNow.getMonth() - 1) {
-            year += 1
-          }
-
-          return new Date(year, monthIndex, dayNum)
-        }
-
-        const availableDays = dayIds
-          .map((dayId) => {
-            const parsedDate = parseMealDate(formattedDays[dayId]?.date || '')
-            return { dayId, parsedDate }
-          })
-          .filter((entry): entry is { dayId: string; parsedDate: Date } => {
-            if (!entry.parsedDate) return false
-
-            // Same availability rules as ordering:
-            // 1) Past or today is unavailable
-            if (entry.parsedDate.getTime() <= todayYMD.getTime()) return false
-
-            // 2) Tomorrow becomes unavailable after daily cutoff time
-            if (
-              entry.parsedDate.getTime() === tomorrowYMD.getTime() &&
-              (currentHour > cutoffTime.hour || (currentHour === cutoffTime.hour && currentMinute > cutoffTime.minute))
-            ) {
-              return false
-            }
-
-            return true
-          })
-          // Pick the nearest upcoming delivery date (earliest future date)
-          .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
-
-        return availableDays[0]?.dayId || dayIds[0]
+      let year = torontoNow.getFullYear()
+      // Handle year boundary (e.g. Jan menu while current month is Dec).
+      if (monthIndex < torontoNow.getMonth() - 1) {
+        year += 1
       }
 
+      return new Date(year, monthIndex, dayNum)
+    }
+
+    const availableDays = dayIds
+      .map((dayId) => {
+        const parsedDate = parseMealDate(formattedDays[dayId]?.date || '')
+        return { dayId, parsedDate }
+      })
+      .filter((entry): entry is { dayId: string; parsedDate: Date } => {
+        if (!entry.parsedDate) return false
+
+        // Same availability rules as ordering:
+        // 1) Past or today is unavailable
+        if (entry.parsedDate.getTime() <= todayYMD.getTime()) return false
+
+        // 2) Tomorrow becomes unavailable after daily cutoff time
+        if (
+          entry.parsedDate.getTime() === tomorrowYMD.getTime() &&
+          (
+            currentHour > effectiveCutoffTime.hour ||
+            (currentHour === effectiveCutoffTime.hour && currentMinute > effectiveCutoffTime.minute)
+          )
+        ) {
+          return false
+        }
+
+        return true
+      })
+      // Pick the nearest upcoming delivery date (earliest future date)
+      .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
+
+    return availableDays[0]?.dayId || dayIds[0]
+  }
+
+  // Function to fetch menu data (extracted for reuse)
+  const fetchMenuData = async (options?: {
+    signal?: AbortSignal
+    cutoffTime?: CutoffTime
+    updateState?: boolean
+  }): Promise<MenuDataResult | undefined> => {
+    const effectiveCutoffTime = options?.cutoffTime ?? cutoffTime
+
+    try {
       // 🚀 OPTIMIZATION #1: Try the optimized single-request endpoint first
       try {
         const optimizedResponse = await fetch('/api/days/active-with-combos', {
@@ -432,22 +445,22 @@ export default function DailyDelivery() {
             };
           });
           
-          setDays(formattedDays);
-          
           // Store the current dates for comparison (for update detection)
           const currentDates = Object.keys(formattedDays)
             .map(dayId => `${dayId}-${formattedDays[dayId].date}`)
             .sort()
             .join(',');
           
-          // Preselect the nearest upcoming available delivery date
-          if (Object.keys(formattedDays).length > 0) {
-            setSelectedDay(pickDefaultAvailableDay(formattedDays));
+          if (options?.updateState !== false) {
+            setDays(formattedDays);
+            if (Object.keys(formattedDays).length > 0) {
+              setSelectedDay(pickDefaultAvailableDay(formattedDays, effectiveCutoffTime));
+            }
           }
           
           // Success with optimized endpoint
           console.log('✅ Loaded menu using optimized endpoint');
-          return currentDates;
+          return { currentDates, formattedDays };
         }
       } catch (optimizedError) {
         console.log('⚠️ Optimized endpoint failed, falling back to parallel requests');
@@ -513,20 +526,20 @@ export default function DailyDelivery() {
             }
           });
           
-          setDays(formattedDays);
-          
           // Store the current dates for comparison (for update detection)
           const currentDates = Object.keys(formattedDays)
             .map(dayId => `${dayId}-${formattedDays[dayId].date}`)
             .sort()
             .join(',');
           
-          // Preselect the nearest upcoming available delivery date
-          if (Object.keys(formattedDays).length > 0) {
-            setSelectedDay(pickDefaultAvailableDay(formattedDays));
+          if (options?.updateState !== false) {
+            setDays(formattedDays);
+            if (Object.keys(formattedDays).length > 0) {
+              setSelectedDay(pickDefaultAvailableDay(formattedDays, effectiveCutoffTime));
+            }
           }
           
-          return currentDates;
+          return { currentDates, formattedDays };
         }
       }
       return undefined;
@@ -547,20 +560,45 @@ export default function DailyDelivery() {
   // Load data from API on mount
   useEffect(() => {
     const controller = new AbortController();
+    const signal = controller.signal;
 
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const dates = await fetchMenuData({ signal: controller.signal });
-        if (controller.signal.aborted) return
-        if (dates) {
-          setLastFetchedDates(dates);
+        const cutoffPromise = sharedUserProfile?.cutoffTime
+          ? Promise.resolve(sharedUserProfile.cutoffTime)
+          : getCutoffTime({ signal });
+
+        const [menuResult, translationsMap, resolvedCutoffTime] = await Promise.all([
+          fetchMenuData({
+            signal,
+            cutoffTime,
+            updateState: false,
+          }),
+          fetchDishTranslations({ signal }),
+          cutoffPromise,
+        ]);
+
+        if (signal.aborted) return
+
+        setDishTranslations(translationsMap);
+
+        if (!sharedUserProfile?.cutoffTime) {
+          setLocalCutoffTime(resolvedCutoffTime);
+        }
+
+        if (menuResult) {
+          setDays(menuResult.formattedDays);
+          if (Object.keys(menuResult.formattedDays).length > 0) {
+            setSelectedDay(pickDefaultAvailableDay(menuResult.formattedDays, resolvedCutoffTime));
+          }
+          setLastFetchedDates(menuResult.currentDates);
         }
       } catch (error) {
-        if ((error as Error).name === 'AbortError' || controller.signal.aborted) return
+        if ((error as Error).name === 'AbortError' || signal.aborted) return
         console.error('Error in initial data load:', error);
       } finally {
-        if (!controller.signal.aborted) {
+        if (!signal.aborted) {
           setIsLoading(false);
         }
       }
@@ -568,7 +606,7 @@ export default function DailyDelivery() {
     
     void fetchData();
     return () => controller.abort();
-  }, []);
+  }, [sharedUserProfile?.cutoffTime]);
 
   useEffect(() => {
     if (sharedUserProfile) {
@@ -599,7 +637,8 @@ export default function DailyDelivery() {
   useEffect(() => {
     const checkForUpdates = async () => {
       try {
-        const dates = await fetchMenuData();
+        const result = await fetchMenuData();
+        const dates = result?.currentDates;
         if (dates && lastFetchedDates && dates !== lastFetchedDates) {
           console.log('🔔 Daily menu update detected!');
           console.log('Old dates:', lastFetchedDates);
@@ -624,9 +663,9 @@ export default function DailyDelivery() {
     setIsLoading(true);
     
     try {
-      const dates = await fetchMenuData();
-      if (dates) {
-        setLastFetchedDates(dates);
+      const result = await fetchMenuData();
+      if (result?.currentDates) {
+        setLastFetchedDates(result.currentDates);
       }
       
       // Clear cart to prevent stale date issues

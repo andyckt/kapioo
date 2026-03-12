@@ -24,6 +24,13 @@ export type WeeklyMeals = {
   [key: string]: Meal
 }
 
+const WEEKLY_MEALS_CACHE_DURATION_MS = 2 * 60 * 1000;
+
+type WeeklyMealsCacheEntry = {
+  data: WeeklyMeals;
+  timestamp: number;
+};
+
 // Default weekly meals data for fallback
 const DEFAULT_WEEKLY_MEALS: WeeklyMeals = {
   monday: {
@@ -128,14 +135,32 @@ const DEFAULT_WEEKLY_MEALS: WeeklyMeals = {
   },
 };
 
+let weeklyMealsCache: WeeklyMealsCacheEntry | null = null;
+let adminWeeklyMealsCache: WeeklyMealsCacheEntry | null = null;
+
+function getCachedWeeklyMeals(cacheEntry: WeeklyMealsCacheEntry | null): WeeklyMeals | null {
+  if (!cacheEntry) {
+    return null;
+  }
+
+  if (Date.now() - cacheEntry.timestamp > WEEKLY_MEALS_CACHE_DURATION_MS) {
+    return null;
+  }
+
+  return cacheEntry.data;
+}
+
 // Get weekly meals from the API
-export async function getWeeklyMeals(options?: { signal?: AbortSignal }): Promise<WeeklyMeals> {
+export async function getWeeklyMeals(options?: { signal?: AbortSignal; force?: boolean }): Promise<WeeklyMeals> {
+  if (!options?.force) {
+    const cachedMeals = getCachedWeeklyMeals(weeklyMealsCache);
+    if (cachedMeals) {
+      return cachedMeals;
+    }
+  }
+
   try {
-    // Add a timestamp parameter to prevent caching
-    const timestamp = new Date().getTime();
-    console.log(`[getWeeklyMeals] Fetching meals with cache-buster: ${timestamp}`);
-    
-    const response = await fetch(`/api/weekly-meals?_t=${timestamp}`, {
+    const response = await fetch('/api/weekly-meals', {
       cache: 'no-store',
       headers: {
         'Pragma': 'no-cache',
@@ -144,7 +169,6 @@ export async function getWeeklyMeals(options?: { signal?: AbortSignal }): Promis
       signal: options?.signal
     });
     const result = await response.json();
-    
     console.log('[getWeeklyMeals] Raw API Response:', result);
     
     if (result.success && result.data) {
@@ -179,13 +203,22 @@ export async function getWeeklyMeals(options?: { signal?: AbortSignal }): Promis
         });
       }
       
-      return result.data as WeeklyMeals;
+      const meals = result.data as WeeklyMeals;
+      weeklyMealsCache = {
+        data: meals,
+        timestamp: Date.now(),
+      };
+      return meals;
     }
     
     console.error('Failed to fetch weekly meals from API');
     // Fall back to default meals
     return DEFAULT_WEEKLY_MEALS;
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw error;
+    }
+
     console.error('Error fetching weekly meals:', error);
     // Fall back to default meals on error
     return DEFAULT_WEEKLY_MEALS;
@@ -193,13 +226,16 @@ export async function getWeeklyMeals(options?: { signal?: AbortSignal }): Promis
 }
 
 // Get all weekly meals for admin (including inactive days)
-export async function getAdminWeeklyMeals(): Promise<WeeklyMeals> {
+export async function getAdminWeeklyMeals(options?: { force?: boolean }): Promise<WeeklyMeals> {
+  if (!options?.force) {
+    const cachedMeals = getCachedWeeklyMeals(adminWeeklyMealsCache);
+    if (cachedMeals) {
+      return cachedMeals;
+    }
+  }
+
   try {
-    // Add a timestamp parameter to prevent caching
-    const timestamp = new Date().getTime();
-    console.log(`[getAdminWeeklyMeals] Fetching admin meals with cache-buster: ${timestamp}`);
-    
-    const response = await fetch(`/api/weekly-meals/admin?_t=${timestamp}`, {
+    const response = await fetch('/api/weekly-meals/admin', {
       cache: 'no-store',
       headers: {
         'Pragma': 'no-cache',
@@ -225,7 +261,12 @@ export async function getAdminWeeklyMeals(): Promise<WeeklyMeals> {
         console.log(`  - ${day}: active=${mealsData[day].active}`);
       }
       
-      return mealsData as WeeklyMeals;
+      const meals = mealsData as WeeklyMeals;
+      adminWeeklyMealsCache = {
+        data: meals,
+        timestamp: Date.now(),
+      };
+      return meals;
     }
     
     console.error('Failed to fetch admin weekly meals from API');

@@ -114,6 +114,7 @@ export function ViewAllOrders() {
     deliveryDateEnd: '',
     comboName: 'all'
   })
+  const [debouncedFilters, setDebouncedFilters] = useState(filters)
   const [comboNames, setComboNames] = useState<string[]>([])
   const [deliveryDates, setDeliveryDates] = useState<Array<{date: string, day: string, display: string}>>([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -358,12 +359,27 @@ export function ViewAllOrders() {
     }
   }
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedFilters(filters)
+    }, 300)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [filters])
+
   // Load orders when component mounts or filters change
   useEffect(() => {
     const controller = new AbortController()
     void fetchOrders(1, { signal: controller.signal })
     return () => controller.abort()
-  }, [filters.status, filters.area, filters.search, filters.deliveryDate, filters.deliveryDateEnd, filters.comboName])
+  }, [
+    debouncedFilters.status,
+    debouncedFilters.area,
+    debouncedFilters.search,
+    debouncedFilters.deliveryDate,
+    debouncedFilters.deliveryDateEnd,
+    debouncedFilters.comboName,
+  ])
   
   // Load areas, delivery dates, and combo names when component mounts
   useEffect(() => {

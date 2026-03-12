@@ -35,7 +35,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { WeeklyAddressDialog } from '@/components/weekly-address-dialog'
-import { ensureUserPhone, getStoredUser } from "@/lib/phone-helper"
+import { ensureUserPhone, getStoredUser, normalizePhoneInput } from "@/lib/phone-helper"
 
 interface CreditPurchasePlansProps {
   userId: string;
@@ -199,6 +199,26 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       setPhone(storedUser.phone)
     }
   }, [])
+
+  useEffect(() => {
+    const normalizedPhone = normalizePhoneInput(phone)
+    const storedPhone = normalizePhoneInput(getStoredUser()?.phone || '')
+    const needsSync = Boolean(normalizedPhone) && normalizedPhone !== storedPhone
+
+    if (!needsSync) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void ensureUserPhone({
+        userId,
+        phoneInput: normalizedPhone,
+        requirePhone: false,
+      })
+    }, 400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [phone, userId])
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

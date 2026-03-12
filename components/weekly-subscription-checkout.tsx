@@ -345,30 +345,50 @@ export function WeeklySubscriptionCheckout({
       console.log('User ID:', userData._id);
       console.log('Props before fetch - weeklySIXmeals:', weeklySIXmeals, 'weeklyEIGHTmeals:', weeklyEIGHTmeals, 'weeklyTENmeals:', weeklyTENmeals, 'weeklyTWELVEmeals:', weeklyTWELVEmeals);
       
-      const freshUserResponse = await fetch(`/api/users/${userData._id}`);
-      const freshUserData = await freshUserResponse.json();
+      // CRITICAL FIX: Fetch fresh user data and delivery days in parallel before checkout validation.
+      // This keeps validation up to date without adding an avoidable waterfall.
+      console.log('=== CHECKOUT DEBUG: Fetching fresh delivery days from database ===');
+      console.log('Delivery days prop before fetch:', deliveryDays.map(d => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
+
+      const [freshUserData, freshDeliveryDaysData] = await Promise.all([
+        fetch(`/api/users/${userData._id}`).then((response) => response.json()),
+        fetch('/api/weekly-subscription/user').then((response) => response.json()),
+      ]);
 
       if (!freshUserData.success || !freshUserData.data) {
         console.error('Failed to fetch fresh user data:', freshUserData.error);
         throw new Error(freshUserData.error || 'Failed to fetch user data for validation');
       }
       
+      if (!freshDeliveryDaysData.success || !freshDeliveryDaysData.data) {
+        console.error('Failed to fetch fresh delivery days:', freshDeliveryDaysData.error);
+        throw new Error('Failed to fetch current delivery schedule');
+      }
+      
       const freshUser = freshUserData.data;
       console.log('Fresh user data from DB - weeklySIXmeals:', freshUser.weeklySIXmeals, 'weeklyEIGHTmeals:', freshUser.weeklyEIGHTmeals, 'weeklyTENmeals:', freshUser.weeklyTENmeals, 'weeklyTWELVEmeals:', freshUser.weeklyTWELVEmeals);
       
+      const freshDeliveryDays = freshDeliveryDaysData.data;
+      console.log('Fresh delivery days from DB:', freshDeliveryDays.map((d: any) => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
+      
+      // Use fresh delivery days for date mapping instead of stale props
+      const currentDeliveryDays = freshDeliveryDays;
+
       // NEW: Validate consecutive dates BEFORE processing
-      // Extract unique dates from cart
+      // Extract unique dates from cart using the fresh schedule
       const uniqueDates = Array.from(new Set(
         cart.map(item => {
-          const day = deliveryDays.find(d => d.id === item.dayId && d.weekOffset === item.weekOffset);
+          const day = currentDeliveryDays.find((deliveryDay: any) => (
+            deliveryDay.id === item.dayId && deliveryDay.weekOffset === item.weekOffset
+          ));
           return day?.date;
         }).filter(Boolean)
       )) as string[];
       
       console.log('🔍 CHECKOUT VALIDATION: Unique dates in cart:', uniqueDates);
       
-      // Validate consecutive dates
-      const validation = validateSelectedDates(uniqueDates, deliveryDays);
+      // Validate consecutive dates against the current delivery schedule
+      const validation = validateSelectedDates(uniqueDates, currentDeliveryDays);
       
       if (!validation.isValid) {
         console.log('❌ CHECKOUT VALIDATION: Failed -', validation.error);
@@ -388,25 +408,6 @@ export function WeeklySubscriptionCheckout({
       const freshTenMeals = freshUser.weeklyTENmeals || 0;
       const freshTwelveMeals = freshUser.weeklyTWELVEmeals || 0;
       const freshSixteenMeals = freshUser.weeklySIXTEENmeals || 0;
-      
-      // CRITICAL FIX: Fetch fresh delivery days from database before checkout
-      // This prevents stale dates if admin rolled forward while user was browsing
-      console.log('=== CHECKOUT DEBUG: Fetching fresh delivery days from database ===');
-      console.log('Delivery days prop before fetch:', deliveryDays.map(d => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
-      
-      const freshDeliveryDaysResponse = await fetch('/api/weekly-subscription/user');
-      const freshDeliveryDaysData = await freshDeliveryDaysResponse.json();
-      
-      if (!freshDeliveryDaysData.success || !freshDeliveryDaysData.data) {
-        console.error('Failed to fetch fresh delivery days:', freshDeliveryDaysData.error);
-        throw new Error('Failed to fetch current delivery schedule');
-      }
-      
-      const freshDeliveryDays = freshDeliveryDaysData.data;
-      console.log('Fresh delivery days from DB:', freshDeliveryDays.map((d: any) => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
-      
-      // Use fresh delivery days for date mapping instead of stale props
-      const currentDeliveryDays = freshDeliveryDays;
       
       // Group cart items by date using FRESH delivery days
       const cartByDate: Record<string, CartItem[]> = {};

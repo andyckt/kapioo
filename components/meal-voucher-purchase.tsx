@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast'
 import { mergeStoredUser } from '@/lib/client-user-cache'
 import { useLanguage } from '@/lib/language-context'
-import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
+import { ensureUserPhone, getStoredUser, normalizePhoneInput } from '@/lib/phone-helper'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
 import { listDailyPlans } from '@/lib/plans/service'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -518,28 +518,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       if (onSuccess) {
         onSuccess()
       }
-      
-      // Refresh voucher balance (will update once approved)
-      const fetchVoucherBalance = async () => {
-        const userData = localStorage.getItem('user')
-        if (!userData) return
-        
-        try {
-          const user = JSON.parse(userData)
-          const response = await fetch(`/api/users/${user._id}/vouchers`)
-          
-          if (response.ok) {
-            const data = await response.json()
-            if (data.success) {
-              setCurrentTwoDishVouchers(data.data.twoDishVoucher || 0)
-              setCurrentThreeDishVouchers(data.data.threeDishVoucher || 0)
-            }
-          }
-        } catch (error) {
-          console.error('Error refreshing voucher balance:', error)
-        }
-      }
-      
     } catch (error) {
       console.error('Error submitting purchase request:', error)
       toast({
@@ -1219,6 +1197,28 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       setPhone(storedUser.phone)
     }
   }, [])
+
+  useEffect(() => {
+    const storedUser = getStoredUser()
+    const userId = storedUser?._id
+    const normalizedPhone = normalizePhoneInput(phone)
+    const storedPhone = normalizePhoneInput(storedUser?.phone || '')
+    const needsSync = Boolean(userId && normalizedPhone) && normalizedPhone !== storedPhone
+
+    if (!needsSync) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void ensureUserPhone({
+        userId: userId as string,
+        phoneInput: normalizedPhone,
+        requirePhone: false,
+      })
+    }, 400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [phone])
   
   // Track if component is mounted to prevent state updates after unmount
   const isMounted = useRef(true);
