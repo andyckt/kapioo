@@ -133,13 +133,16 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
   const { t, language } = useLanguage();
 
   // Fetch daily delivery orders for the user
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = async (page = 1, options?: { signal?: AbortSignal }) => {
     if (!userId) return;
     
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/daily-delivery/order?userId=${userId}&page=${page}&limit=${pagination.limit}`);
+      const response = await fetch(`/api/daily-delivery/order?userId=${userId}&page=${page}&limit=${pagination.limit}`, {
+        signal: options?.signal,
+      });
       const data = await response.json();
+      if (options?.signal?.aborted) return;
       
       if (data.success) {
         setOrders(data.data.orders || []);
@@ -158,6 +161,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
         });
       }
     } catch (error) {
+      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) return;
       console.error("Error fetching daily delivery orders:", error);
       toast({
         title: t('errorOccurred'),
@@ -165,7 +169,9 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      if (!options?.signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -196,9 +202,12 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
 
   // Load orders when component mounts
   useEffect(() => {
-    if (userId) {
-      fetchOrders();
-    }
+    if (!userId) return;
+
+    const controller = new AbortController();
+    void fetchOrders(1, { signal: controller.signal });
+
+    return () => controller.abort();
   }, [userId]);
 
   // Handle pagination

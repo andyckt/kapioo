@@ -6,19 +6,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 import { Clock, Save, RefreshCw } from 'lucide-react'
 
 export function SettingsManagement() {
   const { toast } = useToast()
+  const sharedUserProfile = useOptionalUserProfile()
   const [cutoffHour, setCutoffHour] = useState<number>(11)
   const [cutoffMinute, setCutoffMinute] = useState<number>(59)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Fetch current cutoff time setting
   useEffect(() => {
+    if (sharedUserProfile?.cutoffTime) {
+      setCutoffHour(sharedUserProfile.cutoffTime.hour)
+      setCutoffMinute(sharedUserProfile.cutoffTime.minute)
+      return
+    }
+
     fetchCutoffTime()
-  }, [])
+  }, [sharedUserProfile?.cutoffTime])
 
   const fetchCutoffTime = async () => {
     try {

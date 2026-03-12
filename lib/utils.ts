@@ -129,7 +129,7 @@ const DEFAULT_WEEKLY_MEALS: WeeklyMeals = {
 };
 
 // Get weekly meals from the API
-export async function getWeeklyMeals(): Promise<WeeklyMeals> {
+export async function getWeeklyMeals(options?: { signal?: AbortSignal }): Promise<WeeklyMeals> {
   try {
     // Add a timestamp parameter to prevent caching
     const timestamp = new Date().getTime();
@@ -140,7 +140,8 @@ export async function getWeeklyMeals(): Promise<WeeklyMeals> {
       headers: {
         'Pragma': 'no-cache',
         'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
+      },
+      signal: options?.signal
     });
     const result = await response.json();
     
@@ -496,9 +497,11 @@ export async function getAllUsersForExport(): Promise<User[]> {
 }
 
 // Get a user by ID
-export async function getUserById(id: string): Promise<User | null> {
+export async function getUserById(id: string, options?: { signal?: AbortSignal }): Promise<User | null> {
   try {
-    const response = await fetch(`/api/users/${id}`);
+    const response = await fetch(`/api/users/${id}`, {
+      signal: options?.signal
+    });
     const result = await response.json();
     
     if (result.success && result.data) {

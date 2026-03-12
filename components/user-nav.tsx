@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { CreditCard, LogOut, Settings, User, ShoppingCart, Gem, Ticket } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { useUserProfile } from "@/lib/dashboard-user-profile"
 import { performClientLogout } from "@/lib/client-logout"
 import { useLanguage } from "@/lib/language-context"
 import { Badge } from "@/components/ui/badge"
@@ -24,86 +25,8 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
   const router = useRouter()
   const { toast } = useToast()
   const { t, language } = useLanguage()
-  const [userData, setUserData] = useState<{ 
-    name?: string; 
-    email?: string; 
-    userID?: string; 
-    _id?: string;
-    credits?: number;
-    twoDishVoucher?: number;
-    threeDishVoucher?: number;
-    weeklySIXmeals?: number;
-    weeklyEIGHTmeals?: number;
-    weeklyTENmeals?: number;
-    weeklyTWELVEmeals?: number;
-  } | null>(null)
-  const [upcomingDeliveries, setUpcomingDeliveries] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
-  
-  useEffect(() => {
-    // Get user data from localStorage when component mounts
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        setUserData(user)
-        
-        // If user has _id, fetch complete user data with credits and vouchers
-        if (user && user._id) {
-          fetchUserData(user._id)
-          fetchOrderStats(user._id)
-        }
-      } catch (e) {
-        console.error('Error parsing user data:', e)
-      }
-    }
-  }, [])
-  
-  // Fetch data when dropdown is opened
-  useEffect(() => {
-    if (isOpen && userData?._id) {
-      fetchUserData(userData._id)
-      fetchOrderStats(userData._id)
-    }
-  }, [isOpen])
-  
-  // Fetch complete user data including credits and vouchers
-  const fetchUserData = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/users/${userId}`)
-      const data = await response.json()
-      
-      if (data.success && data.data) {
-        // Update userData with credits and vouchers
-        setUserData(prevData => ({
-          ...prevData,
-          credits: data.data.credits,
-          twoDishVoucher: data.data.twoDishVoucher,
-          threeDishVoucher: data.data.threeDishVoucher,
-          weeklySIXmeals: data.data.weeklySIXmeals,
-          weeklyEIGHTmeals: data.data.weeklyEIGHTmeals,
-          weeklyTENmeals: data.data.weeklyTENmeals,
-          weeklyTWELVEmeals: data.data.weeklyTWELVEmeals
-        }))
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error)
-    }
-  }
-  
-  // Fetch order statistics
-  const fetchOrderStats = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/users/${userId}/orders/count`)
-      const data = await response.json()
-      
-      if (data.success && data.data) {
-        setUpcomingDeliveries(data.data.upcomingDeliveries)
-      }
-    } catch (error) {
-      console.error('Error fetching order statistics:', error)
-    }
-  }
+  const { userData, upcomingDeliveries } = useUserProfile()
   
   const handleLogout = async () => {
     await performClientLogout()

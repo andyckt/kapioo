@@ -45,13 +45,16 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
   // Fetch voucher purchase requests
-  const fetchRequests = async (page = 1) => {
+  const fetchRequests = async (page = 1, options?: { signal?: AbortSignal }) => {
     if (!userId) return;
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/voucher-requests?userId=${userId}&page=${page}&limit=${pagination.limit}`);
+      const response = await fetch(`/api/voucher-requests?userId=${userId}&page=${page}&limit=${pagination.limit}`, {
+        signal: options?.signal,
+      });
       const data = await response.json();
+      if (options?.signal?.aborted) return;
       
       if (data.success) {
         setRequests(data.data);
@@ -70,6 +73,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
         });
       }
     } catch (error) {
+      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) return;
       console.error("Error fetching voucher requests:", error);
       toast({
         title: language === 'en' ? "Error" : "错误",
@@ -77,16 +81,21 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      if (!options?.signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
   // Load requests when component mounts or refreshKey changes
   useEffect(() => {
-    if (userId) {
-      console.log('VoucherPurchaseHistory: Fetching requests', { refreshKey });
-      fetchRequests();
-    }
+    if (!userId) return;
+
+    console.log('VoucherPurchaseHistory: Fetching requests', { refreshKey });
+    const controller = new AbortController();
+    void fetchRequests(1, { signal: controller.signal });
+
+    return () => controller.abort();
   }, [userId, refreshKey]);
 
   // Handle pagination

@@ -44,13 +44,16 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
   // Fetch credit purchase requests
-  const fetchRequests = async (page = 1) => {
+  const fetchRequests = async (page = 1, options?: { signal?: AbortSignal }) => {
     if (!userId) return;
     
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/credits/request?userId=${userId}&page=${page}&limit=${pagination.limit}`);
+      const response = await fetch(`/api/credits/request?userId=${userId}&page=${page}&limit=${pagination.limit}`, {
+        signal: options?.signal,
+      });
       const data = await response.json();
+      if (options?.signal?.aborted) return;
       
       if (data.success) {
         setRequests(data.data.requests);
@@ -69,6 +72,7 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
         });
       }
     } catch (error) {
+      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) return;
       console.error("Error fetching credit requests:", error);
       toast({
         title: language === 'en' ? "Error" : "错误",
@@ -76,16 +80,21 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      if (!options?.signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
   // Load requests when component mounts or when key changes
   useEffect(() => {
-    if (userId) {
-      console.log('CreditPurchaseHistory: Fetching requests');
-      fetchRequests();
-    }
+    if (!userId) return;
+
+    console.log('CreditPurchaseHistory: Fetching requests');
+    const controller = new AbortController();
+    void fetchRequests(1, { signal: controller.signal });
+
+    return () => controller.abort();
   }, [userId]);
   
   // Force refresh when component is remounted with a new key

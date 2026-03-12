@@ -237,10 +237,11 @@ export async function deleteMealOption(id: string): Promise<boolean> {
 }
 
 // Get all delivery days and meal options for users
-export async function getUserWeeklySubscription(): Promise<DeliveryDay[]> {
+export async function getUserWeeklySubscription(options?: { signal?: AbortSignal }): Promise<DeliveryDay[]> {
   try {
     const response = await fetch('/api/weekly-subscription/user', {
       cache: 'no-store',
+      signal: options?.signal,
       headers: {
         'Pragma': 'no-cache',
         'Cache-Control': 'no-cache, no-store, must-revalidate'
@@ -256,6 +257,9 @@ export async function getUserWeeklySubscription(): Promise<DeliveryDay[]> {
     console.error('Failed to fetch user subscription data');
     return [];
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      return [];
+    }
     console.error('Error fetching user subscription data:', error);
     return [];
   }

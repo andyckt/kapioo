@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
@@ -16,6 +16,7 @@ import { getUserWeeklySubscription, sortDeliveryDays, getAdjacentDates, validate
 import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
 import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
+import { DEFAULT_DASHBOARD_CUTOFF_TIME, useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 import { mergeStoredUser } from '@/lib/client-user-cache'
 
@@ -61,34 +62,14 @@ export default function WeeklySubscription({
   // Address confirmation dialog state
   const [showAddressDialog, setShowAddressDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string>("")
-  const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
+  const sharedUserProfile = useOptionalUserProfile()
+  const cutoffTime = sharedUserProfile?.cutoffTime ?? DEFAULT_DASHBOARD_CUTOFF_TIME
   
   // State for menu update notification
   const [menuUpdateAvailable, setMenuUpdateAvailable] = useState(false)
   const [lastFetchedDates, setLastFetchedDates] = useState<string>('')
-  
-  // Fetch cutoff time from settings
-  useEffect(() => {
-    const fetchCutoffTime = async () => {
-      try {
-        const response = await fetch('/api/settings?key=cutoffTime', {
-          cache: 'no-store'
-        });
-        const data = await response.json();
-        
-        if (data.success && data.data?.value) {
-          setCutoffTime({
-            hour: data.data.value.hour || 11,
-            minute: data.data.value.minute || 59
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to fetch cutoff time, using default 11:59 AM', error);
-      }
-    };
-    
-    fetchCutoffTime();
-  }, [])
+  const toastRef = useRef(toast)
+  toastRef.current = toast
   
   // Function to check if a day is unavailable for ordering
   // Updated to use dynamic cutoff time from settings
@@ -236,10 +217,13 @@ export default function WeeklySubscription({
 
   // Fetch delivery days and meal options from API
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const data = await getUserWeeklySubscription();
+        const data = await getUserWeeklySubscription({ signal: controller.signal });
+        if (controller.signal.aborted) return;
         console.log('🔍 FRONTEND DEBUG: Received delivery days from API:', data);
         
         if (data && data.length > 0) {
@@ -284,19 +268,23 @@ export default function WeeklySubscription({
           setDeliveryDays([]);
         }
       } catch (error) {
+        if ((error as Error).name === 'AbortError' || controller.signal.aborted) return;
         console.error("Error fetching weekly subscription data:", error);
-        toast({
+        toastRef.current({
           title: language === 'zh' ? '错误' : 'Error',
           description: language === 'zh' ? '无法加载订阅数据' : 'Failed to load subscription data',
           variant: "destructive"
         });
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchData();
-  }, [language, toast])
+    void fetchData();
+    return () => controller.abort();
+  }, [language])
   
   // NEW: Track selected dates from cart (Update B & C)
   useEffect(() => {

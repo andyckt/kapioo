@@ -46,6 +46,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { CartItem, DayData, submitDailyOrder, formatAddress } from '@/lib/daily-delivery'
 import { mergeStoredUser } from '@/lib/client-user-cache'
+import { useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 
 // Define the supported regions for daily delivery
 const DAILY_DELIVERY_REGIONS = [
@@ -66,6 +67,7 @@ interface DailyDeliveryCheckoutProps {
   }
   setUserVouchers: (vouchers: { twoDish: number, threeDish: number }) => void
   days: Record<string, DayData>
+  dishTranslations: Record<string, string>
 }
 
 export function DailyDeliveryCheckout({
@@ -74,10 +76,12 @@ export function DailyDeliveryCheckout({
   onSuccess,
   userVouchers,
   setUserVouchers,
-  days
+  days,
+  dishTranslations
 }: DailyDeliveryCheckoutProps) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
+  const sharedUserProfile = useOptionalUserProfile()
   const [isLoading, setIsLoading] = useState(false)
   const [userData, setUserData] = useState<any>(null)
   const [formData, setFormData] = useState({
@@ -99,7 +103,6 @@ export function DailyDeliveryCheckout({
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
   const [tempSelectedArea, setTempSelectedArea] = useState<string>("")
-  const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
 
   // Helper function to translate combo names
   const translateComboName = (name: string): string => {
@@ -118,31 +121,6 @@ export function DailyDeliveryCheckout({
     }
     return dishTranslations[dishName] || dishName
   }
-  
-  // Fetch dish translations on component mount
-  useEffect(() => {
-    const fetchDishTranslations = async () => {
-      try {
-        const response = await fetch('/api/dishes');
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          // Create a map of Chinese name -> English name
-          const translationsMap: Record<string, string> = {};
-          result.data.forEach((dish: any) => {
-            if (dish.nameEn) {
-              translationsMap[dish.name] = dish.nameEn;
-            }
-          });
-          setDishTranslations(translationsMap);
-        }
-      } catch (error) {
-        console.error('Error fetching dish translations:', error);
-      }
-    };
-    
-    fetchDishTranslations();
-  }, []);
 
   // Calculate total vouchers needed by type
   const vouchersNeeded = cart.reduce(
@@ -157,7 +135,7 @@ export function DailyDeliveryCheckout({
     { twoDish: 0, threeDish: 0 }
   )
   
-  // Load user data from localStorage, with fallback fetch when address is missing
+  // Load user data: inside dashboard provider = never fetch (use shared or localStorage while waiting)
   useEffect(() => {
     const applyUserToForm = (user: any) => {
       setUserData(user)
@@ -183,12 +161,30 @@ export function DailyDeliveryCheckout({
       }
     }
 
+    if (sharedUserProfile) {
+      // Inside provider: never fetch. Use shared data when ready, else localStorage while waiting
+      if (sharedUserProfile.userData) {
+        applyUserToForm(sharedUserProfile.userData)
+      } else {
+        const storedUser = localStorage.getItem('user')
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser)
+            applyUserToForm(user)
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      return
+    }
+
+    // Outside provider: localStorage + fallback fetch when needsAddress
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
       const user = JSON.parse(storedUser)
       applyUserToForm(user)
 
-      // If user has _id but no address (or empty), fetch full user from API (localStorage may be incomplete)
       const needsAddress = !user.address || !user.address.streetAddress
       if (user._id && needsAddress) {
         fetch(`/api/users/${user._id}`)
@@ -208,7 +204,7 @@ export function DailyDeliveryCheckout({
           .catch(() => {})
       }
     }
-  }, [])
+  }, [sharedUserProfile?.userData])
 
   // Handle input change for all form fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

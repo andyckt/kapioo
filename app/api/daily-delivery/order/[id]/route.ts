@@ -7,9 +7,9 @@ import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-custom
 
 // Interface for route params
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // Define the interface for the DailyOrder document
@@ -110,13 +110,16 @@ let DailyDeliveryOrder: mongoose.Model<DailyOrderDocument>;
 
 // GET handler - get a specific order by ID
 export async function GET(request: Request, { params }: RouteParams) {
+  let orderId = '';
+
   try {
     const { actor, response } = await requireUser();
     if (!actor || response) {
       return response;
     }
 
-    const { id } = params;
+    const resolvedParams = await params;
+    orderId = resolvedParams.id;
     
     await connectToDatabase();
     
@@ -128,7 +131,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
     
     // Find the order by orderId
-    const order = await DailyDeliveryOrder.findOne({ orderId: id });
+    const order = await DailyDeliveryOrder.findOne({ orderId });
     
     if (!order) {
       return NextResponse.json(
@@ -160,7 +163,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
     });
   } catch (error: any) {
-    console.error(`Error fetching order ${params.id}:`, error);
+    console.error(`Error fetching order ${orderId}:`, error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch order', details: error.message },
       { status: 500 }

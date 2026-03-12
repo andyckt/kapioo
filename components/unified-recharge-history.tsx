@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
 import { Loader2, ExternalLink, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Image as ImageIcon, Gem, Ticket } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,7 +16,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 
 interface UnifiedRechargeHistoryProps {
@@ -31,7 +29,7 @@ export function UnifiedRechargeHistory({
   weeklyRefreshKey = 0, 
   dailyRefreshKey = 0 
 }: UnifiedRechargeHistoryProps) {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { toast } = useToast();
   const toNumber = (value: unknown) => {
     const parsed = Number(value);
@@ -39,97 +37,99 @@ export function UnifiedRechargeHistory({
   };
   const formatMoney = (value: unknown) => toNumber(value).toFixed(2);
   
-  // Combined requests array
-  const [requests, setRequests] = useState<any[]>([]);
+  const paginationLimit = 10;
+  const [allRequests, setAllRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: paginationLimit,
     total: 0,
     pages: 1
   });
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
-  // Fetch both types of recharge requests and combine them
-  const fetchRequests = async (page = 1) => {
-    if (!userId) return;
-    
-    setIsLoading(true);
-    try {
-      // Fetch weekly subscription recharge requests
-      const weeklyResponse = await fetch(`/api/credits/request?userId=${userId}&page=1&limit=100`);
-      const weeklyData = await weeklyResponse.json();
-      
-      // Fetch daily delivery recharge requests
-      const dailyResponse = await fetch(`/api/voucher-requests?userId=${userId}&page=1&limit=100`);
-      const dailyData = await dailyResponse.json();
-      
-      let combinedRequests = [];
-      
-      // Process weekly requests
-      if (weeklyData.success && weeklyData.data && weeklyData.data.requests) {
-        const processedWeeklyRequests = weeklyData.data.requests.map((req: any) => ({
-          ...req,
-          requestType: 'weekly',
-          displayType: language === 'zh' ? '周次Meal Box' : 'Weekly Subscription'
-        }));
-        combinedRequests = [...combinedRequests, ...processedWeeklyRequests];
-      }
-      
-      // Process daily requests
-      if (dailyData.success && dailyData.data) {
-        const processedDailyRequests = dailyData.data.map((req: any) => ({
-          ...req,
-          requestType: 'daily',
-          displayType: language === 'zh' ? '每日直送' : 'Daily Delivery'
-        }));
-        combinedRequests = [...combinedRequests, ...processedDailyRequests];
-      }
-      
-      // Sort combined requests by date (newest first)
-      combinedRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      // Apply pagination
-      const startIndex = (page - 1) * pagination.limit;
-      const endIndex = startIndex + pagination.limit;
-      const paginatedRequests = combinedRequests.slice(startIndex, endIndex);
-      
-      setRequests(paginatedRequests);
-      setPagination({
-        page,
-        limit: pagination.limit,
-        total: combinedRequests.length,
-        pages: Math.ceil(combinedRequests.length / pagination.limit)
-      });
-    } catch (error) {
-      console.error("Error fetching recharge requests:", error);
-      toast({
-        title: language === 'en' ? "Error" : "错误",
-        description: language === 'en' ? "Failed to load recharge requests" : "加载充值请求失败",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Paginated slice derived from allRequests
+  const startIndex = (pagination.page - 1) * pagination.limit;
+  const requests = allRequests.slice(startIndex, startIndex + pagination.limit);
 
-  // Load requests when component mounts or refresh keys change
+  // Load requests when component mounts or refresh keys change (with AbortController cleanup)
   useEffect(() => {
-    if (userId) {
-      console.log('UnifiedRechargeHistory: Fetching requests', { weeklyRefreshKey, dailyRefreshKey });
-      fetchRequests();
-    }
+    if (!userId) return;
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const run = async () => {
+      setIsLoading(true);
+      try {
+        const [weeklyResponse, dailyResponse] = await Promise.all([
+          fetch(`/api/credits/request?userId=${userId}&page=1&limit=100`, { signal }),
+          fetch(`/api/voucher-requests?userId=${userId}&page=1&limit=100`, { signal })
+        ]);
+
+        if (signal.aborted) return;
+
+        const [weeklyData, dailyData] = await Promise.all([
+          weeklyResponse.json(),
+          dailyResponse.json()
+        ]);
+
+        if (signal.aborted) return;
+
+        let combinedRequests: any[] = [];
+
+        if (weeklyData.success && weeklyData.data?.requests) {
+          combinedRequests = combinedRequests.concat(
+            weeklyData.data.requests.map((req: any) => ({
+              ...req,
+              requestType: 'weekly'
+            }))
+          );
+        }
+
+        if (dailyData.success && dailyData.data) {
+          combinedRequests = combinedRequests.concat(
+            dailyData.data.map((req: any) => ({
+              ...req,
+              requestType: 'daily'
+            }))
+          );
+        }
+
+        combinedRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        if (signal.aborted) return;
+
+        setAllRequests(combinedRequests);
+        setPagination((p) => ({
+          ...p,
+          page: 1,
+          total: combinedRequests.length,
+          pages: Math.max(1, Math.ceil(combinedRequests.length / paginationLimit))
+        }));
+      } catch (err) {
+        if (signal.aborted || (err instanceof Error && err.name === 'AbortError')) return;
+        console.error("Error fetching recharge requests:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load recharge requests",
+          variant: "destructive"
+        });
+      } finally {
+        if (!signal.aborted) setIsLoading(false);
+      }
+    };
+
+    run();
+    return () => controller.abort();
   }, [userId, weeklyRefreshKey, dailyRefreshKey]);
 
-  // Handle pagination
   const handlePagination = (direction: 'prev' | 'next') => {
-    const newPage = direction === 'prev' 
+    const newPage = direction === 'prev'
       ? Math.max(1, pagination.page - 1)
       : Math.min(pagination.pages, pagination.page + 1);
-      
     if (newPage !== pagination.page) {
-      fetchRequests(newPage);
+      setPagination((p) => ({ ...p, page: newPage }));
     }
   };
 
@@ -178,7 +178,6 @@ export function UnifiedRechargeHistory({
     }
   };
 
-  // Get request type display
   const getRequestTypeIcon = (type: string) => {
     if (type === 'weekly') {
       return <Gem className="h-4 w-4 text-[#C2884E]" />;
@@ -186,6 +185,11 @@ export function UnifiedRechargeHistory({
       return <Ticket className="h-4 w-4 text-[#C2884E]" />;
     }
   };
+
+  const getDisplayType = (request: { requestType?: string }) =>
+    request.requestType === 'weekly'
+      ? (language === 'zh' ? '周次Meal Box' : 'Weekly Subscription')
+      : (language === 'zh' ? '每日直送' : 'Daily Delivery');
 
   // Get voucher/plan details display
   const getRequestDetails = (request: any) => {
@@ -260,7 +264,7 @@ export function UnifiedRechargeHistory({
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">{request.displayType}</p>
+                          <p className="font-medium text-sm">{getDisplayType(request)}</p>
                           <Badge variant="outline" className="bg-[#F5EDE4] text-[#6B5F53] border-[#C2884E]/20">
                             {request.requestId}
                           </Badge>
@@ -394,7 +398,7 @@ export function UnifiedRechargeHistory({
                   </div>
                   <div>
                     <DialogTitle>
-                      {selectedRequest.displayType} {language === 'zh' ? '请求详情' : 'Request Details'}
+                      {getDisplayType(selectedRequest)} {language === 'zh' ? '请求详情' : 'Request Details'}
                     </DialogTitle>
                     <DialogDescription>
                       {selectedRequest.requestId}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { DEFAULT_DASHBOARD_CUTOFF_TIME, useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
 import { CapybaraLogo } from "./capybara-logo"
 import { type WeeklyMeals } from "@/lib/utils"
@@ -35,30 +36,8 @@ export function ThisWeekMeals({ meals, onSelectMeal, onCheckout, isLoading = fal
   const [today, setToday] = useState<string>("")
   const { toast } = useToast()
   const { t, language } = useLanguage()
-  const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
-  
-  // Fetch cutoff time from settings
-  useEffect(() => {
-    const fetchCutoffTime = async () => {
-      try {
-        const response = await fetch('/api/settings?key=cutoffTime', {
-          cache: 'no-store'
-        });
-        const data = await response.json();
-        
-        if (data.success && data.data?.value) {
-          setCutoffTime({
-            hour: data.data.value.hour || 11,
-            minute: data.data.value.minute || 59
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to fetch cutoff time, using default 11:59 AM', error);
-      }
-    };
-    
-    fetchCutoffTime();
-  }, [])
+  const sharedUserProfile = useOptionalUserProfile()
+  const cutoffTime = sharedUserProfile?.cutoffTime ?? DEFAULT_DASHBOARD_CUTOFF_TIME
 
   const days = useMemo(() => ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], [])
   const dayLabels = useMemo((): Record<string, string> => {

@@ -30,6 +30,7 @@ import { CheckCircle2, Loader2 } from 'lucide-react'
 import { CartItem, DeliveryDay, submitUserSubscription, validateSelectedDates, sortDeliveryDays } from '@/lib/weekly-subscription'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 import { mergeStoredUser } from '@/lib/client-user-cache'
+import { useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 
 // Use centralized area list
 const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
@@ -73,6 +74,7 @@ export function WeeklySubscriptionCheckout({
 }: WeeklySubscriptionCheckoutProps) {
   const { t, language } = useLanguage()
   const { toast } = useToast()
+  const sharedUserProfile = useOptionalUserProfile()
   const [isLoading, setIsLoading] = useState(false)
   const [userData, setUserData] = useState<any>(null)
   const [formData, setFormData] = useState({
@@ -96,7 +98,7 @@ export function WeeklySubscriptionCheckout({
   // Calculate total items and cost
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0)
   
-  // Load user data from localStorage, with fallback fetch when address is missing
+  // Load user data: inside dashboard provider = never fetch (use shared or localStorage while waiting)
   useEffect(() => {
     const applyUserToForm = (user: any) => {
       setUserData(user)
@@ -118,12 +120,30 @@ export function WeeklySubscriptionCheckout({
       }
     }
 
+    if (sharedUserProfile) {
+      // Inside provider: never fetch. Use shared data when ready, else localStorage while waiting
+      if (sharedUserProfile.userData) {
+        applyUserToForm(sharedUserProfile.userData)
+      } else {
+        const storedUser = localStorage.getItem('user')
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser)
+            applyUserToForm(user)
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      return
+    }
+
+    // Outside provider: localStorage + fallback fetch when needsAddress
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
       const user = JSON.parse(storedUser)
       applyUserToForm(user)
 
-      // If user has _id but no address (or empty), fetch full user from API (localStorage may be incomplete)
       const needsAddress = !user.address || !user.address.streetAddress
       if (user._id && needsAddress) {
         fetch(`/api/users/${user._id}`)
@@ -143,7 +163,7 @@ export function WeeklySubscriptionCheckout({
           .catch(() => {})
       }
     }
-  }, [])
+  }, [sharedUserProfile?.userData])
 
   // Handle input change for all form fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

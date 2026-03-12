@@ -10,7 +10,7 @@ import { sendVoucherPurchaseStatusEmail } from '@/lib/services/email';
 // GET handler - fetch a single voucher purchase request by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { requestId: string } }
+  { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
     const { actor, response } = await requireUser();
@@ -20,7 +20,7 @@ export async function GET(
 
     await connectToDatabase();
     
-    const { requestId } = params;
+    const { requestId } = await params;
     
     // Find the request
     const voucherRequest = await VoucherPurchaseRequest.findOne({ requestId })
@@ -59,7 +59,7 @@ export async function GET(
 // PUT handler - update a voucher purchase request (approve/decline)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { requestId: string } }
+  { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -69,7 +69,7 @@ export async function PUT(
 
     await connectToDatabase();
     
-    const { requestId } = params;
+    const { requestId } = await params;
     const body = await request.json();
     const { status, adminNotes } = body;
     

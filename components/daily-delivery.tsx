@@ -8,6 +8,11 @@ import { useLanguage } from '@/lib/language-context'
 import { Plus, Minus, ShoppingCart, X, Utensils, Ticket } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import {
+  DEFAULT_DASHBOARD_CUTOFF_TIME,
+  type DashboardUserData,
+  useOptionalUserProfile,
+} from '@/lib/dashboard-user-profile'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
 import { RegionCheckDialog } from './region-check-dialog'
 import { 
@@ -73,6 +78,7 @@ const getChineseDayName = (englishDayName: string): string => {
 export default function DailyDelivery() {
   const { t, language } = useLanguage()
   const { toast } = useToast()
+  const sharedUserProfile = useOptionalUserProfile()
   const [days, setDays] = useState<Record<string, DayData>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -85,8 +91,8 @@ export default function DailyDelivery() {
   })
   const [showRegionDialog, setShowRegionDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
-  const [cutoffTime, setCutoffTime] = useState({ hour: 11, minute: 59 })
   const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
+  const cutoffTime = sharedUserProfile?.cutoffTime ?? DEFAULT_DASHBOARD_CUTOFF_TIME
   
   // State for menu update notification
   const [menuUpdateAvailable, setMenuUpdateAvailable] = useState(false)
@@ -121,10 +127,15 @@ export default function DailyDelivery() {
   
   // Fetch dish translations
   useEffect(() => {
+    const controller = new AbortController()
+
     const fetchDishTranslations = async () => {
       try {
-        const response = await fetch('/api/dishes');
+        const response = await fetch('/api/dishes', {
+          signal: controller.signal,
+        });
         const result = await response.json();
+        if (controller.signal.aborted) return
         
         if (result.success && result.data) {
           // Create a map of Chinese name -> English name
@@ -137,35 +148,14 @@ export default function DailyDelivery() {
           setDishTranslations(translationsMap);
         }
       } catch (error) {
+        if ((error as Error).name === 'AbortError' || controller.signal.aborted) return
         console.error('Error fetching dish translations:', error);
       }
     };
     
-    fetchDishTranslations();
+    void fetchDishTranslations();
+    return () => controller.abort()
   }, []);
-  
-  // Fetch cutoff time from settings
-  useEffect(() => {
-    const fetchCutoffTime = async () => {
-      try {
-        const response = await fetch('/api/settings?key=cutoffTime', {
-          cache: 'no-store'
-        });
-        const data = await response.json();
-        
-        if (data.success && data.data?.value) {
-          setCutoffTime({
-            hour: data.data.value.hour || 11,
-            minute: data.data.value.minute || 59
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to fetch cutoff time, using default 11:59 AM', error);
-      }
-    };
-    
-    fetchCutoffTime();
-  }, [])
   
   // Check if a day is in the past or today after ordering cutoff time
   const isDayUnavailable = (day: string): { unavailable: boolean, reason: string } => {
@@ -312,6 +302,21 @@ export default function DailyDelivery() {
   
   // Tag helper functions removed as icons are no longer used
 
+  const syncUserSnapshot = (user: Partial<DashboardUserData> | null) => {
+    if (!user) {
+      return
+    }
+
+    setUserVouchers({
+      twoDish: user.twoDishVoucher || 0,
+      threeDish: user.threeDishVoucher || 0,
+    })
+
+    const nextRegion = user.address?.province
+    setUserRegion(nextRegion)
+    setShowRegionDialog(Boolean(nextRegion && !DAILY_DELIVERY_REGIONS.includes(nextRegion)))
+  }
+
   // Function to fetch user data from API
   const fetchUserData = async (userId: string) => {
     try {
@@ -320,25 +325,7 @@ export default function DailyDelivery() {
       const data = await response.json();
       
       if (data.success && data.data) {
-        // Update vouchers with the latest data from API
-        setUserVouchers({
-          twoDish: data.data.twoDishVoucher || 0,
-          threeDish: data.data.threeDishVoucher || 0
-        });
-        console.log('Updated vouchers from API:', {
-          twoDish: data.data.twoDishVoucher || 0,
-          threeDish: data.data.threeDishVoucher || 0
-        });
-        
-        // Check user's region
-        if (data.data.address && data.data.address.province) {
-          setUserRegion(data.data.address.province);
-          
-          // If user's region is not in the supported list, show the dialog
-          if (!DAILY_DELIVERY_REGIONS.includes(data.data.address.province)) {
-            setShowRegionDialog(true);
-          }
-        }
+        syncUserSnapshot(data.data);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -346,7 +333,7 @@ export default function DailyDelivery() {
   };
 
   // Function to fetch menu data (extracted for reuse)
-  const fetchMenuData = async () => {
+  const fetchMenuData = async (options?: { signal?: AbortSignal }) => {
     try {
       const pickDefaultAvailableDay = (formattedDays: Record<string, DayData>): string => {
         const dayIds = Object.keys(formattedDays)
@@ -419,8 +406,11 @@ export default function DailyDelivery() {
 
       // 🚀 OPTIMIZATION #1: Try the optimized single-request endpoint first
       try {
-        const optimizedResponse = await fetch('/api/days/active-with-combos');
+        const optimizedResponse = await fetch('/api/days/active-with-combos', {
+          signal: options?.signal,
+        });
         const optimizedData = await optimizedResponse.json();
+        if (options?.signal?.aborted) return undefined
         
         if (optimizedData.success && optimizedData.data) {
           const formattedDays: Record<string, DayData> = {};
@@ -461,10 +451,16 @@ export default function DailyDelivery() {
         }
       } catch (optimizedError) {
         console.log('⚠️ Optimized endpoint failed, falling back to parallel requests');
+        if ((optimizedError as Error).name === 'AbortError' || options?.signal?.aborted) {
+          return undefined
+        }
         
         // Fallback to parallel requests if optimized endpoint fails
-        const daysResponse = await fetch('/api/days?isActive=true');
+        const daysResponse = await fetch('/api/days?isActive=true', {
+          signal: options?.signal,
+        });
         const daysData = await daysResponse.json();
+        if (options?.signal?.aborted) return undefined
         
         if (daysData.success) {
           const formattedDays: Record<string, DayData> = {};
@@ -472,8 +468,11 @@ export default function DailyDelivery() {
           // 🚀 OPTIMIZATION #2: Fetch all combos in parallel
           const comboPromises = daysData.data.map(async (day: any) => {
             try {
-              const combosResponse = await fetch(`/api/days/${day.dayId}/combos`);
+              const combosResponse = await fetch(`/api/days/${day.dayId}/combos`, {
+                signal: options?.signal,
+              });
               const combosData = await combosResponse.json();
+              if (options?.signal?.aborted) return null
               
               if (combosData.success) {
                 const formattedCombos = combosData.data.map((combo: any) => ({
@@ -497,12 +496,16 @@ export default function DailyDelivery() {
               }
               return null;
             } catch (error) {
+              if ((error as Error).name === 'AbortError' || options?.signal?.aborted) {
+                return null;
+              }
               console.error(`Error fetching combos for ${day.dayId}:`, error);
               return null;
             }
           });
           
           const comboResults = await Promise.all(comboPromises);
+          if (options?.signal?.aborted) return undefined
           
           comboResults.forEach((result) => {
             if (result) {
@@ -526,36 +529,11 @@ export default function DailyDelivery() {
           return currentDates;
         }
       }
-      
-      // Load user data from localStorage first (for initial display)
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        
-        // Set initial voucher values from localStorage
-        setUserVouchers({
-          twoDish: user.twoDishVoucher || 0,
-          threeDish: user.threeDishVoucher || 0
-        });
-        
-        // Check user's region
-        if (user.address && user.address.province) {
-          setUserRegion(user.address.province);
-          
-          // If user's region is not in the supported list, show the dialog
-          if (!DAILY_DELIVERY_REGIONS.includes(user.address.province)) {
-            setShowRegionDialog(true);
-          }
-        }
-        
-        // If user has _id, fetch complete user data with vouchers from API
-        if (user && user._id) {
-          await fetchUserData(user._id);
-        }
-      }
-      
       return undefined;
     } catch (error) {
+      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) {
+        return undefined;
+      }
       console.error('Error in fetchMenuData:', error);
       toast({
         title: "Error",
@@ -568,49 +546,54 @@ export default function DailyDelivery() {
   
   // Load data from API on mount
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const dates = await fetchMenuData();
+        const dates = await fetchMenuData({ signal: controller.signal });
+        if (controller.signal.aborted) return
         if (dates) {
           setLastFetchedDates(dates);
         }
-        
-        // Load user data from localStorage first (for initial display)
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          
-          // Set initial voucher values from localStorage
-          setUserVouchers({
-            twoDish: user.twoDishVoucher || 0,
-            threeDish: user.threeDishVoucher || 0
-          });
-          
-          // Check user's region
-          if (user.address && user.address.province) {
-            setUserRegion(user.address.province);
-            
-            // If user's region is not in the supported list, show the dialog
-            if (!DAILY_DELIVERY_REGIONS.includes(user.address.province)) {
-              setShowRegionDialog(true);
-            }
-          }
-          
-          // If user has _id, fetch complete user data with vouchers from API
-          if (user && user._id) {
-            await fetchUserData(user._id);
-          }
-        }
       } catch (error) {
+        if ((error as Error).name === 'AbortError' || controller.signal.aborted) return
         console.error('Error in initial data load:', error);
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
     
-    fetchData();
+    void fetchData();
+    return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (sharedUserProfile) {
+      if (sharedUserProfile.userData) {
+        syncUserSnapshot(sharedUserProfile.userData)
+      }
+      return
+    }
+
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) {
+      return
+    }
+
+    try {
+      const user = JSON.parse(storedUser)
+      syncUserSnapshot(user)
+
+      if (user && user._id) {
+        void fetchUserData(user._id)
+      }
+    } catch (error) {
+      console.error('Error parsing stored user data:', error)
+    }
+  }, [sharedUserProfile?.userData])
   
   // Periodically check for menu updates (every 30 seconds)
   useEffect(() => {
@@ -667,6 +650,10 @@ export default function DailyDelivery() {
   
   // Listen for the refreshUserProfile event to update voucher data
   useEffect(() => {
+    if (sharedUserProfile) {
+      return
+    }
+
     const handleRefreshUserProfile = async () => {
       console.log('Refreshing user data in daily-delivery component');
       const storedUser = localStorage.getItem('user');
@@ -685,7 +672,7 @@ export default function DailyDelivery() {
     return () => {
       window.removeEventListener('refreshUserProfile', handleRefreshUserProfile);
     };
-  }, []);
+  }, [sharedUserProfile?.userData]);
   
   // Add item to cart
   const addToCart = (day: string, date: string, combo: ComboItem, type: ComboType) => {
@@ -965,6 +952,7 @@ export default function DailyDelivery() {
             userVouchers={userVouchers}
             setUserVouchers={setUserVouchers}
             days={days}
+            dishTranslations={dishTranslations}
           />
         </div>
       ) : isLoading ? (

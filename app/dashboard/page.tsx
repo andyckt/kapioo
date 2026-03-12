@@ -4,7 +4,7 @@
 // We're using the "use client" directive to ensure this page is only rendered on the client
 // where window and other browser APIs are available
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -37,10 +37,15 @@ import { CommunityRecipes } from "@/components/community-recipes"
 import { ThisWeekMeals } from "@/components/this-week-meals"
 // These components are dynamically imported above
 import { AvailableAreas } from "@/components/available-areas"
-import { getWeeklyMeals, type WeeklyMeals, getUserById, type User as UserType } from "@/lib/utils"
+import { getWeeklyMeals, type WeeklyMeals, getUserById } from "@/lib/utils"
 import { performClientLogout } from "@/lib/client-logout"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useClientAuth } from "@/lib/client-auth"
+import {
+  DashboardUserProfileContext,
+  DEFAULT_DASHBOARD_CUTOFF_TIME,
+  type DashboardUserData,
+} from "@/lib/dashboard-user-profile"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
@@ -92,7 +97,7 @@ export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [meals, setMeals] = useState<WeeklyMeals>({})
   const [isLoading, setIsLoading] = useState(true)
-  const [userData, setUserData] = useState<UserType | null>(null)
+  const [userData, setUserData] = useState<DashboardUserData | null>(null)
   const [userLoading, setUserLoading] = useState(true)
   const [transactions, setTransactions] = useState<any[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
@@ -105,6 +110,7 @@ export default function DashboardPage() {
     total: 0,
     pages: 1
   })
+  const [cutoffTime, setCutoffTime] = useState(DEFAULT_DASHBOARD_CUTOFF_TIME)
   const [upcomingDeliveries, setUpcomingDeliveries] = useState(0)
   const [totalOrders, setTotalOrders] = useState(0)
   const [orderStatsLoading, setOrderStatsLoading] = useState(true)
@@ -201,6 +207,147 @@ export default function DashboardPage() {
     buzzCode: ''
   });
 
+  const applyUserProfile = useCallback(
+    (nextUser: Partial<DashboardUserData>, options?: { syncForms?: boolean }) => {
+      if (!nextUser._id || !nextUser.name || !nextUser.email) {
+        return;
+      }
+
+      const normalizedUser: DashboardUserData = {
+        _id: nextUser._id,
+        userID: nextUser.userID || "",
+        name: nextUser.name,
+        nickname: nextUser.nickname || "",
+        email: nextUser.email,
+        credits: nextUser.credits || 0,
+        twoDishVoucher: nextUser.twoDishVoucher || 0,
+        threeDishVoucher: nextUser.threeDishVoucher || 0,
+        weeklySIXmeals: nextUser.weeklySIXmeals || 0,
+        weeklyEIGHTmeals: nextUser.weeklyEIGHTmeals || 0,
+        weeklyTENmeals: nextUser.weeklyTENmeals || 0,
+        weeklyTWELVEmeals: nextUser.weeklyTWELVEmeals || 0,
+        weeklySIXTEENmeals: nextUser.weeklySIXTEENmeals || 0,
+        joined: nextUser.joined || nextUser.createdAt || new Date().toISOString(),
+        status: nextUser.status || "Active",
+        languagePreference: nextUser.languagePreference || "zh",
+        address: nextUser.address
+          ? {
+              unitNumber: nextUser.address.unitNumber || "",
+              streetAddress: nextUser.address.streetAddress || "",
+              province: nextUser.address.province || "",
+              postalCode: nextUser.address.postalCode || "",
+              country: nextUser.address.country || "Canada",
+              buzzCode: nextUser.address.buzzCode || "",
+            }
+          : undefined,
+        phone: nextUser.phone || "",
+        createdAt: nextUser.createdAt || nextUser.joined || new Date().toISOString(),
+        updatedAt: nextUser.updatedAt,
+        isActive: nextUser.isActive,
+        totalOrders: nextUser.totalOrders,
+        dailyOrdersCount: nextUser.dailyOrdersCount,
+        weeklyOrdersCount: nextUser.weeklyOrdersCount,
+        area: nextUser.area || nextUser.address?.province || "",
+        role: nextUser.role,
+        isVerified: Boolean(nextUser.isVerified),
+      };
+
+      setUserData(normalizedUser);
+      setCredits(normalizedUser.credits || 0);
+      mergeStoredUser({
+        _id: normalizedUser._id,
+        userID: normalizedUser.userID,
+        name: normalizedUser.name,
+        nickname: normalizedUser.nickname,
+        email: normalizedUser.email,
+        role: normalizedUser.role,
+        languagePreference: normalizedUser.languagePreference || "zh",
+        isVerified: normalizedUser.isVerified,
+        phone: normalizedUser.phone || "",
+        address: normalizedUser.address,
+        area: normalizedUser.area || normalizedUser.address?.province || "",
+        credits: normalizedUser.credits || 0,
+        twoDishVoucher: normalizedUser.twoDishVoucher || 0,
+        threeDishVoucher: normalizedUser.threeDishVoucher || 0,
+        weeklySIXmeals: normalizedUser.weeklySIXmeals || 0,
+        weeklyEIGHTmeals: normalizedUser.weeklyEIGHTmeals || 0,
+        weeklyTENmeals: normalizedUser.weeklyTENmeals || 0,
+        weeklyTWELVEmeals: normalizedUser.weeklyTWELVEmeals || 0,
+        weeklySIXTEENmeals: normalizedUser.weeklySIXTEENmeals || 0,
+      });
+      localStorage.setItem('isAuthenticated', 'true');
+
+      if (
+        normalizedUser.languagePreference &&
+        (normalizedUser.languagePreference === 'zh' || normalizedUser.languagePreference === 'en')
+      ) {
+        console.log('Dashboard: Setting language from database:', normalizedUser.languagePreference);
+        setLanguage(normalizedUser.languagePreference);
+        localStorage.setItem('preferredLanguage', normalizedUser.languagePreference);
+      }
+
+      if (options?.syncForms === false) {
+        return;
+      }
+
+      setFormData({
+        name: normalizedUser.name || '',
+        phone: normalizedUser.phone || '',
+        specialInstructions: ''
+      });
+
+      setPersonalInfo({
+        name: normalizedUser.name || '',
+        nickname: normalizedUser.nickname || '',
+        email: normalizedUser.email || '',
+        phone: normalizedUser.phone || '',
+        languagePreference: normalizedUser.languagePreference || 'zh'
+      });
+
+      setAddressInfo({
+        unitNumber: normalizedUser.address?.unitNumber || '',
+        streetAddress: normalizedUser.address?.streetAddress || '',
+        province: normalizedUser.address?.province || '',
+        postalCode: normalizedUser.address?.postalCode || '',
+        country: normalizedUser.address?.country || 'Canada',
+        buzzCode: normalizedUser.address?.buzzCode || ''
+      });
+    },
+    [setLanguage]
+  );
+
+  const refreshUserProfile = useCallback(
+    async (options?: { syncForms?: boolean; signal?: AbortSignal }) => {
+      if (!authUser?._id) {
+        return null;
+      }
+
+      try {
+        const user = await getUserById(authUser._id, { signal: options?.signal });
+        if (!user) {
+          return null;
+        }
+
+        const nextUser = user as DashboardUserData;
+        applyUserProfile(nextUser, options);
+        return nextUser;
+      } catch (error) {
+        console.error('Error refreshing user profile:', error);
+        return null;
+      }
+    },
+    [applyUserProfile, authUser?._id]
+  );
+
+  const applyRef = useRef(applyUserProfile);
+  const refreshRef = useRef(refreshUserProfile);
+  const routerRef = useRef(router);
+  const toastRef = useRef(toast);
+  applyRef.current = applyUserProfile;
+  refreshRef.current = refreshUserProfile;
+  routerRef.current = router;
+  toastRef.current = toast;
+
   // Add state for password fields
   const [passwordInfo, setPasswordInfo] = useState<{
     currentPassword: string;
@@ -257,11 +404,14 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (activeTab !== "overview") return;
+
+    const controller = new AbortController();
     async function loadMeals() {
       try {
         setIsLoading(true)
         console.log('[Dashboard] Fetching weekly meals...');
-        const weeklyMeals = await getWeeklyMeals()
+        const weeklyMeals = await getWeeklyMeals({ signal: controller.signal })
         
         console.log('[Dashboard] Meals received:', {
           count: Object.keys(weeklyMeals).length,
@@ -271,6 +421,7 @@ export default function DashboardPage() {
         
         setMeals(weeklyMeals)
       } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
         console.error('[Dashboard] Error loading meals:', error)
         toast({
           title: "Error",
@@ -281,88 +432,40 @@ export default function DashboardPage() {
         setIsLoading(false)
       }
     }
-    
-    // Load meals on initial render when on overview tab
-    if (activeTab === "overview") {
-      console.log(`[Dashboard] Loading meals for tab: ${activeTab}`);
-      loadMeals()
-      
-      // Refresh user data when overview tab is selected
-      if (userData?._id) {
-        const refreshUserData = async () => {
-          try {
-            const user = await getUserById(userData._id);
-            if (user) {
-              setUserData(user);
-              setCredits(user.credits || 0);
-            }
-          } catch (error) {
-            console.error('Error refreshing user data:', error);
-          }
-        };
-        
-        refreshUserData();
-        
-        // Also refresh order statistics
-        fetchOrderStats(userData._id);
-      }
-    }
-    
-    // Refresh user data when weekly-subscription tab is selected
-    // This ensures voucher counts are up-to-date after admin approval
-    if (activeTab === "weekly-subscription") {
-      console.log(`[Dashboard] Refreshing user data for weekly subscription tab`);
-      if (userData?._id) {
-        const refreshUserData = async () => {
-          try {
-            const user = await getUserById(userData._id);
-            if (user) {
-              console.log('[Dashboard] Fresh user data fetched:', {
-                weeklySIXmeals: user.weeklySIXmeals,
-                weeklyEIGHTmeals: user.weeklyEIGHTmeals,
-                weeklyTENmeals: user.weeklyTENmeals,
-                weeklyTWELVEmeals: user.weeklyTWELVEmeals,
-                weeklySIXTEENmeals: user.weeklySIXTEENmeals
-              });
-              setUserData(user);
-              setCredits(user.credits || 0);
-            }
-          } catch (error) {
-            console.error('Error refreshing user data:', error);
-          }
-        };
-        
-        refreshUserData();
-      }
-    }
-    
-    // Refresh user data when daily-delivery tab is selected
-    // This ensures voucher counts are up-to-date after admin approval
-    if (activeTab === "daily-delivery") {
-      console.log(`[Dashboard] Refreshing user data for daily delivery tab`);
-      if (userData?._id) {
-        const refreshUserData = async () => {
-          try {
-            const user = await getUserById(userData._id);
-            if (user) {
-              console.log('[Dashboard] Fresh user data fetched:', {
-                twoDishVoucher: user.twoDishVoucher,
-                threeDishVoucher: user.threeDishVoucher
-              });
-              setUserData(user);
-              setCredits(user.credits || 0);
-            }
-          } catch (error) {
-            console.error('Error refreshing user data:', error);
-          }
-        };
-        
-        refreshUserData();
-      }
-    }
-  }, [toast, activeTab, userData?._id])
+
+    console.log(`[Dashboard] Loading meals for tab: ${activeTab}`);
+    loadMeals()
+    return () => controller.abort();
+  }, [toast, activeTab])
 
   useEffect(() => {
+    const controller = new AbortController();
+    async function loadCutoffTime() {
+      try {
+        const response = await fetch('/api/settings?key=cutoffTime', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const data = await response.json();
+
+        if (data.success && data.data?.value) {
+          setCutoffTime({
+            hour: data.data.value.hour || DEFAULT_DASHBOARD_CUTOFF_TIME.hour,
+            minute: data.data.value.minute || DEFAULT_DASHBOARD_CUTOFF_TIME.minute,
+          });
+        }
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+        console.warn('Failed to fetch cutoff time, using default 11:59 AM', error);
+      }
+    }
+
+    void loadCutoffTime();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
     async function loadUserData() {
       try {
         if (authStatus !== "ready") {
@@ -370,20 +473,17 @@ export default function DashboardPage() {
         }
 
         if (!authenticated || !authUser?._id) {
-          router.push("/login");
+          routerRef.current.push("/login");
           return;
         }
 
-        mergeStoredUser(authUser);
-        localStorage.setItem('isAuthenticated', 'true');
-
         setUserLoading(true);
-        const userData = authUser;
+        const initialUser = authUser as DashboardUserData;
         
-        // Check if userData has _id before proceeding
-        if (!userData || !userData._id) {
-          console.error('User data is missing _id:', userData);
-          toast({
+        // Check if auth user has _id before proceeding
+        if (!initialUser || !initialUser._id) {
+          console.error('User data is missing _id:', initialUser);
+          toastRef.current({
             title: "Error",
             description: "User data is incomplete. Please log out and log in again.",
             variant: "destructive"
@@ -391,89 +491,22 @@ export default function DashboardPage() {
           setUserLoading(false);
           return;
         }
-        
-        // Use the getUserById function to get full user data
-        const user = await getUserById(userData._id);
-        
-        if (user) {
-          // If there's no createdAt but there is joined, use joined for createdAt
-          if (!user.createdAt && user.joined) {
-            user.createdAt = user.joined;
-          }
-          
-          setUserData(user);
-          setCredits(user.credits || 0);
-          
-          // Sync full user (including address) to localStorage so checkout and other components get it
-          const userForStorage = {
-            _id: user._id,
-            userID: user.userID,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            languagePreference: user.languagePreference || 'zh',
-            isVerified: Boolean(user.isVerified),
-            phone: user.phone || '',
-            address: user.address,
-            area: user.area || user.address?.province || '',
-            credits: user.credits,
-            twoDishVoucher: user.twoDishVoucher,
-            threeDishVoucher: user.threeDishVoucher,
-            weeklySIXmeals: user.weeklySIXmeals,
-            weeklyEIGHTmeals: user.weeklyEIGHTmeals,
-            weeklyTENmeals: user.weeklyTENmeals,
-            weeklyTWELVEmeals: user.weeklyTWELVEmeals,
-            weeklySIXTEENmeals: user.weeklySIXTEENmeals,
-          };
-          mergeStoredUser(userForStorage);
-          
-          // STEP 1: Set language from database (primary source for authenticated users)
-          if (user.languagePreference && (user.languagePreference === 'zh' || user.languagePreference === 'en')) {
-            console.log('Dashboard: Setting language from database:', user.languagePreference);
-            setLanguage(user.languagePreference);
-            // Also sync to localStorage as backup
-            localStorage.setItem('preferredLanguage', user.languagePreference);
-          }
-          
-          // Set form data for checkout
-          setFormData({
-            name: user.name || '',
-            phone: user.phone || '',
-            specialInstructions: ''
-          });
-          
-          // Set form data
-          setPersonalInfo({
-            name: user.name || '',
-            nickname: user.nickname || '',
-            email: user.email || '',
-            phone: user.phone || '',
-            languagePreference: user.languagePreference || 'zh'
-          });
-          
-          // Set address data if available
-          if (user.address) {
-            setAddressInfo({
-              unitNumber: user.address.unitNumber || '',
-              streetAddress: user.address.streetAddress || '',
-              province: user.address.province || '', // State in UI
-              postalCode: user.address.postalCode || '', // ZIP code in UI
-              country: user.address.country || 'Canada', // Always Canada
-              buzzCode: user.address.buzzCode || ''
-            });
-          }
-        } else {
-          // Handle the case when user data couldn't be fetched
+
+        applyRef.current(initialUser, { syncForms: true });
+        const refreshedUser = await refreshRef.current({ syncForms: true, signal: controller.signal });
+        if (!refreshedUser) {
+          if (controller.signal.aborted) return;
           console.error('Failed to fetch user data from API');
-          toast({
+          toastRef.current({
             title: "Error",
             description: "Failed to load user data from server",
             variant: "destructive"
           });
         }
       } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
         console.error('Error loading user data:', error);
-        toast({
+        toastRef.current({
           title: "Error",
           description: "Failed to load user data",
           variant: "destructive"
@@ -484,49 +517,25 @@ export default function DashboardPage() {
     }
     
     loadUserData();
-  }, [authStatus, authenticated, authUser, router, toast]);
+    return () => controller.abort();
+  }, [authStatus, authenticated, authUser?._id]);
 
   useEffect(() => {
     if (activeTab === "credits" && userData) {
       console.log("Credits tab is active and userData is available, fetching transactions...");
       fetchTransactions();
     }
-  }, [activeTab, userData]);
-
-  // Effect to reload address info when switching to settings tab
-  useEffect(() => {
-    if (activeTab === "settings" && userData?._id) {
-      // Load fresh user data to ensure we have the latest address
-      const fetchUserData = async () => {
-        try {
-          const user = await getUserById(userData._id);
-          if (user && user.address) {
-            // Update address info from the fresh data
-            setAddressInfo({
-              unitNumber: user.address.unitNumber || '',
-              streetAddress: user.address.streetAddress || '',
-              province: user.address.province || '',
-              postalCode: user.address.postalCode || '',
-              country: user.address.country || 'Canada', // Always Canada
-              buzzCode: user.address.buzzCode || ''
-            });
-          }
-        } catch (error) {
-          console.error('Error refreshing user data:', error);
-        }
-      };
-      
-      fetchUserData();
-    }
   }, [activeTab, userData?._id]);
 
   // Function to fetch order statistics
-  const fetchOrderStats = async (userId: string) => {
+  const refreshOrderStats = useCallback(async (userId: string, options?: { signal?: AbortSignal }) => {
     if (!userId) return;
     
     try {
       setOrderStatsLoading(true);
-      const response = await fetch(`/api/users/${userId}/orders/count`);
+      const response = await fetch(`/api/users/${userId}/orders/count`, {
+        signal: options?.signal,
+      });
       const data = await response.json();
       
       if (data.success && data.data) {
@@ -534,19 +543,30 @@ export default function DashboardPage() {
         setTotalOrders(data.data.totalOrders || 0);
       }
     } catch (error) {
+      if ((error as Error).name === 'AbortError') return;
       console.error('Error fetching order statistics:', error);
     } finally {
       setOrderStatsLoading(false);
     }
-  };
+  }, []);
   
   // Effect to fetch total orders and upcoming deliveries when userData is loaded
   useEffect(() => {
-    if (userData?._id) {
-      // Fetch order stats for the user
-      fetchOrderStats(userData._id);
-    }
-  }, [userData?._id]);
+    if (!userData?._id) return;
+
+    const controller = new AbortController();
+    void refreshOrderStats(userData._id, { signal: controller.signal });
+    return () => controller.abort();
+  }, [refreshOrderStats, userData?._id]);
+
+  const userProfileContextValue = useMemo(() => ({
+    userData,
+    cutoffTime,
+    upcomingDeliveries,
+    totalOrders,
+    refreshUserProfile,
+    refreshOrderStats,
+  }), [cutoffTime, refreshOrderStats, refreshUserProfile, totalOrders, upcomingDeliveries, userData]);
 
   const fetchTransactions = async (page = 1) => {
     if (!userData) return;
@@ -673,24 +693,8 @@ export default function DashboardPage() {
       
       const result = await response.json();
       
-      if (result.success) {
-        // Update local state with new data
-        setUserData((prev: UserType | null) => prev ? { ...prev, ...personalInfo } : null);
-        
-        // Update localStorage
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const userObj = JSON.parse(storedUser);
-          const updatedUser = { ...userObj, ...personalInfo };
-          mergeStoredUser(updatedUser);
-          // Update language preference in localStorage for immediate effect
-          localStorage.setItem('preferredLanguage', personalInfo.languagePreference);
-        }
-        
-        // STEP 3: Update the language context immediately
-        console.log('Profile Settings: Updating language to:', personalInfo.languagePreference);
-        setLanguage(personalInfo.languagePreference);
-        
+      if (result.success && result.data) {
+        applyUserProfile(result.data as DashboardUserData, { syncForms: true });
         toast({
           title: t('changesSaved'),
           description: t('personalInfoSaved'),
@@ -736,38 +740,8 @@ export default function DashboardPage() {
       
       const result = await response.json();
       
-      if (result.success) {
-        // Update local state with new data
-        setUserData((prev: UserType | null) => prev ? { 
-          ...prev, 
-          address: {
-            unitNumber: addressInfo.unitNumber,
-            streetAddress: addressInfo.streetAddress,
-            province: addressInfo.province,
-            postalCode: addressInfo.postalCode,
-            country: addressInfo.country,
-            buzzCode: addressInfo.buzzCode
-          } 
-        } : null);
-        
-        // Update localStorage
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const userObj = JSON.parse(storedUser);
-          const updatedUser = { 
-            ...userObj, 
-            address: {
-              unitNumber: addressInfo.unitNumber,
-              streetAddress: addressInfo.streetAddress,
-              province: addressInfo.province,
-              postalCode: addressInfo.postalCode,
-              country: addressInfo.country,
-              buzzCode: addressInfo.buzzCode
-            } 
-          };
-          mergeStoredUser(updatedUser);
-        }
-        
+      if (result.success && result.data) {
+        applyUserProfile(result.data as DashboardUserData, { syncForms: true });
         toast({
           title: t('changesSaved'),
           description: t('addressSaved'),
@@ -907,8 +881,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <header className="bg-background sticky top-0 z-50 w-full border-b flex-shrink-0">
+    <DashboardUserProfileContext.Provider value={userProfileContextValue}>
+      <div className="flex flex-col h-screen overflow-hidden">
+        <header className="bg-background sticky top-0 z-50 w-full border-b flex-shrink-0">
         <div className="container flex h-16 items-center justify-between px-4">
           <MainNav />
           
@@ -2105,15 +2080,7 @@ export default function DashboardPage() {
                       <CreditPurchasePlans 
                         userId={userData._id} 
                         onSuccess={() => {
-                          // Refresh user data to get updated credits
-                          if (userData?._id) {
-                            getUserById(userData._id).then(user => {
-                              if (user) {
-                                setUserData(user);
-                                setCredits(user.credits || 0);
-                              }
-                            });
-                          }
+                          void refreshUserProfile({ syncForms: false });
                           
                           // Refresh transaction history
                           fetchTransactions();
@@ -2631,15 +2598,7 @@ export default function DashboardPage() {
                     weeklyTWELVEmeals={(userData as any)?.weeklyTWELVEmeals}
                     weeklySIXTEENmeals={(userData as any)?.weeklySIXTEENmeals}
                     onVoucherUpdate={() => {
-                      // Refresh user data after successful order
-                      if (userData?._id) {
-                        getUserById(userData._id).then(user => {
-                          if (user) {
-                            setUserData(user);
-                            setCredits(user.credits || 0);
-                          }
-                        });
-                      }
+                      void refreshUserProfile({ syncForms: false });
                     }}
                   />
                 </motion.div>
@@ -2649,6 +2608,7 @@ export default function DashboardPage() {
         </main>
       </div>
     </div>
+    </DashboardUserProfileContext.Provider>
   )
 }
 
