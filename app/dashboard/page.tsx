@@ -74,6 +74,7 @@ export default function DashboardPage() {
   const { status: authStatus, authenticated, user: authUser } = useClientAuth()
   const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
+  const activeTabHistoryReadyRef = useRef(false)
   const [customizeMeal, setCustomizeMeal] = useState(null)
   const [showServiceSelection, setShowServiceSelection] = useState(false)
   
@@ -187,16 +188,48 @@ export default function DashboardPage() {
     languagePreference: 'zh' as 'zh' | 'en'
   })
   
-  // Initialize activeTab from URL parameters
+  // Keep dashboard tabs in the URL/history so browser back/forward restores the exact previous tab.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      const tabParam = urlParams.get('tab')
-      if (tabParam) {
-        setActiveTab(tabParam)
-      }
+    if (typeof window === 'undefined') {
+      return
     }
-  }, []);
+
+    const syncTabFromUrl = () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      const nextTab = urlParams.get('tab') || 'overview'
+      setActiveTab((currentTab) => (currentTab === nextTab ? currentTab : nextTab))
+    }
+
+    syncTabFromUrl()
+    activeTabHistoryReadyRef.current = true
+    window.addEventListener('popstate', syncTabFromUrl)
+
+    return () => {
+      window.removeEventListener('popstate', syncTabFromUrl)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !activeTabHistoryReadyRef.current) {
+      return
+    }
+
+    const nextUrl = new URL(window.location.href)
+    const currentTab = nextUrl.searchParams.get('tab') || 'overview'
+
+    if (currentTab === activeTab) {
+      return
+    }
+
+    if (activeTab === 'overview') {
+      nextUrl.searchParams.delete('tab')
+    } else {
+      nextUrl.searchParams.set('tab', activeTab)
+    }
+
+    const nextPath = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+    window.history.pushState({ tab: activeTab }, '', nextPath)
+  }, [activeTab])
 
   const [addressInfo, setAddressInfo] = useState({
     unitNumber: '',
