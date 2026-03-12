@@ -49,26 +49,25 @@ export function AdminDashboardEnhanced() {
 
   const handleRefresh = () => {
     setRefreshing(true)
-    fetchDashboardStats()
+    void fetchDashboardStats()
   }
 
   // Fetch dashboard statistics from backend
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = async (opts?: { signal?: AbortSignal }) => {
     setLoading(true)
     try {
-      // Fetch total users count
-      const usersResponse = await fetch('/api/users/count');
-      const usersData = await usersResponse.json();
-      
+      const [usersResponse, ordersResponse] = await Promise.all([
+        fetch('/api/users/count', { signal: opts?.signal }),
+        fetch('/api/orders/stats', { signal: opts?.signal })
+      ])
+      if (opts?.signal?.aborted) return
+      const [usersData, ordersData] = await Promise.all([usersResponse.json(), ordersResponse.json()])
+      if (opts?.signal?.aborted) return
+
       if (usersData.success) {
         setTotalUsers(usersData.data.total);
         setUserGrowthRate(usersData.data.growthRate || 0);
       }
-      
-      // Fetch order statistics
-      const ordersResponse = await fetch('/api/orders/stats');
-      const ordersData = await ordersResponse.json();
-      
       if (ordersData.success) {
         setPendingOrders(ordersData.data.pendingOrders || 0);
         setPendingOrdersGrowth(ordersData.data.pendingOrdersGrowth || 0);
@@ -78,17 +77,22 @@ export function AdminDashboardEnhanced() {
         setPopularDayChange(ordersData.data.popularDayChange || 0);
       }
     } catch (error) {
+      if (opts?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
       console.error("Error fetching dashboard stats:", error);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!opts?.signal?.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
   // Fetch data on initial load and when period changes
   useEffect(() => {
-    fetchDashboardStats();
-  }, [period]); // Add period as dependency to refresh data when period changes
+    const controller = new AbortController();
+    void fetchDashboardStats({ signal: controller.signal });
+    return () => controller.abort();
+  }, [period]);
   
   // Handle export dashboard data to CSV
   const handleExport = () => {

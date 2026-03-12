@@ -115,7 +115,7 @@ export function MealVoucherManagement() {
   }, [activeTab, debouncedSearchQuery, dateRange.startDate, dateRange.endDate])
 
   // Fetch voucher purchase requests from API
-  const fetchVoucherRequests = useCallback(async () => {
+  const fetchVoucherRequests = useCallback(async (opts?: { signal?: AbortSignal }) => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
@@ -126,9 +126,11 @@ export function MealVoucherManagement() {
       if (dateRange.startDate) params.append('startDate', format(dateRange.startDate, 'yyyy-MM-dd'))
       if (dateRange.endDate) params.append('endDate', format(dateRange.endDate, 'yyyy-MM-dd'))
       const queryString = params.toString() ? `?${params.toString()}` : ''
-      const response = await fetch(`/api/voucher-requests${queryString}`)
+      const response = await fetch(`/api/voucher-requests${queryString}`, { signal: opts?.signal })
+      if (opts?.signal?.aborted) return
       if (!response.ok) throw new Error('Failed to fetch voucher purchase requests')
       const data = await response.json()
+      if (opts?.signal?.aborted) return
       if (data.success) {
         setRequests(data.data)
         setPagination({
@@ -141,6 +143,7 @@ export function MealVoucherManagement() {
         throw new Error(data.error ?? 'Failed to fetch voucher purchase requests')
       }
     } catch (err) {
+      if (opts?.signal?.aborted || (err instanceof Error && err.name === 'AbortError')) return
       console.error('Error fetching voucher purchase requests:', err)
       toast({
         title: 'Error',
@@ -148,13 +151,15 @@ export function MealVoucherManagement() {
         variant: 'destructive'
       })
     } finally {
-      setIsLoading(false)
+      if (!opts?.signal?.aborted) setIsLoading(false)
     }
   }, [activeTab, currentPage, pageLimit, debouncedSearchQuery, dateRange.startDate, dateRange.endDate, toast])
 
   // Fetch requests whenever query criteria changes
   useEffect(() => {
-    fetchVoucherRequests()
+    const controller = new AbortController()
+    void fetchVoucherRequests({ signal: controller.signal })
+    return () => controller.abort()
   }, [fetchVoucherRequests])
 
   // Format date

@@ -521,10 +521,10 @@ export default function DashboardPage() {
   }, [authStatus, authenticated, authUser?._id]);
 
   useEffect(() => {
-    if (activeTab === "credits" && userData) {
-      console.log("Credits tab is active and userData is available, fetching transactions...");
-      fetchTransactions();
-    }
+    if (activeTab !== "credits" || !userData) return;
+    const controller = new AbortController();
+    void fetchTransactions(1, { signal: controller.signal });
+    return () => controller.abort();
   }, [activeTab, userData?._id]);
 
   // Function to fetch order statistics
@@ -568,21 +568,17 @@ export default function DashboardPage() {
     refreshOrderStats,
   }), [cutoffTime, refreshOrderStats, refreshUserProfile, totalOrders, upcomingDeliveries, userData]);
 
-  const fetchTransactions = async (page = 1) => {
+  const fetchTransactions = async (page = 1, opts?: { signal?: AbortSignal }) => {
     if (!userData) return;
-    
-    console.log("userData in fetchTransactions:", {
-      _id: userData._id,
-      userID: userData.userID,
-      name: userData.name,
-      email: userData.email
-    });
     
     setTransactionsLoading(true);
     try {
-      console.log(`Fetching transactions for user: ${userData._id}, page: ${page}`);
-      const response = await fetch(`/api/transactions?userId=${userData._id}&page=${page}&limit=${transactionsPagination.limit}`);
+      const response = await fetch(`/api/transactions?userId=${userData._id}&page=${page}&limit=${transactionsPagination.limit}`, {
+        signal: opts?.signal,
+      });
+      if (opts?.signal?.aborted) return;
       const data = await response.json();
+      if (opts?.signal?.aborted) return;
       console.log("Transaction API response:", data);
       
       if (data.success) {
@@ -597,10 +593,11 @@ export default function DashboardPage() {
         console.error("API returned error:", data.error);
       }
     } catch (error) {
+      if (opts?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
       console.error("Error fetching transactions:", error);
       setTransactions([]);
     } finally {
-      setTransactionsLoading(false);
+      if (!opts?.signal?.aborted) setTransactionsLoading(false);
     }
   };
   

@@ -15,26 +15,31 @@ export function MaintenanceProvider({ children }: { children: React.ReactNode })
   
   // Load maintenance state from API on component mount
   useEffect(() => {
-    const fetchMaintenanceStatus = async () => {
+    const controller = new AbortController()
+    const signal = controller.signal
+
+    const run = async () => {
       try {
-        const response = await fetch('/api/maintenance/status')
+        const response = await fetch('/api/maintenance/status', { signal })
+        if (signal.aborted) return
         if (response.ok) {
           const data = await response.json()
+          if (signal.aborted) return
           setIsMaintenanceMode(data.isMaintenanceMode || false)
         }
       } catch (error) {
+        if (signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
         console.error('Failed to fetch maintenance status:', error)
-        // Fallback to localStorage if API fails
         const storedValue = localStorage.getItem('maintenanceMode')
         if (storedValue !== null) {
           setIsMaintenanceMode(storedValue === 'true')
         }
       } finally {
-        setIsLoading(false)
+        if (!signal.aborted) setIsLoading(false)
       }
     }
-    
-    fetchMaintenanceStatus()
+    run()
+    return () => controller.abort()
   }, [])
 
   // Save to both localStorage and API whenever the state changes

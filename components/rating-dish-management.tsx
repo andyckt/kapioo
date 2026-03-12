@@ -53,10 +53,19 @@ export function RatingDishManagement() {
   const [activeDateSaving, setActiveDateSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/meal-rating/active-date")
+    const controller = new AbortController();
+    const signal = controller.signal;
+    fetch("/api/meal-rating/active-date", { signal })
       .then((res) => res.json())
-      .then((data) => setActiveDate(data?.date ?? ""))
-      .catch(() => setActiveDate(""));
+      .then((data) => {
+        if (signal.aborted) return;
+        setActiveDate(data?.date ?? "");
+      })
+      .catch((err) => {
+        if (signal.aborted || (err instanceof Error && err.name === 'AbortError')) return;
+        setActiveDate("");
+      });
+    return () => controller.abort();
   }, []);
 
   const saveActiveDate = async () => {
@@ -89,14 +98,17 @@ export function RatingDishManagement() {
     }
   };
 
-  const fetchDishes = async () => {
+  const fetchDishes = async (options?: { signal?: AbortSignal }) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/rating-dishes");
+      const res = await fetch("/api/admin/rating-dishes", { signal: options?.signal });
+      if (options?.signal?.aborted) return;
       const data = await res.json();
+      if (options?.signal?.aborted) return;
       if (!res.ok) throw new Error(data.error || "Failed to fetch");
       setDishes(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
+      if (options?.signal?.aborted || (err instanceof Error && err.name === 'AbortError')) return;
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : "Failed to fetch dishes",
@@ -104,12 +116,14 @@ export function RatingDishManagement() {
       });
       setDishes([]);
     } finally {
-      setIsLoading(false);
+      if (!options?.signal?.aborted) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDishes();
+    const controller = new AbortController();
+    void fetchDishes({ signal: controller.signal });
+    return () => controller.abort();
   }, []);
 
   const handleAdd = () => {

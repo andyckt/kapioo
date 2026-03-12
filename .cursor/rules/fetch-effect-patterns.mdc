@@ -1,0 +1,58 @@
+---
+description: How to add fetch calls in useEffect without causing duplicate requests or stale updates
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Fetch Effect Patterns
+
+Design first so you never trigger duplicate fetches. AbortController is only for unmount cleanup — not for fixing design flaws.
+
+## 1. Design to prevent problems (so you don't need AbortController to fix them)
+
+**Prevent 1: Unstable dependencies**
+- Problem: Effect re-runs every render → duplicate fetches.
+- Design: Use only stable deps. Put callbacks in `useRef`. Derive strings at render, not in effect.
+
+**Prevent 2: Duplicate fetchers**
+- Problem: Parent and child both fetch the same endpoint → 2+ requests.
+- Design: Fetch once in parent, pass data as props. Before adding a fetch: "Does another component already load this?"
+
+**Prevent 3: Pagination re-fetch**
+- Problem: Changing page triggers a new fetch even though full list is loaded.
+- Design: Store full list in state; derive current page by slicing. Fetch only when filters or refresh actually require new data.
+
+Get this right and you won't have duplicate calls. No AbortController needed to "fix" them.
+
+## 2. Before adding any fetch
+
+1. Is another component already fetching this? → Pass data down instead.
+2. Does this depend on something that changes every render? → Use refs or derive at render.
+
+## 3. AbortController — only for unmount (unavoidable)
+
+You cannot design away unmount: the user can always navigate away while a fetch is in flight. AbortController cancels it so you don't setState on an unmounted component. That's lifecycle cleanup. Add it after the design is correct:
+
+```tsx
+useEffect(() => {
+  if (!userId) return;
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const run = async () => {
+    try {
+      const res = await fetch(`/api/foo?userId=${userId}`, { signal });
+      if (signal.aborted) return;
+      const data = await res.json();
+      if (signal.aborted) return;
+      setData(data);
+    } catch (err) {
+      if (signal.aborted || (err instanceof Error && err.name === 'AbortError')) return;
+      toast({ ... });
+    } finally {
+      if (!signal.aborted) setIsLoading(false);
+    }
+  };
+  run();
+  return () => controller.abort();
+}, [userId]);  // Only stable deps — roots fixed above
+```

@@ -161,7 +161,7 @@ export function ViewWeeklyOrders() {
   })
 
   // Fetch orders with pagination and filters
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = async (page = 1, options?: { signal?: AbortSignal }) => {
     setIsLoading(true)
     try {
       // Build query parameters
@@ -195,8 +195,10 @@ export function ViewWeeklyOrders() {
         params.append('deliveryDateEnd', filters.deliveryDateEnd)
       }
       
-      const response = await fetch(`/api/admin/weekly-subscription/orders?${params.toString()}`)
+      const response = await fetch(`/api/admin/weekly-subscription/orders?${params.toString()}`, { signal: options?.signal })
+      if (options?.signal?.aborted) return
       const data = await response.json()
+      if (options?.signal?.aborted) return
       
       if (data.success) {
         setOrders(data.data.orders || [])
@@ -215,6 +217,7 @@ export function ViewWeeklyOrders() {
         })
       }
     } catch (error) {
+      if (options?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return
       console.error("Error fetching orders:", error)
       toast({
         title: "Error",
@@ -222,7 +225,7 @@ export function ViewWeeklyOrders() {
         variant: "destructive"
       })
     } finally {
-      setIsLoading(false)
+      if (!options?.signal?.aborted) setIsLoading(false)
     }
   }
   
@@ -367,13 +370,36 @@ export function ViewWeeklyOrders() {
 
   // Load orders when component mounts or filters change
   useEffect(() => {
-    fetchOrders()
+    const controller = new AbortController()
+    void fetchOrders(1, { signal: controller.signal })
+    return () => controller.abort()
   }, [filters.status, filters.area, filters.search, filters.deliveryDate, filters.deliveryDateEnd])
   
   // Load areas and delivery dates when component mounts
   useEffect(() => {
-    fetchAreas()
-    fetchDeliveryDates()
+    const controller = new AbortController()
+    const signal = controller.signal
+    const run = async () => {
+      try {
+        const [areasRes, datesRes] = await Promise.all([
+          fetch('/api/admin/weekly-subscription/orders/areas', { signal }),
+          fetch('/api/admin/weekly-subscription/orders/delivery-dates', { signal })
+        ])
+        if (signal.aborted) return
+        const [areasData, datesData] = await Promise.all([areasRes.json(), datesRes.json()])
+        if (signal.aborted) return
+        if (areasData.success && areasData.areas?.length > 0) setAreas(areasData.areas)
+        else setAreas([...ALL_WEEKLY_AREAS])
+        if (datesData.success && datesData.deliveryDates?.length > 0) setDeliveryDates(datesData.deliveryDates)
+        else setDeliveryDates([])
+      } catch (e) {
+        if (signal.aborted || (e instanceof Error && e.name === 'AbortError')) return
+        setAreas([...ALL_WEEKLY_AREAS])
+        setDeliveryDates([])
+      }
+    }
+    run()
+    return () => controller.abort()
   }, [])
   
   // Update order status

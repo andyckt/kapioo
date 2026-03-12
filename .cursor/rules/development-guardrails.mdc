@@ -1,0 +1,78 @@
+---
+description: Guardrails for all code changes to keep the system well-designed and performant
+alwaysApply: true
+---
+
+# Development Guardrails
+
+Every edit and new feature must respect these principles. Apply them before considering work complete.
+
+## 1. Data fetching — prevent problems through design (not AbortController)
+
+Design so the effect runs only when it should. If you get this right, you won't have duplicate fetches — no need for AbortController to "fix" them.
+
+**Prevent 1: Unstable dependencies** (effect re-runs every render → duplicate fetches)
+- Never put `toast`, inline callbacks, or objects in the effect dependency array.
+- Use `useRef` for callbacks; derive display strings at render, not in the effect.
+
+**Prevent 2: Duplicate fetchers** (multiple components fetch the same endpoint)
+- Fetch once in the parent, pass data down as props.
+- Before adding a fetch: "Does another component already load this?" If yes, pass it down instead.
+
+**Prevent 3: Pagination re-fetch** (page change triggers new API call despite having data)
+- Store the full list in state; paginate by slicing.
+- Only fetch when filters or user action actually require new data.
+
+**AbortController** is only for one case you cannot design away: user navigates away (component unmounts) while a fetch is in flight. Cancel it so you don't setState on an unmounted component. That's lifecycle cleanup, not fixing a design flaw.
+
+## 2. Error handling
+
+- Handle failures explicitly: show error state, give user feedback (toast, inline message).
+- Never silently fail: no `catch` that only logs to console and does nothing for the user.
+- Optional: add retry for transient failures (network hiccup).
+
+## 3. Type safety
+
+- Avoid `any`; use proper types for API responses and shared props.
+- Define shared types for API contracts (e.g. in `lib/types/` or next to the API).
+
+## 4. Security
+
+- Auth and validation on all API routes; verify the user is allowed to perform the action.
+- Validate and sanitize user input (query params, body); don't trust raw input.
+- No secrets in client code or logs.
+
+## 5. Accessibility
+
+- Interactive elements must be keyboard-accessible (buttons, links, forms).
+- Images must have meaningful `alt` text.
+
+## 6. Testing
+
+- Add or update tests when changing business logic or API contracts.
+- Critical flows (e.g. plan catalog, checkout) should have at least one test path.
+
+## 7. Single source of truth
+
+- **Plans**: Use `lib/plans/catalog.ts` and service helpers. No hardcoded plan IDs, prices, or counts elsewhere (see plan-catalog-update-playbook).
+- **Shared data**: User profile, dish translations, settings — fetch once, pass down. No redundant fetches for the same data.
+
+## 8. Structure
+
+- **Separation**: Keep API routes thin (validate, call service, return). Put business logic in `lib/` or services.
+- **Components**: One responsibility per component. Extract reusable logic into hooks or shared utilities.
+
+## 9. Performance
+
+- **No unnecessary re-renders**: Avoid inline object/array/function creation in render if passed as props to memoized children.
+- **No unnecessary re-fetches**: Before adding a fetch, ask: "Does something else already load this?"
+
+## 10. Before merging
+
+- [ ] **Roots**: No unstable deps (toast, callbacks) in effect? No duplicate fetchers? Pagination slices existing data when possible?
+- [ ] **Safety**: AbortController pattern applied to new/changed fetch effects?
+- [ ] **Errors**: Failures handled with user feedback? No silent catches?
+- [ ] **Types**: No new `any`; API responses typed?
+- [ ] **Tests**: Business logic or API changes have tests?
+- [ ] Plan changes → catalog updated, no hardcoded fallbacks?
+- [ ] Lint passes; Network tab shows no duplicate requests for the same endpoint?

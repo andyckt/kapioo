@@ -64,67 +64,62 @@ export default function BGMPage() {
   });
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const loadVideos = async () => {
       setLoading(true);
-      
       let hasValidVideos = false;
-      
-      // Prioritize getting videos from the server/MongoDB
+
       try {
-        console.log('Fetching videos from server...');
         const response = await fetch('/api/music-videos', {
-          // Add cache-busting to ensure we get fresh data
+          signal,
           headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
           cache: 'no-store',
         });
-        
+        if (signal.aborted) return;
+
         if (response.ok) {
           const serverVideos = await response.json();
+          if (signal.aborted) return;
           if (serverVideos && Array.isArray(serverVideos) && serverVideos.length > 0) {
-            console.log('Loaded videos from server:', serverVideos.length);
             setMusicVideos(serverVideos);
             setCurrentVideoIndex(0);
             localStorage.setItem('musicVideos', JSON.stringify(serverVideos));
             hasValidVideos = true;
-          } else {
-            console.log('No videos found on server');
           }
-        } else {
-          console.error('Error fetching from server:', await response.text());
         }
       } catch (error) {
+        if (signal.aborted || (error instanceof Error && error.name === 'AbortError')) return;
         console.error('Error fetching from server:', error);
       }
-      
-      // Fall back to localStorage only if server fetch failed
+
+      if (signal.aborted) return;
+
       if (!hasValidVideos) {
-        console.log('Trying to load from localStorage...');
         const storedVideos = localStorage.getItem('musicVideos');
         try {
           if (storedVideos) {
             const parsedVideos = JSON.parse(storedVideos);
             if (parsedVideos && Array.isArray(parsedVideos) && parsedVideos.length > 0) {
-              console.log('Loaded videos from localStorage:', parsedVideos.length);
               setMusicVideos(parsedVideos);
               setCurrentVideoIndex(0);
               hasValidVideos = true;
             }
           }
-        } catch (error) {
-          console.error('Error loading videos from localStorage:', error);
+        } catch (parseErr) {
+          console.error('Error loading videos from localStorage:', parseErr);
         }
       }
-      
-      // If we still don't have valid videos after trying both sources, initialize with default
-      if (!hasValidVideos) {
-        console.log('Initializing with default video');
-        initializeDefaultVideo();
-      }
-      
-      setLoading(false);
+
+      if (signal.aborted) return;
+
+      if (!hasValidVideos) initializeDefaultVideo();
+      if (!signal.aborted) setLoading(false);
     };
-    
+
     loadVideos();
+    return () => controller.abort();
   }, []);
   
   // Try to unmute after the player loads

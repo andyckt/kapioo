@@ -147,47 +147,24 @@ export function ViewAllOrders() {
   })
 
   // Fetch orders with pagination and filters
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = async (page = 1, options?: { signal?: AbortSignal }) => {
     setIsLoading(true)
     try {
-      // Build query parameters
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pagination.limit.toString()
       })
+      if (filters.status && filters.status !== 'all') params.append('status', filters.status)
+      if (filters.search) params.append('search', filters.search)
+      if (filters.area && filters.area !== 'all') params.append('area', filters.area)
+      if (filters.deliveryDate) params.append('deliveryDate', filters.deliveryDate)
+      if (filters.deliveryDateEnd) params.append('deliveryDateEnd', filters.deliveryDateEnd)
+      if (filters.comboName && filters.comboName !== 'all') params.append('comboName', filters.comboName)
       
-      // Add status filter if selected and not "all"
-      if (filters.status && filters.status !== 'all') {
-        params.append('status', filters.status)
-      }
-      
-      // Add search filter if provided
-      if (filters.search) {
-        params.append('search', filters.search)
-      }
-      
-      // Add area filter if provided
-      if (filters.area && filters.area !== 'all') {
-        params.append('area', filters.area)
-      }
-      
-      // Add delivery date filter if provided
-      if (filters.deliveryDate) {
-        params.append('deliveryDate', filters.deliveryDate)
-      }
-      
-      // Add delivery date end filter if provided
-      if (filters.deliveryDateEnd) {
-        params.append('deliveryDateEnd', filters.deliveryDateEnd)
-      }
-      
-      // Add combo name filter if provided
-      if (filters.comboName && filters.comboName !== 'all') {
-        params.append('comboName', filters.comboName)
-      }
-      
-      const response = await fetch(`/api/admin/daily-delivery/orders?${params.toString()}`)
+      const response = await fetch(`/api/admin/daily-delivery/orders?${params.toString()}`, { signal: options?.signal })
+      if (options?.signal?.aborted) return
       const data = await response.json()
+      if (options?.signal?.aborted) return
       
       if (data.success) {
         setOrders(data.data.orders || [])
@@ -206,6 +183,7 @@ export function ViewAllOrders() {
         })
       }
     } catch (error) {
+      if (options?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return
       console.error("Error fetching orders:", error)
       toast({
         title: "Error",
@@ -213,7 +191,7 @@ export function ViewAllOrders() {
         variant: "destructive"
       })
     } finally {
-      setIsLoading(false)
+      if (!options?.signal?.aborted) setIsLoading(false)
     }
   }
   
@@ -382,14 +360,40 @@ export function ViewAllOrders() {
 
   // Load orders when component mounts or filters change
   useEffect(() => {
-    fetchOrders()
+    const controller = new AbortController()
+    void fetchOrders(1, { signal: controller.signal })
+    return () => controller.abort()
   }, [filters.status, filters.area, filters.search, filters.deliveryDate, filters.deliveryDateEnd, filters.comboName])
   
   // Load areas, delivery dates, and combo names when component mounts
   useEffect(() => {
-    fetchAreas()
-    fetchDeliveryDates()
-    fetchComboNames()
+    const controller = new AbortController()
+    const signal = controller.signal
+    const run = async () => {
+      try {
+        const [areasRes, datesRes, combosRes] = await Promise.all([
+          fetch('/api/admin/daily-delivery/orders/areas', { signal }),
+          fetch('/api/admin/daily-delivery/orders/delivery-dates', { signal }),
+          fetch('/api/admin/daily-delivery/orders/combos', { signal })
+        ])
+        if (signal.aborted) return
+        const [areasData, datesData, combosData] = await Promise.all([areasRes.json(), datesRes.json(), combosRes.json()])
+        if (signal.aborted) return
+        if (areasData.success && areasData.areas?.length > 0) setAreas(areasData.areas)
+        else setAreas([...ALL_WEEKLY_AREAS])
+        if (datesData.success && datesData.deliveryDates?.length > 0) setDeliveryDates(datesData.deliveryDates)
+        else setDeliveryDates([])
+        if (combosData.success && combosData.comboNames?.length > 0) setComboNames(combosData.comboNames)
+        else setComboNames([])
+      } catch (e) {
+        if (signal.aborted || (e instanceof Error && e.name === 'AbortError')) return
+        setAreas([...ALL_WEEKLY_AREAS])
+        setDeliveryDates([])
+        setComboNames([])
+      }
+    }
+    run()
+    return () => controller.abort()
   }, [])
   
   // Update order status

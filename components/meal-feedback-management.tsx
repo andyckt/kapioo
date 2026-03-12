@@ -63,7 +63,7 @@ export function MealFeedbackManagement() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  const fetchFeedback = async (page = 1) => {
+  const fetchFeedback = async (page = 1, opts?: { signal?: AbortSignal }) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -72,8 +72,10 @@ export function MealFeedbackManagement() {
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
 
-      const res = await fetch(`/api/admin/meal-rating?${params}`);
+      const res = await fetch(`/api/admin/meal-rating?${params}`, { signal: opts?.signal });
+      if (opts?.signal?.aborted) return;
       const data = await res.json();
+      if (opts?.signal?.aborted) return;
       if (!res.ok) throw new Error(data.error || "Failed to fetch");
 
       setItems(data.items || []);
@@ -84,6 +86,7 @@ export function MealFeedbackManagement() {
         pages: data.pagination?.pages ?? 1,
       }));
     } catch (err: unknown) {
+      if (opts?.signal?.aborted || (err instanceof Error && err.name === "AbortError")) return;
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : "Failed to fetch feedback",
@@ -91,12 +94,14 @@ export function MealFeedbackManagement() {
       });
       setItems([]);
     } finally {
-      setIsLoading(false);
+      if (!opts?.signal?.aborted) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchFeedback(pagination.page);
+    const controller = new AbortController();
+    void fetchFeedback(pagination.page, { signal: controller.signal });
+    return () => controller.abort();
   }, [pagination.page, startDate, endDate]);
 
   const handleApplyFilters = () => {

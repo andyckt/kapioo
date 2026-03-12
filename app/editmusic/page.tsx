@@ -97,12 +97,12 @@ export default function EditMusicPage() {
   };
 
   // Simulate server synchronization
-  const simulateServerSync = async () => {
+  const simulateServerSync = async (opts?: { signal?: AbortSignal }) => {
     setIsSyncing(true);
     
     try {
-      // Fetch from API
-      const response = await fetch('/api/music-videos');
+      const response = await fetch('/api/music-videos', { signal: opts?.signal });
+      if (opts?.signal?.aborted) return false;
       
       if (response.ok) {
         const serverVideos = await response.json();
@@ -120,22 +120,23 @@ export default function EditMusicPage() {
         return false;
       }
     } catch (error) {
+      if (opts?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return false;
       console.error('Error syncing with server:', error);
       return false;
     } finally {
-      setIsSyncing(false);
+      if (!opts?.signal?.aborted) setIsSyncing(false);
     }
   };
 
   // Load music videos
   useEffect(() => {
+    const controller = new AbortController();
     const loadVideos = async () => {
       setIsLoading(true);
       let hasLoadedVideos = false;
       
       try {
-        // Always prioritize server data first
-        const serverSyncSuccess = await simulateServerSync();
+        const serverSyncSuccess = await simulateServerSync({ signal: controller.signal });
         hasLoadedVideos = serverSyncSuccess;
         
         // Only fall back to localStorage if server sync failed
@@ -202,22 +203,23 @@ export default function EditMusicPage() {
         // Always ensure we have at least the default video
         initializeDefaultVideo();
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     };
     
     loadVideos();
+    return () => controller.abort();
   }, []);
 
   // Load music submissions
   useEffect(() => {
+    if (activeTab !== 'submissions') return;
+    const controller = new AbortController();
     const loadSubmissions = async () => {
-      if (activeTab !== 'submissions') return;
-      
       setSubmissionsLoading(true);
-      
       try {
-        const response = await fetch('/api/music-submissions');
+        const response = await fetch('/api/music-submissions', { signal: controller.signal });
+        if (controller.signal.aborted) return;
         
         if (response.ok) {
           const data = await response.json();
@@ -227,14 +229,15 @@ export default function EditMusicPage() {
           showError('加载音乐推荐失败');
         }
       } catch (error) {
+        if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return;
         console.error('Error loading submissions:', error);
         showError('加载音乐推荐失败');
       } finally {
-        setSubmissionsLoading(false);
+        if (!controller.signal.aborted) setSubmissionsLoading(false);
       }
     };
-    
     loadSubmissions();
+    return () => controller.abort();
   }, [activeTab]);
 
   // Force sync with server

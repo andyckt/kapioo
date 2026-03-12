@@ -56,28 +56,33 @@ export function PromoCodeManagement() {
   const [isLoadingAppliedRequests, setIsLoadingAppliedRequests] = useState(false)
   const [appliedRequestsByPromo, setAppliedRequestsByPromo] = useState<Record<string, PromoAppliedRequest[]>>({})
 
-  const fetchPromoCodes = async () => {
+  const fetchPromoCodes = async (options?: { signal?: AbortSignal }) => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/admin/promo-codes')
+      const response = await fetch('/api/admin/promo-codes', { signal: options?.signal })
+      if (options?.signal?.aborted) return
       const result = await response.json()
+      if (options?.signal?.aborted) return
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to fetch promo codes')
       }
       setPromoCodes(result.data || [])
     } catch (error: any) {
+      if (options?.signal?.aborted || (error?.name === 'AbortError')) return
       toast({
         title: 'Error',
         description: error?.message || 'Failed to fetch promo codes',
         variant: 'destructive'
       })
     } finally {
-      setIsLoading(false)
+      if (!options?.signal?.aborted) setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchPromoCodes()
+    const controller = new AbortController()
+    void fetchPromoCodes({ signal: controller.signal })
+    return () => controller.abort()
   }, [])
 
   const handleCreate = async () => {

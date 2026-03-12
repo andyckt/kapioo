@@ -163,7 +163,7 @@ export function OrderManagement() {
   const { toast } = useToast();
 
   // Fetch all orders with optional status filter
-  const fetchOrders = async (page = 1, status = '') => {
+  const fetchOrders = async (page = 1, status = '', options?: { signal?: AbortSignal }) => {
     setIsLoading(true);
     setRefreshing(true);
     try {
@@ -175,8 +175,10 @@ export function OrderManagement() {
         url.searchParams.append('status', status);
       }
       
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), { signal: options?.signal });
+      if (options?.signal?.aborted) return;
       const data = await response.json();
+      if (options?.signal?.aborted) return;
       
       if (data.success) {
         setOrders(data.data.orders);
@@ -196,6 +198,7 @@ export function OrderManagement() {
         });
       }
     } catch (error) {
+      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) return;
       console.error("Error fetching orders:", error);
       toast({
         title: "Error",
@@ -203,8 +206,10 @@ export function OrderManagement() {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (!options?.signal?.aborted) {
+        setIsLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -305,7 +310,9 @@ export function OrderManagement() {
 
   // Load orders when component mounts
   useEffect(() => {
-    fetchOrders();
+    const controller = new AbortController();
+    void fetchOrders(1, statusFilter !== 'all' ? statusFilter : '', { signal: controller.signal });
+    return () => controller.abort();
   }, []);
 
   // Handle pagination
