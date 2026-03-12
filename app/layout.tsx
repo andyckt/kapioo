@@ -10,6 +10,7 @@ import { MaintenanceNotification } from "@/components/maintenance-notification"
 import { LanguagePreferenceDialog } from "@/components/language-preference-dialog"
 import { buildPageMetadata } from "@/lib/seo/metadata"
 import { cookies } from "next/headers"
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ["latin"] })
 
