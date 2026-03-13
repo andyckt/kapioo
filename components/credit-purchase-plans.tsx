@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { WeeklyAddressDialog } from '@/components/weekly-address-dialog'
 import { ensureUserPhone, getStoredUser, normalizePhoneInput } from "@/lib/phone-helper"
 import { convertHeicToJpeg } from "@/lib/heic-conversion"
+import { useObjectUrl } from "@/hooks/use-object-url"
 
 interface CreditPurchasePlansProps {
   userId: string;
@@ -90,7 +91,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [promoBreakdown, setPromoBreakdown] = useState<PromoPreviewBreakdown | null>(null)
   const [promoError, setPromoError] = useState('')
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
-  const [paymentProofPreviewUrl, setPaymentProofPreviewUrl] = useState<string | null>(null)
+
+  const paymentProofPreviewUrl = useObjectUrl(paymentProof)
 
   const durationLabels: Record<number, { en: string; zh: string }> = {
     1: { en: 'One week credit', zh: '1周次卡券' },
@@ -130,20 +132,6 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
     }
   }, [])
 
-  useEffect(() => {
-    if (!paymentProof) {
-      setPaymentProofPreviewUrl(null)
-      return
-    }
-
-    const nextPreviewUrl = URL.createObjectURL(paymentProof)
-    setPaymentProofPreviewUrl(nextPreviewUrl)
-
-    return () => {
-      URL.revokeObjectURL(nextPreviewUrl)
-    }
-  }, [paymentProof])
-  
   // Check URL parameters for plan selection
   useEffect(() => {
     if (typeof window !== 'undefined') {

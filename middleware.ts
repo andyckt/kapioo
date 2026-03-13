@@ -217,6 +217,9 @@ export async function middleware(request: any) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   const isBgmPage = pathname === '/bgm' || pathname.startsWith('/bgm/');
+  // CSP blob: allowances are required for: (1) heic2any Web Worker for HEIC→JPEG conversion
+  // in dashboard recharge flows; (2) img-src blob: for payment-proof preview (URL.createObjectURL).
+  // Do not remove blob: from worker-src or img-src without verifying dashboard top-up flows.
   const contentSecurityPolicy = isBgmPage
     ? "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; child-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     : "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; worker-src 'self' blob:; child-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";

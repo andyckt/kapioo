@@ -41,6 +41,7 @@ Design so the effect runs only when it should. If you get this right, you won't 
 - Auth and validation on all API routes; verify the user is allowed to perform the action.
 - Validate and sanitize user input (query params, body); don't trust raw input.
 - No secrets in client code or logs.
+- **CSP**: When changing security headers or middleware, ensure client features using `blob:` URLs still work. Dashboard recharge flows need `worker-src 'self' blob:` (heic2any) and `img-src 'self' data: blob: https:` (payment-proof preview). See comment in `middleware.ts`.
 
 ## 5. Accessibility
 
