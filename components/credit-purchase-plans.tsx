@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import heic2any from "heic2any"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   AlertCircle,
@@ -36,6 +35,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { WeeklyAddressDialog } from '@/components/weekly-address-dialog'
 import { ensureUserPhone, getStoredUser, normalizePhoneInput } from "@/lib/phone-helper"
+import { convertHeicToJpeg } from "@/lib/heic-conversion"
 
 interface CreditPurchasePlansProps {
   userId: string;
@@ -261,21 +261,10 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       
       let processedFile = file;
       
-      // Convert HEIC/HEIF to JPEG if needed
+      // Load HEIC conversion only when a HEIC/HEIF file is actually selected.
       if (isHeic) {
         try {
-          // Convert HEIC to JPEG using heic2any (silently, without toast notifications)
-          const jpegBlob = await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.8
-          }) as Blob;
-          
-          // Create a new file from the JPEG blob
-          processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
-            type: 'image/jpeg',
-            lastModified: new Date().getTime()
-          });
+          processedFile = await convertHeicToJpeg(file, 0.8)
         } catch (conversionError) {
           console.error('Error converting HEIC to JPEG:', conversionError);
           toast({

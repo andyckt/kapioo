@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Upload, X, Loader2, CreditCard, Check } from "lucide-react"
-import heic2any from "heic2any"
 import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
+import { convertHeicToJpeg } from "@/lib/heic-conversion"
 
 interface CreditPurchaseFormProps {
   userId: string;
@@ -97,21 +97,10 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
       
       let processedFile = file;
       
-      // Convert HEIC/HEIF to JPEG if needed
+      // Load HEIC conversion only when a HEIC/HEIF file is actually selected.
       if (isHeic) {
         try {
-          // Convert HEIC to JPEG using heic2any (silently, without toast notifications)
-          const jpegBlob = await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.8
-          }) as Blob;
-          
-          // Create a new file from the JPEG blob
-          processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
-            type: 'image/jpeg',
-            lastModified: new Date().getTime()
-          });
+          processedFile = await convertHeicToJpeg(file, 0.8)
         } catch (conversionError) {
           console.error('Error converting HEIC to JPEG:', conversionError);
           toast({

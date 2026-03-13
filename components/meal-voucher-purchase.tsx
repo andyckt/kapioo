@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-import heic2any from 'heic2any'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { mergeStoredUser } from '@/lib/client-user-cache'
 import { useLanguage } from '@/lib/language-context'
 import { ensureUserPhone, getStoredUser, normalizePhoneInput } from '@/lib/phone-helper'
+import { convertHeicToJpeg } from '@/lib/heic-conversion'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
 import { listDailyPlans } from '@/lib/plans/service'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -167,21 +167,10 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       
       let processedFile = file;
       
-      // Convert HEIC/HEIF to JPEG if needed
+      // Load HEIC conversion only when a HEIC/HEIF file is actually selected.
       if (isHeic) {
         try {
-          // Convert HEIC to JPEG using heic2any (silently, without toast notifications)
-          const jpegBlob = await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.8
-          }) as Blob;
-          
-          // Create a new file from the JPEG blob
-          processedFile = new File([jpegBlob], file.name.replace(/\.heic|\.heif/i, '.jpg'), {
-            type: 'image/jpeg',
-            lastModified: new Date().getTime()
-          });
+          processedFile = await convertHeicToJpeg(file, 0.8)
         } catch (conversionError) {
           console.error('Error converting HEIC to JPEG:', conversionError);
           toast({
