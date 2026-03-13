@@ -67,6 +67,35 @@ import { ServiceSelectionCards } from "@/components/service-selection-cards"
 // Valid delivery areas - using centralized constants
 const VALID_DELIVERY_AREAS = ALL_WEEKLY_AREAS;
 
+function formatDashboardHeaderDate(language: "en" | "zh"): string {
+  return new Intl.DateTimeFormat(language === "en" ? "en-US" : "zh-CN", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "America/Toronto",
+  }).format(new Date());
+}
+
+function formatUpcomingWeekdayLabel(targetDay: 1 | 3): string {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const daysToAdd = targetDay - dayOfWeek;
+  const targetDate = new Date(now);
+  targetDate.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
+
+  const monthFormatter = new Intl.DateTimeFormat("en-CA", {
+    month: "short",
+    timeZone: "America/Toronto",
+  });
+  const dayFormatter = new Intl.DateTimeFormat("en-CA", {
+    day: "numeric",
+    timeZone: "America/Toronto",
+  });
+
+  return `${monthFormatter.format(targetDate)} ${dayFormatter.format(targetDate)}`;
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -116,6 +145,9 @@ export default function DashboardPage() {
   const [totalOrders, setTotalOrders] = useState(0)
   const [orderStatsLoading, setOrderStatsLoading] = useState(true)
   const [selectedLocation, setSelectedLocation] = useState("Downtown")
+  const [dashboardHeaderDate, setDashboardHeaderDate] = useState("")
+  const [nextMondayLabel, setNextMondayLabel] = useState("")
+  const [nextWednesdayLabel, setNextWednesdayLabel] = useState("")
 
   // Define location types - now using centralized constants
   type Location = 
@@ -230,6 +262,12 @@ export default function DashboardPage() {
     const nextPath = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
     window.history.pushState({ tab: activeTab }, '', nextPath)
   }, [activeTab])
+
+  useEffect(() => {
+    setDashboardHeaderDate(formatDashboardHeaderDate(language))
+    setNextMondayLabel(formatUpcomingWeekdayLabel(1))
+    setNextWednesdayLabel(formatUpcomingWeekdayLabel(3))
+  }, [language])
 
   const [addressInfo, setAddressInfo] = useState({
     unitNumber: '',
@@ -1201,12 +1239,7 @@ export default function DashboardPage() {
                             {language === 'en' ? `Welcome, ${userData?.name?.split(' ')[0] || ''}` : `欢迎, ${userData?.name?.split(' ')[0] || ''}`}
                           </h2>
                           <p className="text-[#6B5F53] text-sm mt-1">
-                            {new Date().toLocaleDateString(language === 'en' ? 'en-US' : 'zh-CN', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
-                            })}
+                            {dashboardHeaderDate}
                           </p>
                         </div>
                         <div className="flex items-center space-x-3">
@@ -1640,30 +1673,7 @@ export default function DashboardPage() {
                             <div className="flex items-center">
                               <p className="text-sm font-medium leading-none">Monday</p>
                               <span className="text-xs text-muted-foreground ml-2">
-                                ({(() => {
-                                  try {
-                                    const now = new Date();
-                                    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
-                                    const daysToAdd = 1 - dayOfWeek; // Monday is day 1
-                                    const monday = new Date(now);
-                                    monday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
-                                    
-                                    const monthFormatter = new Intl.DateTimeFormat('en-CA', {
-                                      month: 'short',
-                                      timeZone: 'America/Toronto'
-                                    });
-                                    
-                                    const dayFormatter = new Intl.DateTimeFormat('en-CA', {
-                                      day: 'numeric',
-                                      timeZone: 'America/Toronto'
-                                    });
-                                    
-                                    return `${monthFormatter.format(monday)} ${dayFormatter.format(monday)}`;
-                                  } catch (error) {
-                                    console.error("Error formatting date:", error);
-                                    return "";
-                                  }
-                                })()})
+                                ({nextMondayLabel})
                               </span>
                             </div>
                             <div className="flex items-center text-sm text-muted-foreground">
@@ -1681,30 +1691,7 @@ export default function DashboardPage() {
                             <div className="flex items-center">
                               <p className="text-sm font-medium leading-none">Wednesday</p>
                               <span className="text-xs text-muted-foreground ml-2">
-                                ({(() => {
-                                  try {
-                                    const now = new Date();
-                                    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday, 3 is Wednesday
-                                    const daysToAdd = 3 - dayOfWeek; // Wednesday is day 3
-                                    const wednesday = new Date(now);
-                                    wednesday.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
-                                    
-                                    const monthFormatter = new Intl.DateTimeFormat('en-CA', {
-                                      month: 'short',
-                                      timeZone: 'America/Toronto'
-                                    });
-                                    
-                                    const dayFormatter = new Intl.DateTimeFormat('en-CA', {
-                                      day: 'numeric',
-                                      timeZone: 'America/Toronto'
-                                    });
-                                    
-                                    return `${monthFormatter.format(wednesday)} ${dayFormatter.format(wednesday)}`;
-                                  } catch (error) {
-                                    console.error("Error formatting date:", error);
-                                    return "";
-                                  }
-                                })()})
+                                ({nextWednesdayLabel})
                               </span>
                             </div>
                             <div className="flex items-center text-sm text-muted-foreground">
