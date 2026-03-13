@@ -90,6 +90,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const [promoBreakdown, setPromoBreakdown] = useState<PromoPreviewBreakdown | null>(null)
   const [promoError, setPromoError] = useState('')
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [paymentProofPreviewUrl, setPaymentProofPreviewUrl] = useState<string | null>(null)
 
   const durationLabels: Record<number, { en: string; zh: string }> = {
     1: { en: 'One week credit', zh: '1周次卡券' },
@@ -128,6 +129,20 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       document.removeEventListener('openInfoDialog', handleOpenInfoDialog)
     }
   }, [])
+
+  useEffect(() => {
+    if (!paymentProof) {
+      setPaymentProofPreviewUrl(null)
+      return
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(paymentProof)
+    setPaymentProofPreviewUrl(nextPreviewUrl)
+
+    return () => {
+      URL.revokeObjectURL(nextPreviewUrl)
+    }
+  }, [paymentProof])
   
   // Check URL parameters for plan selection
   useEffect(() => {
@@ -1229,10 +1244,10 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                             </p>
                           </div>
                         </div>
-                      ) : (
+                      ) : paymentProofPreviewUrl ? (
                         <div className="relative">
                           <img 
-                            src={URL.createObjectURL(paymentProof)} 
+                            src={paymentProofPreviewUrl}
                             alt="Payment proof" 
                             className="max-h-[200px] mx-auto rounded-md"
                           />
@@ -1246,6 +1261,16 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
                           >
                             <X className="h-4 w-4" />
                           </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 text-center">
+                          <div className="mx-auto w-12 h-12 rounded-full bg-[#F9F3EC] flex items-center justify-center">
+                            <CheckCircle className="h-6 w-6 text-[#C2884E]" />
+                          </div>
+                          <p className="text-sm font-medium text-[#6B5F53]">{paymentProof.name}</p>
+                          <p className="text-xs text-[#8A7968]">
+                            {language === 'zh' ? '文件已准备好提交' : 'File is ready to submit'}
+                          </p>
                         </div>
                       )}
                     </div>
