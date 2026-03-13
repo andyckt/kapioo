@@ -26,9 +26,11 @@ import {
 export async function POST(request: Request) {
   try {
     const { actor, response } = await requireUser();
-    if (!actor || response) {
-      return response;
-    }
+    // #region agent log
+    const dbg = (msg: string, hypothesisId: string, d?: Record<string, unknown>) => { fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'credits/request/route.ts:POST',message:msg,data:{hypothesisId,...d},timestamp:Date.now(),hypothesisId})}).catch(()=>{}); };
+    if (!actor || response) { dbg('requireUser_failed','C',{hasActor:!!actor}); return response; }
+    dbg('requireUser_ok','C',{userId:String(actor.user._id)});
+    // #endregion
 
     console.log('Credit request POST received');
     const data = await request.json();
@@ -86,12 +88,10 @@ export async function POST(request: Request) {
 
     // Phone is required for all credit requests
     const normalizedUserPhone = normalizePhone(user.phone);
-    if (!normalizedUserPhone) {
-      return NextResponse.json(
-        { success: false, error: 'Phone number is required for credit requests. Please add your phone number and try again.' },
-        { status: 400 }
-      );
-    }
+    // #region agent log
+    if (!normalizedUserPhone) { fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'credits/request/route.ts:POST',message:'phone_required_failed',data:{hypothesisId:'D',hasPhone:false},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{}); return NextResponse.json({ success: false, error: 'Phone number is required for credit requests. Please add your phone number and try again.' }, { status: 400 }); }
+    fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'credits/request/route.ts:POST',message:'phone_ok',data:{hypothesisId:'D',hasPhone:true},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
 
     const duration = Number(data.mealPlanQuantity || data.duration);
     const mealsPerWeek = Number(data.mealsPerWeek || String(data.mealPlanType || '').replace('aweek', ''));

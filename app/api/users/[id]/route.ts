@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
-import { requireAdmin, requireSelfOrAdmin } from '@/lib/auth/guards';
+import { requireAdminMfa, requireSelfOrAdmin } from '@/lib/auth/guards';
 import User from '@/models/User';
 
 // Interface for route params
@@ -12,8 +12,9 @@ interface RouteParams {
 
 // GET handler - return a specific user by ID
 export async function GET(request: Request, { params }: RouteParams) {
+  let id = '';
   try {
-    const { id } = await params;
+    ({ id } = await params);
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
       return response;
@@ -35,7 +36,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     
     return NextResponse.json({ success: true, data: user });
   } catch (error) {
-    console.error(`Error fetching user ${params.id}:`, error);
+    console.error(`Error fetching user ${id}:`, error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch user' },
       { status: 500 }
@@ -52,6 +53,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return response;
     }
     const data = await request.json();
+
+    if ('password' in data) {
+      return NextResponse.json(
+        { success: false, error: 'Use the dedicated change-password route to update passwords' },
+        { status: 400 }
+      );
+    }
     
     await connectToDatabase();
     
@@ -87,7 +95,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       'address',
       'languagePreference',
       'emailPreferences',
-      'password',
     ]);
 
     if (!isAdmin) {
@@ -114,13 +121,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           { status: 409 }
         );
       }
-    }
-    
-    // Handle password update
-    if (data.password) {
-      await user.setPassword(data.password);
-      // Remove password from data to avoid overwriting the hashed password
-      delete data.password;
     }
     
     // Update user fields
@@ -162,9 +162,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
 // DELETE handler - delete a user
 export async function DELETE(request: Request, { params }: RouteParams) {
+  let id = '';
   try {
-    const { id } = await params;
-    const { actor, response } = await requireAdmin();
+    ({ id } = await params);
+    const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
     }
@@ -188,7 +189,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       message: 'User deleted successfully' 
     });
   } catch (error) {
-    console.error(`Error deleting user ${params.id}:`, error);
+    console.error(`Error deleting user ${id}:`, error);
     return NextResponse.json(
       { success: false, error: 'Failed to delete user' },
       { status: 500 }

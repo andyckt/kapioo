@@ -681,38 +681,14 @@ export function WeeklySubscriptionCheckout({
       console.log('📧 Number of orders:', orderResults.length);
       
       try {
-        // Map order results to email format with safety checks
-        const orders = orderResults.map((result, index) => {
-          console.log(`📧 Processing order ${index + 1}:`, result);
-          
-          // submitUserSubscription returns { subscription, order, remainingCredits, ... }
-          // So we need to access result.order directly
-          const orderData = result.order || result;
-          
-          console.log(`📧 Order data for order ${index + 1}:`, orderData);
-          
-          return {
-            orderId: orderData.orderId,
-            items: orderData.items,
-            totalCredits: orderData.creditCost || 0,
-            mealPlanType: result.usedMealPlanType,
-            voucherDeducted: result.voucherDeducted
-          };
-        });
-        
-        console.log('📧 Mapped orders:', orders);
-        
         const emailPayload = {
           type: 'weekly',
-          userEmail: userData.email,
-          userName: userData.name,
-          userId: userData._id,
-          orders: orders,
-          deliveryAddress: deliveryAddress,
-          area: formData.area,
-          phoneNumber: formData.phone,
-          specialInstructions: formData.specialInstructions,
-          language: userData.languagePreference || 'zh'
+          orderIds: orderResults
+            .map((result) => {
+              const orderData = result.order || result
+              return orderData?.orderId
+            })
+            .filter(Boolean)
         };
         
         console.log('📧 Email payload:', JSON.stringify(emailPayload, null, 2));

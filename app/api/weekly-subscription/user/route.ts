@@ -252,9 +252,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { actor, response } = await requireUser();
-    if (!actor || response) {
-      return response;
-    }
+    // #region agent log
+    const dbg = (msg: string, hypothesisId: string, d?: Record<string, unknown>) => { fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'weekly-subscription/user/route.ts:POST',message:msg,data:{hypothesisId,...d},timestamp:Date.now(),hypothesisId})}).catch(()=>{}); };
+    if (!actor || response) { dbg('requireUser_failed','C',{hasActor:!!actor}); return response; }
+    dbg('requireUser_ok','C',{userId:String(actor.user._id)});
+    // #endregion
 
     const data = await request.json();
     
@@ -499,7 +501,7 @@ export async function POST(request: Request) {
     // Remove duplicates
     const uniqueCombos = Array.from(
       new Map(dayWeekCombos.map((combo: any) => [`${combo.day}-${combo.weekOffset}`, combo])).values()
-    );
+    ) as Array<{ day: string; weekOffset: number }>;
     
     console.log('🔍 API DEBUG: Unique day+weekOffset combinations:', uniqueCombos);
     
@@ -556,6 +558,8 @@ export async function POST(request: Request) {
       items: orderItems,
       status: 'pending',
       creditCost: totalItems,
+      mealPlanType,
+      voucherDeducted: shouldDeductVoucher,
       specialInstructions: data.specialInstructions || '',
       deliveryAddress: data.deliveryAddress || {},
       phoneNumber: data.phoneNumber || '',

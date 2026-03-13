@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
+import { restoreWeeklyOrderEntitlement } from '@/lib/orders/weekly-refund';
 import { sendDailyOrderStatusUpdateNotification } from '@/lib/services/notifications';
 import User from '@/models/User';
+import WeeklyOrder from '@/models/WeeklyOrder';
 
 // Define route params interface
 interface RouteParams {
@@ -11,81 +12,6 @@ interface RouteParams {
     id: string;
   };
 }
-
-// Define the interface for the WeeklyOrder document
-interface WeeklyOrderDocument extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: string;
-  items: any[];
-  status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
-  creditCost: number;
-  specialInstructions?: string;
-  deliveryAddress: {
-    unitNumber?: string;
-    streetAddress: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
-    buzzCode?: string;
-  };
-  phoneNumber: string;
-  area: string;
-  confirmedAt?: Date;
-  deliveredAt?: Date;
-  refundedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Create a schema for weekly orders
-const WeeklyOrderSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  orderId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  items: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'],
-    default: 'pending'
-  },
-  creditCost: {
-    type: Number,
-    required: true
-  },
-  specialInstructions: String,
-  deliveryAddress: {
-    unitNumber: String,
-    streetAddress: String,
-    province: String,
-    postalCode: String,
-    country: String,
-    buzzCode: String
-  },
-  phoneNumber: String,
-  area: String,
-  confirmedAt: Date,
-  deliveredAt: Date,
-  refundedAt: Date,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
 
 // PATCH handler - update weekly subscription order status
 export async function PATCH(request: Request, { params }: RouteParams) {
@@ -97,16 +23,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     
     // First connect to the database
     await connectToDatabase();
-    
-    // Initialize the model after database connection is established
-    let WeeklyOrder: mongoose.Model<WeeklyOrderDocument>;
-    if (mongoose.models.WeeklyOrder) {
-      // Use existing model if it exists
-      WeeklyOrder = mongoose.models.WeeklyOrder as mongoose.Model<WeeklyOrderDocument>;
-    } else {
-      // Create the model if it doesn't exist
-      WeeklyOrder = mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
-    }
     
     const { id } = params;
     const { status } = await request.json();
@@ -143,11 +59,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     } else if (status === 'refunded') {
       updateData.refundedAt = new Date();
       
-      // If refunded, return credits to user
+      // Refund the same entitlement type that was originally consumed.
       if (order.status !== 'refunded') {
         const user = await User.findById(order.userId);
         if (user) {
-          user.credits += order.creditCost;
+          restoreWeeklyOrderEntitlement(user, order);
           await user.save();
         }
       }

@@ -544,33 +544,14 @@ export function DailyDeliveryCheckout({
       console.log('📧 Number of orders:', orderResults.length);
       
       try {
-        // Map order results to email format with safety checks
-        const orders = orderResults.map((result, index) => {
-          console.log(`📧 Processing order ${index + 1}:`, result);
-          
-          // Handle both result.data and direct result formats
-          const orderData = result.data || result;
-          
-          return {
-            orderId: orderData.orderId,
-            items: orderData.items,
-            voucherCost: orderData.voucherCost || { twoDish: 0, threeDish: 0 }
-          };
-        });
-        
-        console.log('📧 Mapped orders:', orders);
-        
         const emailPayload = {
           type: 'daily',
-          userEmail: userData.email,
-          userName: userData.name,
-          userId: userData._id,
-          orders: orders,
-          deliveryAddress: editingAddress ? addressFormData : userData.address,
-          area: formData.area,
-          phoneNumber: formData.phone,
-          specialInstructions: formData.specialInstructions,
-          language: userData.languagePreference || 'zh'
+          orderIds: orderResults
+            .map((result) => {
+              const orderData = result.data || result
+              return orderData?.orderId
+            })
+            .filter(Boolean)
         };
         
         console.log('📧 Email payload:', JSON.stringify(emailPayload, null, 2));

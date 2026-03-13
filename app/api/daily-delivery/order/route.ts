@@ -163,9 +163,11 @@ const idempotencyStore = new Map<string, any>();
 export async function POST(request: Request) {
   try {
     const { actor, response } = await requireUser();
-    if (!actor || response) {
-      return response;
-    }
+    // #region agent log
+    const dbg = (msg: string, hypothesisId: string, d?: Record<string, unknown>) => { fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'daily-delivery/order/route.ts:POST',message:msg,data:{hypothesisId,...d},timestamp:Date.now(),hypothesisId})}).catch(()=>{}); };
+    if (!actor || response) { dbg('requireUser_failed','C',{hasActor:!!actor}); return response; }
+    dbg('requireUser_ok','C',{userId:String(actor.user._id)});
+    // #endregion
 
     await connectToDatabase();
     

@@ -1,6 +1,9 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IAddress } from './UserSubscription';
 
+export const WEEKLY_MEAL_PLAN_TYPES = ['legacy', '6aweek', '8aweek', '10aweek', '12aweek', '16aweek'] as const;
+export type WeeklyMealPlanType = (typeof WEEKLY_MEAL_PLAN_TYPES)[number];
+
 // Define WeeklyOrderItem interface
 export interface IWeeklyOrderItem {
   dayId: string;        // 'sunday' or 'tuesday'
@@ -17,6 +20,8 @@ export interface IWeeklyOrder extends Document {
   items: IWeeklyOrderItem[];
   status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
   creditCost: number;   // Total credits used for this order
+  mealPlanType?: WeeklyMealPlanType;
+  voucherDeducted: boolean;
   specialInstructions?: string;
   deliveryAddress: IAddress;
   phoneNumber: string;
@@ -103,6 +108,15 @@ const WeeklyOrderSchema: Schema = new Schema(
       required: true,
       min: 0
     },
+    mealPlanType: {
+      type: String,
+      enum: WEEKLY_MEAL_PLAN_TYPES,
+      default: 'legacy',
+    },
+    voucherDeducted: {
+      type: Boolean,
+      default: false,
+    },
     specialInstructions: {
       type: String,
       default: '',
@@ -125,5 +139,29 @@ const WeeklyOrderSchema: Schema = new Schema(
   }
 );
 
+function shouldRefreshWeeklyOrderModel(model: mongoose.Model<IWeeklyOrder> | undefined) {
+  const schema = model?.schema as any;
+  const mealPlanTypePath = schema?.path?.('mealPlanType');
+  const voucherDeductedPath = schema?.path?.('voucherDeducted');
+
+  return (
+    !mealPlanTypePath ||
+    !voucherDeductedPath ||
+    !Array.isArray(mealPlanTypePath.enumValues) ||
+    !mealPlanTypePath.enumValues.includes('legacy')
+  );
+}
+
+export function getWeeklyOrderModel() {
+  const existingModel = mongoose.models.WeeklyOrder as mongoose.Model<IWeeklyOrder> | undefined;
+
+  if (shouldRefreshWeeklyOrderModel(existingModel)) {
+    delete (mongoose.models as Record<string, unknown>).WeeklyOrder;
+  }
+
+  return (mongoose.models.WeeklyOrder as mongoose.Model<IWeeklyOrder> | undefined) ||
+    mongoose.model<IWeeklyOrder>('WeeklyOrder', WeeklyOrderSchema);
+}
+
 // Create model if it doesn't exist already (for Next.js hot reloading)
-export default mongoose.models.WeeklyOrder || mongoose.model<IWeeklyOrder>('WeeklyOrder', WeeklyOrderSchema);
+export default getWeeklyOrderModel();
