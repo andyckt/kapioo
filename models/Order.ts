@@ -1,5 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+/**
+ * @deprecated Legacy order model retained only for Phase 2B migration.
+ * Canonical daily-delivery order work should target `models/DailyDeliveryOrder.ts`.
+ */
+
 export interface OrderItem {
   dayId: string;
   date: string;

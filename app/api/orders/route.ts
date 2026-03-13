@@ -1,18 +1,26 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { annotateLegacyOrderRoute, LEGACY_ORDER_DOMAIN } from '@/lib/orders/domain-contract';
 import Order from '@/models/Order';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 import { handleOrderNotification, NotificationType } from '@/lib/services/notifications';
 
+function legacyOrderJson(body: unknown, init?: ResponseInit) {
+  return annotateLegacyOrderRoute(
+    NextResponse.json(body, init),
+    LEGACY_ORDER_DOMAIN.listRoute
+  );
+}
+
 // GET handler - get orders with optional userId filtering
 export async function GET(request: Request) {
   try {
     const { actor, response } = await requireUser();
     if (!actor || response) {
-      return response;
+      return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.listRoute);
     }
 
     const url = new URL(request.url);
@@ -35,7 +43,7 @@ export async function GET(request: Request) {
         String(actor.user._id) === String(userId) ||
         String(actor.user.userID) === String(userId);
       if (!isSelf && actor.role !== 'admin') {
-        return NextResponse.json(
+        return legacyOrderJson(
           { success: false, error: 'You do not have access to these orders' },
           { status: 403 }
         );
@@ -44,7 +52,7 @@ export async function GET(request: Request) {
       if (!isSelf && actor.role === 'admin') {
         const { response: adminMfaResponse } = await requireAdminMfa(request);
         if (adminMfaResponse) {
-          return adminMfaResponse;
+          return annotateLegacyOrderRoute(adminMfaResponse, LEGACY_ORDER_DOMAIN.listRoute);
         }
       }
 
@@ -62,7 +70,7 @@ export async function GET(request: Request) {
         { userId: String(actor.user._id) }
       ];
     } else {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'User ID is required for admin order access' },
         { status: 400 }
       );
@@ -88,7 +96,7 @@ export async function GET(request: Request) {
       // Get total count for pagination
       const totalOrders = await Order.countDocuments(query);
       
-      return NextResponse.json({ 
+      return legacyOrderJson({ 
         success: true, 
         data: {
           orders,
@@ -100,14 +108,14 @@ export async function GET(request: Request) {
       });
     } catch (dbError: any) {
       console.error('Database error when fetching orders:', dbError);
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'Database error when fetching orders', details: dbError.message },
         { status: 500 }
       );
     }
   } catch (error: any) {
     console.error('Error fetching orders:', error);
-    return NextResponse.json(
+    return legacyOrderJson(
       { success: false, error: 'Failed to fetch orders', details: error.message },
       { status: 500 }
     );
@@ -119,7 +127,7 @@ export async function POST(request: Request) {
   try {
     const { actor, response } = await requireUser();
     if (!actor || response) {
-      return response;
+      return response ? annotateLegacyOrderRoute(response, LEGACY_ORDER_DOMAIN.listRoute) : response;
     }
 
     const {
@@ -142,7 +150,7 @@ export async function POST(request: Request) {
       String(userId) !== String(actor.user._id) &&
       String(userId) !== String(actor.user.userID)
     ) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'You cannot create orders for another user' },
         { status: 403 }
       );
@@ -159,14 +167,14 @@ export async function POST(request: Request) {
     );
     
     if (!hasSelectedMeals) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'At least one meal must be selected' },
         { status: 400 }
       );
     }
     
     if (!creditCost || creditCost <= 0) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'Valid credit cost is required' },
         { status: 400 }
       );
@@ -174,7 +182,7 @@ export async function POST(request: Request) {
     
     if (!deliveryAddress || !deliveryAddress.streetAddress || 
         !deliveryAddress.province || !deliveryAddress.postalCode) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'Complete delivery address is required' },
         { status: 400 }
       );
@@ -185,7 +193,7 @@ export async function POST(request: Request) {
     // Find user
     const user = await User.findById(effectiveUserId);
     if (!user) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
@@ -193,7 +201,7 @@ export async function POST(request: Request) {
     
     // Check if user has enough credits
     if ((user.credits || 0) < creditCost) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'Insufficient credits' },
         { status: 400 }
       );
@@ -251,7 +259,7 @@ export async function POST(request: Request) {
       );
 
       
-      return NextResponse.json({
+      return legacyOrderJson({
         success: true,
         data: {
           order: savedOrder,
@@ -269,7 +277,7 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error('Error creating order:', error);
-    return NextResponse.json(
+    return legacyOrderJson(
       { success: false, error: 'Failed to create order', details: error.message },
       { status: 500 }
     );

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { annotateLegacyOrderRoute, LEGACY_ORDER_DOMAIN } from '@/lib/orders/domain-contract';
 import Order from '@/models/Order';
 import User from '@/models/User';
 import mongoose from 'mongoose';
@@ -12,13 +13,20 @@ interface RouteParams {
   };
 }
 
+function legacyOrderJson(body: unknown, init?: ResponseInit) {
+  return annotateLegacyOrderRoute(
+    NextResponse.json(body, init),
+    LEGACY_ORDER_DOMAIN.userListRoute
+  );
+}
+
 // GET handler - get all orders for a specific user
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
-      return response;
+      return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.userListRoute);
     }
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
@@ -37,7 +45,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     });
     
     if (!user) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
@@ -60,7 +68,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Get total count for pagination
     const totalOrders = await Order.countDocuments(query);
     
-    return NextResponse.json({
+    return legacyOrderJson({
       success: true,
       data: {
         orders,
@@ -72,7 +80,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     });
   } catch (error: any) {
     console.error(`Error fetching orders for user ${params.id}:`, error);
-    return NextResponse.json(
+    return legacyOrderJson(
       { success: false, error: 'Failed to fetch user orders', details: error.message },
       { status: 500 }
     );

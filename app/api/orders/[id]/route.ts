@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import { logAuditEvent } from '@/lib/security/audit';
+import { annotateLegacyOrderRoute, LEGACY_ORDER_DOMAIN } from '@/lib/orders/domain-contract';
 import Order from '@/models/Order';
 import mongoose from 'mongoose';
 import User from '@/models/User';
@@ -15,12 +16,19 @@ interface RouteParams {
   };
 }
 
+function legacyOrderJson(body: unknown, init?: ResponseInit) {
+  return annotateLegacyOrderRoute(
+    NextResponse.json(body, init),
+    LEGACY_ORDER_DOMAIN.detailRoute
+  );
+}
+
 // GET handler - get order details
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { actor, response } = await requireUser();
     if (!actor || response) {
-      return response;
+      return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.detailRoute);
     }
 
     const { id } = params;
@@ -36,7 +44,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }).populate('userId', 'name email userID');
     
     if (!order) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
@@ -48,7 +56,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         : String(order.userId);
 
     if (actor.role !== 'admin' && orderUserId !== String(actor.user._id)) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'You do not have access to this order' },
         { status: 403 }
       );
@@ -72,13 +80,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       responseData.refundTransaction = refundTransaction;
     }
     
-    return NextResponse.json({
+    return legacyOrderJson({
       success: true,
       data: responseData
     });
   } catch (error: any) {
     console.error(`Error fetching order with ID ${params.id}:`, error);
-    return NextResponse.json(
+    return legacyOrderJson(
       { success: false, error: 'Failed to fetch order', details: error.message },
       { status: 500 }
     );
@@ -90,7 +98,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
-      return response;
+      return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.detailRoute);
     }
 
     const { id } = params;
@@ -99,7 +107,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     // Validate status
     const validStatuses = ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'];
     if (!status || !validStatuses.includes(status)) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'Invalid status value' },
         { status: 400 }
       );
@@ -116,7 +124,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     });
     
     if (!order) {
-      return NextResponse.json(
+      return legacyOrderJson(
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
@@ -131,7 +139,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       const user = await User.findById(order.userId);
       
       if (!user) {
-        return NextResponse.json(
+        return legacyOrderJson(
           { success: false, error: 'User not found for refund processing' },
           { status: 404 }
         );
@@ -187,7 +195,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           request,
         });
         
-        return NextResponse.json({
+        return legacyOrderJson({
           success: true,
           data: {
             order,
@@ -199,7 +207,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         // Abort transaction on error
         await session.abortTransaction();
         console.error('Transaction error during refund:', transactionError);
-        return NextResponse.json(
+        return legacyOrderJson(
           { success: false, error: 'Failed to process refund', details: transactionError.message },
           { status: 500 }
         );
@@ -214,7 +222,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       const user = await User.findById(order.userId);
       
       if (!user) {
-        return NextResponse.json(
+        return legacyOrderJson(
           { success: false, error: 'User not found for cancellation refund processing' },
           { status: 404 }
         );
@@ -272,7 +280,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           request,
         });
         
-        return NextResponse.json({
+        return legacyOrderJson({
           success: true,
           data: {
             order,
@@ -284,7 +292,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         // Abort transaction on error
         await session.abortTransaction();
         console.error('Transaction error during cancellation refund:', transactionError);
-        return NextResponse.json(
+        return legacyOrderJson(
           { success: false, error: 'Failed to process cancellation refund', details: transactionError.message },
           { status: 500 }
         );
@@ -353,14 +361,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         request,
       });
       
-      return NextResponse.json({
+      return legacyOrderJson({
         success: true,
         data: order
       });
     }
   } catch (error: any) {
     console.error(`Error updating order with ID ${params.id}:`, error);
-    return NextResponse.json(
+    return legacyOrderJson(
       { success: false, error: 'Failed to update order', details: error.message },
       { status: 500 }
     );
