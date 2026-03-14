@@ -76,7 +76,6 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
-import { OrderManagement } from "@/components/order-management"
 import { NotificationType } from '@/lib/services/notifications';
 import { WeekYearDisplay } from "@/components/week-year-display"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"

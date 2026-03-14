@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import type mongoose from "mongoose";
 
 import connectToDatabase from "@/lib/db";
 import AuditLog from "@/models/AuditLog";
@@ -13,13 +14,14 @@ type AuditInput = {
   targetId?: string;
   metadata?: Record<string, unknown>;
   request?: Request | NextRequest;
+  session?: mongoose.ClientSession;
 };
 
 export async function logAuditEvent(input: AuditInput) {
   try {
     await connectToDatabase();
 
-    await AuditLog.create({
+    const auditLog = new AuditLog({
       actorUserId: input.actor?.user?._id,
       actorRole: input.actor?.role || "system",
       actorEmail: input.actor?.user?.email,
@@ -33,6 +35,7 @@ export async function logAuditEvent(input: AuditInput) {
         undefined,
       userAgent: input.request?.headers.get("user-agent") || undefined,
     });
+    await auditLog.save(input.session ? { session: input.session } : undefined);
   } catch (error) {
     console.error("Failed to write audit log:", error);
   }

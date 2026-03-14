@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
+import {
+  applyBalanceMutations,
+  BalanceMutationError,
+} from '@/lib/balances/mutations';
 import connectToDatabase from '@/lib/db';
 import { logAuditEvent } from '@/lib/security/audit';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
@@ -126,31 +130,25 @@ export async function PUT(
       
       // If approved, update user's voucher balance
       if (status === 'approved') {
-        const user = await User.findById(voucherRequest.userId);
+        const user = await User.findById(voucherRequest.userId).session(session);
         
         if (!user) {
-          await session.abortTransaction();
-          session.endSession();
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
+          throw new BalanceMutationError('User not found', {
+            status: 404,
+            code: 'USER_NOT_FOUND',
+          });
         }
-        
-        // Update the appropriate voucher count
-        if (voucherRequest.type === 'twoDish') {
-          await User.findByIdAndUpdate(
-            voucherRequest.userId,
-            { $inc: { twoDishVoucher: voucherRequest.quantity } },
-            { session }
-          );
-        } else if (voucherRequest.type === 'threeDish') {
-          await User.findByIdAndUpdate(
-            voucherRequest.userId,
-            { $inc: { threeDishVoucher: voucherRequest.quantity } },
-            { session }
-          );
-        }
+
+        await applyBalanceMutations({
+          user,
+          mutations: [{
+            field: voucherRequest.type === 'twoDish' ? 'twoDishVoucher' : 'threeDishVoucher',
+            amount: voucherRequest.quantity,
+            operation: 'add',
+          }],
+          description: `Voucher purchase approved (Request ID: ${requestId})`,
+          session,
+        });
         
         // Send email notification to user
         try {
@@ -220,6 +218,13 @@ export async function PUT(
       throw transactionError;
     }
   } catch (error) {
+    if (error instanceof BalanceMutationError) {
+      return NextResponse.json(
+        { success: false, error: error.message, details: error.details },
+        { status: error.status }
+      );
+    }
+
     console.error('Error updating voucher purchase request:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to update voucher purchase request' },

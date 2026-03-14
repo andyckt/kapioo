@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import Order from '@/models/Order';
-import mongoose from 'mongoose';
+import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
+import WeeklyOrder from '@/models/WeeklyOrder';
 
 export async function GET(request: Request) {
   try {
@@ -12,18 +12,60 @@ export async function GET(request: Request) {
     }
 
     await connectToDatabase();
-    
-    // Get current counts of orders by status
-    const pendingOrders = await Order.countDocuments({ status: 'pending' });
-    const deliveredOrders = await Order.countDocuments({ status: 'delivered' });
-    const confirmedOrders = await Order.countDocuments({ status: 'confirmed' });
-    const inDeliveryOrders = await Order.countDocuments({ status: 'delivery' });
-    const cancelledOrders = await Order.countDocuments({ status: 'cancelled' });
-    const refundedOrders = await Order.countDocuments({ status: 'refunded' });
+
+    const statuses = ['pending', 'delivered', 'confirmed', 'delivery', 'cancelled', 'refunded'] as const;
+    const [
+      pendingDaily,
+      deliveredDaily,
+      confirmedDaily,
+      inDeliveryDaily,
+      cancelledDaily,
+      refundedDaily,
+      pendingWeekly,
+      deliveredWeekly,
+      confirmedWeekly,
+      inDeliveryWeekly,
+      cancelledWeekly,
+      refundedWeekly,
+    ] = await Promise.all([
+      DailyDeliveryOrder.countDocuments({ status: 'pending' }),
+      DailyDeliveryOrder.countDocuments({ status: 'delivered' }),
+      DailyDeliveryOrder.countDocuments({ status: 'confirmed' }),
+      DailyDeliveryOrder.countDocuments({ status: 'delivery' }),
+      DailyDeliveryOrder.countDocuments({ status: 'cancelled' }),
+      DailyDeliveryOrder.countDocuments({ status: 'refunded' }),
+      WeeklyOrder.countDocuments({ status: 'pending' }),
+      WeeklyOrder.countDocuments({ status: 'delivered' }),
+      WeeklyOrder.countDocuments({ status: 'confirmed' }),
+      WeeklyOrder.countDocuments({ status: 'delivery' }),
+      WeeklyOrder.countDocuments({ status: 'cancelled' }),
+      WeeklyOrder.countDocuments({ status: 'refunded' }),
+    ]);
+
+    const pendingOrders = pendingDaily + pendingWeekly;
+    const deliveredOrders = deliveredDaily + deliveredWeekly;
+    const confirmedOrders = confirmedDaily + confirmedWeekly;
+    const inDeliveryOrders = inDeliveryDaily + inDeliveryWeekly;
+    const cancelledOrders = cancelledDaily + cancelledWeekly;
+    const refundedOrders = refundedDaily + refundedWeekly;
     
     // Get total orders
-    const totalOrders = pendingOrders + deliveredOrders + confirmedOrders + 
-                        inDeliveryOrders + cancelledOrders + refundedOrders;
+    const totalOrders = statuses.reduce((total, status) => {
+      switch (status) {
+        case 'pending':
+          return total + pendingOrders;
+        case 'delivered':
+          return total + deliveredOrders;
+        case 'confirmed':
+          return total + confirmedOrders;
+        case 'delivery':
+          return total + inDeliveryOrders;
+        case 'cancelled':
+          return total + cancelledOrders;
+        case 'refunded':
+          return total + refundedOrders;
+      }
+    }, 0);
     
     // For a real application, we would fetch historical data from a database
     // For this demo, we'll simulate "previous period" data as a percentage of current data

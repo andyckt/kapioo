@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import Order from '@/models/Order';
+import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 
@@ -34,7 +34,7 @@ export async function GET(
     }
     
     // Count total daily orders for the user
-    const dailyOrdersCount = await Order.countDocuments({ userId: user._id });
+    const dailyOrdersCount = await DailyDeliveryOrder.countDocuments({ userId: user._id });
     
     return NextResponse.json({
       success: true,

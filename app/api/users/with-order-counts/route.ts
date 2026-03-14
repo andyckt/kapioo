@@ -1,54 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
 import User from '@/models/User';
-import Order from '@/models/Order';
 import WeeklyOrder from '@/models/WeeklyOrder';
-import mongoose from 'mongoose';
-
-// Define DailyDeliveryOrder schema inline (not a separate model file)
-interface DailyOrderDocument extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: string;
-  items: any;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const DailyDeliveryOrderSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  orderId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  items: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'],
-    default: 'pending'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// Get or create the model
-const DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder || 
-  mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
 
 /**
  * Optimized endpoint that fetches users with their order counts in a single request
@@ -118,14 +73,7 @@ export async function GET(request: Request) {
     const userIds = users.map(user => user._id);
     
     // 🚀 OPTIMIZATION: Fetch all order counts in parallel using aggregation
-    const [totalOrderCounts, dailyOrderCounts, weeklyOrderCounts] = await Promise.all([
-      // Total orders (from Order model)
-      Order.aggregate([
-        { $match: { userId: { $in: userIds } } },
-        { $group: { _id: '$userId', count: { $sum: 1 } } }
-      ]),
-      
-      // Daily delivery orders
+    const [dailyOrderCounts, weeklyOrderCounts] = await Promise.all([
       DailyDeliveryOrder.aggregate([
         { $match: { userId: { $in: userIds } } },
         { $group: { _id: '$userId', count: { $sum: 1 } } }
@@ -139,9 +87,6 @@ export async function GET(request: Request) {
     ]);
     
     // Create lookup maps for O(1) access
-    const totalOrderMap = new Map(
-      totalOrderCounts.map(item => [item._id.toString(), item.count])
-    );
     const dailyOrderMap = new Map(
       dailyOrderCounts.map(item => [item._id.toString(), item.count])
     );
@@ -152,9 +97,11 @@ export async function GET(request: Request) {
     // Combine users with their order counts
     const usersWithCounts = users.map(user => ({
       ...user,
-      totalOrders: totalOrderMap.get(user._id.toString()) || 0,
-      dailyOrdersCount: dailyOrderMap.get(user._id.toString()) || 0,
-      weeklyOrdersCount: weeklyOrderMap.get(user._id.toString()) || 0
+      dailyOrdersCount: dailyOrderMap.get(String(user._id)) || 0,
+      weeklyOrdersCount: weeklyOrderMap.get(String(user._id)) || 0,
+    })).map(user => ({
+      ...user,
+      totalOrders: (user.dailyOrdersCount || 0) + (user.weeklyOrdersCount || 0)
     }));
     
     // Calculate pagination

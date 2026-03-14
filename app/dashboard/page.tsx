@@ -47,7 +47,6 @@ import {
   type DashboardUserData,
 } from "@/lib/dashboard-user-profile"
 import { Checkbox } from "@/components/ui/checkbox"
-import { OrderHistory } from "@/components/order-history"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import Image from "next/image"

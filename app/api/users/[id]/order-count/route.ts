@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import Order from '@/models/Order';
+import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
 import User from '@/models/User';
+import WeeklyOrder from '@/models/WeeklyOrder';
 import mongoose from 'mongoose';
 
 // Interface for route params (Next.js 15: params is a Promise)
@@ -36,8 +37,11 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
     
-    // Count orders for this user
-    const count = await Order.countDocuments({ userId: user._id });
+    const [dailyCount, weeklyCount] = await Promise.all([
+      DailyDeliveryOrder.countDocuments({ userId: user._id }),
+      WeeklyOrder.countDocuments({ userId: user._id }),
+    ]);
+    const count = dailyCount + weeklyCount;
     
     return NextResponse.json({
       success: true,

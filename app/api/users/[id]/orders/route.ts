@@ -2,15 +2,15 @@ import { NextResponse } from 'next/server';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import { annotateLegacyOrderRoute, LEGACY_ORDER_DOMAIN } from '@/lib/orders/domain-contract';
-import Order from '@/models/Order';
+import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 
 // Interface for route params
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 function legacyOrderJson(body: unknown, init?: ResponseInit) {
@@ -22,8 +22,9 @@ function legacyOrderJson(body: unknown, init?: ResponseInit) {
 
 // GET handler - get all orders for a specific user
 export async function GET(request: Request, { params }: RouteParams) {
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
   try {
-    const { id } = params;
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
       return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.userListRoute);
@@ -59,14 +60,14 @@ export async function GET(request: Request, { params }: RouteParams) {
       query.status = status;
     }
     
-    // Find orders for this user with pagination
-    const orders = await Order.find(query)
+    // Find canonical daily-delivery orders for this user with pagination
+    const orders = await DailyDeliveryOrder.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
     
     // Get total count for pagination
-    const totalOrders = await Order.countDocuments(query);
+    const totalOrders = await DailyDeliveryOrder.countDocuments(query);
     
     return legacyOrderJson({
       success: true,
@@ -79,7 +80,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
     });
   } catch (error: any) {
-    console.error(`Error fetching orders for user ${params.id}:`, error);
+    console.error(`Error fetching orders for user ${id}:`, error);
     return legacyOrderJson(
       { success: false, error: 'Failed to fetch user orders', details: error.message },
       { status: 500 }

@@ -3,109 +3,13 @@ import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
 import User from '@/models/User';
+import WeeklyOrder from '@/models/WeeklyOrder';
 import {
   getOrderOnlyOverrideMeta,
   hasOrderCustomerOverride,
   resolveEffectiveOrderCustomerInfo,
   type OrderCustomerOverride,
 } from '@/lib/orders/effective-customer-info';
-
-// Define the interface for the WeeklyOrder document
-interface WeeklyOrderDocument extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: string;
-  items: any[];
-  status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
-  creditCost: number;
-  specialInstructions?: string;
-  deliveryAddress: {
-    unitNumber?: string;
-    streetAddress: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
-    buzzCode?: string;
-  };
-  phoneNumber: string;
-  area: string;
-  orderCustomerOverride?: OrderCustomerOverride;
-  confirmedAt?: Date;
-  deliveredAt?: Date;
-  refundedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Create a schema for weekly orders
-const WeeklyOrderSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  orderId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  items: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'],
-    default: 'pending'
-  },
-  creditCost: {
-    type: Number,
-    required: true
-  },
-  specialInstructions: String,
-  deliveryAddress: {
-    unitNumber: String,
-    streetAddress: String,
-    province: String,
-    postalCode: String,
-    country: String,
-    buzzCode: String
-  },
-  phoneNumber: String,
-  area: String,
-  orderCustomerOverride: {
-    name: String,
-    phoneNumber: String,
-    area: String,
-    specialInstructions: String,
-    deliveryAddress: {
-      unitNumber: String,
-      streetAddress: String,
-      city: String,
-      province: String,
-      postalCode: String,
-      country: String,
-      buzzCode: String
-    },
-    updatedAt: Date,
-    updatedBy: String
-  },
-  confirmedAt: Date,
-  deliveredAt: Date,
-  refundedAt: Date,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// Create the model
-const WeeklyOrder = mongoose.models.WeeklyOrder || 
-  mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
 
 // GET handler - get all weekly subscription orders with pagination and filtering
 export async function GET(request: Request) {
@@ -282,7 +186,7 @@ export async function GET(request: Request) {
     const ordersWithUserInfo = await Promise.all(orders.map(async (order: any) => {
       try {
         const user = await User.findById(order.userId).select('name email').lean();
-        const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user);
+        const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user as any);
         return {
           ...order,
           user,

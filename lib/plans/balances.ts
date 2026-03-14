@@ -45,14 +45,18 @@ export function getBalance(user: UserLike, planId: PlanId | string): number {
 
 export function incrementBalance(user: UserLike, planId: PlanId | string, amount: number) {
   const balances = getPlanBalanceMap(user);
-  balances[planId] = (Number(balances[planId]) || 0) + amount;
-  setPlanBalanceMap(user, balances);
-
   const meals = extractWeeklyMeals(planId);
   if (meals) {
     const legacyField = LEGACY_WEEKLY_FIELD_BY_MEALS[meals];
-    user[legacyField] = (Number(user[legacyField]) || 0) + amount;
+    const nextBalance = (Number(user[legacyField]) || 0) + amount;
+    user[legacyField] = nextBalance;
+    balances[planId] = nextBalance;
+    setPlanBalanceMap(user, balances);
+    return;
   }
+
+  balances[planId] = (Number(balances[planId]) || 0) + amount;
+  setPlanBalanceMap(user, balances);
 }
 
 export function decrementBalance(user: UserLike, planId: PlanId | string, amount: number) {
@@ -66,7 +70,9 @@ export function seedWeeklyPlanBalances(user: UserLike) {
     const legacyValue = Number(user[field] || 0);
     if (legacyValue <= 0) return;
     const key = `weekly-${mealCount}x1`;
-    balances[key] = (Number(balances[key]) || 0) + legacyValue;
+    if (!Number.isFinite(Number(balances[key]))) {
+      balances[key] = legacyValue;
+    }
   });
   setPlanBalanceMap(user, balances);
 }

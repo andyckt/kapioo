@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
 import User from '@/models/User';
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas';
+import WeeklyOrder from '@/models/WeeklyOrder';
 import {
   getOrderOnlyOverrideMeta,
   hasOrderCustomerOverride,
@@ -15,77 +15,10 @@ import {
 } from '@/lib/orders/effective-customer-info';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
-}
-
-interface WeeklyOrderDocument extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: string;
-  phoneNumber?: string;
-  area?: string;
-  specialInstructions?: string;
-  deliveryAddress?: DeliveryAddress;
-  orderCustomerOverride?: OrderCustomerOverride;
-  orderCustomerOverrideLogs?: Array<{
-    updatedAt: Date;
-    updatedBy: string;
-    changedFields: string[];
-    changedDetails?: Array<{
-      field: string;
-      from: string;
-      to: string;
-    }>;
   }>;
 }
-
-const WeeklyOrderSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  orderId: { type: String, required: true, unique: true },
-  phoneNumber: String,
-  area: String,
-  specialInstructions: String,
-  deliveryAddress: {
-    unitNumber: String,
-    streetAddress: String,
-    postalCode: String,
-    country: String,
-    buzzCode: String,
-  },
-  orderCustomerOverride: {
-    name: String,
-    phoneNumber: String,
-    area: String,
-    specialInstructions: String,
-    deliveryAddress: {
-      unitNumber: String,
-      streetAddress: String,
-      postalCode: String,
-      country: String,
-      buzzCode: String,
-    },
-    updatedAt: Date,
-    updatedBy: String,
-  },
-  orderCustomerOverrideLogs: [
-    {
-      updatedAt: Date,
-      updatedBy: String,
-      changedFields: [String],
-      changedDetails: [
-        {
-          field: String,
-          from: String,
-          to: String
-        }
-      ]
-    }
-  ]
-});
-
-const WeeklyOrder =
-  mongoose.models.WeeklyOrder || mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
 
 function hasOwn<T extends object>(obj: T, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
@@ -119,6 +52,7 @@ function displayValue(value: unknown): string {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const { id } = await params;
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
@@ -127,7 +61,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const { id } = params;
     const body = await request.json();
 
     const order = await WeeklyOrder.findOne({ orderId: id }).lean();
@@ -136,7 +69,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const user = order?.userId ? await User.findById(order.userId).select('name email').lean() : null;
-    const effectiveBefore = resolveEffectiveOrderCustomerInfo(order as any, user);
+    const effectiveBefore = resolveEffectiveOrderCustomerInfo(order as any, user as any);
 
     const currentOverride: OrderCustomerOverride = order.orderCustomerOverride || {};
     const nextOverride: OrderCustomerOverride = {
@@ -329,7 +262,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const updatedOrder = await WeeklyOrder.findOne({ orderId: id }).lean();
     const updatedUser = updatedOrder?.userId ? await User.findById(updatedOrder.userId).select('name email').lean() : null;
-    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, updatedUser);
+    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, updatedUser as any);
 
     return NextResponse.json({
       success: true,

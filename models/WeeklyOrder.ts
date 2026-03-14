@@ -26,6 +26,27 @@ export interface IWeeklyOrder extends Document {
   deliveryAddress: IAddress;
   phoneNumber: string;
   area: string;
+  orderCustomerOverride?: {
+    name?: string;
+    phoneNumber?: string;
+    area?: string;
+    specialInstructions?: string;
+    deliveryAddress?: IAddress;
+    updatedAt?: Date;
+    updatedBy?: string;
+  };
+  orderCustomerOverrideLogs?: Array<{
+    updatedAt?: Date;
+    updatedBy?: string;
+    changedFields?: string[];
+    changedDetails?: Array<{
+      field?: string;
+      from?: string;
+      to?: string;
+    }>;
+  }>;
+  confirmedAt?: Date;
+  deliveredAt?: Date;
   refundedAt?: Date;    // Date when the order was refunded (if applicable)
   createdAt: Date;
   updatedAt: Date;
@@ -130,6 +151,83 @@ const WeeklyOrderSchema: Schema = new Schema(
       type: String,
       required: true,
     },
+    orderCustomerOverride: {
+      name: {
+        type: String,
+      },
+      phoneNumber: {
+        type: String,
+      },
+      area: {
+        type: String,
+      },
+      specialInstructions: {
+        type: String,
+      },
+      deliveryAddress: {
+        unitNumber: {
+          type: String,
+        },
+        streetAddress: {
+          type: String,
+        },
+        city: {
+          type: String,
+        },
+        province: {
+          type: String,
+        },
+        postalCode: {
+          type: String,
+        },
+        country: {
+          type: String,
+        },
+        buzzCode: {
+          type: String,
+        },
+      },
+      updatedAt: {
+        type: Date,
+      },
+      updatedBy: {
+        type: String,
+      },
+    },
+    orderCustomerOverrideLogs: [
+      {
+        updatedAt: {
+          type: Date,
+        },
+        updatedBy: {
+          type: String,
+        },
+        changedFields: [
+          {
+            type: String,
+          },
+        ],
+        changedDetails: [
+          {
+            field: {
+              type: String,
+            },
+            from: {
+              type: String,
+            },
+            to: {
+              type: String,
+            },
+          },
+        ],
+      },
+    ],
+    confirmedAt: {
+      type: Date,
+    },
+    deliveredAt: {
+      type: Date,
+    },
     refundedAt: {
       type: Date,
     }
@@ -143,10 +241,18 @@ function shouldRefreshWeeklyOrderModel(model: mongoose.Model<IWeeklyOrder> | und
   const schema = model?.schema as any;
   const mealPlanTypePath = schema?.path?.('mealPlanType');
   const voucherDeductedPath = schema?.path?.('voucherDeducted');
+  const confirmedAtPath = schema?.path?.('confirmedAt');
+  const deliveredAtPath = schema?.path?.('deliveredAt');
+  const orderCustomerOverridePath = schema?.path?.('orderCustomerOverride');
+  const orderCustomerOverrideLogsPath = schema?.path?.('orderCustomerOverrideLogs');
 
   return (
     !mealPlanTypePath ||
     !voucherDeductedPath ||
+    !confirmedAtPath ||
+    !deliveredAtPath ||
+    !orderCustomerOverridePath ||
+    !orderCustomerOverrideLogsPath ||
     !Array.isArray(mealPlanTypePath.enumValues) ||
     !mealPlanTypePath.enumValues.includes('legacy')
   );

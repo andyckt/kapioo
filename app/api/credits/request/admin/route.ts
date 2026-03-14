@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import {
+  applyBalanceMutations,
+  BalanceMutationError,
+  type BalanceMutationEntry,
+} from '@/lib/balances/mutations';
 import connectToDatabase from '@/lib/db';
 import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
 import User from '@/models/User';
-import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 import { sendCreditPurchaseStatusEmail } from '@/lib/services/email';
 import { toWeeklyPlanId } from '@/lib/plans/service';
@@ -153,63 +157,21 @@ export async function POST(request: Request) {
         creditRequest.adminNotes = data.adminNotes || '';
         creditRequest.approvedAt = new Date();
         await creditRequest.save({ session });
-        
-        // Create transaction
-        const transactionId = await Transaction.generateTransactionId('Add');
-        
-        // Calculate total plans for transaction amount
-        const totalPlans = approvedSixMeals + approvedEightMeals + approvedTenMeals + approvedTwelveMeals + approvedSixteenMeals + approvedCredits;
-        
-        const transaction = new Transaction({
-          userId: user._id,
-          type: 'Add',
-          amount: totalPlans,
+
+        const balanceMutations: BalanceMutationEntry[] = [];
+        if (approvedSixMeals > 0) balanceMutations.push({ field: 'weeklySIXmeals', amount: approvedSixMeals, operation: 'add' });
+        if (approvedEightMeals > 0) balanceMutations.push({ field: 'weeklyEIGHTmeals', amount: approvedEightMeals, operation: 'add' });
+        if (approvedTenMeals > 0) balanceMutations.push({ field: 'weeklyTENmeals', amount: approvedTenMeals, operation: 'add' });
+        if (approvedTwelveMeals > 0) balanceMutations.push({ field: 'weeklyTWELVEmeals', amount: approvedTwelveMeals, operation: 'add' });
+        if (approvedSixteenMeals > 0) balanceMutations.push({ field: 'weeklySIXTEENmeals', amount: approvedSixteenMeals, operation: 'add' });
+        if (approvedCredits > 0) balanceMutations.push({ field: 'credits', amount: approvedCredits, operation: 'add' });
+
+        await applyBalanceMutations({
+          user,
+          mutations: balanceMutations,
           description: `Meal plan purchase approved (Request ID: ${creditRequest.requestId})`,
-          transactionId: transactionId
+          session,
         });
-        await transaction.save({ session });
-        
-        // Update user's meal plan counts
-        if (approvedSixMeals > 0) {
-          user.weeklySIXmeals = (user.weeklySIXmeals || 0) + approvedSixMeals;
-        }
-        if (approvedEightMeals > 0) {
-          user.weeklyEIGHTmeals = (user.weeklyEIGHTmeals || 0) + approvedEightMeals;
-        }
-        if (approvedTenMeals > 0) {
-          user.weeklyTENmeals = (user.weeklyTENmeals || 0) + approvedTenMeals;
-        }
-        if (approvedTwelveMeals > 0) {
-          user.weeklyTWELVEmeals = (user.weeklyTWELVEmeals || 0) + approvedTwelveMeals;
-        }
-        if (approvedSixteenMeals > 0) {
-          user.weeklySIXTEENmeals = (user.weeklySIXTEENmeals || 0) + approvedSixteenMeals;
-        }
-
-        const currentPlanBalances =
-          user.planBalances instanceof Map
-            ? Object.fromEntries(user.planBalances.entries())
-            : (user.planBalances || {});
-
-        const incrementPlanBalance = (meals: number, qty: number) => {
-          if (qty <= 0) return;
-          const key = toWeeklyPlanId(meals, 1);
-          currentPlanBalances[key] = (Number(currentPlanBalances[key]) || 0) + qty;
-        };
-
-        incrementPlanBalance(6, approvedSixMeals);
-        incrementPlanBalance(8, approvedEightMeals);
-        incrementPlanBalance(10, approvedTenMeals);
-        incrementPlanBalance(12, approvedTwelveMeals);
-        incrementPlanBalance(16, approvedSixteenMeals);
-        user.planBalances = currentPlanBalances as any;
-        
-        // For backward compatibility, also update credits field if approvedCredits is provided
-        if (approvedCredits > 0) {
-          user.credits = (user.credits || 0) + approvedCredits;
-        }
-        
-        await user.save({ session });
         
         // Commit the transaction
         await session.commitTransaction();
@@ -291,6 +253,13 @@ export async function POST(request: Request) {
       session.endSession();
     }
   } catch (error: any) {
+    if (error instanceof BalanceMutationError) {
+      return NextResponse.json(
+        { success: false, error: error.message, details: error.details },
+        { status: error.status }
+      );
+    }
+
     console.error('Error processing credit purchase request:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to process credit purchase request' },

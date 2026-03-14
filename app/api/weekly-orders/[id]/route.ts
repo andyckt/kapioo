@@ -46,7 +46,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     
     const user = await User.findById(order.userId).select('name email').lean();
     const plainOrder = typeof (order as any).toObject === 'function' ? (order as any).toObject() : order;
-    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as any, user);
+    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as any, user as any);
 
     return NextResponse.json({
       success: true,
@@ -83,6 +83,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return response;
     }
     const data = await request.json();
+
+    if (Object.prototype.hasOwnProperty.call(data, 'status')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Use /api/admin/weekly-subscription/orders/[id]/status for weekly status updates.',
+        },
+        { status: 410 }
+      );
+    }
     
     await connectToDatabase();
     
@@ -102,7 +112,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
     
     // Update only allowed fields
-    const allowedUpdates = ['status', 'specialInstructions'];
+    const allowedUpdates = ['specialInstructions'];
     const updates: Record<string, any> = {};
     
     Object.keys(data).forEach(key => {
@@ -111,9 +121,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       }
     });
     
-    // Add refundedAt timestamp if status is being set to 'refunded'
-    if (data.status === 'refunded' && order.status !== 'refunded') {
-      updates.refundedAt = new Date();
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No editable fields provided' },
+        { status: 400 }
+      );
     }
     
     // Update the order

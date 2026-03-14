@@ -1,18 +1,24 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import {
+  applyBalanceMutations,
+  BALANCE_MUTATION_FIELDS,
+  BalanceMutationError,
+  findBalanceMutationUser,
+  isBalanceMutationField,
+  toSafeUserBalanceResponse,
+} from '@/lib/balances/mutations';
 import connectToDatabase from '@/lib/db';
-import { logAuditEvent } from '@/lib/security/audit';
 import User from '@/models/User';
-import Transaction from '@/models/Transaction';
+import mongoose from 'mongoose';
 import { sendEmail } from '@/lib/services/email';
 import { getTranslations, type Language } from '@/lib/email-translations';
-import { toWeeklyPlanId } from '@/lib/plans/service';
 
 // Define the route params interface
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // POST handler - update user balance (credits or vouchers)
@@ -23,32 +29,20 @@ export async function POST(request: Request, { params }: RouteParams) {
       return response;
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { field, amount, operation, description } = await request.json();
     
     // Validate input
-    if (!field || !amount || !operation || amount <= 0) {
+    if (!field || !Number.isInteger(amount) || !operation || amount <= 0) {
       return NextResponse.json(
         { success: false, error: 'Invalid input' },
         { status: 400 }
       );
     }
     
-    // Make sure field is one of the allowed fields
-    const allowedFields = [
-      'credits', 
-      'twoDishVoucher', 
-      'threeDishVoucher', 
-      'weeklySIXmeals', 
-      'weeklyEIGHTmeals', 
-      'weeklyTENmeals', 
-      'weeklyTWELVEmeals',
-      'weeklySIXTEENmeals'
-    ];
-    
-    if (!allowedFields.includes(field)) {
+    if (!isBalanceMutationField(field)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid field' },
+        { success: false, error: 'Invalid field', allowedFields: BALANCE_MUTATION_FIELDS },
         { status: 400 }
       );
     }
@@ -66,71 +60,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Generate unique request ID for logging
     const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     console.log(`[${requestId}] Balance update request - User: ${id}, Field: ${field}, Amount: ${amount}, Operation: ${operation}`);
-    
-    // Find user
-    const user = await User.findOne({ 
-      $or: [{ _id: id }, { userID: id }] 
-    });
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-    
-    const currentBalance = user[field] || 0;
-    console.log(`[${requestId}] Current ${field} balance: ${currentBalance}`);
-    
-    // Check if user has enough balance for deduction
-    if (operation === 'deduct' && currentBalance < amount) {
-      console.log(`[${requestId}] Insufficient balance - Required: ${amount}, Available: ${currentBalance}`);
-      return NextResponse.json(
-        { success: false, error: `Insufficient ${field} balance` },
-        { status: 400 }
-      );
-    }
-    
-    // Use atomic operation to prevent race conditions
-    // This ensures that even if two requests arrive simultaneously,
-    // they will be processed sequentially by MongoDB
-    const updateOperation = operation === 'add' ? amount : -amount;
-    console.log(`[${requestId}] Applying atomic update: $inc { ${field}: ${updateOperation} }`);
-    
-    const weeklyMealFieldToCount: Record<string, number> = {
-      weeklySIXmeals: 6,
-      weeklyEIGHTmeals: 8,
-      weeklyTENmeals: 10,
-      weeklyTWELVEmeals: 12,
-      weeklySIXTEENmeals: 16
-    };
 
-    const incPayload: Record<string, number> = { [field]: updateOperation };
-    if (weeklyMealFieldToCount[field]) {
-      const planBalanceKey = `planBalances.${toWeeklyPlanId(weeklyMealFieldToCount[field], 1)}`;
-      incPayload[planBalanceKey] = updateOperation;
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      user._id,
-      { $inc: incPayload },
-      { new: true } // Return the updated document
-    );
-    
-    if (!updatedUser) {
-      console.log(`[${requestId}] CRITICAL: Failed to update user balance`);
-      return NextResponse.json(
-        { success: false, error: 'Failed to update user balance' },
-        { status: 500 }
-      );
-    }
-    
-    // Get the new balance from the updated user
-    const newBalance = updatedUser[field] || 0;
-    console.log(`[${requestId}] Balance updated successfully - Old: ${currentBalance}, New: ${newBalance}`);
-    
-    // Create a transaction record for all balance operations
-    // Get voucher type display name for the description
     let voucherTypeName = '';
     let shortVoucherName = '';
     switch (field) {
@@ -170,31 +100,55 @@ export async function POST(request: Request, { params }: RouteParams) {
         voucherTypeName = field;
         shortVoucherName = field;
     }
-    
-    const transaction = new Transaction({
-      userId: updatedUser._id,
-      type: operation === 'add' ? 'Add' : 'Deduct',
-      amount: amount,
-      description: description || `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${shortVoucherName}`,
-      status: 'completed',
-      transactionId: `${operation === 'add' ? 'CR' : 'DB'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    });
-    
-    await transaction.save();
 
-    await logAuditEvent({
-      actor,
-      action: operation === 'add' ? 'balance.add' : 'balance.deduct',
-      targetType: 'user-balance',
-      targetId: String(updatedUser._id),
-      metadata: {
-        field,
-        amount,
-        operation,
-        description: description || null,
-      },
-      request,
-    });
+    const session = await mongoose.startSession();
+    let updatedUser: any = null;
+    try {
+      await session.withTransaction(async () => {
+        const user = await findBalanceMutationUser(id, session);
+        if (!user) {
+          throw new BalanceMutationError('User not found', {
+            status: 404,
+            code: 'USER_NOT_FOUND',
+          });
+        }
+
+        const currentBalance = Number(user[field]) || 0;
+        console.log(`[${requestId}] Current ${field} balance: ${currentBalance}`);
+
+        const result = await applyBalanceMutations({
+          user,
+          mutations: [{ field, amount, operation }],
+          description: description || `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${shortVoucherName}`,
+          session,
+          actor,
+          request,
+          auditAction: operation === 'add' ? 'balance.add' : 'balance.deduct',
+          auditTargetType: 'user-balance',
+          auditMetadata: {
+            field,
+            amount,
+            operation,
+            source: 'admin-update-balance',
+          },
+        });
+
+        updatedUser = result.user;
+        const newBalance = Number(updatedUser[field]) || 0;
+        console.log(`[${requestId}] Balance updated successfully - Old: ${currentBalance}, New: ${newBalance}`);
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to update user balance' },
+        { status: 500 }
+      );
+    }
+
+    const newBalance = Number(updatedUser[field]) || 0;
     
     // Send email notification when vouchers are added (not when deducted)
     if (operation === 'add' && field !== 'credits') {
@@ -320,24 +274,24 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
     
-    // Return the updated user without sensitive information
-    const userResponse = updatedUser.toObject();
-    delete userResponse.password;
-    delete userResponse.salt;
-    delete userResponse.verificationCode;
-    delete userResponse.verificationExpires;
-    delete userResponse.resetPasswordCode;
-    delete userResponse.resetPasswordExpires;
-    
+    const userResponse = toSafeUserBalanceResponse(updatedUser);
+
     return NextResponse.json({ 
       success: true, 
       data: userResponse,
       message: `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${field} ${operation === 'add' ? 'to' : 'from'} user's account`
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof BalanceMutationError) {
+      return NextResponse.json(
+        { success: false, error: error.message, details: error.details },
+        { status: error.status }
+      );
+    }
+
     console.error(`Error updating user balance:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update user balance' },
+      { success: false, error: 'Failed to update user balance', details: error.message },
       { status: 500 }
     );
   }

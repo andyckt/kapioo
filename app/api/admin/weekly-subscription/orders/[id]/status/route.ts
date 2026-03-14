@@ -1,20 +1,30 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import { restoreWeeklyOrderEntitlement } from '@/lib/orders/weekly-refund';
+import mongoose from 'mongoose';
+import {
+  describeWeeklyRefundTarget,
+  resolveWeeklyRefundTarget,
+  restoreWeeklyOrderEntitlement,
+} from '@/lib/orders/weekly-refund';
+import {
+  resolveWeeklyStatusTransition,
+  WEEKLY_ORDER_STATUSES,
+} from '@/lib/orders/weekly-status';
 import { sendDailyOrderStatusUpdateNotification } from '@/lib/services/notifications';
 import User from '@/models/User';
 import WeeklyOrder from '@/models/WeeklyOrder';
 
 // Define route params interface
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // PATCH handler - update weekly subscription order status
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const { id } = await params;
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
@@ -24,12 +34,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     // First connect to the database
     await connectToDatabase();
     
-    const { id } = params;
     const { status } = await request.json();
-    
-    // Validate status
-    const validStatuses = ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'];
-    if (!validStatuses.includes(status)) {
+
+    if (typeof status !== 'string') {
       return NextResponse.json(
         { success: false, error: 'Invalid status' },
         { status: 400 }
@@ -46,38 +53,80 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
     
-    // Store the previous status for notifications
-    const previousStatus = order.status;
-    
-    // Update timestamp based on status
-    const updateData: any = { status };
-    
-    if (status === 'confirmed') {
-      updateData.confirmedAt = new Date();
-    } else if (status === 'delivered') {
-      updateData.deliveredAt = new Date();
-    } else if (status === 'refunded') {
-      updateData.refundedAt = new Date();
-      
-      // Refund the same entitlement type that was originally consumed.
-      if (order.status !== 'refunded') {
-        const user = await User.findById(order.userId);
-        if (user) {
-          restoreWeeklyOrderEntitlement(user, order);
-          await user.save();
+    const transition = resolveWeeklyStatusTransition(order, status);
+    if (!transition.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: transition.error,
+          allowedNextStatuses: transition.allowedNextStatuses,
+          validStatuses: WEEKLY_ORDER_STATUSES,
+          currentStatus: transition.currentStatus,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (transition.noOp) {
+      return NextResponse.json({
+        success: true,
+        data: order,
+        meta: {
+          currentStatus: transition.currentStatus,
+          nextStatus: transition.nextStatus,
+          noOp: true,
+          allowedNextStatuses: transition.allowedNextStatuses,
         }
+      });
+    }
+
+    const updateData = transition.patch || { status: transition.nextStatus };
+    let refundTarget = null as ReturnType<typeof resolveWeeklyRefundTarget> | null;
+
+    if (transition.nextStatus === 'refunded') {
+      refundTarget = resolveWeeklyRefundTarget(order);
+    }
+
+    let updatedOrder = null;
+    if (transition.nextStatus === 'refunded' && order.status !== 'refunded') {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          if (refundTarget && refundTarget.kind !== 'none') {
+            const user = await User.findById(order.userId).session(session);
+            if (!user) {
+              throw new Error('User not found for refund processing');
+            }
+            restoreWeeklyOrderEntitlement(user, order);
+            await user.save({ session });
+          }
+
+          updatedOrder = await WeeklyOrder.findOneAndUpdate(
+            { orderId: id },
+            { $set: updateData },
+            { new: true, session }
+          );
+        });
+      } finally {
+        await session.endSession();
       }
+    } else {
+      updatedOrder = await WeeklyOrder.findOneAndUpdate(
+        { orderId: id },
+        { $set: updateData },
+        { new: true }
+      );
+    }
+
+    if (!updatedOrder) {
+      return NextResponse.json(
+        { success: false, error: 'Order not found after update attempt' },
+        { status: 404 }
+      );
     }
     
-    // Update the order
-    const updatedOrder = await WeeklyOrder.findOneAndUpdate(
-      { orderId: id },
-      { $set: updateData },
-      { new: true }
-    );
-    
     // Send notification to user about status change (skip for 'confirmed' and 'delivered' status)
-    if (status !== 'confirmed' && status !== 'delivered') {
+    if (transition.nextStatus !== 'confirmed' && transition.nextStatus !== 'delivered') {
       try {
         const user = await User.findById(order.userId);
         if (user && user.email) {
@@ -85,7 +134,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
             user.email,
             user.name,
             id,
-            status,
+            transition.nextStatus,
             order.items,
             order.status, // Previous status
             user.languagePreference || 'zh', // Pass user's language preference from database
@@ -100,7 +149,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     
     return NextResponse.json({
       success: true,
-      data: updatedOrder
+      data: updatedOrder,
+      meta: {
+        currentStatus: transition.currentStatus,
+        nextStatus: transition.nextStatus,
+        noOp: false,
+        allowedNextStatuses: transition.allowedNextStatuses,
+        refundTarget,
+        refundSummary: refundTarget ? describeWeeklyRefundTarget(refundTarget) : null,
+      }
     });
   } catch (error: any) {
     console.error('Error updating weekly subscription order status:', error);

@@ -3,22 +3,23 @@ import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
+import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
-import Order from '@/models/Order';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import mongoose from 'mongoose';
 
 // Interface for route params
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // GET handler - get all activity for a specific user
 export async function GET(request: Request, { params }: RouteParams) {
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
   try {
-    const { id } = params;
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
       return response;
@@ -45,7 +46,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
     
     // Array to store all activities
-    let activities = [];
+    let activities: Array<Record<string, any>> = [];
     let totalCount = 0;
     
     // Fetch different types of activities based on the filter
@@ -54,13 +55,15 @@ export async function GET(request: Request, { params }: RouteParams) {
       const transactions = await Transaction.find(userIdQuery)
         .sort({ createdAt: -1 });
       
-      activities = activities.concat(transactions.map(t => ({
+      activities = activities.concat(transactions.map(t => {
+        const isCreditAddition = new Set(['Add', 'credit', 'refund']).has(String(t.type));
+        return ({
         ...t.toObject(),
         activityType: 'transaction',
         date: t.createdAt,
-        title: `${t.type === 'Add' || t.type === 'credit' || t.type === 'refund' ? 'Added' : 'Used'} ${t.amount} credits`,
+        title: `${isCreditAddition ? 'Added' : 'Used'} ${t.amount} credits`,
         details: t.description
-      })));
+      })}));
     }
     
     if (activityType === 'all' || activityType === 'credit-request') {
@@ -92,8 +95,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
     
     if (activityType === 'all' || activityType === 'order') {
-      // Fetch regular orders
-      const orders = await Order.find(userIdQuery)
+      // Fetch canonical daily delivery orders
+      const orders = await DailyDeliveryOrder.find(userIdQuery)
         .sort({ createdAt: -1 });
       
       activities = activities.concat(orders.map(o => ({
@@ -101,7 +104,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         activityType: 'order',
         date: o.createdAt,
         title: `Daily Delivery Order (${o.status})`,
-        details: `Order ID: ${o._id}, Items: ${o.items.length}`
+        details: `Order ID: ${o.orderId}, Items: ${Array.isArray(o.items) ? o.items.length : 0}`
       })));
     }
     
@@ -141,7 +144,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
     });
   } catch (error) {
-    console.error(`Error fetching user activity for ${params.id}:`, error);
+    console.error(`Error fetching user activity for ${id}:`, error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch user activity' },
       { status: 500 }

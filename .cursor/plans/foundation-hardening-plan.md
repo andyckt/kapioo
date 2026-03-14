@@ -1,6 +1,6 @@
 ---
 title: Foundation Hardening Plan
-status: phase-2a-complete
+status: phase-2d-complete
 updated: 2026-03-11
 ---
 
@@ -16,7 +16,9 @@ How to read this plan:
 ## Current Status
 - `Fact`: Phase 1 high-risk hardening work has been completed.
 - `Fact`: Phase 2A canonical-domain decision and inventory work is now complete.
-- `Fact`: The next major work area is Phase 2B daily-order consolidation.
+- `Fact`: Phase 2C-3 weekly refund and entitlement restoration hardening is now complete.
+- `Fact`: Phase 2D balance mutation consolidation is now complete.
+- `Fact`: The next major work area is Phase 2E consumer cleanup and dead-path removal.
 - `Inference`: Phase 2 should still not be executed as one large batch. The remaining subphases should stay gated.
 
 ## Foundation Summary
@@ -222,41 +224,120 @@ Move the system onto one canonical daily-order domain and retire the conflicting
 - Only one daily-order model and route family remain active.
 - Daily admin views, status updates, refunds, and customer order reads all work off the same model.
 
+### Phase 2B execution record
+- `Fact`: Legacy compatibility components now resolve through canonical daily-order surfaces by routing [`components/order-management.tsx`](components/order-management.tsx) to [`components/view-all-orders.tsx`](components/view-all-orders.tsx) and [`components/order-history.tsx`](components/order-history.tsx) to [`components/daily-delivery-history.tsx`](components/daily-delivery-history.tsx).
+- `Fact`: Live stats and count consumers that were still reading legacy daily orders now read canonical data through [`app/api/orders/stats/route.ts`](app/api/orders/stats/route.ts), [`app/api/users/[id]/orders/count/route.ts`](app/api/users/[id]/orders/count/route.ts), [`app/api/users/[id]/order-count/route.ts`](app/api/users/[id]/order-count/route.ts), [`app/api/users/[id]/daily-orders/count/route.ts`](app/api/users/[id]/daily-orders/count/route.ts), [`app/api/users/[id]/activity/route.ts`](app/api/users/[id]/activity/route.ts), and [`app/api/users/with-order-counts/route.ts`](app/api/users/with-order-counts/route.ts).
+- `Fact`: The legacy user-order list route [`app/api/users/[id]/orders/route.ts`](app/api/users/[id]/orders/route.ts) now reads from [`models/DailyDeliveryOrder.ts`](models/DailyDeliveryOrder.ts) instead of [`models/Order.ts`](models/Order.ts).
+- `Fact`: Legacy write entrypoints for daily orders were explicitly retired by returning `410` from [`app/api/orders/route.ts`](app/api/orders/route.ts) `POST` and [`app/api/orders/[id]/route.ts`](app/api/orders/[id]/route.ts) `PATCH`, preventing new writes from re-entering the deprecated `Order` path.
+- `Inference`: Phase 2B materially reduced the chance of silent domain drift because active dashboards, counts, and compatibility surfaces now derive daily-order state from the canonical collection, while legacy write paths no longer mutate stale order data.
+
 ## Phase 2C: Weekly Order Lifecycle Cleanup
 
 ### Goal
 Make weekly-order lifecycle behavior consistent and remove route-level schema duplication.
 
-### What should be done
-1. Replace route-local schema ownership with canonical weekly-order model imports.
-2. Standardize weekly status transition behavior.
-3. Standardize weekly refund and entitlement-restoration behavior.
-4. Ensure weekly admin views and user views read the same lifecycle state.
+### Why this phase should be split
+- `Fact`: Weekly top-up approval writes entitlement into both legacy per-plan user fields and `planBalances` in [`app/api/credits/request/admin/route.ts`](app/api/credits/request/admin/route.ts).
+- `Fact`: Weekly checkout in [`app/api/weekly-subscription/user/route.ts`](app/api/weekly-subscription/user/route.ts) deducts `1` weekly plan for modern meal-plan types but still stores `creditCost` as total ordered items, which means `creditCost` is not the canonical refund source for modern weekly plans.
+- `Fact`: Weekly refund restoration in [`lib/orders/weekly-refund.ts`](lib/orders/weekly-refund.ts) already attempts to return the original entitlement type using `mealPlanType` and `voucherDeducted`.
+- `Fact`: Admin delete behavior in [`app/api/admin/weekly-subscription/orders/[id]/route.ts`](app/api/admin/weekly-subscription/orders/[id]/route.ts) still restores raw `credits`, which can conflict with the newer weekly-plan entitlement model.
+- `Fact`: Admin weekly-order routes still own local `WeeklyOrder` schemas instead of importing the canonical model from [`models/WeeklyOrder.ts`](models/WeeklyOrder.ts).
+- `Inference`: Doing all of `2C` in one batch is too likely to mix storage cleanup, lifecycle normalization, and refund semantics into one risky change set.
 
 ### Exact files involved
 - [`models/WeeklyOrder.ts`](models/WeeklyOrder.ts)
 - [`app/api/weekly-subscription/user/route.ts`](app/api/weekly-subscription/user/route.ts)
 - [`app/api/admin/weekly-subscription/orders/route.ts`](app/api/admin/weekly-subscription/orders/route.ts)
+- [`app/api/admin/weekly-subscription/orders/[id]/route.ts`](app/api/admin/weekly-subscription/orders/[id]/route.ts)
 - [`app/api/admin/weekly-subscription/orders/[id]/status/route.ts`](app/api/admin/weekly-subscription/orders/[id]/status/route.ts)
+- [`app/api/credits/request/admin/route.ts`](app/api/credits/request/admin/route.ts)
 - [`lib/plans/balances.ts`](lib/plans/balances.ts)
-
-### Order to do it in
-1. Canonical schema/model import cleanup.
-2. Status transition cleanup.
-3. Refund restoration cleanup.
-4. Consumer consistency verification.
 
 ### Dependencies
 - Depends on Phase 2A target contracts.
 - Safer after Phase 2B because daily-order confusion is removed first.
 
-### Can be done in parallel
-- Schema-import cleanup and admin view consistency review.
+### Phase 2C-1: Weekly Model Ownership Cleanup
+#### Goal
+Make every weekly admin route read and write through the canonical `WeeklyOrder` model before changing lifecycle behavior.
 
-### Verify after completion
-- Weekly order routes all use canonical models.
-- Refunds restore the correct entitlement type consistently.
+#### What should be done
+1. Replace inline weekly-order schemas in admin routes with imports from [`models/WeeklyOrder.ts`](models/WeeklyOrder.ts).
+2. Confirm admin list/detail/delete/status routes all read the same persisted fields, including `mealPlanType`, `voucherDeducted`, and refund timestamps.
+3. Preserve existing route responses while removing competing schema ownership.
+
+#### Order to do it in
+1. Route import cleanup.
+2. Field-shape verification.
+3. Admin read/delete smoke verification.
+
+#### Verify after completion
+- Weekly admin routes no longer define local order schemas.
+- The canonical weekly model is the only schema owner for weekly orders.
+- No admin weekly route silently drops `mealPlanType` or `voucherDeducted`.
+
+#### Phase 2C-1 execution record
+- `Fact`: The canonical weekly model in [`models/WeeklyOrder.ts`](models/WeeklyOrder.ts) was expanded to include admin-used lifecycle and override fields such as `confirmedAt`, `deliveredAt`, `orderCustomerOverride`, and `orderCustomerOverrideLogs`.
+- `Fact`: Admin weekly routes that previously owned local schemas now import the canonical model: [`app/api/admin/weekly-subscription/orders/route.ts`](app/api/admin/weekly-subscription/orders/route.ts), [`app/api/admin/weekly-subscription/orders/[id]/route.ts`](app/api/admin/weekly-subscription/orders/[id]/route.ts), [`app/api/admin/weekly-subscription/orders/[id]/customer-info/route.ts`](app/api/admin/weekly-subscription/orders/[id]/customer-info/route.ts), [`app/api/admin/weekly-subscription/orders/delivery-dates/route.ts`](app/api/admin/weekly-subscription/orders/delivery-dates/route.ts), and [`app/api/admin/weekly-subscription/orders/export/route.ts`](app/api/admin/weekly-subscription/orders/export/route.ts).
+- `Fact`: Route responses were kept behaviorally compatible while removing competing schema ownership, and the touched weekly files passed linting and local TypeScript checks.
+- `Inference`: Phase 2C-2 is now safer because weekly lifecycle behavior will be normalized on top of one schema owner instead of several route-local variants.
+
+### Phase 2C-2: Weekly Status Lifecycle Normalization
+#### Goal
+Make weekly status transitions consistent across admin actions and user-visible reads without changing refund logic yet.
+
+#### What should be done
+1. Standardize allowed weekly status transitions and timestamp writes.
+2. Ensure admin detail/list routes and user-visible history surface the same lifecycle state.
+3. Remove status-specific behavior that depends on route-local assumptions.
+
+#### Order to do it in
+1. Enumerate valid transitions.
+2. Normalize timestamp updates.
+3. Verify admin/user read consistency.
+
+#### Verify after completion
+- Weekly status transitions behave consistently across all admin routes.
+- `confirmedAt`, `deliveredAt`, and `refundedAt` are written in one predictable way.
 - Admin and user weekly views do not disagree on order state.
+
+#### Phase 2C-2 execution record
+- `Fact`: Weekly status lifecycle rules now live in [`lib/orders/weekly-status.ts`](lib/orders/weekly-status.ts), which defines valid statuses, allowed transitions, and timestamp normalization rules.
+- `Fact`: The canonical admin status route [`app/api/admin/weekly-subscription/orders/[id]/status/route.ts`](app/api/admin/weekly-subscription/orders/[id]/status/route.ts) now rejects invalid transitions with explicit allowed-next-state metadata and normalizes `confirmedAt`, `deliveredAt`, and `refundedAt` consistently.
+- `Fact`: The overlapping admin-only status update path in [`app/api/weekly-orders/[id]/route.ts`](app/api/weekly-orders/[id]/route.ts) no longer performs status mutations and now directs callers to the canonical admin weekly status endpoint, preventing lifecycle drift between two write surfaces.
+- `Fact`: The active admin weekly UI in [`components/view-weekly-orders.tsx`](components/view-weekly-orders.tsx) now updates only successfully changed orders during batch operations and merges returned server state instead of blindly forcing local status changes.
+- `Inference`: Phase 2C-3 can now focus purely on entitlement restoration correctness because weekly status state is centralized and no longer depends on duplicate lifecycle logic.
+
+### Phase 2C-3: Weekly Refund And Entitlement Restoration Hardening
+#### Goal
+Guarantee that weekly refunds and admin deletions restore the same entitlement type that was originally consumed.
+
+#### What should be done
+1. Route weekly refund and delete restoration through one helper-backed entitlement rule.
+2. Align legacy-credit and modern-plan behavior using `mealPlanType`, `voucherDeducted`, and `planBalances`.
+3. Verify side effects on user balances, transaction behavior, and admin flows.
+
+#### Order to do it in
+1. Refund-target rule confirmation.
+2. Status-route refund hardening.
+3. Delete-route restoration hardening.
+4. Balance verification against legacy and modern weekly plans.
+
+#### Can be done in parallel
+- Verification of top-up approval behavior can be reviewed in parallel with refund helper hardening.
+
+#### Verify after completion
+- Refunds restore the correct entitlement type consistently.
+- Admin deletion does not incorrectly return raw credits for plan-based weekly orders.
+- Weekly entitlement counts stay aligned between legacy fields and `planBalances`.
+
+#### Phase 2C-3 execution record
+- `Fact`: Weekly entitlement restoration semantics now live in [`lib/orders/weekly-refund.ts`](lib/orders/weekly-refund.ts), which exports a shared refund-target resolver, mutation helper, and human-readable restoration summary for admin flows.
+- `Fact`: The canonical weekly status mutation route [`app/api/admin/weekly-subscription/orders/[id]/status/route.ts`](app/api/admin/weekly-subscription/orders/[id]/status/route.ts) now computes refund targets up front and applies balance restoration plus order-status mutation inside one MongoDB transaction, preventing partial "user refunded but order not marked refunded" failures.
+- `Fact`: The admin weekly delete route [`app/api/admin/weekly-subscription/orders/[id]/route.ts`](app/api/admin/weekly-subscription/orders/[id]/route.ts) no longer blindly restores raw `credits`; it now restores the original entitlement type through the shared helper and deletes the order in the same transaction.
+- `Fact`: The admin weekly UI [`components/view-weekly-orders.tsx`](components/view-weekly-orders.tsx) now describes delete-time restoration as "weekly voucher / credits" and surfaces refund summaries from the server so operators can distinguish voucher restoration from legacy-credit restoration.
+- `Fact`: Targeted lint checks passed for the edited files. `npx tsc --noEmit` still reports pre-existing unrelated route-context typing failures elsewhere in the repo and did not report new errors for the touched weekly refund files.
+- `Inference`: Phase 2D can now focus on broader mutation-service consolidation because the highest-risk weekly refund/delete mismatch has been removed from the active weekly admin paths.
 
 ## Phase 2D: Balance Mutation Consolidation
 
@@ -295,6 +376,15 @@ Create one coherent entitlement mutation model across admin adjustments, purchas
 ### Verify after completion
 - Manual admin changes, purchases, and refunds all mutate balances through one service.
 - Audit and transaction behavior is consistent across mutation types.
+
+#### Phase 2D execution record
+- `Fact`: A new shared mutation service now exists in [`lib/balances/mutations.ts`](lib/balances/mutations.ts), centralizing supported balance fields, insufficiency checks, transaction creation, safe user lookup, audit integration, and user-response sanitization.
+- `Fact`: Weekly compatibility balance syncing in [`lib/plans/balances.ts`](lib/plans/balances.ts) was hardened so weekly plan mutations keep legacy fields and `planBalances` aligned instead of incrementing a missing `planBalances` entry from zero.
+- `Fact`: Audit logging in [`lib/security/audit.ts`](lib/security/audit.ts) now supports MongoDB sessions, allowing balance mutations and audit rows to be written within the same transaction boundary.
+- `Fact`: Admin mutation endpoints [`app/api/users/[id]/credits/route.ts`](app/api/users/[id]/credits/route.ts), [`app/api/users/[id]/add-credits/route.ts`](app/api/users/[id]/add-credits/route.ts), [`app/api/users/[id]/deduct-credits/route.ts`](app/api/users/[id]/deduct-credits/route.ts), and [`app/api/users/[id]/update-balance/route.ts`](app/api/users/[id]/update-balance/route.ts) now route their writes through the shared service instead of owning separate balance-mutation logic.
+- `Fact`: Purchase approval flows in [`app/api/credits/request/admin/route.ts`](app/api/credits/request/admin/route.ts) and [`app/api/voucher-requests/[requestId]/route.ts`](app/api/voucher-requests/[requestId]/route.ts) now use the same mutation service for credits, daily vouchers, and weekly-plan entitlement grants, while keeping their existing API responses and compatibility URLs.
+- `Fact`: Targeted lint checks passed for all touched files. `npx tsc --noEmit` still reports unrelated pre-existing route-context typing failures elsewhere in the repo and no longer reports errors in the touched 2D files.
+- `Inference`: Phase 2E can now focus on consumer cleanup because the highest-risk mutation drift has been reduced at the service layer even where legacy URLs remain for compatibility.
 
 ## Phase 2E: Consumer Cleanup And Dead-Path Removal
 
@@ -430,16 +520,20 @@ Why this batch second:
 - Confidence to execute each smaller phase safely:
 - `High` for Phase 2A.
 - `Medium` for Phase 2B by itself.
-- `Medium` for Phase 2C by itself.
+- `High` for Phase 2C-1 by itself.
+- `Medium` for Phase 2C-2 by itself.
+- `Medium` for Phase 2C-3 by itself.
 - `Medium-low` for Phase 2D if attempted together with 2B or 2C.
 - `High` for 2E after the earlier subphases are done.
 
 ## Prioritized Checklist
 - [x] Finish Phase 1 high-risk hardening.
 - [x] Complete Phase 2A canonical-domain decision and inventory.
-- [ ] Complete Phase 2B daily-order consolidation.
-- [ ] Complete Phase 2C weekly-order lifecycle cleanup.
-- [ ] Complete Phase 2D balance-mutation consolidation.
+- [x] Complete Phase 2B daily-order consolidation.
+- [x] Complete Phase 2C-1 weekly-order model ownership cleanup.
+- [x] Complete Phase 2C-2 weekly-status lifecycle normalization.
+- [x] Complete Phase 2C-3 weekly refund and entitlement restoration hardening.
+- [x] Complete Phase 2D balance-mutation consolidation.
 - [ ] Complete Phase 2E consumer cleanup and dead-path removal.
 - [ ] Split `app/admin/page.tsx` and `app/dashboard/page.tsx` after backend contracts stabilize.
 - [ ] Standardize shared request/response schemas for core business flows.

@@ -2,138 +2,29 @@ import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import mongoose from 'mongoose';
+import {
+  describeWeeklyRefundTarget,
+  resolveWeeklyRefundTarget,
+  restoreWeeklyOrderEntitlement,
+} from '@/lib/orders/weekly-refund';
 import User from '@/models/User';
+import WeeklyOrder from '@/models/WeeklyOrder';
 import {
   getOrderOnlyOverrideMeta,
   hasOrderCustomerOverride,
   resolveEffectiveOrderCustomerInfo,
-  type OrderCustomerOverride,
 } from '@/lib/orders/effective-customer-info';
 
 // Define route params interface
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
-}
-
-// Define the interface for the WeeklyOrder document
-interface WeeklyOrderDocument extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: string;
-  items: any[];
-  status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
-  creditCost: number;
-  specialInstructions?: string;
-  deliveryAddress: {
-    unitNumber?: string;
-    streetAddress: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
-    buzzCode?: string;
-  };
-  phoneNumber: string;
-  area: string;
-  orderCustomerOverride?: OrderCustomerOverride;
-  orderCustomerOverrideLogs?: Array<{
-    updatedAt: Date;
-    updatedBy: string;
-    changedFields: string[];
   }>;
-  confirmedAt?: Date;
-  deliveredAt?: Date;
-  refundedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Create a schema for weekly orders
-const WeeklyOrderSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  orderId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  items: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'],
-    default: 'pending'
-  },
-  creditCost: {
-    type: Number,
-    required: true
-  },
-  specialInstructions: String,
-  deliveryAddress: {
-    unitNumber: String,
-    streetAddress: String,
-    province: String,
-    postalCode: String,
-    country: String,
-    buzzCode: String
-  },
-  phoneNumber: String,
-  area: String,
-  orderCustomerOverride: {
-    name: String,
-    phoneNumber: String,
-    area: String,
-    specialInstructions: String,
-    deliveryAddress: {
-      unitNumber: String,
-      streetAddress: String,
-      city: String,
-      province: String,
-      postalCode: String,
-      country: String,
-      buzzCode: String
-    },
-    updatedAt: Date,
-    updatedBy: String
-  },
-  orderCustomerOverrideLogs: [
-    {
-      updatedAt: Date,
-      updatedBy: String,
-      changedFields: [String]
-    }
-  ],
-  confirmedAt: Date,
-  deliveredAt: Date,
-  refundedAt: Date,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// Create the model
-let WeeklyOrder: mongoose.Model<WeeklyOrderDocument>;
-try {
-  // Check if the model already exists
-  WeeklyOrder = mongoose.models.WeeklyOrder as mongoose.Model<WeeklyOrderDocument>;
-} catch (error) {
-  // Create the model if it doesn't exist
-  WeeklyOrder = mongoose.model<WeeklyOrderDocument>('WeeklyOrder', WeeklyOrderSchema);
 }
 
 // GET handler - get a single weekly subscription order by ID
 export async function GET(request: Request, { params }: RouteParams) {
+  const { id } = await params;
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
@@ -141,8 +32,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
     
     await connectToDatabase();
-    
-    const { id } = params;
     
     // Find the order by orderId
     const order = await WeeklyOrder.findOne({ orderId: id }).lean();
@@ -161,7 +50,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const orderWithUserInfo = {
       ...order,
       user,
-      effectiveCustomerInfo: resolveEffectiveOrderCustomerInfo(order as any, user),
+      effectiveCustomerInfo: resolveEffectiveOrderCustomerInfo(order as any, user as any),
       hasOrderOnlyOverride: hasOrderCustomerOverride(order as any),
       orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order as any)
     };
@@ -181,9 +70,10 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 // DELETE handler - delete order without notification (admin only)
-// Optional: return credits based on query parameter
+// Optional: return the consumed entitlement based on query parameter
 // Does NOT send email notification
 export async function DELETE(request: Request, { params }: RouteParams) {
+  const { id } = await params;
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
@@ -192,9 +82,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     
     await connectToDatabase();
     
-    const { id } = params;
-    
-    // Get query parameter to check if credits should be returned
+    // Keep the legacy query parameter name for compatibility.
     const url = new URL(request.url);
     const returnCredits = url.searchParams.get('returnCredits') === 'true';
     
@@ -208,27 +96,43 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       );
     }
     
-    // Return credits to user if requested and order was not already refunded
-    if (returnCredits && order.status !== 'refunded') {
-      const user = await User.findById(order.userId);
-      if (user) {
-        const creditsReturned = order.creditCost || 0;
-        
-        user.credits += creditsReturned;
-        await user.save();
-        
-        console.log(`Returned credits for weekly order ${id}: ${creditsReturned} credits`);
-      }
+    const shouldRestoreEntitlement = returnCredits && order.status !== 'refunded';
+    const refundTarget = shouldRestoreEntitlement
+      ? resolveWeeklyRefundTarget(order)
+      : { kind: 'none', amount: 0 } as const;
+
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        if (shouldRestoreEntitlement && refundTarget.kind !== 'none') {
+          const user = await User.findById(order.userId).session(session);
+          if (!user) {
+            throw new Error('User not found for entitlement restoration');
+          }
+          restoreWeeklyOrderEntitlement(user, order);
+          await user.save({ session });
+        }
+
+        const deleteResult = await WeeklyOrder.deleteOne({ orderId: id }, { session });
+        if (deleteResult.deletedCount !== 1) {
+          throw new Error('Order could not be deleted');
+        }
+      });
+    } finally {
+      await session.endSession();
     }
-    
-    // Delete the order (no email notification)
-    await WeeklyOrder.deleteOne({ orderId: id });
-    
-    console.log(`Weekly order ${id} deleted without notification (credits ${returnCredits ? 'returned' : 'not returned'}) by admin`);
+
+    console.log(
+      `Weekly order ${id} deleted without notification (${describeWeeklyRefundTarget(refundTarget)}) by admin`
+    );
     
     return NextResponse.json({
       success: true,
-      message: `Order deleted successfully without notification${returnCredits ? ' (credits returned)' : ''}`
+      message: `Order deleted successfully without notification${shouldRestoreEntitlement ? ` (${describeWeeklyRefundTarget(refundTarget)})` : ''}`,
+      meta: {
+        refundTarget,
+        refundSummary: shouldRestoreEntitlement ? describeWeeklyRefundTarget(refundTarget) : null,
+      }
     });
   } catch (error: any) {
     console.error('Error deleting weekly order:', error);

@@ -9,7 +9,7 @@ export interface RefundableWeeklyOrder {
   voucherDeducted?: boolean | null;
 }
 
-type RefundTarget =
+export type RefundTarget =
   | { kind: 'none'; amount: 0 }
   | { kind: 'credits'; amount: number }
   | { kind: 'weekly-plan'; amount: 1; planId: string };
@@ -60,4 +60,16 @@ export function restoreWeeklyOrderEntitlement(
 
   incrementBalance(user, refundTarget.planId, refundTarget.amount);
   return refundTarget;
+}
+
+export function describeWeeklyRefundTarget(refundTarget: RefundTarget): string {
+  if (refundTarget.kind === 'none') {
+    return 'no entitlement was restored';
+  }
+
+  if (refundTarget.kind === 'credits') {
+    return `${refundTarget.amount} credits restored`;
+  }
+
+  return `${refundTarget.amount} weekly voucher restored (${refundTarget.planId})`;
 }

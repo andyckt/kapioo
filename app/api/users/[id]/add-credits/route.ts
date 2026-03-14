@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import {
+  applyBalanceMutations,
+  type ApplyBalanceMutationsResult,
+  BalanceMutationError,
+  findBalanceMutationUser,
+} from '@/lib/balances/mutations';
 import connectToDatabase from '@/lib/db';
-import User from '@/models/User';
-import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 
 // Interface for route params
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // POST handler - add credits to a user account
@@ -20,7 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return response;
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { credits, description = 'Added Credits' } = await request.json();
     
     // Validate input
@@ -32,69 +36,62 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     
     await connectToDatabase();
+
+    const session = await mongoose.startSession();
+    try {
+      const resultRef: { current: ApplyBalanceMutationsResult | null } = { current: null };
+
+      await session.withTransaction(async () => {
+        const user = await findBalanceMutationUser(id, session);
+        if (!user) {
+          throw new BalanceMutationError('User not found', {
+            status: 404,
+            code: 'USER_NOT_FOUND',
+          });
+        }
+
+        resultRef.current = await applyBalanceMutations({
+          user,
+          mutations: [{ field: 'credits', amount: credits, operation: 'add' }],
+          description,
+          session,
+          actor,
+          request,
+          auditAction: 'balance.add',
+          auditTargetType: 'user-balance',
+          auditMetadata: {
+            field: 'credits',
+            amount: credits,
+            operation: 'add',
+            source: 'legacy-add-credits-route',
+          },
+        });
+      });
+
+      if (!resultRef.current) {
+        throw new Error('Credit mutation did not complete');
+      }
+      const result = resultRef.current;
     
-    // Find user
-    const user = await User.findOne({ 
-      $or: [{ _id: id }, { userID: id }] 
-    });
-    
-    if (!user) {
+      return NextResponse.json({ 
+        success: true, 
+        data: {
+          credits: result.user.credits,
+          transaction: result.transaction
+        }
+      });
+    } finally {
+      await session.endSession();
+    }
+  } catch (error: any) {
+    if (error instanceof BalanceMutationError) {
       return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
+        { success: false, error: error.message, details: error.details },
+        { status: error.status }
       );
     }
-    
-    // Add credits to user
-    const newCreditBalance = (user.credits || 0) + credits;
-    user.credits = newCreditBalance;
-    await user.save();
-    
-    // Create transaction record
-    console.log("Creating transaction for user:", {
-      userId: user._id,
-      userIdStr: user._id.toString(),
-      userObjectId: user._id
-    });
-    
-    // Generate transaction ID
-    let transactionId;
-    try {
-      // Try using the static method
-      transactionId = await Transaction.generateTransactionId('Add');
-    } catch (methodError) {
-      console.error('Error generating transaction ID with static method:', methodError);
-      
-      // Fallback: Create a manual transaction ID
-      const count = await Transaction.countDocuments({ type: 'Add' });
-      transactionId = `Add-${1001 + count}`;
-      console.log('Generated fallback transaction ID:', transactionId);
-    }
-    
-    const transaction = new Transaction({
-      transactionId,
-      userId: user._id,
-      type: 'Add',
-      amount: credits,
-      description,
-    });
-    
-    const savedTransaction = await transaction.save();
-    console.log("Transaction saved:", savedTransaction);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: {
-        credits: newCreditBalance,
-        transaction: savedTransaction
-      }
-    });
-  } catch (error: any) {
-    console.error(`Error adding credits to user ${params.id}:`, error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
-    if (error instanceof mongoose.Error) {
-      console.error('Mongoose error type:', error.name);
-    }
+
+    console.error('Error adding credits to user:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to add credits', details: error.message },
       { status: 500 }

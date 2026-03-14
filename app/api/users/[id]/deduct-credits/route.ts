@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import {
+  applyBalanceMutations,
+  type ApplyBalanceMutationsResult,
+  BalanceMutationError,
+  findBalanceMutationUser,
+} from '@/lib/balances/mutations';
 import connectToDatabase from '@/lib/db';
-import User from '@/models/User';
-import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 
 // Interface for route params
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // POST handler - deduct credits from a user account
@@ -20,7 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return response;
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { credits, description = 'Credit Deduction' } = await request.json();
     
     // Validate input
@@ -32,71 +36,62 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     
     await connectToDatabase();
-    
-    // Find user
-    const user = await User.findOne({ 
-      $or: [{ _id: id }, { userID: id }] 
-    });
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Check if user has enough credits
-    if ((user.credits || 0) < credits) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient credits' },
-        { status: 400 }
-      );
-    }
-    
-    // Generate transaction ID
-    let transactionId;
+
+    const session = await mongoose.startSession();
     try {
-      // Try using the static method
-      transactionId = await Transaction.generateTransactionId('Deduct');
-    } catch (methodError) {
-      console.error('Error generating transaction ID with static method:', methodError);
-      
-      // Fallback: Create a manual transaction ID
-      const count = await Transaction.countDocuments({ type: 'Deduct' });
-      transactionId = `DEDUCT-${2000 + count}`;
-      console.log('Generated fallback transaction ID:', transactionId);
-    }
-    
-    // Deduct credits from user
-    const newCreditBalance = user.credits - credits;
-    user.credits = newCreditBalance;
-    await user.save();
-    
-    // Create transaction record
-    const transaction = new Transaction({
-      transactionId,
-      userId: user._id,
-      type: 'Deduct',
-      amount: credits,
-      description,
-    });
-    
-    const savedTransaction = await transaction.save();
-    console.log("Deduction transaction saved:", savedTransaction);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: {
-        credits: newCreditBalance,
-        transaction: savedTransaction
+      const resultRef: { current: ApplyBalanceMutationsResult | null } = { current: null };
+
+      await session.withTransaction(async () => {
+        const user = await findBalanceMutationUser(id, session);
+        if (!user) {
+          throw new BalanceMutationError('User not found', {
+            status: 404,
+            code: 'USER_NOT_FOUND',
+          });
+        }
+
+        resultRef.current = await applyBalanceMutations({
+          user,
+          mutations: [{ field: 'credits', amount: credits, operation: 'deduct' }],
+          description,
+          session,
+          actor,
+          request,
+          auditAction: 'balance.deduct',
+          auditTargetType: 'user-balance',
+          auditMetadata: {
+            field: 'credits',
+            amount: credits,
+            operation: 'deduct',
+            source: 'legacy-deduct-credits-route',
+          },
+        });
+      });
+
+      if (!resultRef.current) {
+        throw new Error('Credit mutation did not complete');
       }
-    });
-  } catch (error: any) {
-    console.error(`Error deducting credits from user ${params.id}:`, error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
-    if (error instanceof mongoose.Error) {
-      console.error('Mongoose error type:', error.name);
+      const result = resultRef.current;
+
+      return NextResponse.json({ 
+        success: true, 
+        data: {
+          credits: result.user.credits,
+          transaction: result.transaction
+        }
+      });
+    } finally {
+      await session.endSession();
     }
+  } catch (error: any) {
+    if (error instanceof BalanceMutationError) {
+      return NextResponse.json(
+        { success: false, error: error.message, details: error.details },
+        { status: error.status }
+      );
+    }
+
+    console.error('Error deducting credits from user:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to deduct credits', details: error.message },
       { status: 500 }

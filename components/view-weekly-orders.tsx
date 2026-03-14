@@ -417,19 +417,29 @@ export function ViewWeeklyOrders() {
       const data = await response.json()
       
       if (data.success) {
-        // Update the order in the list
-        setOrders(orders.map(order => 
-          order.orderId === orderId ? { ...order, status: newStatus } : order
-        ))
+        const updatedOrder = data.data
+        if (updatedOrder?.orderId) {
+          setOrders(orders.map(order =>
+            order.orderId === orderId ? { ...order, ...updatedOrder } : order
+          ))
+        } else {
+          setOrders(orders.map(order =>
+            order.orderId === orderId ? { ...order, status: newStatus } : order
+          ))
+        }
         
         // Update selected order if it's the one being viewed
         if (selectedOrder && selectedOrder.orderId === orderId) {
-          setSelectedOrder({ ...selectedOrder, status: newStatus })
+          setSelectedOrder(updatedOrder?.orderId ? { ...selectedOrder, ...updatedOrder } : { ...selectedOrder, status: newStatus })
         }
         
         toast({
           title: "Status Updated",
-          description: `Order ${orderId} status changed to ${newStatus}. Email notification sent to customer.`,
+          description: data.meta?.noOp
+            ? `Order ${orderId} is already ${newStatus}.`
+            : data.meta?.refundSummary && newStatus === 'refunded'
+              ? `Order ${orderId} status changed to refunded (${data.meta.refundSummary}).`
+              : `Order ${orderId} status changed to ${newStatus}.`,
         })
       } else {
         toast({
@@ -477,7 +487,7 @@ export function ViewWeeklyOrders() {
         
         toast({
           title: "Order Deleted",
-          description: data.message || `Order ${orderId} deleted successfully without notification${returnCredits ? ' (credits returned)' : ''}.`,
+          description: data.message || `Order ${orderId} deleted successfully without notification${returnCredits ? ' (entitlement restored)' : ''}.`,
         })
       } else {
         toast({
@@ -560,14 +570,34 @@ export function ViewWeeklyOrders() {
         )
       )
       
+      const successfulUpdates = results
+        .map((result, index) => ({ result, orderId: orderIds[index] }))
+        .filter((entry): entry is { result: PromiseFulfilledResult<any>; orderId: string } => (
+          entry.result.status === 'fulfilled' && Boolean(entry.result.value?.success)
+        ))
+
+      const successfulOrderIds = new Set(successfulUpdates.map(entry => entry.orderId))
+      const successfulOrderMap = new Map(
+        successfulUpdates
+          .filter(entry => entry.result.value?.data?.orderId)
+          .map(entry => [entry.orderId, entry.result.value.data])
+      )
+
       // Count successes and failures
-      const successful = results.filter(r => r.status === 'fulfilled' && (r.value?.success ?? false)).length
+      const successful = successfulUpdates.length
       const failed = results.length - successful
       
-      // Update orders in the UI
-      setOrders(orders.map(order => 
-        selectedOrders.has(order.orderId) ? { ...order, status: newStatus } : order
-      ))
+      // Update only successful orders in the UI
+      setOrders(orders.map(order => {
+        if (!successfulOrderIds.has(order.orderId)) return order
+        const updatedOrder = successfulOrderMap.get(order.orderId)
+        return updatedOrder ? { ...order, ...updatedOrder } : { ...order, status: newStatus }
+      }))
+
+      if (selectedOrder && successfulOrderIds.has(selectedOrder.orderId)) {
+        const updatedSelectedOrder = successfulOrderMap.get(selectedOrder.orderId)
+        setSelectedOrder(updatedSelectedOrder ? { ...selectedOrder, ...updatedSelectedOrder } : { ...selectedOrder, status: newStatus })
+      }
       
       // Clear selection
       setSelectedOrders(new Set())
@@ -854,7 +884,8 @@ export function ViewWeeklyOrders() {
                     status: 'all',
                     search: '',
                     area: '',
-                    deliveryDate: ''
+                    deliveryDate: '',
+                    deliveryDateEnd: ''
                   });
                   handleSearch();
                 }}
@@ -1873,7 +1904,7 @@ export function ViewWeeklyOrders() {
               htmlFor="returnCredits"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Return credits to user
+              Return consumed weekly voucher / credits to user
             </label>
           </div>
           

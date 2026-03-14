@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import Order from '@/models/Order';
+import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
 import User from '@/models/User';
+import WeeklyOrder from '@/models/WeeklyOrder';
 import mongoose from 'mongoose';
 
 export async function GET(
@@ -33,14 +34,21 @@ export async function GET(
       );
     }
     
-    // Count total orders for the user
-    const totalOrdersCount = await Order.countDocuments({ userId: user._id });
-    
-    // Count upcoming deliveries (orders with status: pending, confirmed, delivery)
-    const upcomingDeliveriesCount = await Order.countDocuments({ 
-      userId: user._id,
-      status: { $in: ['pending', 'confirmed', 'delivery'] }
-    });
+    const [dailyOrdersCount, weeklyOrdersCount, upcomingDailyCount, upcomingWeeklyCount] = await Promise.all([
+      DailyDeliveryOrder.countDocuments({ userId: user._id }),
+      WeeklyOrder.countDocuments({ userId: user._id }),
+      DailyDeliveryOrder.countDocuments({
+        userId: user._id,
+        status: { $in: ['pending', 'confirmed', 'delivery'] }
+      }),
+      WeeklyOrder.countDocuments({
+        userId: user._id,
+        status: { $in: ['pending', 'confirmed', 'delivery'] }
+      }),
+    ]);
+
+    const totalOrdersCount = dailyOrdersCount + weeklyOrdersCount;
+    const upcomingDeliveriesCount = upcomingDailyCount + upcomingWeeklyCount;
     
     return NextResponse.json({
       success: true,
