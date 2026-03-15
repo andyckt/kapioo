@@ -153,6 +153,7 @@ export async function GET(request: Request) {
       // Build the search query with multiple conditions
       query.$or = [
         { orderId: searchRegex },                         // Search by order ID
+        { weeklyEntitlementGroupId: searchRegex },        // Search by weekly group ID
         { 'items.optionName': searchRegex },              // Search by meal option name
         { 'deliveryAddress.streetAddress': searchRegex }, // Search by street address
         { 'deliveryAddress.postalCode': searchRegex },    // Search by postal code

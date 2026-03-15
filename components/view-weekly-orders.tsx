@@ -101,20 +101,24 @@ export function ViewWeeklyOrders() {
   const [isBatchUpdating, setIsBatchUpdating] = useState(false)
   const [batchStatus, setBatchStatus] = useState<string | null>(null)
   
-  // Copy email to clipboard
-  const copyEmail = (email: string) => {
-    navigator.clipboard.writeText(email).then(() => {
+  const copyText = (label: string, value: string) => {
+    navigator.clipboard.writeText(value).then(() => {
       toast({
-        title: "Email copied!",
-        description: `${email} copied to clipboard`,
+        title: `${label} copied!`,
+        description: `${value} copied to clipboard`,
       })
     }).catch(() => {
       toast({
         title: "Copy failed",
-        description: "Failed to copy email to clipboard",
+        description: `Failed to copy ${label.toLowerCase()} to clipboard`,
         variant: "destructive"
       })
     })
+  }
+
+  // Copy email to clipboard
+  const copyEmail = (email: string) => {
+    copyText('Email', email)
   }
   const [pagination, setPagination] = useState({
     page: 1,
@@ -683,6 +687,51 @@ export function ViewWeeklyOrders() {
     })
   }
 
+  const getWeeklyEntitlementSummary = (order: any) => {
+    if (order?.weeklyEntitlementSummary) {
+      return order.weeklyEntitlementSummary
+    }
+
+    const allocatedMealCount =
+      Number.isFinite(Number(order?.allocatedMealCount))
+        ? Number(order.allocatedMealCount)
+        : Array.isArray(order?.items)
+          ? order.items.reduce((sum: number, item: any) => sum + (Number(item?.quantity) || 0), 0)
+          : Number(order?.creditCost) || 0
+
+    if (typeof order?.mealPlanType === 'string' && order.mealPlanType !== 'legacy') {
+      const mealsPerWeek = Number(String(order.mealPlanType).replace('aweek', ''))
+      if (Number.isFinite(mealsPerWeek)) {
+        return {
+          labelEn: `${mealsPerWeek} meals/week: 1 voucher`,
+          allocatedMealCount,
+        }
+      }
+    }
+
+    return {
+      labelEn: `${Number(order?.creditCost) || 0} meals`,
+      allocatedMealCount,
+    }
+  }
+
+  const getLinkedWeeklyGroup = (order: any) => {
+    if (order?.linkedWeeklyGroup) {
+      return order.linkedWeeklyGroup
+    }
+
+    if (typeof order?.weeklyEntitlementGroupId === 'string' && order.weeklyEntitlementGroupId) {
+      return {
+        groupId: order.weeklyEntitlementGroupId,
+        parentRecordExists: false,
+        linkedChildOrderCount: 1,
+        otherLinkedChildOrders: [],
+      }
+    }
+
+    return null
+  }
+
   const openOverrideDialog = (order: any) => {
     const effective = getEffectiveCustomerInfo(order)
     setOverrideOrderId(order.orderId)
@@ -773,7 +822,7 @@ export function ViewWeeklyOrders() {
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by order ID, customer name or email"
+              placeholder="Search by order ID, weekly group ID, customer name or email"
               className="pl-8"
               value={filters.search}
               onChange={(e) => setFilters({...filters, search: e.target.value})}
@@ -1194,22 +1243,25 @@ export function ViewWeeklyOrders() {
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-4xl max-h-[85vh]">
+                              <DialogHeader>
+                                <DialogTitle>
+                                  Order {order.orderId}
+                                  {(!selectedOrder || selectedOrder.orderId !== order.orderId) && ' — Loading...'}
+                                </DialogTitle>
+                                {selectedOrder && selectedOrder.orderId === order.orderId && (
+                                  <DialogDescription>
+                                    Placed on {new Date(selectedOrder.createdAt).toLocaleString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </DialogDescription>
+                                )}
+                              </DialogHeader>
                               {selectedOrder && selectedOrder.orderId === order.orderId ? (
-                                <>
-                                  <DialogHeader>
-                                    <DialogTitle>Order {selectedOrder.orderId}</DialogTitle>
-                                    <DialogDescription>
-                                      Placed on {new Date(selectedOrder.createdAt).toLocaleString('en-US', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  
-                                  <div className="overflow-y-auto max-h-[calc(85vh-120px)] py-4">
+                                <div className="overflow-y-auto max-h-[calc(85vh-120px)] py-4">
                                     {/* Order status section */}
                                     <div className="mb-4">
                                       <div className="flex justify-between items-center mb-2">
@@ -1267,13 +1319,95 @@ export function ViewWeeklyOrders() {
                                         </div>
                                       </div>
                                       
-                                      {/* Credit cost */}
+                                      {/* Weekly entitlement */}
                                       <div>
-                                        <h3 className="font-semibold mb-1">Credit Cost</h3>
-                                        <p className="text-muted-foreground">
-                                          {selectedOrder.creditCost || 0} credits
-                                        </p>
+                                        {(() => {
+                                          const entitlementSummary = getWeeklyEntitlementSummary(selectedOrder)
+                                          return (
+                                            <>
+                                              <h3 className="font-semibold mb-1">Weekly Voucher Used</h3>
+                                              <p className="text-muted-foreground">
+                                                {entitlementSummary.labelEn}
+                                              </p>
+                                              <h3 className="font-semibold mb-1 mt-3">Allocated Meals For This Delivery</h3>
+                                              <p className="text-muted-foreground">
+                                                {entitlementSummary.allocatedMealCount} meals
+                                              </p>
+                                            </>
+                                          )
+                                        })()}
                                       </div>
+
+                                      {(() => {
+                                        const linkedGroup = getLinkedWeeklyGroup(selectedOrder)
+                                        if (!linkedGroup) {
+                                          return null
+                                        }
+
+                                        return (
+                                          <div>
+                                            <h3 className="font-semibold mb-1">Linked Weekly Group</h3>
+                                            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                                              <div>
+                                                <div className="flex items-center gap-2">
+                                                  <p className="font-medium">Parent Weekly Group ID</p>
+                                                  <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-7 px-2"
+                                                    onClick={() => copyText('Weekly group ID', linkedGroup.groupId)}
+                                                  >
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                  </Button>
+                                                </div>
+                                                <p className="text-muted-foreground font-mono break-all mt-1">
+                                                  {linkedGroup.groupId}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                  Search this group ID in the admin search bar to find linked child orders.
+                                                </p>
+                                                {!linkedGroup.parentRecordExists && (
+                                                  <p className="text-xs text-amber-600 mt-1">
+                                                    Parent weekly group record is unavailable, but child linkage is still stored on this order.
+                                                  </p>
+                                                )}
+                                              </div>
+
+                                              <div>
+                                                <p className="font-medium">Linked Child Order Count</p>
+                                                <p className="text-muted-foreground mt-1">
+                                                  {linkedGroup.linkedChildOrderCount}
+                                                </p>
+                                              </div>
+
+                                              <div>
+                                                <p className="font-medium">Other Linked Child Orders</p>
+                                                {Array.isArray(linkedGroup.otherLinkedChildOrders) && linkedGroup.otherLinkedChildOrders.length > 0 ? (
+                                                  <div className="mt-2 space-y-2">
+                                                    {linkedGroup.otherLinkedChildOrders.map((linkedOrder: any) => (
+                                                      <div key={linkedOrder.orderId} className="rounded border bg-background p-2">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                          <span className="font-mono text-sm break-all">{linkedOrder.orderId}</span>
+                                                          <Badge variant="outline">{linkedOrder.status || 'unknown'}</Badge>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                          {linkedOrder.allocatedMealCount} meals
+                                                          {linkedOrder.deliveryDateSummary ? ` • ${linkedOrder.deliveryDateSummary}` : ''}
+                                                        </p>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                ) : (
+                                                  <p className="text-muted-foreground mt-1">
+                                                    No other linked child orders.
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
                                       
                                       {/* Delivery details */}
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1337,7 +1471,6 @@ export function ViewWeeklyOrders() {
                                       )}
                                     </div>
                                   </div>
-                                </>
                               ) : (
                                 <div className="flex justify-center items-center h-[200px]">
                                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1465,23 +1598,28 @@ export function ViewWeeklyOrders() {
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[85vh] p-0">
+                        {/* Sticky Header - always present for a11y DialogTitle */}
+                        <DialogHeader className="sticky top-0 z-[5] bg-gradient-to-r from-primary/5 to-primary/10 px-4 sm:px-6 py-4 border-b">
+                          <DialogTitle className="text-lg sm:text-xl">
+                            Order {order.orderId}
+                            {(!selectedOrder || selectedOrder.orderId !== order.orderId) && ' — Loading...'}
+                          </DialogTitle>
+                          {selectedOrder && selectedOrder.orderId === order.orderId && (
+                            <DialogDescription className="text-xs sm:text-sm">
+                              {new Date(selectedOrder.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}, {new Date(selectedOrder.createdAt).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </DialogDescription>
+                          )}
+                        </DialogHeader>
+
                         {selectedOrder && selectedOrder.orderId === order.orderId ? (
                           <>
-                            {/* Sticky Header */}
-                            <DialogHeader className="sticky top-0 z-[5] bg-gradient-to-r from-primary/5 to-primary/10 px-4 sm:px-6 py-4 border-b">
-                              <DialogTitle className="text-lg sm:text-xl">Order {selectedOrder.orderId}</DialogTitle>
-                              <DialogDescription className="text-xs sm:text-sm">
-                                {new Date(selectedOrder.createdAt).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}, {new Date(selectedOrder.createdAt).toLocaleTimeString('en-US', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </DialogDescription>
-                            </DialogHeader>
-                            
                             {/* Scrollable Content */}
                             <div className="overflow-y-auto max-h-[calc(85vh-120px)] px-4 sm:px-6 py-4 space-y-5">
                               {/* Customer Information Card */}
@@ -1584,19 +1722,100 @@ export function ViewWeeklyOrders() {
                                 </div>
                               </div>
 
-                              {/* Credit Cost */}
+                              {/* Weekly entitlement */}
                               <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/10 rounded-lg p-4 border border-purple-200/50">
                                 <div className="flex items-center gap-2 mb-3">
                                   <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
                                     <Ticket className="h-4 w-4 text-purple-600" />
                                   </div>
-                                  <h3 className="font-semibold text-sm sm:text-base">Credit Cost</h3>
+                                  <h3 className="font-semibold text-sm sm:text-base">Weekly Entitlement</h3>
                                 </div>
-                                <div className="flex items-center justify-between bg-white dark:bg-gray-900 rounded px-3 py-2">
-                                  <span className="text-sm">Credits Used</span>
-                                  <span className="font-bold text-purple-600">{selectedOrder.creditCost || 0}</span>
-                                </div>
+                                {(() => {
+                                  const entitlementSummary = getWeeklyEntitlementSummary(selectedOrder)
+                                  return (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between gap-3 bg-white dark:bg-gray-900 rounded px-3 py-2">
+                                        <span className="text-sm">Weekly Voucher Used</span>
+                                        <span className="font-bold text-purple-600 text-right break-words">{entitlementSummary.labelEn}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-3 bg-white dark:bg-gray-900 rounded px-3 py-2">
+                                        <span className="text-sm">Allocated Meals For This Delivery</span>
+                                        <span className="font-bold text-purple-600">{entitlementSummary.allocatedMealCount}</span>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
                               </div>
+
+                              {(() => {
+                                const linkedGroup = getLinkedWeeklyGroup(selectedOrder)
+                                if (!linkedGroup) {
+                                  return null
+                                }
+
+                                return (
+                                  <div className="bg-gradient-to-br from-sky-50 to-sky-100/50 dark:from-sky-950/20 dark:to-sky-900/10 rounded-lg p-4 border border-sky-200/50">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <div className="w-8 h-8 rounded-full bg-sky-500/10 flex items-center justify-center">
+                                        <Copy className="h-4 w-4 text-sky-600" />
+                                      </div>
+                                      <h3 className="font-semibold text-sm sm:text-base">Linked Weekly Group</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="bg-white dark:bg-gray-900 rounded px-3 py-2">
+                                        <div className="flex items-center justify-between gap-3">
+                                          <span className="text-sm font-medium">Parent Weekly Group ID</span>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 px-2"
+                                            onClick={() => copyText('Weekly group ID', linkedGroup.groupId)}
+                                          >
+                                            <Copy className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                        <p className="font-mono text-xs break-all mt-2">{linkedGroup.groupId}</p>
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                          Search this group ID in the admin search bar to find linked child orders.
+                                        </p>
+                                        {!linkedGroup.parentRecordExists && (
+                                          <p className="text-xs text-amber-600 mt-2">
+                                            Parent weekly group record is unavailable, but child linkage is still stored on this order.
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center justify-between gap-3 bg-white dark:bg-gray-900 rounded px-3 py-2">
+                                        <span className="text-sm">Linked Child Order Count</span>
+                                        <span className="font-bold text-sky-600">{linkedGroup.linkedChildOrderCount}</span>
+                                      </div>
+                                      <div className="bg-white dark:bg-gray-900 rounded px-3 py-2">
+                                        <p className="text-sm font-medium">Other Linked Child Orders</p>
+                                        {Array.isArray(linkedGroup.otherLinkedChildOrders) && linkedGroup.otherLinkedChildOrders.length > 0 ? (
+                                          <div className="mt-2 space-y-2">
+                                            {linkedGroup.otherLinkedChildOrders.map((linkedOrder: any) => (
+                                              <div key={linkedOrder.orderId} className="rounded border px-2 py-2">
+                                                <div className="flex items-center justify-between gap-2">
+                                                  <span className="font-mono text-xs break-all">{linkedOrder.orderId}</span>
+                                                  <Badge variant="outline">{linkedOrder.status || 'unknown'}</Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                  {linkedOrder.allocatedMealCount} meals
+                                                  {linkedOrder.deliveryDateSummary ? ` • ${linkedOrder.deliveryDateSummary}` : ''}
+                                                </p>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm text-muted-foreground mt-2">
+                                            No other linked child orders.
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
 
                               {/* Special Instructions */}
                               {getEffectiveCustomerInfo(selectedOrder).specialInstructions && (
