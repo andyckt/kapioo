@@ -8,6 +8,14 @@ export const WEEKLY_ORDER_STATUSES = [
 ] as const;
 
 export type WeeklyOrderStatus = (typeof WEEKLY_ORDER_STATUSES)[number];
+export const WEEKLY_OPERATOR_ORDER_STATUSES = [
+  'pending',
+  'confirmed',
+  'delivery',
+  'delivered',
+  'cancelled',
+] as const;
+export type WeeklyOperatorOrderStatus = (typeof WEEKLY_OPERATOR_ORDER_STATUSES)[number];
 
 type TimestampLike = Date | string | null | undefined;
 
@@ -24,16 +32,16 @@ export interface WeeklyStatusTransitionResult {
   nextStatus: WeeklyOrderStatus;
   noOp: boolean;
   patch?: Record<string, WeeklyOrderStatus | Date | null>;
-  allowedNextStatuses: WeeklyOrderStatus[];
+  allowedNextStatuses: WeeklyOperatorOrderStatus[];
   error?: string;
 }
 
-const ALLOWED_NEXT_STATUS: Record<WeeklyOrderStatus, WeeklyOrderStatus[]> = {
-  pending: ['confirmed', 'cancelled', 'refunded'],
-  confirmed: ['pending', 'delivery', 'delivered', 'cancelled', 'refunded'],
-  delivery: ['confirmed', 'delivered', 'cancelled', 'refunded'],
-  delivered: ['delivery', 'refunded'],
-  cancelled: ['pending', 'refunded'],
+const ALLOWED_NEXT_STATUS: Record<WeeklyOrderStatus, WeeklyOperatorOrderStatus[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['pending', 'delivery', 'delivered', 'cancelled'],
+  delivery: ['confirmed', 'delivered', 'cancelled'],
+  delivered: ['delivery'],
+  cancelled: ['pending'],
   refunded: [],
 };
 
@@ -41,11 +49,18 @@ export function isWeeklyOrderStatus(value: unknown): value is WeeklyOrderStatus 
   return typeof value === 'string' && WEEKLY_ORDER_STATUSES.includes(value as WeeklyOrderStatus);
 }
 
+export function isWeeklyOperatorOrderStatus(value: unknown): value is WeeklyOperatorOrderStatus {
+  return (
+    typeof value === 'string' &&
+    WEEKLY_OPERATOR_ORDER_STATUSES.includes(value as WeeklyOperatorOrderStatus)
+  );
+}
+
 function normalizeCurrentStatus(value: unknown): WeeklyOrderStatus {
   return isWeeklyOrderStatus(value) ? value : 'pending';
 }
 
-export function getAllowedWeeklyStatusTransitions(currentStatus: unknown): WeeklyOrderStatus[] {
+export function getAllowedWeeklyStatusTransitions(currentStatus: unknown): WeeklyOperatorOrderStatus[] {
   return ALLOWED_NEXT_STATUS[normalizeCurrentStatus(currentStatus)];
 }
 
@@ -54,14 +69,17 @@ export function resolveWeeklyStatusTransition(
   requestedStatus: unknown,
   now = new Date()
 ): WeeklyStatusTransitionResult {
-  if (!isWeeklyOrderStatus(requestedStatus)) {
+  if (!isWeeklyOperatorOrderStatus(requestedStatus)) {
     return {
       ok: false,
       currentStatus: normalizeCurrentStatus(order.status),
       nextStatus: 'pending',
       noOp: false,
       allowedNextStatuses: getAllowedWeeklyStatusTransitions(order.status),
-      error: 'Invalid status',
+      error:
+        requestedStatus === 'refunded'
+          ? 'Refunded is not available in the weekly child-order status flow'
+          : 'Invalid status',
     };
   }
 
@@ -119,9 +137,6 @@ export function resolveWeeklyStatusTransition(
     case 'cancelled':
       patch.deliveredAt = null;
       patch.refundedAt = null;
-      break;
-    case 'refunded':
-      patch.refundedAt = now;
       break;
   }
 

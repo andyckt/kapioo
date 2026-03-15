@@ -441,9 +441,7 @@ export function ViewWeeklyOrders() {
           title: "Status Updated",
           description: data.meta?.noOp
             ? `Order ${orderId} is already ${newStatus}.`
-            : data.meta?.refundSummary && newStatus === 'refunded'
-              ? `Order ${orderId} status changed to refunded (${data.meta.refundSummary}).`
-              : `Order ${orderId} status changed to ${newStatus}.`,
+            : `Order ${orderId} status changed to ${newStatus}.`,
         })
       } else {
         toast({
@@ -980,7 +978,6 @@ export function ViewWeeklyOrders() {
                         <SelectItem value="delivery">Delivery</SelectItem>
                         <SelectItem value="delivered">Delivered</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="refunded">Refunded</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button 
@@ -1211,13 +1208,6 @@ export function ViewWeeklyOrders() {
                                 className="text-red-600"
                               >
                                 Cancel Order
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => updateOrderStatus(order.orderId, 'refunded')}
-                                disabled={order.status === 'refunded' || isUpdating}
-                                className="text-orange-600"
-                              >
-                                Mark as Refunded
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
@@ -1910,7 +1900,6 @@ export function ViewWeeklyOrders() {
                         <DropdownMenuItem onClick={() => updateOrderStatus(order.orderId, 'delivered')} disabled={order.status === 'delivered' || isUpdating}>Set to Delivered</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => updateOrderStatus(order.orderId, 'cancelled')} disabled={order.status === 'cancelled' || isUpdating} className="text-red-600">Cancel Order</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => updateOrderStatus(order.orderId, 'refunded')} disabled={order.status === 'refunded' || isUpdating} className="text-orange-600">Mark as Refunded</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </CardFooter>

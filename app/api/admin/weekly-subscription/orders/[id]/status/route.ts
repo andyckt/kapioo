@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
-import {
-  describeWeeklyRefundTarget,
-  resolveWeeklyRefundTarget,
-  restoreWeeklyOrderEntitlement,
-} from '@/lib/orders/weekly-refund';
 import {
   resolveWeeklyStatusTransition,
-  WEEKLY_ORDER_STATUSES,
+  WEEKLY_OPERATOR_ORDER_STATUSES,
 } from '@/lib/orders/weekly-status';
 import { sendDailyOrderStatusUpdateNotification } from '@/lib/services/notifications';
 import User from '@/models/User';
@@ -60,7 +54,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           success: false,
           error: transition.error,
           allowedNextStatuses: transition.allowedNextStatuses,
-          validStatuses: WEEKLY_ORDER_STATUSES,
+          validStatuses: WEEKLY_OPERATOR_ORDER_STATUSES,
           currentStatus: transition.currentStatus,
         },
         { status: 409 }
@@ -81,42 +75,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const updateData = transition.patch || { status: transition.nextStatus };
-    let refundTarget = null as ReturnType<typeof resolveWeeklyRefundTarget> | null;
-
-    if (transition.nextStatus === 'refunded') {
-      refundTarget = resolveWeeklyRefundTarget(order);
-    }
-
-    let updatedOrder = null;
-    if (transition.nextStatus === 'refunded' && order.status !== 'refunded') {
-      const session = await mongoose.startSession();
-      try {
-        await session.withTransaction(async () => {
-          if (refundTarget && refundTarget.kind !== 'none') {
-            const user = await User.findById(order.userId).session(session);
-            if (!user) {
-              throw new Error('User not found for refund processing');
-            }
-            restoreWeeklyOrderEntitlement(user, order);
-            await user.save({ session });
-          }
-
-          updatedOrder = await WeeklyOrder.findOneAndUpdate(
-            { orderId: id },
-            { $set: updateData },
-            { new: true, session }
-          );
-        });
-      } finally {
-        await session.endSession();
-      }
-    } else {
-      updatedOrder = await WeeklyOrder.findOneAndUpdate(
-        { orderId: id },
-        { $set: updateData },
-        { new: true }
-      );
-    }
+    const updatedOrder = await WeeklyOrder.findOneAndUpdate(
+      { orderId: id },
+      { $set: updateData },
+      { new: true }
+    );
 
     if (!updatedOrder) {
       return NextResponse.json(
@@ -155,8 +118,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         nextStatus: transition.nextStatus,
         noOp: false,
         allowedNextStatuses: transition.allowedNextStatuses,
-        refundTarget,
-        refundSummary: refundTarget ? describeWeeklyRefundTarget(refundTarget) : null,
       }
     });
   } catch (error: any) {
