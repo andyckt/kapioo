@@ -274,7 +274,10 @@ export async function submitUserSubscription(data: {
   phoneNumber?: string,
   area?: string,
   mealPlanType?: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek',
-  deductVoucher?: boolean // Flag to indicate if this order should deduct a voucher
+  deductVoucher?: boolean, // Flag to indicate if this order should deduct a voucher
+  weeklyEntitlementGroupId?: string,
+  weeklyEntitlementTotalMeals?: number,
+  splitDeliveryCount?: number,
 }): Promise<any> {
   try {
     console.log('Submitting subscription with user ID:', data.userId);

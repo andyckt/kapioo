@@ -545,6 +545,10 @@ export function WeeklySubscriptionCheckout({
       // Get the dates in a consistent order to ensure deterministic processing
       const sortedDates = Object.keys(cartByDate).sort();
       console.log(`=== Processing ${sortedDates.length} orders for dates: ${sortedDates.join(', ')} ===`);
+      const isSplitWeeklyCheckout = sortedDates.length > 1;
+      const weeklyEntitlementGroupId = isSplitWeeklyCheckout
+        ? `weg-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`}`
+        : undefined;
       
       // Process first date WITH voucher deduction
       if (sortedDates.length > 0) {
@@ -566,7 +570,10 @@ export function WeeklySubscriptionCheckout({
           phoneNumber: formData.phone,
           area: formData.area,
           mealPlanType: selectedMealPlanType,
-          deductVoucher: true // First order deducts voucher
+          deductVoucher: true, // First order deducts voucher
+          weeklyEntitlementGroupId,
+          weeklyEntitlementTotalMeals: isSplitWeeklyCheckout ? totalItems : undefined,
+          splitDeliveryCount: isSplitWeeklyCheckout ? sortedDates.length : undefined,
         });
         
         console.log('🔍 DEBUG: First order API response:', firstResult);
@@ -625,7 +632,10 @@ export function WeeklySubscriptionCheckout({
             phoneNumber: formData.phone,
             area: formData.area,
             mealPlanType: selectedMealPlanType,
-            deductVoucher: false // Explicitly set to false for additional orders
+            deductVoucher: false, // Explicitly set to false for additional orders
+            weeklyEntitlementGroupId,
+            weeklyEntitlementTotalMeals: totalItems,
+            splitDeliveryCount: sortedDates.length,
           });
           
           console.log(`Order ${i+1} result:`, result.error ? `ERROR: ${result.error}` : 'SUCCESS');

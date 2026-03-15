@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
 import { annotateLegacyOrderRoute, LEGACY_ORDER_DOMAIN } from '@/lib/orders/domain-contract';
-import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
-import User from '@/models/User';
-import mongoose from 'mongoose';
 
 // Interface for route params
 interface RouteParams {
@@ -20,70 +16,20 @@ function legacyOrderJson(body: unknown, init?: ResponseInit) {
   );
 }
 
-// GET handler - get all orders for a specific user
+// GET handler - legacy route retired in Phase 2E
 export async function GET(request: Request, { params }: RouteParams) {
-  const resolvedParams = await params;
-  const { id } = resolvedParams;
-  try {
-    const { actor, response } = await requireSelfOrAdmin(id);
-    if (!actor || response) {
-      return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.userListRoute);
-    }
-    const url = new URL(request.url);
-    const status = url.searchParams.get('status');
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '10');
-    const skip = (page - 1) * limit;
-    
-    await connectToDatabase();
-    
-    // Check if user exists
-    const user = await User.findOne({
-      $or: [
-        { _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null },
-        { userID: id }
-      ]
-    });
-    
-    if (!user) {
-      return legacyOrderJson(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Build query
-    const query: any = { userId: user._id };
-    
-    // Filter by status if provided
-    if (status) {
-      query.status = status;
-    }
-    
-    // Find canonical daily-delivery orders for this user with pagination
-    const orders = await DailyDeliveryOrder.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-    
-    // Get total count for pagination
-    const totalOrders = await DailyDeliveryOrder.countDocuments(query);
-    
-    return legacyOrderJson({
-      success: true,
-      data: {
-        orders,
-        page,
-        limit,
-        total: totalOrders,
-        pages: Math.ceil(totalOrders / limit)
-      }
-    });
-  } catch (error: any) {
-    console.error(`Error fetching orders for user ${id}:`, error);
-    return legacyOrderJson(
-      { success: false, error: 'Failed to fetch user orders', details: error.message },
-      { status: 500 }
-    );
+  const { id } = await params;
+  const { actor, response } = await requireSelfOrAdmin(id);
+  if (!actor || response) {
+    return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.userListRoute);
   }
+
+  void request;
+  return legacyOrderJson(
+    {
+      success: false,
+      error: 'Legacy user order listing has been retired. Use /api/daily-delivery/order?userId=[id] instead.',
+    },
+    { status: 410 }
+  );
 } 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import {
   applyBalanceMutations,
+  type ApplyBalanceMutationsResult,
   BALANCE_MUTATION_FIELDS,
   BalanceMutationError,
   findBalanceMutationUser,
@@ -103,6 +104,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const session = await mongoose.startSession();
     let updatedUser: any = null;
+    const mutationResultRef: { current: ApplyBalanceMutationsResult | null } = { current: null };
     try {
       await session.withTransaction(async () => {
         const user = await findBalanceMutationUser(id, session);
@@ -116,7 +118,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         const currentBalance = Number(user[field]) || 0;
         console.log(`[${requestId}] Current ${field} balance: ${currentBalance}`);
 
-        const result = await applyBalanceMutations({
+        mutationResultRef.current = await applyBalanceMutations({
           user,
           mutations: [{ field, amount, operation }],
           description: description || `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${shortVoucherName}`,
@@ -133,7 +135,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           },
         });
 
-        updatedUser = result.user;
+        updatedUser = mutationResultRef.current.user;
         const newBalance = Number(updatedUser[field]) || 0;
         console.log(`[${requestId}] Balance updated successfully - Old: ${currentBalance}, New: ${newBalance}`);
       });
@@ -279,6 +281,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ 
       success: true, 
       data: userResponse,
+      meta: {
+        transaction: mutationResultRef.current?.transaction || null,
+      },
       message: `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${field} ${operation === 'add' ? 'to' : 'from'} user's account`
     });
   } catch (error: any) {

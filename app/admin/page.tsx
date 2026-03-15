@@ -490,14 +490,15 @@ export default function AdminDashboardPage() {
     setIsLoading(true)
     
     try {
-      // Make API call to add credits to user
-      const response = await fetch(`/api/users/${selectedUser._id}/credits`, {
+      const response = await fetch(`/api/users/${selectedUser._id}/update-balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
+          field: 'credits',
           amount: creditAmount,
+          operation: 'add',
           description: `Admin added ${creditAmount} credits`
         }),
       })
@@ -505,21 +506,25 @@ export default function AdminDashboardPage() {
       const data = await response.json()
       
       if (data.success) {
+        const updatedUser = data.data
         toast({
           title: "Credits added",
           description: `Added ${creditAmount} credits to ${selectedUser.name}`,
         })
         
-        // Update the user's credit amount in the local state
-        const updatedUsers = users.map(user => {
-          if (user._id === selectedUser._id) {
-            return { ...user, credits: (user.credits || 0) + creditAmount }
-          }
-          return user
-        })
+        const updatedUsers = users.map(user =>
+          user._id === selectedUser._id ? updatedUser : user
+        )
         
         setUsers(updatedUsers)
-        setFilteredUsers(updatedUsers)
+        setFilteredUsers(filteredUsers.map(user =>
+          user._id === selectedUser._id ? updatedUser : user
+        ))
+        setSelectedUser(updatedUser)
+
+        if (activeTab === "credits") {
+          fetchTransactions()
+        }
         
         // Send notification to user about added credits
         try {
@@ -531,7 +536,7 @@ export default function AdminDashboardPage() {
             body: JSON.stringify({
               notificationType: NotificationType.CREDITS_ADDED,
               userId: selectedUser._id,
-              transactionId: data.data.transaction.transactionId,
+              transactionId: data.meta?.transaction?.transactionId,
               amount: creditAmount
             }),
           });
@@ -1094,14 +1099,15 @@ export default function AdminDashboardPage() {
     if (!selectedUser) return
     
     try {
-      // Call the deduct-credits API endpoint
-      const response = await fetch(`/api/users/${selectedUser._id}/deduct-credits`, {
+      const response = await fetch(`/api/users/${selectedUser._id}/update-balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          credits: deductAmount,
+          field: 'credits',
+          amount: deductAmount,
+          operation: 'deduct',
           description: deductDescription
         })
       });
@@ -1109,19 +1115,21 @@ export default function AdminDashboardPage() {
       const result = await response.json();
       
       if (result.success) {
+        const updatedUser = result.data
         // Update local state
         setUsers(users.map(user => 
           user._id === selectedUser._id 
-            ? { ...user, credits: result.data.credits } 
+            ? updatedUser
             : user
         ));
         
         // Also update filtered users if needed
         setFilteredUsers(filteredUsers.map(user => 
           user._id === selectedUser._id 
-            ? { ...user, credits: result.data.credits } 
+            ? updatedUser
             : user
         ));
+        setSelectedUser(updatedUser)
         
         // Refresh transactions list if in Credits tab
         if (activeTab === "credits") {
@@ -1851,24 +1859,6 @@ export default function AdminDashboardPage() {
                 </Card>
               </motion.div>
             )}
-
-            {/* Commented out Orders tab content
-            {activeTab === "orders" && (
-              <motion.div
-                key="orders"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Order Management</h2>
-                </div>
-                <OrderManagement />
-              </motion.div>
-            )}
-            */}
 
             {activeTab === "daily-delivery" && (
               <motion.div

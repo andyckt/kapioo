@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+// @ts-expect-error NextAuth v5 beta runtime exports getToken, but this repo's types do not expose it.
 import { getToken } from 'next-auth/jwt';
 
 import {
@@ -83,7 +84,6 @@ const LEGACY_AUTHJS_COOKIE_NAMES = [
 ];
 
 const AUTH_REQUIRED_API_PATHS = [
-  '/api/orders',
   '/api/daily-delivery/order',
   '/api/transactions',
   '/api/voucher-requests',

@@ -5,8 +5,8 @@ import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import UserSubscription from '@/models/UserSubscription';
 import WeeklyOrder from '@/models/WeeklyOrder';
+import WeeklyEntitlementGroup from '@/models/WeeklyEntitlementGroup';
 import User from '@/models/User';
-import { nanoid } from 'nanoid';
 import { sendWeeklyOrderConfirmationEmail, sendAdminWeeklyOrderNotification } from '@/lib/services/email';
 import { toWeeklyPlanId } from '@/lib/plans/service';
 import { format, addDays, addWeeks } from 'date-fns';
@@ -270,6 +270,29 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const weeklyEntitlementGroupId =
+      typeof data.weeklyEntitlementGroupId === 'string' && data.weeklyEntitlementGroupId.trim()
+        ? data.weeklyEntitlementGroupId.trim()
+        : null;
+    const weeklyEntitlementTotalMeals = Number(data.weeklyEntitlementTotalMeals);
+    const splitDeliveryCount = Number(data.splitDeliveryCount);
+
+    if (weeklyEntitlementGroupId) {
+      if (!Number.isInteger(weeklyEntitlementTotalMeals) || weeklyEntitlementTotalMeals <= 0) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid weekly entitlement total meals' },
+          { status: 400 }
+        );
+      }
+
+      if (!Number.isInteger(splitDeliveryCount) || splitDeliveryCount <= 1) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid split delivery count for weekly entitlement group' },
+          { status: 400 }
+        );
+      }
+    }
     
     const effectiveUserId =
       actor.role === 'admin' && data.userId
@@ -323,6 +346,14 @@ export async function POST(request: Request) {
       
       // Check each recent order for exact match
       for (const recentOrder of recentOrders) {
+        if (
+          weeklyEntitlementGroupId &&
+          recentOrder.weeklyEntitlementGroupId &&
+          String(recentOrder.weeklyEntitlementGroupId) !== weeklyEntitlementGroupId
+        ) {
+          continue;
+        }
+
         // Create comparable keys from the recent order's items
         const recentDayKeys = recentOrder.items.map((item: any) => 
           `${item.dayId}-${item.date}`
@@ -350,6 +381,7 @@ export async function POST(request: Request) {
             success: true,
             data: {
               orderId: recentOrder.orderId,
+              weeklyEntitlementGroupId: recentOrder.weeklyEntitlementGroupId || null,
               subscription: null,
               isDuplicate: true,
               duplicateOf: recentOrder.orderId,
@@ -550,6 +582,41 @@ export async function POST(request: Request) {
     });
     
     console.log('🔍 API DEBUG: Final orderItems to be saved:', JSON.stringify(orderItems, null, 2));
+
+    if (weeklyEntitlementGroupId) {
+      const existingEntitlementGroup = await WeeklyEntitlementGroup.findOne({ groupId: weeklyEntitlementGroupId });
+      if (existingEntitlementGroup) {
+        if (String(existingEntitlementGroup.userId) !== String(user._id)) {
+          return NextResponse.json(
+            { success: false, error: 'Weekly entitlement group belongs to a different user' },
+            { status: 409 }
+          );
+        }
+
+        if (String(existingEntitlementGroup.mealPlanType) !== String(mealPlanType)) {
+          return NextResponse.json(
+            { success: false, error: 'Weekly entitlement group meal plan type mismatch' },
+            { status: 409 }
+          );
+        }
+
+        if (Number(existingEntitlementGroup.totalMealsForWeek) !== weeklyEntitlementTotalMeals) {
+          return NextResponse.json(
+            { success: false, error: 'Weekly entitlement group total meals mismatch' },
+            { status: 409 }
+          );
+        }
+      } else {
+        await WeeklyEntitlementGroup.create({
+          userId: user._id,
+          groupId: weeklyEntitlementGroupId,
+          mealPlanType,
+          voucherCountUsed: mealPlanType === 'legacy' ? 0 : 1,
+          totalMealsForWeek: weeklyEntitlementTotalMeals,
+          splitDeliveryCount,
+        });
+      }
+    }
     
     // Create a new weekly order
     const weeklyOrder = await WeeklyOrder.create({
@@ -560,6 +627,8 @@ export async function POST(request: Request) {
       creditCost: totalItems,
       mealPlanType,
       voucherDeducted: shouldDeductVoucher,
+      weeklyEntitlementGroupId: weeklyEntitlementGroupId || undefined,
+      allocatedMealCount: totalItems,
       specialInstructions: data.specialInstructions || '',
       deliveryAddress: data.deliveryAddress || {},
       phoneNumber: data.phoneNumber || '',

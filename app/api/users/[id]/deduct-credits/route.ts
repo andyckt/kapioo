@@ -1,13 +1,5 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa } from '@/lib/auth/guards';
-import {
-  applyBalanceMutations,
-  type ApplyBalanceMutationsResult,
-  BalanceMutationError,
-  findBalanceMutationUser,
-} from '@/lib/balances/mutations';
-import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
 
 // Interface for route params
 interface RouteParams {
@@ -16,85 +8,19 @@ interface RouteParams {
   }>;
 }
 
-// POST handler - deduct credits from a user account
+// POST handler - legacy route retired in Phase 2E
 export async function POST(request: Request, { params }: RouteParams) {
-  try {
-    const { actor, response } = await requireAdminMfa(request);
-    if (!actor || response) {
-      return response;
-    }
-
-    const { id } = await params;
-    const { credits, description = 'Credit Deduction' } = await request.json();
-    
-    // Validate input
-    if (!credits || typeof credits !== 'number' || credits <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Valid credit amount is required' },
-        { status: 400 }
-      );
-    }
-    
-    await connectToDatabase();
-
-    const session = await mongoose.startSession();
-    try {
-      const resultRef: { current: ApplyBalanceMutationsResult | null } = { current: null };
-
-      await session.withTransaction(async () => {
-        const user = await findBalanceMutationUser(id, session);
-        if (!user) {
-          throw new BalanceMutationError('User not found', {
-            status: 404,
-            code: 'USER_NOT_FOUND',
-          });
-        }
-
-        resultRef.current = await applyBalanceMutations({
-          user,
-          mutations: [{ field: 'credits', amount: credits, operation: 'deduct' }],
-          description,
-          session,
-          actor,
-          request,
-          auditAction: 'balance.deduct',
-          auditTargetType: 'user-balance',
-          auditMetadata: {
-            field: 'credits',
-            amount: credits,
-            operation: 'deduct',
-            source: 'legacy-deduct-credits-route',
-          },
-        });
-      });
-
-      if (!resultRef.current) {
-        throw new Error('Credit mutation did not complete');
-      }
-      const result = resultRef.current;
-
-      return NextResponse.json({ 
-        success: true, 
-        data: {
-          credits: result.user.credits,
-          transaction: result.transaction
-        }
-      });
-    } finally {
-      await session.endSession();
-    }
-  } catch (error: any) {
-    if (error instanceof BalanceMutationError) {
-      return NextResponse.json(
-        { success: false, error: error.message, details: error.details },
-        { status: error.status }
-      );
-    }
-
-    console.error('Error deducting credits from user:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to deduct credits', details: error.message },
-      { status: 500 }
-    );
+  const { actor, response } = await requireAdminMfa(request);
+  if (!actor || response) {
+    return response;
   }
+
+  void params;
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'This route has been retired. Use /api/users/[id]/update-balance instead.',
+    },
+    { status: 410 }
+  );
 }

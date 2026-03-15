@@ -102,6 +102,25 @@ function formatAddress(address: any, language: string, area?: string) {
   return formattedAddress;
 }
 
+function getWeeklyEntitlementLabel(order: any, language: string) {
+  if (order?.weeklyEntitlementSummary) {
+    return language === 'zh'
+      ? order.weeklyEntitlementSummary.labelZh
+      : order.weeklyEntitlementSummary.labelEn;
+  }
+
+  if (typeof order?.mealPlanType === 'string' && order.mealPlanType !== 'legacy') {
+    const mealsPerWeek = Number(String(order.mealPlanType).replace('aweek', ''));
+    if (Number.isFinite(mealsPerWeek)) {
+      return language === 'zh'
+        ? `${mealsPerWeek}餐一周: 1张`
+        : `${mealsPerWeek} meals/week: 1 voucher`;
+    }
+  }
+
+  return `${Number(order?.creditCost) || 0} ${language === 'zh' ? '餐' : 'meals'}`;
+}
+
 interface WeeklySubscriptionHistoryProps {
   userId: string;
 }
@@ -265,19 +284,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                     <div>
                       <p className="font-medium">{language === 'zh' ? '使用餐券' : 'Meal Plan Used'}</p>
                       <p className="text-muted-foreground">
-                        {(() => {
-                          if (order.creditCost === 6) {
-                            return language === 'zh' ? '6餐一周: 1张' : '6 meals/week: 1 voucher';
-                          } else if (order.creditCost === 8) {
-                            return language === 'zh' ? '8餐一周: 1张' : '8 meals/week: 1 voucher';
-                          } else if (order.creditCost === 10) {
-                            return language === 'zh' ? '10餐一周: 1张' : '10 meals/week: 1 voucher';
-                          } else if (order.creditCost === 12) {
-                            return language === 'zh' ? '12餐一周: 1张' : '12 meals/week: 1 voucher';
-                          } else {
-                            return `${order.creditCost} ${language === 'zh' ? '餐' : 'meals'}`;
-                          }
-                        })()}
+                        {getWeeklyEntitlementLabel(order, language)}
                       </p>
                     </div>
                     <div>
@@ -437,19 +444,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                               <div>
                                 <h3 className="font-semibold mb-1">{language === 'zh' ? '使用餐券' : 'Meal Plan Used'}</h3>
                                 <p className="text-muted-foreground">
-                                  {(() => {
-                                    if (selectedOrder.creditCost === 6) {
-                                      return language === 'zh' ? '6餐一周: 1张' : '6 meals/week: 1 voucher';
-                                    } else if (selectedOrder.creditCost === 8) {
-                                      return language === 'zh' ? '8餐一周: 1张' : '8 meals/week: 1 voucher';
-                                    } else if (selectedOrder.creditCost === 10) {
-                                      return language === 'zh' ? '10餐一周: 1张' : '10 meals/week: 1 voucher';
-                                    } else if (selectedOrder.creditCost === 12) {
-                                      return language === 'zh' ? '12餐一周: 1张' : '12 meals/week: 1 voucher';
-                                    } else {
-                                      return `${selectedOrder.creditCost} ${language === 'zh' ? '餐' : 'meals'}`;
-                                    }
-                                  })()}
+                                  {getWeeklyEntitlementLabel(selectedOrder, language)}
                                 </p>
                               </div>
                             </div>

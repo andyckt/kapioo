@@ -1,6 +1,6 @@
 ---
 title: Foundation Hardening Plan
-status: phase-2d-complete
+status: phase-2e-complete
 updated: 2026-03-11
 ---
 
@@ -18,7 +18,8 @@ How to read this plan:
 - `Fact`: Phase 2A canonical-domain decision and inventory work is now complete.
 - `Fact`: Phase 2C-3 weekly refund and entitlement restoration hardening is now complete.
 - `Fact`: Phase 2D balance mutation consolidation is now complete.
-- `Fact`: The next major work area is Phase 2E consumer cleanup and dead-path removal.
+- `Fact`: Phase 2E consumer cleanup and dead-path removal is now complete.
+- `Fact`: The next major work area is Phase 3 maintainability improvements.
 - `Inference`: Phase 2 should still not be executed as one large batch. The remaining subphases should stay gated.
 
 ## Foundation Summary
@@ -421,6 +422,16 @@ Remove remaining dependency on superseded APIs and reduce structural confusion.
 - No live UI depends on superseded order or balance APIs.
 - Dead middleware and retired paths are removed or clearly archived.
 
+#### Phase 2E execution record
+- `Fact`: The live admin consumer in [`app/admin/page.tsx`](app/admin/page.tsx) now uses the canonical balance mutation endpoint [`app/api/users/[id]/update-balance/route.ts`](app/api/users/[id]/update-balance/route.ts) for both credit additions and credit deductions instead of calling separate compatibility routes.
+- `Fact`: The canonical balance mutation route now returns transaction metadata alongside the sanitized user response, which preserves the existing credit-added notification behavior while keeping the UI on one mutation API.
+- `Fact`: Compatibility balance routes [`app/api/users/[id]/credits/route.ts`](app/api/users/[id]/credits/route.ts), [`app/api/users/[id]/add-credits/route.ts`](app/api/users/[id]/add-credits/route.ts), and [`app/api/users/[id]/deduct-credits/route.ts`](app/api/users/[id]/deduct-credits/route.ts) were retired with explicit `410` responses pointing callers to [`app/api/users/[id]/update-balance/route.ts`](app/api/users/[id]/update-balance/route.ts).
+- `Fact`: Legacy order read paths [`app/api/orders/route.ts`](app/api/orders/route.ts), [`app/api/orders/[id]/route.ts`](app/api/orders/[id]/route.ts), and [`app/api/users/[id]/orders/route.ts`](app/api/users/[id]/orders/route.ts) were retired with `410` responses that direct callers to canonical daily-delivery endpoints.
+- `Fact`: Dead compatibility artifacts [`components/order-management.tsx`](components/order-management.tsx), [`components/order-history.tsx`](components/order-history.tsx), and [`lib/middleware.ts`](lib/middleware.ts) were removed, and the stale commented order-management block was removed from [`app/admin/page.tsx`](app/admin/page.tsx).
+- `Fact`: [`middleware.ts`](middleware.ts) no longer treats the retired `/api/orders` family as an active authenticated API prefix.
+- `Fact`: Targeted lint checks passed. `npx tsc --noEmit` still reports unrelated pre-existing route-context/type issues elsewhere in the repo and did not report new errors for the touched 2E files.
+- `Inference`: Phase 3 can now focus on structural maintainability work without carrying the extra ambiguity of compatibility wrappers and split consumer paths inside Phase 2.
+
 ## Phase 3: Maintainability Improvements
 
 ### Goal
@@ -534,7 +545,7 @@ Why this batch second:
 - [x] Complete Phase 2C-2 weekly-status lifecycle normalization.
 - [x] Complete Phase 2C-3 weekly refund and entitlement restoration hardening.
 - [x] Complete Phase 2D balance-mutation consolidation.
-- [ ] Complete Phase 2E consumer cleanup and dead-path removal.
+- [x] Complete Phase 2E consumer cleanup and dead-path removal.
 - [ ] Split `app/admin/page.tsx` and `app/dashboard/page.tsx` after backend contracts stabilize.
 - [ ] Standardize shared request/response schemas for core business flows.
 - [ ] Add integration coverage for auth, orders, refunds, and balance correctness.

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { buildWeeklyEntitlementSummary } from '@/lib/orders/weekly-entitlement-display';
 import WeeklyOrder from '@/models/WeeklyOrder';
+import WeeklyEntitlementGroup from '@/models/WeeklyEntitlementGroup';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
@@ -46,13 +48,19 @@ export async function GET(request: Request, { params }: RouteParams) {
     
     const user = await User.findById(order.userId).select('name email').lean();
     const plainOrder = typeof (order as any).toObject === 'function' ? (order as any).toObject() : order;
+    const entitlementGroup =
+      typeof plainOrder.weeklyEntitlementGroupId === 'string' && plainOrder.weeklyEntitlementGroupId
+        ? await WeeklyEntitlementGroup.findOne({ groupId: plainOrder.weeklyEntitlementGroupId }).lean()
+        : null;
     const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as any, user as any);
+    const weeklyEntitlementSummary = buildWeeklyEntitlementSummary(plainOrder as any, entitlementGroup as any);
 
     return NextResponse.json({
       success: true,
       data: {
         ...plainOrder,
         effectiveCustomerInfo,
+        weeklyEntitlementSummary,
         phoneNumber: effectiveCustomerInfo.phoneNumber,
         area: effectiveCustomerInfo.area,
         deliveryAddress: effectiveCustomerInfo.deliveryAddress,

@@ -19,9 +19,11 @@ export interface IWeeklyOrder extends Document {
   orderId: string;      // A unique order ID for reference
   items: IWeeklyOrderItem[];
   status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
-  creditCost: number;   // Total credits used for this order
+  creditCost: number;   // Legacy compatibility field; do not use as weekly voucher identity
   mealPlanType?: WeeklyMealPlanType;
   voucherDeducted: boolean;
+  weeklyEntitlementGroupId?: string;
+  allocatedMealCount?: number;
   specialInstructions?: string;
   deliveryAddress: IAddress;
   phoneNumber: string;
@@ -138,6 +140,13 @@ const WeeklyOrderSchema: Schema = new Schema(
       type: Boolean,
       default: false,
     },
+    weeklyEntitlementGroupId: {
+      type: String,
+    },
+    allocatedMealCount: {
+      type: Number,
+      min: 0,
+    },
     specialInstructions: {
       type: String,
       default: '',
@@ -241,6 +250,8 @@ function shouldRefreshWeeklyOrderModel(model: mongoose.Model<IWeeklyOrder> | und
   const schema = model?.schema as any;
   const mealPlanTypePath = schema?.path?.('mealPlanType');
   const voucherDeductedPath = schema?.path?.('voucherDeducted');
+  const weeklyEntitlementGroupIdPath = schema?.path?.('weeklyEntitlementGroupId');
+  const allocatedMealCountPath = schema?.path?.('allocatedMealCount');
   const confirmedAtPath = schema?.path?.('confirmedAt');
   const deliveredAtPath = schema?.path?.('deliveredAt');
   const orderCustomerOverridePath = schema?.path?.('orderCustomerOverride');
@@ -249,6 +260,8 @@ function shouldRefreshWeeklyOrderModel(model: mongoose.Model<IWeeklyOrder> | und
   return (
     !mealPlanTypePath ||
     !voucherDeductedPath ||
+    !weeklyEntitlementGroupIdPath ||
+    !allocatedMealCountPath ||
     !confirmedAtPath ||
     !deliveredAtPath ||
     !orderCustomerOverridePath ||

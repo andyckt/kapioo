@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { buildWeeklyEntitlementSummary } from '@/lib/orders/weekly-entitlement-display';
 import WeeklyOrder from '@/models/WeeklyOrder';
+import WeeklyEntitlementGroup from '@/models/WeeklyEntitlementGroup';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
@@ -69,12 +71,32 @@ export async function GET(request: Request) {
       .skip(skip)
       .limit(limit);
 
+    const groupIds = Array.from(
+      new Set(
+        orders
+          .map((order: any) => order.weeklyEntitlementGroupId)
+          .filter((groupId: unknown): groupId is string => typeof groupId === 'string' && groupId.length > 0)
+      )
+    );
+
+    const entitlementGroups = groupIds.length > 0
+      ? await WeeklyEntitlementGroup.find({ groupId: { $in: groupIds } }).lean()
+      : [];
+    const entitlementGroupMap = new Map(
+      entitlementGroups.map((group: any) => [String(group.groupId), group])
+    );
+
     const normalizedOrders = orders.map((order: any) => {
       const plain = typeof order.toObject === 'function' ? order.toObject() : order;
       const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plain, user);
+      const weeklyEntitlementSummary = buildWeeklyEntitlementSummary(
+        plain,
+        entitlementGroupMap.get(String(plain.weeklyEntitlementGroupId || ''))
+      );
       return {
         ...plain,
         effectiveCustomerInfo,
+        weeklyEntitlementSummary,
         phoneNumber: effectiveCustomerInfo.phoneNumber,
         area: effectiveCustomerInfo.area,
         deliveryAddress: effectiveCustomerInfo.deliveryAddress,
