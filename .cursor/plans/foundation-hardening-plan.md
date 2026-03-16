@@ -1,7 +1,7 @@
 ---
 title: Foundation Hardening Plan
-status: phase-2e-complete
-updated: 2026-03-11
+status: phase-2e-plus-weekly-refinements-complete
+updated: 2026-03-16
 ---
 
 # Foundation Hardening Plan
@@ -15,12 +15,20 @@ How to read this plan:
 
 ## Current Status
 - `Fact`: Phase 1 high-risk hardening work has been completed.
-- `Fact`: Phase 2A canonical-domain decision and inventory work is now complete.
-- `Fact`: Phase 2C-3 weekly refund and entitlement restoration hardening is now complete.
-- `Fact`: Phase 2D balance mutation consolidation is now complete.
-- `Fact`: Phase 2E consumer cleanup and dead-path removal is now complete.
+- `Fact`: Phase 2A through 2E are complete.
+- `Fact`: Post-Phase 2E weekly-domain refinements are complete: split-order parent-child model, voucher/meal display fixes, admin traceability, and status-only child cancellation.
 - `Fact`: The next major work area is Phase 3 maintainability improvements.
-- `Inference`: Phase 2 should still not be executed as one large batch. The remaining subphases should stay gated.
+- `Inference`: The weekly domain is now in a materially better state than when the original plan was written; Phase 3 can proceed with reduced concern for weekly-order confusion.
+
+## Checkpoint Summary (post–Phase 2E + weekly refinements)
+
+| Area | Status |
+|------|--------|
+| **Phase 2** | 2A–2E complete. Post-2E weekly refinements (split parent-child, display fixes, traceability, status-only cancellation) complete. |
+| **Next phase** | Phase 3 (maintainability). Start with admin-page decomposition. |
+| **Build next** | Extract lowest-risk admin slices (settings, promo) first, then order/balance sections. |
+| **Wait on** | Must Fix #1–4 (daily canonical, transactions, balance consolidation, schema) remain; Phase 3 does not block them but lowers risk. |
+| **Risks to watch** | Daily-order path changes before #1 consolidation; order/balance mutations without transactions (#2); manual-balance tooling bypassing update-balance service. |
 
 ## Foundation Summary
 - `Fact`: The healthiest centralized parts of the repo are plan/config logic in [`lib/plans/catalog.ts`](lib/plans/catalog.ts), [`lib/plans/service.ts`](lib/plans/service.ts), [`lib/plans/balances.ts`](lib/plans/balances.ts), [`lib/promo-code.ts`](lib/promo-code.ts), and [`lib/constants/areas.ts`](lib/constants/areas.ts).
@@ -32,7 +40,7 @@ How to read this plan:
 ### 1. Canonicalize the daily-order domain
 - Problem: The repo still contains competing daily-order paths with incompatible contracts.
 - Why it matters: There is no single trustworthy daily-order source of truth.
-- Exact files involved: [`models/Order.ts`](models/Order.ts), [`app/api/orders/route.ts`](app/api/orders/route.ts), [`components/order-management.tsx`](components/order-management.tsx), [`app/api/daily-delivery/order/route.ts`](app/api/daily-delivery/order/route.ts), [`app/api/admin/daily-delivery/orders/route.ts`](app/api/admin/daily-delivery/orders/route.ts), [`app/api/admin/daily-delivery/orders/[id]/status/route.ts`](app/api/admin/daily-delivery/orders/[id]/status/route.ts).
+- Exact files involved: [`models/Order.ts`](models/Order.ts), [`app/api/orders/route.ts`](app/api/orders/route.ts) (410 stub), [`app/api/daily-delivery/order/route.ts`](app/api/daily-delivery/order/route.ts), [`app/api/admin/daily-delivery/orders/route.ts`](app/api/admin/daily-delivery/orders/route.ts), [`app/api/admin/daily-delivery/orders/[id]/status/route.ts`](app/api/admin/daily-delivery/orders/[id]/status/route.ts). (Legacy UI artifacts were removed in Phase 2E.)
 - Recommended fix direction: Select the `DailyDeliveryOrder` family as canonical, migrate consumers, and retire the older `Order` path.
 - Expected benefit: One model, one lifecycle, lower regression risk.
 - Implementation difficulty: High.
@@ -59,7 +67,7 @@ How to read this plan:
 ### 4. Replace route-local schema duplication in admin order flows
 - Problem: Admin order routes still redefine schema structures inline.
 - Why it matters: Schema drift is easy to introduce and hard to spot.
-- Exact files involved: [`app/api/admin/daily-delivery/orders/route.ts`](app/api/admin/daily-delivery/orders/route.ts), [`app/api/admin/daily-delivery/orders/[id]/status/route.ts`](app/api/admin/daily-delivery/orders/[id]/status/route.ts), [`app/api/admin/weekly-subscription/orders/route.ts`](app/api/admin/weekly-subscription/orders/route.ts), [`app/api/admin/weekly-subscription/orders/[id]/status/route.ts`](app/api/admin/weekly-subscription/orders/[id]/status/route.ts), [`models/WeeklyOrder.ts`](models/WeeklyOrder.ts).
+- Exact files involved: [`app/api/admin/daily-delivery/orders/route.ts`](app/api/admin/daily-delivery/orders/route.ts), [`app/api/admin/daily-delivery/orders/[id]/status/route.ts`](app/api/admin/daily-delivery/orders/[id]/status/route.ts). (Weekly admin schema ownership was addressed in Phase 2C-1.)
 - Recommended fix direction: Make model files the only schema owners and import them from all route handlers.
 - Expected benefit: Lower drift risk and cleaner ownership.
 - Implementation difficulty: Medium.
@@ -88,7 +96,7 @@ How to read this plan:
 ### 7. Remove dead or conflicting framework artifacts
 - Problem: The repo still contains dead or conflicting framework/security artifacts.
 - Why it matters: Engineers can patch the wrong layer and misunderstand runtime truth.
-- Exact files involved: [`middleware.ts`](middleware.ts), [`lib/middleware.ts`](lib/middleware.ts), legacy order paths under [`app/api/orders`](app/api/orders).
+- Exact files involved: [`middleware.ts`](middleware.ts), legacy order paths under [`app/api/orders`](app/api/orders) (return 410; [`lib/middleware.ts`](lib/middleware.ts) was removed in Phase 2E).
 - Recommended fix direction: Remove dead middleware and fully retire superseded route families after migration.
 - Expected benefit: Cleaner runtime behavior and easier maintenance.
 - Implementation difficulty: Low to Medium.
@@ -432,24 +440,70 @@ Remove remaining dependency on superseded APIs and reduce structural confusion.
 - `Fact`: Targeted lint checks passed. `npx tsc --noEmit` still reports unrelated pre-existing route-context/type issues elsewhere in the repo and did not report new errors for the touched 2E files.
 - `Inference`: Phase 3 can now focus on structural maintainability work without carrying the extra ambiguity of compatibility wrappers and split consumer paths inside Phase 2.
 
+## Post-Phase 2E: Weekly-Domain Refinements
+
+### Summary
+Work completed after Phase 2E to simplify weekly split-order modeling, fix display conflation, improve admin traceability, and make child-order cancellation status-only.
+
+#### Weekly split-order parent-child entitlement model
+- `Fact`: A new parent model [`models/WeeklyEntitlementGroup.ts`](models/WeeklyEntitlementGroup.ts) was added to represent one weekly voucher usage for a week.
+- `Fact`: Child [`WeeklyOrder`](models/WeeklyOrder.ts) documents now store `weeklyEntitlementGroupId` and `allocatedMealCount` for new split checkouts.
+- `Fact`: Split weekly checkout in [`components/weekly-subscription-checkout.tsx`](components/weekly-subscription-checkout.tsx) generates a stable group ID and passes it to all child-order writes via [`app/api/weekly-subscription/user/route.ts`](app/api/weekly-subscription/user/route.ts).
+- `Fact`: Historical weekly orders remain unchanged; no backfill. UI fallback uses `mealPlanType` then legacy `creditCost` for old records.
+- `Inference`: The root conflation of child meal count with weekly voucher identity is fixed for new split orders.
+
+#### Weekly customer/admin display fixes
+- `Fact`: [`lib/orders/weekly-entitlement-display.ts`](lib/orders/weekly-entitlement-display.ts) centralizes voucher vs. meal-count display semantics.
+- `Fact`: Customer history [`components/weekly-subscription-history.tsx`](components/weekly-subscription-history.tsx) and detail APIs ([`app/api/weekly-subscription/user/history/route.ts`](app/api/weekly-subscription/user/history/route.ts), [`app/api/weekly-orders/[id]/route.ts`](app/api/weekly-orders/[id]/route.ts)) now return `weeklyEntitlementSummary`; UI renders parent voucher meaning and child allocated meals separately.
+- `Fact`: Admin detail modal in [`components/view-weekly-orders.tsx`](components/view-weekly-orders.tsx) was updated to show "Weekly Voucher Used" and "Allocated Meals For This Delivery" instead of misleading "Credit Cost" for split child orders.
+- `Fact`: Admin detail API [`app/api/admin/weekly-subscription/orders/[id]/route.ts`](app/api/admin/weekly-subscription/orders/[id]/route.ts) attaches `weeklyEntitlementSummary` and `linkedWeeklyGroup` for traceability.
+
+#### Admin linked-weekly-group traceability
+- `Fact`: Admin detail API returns `linkedWeeklyGroup` (groupId, linkedChildOrderCount, otherLinkedChildOrders) when `weeklyEntitlementGroupId` exists.
+- `Fact`: Admin weekly order list search in [`app/api/admin/weekly-subscription/orders/route.ts`](app/api/admin/weekly-subscription/orders/route.ts) now includes `weeklyEntitlementGroupId`, so admins can paste the group ID into the search bar to find linked child orders.
+- `Fact`: Admin modal shows an admin-only "Linked Weekly Group" section with copyable group ID and sibling order list.
+- `Inference`: Operators can trace split weekly child orders without manual correlation.
+
+#### Weekly child-order status simplification
+- `Fact`: [`lib/orders/weekly-status.ts`](lib/orders/weekly-status.ts) now distinguishes `WEEKLY_OPERATOR_ORDER_STATUSES` (pending, confirmed, delivery, delivered, cancelled) from full stored statuses; `refunded` is no longer an allowed operator transition for weekly child orders.
+- `Fact`: Admin weekly status API [`app/api/admin/weekly-subscription/orders/[id]/status/route.ts`](app/api/admin/weekly-subscription/orders/[id]/status/route.ts) no longer performs automatic entitlement restoration on status change; it is a pure status-update route.
+- `Fact`: "Mark as Refunded" and "Refunded" batch option were removed from weekly admin UI in [`components/view-weekly-orders.tsx`](components/view-weekly-orders.tsx).
+- `Fact`: Weekly child-order cancellation is now a fulfillment status change only. Partial cancellation is handled by human support; no automatic refund/restoration from child-order status changes.
+- `Fact`: Exceptional manual refund/delete path (delete with `returnCredits=true`) remains unchanged and separate from normal status flow.
+
+#### Assumptions now outdated
+- The original "Must Fix Now" item 4 listed admin weekly schema duplication; Phase 2C-1 already addressed weekly admin route schema ownership. Item 4 now applies primarily to daily-order admin routes.
+- The original "Especially dangerous" verdict referred to Phase 2B/2C/2D/2E as incomplete; all are now complete for their intended scope.
+
 ## Phase 3: Maintainability Improvements
 
 ### Goal
 Reduce change risk by shrinking orchestration layers and standardizing contracts.
 
+### Reassessment (post–Phase 2E and weekly refinements)
+- `Fact`: Phase 2B through 2E are complete. Post-Phase 2E weekly refinements are complete. Backend contracts for orders, balances, and weekly lifecycle are materially stable.
+- `Inference`: Phase 3 is still the correct next phase. The weekly domain is no longer a major source of confusion; admin/dashboard decomposition can proceed without weekly-order uncertainty.
+- `Inference`: Implementation order inside Phase 3 should prioritize admin-page decomposition first, then dashboard, then shared schema adoption, because admin is the most coupled and highest regression-risk surface.
+
 ### What should be done
-1. Split [`app/admin/page.tsx`](app/admin/page.tsx) into smaller domain composition layers.
+1. Split [`app/admin/page.tsx`](app/admin/page.tsx) into smaller domain composition layers (highest impact first).
 2. Split [`app/dashboard/page.tsx`](app/dashboard/page.tsx) into clearer slices.
 3. Extract shared hooks, client adapters, and view components from the large checkout and management files.
 4. Standardize request schemas and typed client contracts now that the backend has stabilized.
 
+### Recommended Phase 3 implementation order
+1. Admin-page decomposition (start with lowest-risk slices: settings, promo, then order/balance sections).
+2. Dashboard decomposition (profile, order history, subscription views).
+3. Shared schema adoption in clients (typed request/response for core APIs).
+4. Checkout and management component extraction (after admin/dashboard are split).
+
 ### Dependencies
-- Should start after Phase 2B through 2E are stable.
+- Phase 2B through 2E are complete. Backend contracts are stable enough for Phase 3.
 
 ### Can be done in parallel
-- Admin-page decomposition.
-- Dashboard decomposition.
-- Shared schema adoption in clients.
+- Admin-page domain slices (if scoped to non-overlapping sections).
+- Dashboard slices.
+- Shared schema definitions (can precede decomposition).
 
 ### Verify after completion
 - The largest controller-style files have reduced scope.
@@ -493,36 +547,20 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - New core-commerce features that touch orders, subscriptions, credits, vouchers, approvals, or proofs of payment.
 
 ### Especially dangerous right now
-- Any change to daily-order behavior before Phase 2B is complete.
-- Any change to weekly lifecycle/refund behavior before Phase 2C is complete.
-- Any new manual-balance tooling before Phase 2D is complete.
-- Any broad admin/dashboard feature that still depends on superseded APIs before Phase 2E is complete.
+- Phase 2B, 2C, 2D, and 2E are complete. The prior "before Phase 2X is complete" warnings no longer apply.
+- Remaining high-risk areas: changes to daily-order canonical path (Must Fix #1) before consolidation; changes to order placement or balance mutation without transactions (Must Fix #2); new manual-balance tooling that bypasses the consolidated update-balance service.
 
 ## Recommended First Implementation Batch
 
-### Roughly 1 week
-- Complete Phase 2A in full.
-- Start Phase 2B only far enough to lock the daily-order canonical path and migrate the highest-risk admin consumer.
-
-Why this batch first:
-- It is low-to-medium implementation risk compared with the rest of Phase 2.
-- It reduces ambiguity before code movement starts.
-- It gives a clear boundary for the next execution batch.
-
-### Roughly 1 month
-- Complete Phase 2B daily-order consolidation.
-- Complete Phase 2C weekly lifecycle cleanup.
-- Start Phase 2D balance-mutation service design and initial migration.
-
-Why this batch second:
-- This removes the biggest structural contradictions in the commerce domain.
+### Next step: Phase 3 (roughly 1–2 weeks to first measurable impact)
+- Start with admin-page decomposition: extract lowest-risk slices (settings, promo) first, then order/balance sections.
+- This reduces regression blast radius before touching the most coupled admin logic.
+- Weekly domain is now stable; no need to defer Phase 3 for weekly-order uncertainty.
 
 ### Before any major new core-commerce feature work
-- Phase 2B must be complete.
-- Phase 2C must be complete.
-- Phase 2D must be functionally complete for all live mutation paths.
-- Phase 2E must remove or isolate dead legacy paths.
-- Phase 4 must provide regression coverage for orders, refunds, and balance mutation.
+- Phase 2B through 2E are complete.
+- Phase 4 must provide regression coverage for orders, refunds, and balance mutation before high-risk expansion.
+- Must Fix items 1–4 remain for correctness and maintainability; Phase 3 does not block them but reduces risk when addressing them.
 
 ## Confidence And Risk View
 - `Fact`: The remaining work is concentrated in the most coupled domains in the repo.
@@ -546,7 +584,8 @@ Why this batch second:
 - [x] Complete Phase 2C-3 weekly refund and entitlement restoration hardening.
 - [x] Complete Phase 2D balance-mutation consolidation.
 - [x] Complete Phase 2E consumer cleanup and dead-path removal.
-- [ ] Split `app/admin/page.tsx` and `app/dashboard/page.tsx` after backend contracts stabilize.
+- [x] Post-Phase 2E weekly refinements (split parent-child, display, traceability, status-only cancellation).
+- [ ] Split `app/admin/page.tsx` and `app/dashboard/page.tsx` (Phase 3; backend contracts stable).
 - [ ] Standardize shared request/response schemas for core business flows.
 - [ ] Add integration coverage for auth, orders, refunds, and balance correctness.
-- [ ] Remove dead middleware and retired legacy route artifacts.
+- [ ] Optional: delete 410-stub route files under `app/api/orders` once no external callers remain (Phase 2E retired paths and removed `lib/middleware.ts`).
