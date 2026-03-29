@@ -42,9 +42,7 @@ import {
 } from "@/components/ui/sheet"
 import {
   getUsers,
-  updateUser,
   type User,
-  setDayActiveStatus,
   deleteUser,
   getAllUsersForExport
 } from "@/lib/utils"
@@ -69,15 +67,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { formatDate, formatDateForCSV, formatDateTime } from "@/lib/format"
 import { 
   Tabs, 
   TabsContent, 
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs"
-import { Switch } from "@/components/ui/switch"
 import { NotificationType } from '@/lib/services/notifications';
-import { WeekYearDisplay } from "@/components/week-year-display"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { NextWeekMenuEmail } from "@/components/next-week-menu-email"
@@ -1204,39 +1201,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Format date helper - displays in Toronto timezone
-  const formatDate = (date: Date | string) => {
-    try {
-      const dateObj = date instanceof Date ? date : new Date(date);
-      return dateObj.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'America/Toronto'
-      });
-    } catch (e) {
-      return String(date);
-    }
-  }
-
-  // Format date and time helper - displays in Toronto timezone with time
-  const formatDateTime = (date: Date | string) => {
-    try {
-      const dateObj = date instanceof Date ? date : new Date(date);
-      return dateObj.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: 'America/Toronto'
-      });
-    } catch (e) {
-      return String(date);
-    }
-  };
-
   // Handle user pagination
   const handleUserPagination = (direction: 'prev' | 'next') => {
     const newPage = direction === 'prev' 
@@ -1318,18 +1282,6 @@ export default function AdminDashboardPage() {
         if (!text) return '';
         // If contains comma, quote the text
         return text.includes(',') ? `"${text}"` : text;
-      };
-
-      // Format date properly for CSV to prevent it from being split across rows
-      const formatDateForCSV = (date: Date | string | undefined) => {
-        if (!date) return '';
-        try {
-          const dateObj = date instanceof Date ? date : new Date(date);
-          // Format as YYYY-MM-DD to avoid commas and ensure it's a single cell
-          return dateObj.toISOString().split('T')[0];
-        } catch (e) {
-          return '';
-        }
       };
 
       // Create rows for each user
@@ -3175,96 +3127,6 @@ export default function AdminDashboardPage() {
               </motion.div>
             )}
 
-            {activeTab === "settings-old" && (
-              <motion.div
-                key="settings-old"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Admin Settings</h2>
-                </div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>System Settings</CardTitle>
-                    <CardDescription>Configure system-wide settings</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="company-name">Company Name</Label>
-                        <Input id="company-name" defaultValue="MealWeek" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="support-email">Support Email</Label>
-                        <Input id="support-email" defaultValue="support@mealweek.com" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="credit-cost">Credit Cost ($)</Label>
-                        <Input id="credit-cost" defaultValue="5.00" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="delivery-fee">Delivery Fee ($)</Label>
-                        <Input id="delivery-fee" defaultValue="0.00" />
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      onClick={() => {
-                        toast({
-                          title: "Settings updated",
-                          description: "System settings have been updated successfully",
-                        })
-                      }}
-                    >
-                      Save Changes
-                    </Button>
-                  </CardFooter>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Admin Account</CardTitle>
-                    <CardDescription>Update your admin account details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="admin-name">Name</Label>
-                        <Input id="admin-name" defaultValue="Admin User" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="admin-email">Email</Label>
-                        <Input id="admin-email" defaultValue="admin@mealweek.com" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="admin-password">New Password</Label>
-                        <Input id="admin-password" type="password" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Confirm Password</Label>
-                        <Input id="confirm-password" type="password" />
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      onClick={() => {
-                        toast({
-                          title: "Account updated",
-                          description: "Your admin account has been updated successfully",
-                        })
-                      }}
-                    >
-                      Update Account
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            )}
           </AnimatePresence>
         </main>
       </div>

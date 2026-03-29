@@ -4,10 +4,9 @@
 // We're using the "use client" directive to ensure this page is only rendered on the client
 // where window and other browser APIs are available
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 
 import { Label } from "@/components/ui/label"
 
@@ -20,24 +19,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
 import { useToast } from "@/hooks/use-toast"
-import { NotificationBell } from "@/components/notification-bell"
-import { MealDetail } from "@/components/meal-detail"
-import { ReferralCard } from "@/components/referral-card"
-import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS, ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
-import { DeliveryTracking } from "@/components/delivery-tracking"
+import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 // import { SupportChat } from "@/components/support-chat"
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { MealCustomization } from "@/components/meal-customization"
 import { CommunityRecipes } from "@/components/community-recipes"
-import { ThisWeekMeals } from "@/components/this-week-meals"
 // These components are dynamically imported above
 import { AvailableAreas } from "@/components/available-areas"
-import { getWeeklyMeals, type WeeklyMeals, getUserById } from "@/lib/utils"
+import { getUserById } from "@/lib/utils"
 import { performClientLogout } from "@/lib/client-logout"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useClientAuth } from "@/lib/client-auth"
@@ -46,7 +38,6 @@ import {
   DEFAULT_DASHBOARD_CUTOFF_TIME,
   type DashboardUserData,
 } from "@/lib/dashboard-user-profile"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import Image from "next/image"
@@ -76,25 +67,6 @@ function formatDashboardHeaderDate(language: "en" | "zh"): string {
   }).format(new Date());
 }
 
-function formatUpcomingWeekdayLabel(targetDay: 1 | 3): string {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const daysToAdd = targetDay - dayOfWeek;
-  const targetDate = new Date(now);
-  targetDate.setDate(now.getDate() + (daysToAdd <= 0 ? daysToAdd + 7 : daysToAdd));
-
-  const monthFormatter = new Intl.DateTimeFormat("en-CA", {
-    month: "short",
-    timeZone: "America/Toronto",
-  });
-  const dayFormatter = new Intl.DateTimeFormat("en-CA", {
-    day: "numeric",
-    timeZone: "America/Toronto",
-  });
-
-  return `${monthFormatter.format(targetDate)} ${dayFormatter.format(targetDate)}`;
-}
-
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -103,11 +75,7 @@ export default function DashboardPage() {
   const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
   const activeTabHistoryReadyRef = useRef(false)
-  const [customizeMeal, setCustomizeMeal] = useState(null)
   const [showServiceSelection, setShowServiceSelection] = useState(false)
-  
-  // Daily delivery regions - using centralized constants
-  const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
 
   const handleLogout = async () => {
     await performClientLogout()
@@ -117,98 +85,17 @@ export default function DashboardPage() {
     })
     router.push("/login")
   }
-  
-  // Function to check if user's area has daily delivery service
-  const hasAreaDailyDelivery = (userAddress?: any): boolean => {
-    if (!userAddress || !userAddress.province) return false
-    return DAILY_DELIVERY_REGIONS.includes(userAddress.province)
-  }
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [meals, setMeals] = useState<WeeklyMeals>({})
-  const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState<DashboardUserData | null>(null)
   const [userLoading, setUserLoading] = useState(true)
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [purchaseHistoryKey, setPurchaseHistoryKey] = useState(0)
   const [voucherHistoryKey, setVoucherHistoryKey] = useState(0)
   const [orderActiveSection, setOrderActiveSection] = useState<'orders' | 'recharges'>('orders')
-  const [transactionsPagination, setTransactionsPagination] = useState({
-    page: 1,
-    limit: 5,
-    total: 0,
-    pages: 1
-  })
   const [cutoffTime, setCutoffTime] = useState(DEFAULT_DASHBOARD_CUTOFF_TIME)
   const [upcomingDeliveries, setUpcomingDeliveries] = useState(0)
   const [totalOrders, setTotalOrders] = useState(0)
   const [orderStatsLoading, setOrderStatsLoading] = useState(true)
-  const [selectedLocation, setSelectedLocation] = useState("Downtown")
   const [dashboardHeaderDate, setDashboardHeaderDate] = useState("")
-  const [nextMondayLabel, setNextMondayLabel] = useState("")
-  const [nextWednesdayLabel, setNextWednesdayLabel] = useState("")
-
-  // Define location types - now using centralized constants
-  type Location = 
-    | "Downtown" 
-    | typeof DAILY_DELIVERY_AREAS[number]
-    | typeof WEEKLY_ONLY_AREAS[number]
-  
-  // Group locations by service availability - using centralized constants
-  const FULL_SERVICE_LOCATIONS = [...DAILY_DELIVERY_AREAS] as Location[]
-  const WEEKLY_ONLY_LOCATIONS_TYPED = [...WEEKLY_ONLY_AREAS] as Location[]
-  
-  // All locations
-  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS_TYPED]
-  
-  // Location display names
-  const getLocationDisplayName = (location: Location): string => {
-    return location
-  }
-  
-  // Get available plans based on location
-  const getAvailablePlans = () => {
-    if (FULL_SERVICE_LOCATIONS.includes(selectedLocation as Location)) {
-      return [
-        {
-          id: "weekly",
-          title: language === 'en' ? t('weeklySubscriptionTitle') : t('weeklySubscriptionTitle'),
-          description: language === 'en' ? t('weeklySubscriptionDesc') : t('weeklySubscriptionDesc'),
-          imagePath: "/food-gallery/westernfood.JPG",
-          tabId: "weekly-subscription"
-        },
-        {
-          id: "daily",
-          title: language === 'en' ? t('dailyDeliveryTitle') : t('dailyDeliveryTitle'),
-          description: language === 'en' ? t('dailyDeliveryDesc') : t('dailyDeliveryDesc'),
-          imagePath: "/food-gallery/_MG_4897.jpg",
-          tabId: "daily-delivery"
-        }
-      ]
-    } else {
-      return [
-        {
-          id: "weekly",
-          title: language === 'en' ? t('weeklySubscriptionTitle') : t('weeklySubscriptionTitle'),
-          description: language === 'en' ? t('weeklySubscriptionDesc') : t('weeklySubscriptionDesc'),
-          imagePath: "/food-gallery/westernfood.JPG",
-          tabId: "weekly-subscription"
-        }
-      ]
-    }
-  }
-  
-  // Add state for meal selection and checkout
-  const [selectedMeals, setSelectedMeals] = useState({
-    monday: { selected: false, date: '' },
-    tuesday: { selected: false, date: '' },
-    wednesday: { selected: false, date: '' },
-    thursday: { selected: false, date: '' },
-    friday: { selected: false, date: '' },
-    saturday: { selected: false, date: '' },
-    sunday: { selected: false, date: '' },
-  })
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
 
   // Add form state for user settings
   const [personalInfo, setPersonalInfo] = useState({
@@ -264,8 +151,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setDashboardHeaderDate(formatDashboardHeaderDate(language))
-    setNextMondayLabel(formatUpcomingWeekdayLabel(1))
-    setNextWednesdayLabel(formatUpcomingWeekdayLabel(3))
   }, [language])
 
   const [addressInfo, setAddressInfo] = useState({
@@ -360,12 +245,6 @@ export default function DashboardPage() {
         return;
       }
 
-      setFormData({
-        name: normalizedUser.name || '',
-        phone: normalizedUser.phone || '',
-        specialInstructions: ''
-      });
-
       setPersonalInfo({
         name: normalizedUser.name || '',
         nickname: normalizedUser.nickname || '',
@@ -429,50 +308,6 @@ export default function DashboardPage() {
     confirmPassword: ''
   });
 
-  // Add form state for checkout
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    specialInstructions: ''
-  });
-
-  // Effect to load meal selections from localStorage
-  useEffect(() => {
-    try {
-      const savedSelections = localStorage.getItem('selectedMeals');
-      if (savedSelections) {
-        const parsed = JSON.parse(savedSelections);
-        
-        // Handle both old and new structure
-        if (typeof parsed.monday === 'boolean') {
-          // Convert old structure to new structure
-          setSelectedMeals({
-            monday: { selected: parsed.monday || false, date: '' },
-            tuesday: { selected: parsed.tuesday || false, date: '' },
-            wednesday: { selected: parsed.wednesday || false, date: '' },
-            thursday: { selected: parsed.thursday || false, date: '' },
-            friday: { selected: parsed.friday || false, date: '' },
-            saturday: { selected: parsed.saturday || false, date: '' },
-            sunday: { selected: parsed.sunday || false, date: '' },
-          });
-        } else {
-          // New structure with dates
-          setSelectedMeals({
-            monday: parsed.monday || { selected: false, date: '' },
-            tuesday: parsed.tuesday || { selected: false, date: '' },
-            wednesday: parsed.wednesday || { selected: false, date: '' },
-            thursday: parsed.thursday || { selected: false, date: '' },
-            friday: parsed.friday || { selected: false, date: '' },
-            saturday: parsed.saturday || { selected: false, date: '' },
-            sunday: parsed.sunday || { selected: false, date: '' },
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error loading saved meal selections:', error);
-    }
-  }, []);
-
   useEffect(() => {
     const controller = new AbortController();
     async function loadCutoffTime() {
@@ -528,12 +363,10 @@ export default function DashboardPage() {
         }
 
         applyRef.current(initialUser, { syncForms: true });
-        setIsLoading(true);
         setOrderStatsLoading(true);
-        console.log('[Dashboard] Loading user profile, weekly meals, and order stats in parallel...');
-        const [refreshedUser, weeklyMeals, orderStatsResponse] = await Promise.all([
+        console.log('[Dashboard] Loading user profile and order stats in parallel...');
+        const [refreshedUser, orderStatsResponse] = await Promise.all([
           refreshRef.current({ syncForms: true, signal: controller.signal }),
-          getWeeklyMeals({ signal: controller.signal }),
           fetch(`/api/users/${authUser._id}/orders/count`, {
             signal: controller.signal,
           }),
@@ -541,13 +374,6 @@ export default function DashboardPage() {
         if (controller.signal.aborted) {
           return;
         }
-
-        console.log('[Dashboard] Meals received:', {
-          count: Object.keys(weeklyMeals).length,
-          days: Object.keys(weeklyMeals),
-          meals: weeklyMeals
-        });
-        setMeals(weeklyMeals);
 
         const orderStatsData = await orderStatsResponse.json();
         if (controller.signal.aborted) {
@@ -578,7 +404,6 @@ export default function DashboardPage() {
         });
       } finally {
         setUserLoading(false);
-        setIsLoading(false);
         setOrderStatsLoading(false);
       }
     }
@@ -586,13 +411,6 @@ export default function DashboardPage() {
     loadUserData();
     return () => controller.abort();
   }, [authStatus, authenticated, authUser?._id]);
-
-  useEffect(() => {
-    if (activeTab !== "credits" || !userData) return;
-    const controller = new AbortController();
-    void fetchTransactions(1, { signal: controller.signal });
-    return () => controller.abort();
-  }, [activeTab, userData?._id]);
 
   // Function to fetch order statistics
   const refreshOrderStats = useCallback(async (userId: string, options?: { signal?: AbortSignal }) => {
@@ -626,49 +444,6 @@ export default function DashboardPage() {
     refreshOrderStats,
   }), [cutoffTime, refreshOrderStats, refreshUserProfile, totalOrders, upcomingDeliveries, userData]);
 
-  const fetchTransactions = async (page = 1, opts?: { signal?: AbortSignal }) => {
-    if (!userData) return;
-    
-    setTransactionsLoading(true);
-    try {
-      const response = await fetch(`/api/transactions?userId=${userData._id}&page=${page}&limit=${transactionsPagination.limit}`, {
-        signal: opts?.signal,
-      });
-      if (opts?.signal?.aborted) return;
-      const data = await response.json();
-      if (opts?.signal?.aborted) return;
-      console.log("Transaction API response:", data);
-      
-      if (data.success) {
-        setTransactions(data.data.transactions || []);
-        setTransactionsPagination({
-          page: data.data.page,
-          limit: data.data.limit,
-          total: data.data.total,
-          pages: Math.ceil(data.data.total / data.data.limit)
-        });
-      } else {
-        console.error("API returned error:", data.error);
-      }
-    } catch (error) {
-      if (opts?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
-      console.error("Error fetching transactions:", error);
-      setTransactions([]);
-    } finally {
-      if (!opts?.signal?.aborted) setTransactionsLoading(false);
-    }
-  };
-  
-  const handleTransactionPagination = (direction: 'prev' | 'next') => {
-    const newPage = direction === 'prev' 
-      ? Math.max(1, transactionsPagination.page - 1)
-      : Math.min(transactionsPagination.pages, transactionsPagination.page + 1);
-      
-    if (newPage !== transactionsPagination.page) {
-      fetchTransactions(newPage);
-    }
-  };
-
   const menuItems = [
     { id: "overview", label: t('overview'), icon: <User className="h-4 w-4" /> },
     { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
@@ -692,20 +467,6 @@ export default function DashboardPage() {
         { id: "meal-vouchers", label: language === 'zh' ? "充值" : "Recharge", icon: <CreditCard className="h-4 w-4" /> }
       ]
     },
-    /* Commented out for now
-    { id: "nutrition", label: "Nutrition", icon: <BarChart2 className="h-4 w-4" /> },
-    */
-    /* Commented out Community tab 
-    { id: "community", label: "Community", icon: <Users className="h-4 w-4" /> },
-    */
-    /* Commented out Referral tab
-    { id: "refer", label: "Refer a Friend", icon: <Gift className="h-4 w-4" /> },
-    */
-    /* Commented out for now
-    { id: "loyalty", label: "Loyalty Program", icon: <Award className="h-4 w-4" /> },
-    { id: "gift", label: "Gift Cards", icon: <Gift className="h-4 w-4" /> },
-    { id: "subscription", label: "Subscription", icon: <Bell className="h-4 w-4" /> },
-    */
     { id: "settings", label: t('settings'), icon: <Settings className="h-4 w-4" /> },
   ]
 
@@ -904,37 +665,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Function to handle checkout from ThisWeekMeals
-  const handleThisWeekCheckout = (selections: Record<string, { selected: boolean, date: string }>) => {
-    // Save to localStorage
-    localStorage.setItem('selectedMeals', JSON.stringify(selections));
-    
-    // Set the selected meals with type casting to ensure compatibility
-    setSelectedMeals(selections as {
-      monday: { selected: boolean; date: string };
-      tuesday: { selected: boolean; date: string };
-      wednesday: { selected: boolean; date: string };
-      thursday: { selected: boolean; date: string };
-      friday: { selected: boolean; date: string };
-      saturday: { selected: boolean; date: string };
-      sunday: { selected: boolean; date: string };
-    });
-    
-    // Open the checkout
-    setCheckoutOpen(true);
-    // Switch to the overview tab
-    setActiveTab("overview");
-  };
-
-  // Handle input change for all form fields
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target
-    setFormData({
-      ...formData,
-      [id]: value,
-    })
-  }
-
   return (
     <DashboardUserProfileContext.Provider value={userProfileContextValue}>
       <div className="flex flex-col h-screen overflow-hidden">
@@ -943,8 +673,6 @@ export default function DashboardPage() {
           <MainNav />
           
           <div className="flex items-center gap-2">
-            {/* NotificationBell component temporarily disabled */}
-            {/* <NotificationBell /> */}
             <LanguageSwitcher />
             <UserNav setActiveTab={setActiveTab} />
             
@@ -1656,101 +1384,8 @@ export default function DashboardPage() {
                     </motion.div>
                   )}
 
-                  {/* Commented out Upcoming Meals section
-                  <Card className="col-span-1">
-                    <CardHeader>
-                      <CardTitle>Upcoming Meals</CardTitle>
-                      <CardDescription>Your scheduled meals for this week</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
-                            M
-                          </div>
-                          <div className="space-y-1 flex-1">
-                            <div className="flex items-center">
-                              <p className="text-sm font-medium leading-none">Monday</p>
-                              <span className="text-xs text-muted-foreground ml-2">
-                                ({nextMondayLabel})
-                              </span>
-                            </div>
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
-                              <span className="ml-2">Pasta Primavera</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-4">
-                          <div className="rounded-full h-12 w-12 bg-primary flex items-center justify-center text-primary-foreground">
-                            W
-                          </div>
-                          <div className="space-y-1 flex-1">
-                            <div className="flex items-center">
-                              <p className="text-sm font-medium leading-none">Wednesday</p>
-                              <span className="text-xs text-muted-foreground ml-2">
-                                ({nextWednesdayLabel})
-                              </span>
-                            </div>
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">Confirmed</span>
-                              <span className="ml-2">Chicken Teriyaki Bowl</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        onClick={() => setActiveTab("overview")}
-                      >
-                        Select More Meals
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  */}
                 </motion.div>
               )}
-
-              {/* Comment out Delivery Tracking tab content */}
-              {/* 
-              {activeTab === "delivery" && (
-                <motion.div
-                  key="delivery"
-                  initial={{ y: 10 }}
-                  animate={{ y: 0 }}
-                  exit={{ y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-6"
-                >
-                  <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">Delivery Tracking</h2>
-                  </div>
-                  <DeliveryTracking />
-                </motion.div>
-              )}
-              */}
-
-              {/* Nutrition section commented out for now
-{activeTab === "nutrition" && (
-  <motion.div
-    key="nutrition"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.3 }}
-    className="space-y-6"
-  >
-    <div className="flex items-center justify-between">
-      <h2 className="text-3xl font-bold tracking-tight">Nutrition Dashboard</h2>
-    </div>
-    <NutritionDashboard />
-  </motion.div>
-)}
-*/}
 
               {activeTab === "community" && (
                 <motion.div
@@ -2087,10 +1722,7 @@ export default function DashboardPage() {
                         userId={userData._id} 
                         onSuccess={() => {
                           void refreshUserProfile({ syncForms: false });
-                          
-                          // Refresh transaction history
-                          fetchTransactions();
-                          
+
                           // Force refresh of credit purchase history component
                           setPurchaseHistoryKey(prev => prev + 1);
                         }} 
@@ -2108,206 +1740,8 @@ export default function DashboardPage() {
                     </div>
                   )}
                   
-                  {/* Transaction History section commented out as it's redundant with the Recharge Requests section
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t('transactionHistory')}</CardTitle>
-                      <CardDescription>{t('creditsUsageHistory')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {transactionsLoading ? (
-                          <div className="flex justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                            <span className="ml-2">{language === 'en' ? 'Loading...' : '加载中...'}</span>
-                          </div>
-                        ) : transactions && transactions.length > 0 ? (
-                          <>
-                            {transactions.map((transaction) => (
-                              <div key={transaction._id} className="flex justify-between items-center border-b pb-3 pt-1">
-                                <div>
-                                  <p className="font-medium">{transaction.description}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {new Date(transaction.createdAt).toLocaleDateString(
-                                      language === 'en' ? 'en-US' : 'zh-CN', { 
-                                      year: 'numeric', 
-                                      month: 'long', 
-                                      day: 'numeric' 
-                                    })}
-                                  </p>
-                                </div>
-                                <div className={
-                                  transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
-                                    ? "text-green-500 font-medium" 
-                                    : "text-red-500 font-medium"
-                                }>
-                                  {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
-                                    ? '+' 
-                                    : '-'
-                                  }{transaction.amount}
-                                  {transaction.description ? (
-                                    // Handle different transaction description formats
-                                    transaction.description.includes('2dish') ? '/2dish' :
-                                    transaction.description.includes('3dish') ? '/3dish' :
-                                    transaction.description.includes('6weekly') ? '/6weekly' :
-                                    transaction.description.includes('8weekly') ? '/8weekly' :
-                                    transaction.description.includes('10weekly') ? '/10weekly' :
-                                    transaction.description.includes('12weekly') ? '/12weekly' :
-                                    transaction.description.includes('twoDishVoucher') ? '/2dish' :
-                                    transaction.description.includes('threeDishVoucher') ? '/3dish' :
-                                    transaction.description.includes('weeklySIXmeals') ? '/6weekly' :
-                                    transaction.description.includes('weeklyEIGHTmeals') ? '/8weekly' :
-                                    transaction.description.includes('weeklyTENmeals') ? '/10weekly' :
-                                    transaction.description.includes('weeklyTWELVEmeals') ? '/12weekly' :
-                                    transaction.description.includes('weeklySIXTEENmeals') ? '/16weekly' :
-                                    ''
-                                  ) : ''}
-                                </div>
-                              </div>
-                            ))}
-                            
-                            {transactionsPagination.pages > 1 && (
-                              <div className="flex items-center justify-between pt-4">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleTransactionPagination('prev')}
-                                  disabled={transactionsPagination.page === 1}
-                                >
-                                  {t('previous')}
-                                </Button>
-                                <div className="text-sm text-muted-foreground">
-                                  {t('pageOf').replace('X', transactionsPagination.page.toString()).replace('Y', transactionsPagination.pages.toString())}
-                                </div>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleTransactionPagination('next')}
-                                  disabled={transactionsPagination.page === transactionsPagination.pages}
-                                >
-                                  {t('next')}
-                                </Button>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="text-center py-6 text-muted-foreground">
-                            {t('noTransactionHistory')}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  */}
                 </motion.div>
               )}
-
-              {/* Commented out Referral tab */}
-              {/* 
-              {activeTab === "refer" && (
-                <motion.div
-                  key="refer"
-                  initial={{ y: 10 }}
-                  animate={{ y: 0 }}
-                  exit={{ y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-6"
-                >
-                  <div className="flex items-center justify-between mt-4">
-                    <h2 className="text-3xl font-bold tracking-tight">Refer a Friend</h2>
-                  </div>
-                  <ReferralCard />
-                  <Card className="overflow-hidden">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-xl sm:text-2xl">How Referrals Work</CardTitle>
-                      <CardDescription className="text-sm sm:text-base">Our referral program is simple and rewarding</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid gap-6 md:grid-cols-3">
-                        <motion.div 
-                          className="flex flex-col items-center text-center space-y-3 p-4 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-colors"
-                          whileHover={{ y: -5 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                        >
-                          <div className="rounded-full bg-primary/10 p-4 relative">
-                            <Gift className="h-7 w-7 text-primary" />
-                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">1</span>
-                          </div>
-                          <h3 className="font-medium text-base sm:text-lg">Share Your Code</h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            Send your unique referral code to friends and family through text, email, or social media
-                          </p>
-                        </motion.div>
-                        
-                        <motion.div 
-                          className="flex flex-col items-center text-center space-y-3 p-4 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-colors"
-                          whileHover={{ y: -5 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                        >
-                          <div className="rounded-full bg-primary/10 p-4 relative">
-                            <User className="h-7 w-7 text-primary" />
-                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">2</span>
-                          </div>
-                          <h3 className="font-medium text-base sm:text-lg">Friend Signs Up</h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            They create an account using your referral code during registration or checkout
-                          </p>
-                        </motion.div>
-                        
-                        <motion.div 
-                          className="flex flex-col items-center text-center space-y-3 p-4 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-colors"
-                          whileHover={{ y: -5 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                        >
-                          <div className="rounded-full bg-primary/10 p-4 relative">
-                            <CreditCard className="h-7 w-7 text-primary" />
-                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">3</span>
-                          </div>
-                          <h3 className="font-medium text-base sm:text-lg">Both Get Credits</h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            You automatically receive 5 credits, and your friend gets 5 credits to use on their first order
-                          </p>
-                        </motion.div>
-                      </div>
-                      
-                      <div className="mt-6 rounded-lg border p-4 bg-muted/50">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                          <div className="shrink-0 rounded-full bg-primary/20 p-2">
-                            <Sparkles className="h-5 w-5 text-primary" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-sm font-medium mb-1">No Limit on Referrals</h4>
-                            <p className="text-xs sm:text-sm text-muted-foreground">
-                              Refer as many friends as you want! There's no cap on how many credits you can earn through referrals. 
-                              The more friends you refer, the more free meals you get.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-              */}
-
-              {/* Commented out Loyalty Program section */}
-              {/* 
-              {activeTab === "loyalty" && (
-                <motion.div
-                  key="loyalty"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-6"
-                >
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-3xl font-bold tracking-tight">Loyalty Program</h2>
-                  </div>
-                  <LoyaltyProgram credits={credits} totalOrders={12} />
-                </motion.div>
-              )}
-              */}
 
               {activeTab === "settings" && (
                 <motion.div
