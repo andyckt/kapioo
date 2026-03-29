@@ -55,8 +55,13 @@ export interface AdminTransaction {
 
 export interface UserActivity {
   _id: string
-  type: string
+  activityType?: string
+  type?: string
+  title?: string
+  details?: string
+  status?: string
+  date?: string
   description?: string
-  createdAt: string
+  createdAt?: string
   metadata?: Record<string, unknown>
 }

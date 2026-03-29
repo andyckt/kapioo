@@ -10,7 +10,7 @@ import { CardTitle } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
@@ -41,10 +41,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import {
-  getUsers,
   type User,
-  deleteUser,
-  getAllUsersForExport
 } from "@/lib/utils"
 import {
   Select,
@@ -67,14 +64,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { formatDate, formatDateForCSV, formatDateTime } from "@/lib/format"
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs"
 import { NotificationType } from '@/lib/services/notifications';
+import {
+  AdminUsersTab,
+  DeleteUserDialog,
+  useAdminUsers,
+  ViewUserDialog,
+} from "@/features/admin-users"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { NextWeekMenuEmail } from "@/components/next-week-menu-email"
@@ -181,20 +177,9 @@ export default function AdminDashboardPage() {
   const [viewUserOpen, setViewUserOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [creditAmount, setCreditAmount] = useState(10)
-  const [searchResults, setSearchResults] = useState<User[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
   const [serviceType, setServiceType] = useState<"daily" | "weekly">("daily")
   const [voucherType, setVoucherType] = useState<string>("twoDishVoucher")
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false)
-  const [users, setUsers] = useState<User[]>([])
-  const [usersLoading, setUsersLoading] = useState(true)
-  const [usersPagination, setUsersPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 25,
-    pages: 1
-  })
-  const [usersError, setUsersError] = useState<string | null>(null)
   const [transactions, setTransactions] = useState<any[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [transactionsPagination, setTransactionsPagination] = useState({
@@ -203,46 +188,40 @@ export default function AdminDashboardPage() {
     total: 0,
     pages: 1
   })
-  const [userSearchQuery, setUserSearchQuery] = useState("")
-  const [userSearchType, setUserSearchType] = useState<"all" | "name" | "email" | "userID">("all")
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [deductCreditsOpen, setDeductCreditsOpen] = useState(false)
   const [deductAmount, setDeductAmount] = useState(1)
   const [deleteUserOpen, setDeleteUserOpen] = useState(false)
   const [deductDescription, setDeductDescription] = useState("Admin deduction")
-  const [userActivities, setUserActivities] = useState<any[]>([])
-  const [userActivitiesLoading, setUserActivitiesLoading] = useState(false)
-  const [activityType, setActivityType] = useState<string>('all')
-  const [activityPagination, setActivityPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 1
-  })
   const [isLoading, setIsLoading] = useState(false)
-  const [totalUsersCount, setTotalUsersCount] = useState(0)
-  const [userGrowthRate, setUserGrowthRate] = useState(0)
-  const [totalUsersLoading, setTotalUsersLoading] = useState(true)
-
-  // Fetch total users count for the stats card
-  const fetchTotalUsersStats = async (opts?: { signal?: AbortSignal }) => {
-    try {
-      setTotalUsersLoading(true)
-      const response = await fetch('/api/users/count', { signal: opts?.signal })
-      if (opts?.signal?.aborted) return
-      const data = await response.json()
-      if (opts?.signal?.aborted) return
-      if (data.success) {
-        setTotalUsersCount(data.data.total)
-        setUserGrowthRate(data.data.growthRate || 0)
-      }
-    } catch (error) {
-      if (opts?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return
-      console.error('Error fetching total users stats:', error)
-    } finally {
-      if (!opts?.signal?.aborted) setTotalUsersLoading(false)
-    }
-  }
+  const {
+    users,
+    setUsers,
+    filteredUsers,
+    setFilteredUsers,
+    usersLoading,
+    usersPagination,
+    setUsersPagination,
+    usersError,
+    userSearchQuery,
+    setUserSearchQuery,
+    userSearchType,
+    setUserSearchType,
+    searchResults,
+    searchLoading,
+    totalUsersCount,
+    userGrowthRate,
+    totalUsersLoading,
+    isExportingUsers,
+    isDeletingUser,
+    fetchUsers,
+    fetchTotalUsersStats,
+    searchUsers,
+    handleUserSearch,
+    resetUserSearch,
+    handleUserPagination,
+    handleExportUsers,
+    handleDeleteUser: deleteUserById,
+  } = useAdminUsers({ hasVerifiedAdminSession, activeTab })
 
   useEffect(() => {
     if (authStatus !== "ready") {
@@ -269,179 +248,6 @@ export default function AdminDashboardPage() {
     }
   }, [authStatus, authenticated, requiresAdminMfa, router, toast, user?.role])
 
-  // Track last successful fetch to avoid duplicate fetches when switching users <-> credits
-  const lastUsersFetchKeyRef = useRef<string | null>(null)
-
-  // Fetch users when the tab is switched to 'users' or 'credits'
-  useEffect(() => {
-    if (!hasVerifiedAdminSession) return
-    if (activeTab !== 'users' && activeTab !== 'credits') return
-
-    const page = usersPagination.page
-    const limit = usersPagination.limit
-    const fetchKey = `${page}-${limit}`
-
-    // Skip refetch when switching between users and credits with same page/limit and we already have data
-    if (users.length > 0 && lastUsersFetchKeyRef.current === fetchKey) {
-      setSearchResults([])
-      return
-    }
-
-    const controller = new AbortController()
-    const signal = controller.signal
-
-    const run = async () => {
-      setSearchResults([])
-      try {
-        await Promise.all([
-          fetchUsers(page, limit, undefined, undefined, { signal }),
-          fetchTotalUsersStats({ signal })
-        ])
-        if (signal.aborted) return
-        lastUsersFetchKeyRef.current = fetchKey
-      } catch (e) {
-        if (signal.aborted || (e instanceof Error && e.name === 'AbortError')) return
-      }
-    }
-    void run()
-    return () => controller.abort()
-  }, [activeTab, hasVerifiedAdminSession, usersPagination.page, usersPagination.limit])
-
-  const fetchUsers = async (
-    page = 1, 
-    limit = 10, 
-    search?: string, 
-    searchType?: 'all' | 'name' | 'email' | 'userID',
-    opts?: { signal?: AbortSignal }
-  ) => {
-    try {
-      console.log(`Fetching users, page: ${page}, limit: ${limit}, search: ${search || 'none'}, searchType: ${searchType || 'all'}`);
-      setUsersLoading(true)
-      setUsersError(null)
-      
-      // 🚀 OPTIMIZATION: Use the new optimized endpoint that returns users with order counts
-      try {
-        let url = `/api/users/with-order-counts?page=${page}&limit=${limit}`;
-        
-        // Add search parameters if provided
-        if (search && search.trim()) {
-          url += `&search=${encodeURIComponent(search.trim())}`;
-          if (searchType && searchType !== 'all') {
-            url += `&searchType=${searchType}`;
-          }
-        }
-        
-        const response = await fetch(url, { signal: opts?.signal });
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          console.log(`✅ Fetched ${result.data.length} users with order counts in single request`);
-          
-          setUsers(result.data)
-          setFilteredUsers(result.data)
-          setUsersPagination(result.pagination)
-          
-          // If this was a search, show toast with results
-          if (search && search.trim()) {
-            if (result.data.length === 0) {
-              toast({
-                title: "No matches",
-                description: `No users found matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
-              });
-            } else {
-              toast({
-                title: "Search results",
-                description: `Found ${result.pagination.total} users matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
-              });
-            }
-          }
-        } else {
-          throw new Error('Optimized endpoint failed');
-        }
-      } catch (optimizedError) {
-        console.log('⚠️ Optimized endpoint failed, falling back to original method');
-        
-        // Fallback to original method if optimized endpoint fails
-        const result = await getUsers(page, limit, search, searchType)
-        console.log(`Fetched ${result.users?.length || 0} users (fallback)`);
-        
-        if (result.users) {
-          // Fetch order counts for users (original method)
-          const usersWithOrderCounts = await Promise.all(
-            result.users.map(async (user) => {
-              try {
-                // Fetch total order count
-                const totalOrderResponse = await fetch(`/api/users/${user._id}/order-count`);
-                let updatedUser = { ...user };
-                
-                if (totalOrderResponse.ok) {
-                  const totalOrderData = await totalOrderResponse.json();
-                  updatedUser.totalOrders = totalOrderData.success ? totalOrderData.count : 0;
-                }
-                
-                // Fetch daily order count
-                const dailyOrderResponse = await fetch(`/api/users/${user._id}/daily-orders/count`);
-                if (dailyOrderResponse.ok) {
-                  const dailyOrderData = await dailyOrderResponse.json();
-                  updatedUser.dailyOrdersCount = dailyOrderData.success ? dailyOrderData.count : 0;
-                }
-                
-                // Fetch weekly order count
-                const weeklyOrderResponse = await fetch(`/api/users/${user._id}/weekly-orders/count`);
-                if (weeklyOrderResponse.ok) {
-                  const weeklyOrderData = await weeklyOrderResponse.json();
-                  updatedUser.weeklyOrdersCount = weeklyOrderData.success ? weeklyOrderData.count : 0;
-                }
-                
-                return updatedUser;
-              } catch (e) {
-                console.error(`Error fetching order counts for user ${user._id}:`, e);
-                return user;
-              }
-            })
-          );
-          
-          setUsers(usersWithOrderCounts)
-          setFilteredUsers(usersWithOrderCounts)
-          setUsersPagination(result.pagination)
-          
-          // If this was a search, show toast with results
-          if (search && search.trim()) {
-            if (result.users.length === 0) {
-              toast({
-                title: "No matches",
-                description: `No users found matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
-              });
-            } else {
-              toast({
-                title: "Search results",
-                description: `Found ${result.pagination.total} users matching "${search}"${searchType !== 'all' ? ` in ${searchType}` : ""}`,
-              });
-            }
-          }
-        } else {
-          console.error('Failed to fetch users, result:', result);
-          setUsersError('Failed to fetch users')
-          toast({
-            title: "Error",
-            description: 'Failed to fetch users',
-            variant: "destructive",
-          })
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error)
-      setUsersError('An unexpected error occurred')
-      toast({
-        title: "Error",
-        description: 'An unexpected error occurred while fetching users',
-        variant: "destructive",
-      })
-    } finally {
-      setUsersLoading(false)
-    }
-  }
-
   const handleAddCredits = (user: User) => {
     // Find the most up-to-date user data from the array
     const currentUser = users.find(u => u._id === user._id) || user;
@@ -450,35 +256,9 @@ export default function AdminDashboardPage() {
     setAddCreditsOpen(true);
   }
 
-  // Search users for dropdown selection
-  const searchUsers = async (query: string) => {
-    try {
-      setSearchLoading(true);
-      const result = await getUsers(1, 20, query, 'all');
-      
-      if (result.users) {
-        // Update the search results state
-        setSearchResults(result.users);
-      } else {
-        setSearchResults([]);
-      }
-    } catch (error) {
-      console.error('Error searching users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to search users",
-        variant: "destructive"
-      });
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  }
-
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
     setViewUserOpen(true)
-    fetchUserActivities(user._id)
   }
 
   const confirmAddCredits = async () => {
@@ -1011,32 +791,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Add a handler for search
-  const handleUserSearch = () => {
-    if (!userSearchQuery.trim()) {
-      // Reset to normal view without search
-      fetchUsers(1, usersPagination.limit);
-      return;
-    }
-    
-    // Reset to first page when searching
-    setUsersPagination(prev => ({
-      ...prev,
-      page: 1
-    }));
-    
-    // Use the backend search API
-    fetchUsers(1, usersPagination.limit, userSearchQuery, userSearchType);
-  }
-
-  // Add a reset search function
-  const resetUserSearch = () => {
-    setUserSearchQuery("");
-    setUserSearchType("all");
-    // Reset to first page and fetch without search parameters
-    fetchUsers(1, usersPagination.limit);
-  }
-
   // Handle deduct credits button click
   const handleDeductCredits = (user: User) => {
     setSelectedUser(user)
@@ -1056,10 +810,7 @@ export default function AdminDashboardPage() {
     if (!selectedUser) return
     
     try {
-      setIsLoading(true)
-      
-      // Call the deleteUser function from utils
-      const success = await deleteUser(selectedUser._id)
+      const success = await deleteUserById(selectedUser._id)
       
       if (success) {
         toast({
@@ -1087,7 +838,6 @@ export default function AdminDashboardPage() {
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
     }
   }
 
@@ -1155,188 +905,6 @@ export default function AdminDashboardPage() {
       setDeductCreditsOpen(false);
     }
   }
-
-  // Add function to fetch all activities for a specific user
-  const fetchUserActivities = async (userId: string, page = 1, type = 'all') => {
-    setUserActivitiesLoading(true)
-    try {
-      const response = await fetch(`/api/users/${userId}/activity?page=${page}&limit=${activityPagination.limit}&type=${type}`)
-      
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setUserActivities(data.data.activities || [])
-        setActivityPagination({
-          page: data.data.pagination.page,
-          limit: data.data.pagination.limit,
-          total: data.data.pagination.total,
-          pages: data.data.pagination.pages
-        })
-      } else {
-        console.error("API returned error:", data.error)
-        setUserActivities([])
-      }
-    } catch (error) {
-      console.error("Error fetching user activities:", error)
-      setUserActivities([])
-    } finally {
-      setUserActivitiesLoading(false)
-    }
-  }
-  
-  // Handle activity pagination
-  const handleActivityPagination = (direction: 'prev' | 'next') => {
-    if (!selectedUser) return
-    
-    const newPage = direction === 'prev' 
-      ? Math.max(1, activityPagination.page - 1)
-      : Math.min(activityPagination.pages, activityPagination.page + 1)
-      
-    if (newPage !== activityPagination.page) {
-      fetchUserActivities(selectedUser._id, newPage, activityType)
-    }
-  }
-
-  // Handle user pagination
-  const handleUserPagination = (direction: 'prev' | 'next') => {
-    const newPage = direction === 'prev' 
-      ? Math.max(1, usersPagination.page - 1)
-      : Math.min(usersPagination.pages, usersPagination.page + 1);
-      
-    if (newPage !== usersPagination.page) {
-      fetchUsers(newPage, usersPagination.limit);
-    }
-  };
-
-  // Export users to CSV
-  const handleExportUsers = async () => {
-    try {
-      setIsLoading(true);
-      toast({
-        title: "Export started",
-        description: "Fetching all users for export. This may take a moment...",
-      });
-
-      // Fetch all users for export
-      const allUsers = await getAllUsersForExport();
-      
-      // Process users to get order counts
-      const processedUsers = await Promise.all(
-        allUsers.map(async (user) => {
-          try {
-            let updatedUser = { ...user };
-            
-            // Fetch total order count
-            const totalOrderResponse = await fetch(`/api/users/${user._id}/order-count`);
-            if (totalOrderResponse.ok) {
-              const totalOrderData = await totalOrderResponse.json();
-              updatedUser.totalOrders = totalOrderData.success ? totalOrderData.count : 0;
-            }
-            
-            // Fetch daily order count
-            const dailyOrderResponse = await fetch(`/api/users/${user._id}/daily-orders/count`);
-            if (dailyOrderResponse.ok) {
-              const dailyOrderData = await dailyOrderResponse.json();
-              updatedUser.dailyOrdersCount = dailyOrderData.success ? dailyOrderData.count : 0;
-            }
-            
-            // Fetch weekly order count
-            const weeklyOrderResponse = await fetch(`/api/users/${user._id}/weekly-orders/count`);
-            if (weeklyOrderResponse.ok) {
-              const weeklyOrderData = await weeklyOrderResponse.json();
-              updatedUser.weeklyOrdersCount = weeklyOrderData.success ? weeklyOrderData.count : 0;
-            }
-            
-            return updatedUser;
-          } catch (e) {
-            console.error(`Error fetching order counts for user ${user._id}:`, e);
-            return user;
-          }
-        })
-      );
-
-      // Create headers for CSV
-      const headers = [
-        'User ID',
-        'Name',
-        'Phone',
-        'Email',
-        'Created',
-        '2-Dish Vouchers',
-        '3-Dish Vouchers',
-        '6 Meals Plan',
-        '8 Meals Plan',
-        '10 Meals Plan',
-        '12 Meals Plan',
-        'Daily Orders',
-        'Weekly Orders',
-        'Total Orders'
-      ].join(',');
-
-      // Format data and handle commas in text to avoid breaking CSV
-      const formatCSV = (text: string | undefined) => {
-        if (!text) return '';
-        // If contains comma, quote the text
-        return text.includes(',') ? `"${text}"` : text;
-      };
-
-      // Create rows for each user
-      const rows = processedUsers.map(user => {
-        return [
-          formatCSV(user.userID),
-          formatCSV(user.name),
-          formatCSV(user.phone),
-          formatCSV(user.email),
-          formatDateForCSV(user.joined),
-          user.twoDishVoucher || 0,
-          user.threeDishVoucher || 0,
-          user.weeklySIXmeals || 0,
-          user.weeklyEIGHTmeals || 0,
-          user.weeklyTENmeals || 0,
-          user.weeklyTWELVEmeals || 0,
-          user.dailyOrdersCount || 0,
-          user.weeklyOrdersCount || 0,
-          user.totalOrders || 0
-        ].join(',');
-      });
-
-      // Combine headers and rows
-      const csvContent = [headers, ...rows].join('\n');
-
-      // Create a Blob with the CSV content
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-
-      // Create a temporary link to download the CSV
-      const link = document.createElement('a');
-      const fileName = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', fileName);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast({
-        title: "Export successful",
-        description: `${rows.length} users exported to ${fileName}`,
-      });
-    } catch (error) {
-      console.error('Error exporting users:', error);
-      toast({
-        title: "Export failed",
-        description: "There was an error exporting users. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -1500,315 +1068,42 @@ export default function AdminDashboardPage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">User Management</h2>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        fetchUsers(usersPagination.page, usersPagination.limit)
-                        fetchTotalUsersStats()
-                      }}
-                      className="h-9 gap-1 flex-1 sm:flex-none"
-                    >
-                      <RefreshCcw className={cn("h-4 w-4", (usersLoading || totalUsersLoading) && "animate-spin")} />
-                      <span className="hidden sm:inline">{(usersLoading || totalUsersLoading) ? "Refreshing..." : "Refresh"}</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportUsers}
-                      className="h-9 gap-1 flex-1 sm:flex-none"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="hidden sm:inline">Exporting...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4" />
-                          <span className="hidden sm:inline">Export Users</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Total Users Stats Card */}
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {totalUsersLoading ? "..." : totalUsersCount}
-                    </div>
-                    {!totalUsersLoading && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {userGrowthRate >= 0 ? "+" : ""}{userGrowthRate}% from last period
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>All Users</CardTitle>
-                    <CardDescription>Manage user accounts and credits</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Search Section - Mobile Responsive */}
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <div className="flex gap-2 flex-1">
-                          <Select
-                            value={userSearchType}
-                            onValueChange={(value: "all" | "name" | "email" | "userID") => setUserSearchType(value)}
-                          >
-                            <SelectTrigger className="w-[100px] sm:w-[120px]">
-                              <SelectValue placeholder="Search by" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Fields</SelectItem>
-                              <SelectItem value="name">Name</SelectItem>
-                              <SelectItem value="email">Email</SelectItem>
-                              <SelectItem value="userID">User ID</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input 
-                            placeholder={userSearchType === "email" ? "Search by email..." : 
-                                         userSearchType === "name" ? "Search by name..." :
-                                         userSearchType === "userID" ? "Search by user ID..." :
-                                         "Search users..."}
-                            className="flex-1" 
-                            value={userSearchQuery}
-                            onChange={(e) => setUserSearchQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleUserSearch();
-                              }
-                            }}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" onClick={handleUserSearch} className="flex-1 sm:flex-none">Search</Button>
-                          {userSearchQuery && (
-                            <Button variant="ghost" size="sm" onClick={resetUserSearch}>
-                              Clear
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Desktop Table View - Hidden on Mobile */}
-                      <div className="hidden md:block rounded-md border">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left p-4 font-medium">User ID</th>
-                              <th className="text-left p-4 font-medium">Name</th>
-                              <th className="text-left p-4 font-medium w-[150px]">Email</th>
-                              <th className="text-left p-4 font-medium">Phone</th>
-                              <th className="text-left p-4 font-medium">Area</th>
-                              <th className="text-left p-4 font-medium">Created</th>
-                              <th className="text-left p-4 font-medium">Daily Orders</th>
-                              <th className="text-left p-4 font-medium">Weekly Orders</th>
-                              <th className="text-center p-4 font-medium">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredUsers.map((user) => (
-                              <tr key={user._id} className="border-b">
-                                <td className="p-4">{user.userID}</td>
-                                <td className="p-4">{user.name}</td>
-                                <td className="p-4 w-[150px]">
-                                  <div className="flex items-center space-x-1">
-                                    <div className="break-words max-w-[120px]" title={user.email || "-"}>
-                                      {user.email || "-"}
-                                    </div>
-                                    {user.email && (
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-5 w-5 ml-1"
-                                        onClick={() => {
-                                          navigator.clipboard.writeText(user.email);
-                                          toast({
-                                            title: "Copied",
-                                            description: "Email copied to clipboard",
-                                            duration: 2000,
-                                          });
-                                        }}
-                                      >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                      </Button>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="p-4">{user.phone || "-"}</td>
-                                <td className="p-4">{user.address?.province || "-"}</td>
-                                <td className="p-4" title={user.joined ? formatDateTime(user.joined) : "-"}>
-                                  {user.joined ? formatDate(user.joined) : "-"}
-                                </td>
-                                <td className="p-4">{user.dailyOrdersCount || 0}</td>
-                                <td className="p-4">{user.weeklyOrdersCount || 0}</td>
-                                <td className="p-4">
-                                  <div className="flex justify-center gap-1">
-                                    <Button variant="outline" size="sm" onClick={() => handleViewUser(user)}>
-                                      View
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-500 border-red-200 hover:bg-red-50">
-                                      Delete
-                                    </Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      
-                      {/* Mobile Card View - Hidden on Desktop */}
-                      <div className="md:hidden space-y-3">
-                        {filteredUsers.map((user) => (
-                          <Card key={user._id} className="overflow-hidden">
-                            <CardContent className="p-4">
-                              <div className="space-y-3">
-                                {/* Header with Name and Actions */}
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-base truncate">{user.name}</h3>
-                                    <p className="text-xs text-muted-foreground">ID: {user.userID}</p>
-                                  </div>
-                                  <div className="flex gap-1 flex-shrink-0">
-                                    <Button variant="outline" size="sm" onClick={() => handleViewUser(user)} className="h-8 px-2">
-                                      <Eye className="h-3 w-3" />
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-500 border-red-200 hover:bg-red-50 h-8 px-2">
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
-                                
-                                {/* User Details Grid */}
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Email</p>
-                                    <div className="flex items-center gap-1">
-                                      <p className="text-xs font-medium truncate" title={user.email || "-"}>
-                                        {user.email || "-"}
-                                      </p>
-                                      {user.email && (
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-4 w-4 flex-shrink-0"
-                                          onClick={() => {
-                                            navigator.clipboard.writeText(user.email);
-                                            toast({
-                                              title: "Copied",
-                                              description: "Email copied to clipboard",
-                                              duration: 2000,
-                                            });
-                                          }}
-                                        >
-                                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                          </svg>
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Phone</p>
-                                    <p className="text-xs font-medium truncate">{user.phone || "-"}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Area</p>
-                                    <p className="text-xs font-medium truncate">{user.address?.province || "-"}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Daily Orders</p>
-                                    <p className="text-xs font-medium">{user.dailyOrdersCount || 0}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Weekly Orders</p>
-                                    <p className="text-xs font-medium">{user.weeklyOrdersCount || 0}</p>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <p className="text-xs text-muted-foreground">Joined (Toronto)</p>
-                                    <p className="text-xs font-medium" title={user.joined ? formatDateTime(user.joined) : "-"}>
-                                      {user.joined ? formatDate(user.joined) : "-"}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex-col gap-4 sm:flex-row">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleUserPagination('prev')}
-                        disabled={usersPagination.page <= 1}
-                        className="flex-1 sm:flex-none"
-                      >
-                        Previous
-                      </Button>
-                      <div className="text-sm text-muted-foreground whitespace-nowrap">
-                        Page {usersPagination.page} of {usersPagination.pages}
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleUserPagination('next')}
-                        disabled={usersPagination.page >= usersPagination.pages}
-                        className="flex-1 sm:flex-none"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                    
-                    <div className="flex items-center justify-center sm:justify-end gap-2 w-full sm:w-auto sm:ml-auto">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
-                      <Select
-                        value={usersPagination.limit.toString()}
-                        onValueChange={(value) => {
-                          const newLimit = parseInt(value);
-                          setUsersPagination(prev => ({
-                            ...prev,
-                            limit: newLimit,
-                            page: 1 // Reset to first page when changing limit
-                          }));
-                          fetchUsers(1, newLimit);
-                        }}
-                      >
-                        <SelectTrigger className="h-8 w-[80px]">
-                          <SelectValue placeholder={usersPagination.limit.toString()} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="25">25</SelectItem>
-                          <SelectItem value="50">50</SelectItem>
-                          <SelectItem value="100">100</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardFooter>
-                </Card>
+                <AdminUsersTab
+                  users={users}
+                  usersLoading={usersLoading}
+                  usersPagination={usersPagination}
+                  setUsersPagination={setUsersPagination}
+                  usersError={usersError}
+                  filteredUsers={filteredUsers}
+                  userSearchQuery={userSearchQuery}
+                  setUserSearchQuery={setUserSearchQuery}
+                  userSearchType={userSearchType}
+                  setUserSearchType={setUserSearchType}
+                  totalUsersCount={totalUsersCount}
+                  userGrowthRate={userGrowthRate}
+                  totalUsersLoading={totalUsersLoading}
+                  isExportingUsers={isExportingUsers}
+                  onRefresh={() => {
+                    void fetchUsers(usersPagination.page, usersPagination.limit)
+                    void fetchTotalUsersStats()
+                  }}
+                  onExportUsers={() => {
+                    void handleExportUsers()
+                  }}
+                  onSearch={handleUserSearch}
+                  onResetSearch={resetUserSearch}
+                  onPaginate={handleUserPagination}
+                  onViewUser={handleViewUser}
+                  onDeleteUser={handleDeleteUser}
+                  onChangePageSize={(newLimit) => {
+                    setUsersPagination((prev) => ({
+                      ...prev,
+                      limit: newLimit,
+                      page: 1,
+                    }))
+                    void fetchUsers(1, newLimit)
+                  }}
+                />
               </motion.div>
             )}
 
@@ -3171,294 +2466,11 @@ export default function AdminDashboardPage() {
       </Dialog>
 
       {/* View User Dialog */}
-      <Dialog open={viewUserOpen} onOpenChange={setViewUserOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>Information about {selectedUser?.name}</DialogDescription>
-          </DialogHeader>
-          
-          {selectedUser && (
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="details">User Details</TabsTrigger>
-                <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="details" className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm text-muted-foreground">User ID</Label>
-                      <p className="font-medium">{selectedUser.userID}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Status</Label>
-                      <p className="font-medium">{selectedUser.status}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Name</Label>
-                      <p className="font-medium">{selectedUser.name}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Email</Label>
-                      <div className="flex items-center gap-1">
-                        <p className="font-medium break-all">{selectedUser.email}</p>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6" 
-                          onClick={() => {
-                            navigator.clipboard.writeText(selectedUser.email);
-                            toast({
-                              title: "Copied",
-                              description: "Email copied to clipboard",
-                              duration: 2000,
-                            });
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                          </svg>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Phone</Label>
-                      <p className="font-medium">{selectedUser.phone}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Joined (Toronto Time)</Label>
-                      <p className="font-medium">{selectedUser.joined 
-                        ? formatDateTime(selectedUser.joined)
-                        : '-'}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Address</Label>
-                    {selectedUser?.address ? (
-                      <div className="font-medium mt-1">
-                        <p>
-                          {selectedUser.address.unitNumber ? `Unit ${selectedUser.address.unitNumber}, ` : ''}
-                          {selectedUser.address.streetAddress || ''}
-                        </p>
-                        <p>
-                          {[selectedUser.address.province, selectedUser.address.postalCode].filter(Boolean).join(', ')}
-                        </p>
-                        <p>{selectedUser.address.country || ''}</p>
-                        {selectedUser.address.buzzCode && (
-                          <p>Buzz Code: {selectedUser.address.buzzCode}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="font-medium">No address provided</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <Label className="text-sm text-muted-foreground font-medium">Vouchers & Subscriptions</Label>
-                  <div className="mt-2 space-y-4">
-                    <div className="rounded-md border p-3 bg-slate-50">
-                      <h4 className="text-sm font-medium">Meal Vouchers</h4>
-                      <div className="mt-2 space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-sm">2-Dish Vouchers:</span>
-                          <span className="font-medium">{selectedUser.twoDishVoucher || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm">3-Dish Vouchers:</span>
-                          <span className="font-medium">{selectedUser.threeDishVoucher || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="rounded-md border p-3 bg-slate-50">
-                      <h4 className="text-sm font-medium">Weekly Subscriptions</h4>
-                      <div className="mt-2 space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-sm">6 Meals:</span>
-                          <span className="font-medium">{selectedUser.weeklySIXmeals || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm">8 Meals:</span>
-                          <span className="font-medium">{selectedUser.weeklyEIGHTmeals || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm">10 Meals:</span>
-                          <span className="font-medium">{selectedUser.weeklyTENmeals || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm">12 Meals:</span>
-                          <span className="font-medium">{selectedUser.weeklyTWELVEmeals || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="activity">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="font-medium">User Activity</Label>
-                    <Select
-                      value={activityType}
-                      onValueChange={(value) => {
-                        setActivityType(value);
-                        if (selectedUser) {
-                          fetchUserActivities(selectedUser._id, 1, value);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filter by type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Activities</SelectItem>
-                        <SelectItem value="transaction">Credit Transactions</SelectItem>
-                        <SelectItem value="credit-request">Weekly Meal Requests</SelectItem>
-                        <SelectItem value="voucher-request">Voucher Requests</SelectItem>
-                        <SelectItem value="order">Daily Orders</SelectItem>
-                        <SelectItem value="weekly-order">Weekly Orders</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="max-h-[400px] overflow-y-auto pr-2">
-                    {userActivitiesLoading ? (
-                      <div className="flex justify-center p-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                      </div>
-                    ) : userActivities.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-3">
-                        {userActivities.map((activity) => {
-                          let icon;
-                          let colorClass;
-                          
-                          // Determine icon and color based on activity type
-                          switch (activity.activityType) {
-                            case 'transaction':
-                              icon = activity.type === 'Add' || activity.type === 'credit' || activity.type === 'refund' ? 
-                                <DollarSign className="h-4 w-4 text-green-500" /> : 
-                                <DollarSign className="h-4 w-4 text-red-500" />;
-                              colorClass = activity.type === 'Add' || activity.type === 'credit' || activity.type === 'refund' ? 
-                                "border-l-4 border-green-500" : "border-l-4 border-red-500";
-                              break;
-                            case 'credit-request':
-                              icon = <CreditCard className="h-4 w-4 text-blue-500" />;
-                              colorClass = activity.status === 'approved' ? "border-l-4 border-green-500" : 
-                                         activity.status === 'declined' ? "border-l-4 border-red-500" : 
-                                         "border-l-4 border-yellow-500";
-                              break;
-                            case 'voucher-request':
-                              icon = <Gift className="h-4 w-4 text-purple-500" />;
-                              colorClass = activity.status === 'approved' ? "border-l-4 border-green-500" : 
-                                         activity.status === 'declined' ? "border-l-4 border-red-500" : 
-                                         "border-l-4 border-yellow-500";
-                              break;
-                            case 'order':
-                              icon = <ShoppingCart className="h-4 w-4 text-orange-500" />;
-                              colorClass = "border-l-4 border-orange-500";
-                              break;
-                            case 'weekly-order':
-                              icon = <CalendarIcon className="h-4 w-4 text-indigo-500" />;
-                              colorClass = "border-l-4 border-indigo-500";
-                              break;
-                            default:
-                              icon = <ChevronsUpDown className="h-4 w-4" />;
-                              colorClass = "border-l-4 border-gray-300";
-                          }
-                          
-                          return (
-                            <div key={activity._id} className={`rounded-md border p-3 ${colorClass}`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  {icon}
-                                  <p className="text-sm font-medium truncate max-w-[180px]" title={activity.title}>
-                                    {activity.title}
-                                  </p>
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(activity.date).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })}
-                                </p>
-                              </div>
-                              {activity.details && (
-                                <p className="text-xs text-muted-foreground mt-2 truncate" title={activity.details}>
-                                  {activity.details}
-                                </p>
-                              )}
-                              
-                              {/* Show status badge for requests */}
-                              {(activity.activityType === 'credit-request' || activity.activityType === 'voucher-request') && (
-                                <div className="mt-2">
-                                  <span className={
-                                    `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                      activity.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                      activity.status === 'declined' ? 'bg-red-100 text-red-800' :
-                                      'bg-yellow-100 text-yellow-800'
-                                    }`
-                                  }>
-                                    {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="rounded-md border p-3 text-center text-muted-foreground">
-                        No activity found
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Pagination controls */}
-                  {userActivities.length > 0 && activityPagination.pages > 1 && (
-                    <div className="flex items-center justify-between pt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleActivityPagination('prev')}
-                        disabled={activityPagination.page <= 1}
-                      >
-                        Previous
-                      </Button>
-                      <div className="text-sm text-muted-foreground">
-                        Page {activityPagination.page} of {activityPagination.pages}
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleActivityPagination('next')}
-                        disabled={activityPagination.page >= activityPagination.pages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewUserOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ViewUserDialog
+        open={viewUserOpen}
+        user={selectedUser}
+        onOpenChange={setViewUserOpen}
+      />
 
       {/* View Credit Request Dialog */}
       <Dialog open={viewRequestOpen} onOpenChange={setViewRequestOpen}>
@@ -4183,51 +3195,13 @@ export default function AdminDashboardPage() {
       </Dialog>
 
       {/* Delete User Dialog */}
-      <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-red-500">Delete User Account</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {selectedUser?.name}'s account? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {selectedUser && (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-sm text-muted-foreground">User ID</Label>
-                    <p className="font-medium">{selectedUser.userID}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground">Email</Label>
-                    <p className="font-medium">{selectedUser.email}</p>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <Label className="text-sm text-muted-foreground">Warning</Label>
-                  <p className="text-sm text-red-500 font-medium">
-                    This will permanently delete all user data including order history, credits, and account information.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDeleteUser}
-              className="gap-1"
-            >
-              {isLoading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
-              Delete User
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteUserDialog
+        open={deleteUserOpen}
+        user={selectedUser}
+        isDeleting={isDeletingUser}
+        onOpenChange={setDeleteUserOpen}
+        onConfirm={confirmDeleteUser}
+      />
     </div>
   )
 }
