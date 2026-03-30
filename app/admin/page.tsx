@@ -65,12 +65,15 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { NotificationType } from '@/lib/services/notifications';
+import type { CreditRequest } from "@/lib/types/admin"
 import {
   AdminUsersTab,
   DeleteUserDialog,
   useAdminUsers,
   ViewUserDialog,
 } from "@/features/admin-users"
+import { useAdminTransactions } from "@/features/admin-credits"
+import { useAdminCreditRequests } from "@/features/admin-credit-requests"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { NextWeekMenuEmail } from "@/components/next-week-menu-email"
@@ -87,6 +90,28 @@ const RatingDishManagement = dynamic(
   () => import("@/components/rating-dish-management").then((m) => ({ default: m.RatingDishManagement })),
   { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
 )
+
+function getCreditRequestUserInfo(request?: CreditRequest | null) {
+  const user = request?.userId
+
+  if (user && typeof user !== "string") {
+    return {
+      id: user._id || "Unknown",
+      name: user.name || user.userID || "Unknown User",
+      email: user.email || "",
+    }
+  }
+
+  return {
+    id: typeof user === "string" ? user : "Unknown",
+    name: "Unknown User",
+    email: "",
+  }
+}
+
+function getCreditRequestAmount(request?: CreditRequest | null) {
+  return Number(request?.amount ?? 0)
+}
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -146,33 +171,6 @@ export default function AdminDashboardPage() {
     },
     { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
   ]
-  const [creditRequestsLoading, setCreditRequestsLoading] = useState(false)
-  const [creditRequests, setCreditRequests] = useState<any[]>([])
-  const [creditRequestsPagination, setCreditRequestsPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 1
-  })
-  const [isExportingCreditRequests, setIsExportingCreditRequests] = useState(false)
-  const [creditRequestsDateRange, setCreditRequestsDateRange] = useState<{
-    startDate: Date | undefined;
-    endDate: Date | undefined;
-  }>({
-    startDate: undefined,
-    endDate: undefined
-  })
-  const [viewRequestOpen, setViewRequestOpen] = useState(false)
-  const [selectedRequest, setSelectedRequest] = useState<any>(null)
-  const [approveRequestOpen, setApproveRequestOpen] = useState(false)
-  const [declineRequestOpen, setDeclineRequestOpen] = useState(false)
-  const [approvedSixMeals, setApprovedSixMeals] = useState(0)
-  const [approvedEightMeals, setApprovedEightMeals] = useState(0)
-  const [approvedTenMeals, setApprovedTenMeals] = useState(0)
-  const [approvedTwelveMeals, setApprovedTwelveMeals] = useState(0)
-  const [approvedSixteenMeals, setApprovedSixteenMeals] = useState(0)
-  const [adminNotes, setAdminNotes] = useState('')
-  const [processingRequest, setProcessingRequest] = useState(false)
   const [addCreditsOpen, setAddCreditsOpen] = useState(false)
   const [viewUserOpen, setViewUserOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -180,14 +178,6 @@ export default function AdminDashboardPage() {
   const [serviceType, setServiceType] = useState<"daily" | "weekly">("daily")
   const [voucherType, setVoucherType] = useState<string>("twoDishVoucher")
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false)
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [transactionsLoading, setTransactionsLoading] = useState(false)
-  const [transactionsPagination, setTransactionsPagination] = useState({
-    page: 1,
-    limit: 25,
-    total: 0,
-    pages: 1
-  })
   const [deductCreditsOpen, setDeductCreditsOpen] = useState(false)
   const [deductAmount, setDeductAmount] = useState(1)
   const [deleteUserOpen, setDeleteUserOpen] = useState(false)
@@ -222,6 +212,66 @@ export default function AdminDashboardPage() {
     handleExportUsers,
     handleDeleteUser: deleteUserById,
   } = useAdminUsers({ hasVerifiedAdminSession, activeTab })
+  const {
+    transactions,
+    transactionsLoading,
+    transactionsPagination,
+    setTransactionsPagination,
+    fetchTransactions,
+    handleTransactionPagination,
+    changeTransactionsPageSize,
+  } = useAdminTransactions({
+    activeTab,
+    hasVerifiedAdminSession,
+    usersCount: users.length,
+    usersLoading,
+    ensureUsersLoaded: () => fetchUsers(usersPagination.page, usersPagination.limit),
+  })
+  const {
+    creditRequestsLoading,
+    creditRequests,
+    creditRequestsPagination,
+    isExportingCreditRequests,
+    creditRequestsDateRange,
+    viewRequestOpen,
+    setViewRequestOpen,
+    selectedRequest,
+    setSelectedRequest,
+    approveRequestOpen,
+    setApproveRequestOpen,
+    declineRequestOpen,
+    setDeclineRequestOpen,
+    approvedSixMeals,
+    setApprovedSixMeals,
+    approvedEightMeals,
+    setApprovedEightMeals,
+    approvedTenMeals,
+    setApprovedTenMeals,
+    approvedTwelveMeals,
+    setApprovedTwelveMeals,
+    approvedSixteenMeals,
+    setApprovedSixteenMeals,
+    adminNotes,
+    setAdminNotes,
+    processingRequest,
+    fetchCreditRequests,
+    handleCreditRequestPagination,
+    applyCreditRequestsDateRange,
+    clearCreditRequestsDateRange,
+    changeCreditRequestsPageSize,
+    refreshCreditRequests,
+    handleViewRequest,
+    handleApproveRequest,
+    handleDeclineRequest,
+    confirmApproveRequest,
+    confirmDeclineRequest,
+    exportCreditRequestsToCSV,
+  } = useAdminCreditRequests({
+    activeTab,
+    hasVerifiedAdminSession,
+  })
+  const selectedRequestUser = getCreditRequestUserInfo(selectedRequest)
+  const selectedRequestAmount = getCreditRequestAmount(selectedRequest)
 
   useEffect(() => {
     if (authStatus !== "ready") {
@@ -341,455 +391,6 @@ export default function AdminDashboardPage() {
       setIsLoading(false)
     }
   }
-
-  // Fetch credit purchase requests
-  const fetchCreditRequests = async (page = 1) => {
-    setCreditRequestsLoading(true);
-    try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('limit', creditRequestsPagination.limit.toString());
-      
-      // Add date range if provided
-      if (creditRequestsDateRange.startDate) {
-        params.append('startDate', format(creditRequestsDateRange.startDate, 'yyyy-MM-dd'));
-      }
-      
-      if (creditRequestsDateRange.endDate) {
-        params.append('endDate', format(creditRequestsDateRange.endDate, 'yyyy-MM-dd'));
-      }
-      
-      const response = await fetch(`/api/credits/request/admin?${params.toString()}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error response from server (${response.status}):`, errorText);
-        throw new Error(`Server returned ${response.status}: ${errorText}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setCreditRequests(data.data.requests || []);
-        setCreditRequestsPagination(prev => ({
-          ...prev,
-          page: data.data.page,
-          total: data.data.total,
-          pages: Math.ceil(data.data.total / data.data.limit)
-        }));
-      } else {
-        console.error("API returned error:", data.error);
-        setCreditRequests([]);
-      }
-    } catch (error) {
-      console.error("Error fetching credit requests:", error);
-      setCreditRequests([]);
-      toast({
-        title: "Error",
-        description: "Failed to fetch credit purchase requests",
-        variant: "destructive"
-      });
-    } finally {
-      setCreditRequestsLoading(false);
-    }
-  };
-  
-  // Handle credit request pagination
-  const handleCreditRequestPagination = (direction: 'prev' | 'next') => {
-    const newPage = direction === 'prev' 
-      ? Math.max(1, creditRequestsPagination.page - 1)
-      : Math.min(creditRequestsPagination.pages, creditRequestsPagination.page + 1);
-      
-    if (newPage !== creditRequestsPagination.page) {
-      fetchCreditRequests(newPage);
-    }
-  };
-  
-  // View credit request details
-  const handleViewRequest = (request: any) => {
-    setSelectedRequest(request);
-    setViewRequestOpen(true);
-  };
-  
-  // Open approve dialog
-  const handleApproveRequest = (request: any) => {
-    setSelectedRequest(request);
-    
-    // Reset all values first
-    setApprovedSixMeals(0);
-    setApprovedEightMeals(0);
-    setApprovedTenMeals(0);
-    setApprovedTwelveMeals(0);
-    setApprovedSixteenMeals(0);
-    
-    // Determine suggested values based on meal plan type and quantity
-    if (request.mealPlanType && request.mealPlanQuantity) {
-      const quantity = request.mealPlanQuantity;
-      
-      switch(request.mealPlanType) {
-        case '6aweek':
-          setApprovedSixMeals(quantity);
-          break;
-        case '8aweek':
-          setApprovedEightMeals(quantity);
-          break;
-        case '10aweek':
-          setApprovedTenMeals(quantity);
-          break;
-        case '12aweek':
-          setApprovedTwelveMeals(quantity);
-          break;
-        case '16aweek':
-          setApprovedSixteenMeals(quantity);
-          break;
-      }
-    } else if (request.planDescription) {
-      // Try to determine meal plan type from description for older requests
-      const mealsMatch = request.planDescription.match(/(\d+)\s*meals\/week/i);
-      let mealsPerWeek = 0;
-      
-      if (mealsMatch && mealsMatch[1]) {
-        mealsPerWeek = parseInt(mealsMatch[1]);
-      } else {
-        const altMatch = request.planDescription.match(/(\d+)\s*meals/i);
-        if (altMatch && altMatch[1]) {
-          mealsPerWeek = parseInt(altMatch[1]);
-        }
-      }
-      
-      // If we found meals per week, set the appropriate field
-      if (mealsPerWeek > 0) {
-        // Try to extract duration from plan description
-        let quantity = request.mealPlanQuantity;
-        
-        if (!quantity && request.planDescription) {
-          // Look for patterns like "2 weeks" or "4-week"
-          const durationMatch = request.planDescription.match(/(\d+)[\s-]*(weeks?|周)/i);
-          if (durationMatch && durationMatch[1]) {
-            quantity = parseInt(durationMatch[1]);
-          }
-        }
-        
-        // If we still don't have a quantity, check if we can determine from the amount
-        if (!quantity && request.amount && mealsPerWeek) {
-          // Rough estimation based on price ranges
-          if (mealsPerWeek === 6) {
-            if (request.amount < 150) quantity = 1;
-            else if (request.amount < 300) quantity = 2;
-            else quantity = 4;
-          } else if (mealsPerWeek === 8) {
-            if (request.amount < 200) quantity = 1;
-            else if (request.amount < 350) quantity = 2;
-            else quantity = 4;
-          } else if (mealsPerWeek === 10) {
-            if (request.amount < 250) quantity = 1;
-            else if (request.amount < 450) quantity = 2;
-            else quantity = 4;
-          } else if (mealsPerWeek === 12) {
-            if (request.amount < 300) quantity = 1;
-            else if (request.amount < 500) quantity = 2;
-            else quantity = 4;
-          }
-        }
-        
-        // Fallback to 1 if we still couldn't determine
-        quantity = quantity || 1;
-        
-        if (mealsPerWeek === 6) {
-          setApprovedSixMeals(quantity);
-        } else if (mealsPerWeek === 8) {
-          setApprovedEightMeals(quantity);
-        } else if (mealsPerWeek === 10) {
-          setApprovedTenMeals(quantity);
-        } else if (mealsPerWeek === 12) {
-          setApprovedTwelveMeals(quantity);
-        } else if (mealsPerWeek === 16) {
-          setApprovedSixteenMeals(quantity);
-        }
-      }
-      
-    }
-    
-    setAdminNotes('');
-    setApproveRequestOpen(true);
-  };
-  
-  // Open decline dialog
-  const handleDeclineRequest = (request: any) => {
-    setSelectedRequest(request);
-    setAdminNotes('');
-    setDeclineRequestOpen(true);
-  };
-  
-  // Process approve request
-  const confirmApproveRequest = async () => {
-    if (!selectedRequest) return;
-    
-    setProcessingRequest(true);
-    try {
-      const approvedPlans = [
-        { planId: 'weekly-6x1', quantity: approvedSixMeals },
-        { planId: 'weekly-8x1', quantity: approvedEightMeals },
-        { planId: 'weekly-10x1', quantity: approvedTenMeals },
-        { planId: 'weekly-12x1', quantity: approvedTwelveMeals },
-        { planId: 'weekly-16x1', quantity: approvedSixteenMeals }
-      ].filter((entry) => entry.quantity > 0);
-
-      // Calculate total approved plans for display
-      const totalApproved = approvedPlans.reduce((sum, entry) => sum + entry.quantity, 0);
-      
-      // Check if at least one plan type has a value
-      if (totalApproved <= 0) {
-        toast({
-          title: "Error",
-          description: "Please enter at least one meal plan quantity",
-          variant: "destructive"
-        });
-        setProcessingRequest(false);
-        return;
-      }
-      
-      const response = await fetch('/api/credits/request/admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          requestId: selectedRequest.requestId,
-          action: 'approve',
-          approvedSixMeals,
-          approvedEightMeals,
-          approvedTenMeals,
-          approvedTwelveMeals,
-          approvedSixteenMeals,
-          approvedPlans,
-          adminNotes
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        const description = approvedPlans
-          .map((entry) => {
-            const meals = String(entry.planId).match(/^weekly-(\d+)x/)?.[1] || '?';
-            return `${entry.quantity} x ${meals}-meal plans`;
-          })
-          .join(', ');
-        
-        toast({
-          title: "Request approved",
-          description: `Approved ${description} for user`
-        });
-        
-        // Refresh credit requests
-        fetchCreditRequests(creditRequestsPagination.page);
-        
-        // Close dialog
-        setApproveRequestOpen(false);
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to approve request",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error approving request:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      });
-    } finally {
-      setProcessingRequest(false);
-    }
-  };
-  
-  // Export credit requests to CSV
-  const exportCreditRequestsToCSV = async () => {
-    setIsExportingCreditRequests(true);
-    try {
-      // Build query parameters for export
-      const params = new URLSearchParams();
-      
-      // Add status filter if selected
-      if (activeTab === "credit-requests") {
-        params.append('status', 'all');
-      }
-      
-      // Add date range if provided
-      if (creditRequestsDateRange.startDate) {
-        params.append('startDate', format(creditRequestsDateRange.startDate, 'yyyy-MM-dd'));
-      }
-      
-      if (creditRequestsDateRange.endDate) {
-        params.append('endDate', format(creditRequestsDateRange.endDate, 'yyyy-MM-dd'));
-      }
-      
-      // Create a link to download the CSV
-      const link = document.createElement('a');
-      link.href = `/api/credits/request/admin/export?${params.toString()}`;
-      link.setAttribute('download', `credit-requests-${format(new Date(), 'yyyy-MM-dd')}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        title: "Export Started",
-        description: "Your CSV file will download shortly."
-      });
-    } catch (error) {
-      console.error('Error exporting credit requests:', error);
-      toast({
-        title: "Export Failed",
-        description: "There was an error exporting credit requests to CSV.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsExportingCreditRequests(false);
-    }
-  };
-  
-  // Process decline request
-  const confirmDeclineRequest = async () => {
-    if (!selectedRequest) return;
-    
-    setProcessingRequest(true);
-    try {
-      const response = await fetch('/api/credits/request/admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          requestId: selectedRequest.requestId,
-          action: 'decline',
-          adminNotes
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        toast({
-          title: "Request declined",
-          description: "Credit purchase request has been declined"
-        });
-        
-        // Refresh credit requests
-        fetchCreditRequests(creditRequestsPagination.page);
-        
-        // Close dialog
-        setDeclineRequestOpen(false);
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to decline request",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error declining request:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      });
-    } finally {
-      setProcessingRequest(false);
-    }
-  };
-
-  // Add function to fetch transactions
-  const fetchTransactions = async (page = 1, options?: { signal?: AbortSignal }) => {
-    setTransactionsLoading(true);
-    try {
-      console.log(`Fetching transactions page ${page}, limit ${transactionsPagination.limit}`);
-      const response = await fetch(`/api/transactions?page=${page}&limit=${transactionsPagination.limit}`, {
-        signal: options?.signal,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error response from server (${response.status}):`, errorText);
-        throw new Error(`Server returned ${response.status}: ${errorText}`);
-      }
-      
-      const data = await response.json();
-      if (options?.signal?.aborted) {
-        return;
-      }
-      console.log('Transaction data received:', data);
-      
-      if (data.success) {
-        setTransactions(data.data.transactions || []);
-        setTransactionsPagination(prev => ({
-          ...prev,
-          page: data.data.page,
-          total: data.data.total,
-          pages: Math.ceil(data.data.total / data.data.limit)
-        }));
-      } else {
-        console.error("API returned error:", data.error);
-        setTransactions([]);
-      }
-    } catch (error) {
-      if ((error as Error).name === 'AbortError' || options?.signal?.aborted) {
-        return;
-      }
-      console.error("Error fetching transactions:", error);
-      setTransactions([]);
-    } finally {
-      if (!options?.signal?.aborted) {
-        setTransactionsLoading(false);
-      }
-    }
-  };
-  
-  // Add effect to fetch credit requests when the tab is active
-  useEffect(() => {
-    if (!hasVerifiedAdminSession) {
-      return
-    }
-
-    if (activeTab === "credit-requests") {
-      fetchCreditRequests();
-    }
-  }, [activeTab, hasVerifiedAdminSession]);
-  
-  // Add effect to fetch transactions when the Credits tab is active
-  useEffect(() => {
-    if (!hasVerifiedAdminSession) {
-      return
-    }
-
-    if (activeTab === "credits") {
-      const controller = new AbortController();
-      console.log(`Credits tab is active, users data available: ${users.length} users`);
-      
-      // If no users data is available yet and not currently loading, fetch users
-      if (users.length === 0 && !usersLoading) {
-        console.log('No users data available, fetching users for Credits tab...');
-        fetchUsers(usersPagination.page, usersPagination.limit);
-      }
-      
-      void fetchTransactions(1, { signal: controller.signal });
-      return () => controller.abort();
-    }
-  }, [activeTab, hasVerifiedAdminSession]);
-  
-  // Add function to handle pagination for transactions
-  const handleTransactionPagination = (direction: 'prev' | 'next') => {
-    const newPage = direction === 'prev' 
-      ? Math.max(1, transactionsPagination.page - 1)
-      : Math.min(transactionsPagination.pages, transactionsPagination.page + 1);
-      
-    if (newPage !== transactionsPagination.page) {
-      fetchTransactions(newPage);
-    }
-  };
 
   // Handle deduct credits button click
   const handleDeductCredits = (user: User) => {
@@ -1833,13 +1434,7 @@ export default function AdminDashboardPage() {
                         <Select
                           value={transactionsPagination.limit.toString()}
                           onValueChange={(value) => {
-                            const newLimit = parseInt(value);
-                            setTransactionsPagination(prev => ({
-                              ...prev,
-                              limit: newLimit,
-                              page: 1 // Reset to first page when changing limit
-                            }));
-                            fetchTransactions(1);
+                            changeTransactionsPageSize(parseInt(value, 10));
                           }}
                         >
                           <SelectTrigger className="h-8 w-[80px]">
@@ -1950,17 +1545,10 @@ export default function AdminDashboardPage() {
                               to: creditRequestsDateRange.endDate,
                             }}
                             onSelect={(range?: { from?: Date; to?: Date }) => {
-                              setCreditRequestsDateRange({
+                              applyCreditRequestsDateRange({
                                 startDate: range?.from,
                                 endDate: range?.to,
-                              });
-                              // Reset to page 1 when changing date range
-                              setCreditRequestsPagination(prev => ({
-                                ...prev,
-                                page: 1
-                              }));
-                              // Fetch with new date range
-                              fetchCreditRequests(1);
+                              })
                             }}
                             numberOfMonths={2}
                             className="rounded-md border"
@@ -1971,11 +1559,7 @@ export default function AdminDashboardPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setCreditRequestsDateRange({
-                            startDate: undefined,
-                            endDate: undefined
-                          });
-                          fetchCreditRequests(1);
+                          clearCreditRequestsDateRange()
                         }}
                         className="h-9 flex-1 sm:flex-none"
                         disabled={!creditRequestsDateRange.startDate && !creditRequestsDateRange.endDate}
@@ -1986,7 +1570,9 @@ export default function AdminDashboardPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => exportCreditRequestsToCSV()}
+                      onClick={() => {
+                        void exportCreditRequestsToCSV()
+                      }}
                       className="h-9 gap-1 flex-1 sm:flex-none"
                       disabled={isExportingCreditRequests || creditRequests.length === 0}
                     >
@@ -2006,7 +1592,7 @@ export default function AdminDashboardPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => fetchCreditRequests(creditRequestsPagination.page)}
+                      onClick={refreshCreditRequests}
                       className="h-9 gap-1 flex-1 sm:flex-none"
                     >
                       <RefreshCcw className={cn("h-4 w-4", creditRequestsLoading && "animate-spin")} />
@@ -2044,9 +1630,7 @@ export default function AdminDashboardPage() {
                             </tr>
                           ) : creditRequests.length > 0 ? (
                             creditRequests.map((request) => {
-                              // Get user info
-                              const user = request.userId;
-                              const userName = user ? (user.name || user.userID) : 'Unknown User';
+                              const userName = getCreditRequestUserInfo(request).name;
                               
                               // Format status badge
                               let statusBadge;
@@ -2092,7 +1676,7 @@ export default function AdminDashboardPage() {
                                     )}
                                   </td>
                                   <td className="p-4">
-                                    <div>${request.amount.toFixed(2)}</div>
+                                    <div>${getCreditRequestAmount(request).toFixed(2)}</div>
                                     <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
                                     {request.promoCode && (
                                       <div className="text-xs text-green-700 font-medium mt-1">
@@ -2173,13 +1757,13 @@ export default function AdminDashboardPage() {
                         </div>
                       ) : creditRequests.length > 0 ? (
                         creditRequests.map((request) => {
-                          const user = request.userId;
-                          const userName = user ? (user.name || user.userID) : 'Unknown User';
-                          const userEmail = user?.email || '';
+                          const userInfo = getCreditRequestUserInfo(request);
+                          const userName = userInfo.name;
+                          const userEmail = userInfo.email;
                           
                           let statusColor = 'bg-gray-100 text-gray-800';
                           let statusBorderColor = 'border-gray-200';
-                          let statusText = request.status;
+                          let statusText: string = request.status;
                           
                           switch(request.status) {
                             case 'pending':
@@ -2223,7 +1807,7 @@ export default function AdminDashboardPage() {
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <p className="text-xs text-muted-foreground mb-0.5">Payment Amount</p>
-                                      <p className="text-2xl font-bold text-primary">${request.amount.toFixed(2)}</p>
+                                      <p className="text-2xl font-bold text-primary">${getCreditRequestAmount(request).toFixed(2)}</p>
                                       <p className="text-xs text-muted-foreground mt-0.5">via e-Transfer</p>
                                     </div>
                                     <DollarSign className="h-8 w-8 text-primary/30" />
@@ -2360,13 +1944,7 @@ export default function AdminDashboardPage() {
                         <Select
                           value={creditRequestsPagination.limit.toString()}
                           onValueChange={(value) => {
-                            const newLimit = parseInt(value);
-                            setCreditRequestsPagination(prev => ({
-                              ...prev,
-                              limit: newLimit,
-                              page: 1 // Reset to first page when changing limit
-                            }));
-                            fetchCreditRequests(1);
+                            changeCreditRequestsPageSize(parseInt(value, 10))
                           }}
                         >
                           <SelectTrigger className="h-8 w-[80px]">
@@ -2513,10 +2091,10 @@ export default function AdminDashboardPage() {
                   <div>
                     <Label className="text-xs text-muted-foreground">Submitted By</Label>
                     <p className="font-medium text-base">
-                      {selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                      {selectedRequestUser.name}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedRequest.userId?.email || ''}
+                      {selectedRequestUser.email}
                     </p>
                   </div>
                   <div className="text-right">
@@ -2574,7 +2152,7 @@ export default function AdminDashboardPage() {
                     <div>
                       <Label className="text-xs text-muted-foreground">User ID</Label>
                       <p className="font-medium text-sm mt-1 text-muted-foreground truncate">
-                        {selectedRequest.userId?._id || 'Unknown'}
+                        {selectedRequestUser.id}
                       </p>
                     </div>
                     
@@ -2836,10 +2414,10 @@ export default function AdminDashboardPage() {
                   <div>
                     <Label className="text-xs text-muted-foreground">User</Label>
                     <p className="font-medium">
-                      {selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                      {selectedRequestUser.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {selectedRequest.userId?.email || ''}
+                      {selectedRequestUser.email}
                     </p>
                   </div>
                 </div>
@@ -2881,7 +2459,7 @@ export default function AdminDashboardPage() {
                     <div>
                       <Label className="text-xs text-muted-foreground">Amount Paid</Label>
                       <p className="font-medium">
-                        ${selectedRequest.amount.toFixed(2)}
+                        ${selectedRequestAmount.toFixed(2)}
                         {selectedRequest.paymentMethod === 'wechat' && (
                           <span className="ml-2 text-xs text-green-600">(10% discount applied)</span>
                         )}
@@ -3085,7 +2663,7 @@ export default function AdminDashboardPage() {
                 </Label>
                 <Input
                   id="decline-user"
-                  value={selectedRequest.userId?.name || selectedRequest.userId?.userID || 'Unknown'}
+                  value={selectedRequestUser.name}
                   className="col-span-3"
                   disabled
                 />

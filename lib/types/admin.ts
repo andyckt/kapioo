@@ -9,6 +9,7 @@ export interface AdminUserAddress {
 
 export interface AdminUser {
   _id: string
+  userID?: string
   name: string
   email: string
   phone?: string
@@ -29,28 +30,64 @@ export interface AdminUser {
   totalOrderCount?: number
 }
 
+export type CreditRequestStatus = "pending" | "approved" | "declined"
+
+export type CreditRequestPaymentMethod = "wechat" | "emt" | string
+
+export interface CreditRequestUserSummary {
+  _id?: string
+  userID?: string
+  name?: string
+  email?: string
+}
+
 export interface CreditRequest {
   _id: string
-  userId: string
+  requestId?: string
+  userId?: string | CreditRequestUserSummary | null
   userName?: string
   userEmail?: string
   amount?: number
-  status: "pending" | "approved" | "declined"
+  status: CreditRequestStatus
   planId?: string
   planLabel?: string
+  planDescription?: string
+  mealPlanType?: string
+  mealPlanQuantity?: number
+  paymentMethod?: CreditRequestPaymentMethod
+  referenceNumber?: string
+  promoCode?: string
+  promoDiscountAmount?: number
+  mealSubtotal?: number
+  originalSubtotal?: number
+  originalPrice?: number
+  deliveryFeeTotal?: number
+  deliveryFeePerWeek?: number
+  taxAmount?: number
+  finalTotal?: number
+  notes?: string
+  imageProof?: string
   proofOfPayment?: string
   adminNotes?: string
   createdAt: string
+  approvedAt?: string
+  declinedAt?: string
   updatedAt?: string
 }
 
 export interface AdminTransaction {
   _id: string
-  userId: string
+  transactionId?: string
+  userId?: string
   type: string
   amount?: number
   description?: string
   createdAt: string
+}
+
+export interface AdminDateRange {
+  startDate?: Date
+  endDate?: Date
 }
 
 export interface UserActivity {
