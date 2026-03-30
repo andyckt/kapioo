@@ -9,15 +9,12 @@ import { CardDescription } from "@/components/ui/card"
 import { CardTitle } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
-import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, Check, ChevronsUpDown, Search, RefreshCcw, Download, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, FileSpreadsheet, CalendarDays, Menu, Package, CheckCircle, Mail, Tag, Star } from "lucide-react"
+import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, DollarSign, X, ExternalLink, Eye, Truck, Gift, CheckCircle2, Loader2, Menu, Package, Mail, Tag, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
 import { performClientLogout } from "@/lib/client-logout"
 import { useClientAuth } from "@/lib/client-auth"
@@ -43,37 +40,20 @@ import {
 import {
   type User,
 } from "@/lib/utils"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 import { NotificationType } from '@/lib/services/notifications';
-import type { CreditRequest } from "@/lib/types/admin"
 import {
   AdminUsersTab,
   DeleteUserDialog,
   useAdminUsers,
   ViewUserDialog,
 } from "@/features/admin-users"
-import { useAdminTransactions } from "@/features/admin-credits"
-import { useAdminCreditRequests } from "@/features/admin-credit-requests"
+import { AdminCreditsTab, useAdminTransactions } from "@/features/admin-credits"
+import {
+  AdminCreditRequestsTab,
+  getCreditRequestAmount,
+  getCreditRequestUserInfo,
+  useAdminCreditRequests,
+} from "@/features/admin-credit-requests"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { NextWeekMenuEmail } from "@/components/next-week-menu-email"
@@ -91,26 +71,13 @@ const RatingDishManagement = dynamic(
   { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
 )
 
-function getCreditRequestUserInfo(request?: CreditRequest | null) {
-  const user = request?.userId
-
-  if (user && typeof user !== "string") {
-    return {
-      id: user._id || "Unknown",
-      name: user.name || user.userID || "Unknown User",
-      email: user.email || "",
-    }
-  }
-
-  return {
-    id: typeof user === "string" ? user : "Unknown",
-    name: "Unknown User",
-    email: "",
-  }
-}
-
-function getCreditRequestAmount(request?: CreditRequest | null) {
-  return Number(request?.amount ?? 0)
+function getVoucherTypeLabel(field: string) {
+  if (field === "twoDishVoucher") return "2-Dish vouchers"
+  if (field === "threeDishVoucher") return "3-Dish vouchers"
+  if (field === "weeklySIXmeals") return "6-meal vouchers"
+  if (field === "weeklyEIGHTmeals") return "8-meal vouchers"
+  if (field === "weeklyTENmeals") return "10-meal vouchers"
+  return "12-meal vouchers"
 }
 
 export default function AdminDashboardPage() {
@@ -309,6 +276,92 @@ export default function AdminDashboardPage() {
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
     setViewUserOpen(true)
+  }
+
+  const syncUpdatedUserState = (updatedUser: User) => {
+    setUsers(users.map((user) => (user._id === updatedUser._id ? updatedUser : user)))
+    setFilteredUsers(filteredUsers.map((user) => (user._id === updatedUser._id ? updatedUser : user)))
+    setSelectedUser(updatedUser)
+  }
+
+  const handleVoucherBalanceUpdate = async (operation: "add" | "deduct") => {
+    if (!selectedUser) {
+      toast({
+        title: "Error",
+        description: "Please select a user first",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (creditAmount <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (operation === "deduct") {
+      const currentBalance = (selectedUser[voucherType as keyof User] as number) || 0
+      if (currentBalance < creditAmount) {
+        toast({
+          title: "Error",
+          description: "User does not have enough vouchers to deduct",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    if (isUpdatingBalance) {
+      return
+    }
+
+    setIsUpdatingBalance(true)
+
+    try {
+      const response = await fetch(`/api/users/${selectedUser._id}/update-balance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          field: voucherType,
+          amount: creditAmount,
+          operation,
+          description: `${operation === "add" ? "Added" : "Deducted"} ${creditAmount} ${voucherType}`,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        const updatedUser = result.data
+        syncUpdatedUserState(updatedUser)
+
+        toast({
+          title: "Balance updated",
+          description: `${operation === "add" ? "Added" : "Deducted"} ${creditAmount} ${getVoucherTypeLabel(voucherType)} ${operation === "add" ? "to" : "from"} ${selectedUser.name}'s account`,
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update balance",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating balance:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingBalance(false)
+    }
   }
 
   const confirmAddCredits = async () => {
@@ -756,701 +809,29 @@ export default function AdminDashboardPage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Manual Credit Management</h2>
-                </div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Manage User Balance</CardTitle>
-                    <CardDescription>Manually add or deduct credits and vouchers</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {/* Step 1: Select User */}
-                      <div className="space-y-2">
-                        <Label htmlFor="user-select">Step 1: Select User</Label>
-                        {usersLoading ? (
-                          <div className="flex items-center space-x-2 h-10 px-3 rounded-md border border-input">
-                            <span className="text-muted-foreground">Loading users...</span>
-                            <div className="animate-pulse w-3 h-3 rounded-full bg-muted"></div>
-                          </div>
-                        ) : (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="w-full justify-between"
-                              >
-                                {selectedUser ? (
-                                  `${selectedUser.name} (${selectedUser.userID})`
-                                ) : (
-                                  "Search for a user..."
-                                )}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="p-0 w-full min-w-[300px]">
-                              <Command>
-                                <CommandInput 
-                                  placeholder="Search users..." 
-                                  className="h-9" 
-                                  onValueChange={(value) => {
-                                    if (value.trim().length >= 2) {
-                                      searchUsers(value);
-                                    }
-                                  }}
-                                />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    {searchLoading ? 'Searching...' : 'No users found.'}
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {searchLoading ? (
-                                      <div className="flex items-center justify-center py-6">
-                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                                      </div>
-                                    ) : (
-                                      (searchResults.length > 0 ? searchResults : users).map((user) => (
-                                        <CommandItem
-                                          key={user._id}
-                                          value={`${user.name} ${user.userID} ${user.email}`}
-                                          onSelect={() => {
-                                            setSelectedUser(user);
-                                            // Reset service and voucher type when selecting a new user
-                                            setServiceType("daily");
-                                            setVoucherType("twoDishVoucher");
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              selectedUser?._id === user._id ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          <div className="flex flex-col">
-                                            <span>{user.name}</span>
-                                            <span className="text-xs text-muted-foreground">{user.userID} - {user.email}</span>
-                                          </div>
-                                        </CommandItem>
-                                      ))
-                                    )}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                      </div>
-                      
-                      {selectedUser && (
-                        <>
-                          {/* Step 2: Select Service Type */}
-                          <div className="space-y-2">
-                            <Label>Step 2: Select Service Type</Label>
-                            <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                              <Button 
-                                variant={serviceType === "daily" ? "default" : "outline"}
-                                onClick={() => {
-                                  setServiceType("daily");
-                                  setVoucherType("twoDishVoucher");
-                                }}
-                                className="w-full h-10 text-sm"
-                              >
-                                Daily Delivery
-                              </Button>
-                              <Button 
-                                variant={serviceType === "weekly" ? "default" : "outline"}
-                                onClick={() => {
-                                  setServiceType("weekly");
-                                  setVoucherType("weeklySIXmeals");
-                                }}
-                                className="w-full h-10 text-sm"
-                              >
-                                Weekly Meal Box
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          {/* Step 3: Select Voucher Type (if applicable) */}
-                          {serviceType === "daily" && (
-                            <div className="space-y-2">
-                              <Label>Step 3: Select Voucher Type</Label>
-                              <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                                <Button 
-                                  variant={voucherType === "twoDishVoucher" ? "default" : "outline"}
-                                  onClick={() => setVoucherType("twoDishVoucher")}
-                                  className="w-full h-10 text-sm"
-                                >
-                                  2-Dish Voucher
-                                </Button>
-                                <Button 
-                                  variant={voucherType === "threeDishVoucher" ? "default" : "outline"}
-                                  onClick={() => setVoucherType("threeDishVoucher")}
-                                  className="w-full h-10 text-sm"
-                                >
-                                  3-Dish Voucher
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {serviceType === "weekly" && (
-                            <div className="space-y-2">
-                              <Label>Step 3: Select Meal Plan</Label>
-                              <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                                <Button 
-                                  variant={voucherType === "weeklySIXmeals" ? "default" : "outline"}
-                                  onClick={() => setVoucherType("weeklySIXmeals")}
-                                  className="w-full h-10 text-sm"
-                                >
-                                  6 Meals/Week
-                                </Button>
-                                <Button 
-                                  variant={voucherType === "weeklyEIGHTmeals" ? "default" : "outline"}
-                                  onClick={() => setVoucherType("weeklyEIGHTmeals")}
-                                  className="w-full h-10 text-sm"
-                                >
-                                  8 Meals/Week
-                                </Button>
-                                <Button 
-                                  variant={voucherType === "weeklyTENmeals" ? "default" : "outline"}
-                                  onClick={() => setVoucherType("weeklyTENmeals")}
-                                  className="w-full h-10 text-sm"
-                                >
-                                  10 Meals/Week
-                                </Button>
-                                <Button 
-                                  variant={voucherType === "weeklyTWELVEmeals" ? "default" : "outline"}
-                                  onClick={() => setVoucherType("weeklyTWELVEmeals")}
-                                  className="w-full h-10 text-sm"
-                                >
-                                  12 Meals/Week
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Step 4: Enter Amount */}
-                          <div className="space-y-2">
-                            <Label htmlFor="amount">
-                              Step 4: Enter Amount
-                            </Label>
-                            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2 sm:gap-4">
-                              <Input 
-                                id="amount" 
-                                type="number" 
-                                min="1"
-                                defaultValue="10" 
-                                onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
-                                className="h-10"
-                              />
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                  className="w-full h-10"
-                                  onClick={async () => {
-                                    if (!selectedUser) {
-                                      toast({
-                                        title: "Error",
-                                        description: "Please select a user first",
-                                        variant: "destructive"
-                                      });
-                                      return;
-                                    }
-                                    
-                                    if (creditAmount <= 0) {
-                                      toast({
-                                        title: "Error",
-                                        description: "Please enter a valid amount",
-                                        variant: "destructive"
-                                      });
-                                      return;
-                                    }
-                                    
-                                    // Prevent double submission
-                                    if (isUpdatingBalance) {
-                                      return;
-                                    }
-                                    
-                                    setIsUpdatingBalance(true);
-                                    
-                                    try {
-                                      let response;
-                                      let fieldToUpdate = voucherType;
-                                      let endpoint = `/api/users/${selectedUser._id}/update-balance`;
-                                      
-                                      response = await fetch(endpoint, {
-                                        method: 'POST',
-                                        headers: {
-                                          'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                          field: fieldToUpdate,
-                                          amount: creditAmount,
-                                          operation: "add",
-                                          description: `Added ${creditAmount} ${fieldToUpdate}`
-                                        })
-                                      });
-                                      
-                                      const result = await response.json();
-                                      
-                                      if (result.success) {
-                                        // Update user data
-                                        const updatedUser = result.data;
-                                        
-                                        // Update all users list
-                                        const updatedUsers = users.map(user => 
-                                          user._id === selectedUser._id ? updatedUser : user
-                                        );
-                                        setUsers(updatedUsers);
-                                        
-                                        // Update filtered users list
-                                        setFilteredUsers(filteredUsers.map(user => 
-                                          user._id === selectedUser._id ? updatedUser : user
-                                        ));
-                                        
-                                        // Update selectedUser
-                                        setSelectedUser(updatedUser);
-                                        
-                                        // No need to refresh transactions as we're not handling credits
-                                        
-                                        toast({
-                                          title: "Balance updated",
-                                          description: `Added ${creditAmount} ${
-                                                      fieldToUpdate === "twoDishVoucher" ? "2-Dish vouchers" : 
-                                                      fieldToUpdate === "threeDishVoucher" ? "3-Dish vouchers" : 
-                                                      fieldToUpdate === "weeklySIXmeals" ? "6-meal vouchers" :
-                                                      fieldToUpdate === "weeklyEIGHTmeals" ? "8-meal vouchers" :
-                                                      fieldToUpdate === "weeklyTENmeals" ? "10-meal vouchers" :
-                                                      "12-meal vouchers"} to ${selectedUser.name}'s account`,
-                                        });
-                                      } else {
-                                        toast({
-                                          title: "Error",
-                                          description: result.error || "Failed to update balance",
-                                          variant: "destructive"
-                                        });
-                                      }
-                                    } catch (error) {
-                                      console.error('Error updating balance:', error);
-                                      toast({
-                                        title: "Error",
-                                        description: "An unexpected error occurred",
-                                        variant: "destructive"
-                                      });
-                                    } finally {
-                                      setIsUpdatingBalance(false);
-                                    }
-                                  }}
-                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType || isUpdatingBalance}
-                                >
-                                  {isUpdatingBalance ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Adding...
-                                    </>
-                                  ) : (
-                                    'Add'
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  className="w-full h-10"
-                                  onClick={async () => {
-                                    if (!selectedUser) {
-                                      toast({
-                                        title: "Error",
-                                        description: "Please select a user first",
-                                        variant: "destructive"
-                                      });
-                                      return;
-                                    }
-                                    
-                                    if (creditAmount <= 0) {
-                                      toast({
-                                        title: "Error",
-                                        description: "Please enter a valid amount",
-                                        variant: "destructive"
-                                      });
-                                      return;
-                                    }
-                                    
-                                    // Check if user has enough balance to deduct
-                                    const fieldToCheck = voucherType;
-                                    const currentBalance = selectedUser[fieldToCheck as keyof User] as number || 0;
-                                    if (currentBalance < creditAmount) {
-                                      toast({
-                                        title: "Error",
-                                        description: `User does not have enough vouchers to deduct`,
-                                        variant: "destructive"
-                                      });
-                                      return;
-                                    }
-                                    
-                                    // Prevent double submission
-                                    if (isUpdatingBalance) {
-                                      return;
-                                    }
-                                    
-                                    setIsUpdatingBalance(true);
-                                    
-                                    try {
-                                      let response;
-                                      let fieldToUpdate = voucherType;
-                                      let endpoint = `/api/users/${selectedUser._id}/update-balance`;
-                                      
-                                      response = await fetch(endpoint, {
-                                        method: 'POST',
-                                        headers: {
-                                          'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                          field: fieldToUpdate,
-                                          amount: creditAmount,
-                                          operation: "deduct",
-                                          description: `Deducted ${creditAmount} ${fieldToUpdate}`
-                                        })
-                                      });
-                                      
-                                      const result = await response.json();
-                                      
-                                      if (result.success) {
-                                        // Update user data
-                                        const updatedUser = result.data;
-                                        
-                                        // Update all users list
-                                        const updatedUsers = users.map(user => 
-                                          user._id === selectedUser._id ? updatedUser : user
-                                        );
-                                        setUsers(updatedUsers);
-                                        
-                                        // Update filtered users list
-                                        setFilteredUsers(filteredUsers.map(user => 
-                                          user._id === selectedUser._id ? updatedUser : user
-                                        ));
-                                        
-                                        // Update selectedUser
-                                        setSelectedUser(updatedUser);
-                                        
-                                        // No need to refresh transactions as we're not handling credits
-                                        
-                                        toast({
-                                          title: "Balance updated",
-                                          description: `Deducted ${creditAmount} ${
-                                                      fieldToUpdate === "twoDishVoucher" ? "2-Dish vouchers" : 
-                                                      fieldToUpdate === "threeDishVoucher" ? "3-Dish vouchers" : 
-                                                      fieldToUpdate === "weeklySIXmeals" ? "6-meal vouchers" :
-                                                      fieldToUpdate === "weeklyEIGHTmeals" ? "8-meal vouchers" :
-                                                      fieldToUpdate === "weeklyTENmeals" ? "10-meal vouchers" :
-                                                      "12-meal vouchers"} from ${selectedUser.name}'s account`,
-                                        });
-                                      } else {
-                                        toast({
-                                          title: "Error",
-                                          description: result.error || "Failed to update balance",
-                                          variant: "destructive"
-                                        });
-                                      }
-                                    } catch (error) {
-                                      console.error('Error updating balance:', error);
-                                      toast({
-                                        title: "Error",
-                                        description: "An unexpected error occurred",
-                                        variant: "destructive"
-                                      });
-                                    } finally {
-                                      setIsUpdatingBalance(false);
-                                    }
-                                  }}
-                                  disabled={!selectedUser || creditAmount <= 0 || !voucherType || isUpdatingBalance}
-                                >
-                                  {isUpdatingBalance ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Deducting...
-                                    </>
-                                  ) : (
-                                    'Deduct'
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* User Information */}
-                      {selectedUser && (
-                        <div className="mt-4 p-3 sm:p-4 bg-muted rounded-md">
-                          <h3 className="font-medium text-base sm:text-lg mb-2">User Balance:</h3>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
-                            <div className="p-2 bg-background rounded border">
-                              <p className="text-xs sm:text-sm text-muted-foreground">2-Dish</p>
-                              <p className="font-medium text-base sm:text-lg">{selectedUser.twoDishVoucher || 0}</p>
-                            </div>
-                            
-                            <div className="p-2 bg-background rounded border">
-                              <p className="text-xs sm:text-sm text-muted-foreground">3-Dish</p>
-                              <p className="font-medium text-base sm:text-lg">{selectedUser.threeDishVoucher || 0}</p>
-                            </div>
-                            
-                            <div className="p-2 bg-background rounded border">
-                              <p className="text-xs sm:text-sm text-muted-foreground">6-Meal</p>
-                              <p className="font-medium text-base sm:text-lg">{selectedUser.weeklySIXmeals || 0}</p>
-                            </div>
-                            
-                            <div className="p-2 bg-background rounded border">
-                              <p className="text-xs sm:text-sm text-muted-foreground">8-Meal</p>
-                              <p className="font-medium text-base sm:text-lg">{(selectedUser as any).weeklyEIGHTmeals || 0}</p>
-                            </div>
-                            
-                            <div className="p-2 bg-background rounded border">
-                              <p className="text-xs sm:text-sm text-muted-foreground">10-Meal</p>
-                              <p className="font-medium text-base sm:text-lg">{selectedUser.weeklyTENmeals || 0}</p>
-                            </div>
-                            
-                            <div className="p-2 bg-background rounded border">
-                              <p className="text-xs sm:text-sm text-muted-foreground">12-Meal</p>
-                              <p className="font-medium text-base sm:text-lg">{(selectedUser as any).weeklyTWELVEmeals || 0}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>All Transactions</CardTitle>
-                    <CardDescription>Recent transactions (credits and vouchers)</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block rounded-md border">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-4 font-medium">Transaction ID</th>
-                            <th className="text-left p-4 font-medium">User</th>
-                            <th className="text-left p-4 font-medium">Type</th>
-                            <th className="text-left p-4 font-medium">Amount</th>
-                            <th className="text-left p-4 font-medium">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {transactionsLoading ? (
-                            <tr>
-                              <td colSpan={5} className="p-8 text-center">
-                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                              </td>
-                            </tr>
-                          ) : transactions.length > 0 ? (
-                            transactions.map((transaction) => {
-                              // Find user for this transaction
-                              const userForTransaction = users.find(u => u._id === transaction.userId);
-                              
-                              const displayUser = usersLoading ? (
-                                <div className="flex items-center">
-                                  <span className="text-muted-foreground">Loading...</span>
-                                  <div className="ml-2 animate-pulse w-3 h-3 rounded-full bg-muted"></div>
-                                </div>
-                              ) : userForTransaction ? (
-                                <span>{userForTransaction.name || userForTransaction.userID}</span>
-                              ) : (
-                                <span className="text-muted-foreground">
-                                  {transaction.userId?.toString().substring(0, 8)}...
-                                </span>
-                              );
-                              
-                              return (
-                                <tr key={transaction._id} className="border-b">
-                                  <td className="p-4">{transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`}</td>
-                                  <td className="p-4">{displayUser}</td>
-                                  <td className="p-4">{transaction.type === 'credit' ? 'Add' : transaction.type === 'debit' ? 'Deduct' : 
-                                   transaction.type === 'refund' ? 'Refund' : 
-                                   transaction.type}</td>
-                                  <td className="p-4">
-                                    <span className={
-                                      transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
-                                        ? "text-green-600" 
-                                        : "text-red-600"
-                                    }>
-                                      {transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund'
-                                        ? '+' 
-                                        : '-'
-                                      }{transaction.amount}
-                                      {transaction.description ? (
-                                        // Handle different transaction description formats
-                                        transaction.description.includes('2dish') ? '/2dish' :
-                                        transaction.description.includes('3dish') ? '/3dish' :
-                                        transaction.description.includes('6weekly') ? '/6weekly' :
-                                        transaction.description.includes('8weekly') ? '/8weekly' :
-                                        transaction.description.includes('10weekly') ? '/10weekly' :
-                                        transaction.description.includes('12weekly') ? '/12weekly' :
-                                        transaction.description.includes('twoDishVoucher') ? '/2dish' :
-                                        transaction.description.includes('threeDishVoucher') ? '/3dish' :
-                                        transaction.description.includes('weeklySIXmeals') ? '/6weekly' :
-                                        transaction.description.includes('weeklyEIGHTmeals') ? '/8weekly' :
-                                        transaction.description.includes('weeklyTENmeals') ? '/10weekly' :
-                                        transaction.description.includes('weeklyTWELVEmeals') ? '/12weekly' :
-                                        ''
-                                      ) : ''}
-                                    </span>
-                                  </td>
-                                  <td className="p-4">{new Date(transaction.createdAt).toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                  })}</td>
-                                </tr>
-                              );
-                            })
-                          ) : (
-                            <tr>
-                              <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                                No transactions found
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Mobile Card View */}
-                    <div className="md:hidden grid grid-cols-1 gap-3">
-                      {transactionsLoading ? (
-                        <Card className="p-8">
-                          <div className="flex justify-center">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                          </div>
-                        </Card>
-                      ) : transactions.length > 0 ? (
-                        transactions.map((transaction) => {
-                          // Find user for this transaction
-                          const userForTransaction = users.find(u => u._id === transaction.userId);
-                          
-                          const displayUser = usersLoading ? (
-                            <span className="text-muted-foreground text-xs">Loading...</span>
-                          ) : userForTransaction ? (
-                            <span className="text-sm font-medium">{userForTransaction.name || userForTransaction.userID}</span>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">
-                              {transaction.userId?.toString().substring(0, 8)}...
-                            </span>
-                          );
-
-                          const transactionType = transaction.type === 'credit' ? 'Add' : transaction.type === 'debit' ? 'Deduct' : 
-                            transaction.type === 'refund' ? 'Refund' : transaction.type;
-                          
-                          const isPositive = transaction.type === 'Add' || transaction.type === 'credit' || transaction.type === 'refund';
-                          
-                          const voucherType = transaction.description ? (
-                            transaction.description.includes('2dish') || transaction.description.includes('twoDishVoucher') ? '2-Dish' :
-                            transaction.description.includes('3dish') || transaction.description.includes('threeDishVoucher') ? '3-Dish' :
-                            transaction.description.includes('6weekly') || transaction.description.includes('weeklySIXmeals') ? '6-Meal' :
-                            transaction.description.includes('8weekly') || transaction.description.includes('weeklyEIGHTmeals') ? '8-Meal' :
-                            transaction.description.includes('10weekly') || transaction.description.includes('weeklyTENmeals') ? '10-Meal' :
-                            transaction.description.includes('12weekly') || transaction.description.includes('weeklyTWELVEmeals') ? '12-Meal' :
-                            ''
-                          ) : '';
-                          
-                          return (
-                            <Card key={transaction._id} className={`border-l-4 ${isPositive ? 'border-green-500' : 'border-red-500'}`}>
-                              <CardHeader className="pb-2 pt-3 px-3">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <CardTitle className="text-sm font-semibold truncate">
-                                      {displayUser}
-                                    </CardTitle>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                      {transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`}
-                                    </p>
-                                  </div>
-                                  <Badge variant={isPositive ? "default" : "destructive"} className="text-xs">
-                                    {transactionType}
-                                  </Badge>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="space-y-2 pb-3 px-3">
-                                {/* Amount */}
-                                <div className="flex items-center justify-between py-2 border-y">
-                                  <span className="text-xs text-muted-foreground">Amount</span>
-                                  <span className={`text-lg font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                                    {isPositive ? '+' : '-'}{transaction.amount}
-                                    {voucherType && <span className="text-xs ml-1">({voucherType})</span>}
-                                  </span>
-                                </div>
-
-                                {/* Date */}
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-muted-foreground">Date</span>
-                                  <span>{new Date(transaction.createdAt).toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'short', 
-                                    day: 'numeric' 
-                                  })}</span>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })
-                      ) : (
-                        <Card className="p-8">
-                          <p className="text-center text-muted-foreground">
-                            No transactions found
-                          </p>
-                        </Card>
-                      )}
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-4">
-                      <div className="flex items-center justify-center sm:justify-start space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleTransactionPagination('prev')}
-                          disabled={transactionsPagination.page === 1 || transactionsLoading}
-                          className="flex-1 sm:flex-none"
-                        >
-                          Previous
-                        </Button>
-                        <div className="text-sm text-muted-foreground whitespace-nowrap">
-                          Page {transactionsPagination.page} of {transactionsPagination.pages}
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleTransactionPagination('next')}
-                          disabled={transactionsPagination.page === transactionsPagination.pages || transactionsLoading}
-                          className="flex-1 sm:flex-none"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                      
-                      <div className="flex items-center justify-center sm:justify-end space-x-2">
-                        <span className="text-sm text-muted-foreground">Rows per page:</span>
-                        <Select
-                          value={transactionsPagination.limit.toString()}
-                          onValueChange={(value) => {
-                            changeTransactionsPageSize(parseInt(value, 10));
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-[80px]">
-                            <SelectValue placeholder={transactionsPagination.limit.toString()} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="25">25</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardFooter>
-                </Card>
+                <AdminCreditsTab
+                  users={users}
+                  usersLoading={usersLoading}
+                  searchResults={searchResults}
+                  searchLoading={searchLoading}
+                  selectedUser={selectedUser}
+                  setSelectedUser={setSelectedUser}
+                  serviceType={serviceType}
+                  setServiceType={setServiceType}
+                  voucherType={voucherType}
+                  setVoucherType={setVoucherType}
+                  creditAmount={creditAmount}
+                  setCreditAmount={setCreditAmount}
+                  isUpdatingBalance={isUpdatingBalance}
+                  transactions={transactions}
+                  transactionsLoading={transactionsLoading}
+                  transactionsPagination={transactionsPagination}
+                  searchUsers={searchUsers}
+                  onAddBalance={() => handleVoucherBalanceUpdate("add")}
+                  onDeductBalance={() => handleVoucherBalanceUpdate("deduct")}
+                  onTransactionPagination={handleTransactionPagination}
+                  onChangeTransactionsPageSize={changeTransactionsPageSize}
+                />
               </motion.div>
             )}
 
@@ -1512,455 +893,22 @@ export default function AdminDashboardPage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Weekly Purchase Requests</h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2 flex-1 sm:flex-none">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 gap-1"
-                          >
-                            <CalendarDays className="h-4 w-4" />
-                            {creditRequestsDateRange.startDate ? (
-                              creditRequestsDateRange.endDate ? (
-                                <>
-                                  {format(creditRequestsDateRange.startDate, 'MMM d')} - {format(creditRequestsDateRange.endDate, 'MMM d')}
-                                </>
-                              ) : (
-                                format(creditRequestsDateRange.startDate, 'MMM d')
-                              )
-                            ) : (
-                              "Date Range"
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                          <Calendar
-                            mode="range"
-                            selected={{
-                              from: creditRequestsDateRange.startDate,
-                              to: creditRequestsDateRange.endDate,
-                            }}
-                            onSelect={(range?: { from?: Date; to?: Date }) => {
-                              applyCreditRequestsDateRange({
-                                startDate: range?.from,
-                                endDate: range?.to,
-                              })
-                            }}
-                            numberOfMonths={2}
-                            className="rounded-md border"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          clearCreditRequestsDateRange()
-                        }}
-                        className="h-9 flex-1 sm:flex-none"
-                        disabled={!creditRequestsDateRange.startDate && !creditRequestsDateRange.endDate}
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        void exportCreditRequestsToCSV()
-                      }}
-                      className="h-9 gap-1 flex-1 sm:flex-none"
-                      disabled={isExportingCreditRequests || creditRequests.length === 0}
-                    >
-                      {isExportingCreditRequests ? (
-                        <>
-                          <Loader2 className="h-4 w-4 sm:mr-1 animate-spin" />
-                          <span className="hidden sm:inline">Exporting...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FileSpreadsheet className="h-4 w-4 sm:mr-1" />
-                          <span className="hidden sm:inline">Export to CSV</span>
-                          <span className="sm:hidden">Export</span>
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={refreshCreditRequests}
-                      className="h-9 gap-1 flex-1 sm:flex-none"
-                    >
-                      <RefreshCcw className={cn("h-4 w-4", creditRequestsLoading && "animate-spin")} />
-                      <span className="hidden sm:inline">{creditRequestsLoading ? "Refreshing..." : "Refresh"}</span>
-                    </Button>
-                  </div>
-                </div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Credit Purchase Requests</CardTitle>
-                    <CardDescription>Review and process credit purchase requests from users</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block rounded-md border">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-4 font-medium">Request ID</th>
-                            <th className="text-left p-4 font-medium">User</th>
-                            <th className="text-left p-4 font-medium">Plan</th>
-                            <th className="text-left p-4 font-medium">Amount</th>
-                            <th className="text-left p-4 font-medium hidden">Reference</th>
-                            <th className="text-left p-4 font-medium">Date</th>
-                            <th className="text-left p-4 font-medium">Status</th>
-                            <th className="text-center p-4 font-medium">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {creditRequestsLoading ? (
-                            <tr>
-                              <td colSpan={7} className="p-8 text-center">
-                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                              </td>
-                            </tr>
-                          ) : creditRequests.length > 0 ? (
-                            creditRequests.map((request) => {
-                              const userName = getCreditRequestUserInfo(request).name;
-                              
-                              // Format status badge
-                              let statusBadge;
-                              switch(request.status) {
-                                case 'pending':
-                                  statusBadge = (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                      Pending
-                                    </span>
-                                  );
-                                  break;
-                                case 'approved':
-                                  statusBadge = (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                      Approved
-                                    </span>
-                                  );
-                                  break;
-                                case 'declined':
-                                  statusBadge = (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                      Declined
-                                    </span>
-                                  );
-                                  break;
-                                default:
-                                  statusBadge = (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                      {request.status}
-                                    </span>
-                                  );
-                              }
-                              
-                              return (
-                                <tr key={request._id} className="border-b">
-                                  <td className="p-4">{request.requestId}</td>
-                                  <td className="p-4">{userName}</td>
-                                  <td className="p-4">
-                                    {request.planDescription ? (
-                                      <div className="font-medium">{request.planDescription}</div>
-                                    ) : (
-                                      <div className="text-xs text-muted-foreground">No plan details</div>
-                                    )}
-                                  </td>
-                                  <td className="p-4">
-                                    <div>${getCreditRequestAmount(request).toFixed(2)}</div>
-                                    <div className="text-xs text-muted-foreground">Amount paid via e-Transfer</div>
-                                    {request.promoCode && (
-                                      <div className="text-xs text-green-700 font-medium mt-1">
-                                        Promo: {request.promoCode} (-${(request.promoDiscountAmount || 0).toFixed(2)})
-                                      </div>
-                                    )}
-                                    {request.referenceNumber && (
-                                      <div className="text-xs text-blue-600 font-medium mt-1">
-                                        INTERAC Email: {request.referenceNumber}
-                                      </div>
-                                    )}
-                                    {request.status === 'approved' && (
-                                      <div className="text-xs text-green-600 font-medium mt-1">
-                                        Plan approved
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="p-4 hidden">
-                                    {request.referenceNumber ? (
-                                      <div className="font-medium">{request.referenceNumber}</div>
-                                    ) : (
-                                      <div className="text-xs text-muted-foreground">No INTERAC email</div>
-                                    )}
-                                  </td>
-                                  <td className="p-4">{new Date(request.createdAt).toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'short', 
-                                    day: 'numeric' 
-                                  })}</td>
-                                  <td className="p-4">{statusBadge}</td>
-                                  <td className="p-4">
-                                    <div className="flex justify-center gap-1">
-                                      <Button variant="outline" size="sm" onClick={() => handleViewRequest(request)}>
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                      
-                                      {request.status === 'pending' && (
-                                        <>
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            className="text-green-600 border-green-200 hover:bg-green-50"
-                                            onClick={() => handleApproveRequest(request)}
-                                          >
-                                            <Check className="h-4 w-4" />
-                                          </Button>
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            className="text-red-600 border-red-200 hover:bg-red-50"
-                                            onClick={() => handleDeclineRequest(request)}
-                                          >
-                                            <X className="h-4 w-4" />
-                                          </Button>
-                                        </>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          ) : (
-                            <tr>
-                              <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                                No credit purchase requests found
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                    
-                    {/* Mobile Card View */}
-                    <div className="md:hidden space-y-3">
-                      {creditRequestsLoading ? (
-                        <div className="flex justify-center items-center py-12">
-                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        </div>
-                      ) : creditRequests.length > 0 ? (
-                        creditRequests.map((request) => {
-                          const userInfo = getCreditRequestUserInfo(request);
-                          const userName = userInfo.name;
-                          const userEmail = userInfo.email;
-                          
-                          let statusColor = 'bg-gray-100 text-gray-800';
-                          let statusBorderColor = 'border-gray-200';
-                          let statusText: string = request.status;
-                          
-                          switch(request.status) {
-                            case 'pending':
-                              statusColor = 'bg-yellow-50 text-yellow-800 border-yellow-200';
-                              statusBorderColor = 'border-yellow-200';
-                              statusText = 'Pending';
-                              break;
-                            case 'approved':
-                              statusColor = 'bg-green-50 text-green-800 border-green-200';
-                              statusBorderColor = 'border-green-200';
-                              statusText = 'Approved';
-                              break;
-                            case 'declined':
-                              statusColor = 'bg-red-50 text-red-800 border-red-200';
-                              statusBorderColor = 'border-red-200';
-                              statusText = 'Declined';
-                              break;
-                          }
-                          
-                          return (
-                            <Card key={request._id} className={`overflow-hidden border-l-4 ${statusBorderColor} shadow-sm hover:shadow-md transition-shadow`}>
-                              <CardHeader className="pb-3 bg-muted/30">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <CardTitle className="text-base font-semibold truncate">{userName}</CardTitle>
-                                    {userEmail && (
-                                      <p className="text-xs text-muted-foreground truncate mt-0.5">{userEmail}</p>
-                                    )}
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      <span className="font-medium">ID:</span> {request.requestId}
-                                    </p>
-                                  </div>
-                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
-                                    {statusText}
-                                  </span>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="pb-3 pt-4 space-y-3">
-                                {/* Amount - Most Important */}
-                                <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-xs text-muted-foreground mb-0.5">Payment Amount</p>
-                                      <p className="text-2xl font-bold text-primary">${getCreditRequestAmount(request).toFixed(2)}</p>
-                                      <p className="text-xs text-muted-foreground mt-0.5">via e-Transfer</p>
-                                    </div>
-                                    <DollarSign className="h-8 w-8 text-primary/30" />
-                                  </div>
-                                </div>
-                                
-                                {/* Plan Details */}
-                                <div className="bg-muted/50 p-3 rounded-lg">
-                                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                                    <Package className="h-3 w-3" />
-                                    Plan Details
-                                  </p>
-                                  <p className="font-medium text-sm">
-                                    {request.planDescription || 'No plan details'}
-                                  </p>
-                                  {request.status === 'approved' && (
-                                    <div className="flex items-center gap-1 mt-2">
-                                      <CheckCircle className="h-3 w-3 text-green-600" />
-                                      <span className="text-xs text-green-600 font-medium">Plan approved</span>
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {/* Reference & Date */}
-                                <div className="space-y-2">
-                                  {request.referenceNumber && (
-                                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
-                                      <div className="flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full flex-shrink-0">
-                                        <span className="text-blue-600 text-xs font-bold">#</span>
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-blue-600 font-medium truncate">{request.referenceNumber}</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30">
-                                    <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                    <p className="text-xs font-medium">
-                                      {new Date(request.createdAt).toLocaleDateString('en-US', { 
-                                        month: 'short', 
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                              <CardFooter className="pt-0 pb-3 flex flex-col gap-2">
-                                {request.status === 'pending' ? (
-                                  <>
-                                    <div className="flex gap-2 w-full">
-                                      <Button 
-                                        variant="default" 
-                                        size="sm" 
-                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                                        onClick={() => handleApproveRequest(request)}
-                                      >
-                                        <Check className="h-4 w-4 mr-1" />
-                                        Approve
-                                      </Button>
-                                      <Button 
-                                        variant="destructive" 
-                                        size="sm" 
-                                        className="flex-1 shadow-sm"
-                                        onClick={() => handleDeclineRequest(request)}
-                                      >
-                                        <X className="h-4 w-4 mr-1" />
-                                        Decline
-                                      </Button>
-                                    </div>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      onClick={() => handleViewRequest(request)}
-                                      className="w-full"
-                                    >
-                                      <Eye className="h-4 w-4 mr-1" />
-                                      View Details
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => handleViewRequest(request)}
-                                    className="w-full"
-                                  >
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    View Details
-                                  </Button>
-                                )}
-                              </CardFooter>
-                            </Card>
-                          );
-                        })
-                      ) : (
-                        <div className="flex flex-col justify-center items-center py-12 text-center">
-                          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-3">
-                            <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                          <p className="text-muted-foreground font-medium">No credit purchase requests found</p>
-                          <p className="text-xs text-muted-foreground mt-1">Requests will appear here when submitted</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleCreditRequestPagination('prev')}
-                          disabled={creditRequestsPagination.page === 1 || creditRequestsLoading}
-                        >
-                          Previous
-                        </Button>
-                        <div className="text-sm text-muted-foreground whitespace-nowrap">
-                          Page {creditRequestsPagination.page} of {creditRequestsPagination.pages}
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleCreditRequestPagination('next')}
-                          disabled={creditRequestsPagination.page === creditRequestsPagination.pages || creditRequestsLoading}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
-                        <Select
-                          value={creditRequestsPagination.limit.toString()}
-                          onValueChange={(value) => {
-                            changeCreditRequestsPageSize(parseInt(value, 10))
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-[80px]">
-                            <SelectValue placeholder={creditRequestsPagination.limit.toString()} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="5">5</SelectItem>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="25">25</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardFooter>
-                </Card>
+                <AdminCreditRequestsTab
+                  creditRequestsLoading={creditRequestsLoading}
+                  creditRequests={creditRequests}
+                  creditRequestsPagination={creditRequestsPagination}
+                  isExportingCreditRequests={isExportingCreditRequests}
+                  creditRequestsDateRange={creditRequestsDateRange}
+                  onApplyDateRange={applyCreditRequestsDateRange}
+                  onClearDateRange={clearCreditRequestsDateRange}
+                  onExport={exportCreditRequestsToCSV}
+                  onRefresh={refreshCreditRequests}
+                  onViewRequest={handleViewRequest}
+                  onApproveRequest={handleApproveRequest}
+                  onDeclineRequest={handleDeclineRequest}
+                  onPaginate={handleCreditRequestPagination}
+                  onChangePageSize={changeCreditRequestsPageSize}
+                />
               </motion.div>
             )}
 
