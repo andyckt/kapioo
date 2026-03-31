@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, History, LogOut, Settings, ShoppingCart, User, Calendar, Users, Gift, CheckCircle2, Menu, X, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info, Check, ChevronsUpDown, Search, ChevronDown, Ticket, CalendarCheck, UtensilsCrossed, Truck, Clock, Star } from "lucide-react"
+import { CreditCard, History, Settings, ShoppingCart, Calendar, Users, Gift, CheckCircle2, Sparkles, Loader2, Gem, Leaf, Shield, Zap, Heart, Flame, Apple, ChefHat, ArrowRight, Upload, Info, Check, ChevronsUpDown, Search, ChevronDown, Ticket, CalendarCheck, UtensilsCrossed, Truck, Clock, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,8 +20,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { UserNav } from "@/components/user-nav"
-import { MainNav } from "@/components/main-nav"
 import { useToast } from "@/hooks/use-toast"
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 // import { SupportChat } from "@/components/support-chat"
@@ -39,8 +37,8 @@ import {
   type DashboardUserData,
 } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
-import { LanguageSwitcher } from "@/components/language-switcher"
-import Image from "next/image"
+import { DashboardShell, getDashboardMenuItems } from "@/features/dashboard-shell"
+import { DashboardOverviewTab } from "@/features/dashboard-overview"
 // Dynamically import components that might use client-side libraries like heic2any
 const DailyDelivery = dynamic(() => import("@/components/daily-delivery"), { ssr: false })
 const WeeklySubscription = dynamic(() => import("@/components/weekly-subscription"), { ssr: false })
@@ -52,7 +50,6 @@ const UnifiedRechargeHistory = dynamic(() => import("@/components/unified-rechar
 const CreditPurchasePlans = dynamic(() => import("@/components/credit-purchase-plans").then(mod => ({ default: mod.CreditPurchasePlans })), { ssr: false })
 const CreditPurchaseHistory = dynamic(() => import("@/components/credit-purchase-history").then(mod => ({ default: mod.CreditPurchaseHistory })), { ssr: false })
 import { OrderSectionNavigation } from "@/components/order-section-navigation"
-import { ServiceSelectionCards } from "@/components/service-selection-cards"
 
 // Valid delivery areas - using centralized constants
 const VALID_DELIVERY_AREAS = ALL_WEEKLY_AREAS;
@@ -65,6 +62,10 @@ function formatDashboardHeaderDate(language: "en" | "zh"): string {
     day: "numeric",
     timeZone: "America/Toronto",
   }).format(new Date());
+}
+
+function isValidDeliveryArea(area: string) {
+  return VALID_DELIVERY_AREAS.includes(area as (typeof VALID_DELIVERY_AREAS)[number])
 }
 
 export default function DashboardPage() {
@@ -85,6 +86,20 @@ export default function DashboardPage() {
     })
     router.push("/login")
   }
+
+  const handleMobileLogout = () => {
+    toast({
+      title: "Logging out",
+      description: "Please wait...",
+    })
+
+    setIsMobileMenuOpen(false)
+
+    setTimeout(() => {
+      void handleLogout()
+    }, 800)
+  }
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [userData, setUserData] = useState<DashboardUserData | null>(null)
   const [userLoading, setUserLoading] = useState(true)
@@ -444,31 +459,15 @@ export default function DashboardPage() {
     refreshOrderStats,
   }), [cutoffTime, refreshOrderStats, refreshUserProfile, totalOrders, upcomingDeliveries, userData]);
 
-  const menuItems = [
-    { id: "overview", label: t('overview'), icon: <User className="h-4 w-4" /> },
-    { id: "orders", label: t('myOrders'), icon: <History className="h-4 w-4" /> },
-    { 
-      id: "weekly-subscription-group", 
-      label: language === 'zh' ? "周次Meal Box" : "Weekly Meal Box", 
-      icon: <Gift className="h-4 w-4" />,
-      isHeading: true,
-      children: [
-        { id: "weekly-subscription", label: language === 'zh' ? "订餐" : "Start Ordering", icon: <ShoppingCart className="h-4 w-4" /> },
-        { id: "credits", label: language === 'zh' ? "充值" : "Recharge", icon: <CreditCard className="h-4 w-4" /> }
-      ]
-    },
-    { 
-      id: "daily-delivery-group", 
-      label: language === 'zh' ? "每日直送" : "Daily Delivery", 
-      icon: <Calendar className="h-4 w-4" />,
-      isHeading: true,
-      children: [
-        { id: "daily-delivery", label: language === 'zh' ? "订餐" : "Start Ordering", icon: <ShoppingCart className="h-4 w-4" /> },
-        { id: "meal-vouchers", label: language === 'zh' ? "充值" : "Recharge", icon: <CreditCard className="h-4 w-4" /> }
-      ]
-    },
-    { id: "settings", label: t('settings'), icon: <Settings className="h-4 w-4" /> },
-  ]
+  const menuItems = useMemo(
+    () =>
+      getDashboardMenuItems(language, {
+        overview: t('overview'),
+        myOrders: t('myOrders'),
+        settings: t('settings'),
+      }),
+    [language, t]
+  )
 
   // Handle personal info form changes
   const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -667,667 +666,28 @@ export default function DashboardPage() {
 
   return (
     <DashboardUserProfileContext.Provider value={userProfileContextValue}>
-      <div className="flex flex-col h-screen overflow-hidden">
-        <header className="bg-background sticky top-0 z-50 w-full border-b flex-shrink-0">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <MainNav />
-          
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <UserNav setActiveTab={setActiveTab} />
-            
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
-      </header>
-      
-      {/* Mobile menu overlay with enhanced transitions and visual indicators */}
-      <AnimatePresence mode="wait">
-        {isMobileMenuOpen && (
-          <motion.div 
-            className="fixed inset-0 z-40 bg-background/90 backdrop-blur-md md:hidden overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            <motion.div 
-              className="absolute top-0 right-0 left-0 h-1 bg-primary"
-              initial={{ scaleX: 0, transformOrigin: "left" }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-            />
-            
-            {/* Close button */}
-            <motion.button
-              className="absolute top-4 right-4 p-2 rounded-full bg-muted/80 backdrop-blur-sm text-foreground hover:bg-muted/90 focus:outline-none focus:ring-2 focus:ring-primary"
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              transition={{ duration: 0.2, delay: 0.1 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              aria-label="Close menu"
-            >
-              <X className="h-5 w-5" />
-            </motion.button>
-            
-            <motion.div 
-              className="container p-6 pt-20"
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <nav className="flex flex-col gap-4">
-                {menuItems.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ 
-                      duration: 0.35, 
-                      delay: 0.05 + index * 0.05, 
-                      ease: [0.25, 1, 0.5, 1]
-                    }}
-                  >
-                    {item.isHeading ? (
-                      <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
-                        <motion.span
-                          initial={{ scale: 1 }}
-                        >
-                          {item.icon}
-                        </motion.span>
-                        {item.label}
-                      </div>
-                    ) : (
-                      <Button
-                        variant={activeTab === item.id ? "default" : "ghost"}
-                        className={`justify-start gap-2 text-base w-full ${
-                          activeTab === item.id 
-                            ? "relative overflow-hidden group bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          setActiveTab(item.id);
-                          // Don't close menu if item has children
-                          if (!item.children || item.children.length === 0) {
-                            // Add a slight delay before closing to show the selection animation
-                            setTimeout(() => setIsMobileMenuOpen(false), 150);
-                          }
-                        }}
-                      >
-                        <motion.span
-                          initial={{ scale: 1 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          {item.icon}
-                        </motion.span>
-                        {item.label}
-                        {activeTab === item.id && (
-                          <div 
-                            className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full transition-opacity duration-200"
-                          />
-                        )}
-                      </Button>
-                    )}
-                    
-                    {/* Render children if they exist */}
-                    {item.children && item.children.length > 0 && (
-                      <div className="pl-6 mt-2 border-l-2 border-muted/50 ml-3">
-                        {item.children.map((child, childIndex) => (
-                          <motion.div
-                            key={child.id}
-                            initial={{ opacity: 0, x: -8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ 
-                              duration: 0.25, 
-                              delay: 0.05 + (index + 1) * 0.05 + childIndex * 0.05, 
-                              ease: [0.25, 1, 0.5, 1]
-                            }}
-                          >
-                            <Button
-                              variant={activeTab === child.id ? "default" : "ghost"}
-                              className={`justify-start gap-2 text-sm w-full mt-1 ${
-                                activeTab === child.id 
-                                  ? "relative overflow-hidden group bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white"
-                                  : ""
-                              }`}
-                              onClick={() => {
-                                setActiveTab(child.id);
-                                // Add a slight delay before closing to show the selection animation
-                                setTimeout(() => setIsMobileMenuOpen(false), 150);
-                              }}
-                            >
-                              <motion.span
-                                initial={{ scale: 1 }}
-                                whileTap={{ scale: 0.9 }}
-                              >
-                                {child.icon}
-                              </motion.span>
-                              {child.label}
-                              {activeTab === child.id && (
-                                <div 
-                                  className="absolute bottom-0 left-0 h-0.5 bg-white/30 w-full transition-opacity duration-200"
-                                />
-                              )}
-                            </Button>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-                <motion.div
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ 
-                    duration: 0.35, 
-                    delay: 0.05 + menuItems.length * 0.05, 
-                    ease: [0.25, 1, 0.5, 1]
-                  }}
-                >
-                  <Button
-                    variant="ghost"
-                    className="justify-start gap-2 text-base text-destructive w-full"
-                    onClick={() => {
-                      // Create a simple loading animation before logging out
-                      toast({
-                        title: "Logging out",
-                        description: "Please wait...",
-                      });
-                      
-                      // Close menu first with animation
-                      setIsMobileMenuOpen(false);
-                      
-                      // Then proceed with logout after a short delay
-                      setTimeout(() => {
-                        void handleLogout();
-                      }, 800);
-                    }}
-                  >
-                    <motion.span
-                      initial={{ scale: 1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </motion.span>
-                    {t('logOut')}
-                  </Button>
-                </motion.div>
-              </nav>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative z-10">
-        {/* Brand icon background elements */}
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-          {/* Large semi-transparent brand icon in bottom right */}
-          <div className="absolute -bottom-10 -right-10 w-[320px] h-[320px] sm:w-[450px] sm:h-[450px] md:w-[550px] md:h-[550px] opacity-[0.025]">
-            <Image 
-              src="/未命名設計.png" 
-              alt="Kapioo Logo Background" 
-              fill
-              className="object-contain"
-              priority={false}
-            />
-          </div>
-          
-          {/* Smaller brand icon in top left */}
-          <div className="absolute -top-5 -left-5 w-[230px] h-[230px] sm:w-[280px] sm:h-[280px] md:w-[320px] md:h-[320px] opacity-[0.02] rotate-12">
-            <Image 
-              src="/未命名設計.png" 
-              alt="Kapioo Logo Background" 
-              fill
-              className="object-contain"
-              priority={false}
-            />
-          </div>
-          
-          {/* Subtle pattern overlay */}
-          <div 
-            className="absolute inset-0 opacity-[0.01] sm:opacity-[0.015]"
-            style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, #C2884E 1px, transparent 0)`,
-              backgroundSize: "16px 16px",
-            }}
-          ></div>
-        </div>
-        
-        <aside className="w-full md:w-64 border-r bg-background p-4 hidden md:block">
-          <nav className="grid gap-2">
-            {menuItems.map((item) => (
-              <div key={item.id}>
-                {item.isHeading ? (
-                  <div className="px-3 py-2 text-sm font-medium flex items-center gap-2">
-                    {item.icon}
-                    {item.label}
-                  </div>
-                ) : (
-                  <Button
-                    variant={activeTab === item.id ? "default" : "ghost"}
-                    className={`justify-start gap-2 w-full ${
-                      activeTab === item.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
-                    }`}
-                    onClick={() => setActiveTab(item.id)}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Button>
-                )}
-                
-                {/* Render children if they exist */}
-                {item.children && item.children.length > 0 && (
-                  <div className="pl-6 mt-1 border-l-2 border-muted ml-2">
-                    {item.children.map((child) => (
-                      <Button
-                        key={child.id}
-                        variant={activeTab === child.id ? "default" : "ghost"}
-                        className={`justify-start gap-2 w-full text-sm ${
-                          activeTab === child.id ? "bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] text-white" : ""
-                        }`}
-                        onClick={() => setActiveTab(child.id)}
-                      >
-                        {child.icon}
-                        {child.label}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav>
-        </aside>
-        
-        <main className="flex-1 pt-2 md:pt-6 px-4 pb-12 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto max-w-5xl space-y-4">
+      <DashboardShell
+        menuItems={menuItems}
+        activeTab={activeTab}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onActiveTabChange={setActiveTab}
+        onMobileMenuOpenChange={setIsMobileMenuOpen}
+        onLogout={handleLogout}
+        onMobileLogout={handleMobileLogout}
+        mobileLogoutLabel={t('logOut')}
+      >
             <AnimatePresence mode="wait">
               {activeTab === "overview" && (
-                <motion.div
-                  key="overview"
-                  initial={{ y: 10 }}
-                  animate={{ y: 0 }}
-                  exit={{ y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-6"
-                >
-                  <div className="flex flex-col mt-4">
-                    <div className="bg-gradient-to-r from-[#F8F0E5] to-[#FFF6EF] p-6 rounded-3xl shadow-sm border border-[#C2884E]/10">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                        <div className="flex flex-col mb-4 md:mb-0">
-                          <h2 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                            {language === 'en' ? `Welcome, ${userData?.name?.split(' ')[0] || ''}` : `欢迎, ${userData?.name?.split(' ')[0] || ''}`}
-                          </h2>
-                          <p className="text-[#6B5F53] text-sm mt-1">
-                            {dashboardHeaderDate}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <Button 
-                            variant="outline"
-                            className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
-                            onClick={() => setActiveTab("orders")}
-                          >
-                            <History className="h-4 w-4 mr-2" />
-                            {language === 'en' ? 'My Orders' : '我的订单'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* User Summary Cards - Premium Design */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                    {/* Two-Step Flow: No Credits Message OR Service Selection Cards */}
-                    {/* Only show after user data has fully loaded to avoid flicker (auth user may have 0s before API refresh) */}
-                    {userData && !userLoading &&
-                      (userData?.credits || 0) === 0 &&
-                      (userData?.twoDishVoucher || 0) === 0 && 
-                      (userData?.threeDishVoucher || 0) === 0 && 
-                      (userData?.weeklySIXmeals || 0) === 0 && 
-                      ((userData as any)?.weeklyEIGHTmeals || 0) === 0 && 
-                      (userData?.weeklyTENmeals || 0) === 0 && 
-                      ((userData as any)?.weeklyTWELVEmeals || 0) === 0 && 
-                      ((userData as any)?.weeklySIXTEENmeals || 0) === 0 && (
-                      <AnimatePresence mode="wait">
-                        {!showServiceSelection ? (
-                          // Step 1: No Credits Message
-                          <motion.div
-                            key="no-credits"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.4 }}
-                            className="col-span-full"
-                          >
-                            <Card className="overflow-hidden border border-[#C2884E]/20 bg-gradient-to-br from-white to-[#FFF6EF] shadow-lg rounded-3xl">
-                              <CardContent className="p-8 text-center">
-                                <div className="flex flex-col items-center justify-center space-y-6">
-                                  {/* Icon */}
-                                  <div className="h-20 w-20 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-                                    <Ticket className="h-10 w-10 text-[#C2884E]" />
-                                  </div>
-                                  
-                                  {/* Message */}
-                                  <div className="space-y-2">
-                                    <h3 className="text-2xl font-semibold text-[#6B5F53]">
-                                      {language === 'en' 
-                                        ? "You don't have any meal credits right now" 
-                                        : '您目前没有任何餐券'}
-                                    </h3>
-                                    <p className="text-[#6B5F53]/70 text-base max-w-md mx-auto">
-                                      {language === 'en'
-                                        ? 'Please start recharging to enjoy our delicious meals'
-                                        : '请充值以享受我们美味的餐点'}
-                                    </p>
-                                  </div>
-                                  
-                                  {/* CTA Button */}
-                                  <Button 
-                                    size="lg"
-                                    className="bg-[#C2884E] hover:bg-[#B17940] text-white rounded-xl px-8 py-6 text-base font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                                    onClick={() => setShowServiceSelection(true)}
-                                  >
-                                    <CreditCard className="h-5 w-5 mr-2" />
-                                    {language === 'en' ? 'Start Recharging' : '开始充值'}
-                                  </Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-                        ) : (
-                          // Step 2: Service Selection Cards
-                          <motion.div
-                            key="service-selection"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.5 }}
-                            className="col-span-full"
-                          >
-                            <div className="space-y-6">
-                              {/* Title */}
-                              <div className="text-center">
-                                <h3 className="text-2xl font-semibold text-[#6B5F53] mb-2">
-                                  {language === 'en' ? 'Choose Your Service' : '选择您的服务'}
-                                </h3>
-                              </div>
-                              
-                              {/* Service Cards */}
-                              <ServiceSelectionCards 
-                                onSelectDaily={() => setActiveTab("meal-vouchers")}
-                                onSelectWeekly={() => setActiveTab("credits")}
-                              />
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    )}
-                    
-                    {/* Show Daily first if user has both daily and weekly vouchers, otherwise show weekly first if only weekly */}
-                    {/* Daily Delivery Vouchers Card - Show first if user has daily vouchers */}
-                    {userData && ((userData?.twoDishVoucher || 0) > 0 || (userData?.threeDishVoucher || 0) > 0) && (
-                      <div
-                        className=""
-                        style={{ transitionDelay: '0.15s' } as React.CSSProperties}
-                      >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                                <Ticket className="h-4 w-4 text-[#C2884E]" />
-                              </div>
-                              {language === 'en' ? 'Daily Delivery Vouchers' : '每日直送系列'}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '2-Dish Voucher:' : '2菜餐券 剩余：'}</span>
-                                <div className="flex items-center">
-                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.twoDishVoucher || 0}</span>
-                                  <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '3-Dish Voucher:' : '3菜餐券 剩余：'}</span>
-                                <div className="flex items-center">
-                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.threeDishVoucher || 0}</span>
-                                  <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                                  onClick={() => setActiveTab("daily-delivery")}
-                                >
-                                  <ShoppingCart className="h-4 w-4 mr-2" />
-                                  {language === 'en' ? 'Start Ordering' : '去订餐'}
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                                  onClick={() => setActiveTab("meal-vouchers")}
-                                >
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  {language === 'en' ? 'Recharge' : '去充值'}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-                    
-                    {/* Weekly Delivery Vouchers Card - Show only if user has vouchers > 0 */}
-                    {userData && (userData?.weeklySIXmeals > 0 || (userData as any)?.weeklyEIGHTmeals > 0 || 
-                      userData?.weeklyTENmeals > 0 || (userData as any)?.weeklyTWELVEmeals > 0 || 
-                      (userData as any)?.weeklySIXTEENmeals > 0) && (
-                      <div
-                        className=""
-                        style={{ transitionDelay: '0.1s' } as React.CSSProperties}
-                      >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                                <Gem className="h-4 w-4 text-[#C2884E]" />
-                              </div>
-                              {language === 'en' ? 'Weekly Delivery Vouchers' : '周次Meal Box订阅系列'}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="space-y-3">
-                              {/* Display individual meal plan counts - Only show vouchers > 0 */}
-                              <div className="space-y-2">
-                                {userData?.weeklySIXmeals > 0 && (
-                                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                    <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '6 meals/week' : '6餐一周'}:</span>
-                                    <div className="flex items-center">
-                                      <span className="text-xl font-bold text-[#C2884E]">{userData?.weeklySIXmeals}</span>
-                                      <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {(userData as any)?.weeklyEIGHTmeals > 0 && (
-                                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                    <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '8 meals/week' : '8餐一周'}:</span>
-                                    <div className="flex items-center">
-                                      <span className="text-xl font-bold text-[#C2884E]">{(userData as any)?.weeklyEIGHTmeals}</span>
-                                      <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {userData?.weeklyTENmeals > 0 && (
-                                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                    <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '10 meals/week' : '10餐一周'}:</span>
-                                    <div className="flex items-center">
-                                      <span className="text-xl font-bold text-[#C2884E]">{userData?.weeklyTENmeals}</span>
-                                      <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {(userData as any)?.weeklyTWELVEmeals > 0 && (
-                                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                    <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '12 meals/week' : '12餐一周'}:</span>
-                                    <div className="flex items-center">
-                                      <span className="text-xl font-bold text-[#C2884E]">{(userData as any)?.weeklyTWELVEmeals}</span>
-                                      <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {(userData as any)?.weeklySIXTEENmeals > 0 && (
-                                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                    <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '16 meals/week' : '16餐一周'}:</span>
-                                    <div className="flex items-center">
-                                      <span className="text-xl font-bold text-[#C2884E]">{(userData as any)?.weeklySIXTEENmeals}</span>
-                                      <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                                  onClick={() => setActiveTab("weekly-subscription")}
-                                >
-                                  <ShoppingCart className="h-4 w-4 mr-2" />
-                                  {language === 'en' ? 'Start Ordering' : '去订餐'}
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                                  onClick={() => setActiveTab("credits")}
-                                >
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  {language === 'en' ? 'Recharge' : '去充值'}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-                    
-                    {/* Daily Delivery Vouchers Card - Show after weekly if user has 0 daily vouchers but has weekly vouchers */}
-                    {userData && 
-                      ((userData?.twoDishVoucher || 0) === 0 && (userData?.threeDishVoucher || 0) === 0) &&
-                      ((userData?.weeklySIXmeals || 0) > 0 || ((userData as any)?.weeklyEIGHTmeals || 0) > 0 || 
-                       (userData?.weeklyTENmeals || 0) > 0 || ((userData as any)?.weeklyTWELVEmeals || 0) > 0 || 
-                       ((userData as any)?.weeklySIXTEENmeals || 0) > 0) && (
-                      <div
-                        className=""
-                        style={{ transitionDelay: '0.2s' } as React.CSSProperties}
-                      >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                              <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                                <Ticket className="h-4 w-4 text-[#C2884E]" />
-                              </div>
-                              {language === 'en' ? 'Daily Delivery Vouchers' : '每日直送系列'}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '2-Dish Voucher:' : '2菜餐券 剩余：'}</span>
-                                <div className="flex items-center">
-                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.twoDishVoucher || 0}</span>
-                                  <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                                <span className="text-sm font-medium text-[#6B5F53]">{language === 'en' ? '3-Dish Voucher:' : '3菜餐券 剩余：'}</span>
-                                <div className="flex items-center">
-                                  <span className="text-xl font-bold text-[#C2884E]">{userData?.threeDishVoucher || 0}</span>
-                                  <span className="ml-1 text-sm text-[#6B5F53]">{language === 'en' ? '' : '张'}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                                  onClick={() => setActiveTab("daily-delivery")}
-                                >
-                                  <ShoppingCart className="h-4 w-4 mr-2" />
-                                  {language === 'en' ? 'Start Ordering' : '去订餐'}
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                                  onClick={() => setActiveTab("meal-vouchers")}
-                                >
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  {language === 'en' ? 'Recharge' : '去充值'}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-                    
-                    {/* Upcoming Orders Card - Only show if upcomingDeliveries > 0 */}
-                    {upcomingDeliveries > 0 && (
-                      <div
-                        className=""
-                        style={{ transitionDelay: '0.3s' } as React.CSSProperties}
-                      >
-                        <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-                          <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                                <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                                  <ShoppingCart className="h-4 w-4 text-[#C2884E]" />
-                                </div>
-                                {language === 'en' ? 'Upcoming Orders' : '即将到来的订单'}
-                              </CardTitle>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#C2884E]/10">
-                              <span className="text-sm font-medium text-[#6B5F53]">待配送订单：</span>
-                              <div className="flex items-center">
-                                <span className="text-xl font-bold text-[#C2884E]">{upcomingDeliveries}</span>
-                                <span className="ml-1 text-sm text-[#6B5F53]">个</span>
-                              </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                              <Button 
-                                variant="ghost" 
-                                className="w-full text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
-                                onClick={() => setActiveTab("orders")}
-                              >
-                                <History className="h-4 w-4 mr-2" />
-                                查看订单
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
+                <DashboardOverviewTab
+                  language={language}
+                  userData={userData}
+                  userLoading={userLoading}
+                  dashboardHeaderDate={dashboardHeaderDate}
+                  showServiceSelection={showServiceSelection}
+                  upcomingDeliveries={upcomingDeliveries}
+                  onShowServiceSelection={() => setShowServiceSelection(true)}
+                  onTabChange={(tab) => setActiveTab(tab)}
+                />
               )}
 
               {activeTab === "orders" && (
@@ -1856,7 +1216,7 @@ export default function DashboardPage() {
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
                                 <Label htmlFor="state">{t('state')}</Label>
-                                {addressInfo.province && !VALID_DELIVERY_AREAS.includes(addressInfo.province) && (
+                                {addressInfo.province && !isValidDeliveryArea(addressInfo.province) && (
                                   <span className="text-red-500 text-xs">
                                     ({language === 'zh' ? '请选择有效的配送区域' : 'Please select a valid delivery area'})
                                   </span>
@@ -1869,7 +1229,7 @@ export default function DashboardPage() {
                                     role="combobox"
                                     className={cn(
                                       "w-full justify-between",
-                                      addressInfo.province && !VALID_DELIVERY_AREAS.includes(addressInfo.province) && "border-red-500"
+                                      addressInfo.province && !isValidDeliveryArea(addressInfo.province) && "border-red-500"
                                     )}
                                   >
                                     {addressInfo.province || "Select an area..."}
@@ -2044,10 +1404,7 @@ export default function DashboardPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
-        </main>
-      </div>
-    </div>
+      </DashboardShell>
     </DashboardUserProfileContext.Provider>
   )
 }
