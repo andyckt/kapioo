@@ -34,7 +34,7 @@ type WeeklyPlanEntry = {
   count: number
 }
 
-interface DashboardCreditsTabProps {
+export interface DashboardCreditsTabProps {
   language: "en" | "zh"
   userData: DashboardUserData | null
   purchaseHistoryKey: number

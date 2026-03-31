@@ -16,7 +16,7 @@ import { ALL_WEEKLY_AREAS } from "@/lib/constants/areas"
 import type { useLanguage } from "@/lib/language-context"
 import { cn } from "@/lib/utils"
 
-type DashboardPersonalInfo = {
+export type DashboardPersonalInfo = {
   name: string
   nickname: string
   email: string
@@ -24,7 +24,7 @@ type DashboardPersonalInfo = {
   languagePreference: "zh" | "en"
 }
 
-type DashboardAddressInfo = {
+export type DashboardAddressInfo = {
   unitNumber: string
   streetAddress: string
   province: string
@@ -33,13 +33,13 @@ type DashboardAddressInfo = {
   buzzCode: string
 }
 
-type DashboardPasswordInfo = {
+export type DashboardPasswordInfo = {
   currentPassword: string
   newPassword: string
   confirmPassword: string
 }
 
-interface DashboardSettingsTabProps {
+export interface DashboardSettingsTabProps {
   language: "en" | "zh"
   t: ReturnType<typeof useLanguage>["t"]
   userStatus?: string

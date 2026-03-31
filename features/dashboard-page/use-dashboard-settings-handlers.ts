@@ -1,0 +1,254 @@
+"use client"
+
+import type React from "react"
+import { useCallback, type Dispatch, type SetStateAction } from "react"
+
+import type { useToast } from "@/hooks/use-toast"
+import type { useLanguage } from "@/lib/language-context"
+import type { DashboardUserData } from "@/lib/dashboard-user-profile"
+import type {
+  DashboardAddressInfo,
+  DashboardPasswordInfo,
+  DashboardPersonalInfo,
+} from "@/features/dashboard-settings/dashboard-settings-tab"
+
+type TFn = ReturnType<typeof useLanguage>["t"]
+type ToastFn = ReturnType<typeof useToast>["toast"]
+
+interface UseDashboardSettingsHandlersParams {
+  userData: DashboardUserData | null
+  personalInfo: DashboardPersonalInfo
+  addressInfo: DashboardAddressInfo
+  passwordInfo: DashboardPasswordInfo
+  applyUserProfile: (
+    user: Partial<DashboardUserData>,
+    options?: { syncForms?: boolean }
+  ) => void
+  toast: ToastFn
+  t: TFn
+  setPersonalInfo: Dispatch<SetStateAction<DashboardPersonalInfo>>
+  setAddressInfo: Dispatch<SetStateAction<DashboardAddressInfo>>
+  setPasswordInfo: Dispatch<SetStateAction<DashboardPasswordInfo>>
+}
+
+export function useDashboardSettingsHandlers({
+  userData,
+  personalInfo,
+  addressInfo,
+  passwordInfo,
+  applyUserProfile,
+  toast,
+  t,
+  setPersonalInfo,
+  setAddressInfo,
+  setPasswordInfo,
+}: UseDashboardSettingsHandlersParams) {
+  const handlePersonalInfoChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { id, value } = e.target
+      setPersonalInfo((prev) => ({
+        ...prev,
+        [id]: value,
+      }))
+    },
+    [setPersonalInfo]
+  )
+
+  const handleAddressInfoChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { id, value } = e.target
+      setAddressInfo((prev) => ({
+        ...prev,
+        [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+      }))
+    },
+    [setAddressInfo]
+  )
+
+  const handlePasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { id, value } = e.target
+      setPasswordInfo((prev) => ({
+        ...prev,
+        [id === "current-password"
+          ? "currentPassword"
+          : id === "new-password"
+            ? "newPassword"
+            : id === "confirm-password"
+              ? "confirmPassword"
+              : id]: value,
+      }))
+    },
+    [setPasswordInfo]
+  )
+
+  const handleSavePersonalInfo = useCallback(async () => {
+    if (!userData?._id) return
+
+    try {
+      const response = await fetch(`/api/users/${userData._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: personalInfo.name,
+          nickname: personalInfo.nickname,
+          email: personalInfo.email,
+          phone: personalInfo.phone,
+          languagePreference: personalInfo.languagePreference,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        applyUserProfile(result.data as DashboardUserData, { syncForms: true })
+        toast({
+          title: t("changesSaved"),
+          description: t("personalInfoSaved"),
+        })
+      } else {
+        toast({
+          title: t("errorOccurred"),
+          description: result.error || t("personalInfoError"),
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating personal info:", error)
+      toast({
+        title: t("errorOccurred"),
+        description: t("personalInfoError"),
+        variant: "destructive",
+      })
+    }
+  }, [applyUserProfile, personalInfo, t, toast, userData?._id])
+
+  const handleSaveAddressInfo = useCallback(async () => {
+    if (!userData?._id) return
+
+    try {
+      const response = await fetch(`/api/users/${userData._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: {
+            unitNumber: addressInfo.unitNumber,
+            streetAddress: addressInfo.streetAddress,
+            province: addressInfo.province,
+            postalCode: addressInfo.postalCode,
+            country: addressInfo.country,
+            buzzCode: addressInfo.buzzCode,
+          },
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        applyUserProfile(result.data as DashboardUserData, { syncForms: true })
+        toast({
+          title: t("changesSaved"),
+          description: t("addressSaved"),
+        })
+      } else {
+        toast({
+          title: t("errorOccurred"),
+          description: result.error || t("addressError"),
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating address:", error)
+      toast({
+        title: t("errorOccurred"),
+        description: t("addressError"),
+        variant: "destructive",
+      })
+    }
+  }, [addressInfo, applyUserProfile, t, toast, userData?._id])
+
+  const handleSavePassword = useCallback(async () => {
+    if (!userData?._id) return
+
+    if (!passwordInfo.currentPassword) {
+      toast({
+        title: t("errorOccurred"),
+        description: t("passwordRequired"),
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!passwordInfo.newPassword) {
+      toast({
+        title: t("errorOccurred"),
+        description: t("newPasswordRequired"),
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (passwordInfo.newPassword !== passwordInfo.confirmPassword) {
+      toast({
+        title: t("errorOccurred"),
+        description: t("passwordMismatch"),
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users/${userData._id}/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword: passwordInfo.currentPassword,
+          newPassword: passwordInfo.newPassword,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setPasswordInfo({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        })
+
+        toast({
+          title: t("changesSaved"),
+          description: t("passwordChanged"),
+        })
+      } else {
+        toast({
+          title: t("errorOccurred"),
+          description: result.error || t("passwordError"),
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating password:", error)
+      toast({
+        title: t("errorOccurred"),
+        description: t("passwordError"),
+        variant: "destructive",
+      })
+    }
+  }, [passwordInfo, setPasswordInfo, t, toast, userData?._id])
+
+  return {
+    handlePersonalInfoChange,
+    handleAddressInfoChange,
+    handlePasswordChange,
+    handleSavePersonalInfo,
+    handleSaveAddressInfo,
+    handleSavePassword,
+  }
+}

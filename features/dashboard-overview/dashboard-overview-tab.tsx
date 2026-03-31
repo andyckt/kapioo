@@ -15,7 +15,7 @@ type DashboardTabId =
   | "weekly-subscription"
   | "credits"
 
-interface DashboardOverviewTabProps {
+export interface DashboardOverviewTabProps {
   language: "en" | "zh"
   userData: DashboardUserData | null
   userLoading: boolean
