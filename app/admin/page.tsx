@@ -1,18 +1,11 @@
 'use client'
 
 import dynamic from "next/dynamic"
-import { CardFooter } from "@/components/ui/card"
-import { CardContent } from "@/components/ui/card"
-import { CardDescription } from "@/components/ui/card"
-import { CardTitle } from "@/components/ui/card"
-import { CardHeader } from "@/components/ui/card"
-import { Card } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
-import { CreditCard, LogOut, Settings, ShoppingCart, Users, Calendar as CalendarIcon, BarChart, DollarSign, Eye, Truck, Gift, Loader2, Menu, Package, Mail, Tag, Star } from "lucide-react"
+import { AnimatePresence } from "framer-motion"
+import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { performClientLogout } from "@/lib/client-logout"
 import { useClientAuth } from "@/lib/client-auth"
@@ -20,13 +13,6 @@ const AdminDashboardEnhanced = dynamic(
   () => import("@/components/admin-dashboard-enhanced").then((m) => ({ default: m.AdminDashboardEnhanced })),
   { loading: () => <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
 )
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import {
   type User,
 } from "@/lib/utils"
@@ -48,6 +34,7 @@ import {
   CreditRequestDialogs,
   useAdminCreditRequests,
 } from "@/features/admin-credit-requests"
+import { AdminShell, AdminTabPanel, adminSidebarMenuItems } from "@/features/admin-shell"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { NextWeekMenuEmail } from "@/components/next-week-menu-email"
@@ -83,55 +70,6 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("users")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
-  // Define sidebar menu items with groups and submenus
-  const sidebarMenuItems = [
-    // { id: "dashboard", label: "Dashboard", icon: <BarChart className="h-4 w-4" /> },
-    { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
-    { 
-      id: "food-management-group", 
-      label: "Food Management", 
-      icon: <CalendarIcon className="h-4 w-4" />,
-      isHeading: true,
-      children: [
-        { id: "daily-delivery", label: "Daily Delivery", icon: <Truck className="h-4 w-4" /> },
-        { id: "weekly-subscription", label: "Weekly Delivery", icon: <Gift className="h-4 w-4" /> },
-        { id: "next-week-menu-email", label: "Next Week Menu Update Email", icon: <Mail className="h-4 w-4" /> }
-      ]
-    },
-    { 
-      id: "credit-request-group", 
-      label: "Credit Request", 
-      icon: <CreditCard className="h-4 w-4" />,
-      isHeading: true,
-      children: [
-        { id: "credit-requests", label: "Weekly Request", icon: <DollarSign className="h-4 w-4" /> },
-        { id: "promo-codes", label: "Promo Codes", icon: <Tag className="h-4 w-4" /> },
-        { id: "meal-vouchers", label: "2Dish 3Dish Voucher", icon: <CreditCard className="h-4 w-4" /> },
-        { id: "credits", label: "Manual +/- credit", icon: <CreditCard className="h-4 w-4" /> }
-      ]
-    },
-    { 
-      id: "orders-group", 
-      label: "Orders", 
-      icon: <ShoppingCart className="h-4 w-4" />,
-      isHeading: true,
-      children: [
-        { id: "view-all-orders", label: "View Daily Delivery Orders", icon: <Eye className="h-4 w-4" /> },
-        { id: "view-weekly-orders", label: "View Weekly Orders", icon: <CalendarIcon className="h-4 w-4" /> }
-      ]
-    },
-    { 
-      id: "meal-ratings-group", 
-      label: "Meal Ratings", 
-      icon: <Star className="h-4 w-4" />,
-      isHeading: true,
-      children: [
-        { id: "meal-feedback", label: "Feedback", icon: <Star className="h-4 w-4" /> },
-        { id: "rating-dishes", label: "Rating Setup", icon: <Package className="h-4 w-4" /> }
-      ]
-    },
-    { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
-  ]
   const [addCreditsOpen, setAddCreditsOpen] = useState(false)
   const [viewUserOpen, setViewUserOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -196,7 +134,6 @@ export default function AdminDashboardPage() {
     viewRequestOpen,
     setViewRequestOpen,
     selectedRequest,
-    setSelectedRequest,
     approveRequestOpen,
     setApproveRequestOpen,
     declineRequestOpen,
@@ -533,168 +470,33 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const handleLogout = async () => {
+    await performClientLogout()
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    })
+    router.push("/login")
+  }
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="container flex h-16 items-center justify-between py-4">
-          <div className="flex items-center gap-2">
-            {/* Mobile Menu Trigger */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[min(320px,90vw)] flex flex-col overflow-hidden">
-                <SheetHeader className="flex-shrink-0">
-                  <SheetTitle className="flex items-center space-x-2">
-                    <ShoppingCart className="h-6 w-6" />
-                    <span>Kapioo Admin</span>
-                  </SheetTitle>
-                </SheetHeader>
-                <nav className="mt-6 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 [-webkit-overflow-scrolling:touch]">
-                  {sidebarMenuItems.map((item) => (
-                    <div key={item.id}>
-                      {item.isHeading ? (
-                        <div className="px-3 py-2 text-sm font-medium flex items-center gap-2 min-w-0">
-                          {item.icon}
-                          <span className="ml-2 min-w-0 flex-1 break-words text-left">{item.label}</span>
-                        </div>
-                      ) : (
-                        <Button
-                          variant={activeTab === item.id ? "default" : "ghost"}
-                          className="justify-start w-full whitespace-normal text-left min-w-0"
-                          onClick={() => {
-                            setActiveTab(item.id)
-                            setMobileMenuOpen(false)
-                          }}
-                        >
-                          {item.icon}
-                          <span className="ml-2 min-w-0 flex-1 break-words">{item.label}</span>
-                        </Button>
-                      )}
-                      
-                      {/* Render children if they exist */}
-                      {item.children && item.children.length > 0 && (
-                        <div className="pl-6 mt-1 border-l-2 border-muted ml-2 min-w-0">
-                          {item.children.map((child) => (
-                            <Button
-                              key={child.id}
-                              variant={activeTab === child.id ? "default" : "ghost"}
-                              className="justify-start w-full text-sm whitespace-normal text-left min-w-0"
-                              onClick={() => {
-                                setActiveTab(child.id)
-                                setMobileMenuOpen(false)
-                              }}
-                            >
-                              {child.icon}
-                              <span className="ml-2 min-w-0 flex-1 break-words">{child.label}</span>
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </nav>
-              </SheetContent>
-            </Sheet>
-            
-            <ShoppingCart className="h-6 w-6" />
-            <span className="font-bold text-xl">Kapioo Admin</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              className="text-red-500 hover:text-red-600 hover:bg-red-100"
-              onClick={async () => {
-                await performClientLogout()
-                toast({
-                  title: "Logged out",
-                  description: "You have been logged out successfully",
-                })
-                router.push("/login")
-              }}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-      <div className="container grid flex-1 gap-12 md:grid-cols-[240px_1fr] pt-6">
-        <aside className="hidden w-[240px] flex-col md:flex">
-          <motion.nav
-            className="grid items-start gap-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {sidebarMenuItems.map((item) => (
-              <div key={item.id}>
-                {item.isHeading ? (
-                  <div className="px-3 py-2 text-xs font-medium flex items-center gap-2">
-                    {item.icon}
-                    <span className="ml-2">{item.label}</span>
-                  </div>
-                ) : (
-                  <Button
-                    variant={activeTab === item.id ? "default" : "ghost"}
-                    className="justify-start w-full h-auto py-2 px-3"
-                    onClick={() => setActiveTab(item.id)}
-                  >
-                    <div className="flex items-center gap-2 w-full">
-                      {item.icon}
-                      <span className="text-xs leading-tight text-left flex-1">{item.label}</span>
-                    </div>
-                  </Button>
-                )}
-                
-                {/* Render children if they exist */}
-                {item.children && item.children.length > 0 && (
-                  <div className="pl-4 mt-1 border-l-2 border-muted ml-2 space-y-1">
-                    {item.children.map((child) => (
-                      <Button
-                        key={child.id}
-                        variant={activeTab === child.id ? "default" : "ghost"}
-                        className="justify-start w-full h-auto py-2 px-2 text-xs"
-                        onClick={() => setActiveTab(child.id)}
-                      >
-                        <div className="flex items-center gap-2 w-full">
-                          {child.icon}
-                          <span className="text-xs leading-tight text-left flex-1">{child.label}</span>
-                        </div>
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </motion.nav>
-        </aside>
-        <main className="flex w-full flex-1 flex-col overflow-hidden">
+    <AdminShell
+      sidebarMenuItems={adminSidebarMenuItems}
+      activeTab={activeTab}
+      mobileMenuOpen={mobileMenuOpen}
+      onMobileMenuOpenChange={setMobileMenuOpen}
+      onTabChange={setActiveTab}
+      onLogout={handleLogout}
+    >
           <AnimatePresence mode="wait">
             {activeTab === "dashboard" && (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AdminTabPanel panelKey="dashboard">
                 <AdminDashboardEnhanced />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "users" && (
-              <motion.div
-                key="users"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
+              <AdminTabPanel panelKey="users" className="space-y-6">
                 <AdminUsersTab
                   users={users}
                   usersLoading={usersLoading}
@@ -731,57 +533,29 @@ export default function AdminDashboardPage() {
                     void fetchUsers(1, newLimit)
                   }}
                 />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "daily-delivery" && (
-              <motion.div
-                key="daily-delivery"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
+              <AdminTabPanel panelKey="daily-delivery" className="space-y-6">
                 <DailyDeliveryManagement />
-              </motion.div>
+              </AdminTabPanel>
             )}
-            
+
             {activeTab === "weekly-subscription" && (
-              <motion.div
-                key="weekly-subscription"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
+              <AdminTabPanel panelKey="weekly-subscription" className="space-y-6">
                 <WeeklySubscriptionManagement />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "next-week-menu-email" && (
-              <motion.div
-                key="next-week-menu-email"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
+              <AdminTabPanel panelKey="next-week-menu-email" className="space-y-6">
                 <NextWeekMenuEmail />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "credits" && (
-              <motion.div
-                key="credits"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
+              <AdminTabPanel panelKey="credits" className="space-y-6">
                 <AdminCreditsTab
                   users={users}
                   usersLoading={usersLoading}
@@ -805,67 +579,35 @@ export default function AdminDashboardPage() {
                   onTransactionPagination={handleTransactionPagination}
                   onChangeTransactionsPageSize={changeTransactionsPageSize}
                 />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "meal-vouchers" && (
-              <motion.div
-                key="meal-vouchers"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AdminTabPanel panelKey="meal-vouchers">
                 <MealVoucherManagement />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "promo-codes" && (
-              <motion.div
-                key="promo-codes"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
+              <AdminTabPanel panelKey="promo-codes" className="space-y-6">
                 <PromoCodeManagement />
-              </motion.div>
+              </AdminTabPanel>
             )}
-            
+
             {activeTab === "view-all-orders" && (
-              <motion.div
-                key="view-all-orders"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AdminTabPanel panelKey="view-all-orders">
                 <ViewAllOrders />
-              </motion.div>
+              </AdminTabPanel>
             )}
-            
+
             {activeTab === "view-weekly-orders" && (
-              <motion.div
-                key="view-weekly-orders"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AdminTabPanel panelKey="view-weekly-orders">
                 <ViewWeeklyOrders />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "credit-requests" && (
-              <motion.div
-                key="credit-requests"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
+              <AdminTabPanel panelKey="credit-requests" className="space-y-6">
                 <AdminCreditRequestsTab
                   creditRequestsLoading={creditRequestsLoading}
                   creditRequests={creditRequests}
@@ -882,48 +624,28 @@ export default function AdminDashboardPage() {
                   onPaginate={handleCreditRequestPagination}
                   onChangePageSize={changeCreditRequestsPageSize}
                 />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "meal-feedback" && (
-              <motion.div
-                key="meal-feedback"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AdminTabPanel panelKey="meal-feedback">
                 <MealFeedbackManagement />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "rating-dishes" && (
-              <motion.div
-                key="rating-dishes"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AdminTabPanel panelKey="rating-dishes">
                 <RatingDishManagement />
-              </motion.div>
+              </AdminTabPanel>
             )}
 
             {activeTab === "settings" && (
-              <motion.div
-                key="settings"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AdminTabPanel panelKey="settings">
                 <SettingsManagement />
-              </motion.div>
+              </AdminTabPanel>
             )}
-
           </AnimatePresence>
-        </main>
-      </div>
+      
 
       <AddCreditsDialog
         open={addCreditsOpen}
@@ -987,7 +709,7 @@ export default function AdminDashboardPage() {
         onOpenChange={setDeleteUserOpen}
         onConfirm={confirmDeleteUser}
       />
-    </div>
+    </AdminShell>
   )
 }
 
