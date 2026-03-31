@@ -80,7 +80,9 @@ export function useAdminTransactions({
         variant: "destructive",
       })
     } catch (error) {
-      if (options?.signal?.aborted || (error instanceof Error && error.name === "AbortError")) return
+      if (options?.signal?.aborted || (error instanceof Error && error.name === "AbortError")) {
+        return
+      }
 
       console.error("Error fetching transactions:", error)
       setTransactions([])
@@ -90,9 +92,9 @@ export function useAdminTransactions({
         variant: "destructive",
       })
     } finally {
-      if (!options?.signal?.aborted) {
-        setTransactionsLoading(false)
-      }
+      // Always clear loading, including on abort: effect cleanup aborts in-flight fetches when
+      // deps change; skipping this left transactionsLoading stuck true forever.
+      setTransactionsLoading(false)
     }
   }, [])
 

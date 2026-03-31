@@ -41,7 +41,7 @@ import type { AdminTransaction } from "@/lib/types/admin"
 import type { PaginationState } from "@/lib/types/pagination"
 import type { User } from "@/lib/utils"
 
-interface AdminCreditsTabProps {
+export interface AdminCreditsTabProps {
   users: User[]
   usersLoading: boolean
   searchResults: User[]

@@ -30,7 +30,7 @@ import type { AdminDateRange, CreditRequest } from "@/lib/types/admin"
 
 import { getCreditRequestAmount, getCreditRequestUserInfo } from "./request-display"
 
-interface AdminCreditRequestsTabProps {
+export interface AdminCreditRequestsTabProps {
   creditRequestsLoading: boolean
   creditRequests: CreditRequest[]
   creditRequestsPagination: {

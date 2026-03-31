@@ -22,7 +22,7 @@ import type { User } from "@/lib/utils"
 
 import type { AdminUserSearchType } from "./use-admin-users"
 
-interface AdminUsersTabProps {
+export interface AdminUsersTabProps {
   users: User[]
   usersLoading: boolean
   usersPagination: PaginationState
