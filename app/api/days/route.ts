@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, parseJsonBody, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { dayBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Day from '@/models/Day';
 
@@ -12,19 +13,15 @@ export async function GET(request: Request) {
     const isActiveParam = url.searchParams.get('isActive');
     
     // Build query
-    const query: any = {};
+    const query: Record<string, unknown> = {};
     if (isActiveParam !== null) {
       query.isActive = isActiveParam === 'true';
     }
     
     const days = await Day.find(query).sort({ week: 1 });
-    return NextResponse.json({ success: true, data: days });
-  } catch (error) {
-    console.error('Error fetching days:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(days);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/days');
   }
 }
 
@@ -36,23 +33,14 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.dayId || !data.displayName || !data.date || !data.week) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, dayBodySchema);
+    if (error) {
+      return error;
     }
     
     const day = await Day.create(data);
-    return NextResponse.json({ success: true, data: day }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating day:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(day, 201);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/days');
   }
 }

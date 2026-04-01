@@ -1,60 +1,57 @@
-import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db';
-import MealRating from '@/models/MealRating';
+import { NextResponse } from "next/server";
 
-const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+import { parseJsonBody } from "@/lib/api";
+import connectToDatabase from "@/lib/db";
+import { mealRatingSubmitBodySchema } from "@/lib/contracts/meal-rating";
+import MealRating from "@/models/MealRating";
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LENGTH = 254;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { deliveryDate, overallRating, dishRatings = [], comment, userEmail } = body;
-
-    if (!deliveryDate || typeof deliveryDate !== 'string') {
-      return NextResponse.json(
-        { error: 'deliveryDate is required' },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(request, mealRatingSubmitBodySchema);
+    if (parsed.error) {
+      return parsed.error;
     }
-    if (!DATE_REGEX.test(deliveryDate)) {
-      return NextResponse.json(
-        { error: 'deliveryDate must be YYYY-MM-DD' },
-        { status: 400 }
-      );
-    }
+    const body = parsed.data;
 
-    if (typeof overallRating !== 'number' || overallRating < 1 || overallRating > 5) {
-      return NextResponse.json(
-        { error: 'overallRating must be 1-5' },
-        { status: 400 }
-      );
-    }
-
-    const validDishRatings = Array.isArray(dishRatings)
-      ? dishRatings
+    const validDishRatings = Array.isArray(body.dishRatings)
+      ? body.dishRatings
           .filter(
-            (r: any) =>
+            (r: unknown) =>
               r &&
-              typeof r.dishId === 'string' &&
-              typeof r.dishName === 'string' &&
-              typeof r.rating === 'number' &&
-              r.rating >= 1 &&
-              r.rating <= 5
+              typeof r === "object" &&
+              typeof (r as { dishId?: unknown }).dishId === "string" &&
+              typeof (r as { dishName?: unknown }).dishName === "string" &&
+              typeof (r as { rating?: unknown }).rating === "number" &&
+              (r as { rating: number }).rating >= 1 &&
+              (r as { rating: number }).rating <= 5
           )
-          .map((r: any) => ({
-            dishId: r.dishId,
-            dishName: r.dishName,
-            rating: r.rating,
-            comment: typeof r.comment === 'string' && r.comment.trim() ? r.comment.trim() : undefined,
-          }))
+          .map((r) => {
+            const row = r as {
+              dishId: string;
+              dishName: string;
+              rating: number;
+              comment?: unknown;
+            };
+            return {
+              dishId: row.dishId,
+              dishName: row.dishName,
+              rating: row.rating,
+              comment:
+                typeof row.comment === "string" && row.comment.trim()
+                  ? row.comment.trim()
+                  : undefined,
+            };
+          })
       : [];
 
     await connectToDatabase();
 
     let storedUserEmail: string | undefined;
-    if (typeof userEmail === 'string') {
-      const trimmed = userEmail.trim();
+    if (typeof body.userEmail === "string") {
+      const trimmed = body.userEmail.trim();
       if (
         trimmed &&
         trimmed.length <= EMAIL_MAX_LENGTH &&
@@ -65,10 +62,13 @@ export async function POST(request: Request) {
     }
 
     const doc = await MealRating.create({
-      overallRating,
-      deliveryDate,
+      overallRating: body.overallRating,
+      deliveryDate: body.deliveryDate,
       dishRatings: validDishRatings,
-      comment: typeof comment === 'string' ? comment.trim() || undefined : undefined,
+      comment:
+        typeof body.comment === "string"
+          ? body.comment.trim() || undefined
+          : undefined,
       userEmail: storedUserEmail,
       submittedAt: new Date(),
     });
@@ -77,10 +77,10 @@ export async function POST(request: Request) {
       success: true,
       id: doc._id,
     });
-  } catch (error) {
-    console.error('[meal-rating] POST error:', error);
+  } catch (error: unknown) {
+    console.error("[meal-rating] POST error:", error);
     return NextResponse.json(
-      { error: 'Failed to submit rating' },
+      { error: "Failed to submit rating" },
       { status: 500 }
     );
   }

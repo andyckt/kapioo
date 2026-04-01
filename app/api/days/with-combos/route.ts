@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/api';
 import connectToDatabase from '@/lib/db';
 import Day from '@/models/Day';
 import Combo from '@/models/Combo';
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     const isActiveParam = url.searchParams.get('isActive');
     
     // Build query
-    const query: any = {};
+    const query: Record<string, unknown> = {};
     if (isActiveParam !== null) {
       query.isActive = isActiveParam === 'true';
     }
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     console.log(`✅ Fetched ${days.length} days and ${combos.length} combos in 2 queries (optimized)`);
     
     // Group combos by dayId for efficient lookup
-    const combosByDay: Record<string, any[]> = {};
+    const combosByDay: Record<string, Array<Record<string, unknown>>> = {};
     combos.forEach((combo) => {
       if (!combosByDay[combo.dayId]) {
         combosByDay[combo.dayId] = [];
@@ -71,8 +72,8 @@ export async function GET(request: Request) {
       combos: combosByDay[day.dayId] || []
     }));
     
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: daysWithCombos,
       meta: {
         totalDays: days.length,
@@ -80,15 +81,8 @@ export async function GET(request: Request) {
         optimized: true
       }
     });
-  } catch (error) {
-    console.error('Error fetching days with combos:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/days/with-combos');
   }
 }
 

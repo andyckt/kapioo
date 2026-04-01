@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, parseJsonBody, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { comboBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Combo from '@/models/Combo';
 
@@ -7,13 +8,9 @@ export async function GET(request: Request) {
   try {
     await connectToDatabase();
     const combos = await Combo.find({});
-    return NextResponse.json({ success: true, data: combos });
-  } catch (error) {
-    console.error('Error fetching combos:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(combos);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/combos');
   }
 }
 
@@ -25,23 +22,14 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.comboId || !data.dayId || !data.name || data.calories === undefined) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, comboBodySchema);
+    if (error) {
+      return error;
     }
     
     const combo = await Combo.create(data);
-    return NextResponse.json({ success: true, data: combo }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating combo:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(combo, 201);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/combos');
   }
 }

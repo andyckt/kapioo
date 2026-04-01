@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas';
@@ -21,12 +22,7 @@ export async function GET(request: Request) {
       success: true,
       areas
     });
-  } catch (error) {
-    console.error('Error fetching unique areas:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch areas' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/admin/daily-delivery/orders/areas');
   }
 }

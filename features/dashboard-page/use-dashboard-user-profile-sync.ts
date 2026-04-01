@@ -59,7 +59,7 @@ export function useDashboardUserProfileSync(
         dailyOrdersCount: nextUser.dailyOrdersCount,
         weeklyOrdersCount: nextUser.weeklyOrdersCount,
         area: nextUser.area || nextUser.address?.province || "",
-        role: nextUser.role,
+        role: nextUser.role || "user",
         isVerified: Boolean(nextUser.isVerified),
       }
 

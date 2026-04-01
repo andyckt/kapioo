@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+
+import { handleRouteError, parseJsonBody, parseSearchParams, successJson } from '@/lib/api';
+import { dayHistoryCreateBodySchema, dayHistoryListQuerySchema } from '@/lib/contracts/admin-history';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import DayHistory from '@/models/DayHistory';
@@ -10,45 +13,41 @@ export async function GET(request: Request) {
       return response;
     }
 
-    await connectToDatabase();
-    
-    // Parse query parameters
-    const url = new URL(request.url);
-    const limit = parseInt(url.searchParams.get('limit') || '50');
-    const skip = parseInt(url.searchParams.get('skip') || '0');
-    const reason = url.searchParams.get('reason');
-    
-    // Build query
-    const query: any = {};
-    if (reason) {
-      query.archivedReason = reason;
+    const { data: query, error: queryError } = parseSearchParams(request, dayHistoryListQuerySchema);
+    if (queryError) {
+      return queryError;
     }
-    
+
+    await connectToDatabase();
+
+    const limit = query.limit ?? 50;
+    const skip = query.skip ?? 0;
+    const { reason } = query;
+
+    // Build query
+    const dbQuery: Record<string, unknown> = {};
+    if (reason) {
+      dbQuery.archivedReason = reason;
+    }
+
     // Fetch history with pagination, sorted by most recent first
-    const history = await DayHistory.find(query)
-      .sort({ archivedAt: -1 })
-      .limit(limit)
-      .skip(skip);
-    
+    const history = await DayHistory.find(dbQuery).sort({ archivedAt: -1 }).limit(limit).skip(skip);
+
     // Get total count for pagination
-    const total = await DayHistory.countDocuments(query);
-    
-    return NextResponse.json({ 
-      success: true, 
+    const total = await DayHistory.countDocuments(dbQuery);
+
+    return NextResponse.json({
+      success: true,
       data: history,
       pagination: {
         total,
         limit,
         skip,
-        hasMore: skip + history.length < total
-      }
+        hasMore: skip + history.length < total,
+      },
     });
-  } catch (error) {
-    console.error('Error fetching day history:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/day-history');
   }
 }
 
@@ -60,24 +59,14 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.historyId || !data.originalDayId || !data.displayName || !data.date || !data.week || !data.archivedReason) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, dayHistoryCreateBodySchema);
+    if (error) {
+      return error;
     }
-    
+
     const historyEntry = await DayHistory.create(data);
-    return NextResponse.json({ success: true, data: historyEntry }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating day history:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(historyEntry, { status: 201 });
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/day-history');
   }
 }
-

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { dishBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Dish from '@/models/Dish';
 
@@ -8,13 +9,9 @@ export async function GET(request: Request) {
   try {
     await connectToDatabase();
     const dishes = await Dish.find({}).sort({ name: 1 });
-    return NextResponse.json({ success: true, data: dishes });
-  } catch (error) {
-    console.error('Error fetching dishes:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(dishes);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/dishes');
   }
 }
 
@@ -27,13 +24,9 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
-    const data = await request.json();
-    
-    if (!data.name) {
-      return NextResponse.json(
-        { success: false, error: 'Dish name is required' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, dishBodySchema);
+    if (error) {
+      return error;
     }
     
     // Upsert: Create if not exists, update if exists
@@ -50,13 +43,9 @@ export async function POST(request: Request) {
       }
     );
     
-    return NextResponse.json({ success: true, data: dish }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating/updating dish:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(dish, 201);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/dishes');
   }
 }
 

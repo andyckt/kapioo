@@ -1,9 +1,14 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
-import User from '@/models/User';
-import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas';
+import {
+  errorJson,
+  handleRouteError,
+  parseJsonBody,
+  successJson,
+  type RouteContext,
+} from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import { dailyOrderCustomerInfoPatchBodySchema } from "@/lib/contracts/daily-order";
+import { ALL_WEEKLY_AREAS } from "@/lib/constants/areas";
+import connectToDatabase from "@/lib/db";
 import {
   getOrderOnlyOverrideMeta,
   hasOrderCustomerOverride,
@@ -12,81 +17,9 @@ import {
   resolveEffectiveOrderCustomerInfo,
   type DeliveryAddress,
   type OrderCustomerOverride,
-} from '@/lib/orders/effective-customer-info';
-
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-interface DailyOrderDocument extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: string;
-  phoneNumber?: string;
-  area?: string;
-  specialInstructions?: string;
-  deliveryAddress?: DeliveryAddress;
-  orderCustomerOverride?: OrderCustomerOverride;
-  orderCustomerOverrideLogs?: Array<{
-    updatedAt: Date;
-    updatedBy: string;
-    changedFields: string[];
-    changedDetails?: Array<{
-      field: string;
-      from: string;
-      to: string;
-    }>;
-  }>;
-}
-
-const DailyDeliveryOrderSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  orderId: { type: String, required: true, unique: true },
-  phoneNumber: String,
-  area: String,
-  specialInstructions: String,
-  deliveryAddress: {
-    unitNumber: String,
-    streetAddress: String,
-    postalCode: String,
-    country: String,
-    buzzCode: String,
-  },
-  orderCustomerOverride: {
-    name: String,
-    phoneNumber: String,
-    area: String,
-    specialInstructions: String,
-    deliveryAddress: {
-      unitNumber: String,
-      streetAddress: String,
-      postalCode: String,
-      country: String,
-      buzzCode: String,
-    },
-    updatedAt: Date,
-    updatedBy: String,
-  },
-  orderCustomerOverrideLogs: [
-    {
-      updatedAt: Date,
-      updatedBy: String,
-      changedFields: [String],
-      changedDetails: [
-        {
-          field: String,
-          from: String,
-          to: String
-        }
-      ]
-    }
-  ]
-});
-
-const DailyDeliveryOrder =
-  mongoose.models.DailyDeliveryOrder ||
-  mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
+} from "@/lib/orders/effective-customer-info";
+import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
+import User from "@/models/User";
 
 function hasOwn<T extends object>(obj: T, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
@@ -98,7 +31,7 @@ function hasAddressValue(address?: DeliveryAddress): boolean {
 }
 
 function sanitizeAddressPatch(value: unknown): DeliveryAddress | undefined {
-  if (!value || typeof value !== 'object') return undefined;
+  if (!value || typeof value !== "object") return undefined;
   const input = value as Record<string, unknown>;
   return {
     unitNumber: normalizeOptionalText(input.unitNumber as string),
@@ -110,16 +43,17 @@ function sanitizeAddressPatch(value: unknown): DeliveryAddress | undefined {
 }
 
 function toComparable(value: unknown): string {
-  if (typeof value !== 'string') return '';
+  if (typeof value !== "string") return "";
   return value.trim();
 }
 
 function displayValue(value: unknown): string {
   const normalized = toComparable(value);
-  return normalized || '(empty)';
+  return normalized || "(empty)";
 }
 
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: Request, { params }: RouteContext<{ id: string }>) {
+  let id = "";
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
@@ -128,18 +62,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const { id } = params;
-    const body = await request.json();
+    ({ id } = await params);
+
+    const { data: body, error } = await parseJsonBody(request, dailyOrderCustomerInfoPatchBodySchema);
+    if (error) {
+      return error;
+    }
 
     const order = await DailyDeliveryOrder.findOne({ orderId: id }).lean();
     if (!order) {
-      return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+      return errorJson("Order not found", 404);
     }
 
-    const user = order?.userId ? await User.findById(order.userId).select('name email').lean() : null;
-    const effectiveBefore = resolveEffectiveOrderCustomerInfo(order as any, user);
+    const user = order?.userId ? await User.findById(order.userId).select("name email").lean() : null;
+    const effectiveBefore = resolveEffectiveOrderCustomerInfo(order as never, user as never);
 
-    const currentOverride: OrderCustomerOverride = order.orderCustomerOverride || {};
+    const currentOverride: OrderCustomerOverride =
+      (order as { orderCustomerOverride?: OrderCustomerOverride }).orderCustomerOverride || {};
     const nextOverride: OrderCustomerOverride = {
       ...currentOverride,
       deliveryAddress: { ...(currentOverride.deliveryAddress || {}) },
@@ -150,80 +89,82 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const changedFields: string[] = [];
     const changedDetails: Array<{ field: string; from: string; to: string }> = [];
 
-    if (hasOwn(body, 'name')) {
+    if (hasOwn(body, "name")) {
       hasPatchField = true;
       const previous = normalizeOptionalText(effectiveBefore.name);
       nextOverride.name = normalizeOptionalText(body.name as string);
       if (toComparable(previous) !== toComparable(nextOverride.name)) {
-        changedFields.push('name');
+        changedFields.push("name");
         changedDetails.push({
-          field: 'name',
+          field: "name",
           from: displayValue(previous),
-          to: displayValue(nextOverride.name)
+          to: displayValue(nextOverride.name),
         });
       }
     }
 
-    if (hasOwn(body, 'phoneNumber')) {
+    if (hasOwn(body, "phoneNumber")) {
       hasPatchField = true;
       const previous = normalizePhoneNumber(effectiveBefore.phoneNumber);
       nextOverride.phoneNumber = normalizePhoneNumber(body.phoneNumber as string);
       if (toComparable(previous) !== toComparable(nextOverride.phoneNumber)) {
-        changedFields.push('phone number');
+        changedFields.push("phone number");
         changedDetails.push({
-          field: 'phone number',
+          field: "phone number",
           from: displayValue(previous),
-          to: displayValue(nextOverride.phoneNumber)
+          to: displayValue(nextOverride.phoneNumber),
         });
       }
     }
 
-    if (hasOwn(body, 'area')) {
+    if (hasOwn(body, "area")) {
       hasPatchField = true;
       const previous = normalizeOptionalText(effectiveBefore.area);
       const normalizedArea = normalizeOptionalText(body.area as string);
-      if (normalizedArea && !ALL_WEEKLY_AREAS.includes(normalizedArea as any)) {
-        return NextResponse.json({ success: false, error: 'Invalid area value' }, { status: 400 });
+      if (normalizedArea && !ALL_WEEKLY_AREAS.includes(normalizedArea as (typeof ALL_WEEKLY_AREAS)[number])) {
+        return errorJson("Invalid area value", 400);
       }
       nextOverride.area = normalizedArea;
       if (toComparable(previous) !== toComparable(nextOverride.area)) {
-        changedFields.push('area');
+        changedFields.push("area");
         changedDetails.push({
-          field: 'area',
+          field: "area",
           from: displayValue(previous),
-          to: displayValue(nextOverride.area)
+          to: displayValue(nextOverride.area),
         });
       }
     }
 
-    if (hasOwn(body, 'specialInstructions')) {
+    if (hasOwn(body, "specialInstructions")) {
       hasPatchField = true;
       const previous = normalizeOptionalText(effectiveBefore.specialInstructions);
       nextOverride.specialInstructions = normalizeOptionalText(body.specialInstructions as string);
       if (toComparable(previous) !== toComparable(nextOverride.specialInstructions)) {
-        changedFields.push('special request');
+        changedFields.push("special request");
         changedDetails.push({
-          field: 'special request',
+          field: "special request",
           from: displayValue(previous),
-          to: displayValue(nextOverride.specialInstructions)
+          to: displayValue(nextOverride.specialInstructions),
         });
       }
     }
 
-    if (hasOwn(body, 'deliveryAddress')) {
+    if (hasOwn(body, "deliveryAddress")) {
       hasPatchField = true;
       const previousAddress = effectiveBefore.deliveryAddress || {};
       if (body.deliveryAddress === null) {
-        const hadAddressValues = Object.values(previousAddress).some((value) => Boolean(normalizeOptionalText(value)));
+        const hadAddressValues = Object.values(previousAddress).some((value) =>
+          Boolean(normalizeOptionalText(value))
+        );
         nextOverride.deliveryAddress = {};
         if (hadAddressValues) {
-          changedFields.push('address');
+          changedFields.push("address");
           const fieldMap: Array<{ key: keyof DeliveryAddress; label: string }> = [
-            { key: 'unitNumber', label: 'unit number' },
-            { key: 'streetAddress', label: 'street address' },
-            { key: 'postalCode', label: 'postal code' },
-            { key: 'country', label: 'country' },
-            { key: 'buzzCode', label: 'buzz code' }
+            { key: "unitNumber", label: "unit number" },
+            { key: "streetAddress", label: "street address" },
+            { key: "postalCode", label: "postal code" },
+            { key: "country", label: "country" },
+            { key: "buzzCode", label: "buzz code" },
           ];
           for (const field of fieldMap) {
             const before = normalizeOptionalText(previousAddress[field.key]);
@@ -231,7 +172,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
               changedDetails.push({
                 field: field.label,
                 from: displayValue(before),
-                to: '(empty)'
+                to: "(empty)",
               });
             }
           }
@@ -239,7 +180,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       } else {
         const addressPatch = sanitizeAddressPatch(body.deliveryAddress);
         if (!addressPatch) {
-          return NextResponse.json({ success: false, error: 'Invalid deliveryAddress payload' }, { status: 400 });
+          return errorJson("Invalid deliveryAddress payload", 400);
         }
         nextOverride.deliveryAddress = {
           ...(nextOverride.deliveryAddress || {}),
@@ -247,11 +188,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         };
 
         const fieldMap: Array<{ key: keyof DeliveryAddress; label: string }> = [
-          { key: 'unitNumber', label: 'unit number' },
-          { key: 'streetAddress', label: 'street address' },
-          { key: 'postalCode', label: 'postal code' },
-          { key: 'country', label: 'country' },
-          { key: 'buzzCode', label: 'buzz code' }
+          { key: "unitNumber", label: "unit number" },
+          { key: "streetAddress", label: "street address" },
+          { key: "postalCode", label: "postal code" },
+          { key: "country", label: "country" },
+          { key: "buzzCode", label: "buzz code" },
         ];
 
         for (const field of fieldMap) {
@@ -263,7 +204,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
               changedDetails.push({
                 field: field.label,
                 from: displayValue(before),
-                to: displayValue(after)
+                to: displayValue(after),
               });
             }
           }
@@ -272,7 +213,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     if (!hasPatchField) {
-      return NextResponse.json({ success: false, error: 'No editable fields provided' }, { status: 400 });
+      return errorJson("No editable fields provided", 400);
     }
 
     const shouldPersistOverride =
@@ -283,9 +224,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       hasAddressValue(nextOverride.deliveryAddress);
 
     const adminMarker =
-      request.headers.get('x-admin-email') ||
-      request.headers.get('x-admin-id') ||
-      'admin';
+      request.headers.get("x-admin-email") ||
+      request.headers.get("x-admin-id") ||
+      "admin";
 
     const now = new Date();
     const uniqueChangedFields = Array.from(new Set(changedFields));
@@ -295,7 +236,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           updatedAt: now,
           updatedBy: adminMarker,
           changedFields: uniqueChangedFields,
-          changedDetails
+          changedDetails,
         }
       : null;
 
@@ -303,25 +244,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       nextOverride.updatedAt = now;
       nextOverride.updatedBy = adminMarker;
 
-      const updateDoc: Record<string, any> = { $set: { orderCustomerOverride: nextOverride } };
+      const updateDoc: Record<string, unknown> = { $set: { orderCustomerOverride: nextOverride } };
       if (changeLogEntry) {
         updateDoc.$push = {
           orderCustomerOverrideLogs: {
             $each: [changeLogEntry],
-            $slice: -30
-          }
+            $slice: -30,
+          },
         };
       }
 
       await DailyDeliveryOrder.findOneAndUpdate({ orderId: id }, updateDoc, { strict: false });
     } else {
-      const updateDoc: Record<string, any> = { $unset: { orderCustomerOverride: '' } };
+      const updateDoc: Record<string, unknown> = { $unset: { orderCustomerOverride: "" } };
       if (changeLogEntry) {
         updateDoc.$push = {
           orderCustomerOverrideLogs: {
             $each: [changeLogEntry],
-            $slice: -30
-          }
+            $slice: -30,
+          },
         };
       }
 
@@ -329,25 +270,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const updatedOrder = await DailyDeliveryOrder.findOne({ orderId: id }).lean();
-    const updatedUser = updatedOrder?.userId ? await User.findById(updatedOrder.userId).select('name email').lean() : null;
-    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, updatedUser);
+    const updatedUser = updatedOrder?.userId
+      ? await User.findById(updatedOrder.userId).select("name email").lean()
+      : null;
+    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(
+      updatedOrder || {},
+      updatedUser as never
+    );
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...updatedOrder,
-        user: updatedUser,
-        effectiveCustomerInfo,
-        hasOrderOnlyOverride: hasOrderCustomerOverride(updatedOrder || {}),
-        orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(updatedOrder || {}),
-      },
+    return successJson({
+      ...updatedOrder,
+      user: updatedUser,
+      effectiveCustomerInfo,
+      hasOrderOnlyOverride: hasOrderCustomerOverride(updatedOrder || {}),
+      orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(updatedOrder || {}),
     });
-  } catch (error: any) {
-    console.error('Error updating daily order customer info override:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update order customer info', details: error.message },
-      { status: 500 }
+  } catch (error: unknown) {
+    return handleRouteError(
+      error,
+      `PATCH /api/admin/daily-delivery/orders/${id || "[id]"}/customer-info`
     );
   }
 }
-

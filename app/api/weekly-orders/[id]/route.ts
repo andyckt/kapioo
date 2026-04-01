@@ -1,163 +1,116 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import { buildWeeklyEntitlementSummary } from '@/lib/orders/weekly-entitlement-display';
-import WeeklyOrder from '@/models/WeeklyOrder';
-import WeeklyEntitlementGroup from '@/models/WeeklyEntitlementGroup';
-import User from '@/models/User';
-import mongoose from 'mongoose';
-import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from "@/lib/api";
+import { requireAdminMfa, requireUser } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import { buildWeeklyEntitlementSummary } from "@/lib/orders/weekly-entitlement-display";
+import {
+  weeklyOrderUserPatchBodySchema,
+} from "@/lib/contracts/weekly-order";
+import WeeklyOrder from "@/models/WeeklyOrder";
+import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
+import User from "@/models/User";
+import mongoose from "mongoose";
+import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-customer-info";
 
-// Interface for route params (Next.js 15+: params is a Promise)
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
-// GET handler - get a specific weekly order by ID
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) {
   try {
-    const { id } = await params;
+    const { id } = await ctx.params;
     const { actor, response } = await requireUser();
     if (!actor || response) {
       return response;
     }
-    
+
     await connectToDatabase();
-    
-    // Find order by ID or orderId
+
     const order = await WeeklyOrder.findOne({
       $or: [
         { _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null },
-        { orderId: id }
-      ]
+        { orderId: id },
+      ],
     });
-    
+
     if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
+      return errorJson("Order not found", 404);
     }
 
-    if (actor.role !== 'admin' && String(order.userId) !== String(actor.user._id)) {
-      return NextResponse.json(
-        { success: false, error: 'You do not have access to this order' },
-        { status: 403 }
-      );
+    if (actor.role !== "admin" && String(order.userId) !== String(actor.user._id)) {
+      return errorJson("You do not have access to this order", 403);
     }
-    
-    const user = await User.findById(order.userId).select('name email').lean();
-    const plainOrder = typeof (order as any).toObject === 'function' ? (order as any).toObject() : order;
+
+    const user = await User.findById(order.userId).select("name email").lean();
+    const plainOrder =
+      typeof (order as { toObject?: () => Record<string, unknown> }).toObject === "function"
+        ? (order as { toObject: () => Record<string, unknown> }).toObject()
+        : (order as unknown as Record<string, unknown>);
+    const groupId = plainOrder.weeklyEntitlementGroupId;
     const entitlementGroup =
-      typeof plainOrder.weeklyEntitlementGroupId === 'string' && plainOrder.weeklyEntitlementGroupId
-        ? await WeeklyEntitlementGroup.findOne({ groupId: plainOrder.weeklyEntitlementGroupId }).lean()
+      typeof groupId === "string" && groupId
+        ? await WeeklyEntitlementGroup.findOne({ groupId }).lean()
         : null;
-    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as any, user as any);
-    const weeklyEntitlementSummary = buildWeeklyEntitlementSummary(plainOrder as any, entitlementGroup as any);
+    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as never, user as never);
+    const weeklyEntitlementSummary = buildWeeklyEntitlementSummary(plainOrder as never, entitlementGroup as never);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...plainOrder,
-        effectiveCustomerInfo,
-        weeklyEntitlementSummary,
-        phoneNumber: effectiveCustomerInfo.phoneNumber,
-        area: effectiveCustomerInfo.area,
-        deliveryAddress: effectiveCustomerInfo.deliveryAddress,
-        specialInstructions: effectiveCustomerInfo.specialInstructions
-      }
+    return successJson({
+      ...plainOrder,
+      effectiveCustomerInfo,
+      weeklyEntitlementSummary,
+      phoneNumber: effectiveCustomerInfo.phoneNumber,
+      area: effectiveCustomerInfo.area,
+      deliveryAddress: effectiveCustomerInfo.deliveryAddress,
+      specialInstructions: effectiveCustomerInfo.specialInstructions,
     });
-  } catch (error: any) {
-    const { id } = await params;
-    console.error(`Error fetching weekly order ${id}:`, error);
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch order details',
-        details: error.message
-      },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleRouteError(error, "GET /api/weekly-orders/[id]");
   }
 }
 
-// PATCH handler - update a weekly order (e.g., change status)
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>) {
   try {
-    const { id } = await params;
+    const { id } = await ctx.params;
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
     }
-    const data = await request.json();
 
-    if (Object.prototype.hasOwnProperty.call(data, 'status')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Use /api/admin/weekly-subscription/orders/[id]/status for weekly status updates.',
-        },
-        { status: 410 }
-      );
+    const { data, error: bodyError } = await parseJsonBody(request, weeklyOrderUserPatchBodySchema);
+    if (bodyError || !data) {
+      return bodyError;
     }
-    
+
+    if (Object.prototype.hasOwnProperty.call(data, "status")) {
+      return errorJson("Use /api/admin/weekly-subscription/orders/[id]/status for weekly status updates.", 410);
+    }
+
     await connectToDatabase();
-    
-    // Find order by ID or orderId
+
     const order = await WeeklyOrder.findOne({
       $or: [
         { _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null },
-        { orderId: id }
-      ]
+        { orderId: id },
+      ],
     });
-    
+
     if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
+      return errorJson("Order not found", 404);
     }
-    
-    // Update only allowed fields
-    const allowedUpdates = ['specialInstructions'];
-    const updates: Record<string, any> = {};
-    
-    Object.keys(data).forEach(key => {
+
+    const allowedUpdates = ["specialInstructions"];
+    const updates: Record<string, unknown> = {};
+    const raw = data as Record<string, unknown>;
+
+    Object.keys(data).forEach((key) => {
       if (allowedUpdates.includes(key)) {
-        updates[key] = data[key];
+        updates[key] = raw[key];
       }
     });
-    
+
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No editable fields provided' },
-        { status: 400 }
-      );
+      return errorJson("No editable fields provided", 400);
     }
-    
-    // Update the order
-    const updatedOrder = await WeeklyOrder.findByIdAndUpdate(
-      order._id,
-      { $set: updates },
-      { new: true }
-    );
-    
-    return NextResponse.json({
-      success: true,
-      data: updatedOrder
-    });
-  } catch (error: any) {
-    const { id } = await params;
-    console.error(`Error updating weekly order ${id}:`, error);
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to update order',
-        details: error.message
-      },
-      { status: 500 }
-    );
+
+    const updatedOrder = await WeeklyOrder.findByIdAndUpdate(order._id, { $set: updates }, { new: true });
+
+    return successJson(updatedOrder);
+  } catch (error) {
+    return handleRouteError(error, "PATCH /api/weekly-orders/[id]");
   }
 }

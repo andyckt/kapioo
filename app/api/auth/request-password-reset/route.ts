@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
+import { emailOnlyBodySchema } from '@/lib/contracts/auth';
 import connectToDatabase from '@/lib/db';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import User from '@/models/User';
@@ -6,19 +7,14 @@ import { sendPasswordResetEmail } from '@/lib/services/email';
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const { data, error } = await parseJsonBody(request, emailOnlyBodySchema);
+    if (error) {
+      return error;
+    }
     const ipAddress =
       request.headers.get('x-forwarded-for') ||
       request.headers.get('x-real-ip') ||
       'unknown';
-    
-    // Validate required fields
-    if (!data.email) {
-      return NextResponse.json(
-        { success: false, error: 'Email is required' },
-        { status: 400 }
-      );
-    }
 
     const rateLimitResult = checkRateLimit(
       `password-reset:${ipAddress}:${String(data.email).toLowerCase()}`,
@@ -26,10 +22,7 @@ export async function POST(request: Request) {
       15 * 60 * 1000
     );
     if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { success: false, error: 'Too many password reset attempts. Please try again later.' },
-        { status: 429 }
-      );
+      return errorJson('Too many password reset attempts. Please try again later.', 429);
     }
     
     await connectToDatabase();
@@ -40,8 +33,7 @@ export async function POST(request: Request) {
     // For security reasons, don't reveal whether the email exists or not
     // Just return success even if the user doesn't exist
     if (!user) {
-      return NextResponse.json({
-        success: true,
+      return successJson({
         message: 'If the email exists, a password reset code will be sent'
       });
     }
@@ -56,21 +48,13 @@ export async function POST(request: Request) {
       await sendPasswordResetEmail(user.email, code, user.languagePreference || 'zh');
     } catch (emailError) {
       console.error('Error sending password reset email:', emailError);
-      return NextResponse.json(
-        { success: false, error: 'Failed to send password reset email' },
-        { status: 500 }
-      );
+      return errorJson('Failed to send password reset email', 500);
     }
     
-    return NextResponse.json({
-      success: true,
+    return successJson({
       message: 'Password reset code sent successfully'
     });
-  } catch (error) {
-    console.error('Error requesting password reset:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to process password reset request' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/auth/request-password-reset');
   }
 } 

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, parseJsonBody, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { mealBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Meal from '@/models/Meal';
 
@@ -9,13 +10,9 @@ export async function GET() {
     await connectToDatabase();
     const meals = await Meal.find({}).sort({ createdAt: -1 });
     
-    return NextResponse.json({ success: true, data: meals });
-  } catch (error) {
-    console.error('Error fetching meals:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch meals' },
-      { status: 500 }
-    );
+    return successJson(meals);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/meals');
   }
 }
 
@@ -27,14 +24,9 @@ export async function POST(request: Request) {
       return response;
     }
 
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.name || !data.image || !data.description) {
-      return NextResponse.json(
-        { success: false, error: 'Name, image, and description are required' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, mealBodySchema);
+    if (error) {
+      return error;
     }
     
     await connectToDatabase();
@@ -43,15 +35,8 @@ export async function POST(request: Request) {
     const meal = new Meal(data);
     await meal.save();
     
-    return NextResponse.json(
-      { success: true, data: meal },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error('Error creating meal:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to create meal' },
-      { status: 500 }
-    );
+    return successJson(meal, 201);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/meals');
   }
 } 

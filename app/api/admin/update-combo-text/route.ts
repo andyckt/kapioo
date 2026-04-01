@@ -1,7 +1,15 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
+import { NextResponse } from "next/server";
+
+import type { z } from "zod";
+
+import { errorJson, parseSearchParams } from "@/lib/api";
+import {
+  updateComboTextQuerySchema,
+  type UpdateComboTextQuery,
+} from "@/lib/contracts/admin-routes";
+import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
+import WeeklyOrder from '@/models/WeeklyOrder';
 
 // Configuration
 const OLD_COMBO_TEXT = '🇭🇺匈牙利风味炖牛肉 + 清炒黄瓜条玉米粒 + 豌豆饭';
@@ -24,40 +32,20 @@ const ORDER_IDS = [
   'WS-96704377'
 ];
 
-// Define WeeklyOrder schema
-const WeeklyOrderSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  orderId: { type: String, required: true, unique: true },
-  items: { type: mongoose.Schema.Types.Mixed, required: true },
-  status: { type: String, enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'], default: 'pending' },
-  creditCost: { type: Number, required: true },
-  specialInstructions: String,
-  deliveryAddress: {
-    unitNumber: String,
-    streetAddress: String,
-    province: String,
-    postalCode: String,
-    country: String,
-    buzzCode: String
-  },
-  phoneNumber: String,
-  area: String,
-  confirmedAt: Date,
-  deliveredAt: Date,
-  refundedAt: Date,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
-
 export async function GET(request: Request) {
   const { actor, response } = await requireAdminMfa(request);
   if (!actor || response) {
     return response;
   }
 
-  const url = new URL(request.url);
-  const dryRun = url.searchParams.get('dryRun') !== 'false'; // Default to true
-  const apply = url.searchParams.get('apply') === 'true'; // Must explicitly set to true to apply changes
+  const queryParsed = parseSearchParams(
+    request.url,
+    updateComboTextQuerySchema as unknown as z.ZodType<UpdateComboTextQuery>
+  );
+  if (queryParsed.error) {
+    return queryParsed.error;
+  }
+  const { dryRun, apply } = queryParsed.data;
 
   console.log('\n' + '='.repeat(80));
   console.log('🔧 WEEKLY ORDER COMBO TEXT UPDATE');
@@ -70,9 +58,6 @@ export async function GET(request: Request) {
 
   try {
     await connectToDatabase();
-    
-    // Initialize model
-    const WeeklyOrder = mongoose.models.WeeklyOrder || mongoose.model('WeeklyOrder', WeeklyOrderSchema);
     
     // Step 1: Find all orders
     console.log('📋 Step 1: Finding orders...\n');
@@ -277,15 +262,10 @@ export async function GET(request: Request) {
       });
     }
     
-  } catch (error: any) {
-    console.error('\n❌ API ERROR:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to update orders',
-        details: error.message 
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("\n❌ API ERROR:", error);
+    return errorJson("Failed to update orders", 500, {
+      details: error instanceof Error ? error.message : undefined,
+    });
   }
 }

@@ -1,4 +1,8 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, parseJsonBody, parseSearchParams, successJson } from '@/lib/api';
+import {
+  weeklyDeliveryHistoryCreateBodySchema,
+  weeklyDeliveryHistoryListQuerySchema,
+} from '@/lib/contracts/admin-history';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyDeliveryHistory from '@/models/WeeklyDeliveryHistory';
@@ -11,35 +15,27 @@ export async function GET(request: Request) {
       return response;
     }
 
-    await connectToDatabase();
-    
-    const url = new URL(request.url);
-    const limit = parseInt(url.searchParams.get('limit') || '50');
-    const reason = url.searchParams.get('reason');
-    
-    // Build query
-    const query: any = {};
-    if (reason) {
-      query.archivedReason = reason;
+    const { data: query, error: queryError } = parseSearchParams(request, weeklyDeliveryHistoryListQuerySchema);
+    if (queryError) {
+      return queryError;
     }
-    
-    const history = await WeeklyDeliveryHistory.find(query)
-      .sort({ archivedAt: -1 })
-      .limit(limit);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: history 
-    });
-  } catch (error) {
-    console.error('Error fetching weekly delivery history:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      },
-      { status: 500 }
-    );
+
+    await connectToDatabase();
+
+    const limit = query.limit ?? 50;
+    const { reason } = query;
+
+    // Build query
+    const dbQuery: Record<string, unknown> = {};
+    if (reason) {
+      dbQuery.archivedReason = reason;
+    }
+
+    const history = await WeeklyDeliveryHistory.find(dbQuery).sort({ archivedAt: -1 }).limit(limit);
+
+    return successJson(history);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/weekly-delivery-history');
   }
 }
 
@@ -52,27 +48,14 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.historyId || !data.originalDay || data.originalWeekOffset === undefined || !data.date || !data.archivedReason) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, weeklyDeliveryHistoryCreateBodySchema);
+    if (error) {
+      return error;
     }
-    
+
     const history = await WeeklyDeliveryHistory.create(data);
-    return NextResponse.json({ success: true, data: history }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating weekly delivery history:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      },
-      { status: 500 }
-    );
+    return successJson(history, { status: 201 });
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/weekly-delivery-history');
   }
 }
-

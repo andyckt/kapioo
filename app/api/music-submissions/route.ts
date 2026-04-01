@@ -1,17 +1,14 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import MusicSubmission from '@/models/MusicSubmission';
+import { NextResponse } from "next/server";
 
-// Interface for music submission data
-interface MusicSubmissionData {
-  songName: string;
-  artistName: string;
-  reason: string;
-  submitterName: string;
-}
+import { parseJsonBody } from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import {
+  musicSubmissionCreateBodySchema,
+  musicSubmissionPatchBodySchema,
+} from "@/lib/contracts/content";
+import MusicSubmission from "@/models/MusicSubmission";
 
-// GET handler - Return all music submissions
 export async function GET(request: Request) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -20,59 +17,59 @@ export async function GET(request: Request) {
     }
 
     await connectToDatabase();
-    
-    // Fetch all music submissions from MongoDB, sorted by creation date (newest first)
-    const submissions = await MusicSubmission.find({}).sort({ createdAt: -1 }).lean();
-    
+
+    const submissions = await MusicSubmission.find({})
+      .sort({ createdAt: -1 })
+      .lean();
+
     return NextResponse.json(submissions);
-  } catch (error) {
-    console.error('Error fetching music submissions:', error);
+  } catch (error: unknown) {
+    console.error("Error fetching music submissions:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      {
+        error:
+          error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     );
   }
 }
 
-// POST handler - Create a new music submission
 export async function POST(request: Request) {
   try {
-    const submission: MusicSubmissionData = await request.json();
-    
-    // Validate submission data
-    if (!submission.songName || !submission.artistName || !submission.reason || !submission.submitterName) {
-      return NextResponse.json(
-        { error: 'All fields are required: songName, artistName, reason, submitterName' },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(request, musicSubmissionCreateBodySchema);
+    if (parsed.error) {
+      return parsed.error;
     }
-    
+    const submission = parsed.data;
+
     await connectToDatabase();
-    
-    // Create new submission
+
     const newSubmission = await MusicSubmission.create({
       songName: submission.songName,
       artistName: submission.artistName,
       reason: submission.reason,
       submitterName: submission.submitterName,
-      status: 'pending'
+      status: "pending",
     });
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Music submission created successfully',
-      data: newSubmission
+
+    return NextResponse.json({
+      success: true,
+      message: "Music submission created successfully",
+      data: newSubmission,
     });
-  } catch (error) {
-    console.error('Error creating music submission:', error);
+  } catch (error: unknown) {
+    console.error("Error creating music submission:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      {
+        error:
+          error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     );
   }
 }
 
-// PATCH handler - Update a music submission status
 export async function PATCH(request: Request) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -80,47 +77,37 @@ export async function PATCH(request: Request) {
       return response;
     }
 
-    const data = await request.json();
-    
-    if (!data.submissionId || !data.status) {
-      return NextResponse.json(
-        { error: 'submissionId and status are required' },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(request, musicSubmissionPatchBodySchema);
+    if (parsed.error) {
+      return parsed.error;
     }
-    
-    if (!['pending', 'approved', 'rejected'].includes(data.status)) {
-      return NextResponse.json(
-        { error: 'Status must be one of: pending, approved, rejected' },
-        { status: 400 }
-      );
-    }
-    
+    const data = parsed.data;
+
     await connectToDatabase();
-    
+
     const submission = await MusicSubmission.findByIdAndUpdate(
       data.submissionId,
       { status: data.status },
       { new: true }
     );
-    
+
     if (!submission) {
-      return NextResponse.json(
-        { error: 'Submission not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
     }
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Submission status updated successfully',
-      data: submission
+
+    return NextResponse.json({
+      success: true,
+      message: "Submission status updated successfully",
+      data: submission,
     });
-  } catch (error) {
-    console.error('Error updating submission status:', error);
+  } catch (error: unknown) {
+    console.error("Error updating submission status:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      {
+        error:
+          error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     );
   }
-} 
+}

@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import { format } from 'date-fns';
+import { NextResponse } from "next/server";
+import { format } from "date-fns";
+
+import { errorJson, parseSearchParams } from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import { voucherPurchaseRequestExportQuerySchema } from "@/lib/contracts/voucher-request";
+import connectToDatabase from "@/lib/db";
+import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 
 export async function GET(request: Request) {
   try {
@@ -10,129 +14,119 @@ export async function GET(request: Request) {
       return response;
     }
 
-    const url = new URL(request.url);
-    const status = url.searchParams.get('status');
-    const startDate = url.searchParams.get('startDate');
-    const endDate = url.searchParams.get('endDate');
-    
-    await connectToDatabase();
-    
-    // Build query for MongoDB
-    const query: any = {};
-    
-    // Filter by status if provided
-    if (status && status !== 'all') {
-      query.status = status;
+    const { data: query, error: queryError } = parseSearchParams(
+      request,
+      voucherPurchaseRequestExportQuerySchema
+    );
+    if (queryError) {
+      return queryError;
     }
-    
-    // Filter by date range if provided
+
+    const { status, startDate, endDate } = query;
+
+    await connectToDatabase();
+
+    const mongoQuery: Record<string, unknown> = {};
+
+    if (status && status !== "all") {
+      mongoQuery.status = status;
+    }
+
     if (startDate || endDate) {
-      query.createdAt = {};
-      
+      const createdAt: Record<string, Date> = {};
       if (startDate) {
-        query.createdAt.$gte = new Date(startDate);
+        createdAt.$gte = new Date(startDate);
       }
-      
       if (endDate) {
-        // Set to end of the day for the end date
         const endOfDay = new Date(endDate);
         endOfDay.setHours(23, 59, 59, 999);
-        query.createdAt.$lte = endOfDay;
+        createdAt.$lte = endOfDay;
       }
+      mongoQuery.createdAt = createdAt;
     }
-    
-    // Fetch voucher requests from database
-    // We need to dynamically import the model to avoid Next.js server component issues
-    const { default: VoucherPurchaseRequest } = await import('@/models/VoucherPurchaseRequest');
-    
-    const requests = await VoucherPurchaseRequest.find(query)
+
+    const requests = await VoucherPurchaseRequest.find(mongoQuery)
       .sort({ createdAt: -1 })
-      .populate('userId', 'name email userID phone');
-    
-    // Convert to CSV
+      .populate("userId", "name email userID phone");
+
     const csv = convertToCSV(requests);
-    
-    // Set headers for CSV download
+
     const headers = new Headers();
-    headers.set('Content-Type', 'text/csv');
-    headers.set('Content-Disposition', `attachment; filename="voucher-requests-${format(new Date(), 'yyyy-MM-dd')}.csv"`);
-    
+    headers.set("Content-Type", "text/csv");
+    headers.set(
+      "Content-Disposition",
+      `attachment; filename="voucher-requests-${format(new Date(), "yyyy-MM-dd")}.csv"`
+    );
+
     return new NextResponse(csv, {
       status: 200,
-      headers
+      headers,
     });
-  } catch (error: any) {
-    console.error('Error exporting voucher purchase requests:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to export voucher purchase requests' },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error("Error exporting voucher purchase requests:", error);
+    return errorJson("Failed to export voucher purchase requests", 500);
   }
 }
 
-function convertToCSV(requests: any[]) {
-  // Define CSV headers
+function convertToCSV(requests: unknown[]) {
   const headers = [
-    'Request ID',
-    'User Name',
-    'User Email',
-    'User ID',
-    'Phone',
-    'Voucher Type',
-    'Quantity',
-    'Amount',
-    'Status',
-    'Created Date',
-    'Approved/Declined Date',
-    'Admin Notes',
-    'User Notes',
-    'Payment Reference'
+    "Request ID",
+    "User Name",
+    "User Email",
+    "User ID",
+    "Phone",
+    "Voucher Type",
+    "Quantity",
+    "Amount",
+    "Status",
+    "Created Date",
+    "Approved/Declined Date",
+    "Admin Notes",
+    "User Notes",
+    "Payment Reference",
   ];
-  
-  // Start with headers
-  let csvContent = headers.join(',') + '\n';
-  
-  // Add each request as a row
-  for (const request of requests) {
-    const user = request.userId || {};
-    
-    // Format dates
-    const createdDate = request.createdAt ? format(new Date(request.createdAt), 'yyyy-MM-dd HH:mm:ss') : '';
-    const statusDate = request.approvedAt || request.declinedAt ? 
-      format(new Date(request.approvedAt || request.declinedAt), 'yyyy-MM-dd HH:mm:ss') : '';
-    
-    // Format voucher type for display
-    const voucherType = request.type === 'twoDish' ? '2-Dish' : '3-Dish';
-    
-    // Escape fields that might contain commas or quotes
+
+  let csvContent = headers.join(",") + "\n";
+
+  for (const req of requests) {
+    const r = req as Record<string, unknown>;
+    const user = (r.userId as Record<string, string>) || {};
+
+    const createdDate = r.createdAt
+      ? format(new Date(r.createdAt as string), "yyyy-MM-dd HH:mm:ss")
+      : "";
+    const statusDate =
+      r.approvedAt || r.declinedAt
+        ? format(new Date((r.approvedAt || r.declinedAt) as string), "yyyy-MM-dd HH:mm:ss")
+        : "";
+
+    const voucherType = r.type === "twoDish" ? "2-Dish" : "3-Dish";
+
     const row = [
-      escapeCsvField(request.requestId || ''),
-      escapeCsvField(user.name || ''),
-      escapeCsvField(user.email || ''),
-      escapeCsvField(user.userID || ''),
-      escapeCsvField(user.phone || ''),
+      escapeCsvField(String(r.requestId || "")),
+      escapeCsvField(String(user.name || "")),
+      escapeCsvField(String(user.email || "")),
+      escapeCsvField(String(user.userID || "")),
+      escapeCsvField(String(user.phone || "")),
       escapeCsvField(voucherType),
-      request.quantity || '',
-      request.amount || '',
-      escapeCsvField(request.status || ''),
+      String(r.quantity || ""),
+      String(r.amount || ""),
+      escapeCsvField(String(r.status || "")),
       escapeCsvField(createdDate),
       escapeCsvField(statusDate),
-      escapeCsvField(request.adminNotes || ''),
-      escapeCsvField(request.notes || ''),
-      escapeCsvField(request.paymentReference || '')
+      escapeCsvField(String(r.adminNotes || "")),
+      escapeCsvField(String(r.notes || "")),
+      escapeCsvField(String(r.paymentReference || "")),
     ];
-    
-    csvContent += row.join(',') + '\n';
+
+    csvContent += row.join(",") + "\n";
   }
-  
+
   return csvContent;
 }
 
-// Helper function to escape CSV fields
 function escapeCsvField(field: string) {
-  // If the field contains commas, quotes, or newlines, wrap it in quotes
-  if (field && (field.includes(',') || field.includes('"') || field.includes('\n'))) {
-    // Replace any quotes with double quotes
+  if (field && (field.includes(",") || field.includes('"') || field.includes("\n"))) {
     return `"${field.replace(/"/g, '""')}"`;
   }
   return field;

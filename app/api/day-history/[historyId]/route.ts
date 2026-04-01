@@ -1,68 +1,50 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, successJson, type RouteContext } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import DayHistory from '@/models/DayHistory';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { historyId: string } }
-) {
+export async function GET(_request: Request, { params }: RouteContext<{ historyId: string }>) {
+  let historyId = '';
   try {
-    const { actor, response } = await requireAdminMfa(request);
+    const { actor, response } = await requireAdminMfa(_request);
     if (!actor || response) {
       return response;
     }
 
+    ({ historyId } = await params);
+
     await connectToDatabase();
-    const { historyId } = params;
     const history = await DayHistory.findOne({ historyId });
-    
+
     if (!history) {
-      return NextResponse.json(
-        { success: false, error: 'History entry not found' },
-        { status: 404 }
-      );
+      return errorJson('History entry not found', 404);
     }
-    
-    return NextResponse.json({ success: true, data: history });
-  } catch (error) {
-    console.error('Error fetching history entry:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+
+    return successJson(history);
+  } catch (error: unknown) {
+    return handleRouteError(error, `GET /api/day-history/${historyId || '[historyId]'}`);
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { historyId: string } }
-) {
+export async function DELETE(_request: Request, { params }: RouteContext<{ historyId: string }>) {
+  let historyId = '';
   try {
-    const { actor, response } = await requireAdminMfa(request);
+    const { actor, response } = await requireAdminMfa(_request);
     if (!actor || response) {
       return response;
     }
 
     await connectToDatabase();
-    const { historyId } = params;
-    
+    ({ historyId } = await params);
+
     const history = await DayHistory.findOneAndDelete({ historyId });
-    
+
     if (!history) {
-      return NextResponse.json(
-        { success: false, error: 'History entry not found' },
-        { status: 404 }
-      );
+      return errorJson('History entry not found', 404);
     }
-    
-    return NextResponse.json({ success: true, data: {} });
-  } catch (error) {
-    console.error('Error deleting history entry:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+
+    return successJson({});
+  } catch (error: unknown) {
+    return handleRouteError(error, `DELETE /api/day-history/${historyId || '[historyId]'}`);
   }
 }
-

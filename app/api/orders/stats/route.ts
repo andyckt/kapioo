@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
@@ -100,9 +100,7 @@ export async function GET(request: Request) {
     // Simulate popular day change (-5 to +5%)
     const popularDayChange = Number((Math.random() * 10 - 5).toFixed(1));
     
-    return NextResponse.json({ 
-      success: true, 
-      data: {
+    return successJson({
         totalOrders,
         pendingOrders,
         deliveredOrders,
@@ -114,13 +112,8 @@ export async function GET(request: Request) {
         deliveredOrdersGrowth,
         popularDay,
         popularDayChange
-      }
     });
-  } catch (error) {
-    console.error('Error fetching order statistics:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch order statistics' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/orders/stats');
   }
 } 

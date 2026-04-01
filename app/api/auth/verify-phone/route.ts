@@ -1,18 +1,14 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
+import { phoneOnlyBodySchema } from '@/lib/contracts/auth';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 
 // POST handler - verify phone number
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.phone) {
-      return NextResponse.json(
-        { success: false, error: 'Phone number is required' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, phoneOnlyBodySchema);
+    if (error) {
+      return error;
     }
     
     await connectToDatabase();
@@ -23,31 +19,20 @@ export async function POST(request: Request) {
     });
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Phone number not found' },
-        { status: 404 }
-      );
+      return errorJson('Phone number not found', 404);
     }
     
     // Check if the user is active
     if (user.status !== 'Active') {
-      return NextResponse.json(
-        { success: false, error: 'Account is not active' },
-        { status: 403 }
-      );
+      return errorJson('Account is not active', 403);
     }
     
     // Return success and userID for password reset
-    return NextResponse.json({
-      success: true,
+    return successJson({
       userId: user.userID,
       message: 'Phone number verified successfully'
     });
-  } catch (error) {
-    console.error('Error during phone verification:', error);
-    return NextResponse.json(
-      { success: false, error: 'Verification failed' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/auth/verify-phone');
   }
 } 

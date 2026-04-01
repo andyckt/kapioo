@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
+import { NextResponse } from "next/server";
+import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
+import { weeklySubscriptionUserOrderBodySchema } from "@/lib/contracts/weekly-subscription";
+import { requireUser } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import UserSubscription from '@/models/UserSubscription';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import WeeklyEntitlementGroup from '@/models/WeeklyEntitlementGroup';
-import User from '@/models/User';
-import { sendWeeklyOrderConfirmationEmail, sendAdminWeeklyOrderNotification } from '@/lib/services/email';
-import { toWeeklyPlanId } from '@/lib/plans/service';
+import User from "@/models/User";
+import { toWeeklyPlanId } from "@/lib/plans/service";
 import { format, addDays, addWeeks } from 'date-fns';
 
 // Types for consecutive date validation
@@ -99,12 +100,12 @@ function sortDeliveryDays(days: DeliveryDayForValidation[]): DeliveryDayForValid
 
 // Helper function: Validate consecutive dates
 function validateConsecutiveDates(
-  orderItems: Array<{ dayId: string; weekOffset: number }>,
+  orderItems: Array<{ dayId: string; weekOffset?: number }>,
   allAvailableDeliveryDays: DeliveryDayForValidation[]
 ): DateValidationResult {
   // Extract unique day+weekOffset combinations from order items
   const uniqueCombinations = Array.from(
-    new Set(orderItems.map(item => `${item.dayId}-${item.weekOffset}`))
+    new Set(orderItems.map((item) => `${item.dayId}-${item.weekOffset ?? 0}`))
   ).map(combo => {
     const [dayId, weekOffsetStr] = combo.split('-');
     return { dayId, weekOffset: parseInt(weekOffsetStr, 10) };
@@ -185,17 +186,8 @@ function validateConsecutiveDates(
 }
 
 // GET handler - return active delivery days and options for users
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    console.log('Fetching user subscription data...');
-    
-    // Make sure WeeklyMealOption model is registered before using it in populate
-    if (!WeeklyMealOption) {
-      console.error('WeeklyMealOption model not loaded');
-    } else {
-      console.log('WeeklyMealOption model loaded successfully');
-    }
-    
     await connectToDatabase();
     await ensureWeeklyDeliveryDays();
     
@@ -224,27 +216,9 @@ export async function GET(request: Request) {
       }))
     }));
     
-    return NextResponse.json(
-      { success: true, data: formattedDeliveryDays },
-      { status: 200 }
-    );
+    return successJson(formattedDeliveryDays);
   } catch (error) {
-    console.error('Error fetching user subscription data:', error);
-    
-    // Log more detailed information for debugging
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch subscription data',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return handleRouteError(error, "GET /api/weekly-subscription/user");
   }
 }
 
@@ -252,23 +226,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { actor, response } = await requireUser();
-    // #region agent log
-    const dbg = (msg: string, hypothesisId: string, d?: Record<string, unknown>) => { fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'weekly-subscription/user/route.ts:POST',message:msg,data:{hypothesisId,...d},timestamp:Date.now(),hypothesisId})}).catch(()=>{}); };
-    if (!actor || response) { dbg('requireUser_failed','C',{hasActor:!!actor}); return response; }
-    dbg('requireUser_ok','C',{userId:String(actor.user._id)});
-    // #endregion
+    if (!actor || response) {
+      return response;
+    }
 
-    const data = await request.json();
-    
-    console.log('🔍 API DEBUG: Received POST request with data:', JSON.stringify(data, null, 2));
-    console.log('🔍 API DEBUG: Items received:', data.items);
-    
-    // Validate required fields
-    if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Subscription items are required' },
-        { status: 400 }
-      );
+    const { data, error: bodyError } = await parseJsonBody(request, weeklySubscriptionUserOrderBodySchema);
+    if (bodyError || !data) {
+      return bodyError;
     }
 
     const weeklyEntitlementGroupId =
@@ -280,17 +244,11 @@ export async function POST(request: Request) {
 
     if (weeklyEntitlementGroupId) {
       if (!Number.isInteger(weeklyEntitlementTotalMeals) || weeklyEntitlementTotalMeals <= 0) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid weekly entitlement total meals' },
-          { status: 400 }
-        );
+        return errorJson("Invalid weekly entitlement total meals", 400);
       }
 
       if (!Number.isInteger(splitDeliveryCount) || splitDeliveryCount <= 1) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid split delivery count for weekly entitlement group' },
-          { status: 400 }
-        );
+        return errorJson("Invalid split delivery count for weekly entitlement group", 400);
       }
     }
     
@@ -305,10 +263,7 @@ export async function POST(request: Request) {
       String(data.userId) !== String(actor.user._id) &&
       String(data.userId) !== String(actor.user.userID)
     ) {
-      return NextResponse.json(
-        { success: false, error: 'You cannot create subscriptions for another user' },
-        { status: 403 }
-      );
+      return errorJson("You cannot create subscriptions for another user", 403);
     }
     
     await connectToDatabase();
@@ -317,10 +272,7 @@ export async function POST(request: Request) {
     const user = await User.findById(effectiveUserId);
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson("User not found", 404);
     }
     
     // ✅ IDEMPOTENCY CHECK: Prevent duplicate orders within 60 seconds
@@ -431,16 +383,13 @@ export async function POST(request: Request) {
       
       if (!validation.isValid) {
         console.log('❌ CONSECUTIVE VALIDATION: Failed -', validation.error);
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: validation.error || 'Invalid delivery date selection',
-            details: 'Selected delivery dates must be consecutive delivery slots',
+        return errorJson(validation.error || "Invalid delivery date selection", 400, {
+          details: "Selected delivery dates must be consecutive delivery slots",
+          extra: {
             selectedDates: validation.selectedDates,
             availableDates: validation.availableDates,
           },
-          { status: 400 }
-        );
+        });
       }
       
       console.log('✅ CONSECUTIVE VALIDATION: Passed');
@@ -487,16 +436,13 @@ export async function POST(request: Request) {
       
       // Check if user has enough of the specified meal plan
       if (!hasEnoughMeals) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Not enough meal plans', 
-            requiredCredits: mealPlanType === 'legacy' ? totalItems : 1, 
+        return errorJson("Not enough meal plans", 400, {
+          extra: {
+            requiredCredits: mealPlanType === "legacy" ? totalItems : 1,
             availableCredits: availableMeals,
-            mealPlanType
+            mealPlanType,
           },
-          { status: 400 }
-        );
+        });
       }
     }
     
@@ -587,24 +533,15 @@ export async function POST(request: Request) {
       const existingEntitlementGroup = await WeeklyEntitlementGroup.findOne({ groupId: weeklyEntitlementGroupId });
       if (existingEntitlementGroup) {
         if (String(existingEntitlementGroup.userId) !== String(user._id)) {
-          return NextResponse.json(
-            { success: false, error: 'Weekly entitlement group belongs to a different user' },
-            { status: 409 }
-          );
+          return errorJson("Weekly entitlement group belongs to a different user", 409);
         }
 
         if (String(existingEntitlementGroup.mealPlanType) !== String(mealPlanType)) {
-          return NextResponse.json(
-            { success: false, error: 'Weekly entitlement group meal plan type mismatch' },
-            { status: 409 }
-          );
+          return errorJson("Weekly entitlement group meal plan type mismatch", 409);
         }
 
         if (Number(existingEntitlementGroup.totalMealsForWeek) !== weeklyEntitlementTotalMeals) {
-          return NextResponse.json(
-            { success: false, error: 'Weekly entitlement group total meals mismatch' },
-            { status: 409 }
-          );
+          return errorJson("Weekly entitlement group total meals mismatch", 409);
         }
       } else {
         await WeeklyEntitlementGroup.create({
@@ -744,21 +681,6 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error processing subscription:', error);
-    
-    // Log more detailed information for debugging
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to process subscription',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return handleRouteError(error, "POST /api/weekly-subscription/user");
   }
 }

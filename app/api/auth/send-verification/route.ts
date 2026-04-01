@@ -1,18 +1,14 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
+import { userIdBodySchema } from '@/lib/contracts/auth';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { sendVerificationEmail } from '@/lib/services/email';
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, userIdBodySchema);
+    if (error) {
+      return error;
     }
     
     await connectToDatabase();
@@ -26,18 +22,12 @@ export async function POST(request: Request) {
     });
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
     
     // Check if already verified
     if (user.isVerified) {
-      return NextResponse.json(
-        { success: false, error: 'Email is already verified' },
-        { status: 400 }
-      );
+      return errorJson('Email is already verified', 400);
     }
     
     // Generate verification code
@@ -48,15 +38,10 @@ export async function POST(request: Request) {
     // Send verification email with code
     await sendVerificationEmail(user.email, code, user.languagePreference || 'zh');
     
-    return NextResponse.json({
-      success: true,
+    return successJson({
       message: 'Verification email sent successfully'
     });
-  } catch (error) {
-    console.error('Error sending verification email:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to send verification email' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/auth/send-verification');
   }
 } 

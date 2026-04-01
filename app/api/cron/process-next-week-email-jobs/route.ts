@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db';
-import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
-import User from '@/models/User';
-import { buildNextWeekMenuUpdateEmail } from '@/lib/services/email';
-import { sendBatchEmailsWithResend } from '@/lib/services/resend-email';
+import { NextResponse } from "next/server";
+
+import { errorJson, successJson } from "@/lib/api";
+import type { Language } from "@/lib/email-translations";
+import connectToDatabase from "@/lib/db";
+import NextWeekMenuEmailJob from "@/models/NextWeekMenuEmailJob";
+import User from "@/models/User";
+import { buildNextWeekMenuUpdateEmail } from "@/lib/services/email";
+import { sendBatchEmailsWithResend } from "@/lib/services/resend-email";
 
 const LOCK_TTL_MS = 5 * 60_000;
 const CHUNK_SIZE = 60; // Process up to 60 users per run
@@ -13,7 +16,7 @@ const BATCH_INTERVAL_MS = 500; // Small pause only when multiple batch requests 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isAuthorizedCronCall = (request: Request, cronSecret: string) => {
-  const authHeader = request.headers.get('authorization');
+  const authHeader = request.headers.get("authorization");
   return authHeader === `Bearer ${cronSecret}`;
 };
 
@@ -21,21 +24,21 @@ const acquireJobLock = async (lockOwner: string) => {
   const now = new Date();
   return NextWeekMenuEmailJob.findOneAndUpdate(
     {
-      status: { $in: ['pending', 'processing'] },
-      $expr: { $lt: ['$cursor', '$totalUsers'] },
-      $or: [{ lockExpiresAt: null }, { lockExpiresAt: { $lte: now } }]
+      status: { $in: ["pending", "processing"] },
+      $expr: { $lt: ["$cursor", "$totalUsers"] },
+      $or: [{ lockExpiresAt: null }, { lockExpiresAt: { $lte: now } }],
     },
     {
       $set: {
-        status: 'processing',
+        status: "processing",
         lockOwner,
         lockExpiresAt: new Date(now.getTime() + LOCK_TTL_MS),
-        startedAt: now
-      }
+        startedAt: now,
+      },
     },
     {
       sort: { createdAt: 1 },
-      new: true
+      new: true,
     }
   );
 };
@@ -44,15 +47,12 @@ async function processJobs(request: Request) {
   try {
     const cronSecret = process.env.CRON_SECRET;
     if (!cronSecret) {
-      console.error('Cron endpoint secret is not configured');
-      return NextResponse.json(
-        { success: false, error: 'Cron endpoint is not configured' },
-        { status: 503 }
-      );
+      console.error("Cron endpoint secret is not configured");
+      return errorJson("Cron endpoint is not configured", 503);
     }
 
     if (!isAuthorizedCronCall(request, cronSecret)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized cron call' }, { status: 401 });
+      return errorJson("Unauthorized cron call", 401);
     }
 
     await connectToDatabase();
@@ -62,7 +62,7 @@ async function processJobs(request: Request) {
     if (!job) {
       return NextResponse.json({
         success: true,
-        message: 'No pending next-week email jobs to process'
+        message: "No pending next-week email jobs to process",
       });
     }
 
@@ -74,9 +74,14 @@ async function processJobs(request: Request) {
     );
 
     const users = await User.find({ _id: { $in: targetUserIds } })
-      .select('_id name email languagePreference')
+      .select("_id name email languagePreference")
       .lean();
-    const userMap = new Map(users.map((user: any) => [String(user._id), user]));
+    const userMap = new Map(
+      users.map((user: { _id: unknown; email?: string; name?: string; languagePreference?: string }) => [
+        String(user._id),
+        user,
+      ])
+    );
 
     let sentDelta = 0;
     let failedDelta = 0;
@@ -101,22 +106,22 @@ async function processJobs(request: Request) {
           userId,
           name: user?.name,
           email: user?.email,
-          error: 'User missing or has invalid email',
-          occurredAt: new Date()
+          error: "User missing or has invalid email",
+          occurredAt: new Date(),
         });
       } else {
         batchPayloads.push(
           buildNextWeekMenuUpdateEmail(
             user.email,
-            user.name || 'Kapioo User',
+            user.name || "Kapioo User",
             String(user._id),
-            user.languagePreference || 'zh'
+            (user.languagePreference || "zh") as Language
           )
         );
         batchMetadata.push({
           userId: String(user._id),
           email: user.email,
-          name: user.name
+          name: user.name,
         });
       }
     }
@@ -144,8 +149,8 @@ async function processJobs(request: Request) {
             userId: metadata.userId,
             email: metadata.email,
             name: metadata.name,
-            error: result?.error || 'Unknown batch send error',
-            occurredAt: new Date()
+            error: result?.error || "Unknown batch send error",
+            occurredAt: new Date(),
           });
         }
       }
@@ -163,17 +168,17 @@ async function processJobs(request: Request) {
     const nextCursor = targetCursor;
     const isComplete = nextCursor >= job.totalUsers;
 
-    const updateQuery: any = { _id: job._id, lockOwner };
-    const updatePayload: any = {
+    const updateQuery: Record<string, unknown> = { _id: job._id, lockOwner };
+    const updatePayload: Record<string, unknown> = {
       $set: {
         cursor: nextCursor,
         sentCount: job.sentCount + sentDelta,
         failedCount: job.failedCount + failedDelta,
-        status: isComplete ? 'completed' : 'processing',
+        status: isComplete ? "completed" : "processing",
         lastProcessedAt: new Date(),
         lockOwner: null,
-        lockExpiresAt: null
-      }
+        lockExpiresAt: null,
+      },
     };
 
     if (failedEntries.length > 0) {
@@ -181,7 +186,7 @@ async function processJobs(request: Request) {
     }
 
     if (isComplete) {
-      updatePayload.$set.completedAt = new Date();
+      (updatePayload.$set as Record<string, unknown>).completedAt = new Date();
     }
 
     const updatedJob = await NextWeekMenuEmailJob.findOneAndUpdate(
@@ -191,44 +196,31 @@ async function processJobs(request: Request) {
     );
 
     if (!updatedJob) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Job lock lost before final update'
-        },
-        { status: 409 }
-      );
+      return errorJson("Job lock lost before final update", 409);
     }
 
     console.info(
       `[NextWeekEmailWorker] checkpoint jobId=${String(job._id)} cursor=${updatedJob.cursor}/${updatedJob.totalUsers} sent=${updatedJob.sentCount} failed=${updatedJob.failedCount} status=${updatedJob.status}`
     );
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        jobId: String(updatedJob._id),
-        processedThisRun: targetUserIds.length,
-        sentDelta,
-        failedDelta,
-        status: updatedJob.status,
-        cursor: updatedJob.cursor,
-        totalUsers: updatedJob.totalUsers,
-        progress:
-          updatedJob.totalUsers > 0
-            ? Math.round(
-                ((updatedJob.sentCount + updatedJob.failedCount) / updatedJob.totalUsers) *
-                  100
-              )
-            : 0
-      }
+    return successJson({
+      jobId: String(updatedJob._id),
+      processedThisRun: targetUserIds.length,
+      sentDelta,
+      failedDelta,
+      status: updatedJob.status,
+      cursor: updatedJob.cursor,
+      totalUsers: updatedJob.totalUsers,
+      progress:
+        updatedJob.totalUsers > 0
+          ? Math.round(
+              ((updatedJob.sentCount + updatedJob.failedCount) / updatedJob.totalUsers) * 100
+            )
+          : 0,
     });
-  } catch (error) {
-    console.error('Error processing next-week email jobs:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to process next-week email jobs' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Error processing next-week email jobs:", error);
+    return errorJson("Failed to process next-week email jobs", 500);
   }
 }
 

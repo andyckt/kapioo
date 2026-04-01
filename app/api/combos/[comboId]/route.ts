@@ -1,37 +1,31 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { comboBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Combo from '@/models/Combo';
 
 export async function GET(
   request: Request,
-  { params }: { params: { comboId: string } }
+  { params }: RouteContext<{ comboId: string }>
 ) {
   try {
     await connectToDatabase();
-    const { comboId } = params;
+    const { comboId } = await params;
     const combo = await Combo.findOne({ comboId });
     
     if (!combo) {
-      return NextResponse.json(
-        { success: false, error: 'Combo not found' },
-        { status: 404 }
-      );
+      return errorJson('Combo not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: combo });
-  } catch (error) {
-    console.error('Error fetching combo:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(combo);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/combos/[comboId]');
   }
 }
 
 export async function PUT(
   request: Request,
-  { params }: { params: { comboId: string } }
+  { params }: RouteContext<{ comboId: string }>
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -40,8 +34,11 @@ export async function PUT(
     }
 
     await connectToDatabase();
-    const { comboId } = params;
-    const data = await request.json();
+    const { comboId } = await params;
+    const { data, error } = await parseJsonBody(request, comboBodySchema.partial());
+    if (error) {
+      return error;
+    }
     
     const combo = await Combo.findOneAndUpdate(
       { comboId },
@@ -50,25 +47,18 @@ export async function PUT(
     );
     
     if (!combo) {
-      return NextResponse.json(
-        { success: false, error: 'Combo not found' },
-        { status: 404 }
-      );
+      return errorJson('Combo not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: combo });
-  } catch (error) {
-    console.error('Error updating combo:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(combo);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'PUT /api/combos/[comboId]');
   }
 }
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { comboId: string } }
+  { params }: RouteContext<{ comboId: string }>
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -77,23 +67,16 @@ export async function DELETE(
     }
 
     await connectToDatabase();
-    const { comboId } = params;
+    const { comboId } = await params;
     
     const combo = await Combo.findOneAndDelete({ comboId });
     
     if (!combo) {
-      return NextResponse.json(
-        { success: false, error: 'Combo not found' },
-        { status: 404 }
-      );
+      return errorJson('Combo not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: {} });
-  } catch (error) {
-    console.error('Error deleting combo:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson({});
+  } catch (error: unknown) {
+    return handleRouteError(error, 'DELETE /api/combos/[comboId]');
   }
 }

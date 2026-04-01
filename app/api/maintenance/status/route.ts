@@ -1,35 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import dbConnect from '@/lib/db';
-import Settings from '@/models/Settings';
+import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = 'force-dynamic';
+import { parseJsonBody } from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import dbConnect from "@/lib/db";
+import { maintenanceModeBodySchema } from "@/lib/contracts/settings";
+import Settings from "@/models/Settings";
+
+export const dynamic = "force-dynamic";
 
 // GET - Fetch maintenance mode status
 export async function GET(request: NextRequest) {
+  void request;
   try {
     await dbConnect();
-    
-    // Try to find the maintenance mode setting
-    let setting = await Settings.findOne({ key: 'maintenanceMode' });
-    
-    // If it doesn't exist, create it with default value false
+
+    let setting = await Settings.findOne({ key: "maintenanceMode" });
+
     if (!setting) {
       setting = await Settings.create({
-        key: 'maintenanceMode',
+        key: "maintenanceMode",
         value: false,
-        description: 'Global maintenance mode flag for the website'
+        description: "Global maintenance mode flag for the website",
       });
     }
-    
+
     return NextResponse.json({
       isMaintenanceMode: setting.value || false,
-      updatedAt: setting.updatedAt
+      updatedAt: setting.updatedAt,
     });
-  } catch (error) {
-    console.error('Error fetching maintenance status:', error);
+  } catch (error: unknown) {
+    console.error("Error fetching maintenance status:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch maintenance status', isMaintenanceMode: false },
+      { error: "Failed to fetch maintenance status", isMaintenanceMode: false },
       { status: 500 }
     );
   }
@@ -43,43 +45,37 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    await dbConnect();
-    
-    const body = await request.json();
-    const { isMaintenanceMode } = body;
-    
-    if (typeof isMaintenanceMode !== 'boolean') {
-      return NextResponse.json(
-        { error: 'isMaintenanceMode must be a boolean value' },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(request, maintenanceModeBodySchema);
+    if (parsed.error) {
+      return parsed.error;
     }
-    
-    // Update or create the maintenance mode setting
+    const { isMaintenanceMode } = parsed.data;
+
+    await dbConnect();
+
     const setting = await Settings.findOneAndUpdate(
-      { key: 'maintenanceMode' },
-      { 
+      { key: "maintenanceMode" },
+      {
         value: isMaintenanceMode,
-        description: 'Global maintenance mode flag for the website'
+        description: "Global maintenance mode flag for the website",
       },
-      { 
-        new: true, 
+      {
+        new: true,
         upsert: true,
-        runValidators: true
+        runValidators: true,
       }
     );
-    
+
     return NextResponse.json({
       success: true,
-      isMaintenanceMode: setting.value,
-      updatedAt: setting.updatedAt
+      isMaintenanceMode: setting!.value,
+      updatedAt: setting!.updatedAt,
     });
-  } catch (error) {
-    console.error('Error updating maintenance status:', error);
+  } catch (error: unknown) {
+    console.error("Error updating maintenance status:", error);
     return NextResponse.json(
-      { error: 'Failed to update maintenance status' },
+      { error: "Failed to update maintenance status" },
       { status: 500 }
     );
   }
 }
-

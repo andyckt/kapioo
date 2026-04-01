@@ -1,45 +1,37 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from '@/lib/api';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
+import { changePasswordBodySchema } from '@/lib/contracts/user';
 import connectToDatabase from '@/lib/db';
+import { findUserByIdentifier } from '@/lib/api/users';
 import User from '@/models/User';
 
-// Interface for route params
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
 // POST handler - change user password
-export async function POST(request: Request, { params }: RouteParams) {
+export async function POST(request: Request, { params }: RouteContext<{ id: string }>) {
+  let id = '';
   try {
-    const { id } = await params;
+    ({ id } = await params);
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
       return response;
     }
-    const { currentPassword, newPassword } = await request.json();
+    const { data, error } = await parseJsonBody(request, changePasswordBodySchema);
+    if (error) {
+      return error;
+    }
+    const { currentPassword, newPassword } = data;
     
     // Validate inputs
     if (!newPassword || (!currentPassword && actor.role !== 'admin')) {
-      return NextResponse.json(
-        { success: false, error: 'Current password and new password are required' },
-        { status: 400 }
-      );
+      return errorJson('Current password and new password are required', 400);
     }
     
     await connectToDatabase();
     
     // Find user
-    const user = await User.findOne({ 
-      $or: [{ _id: id }, { userID: id }] 
-    });
+    const user = await findUserByIdentifier(id);
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
     
     // Verify current password
@@ -47,10 +39,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       const isPasswordValid = await user.comparePassword(currentPassword);
       
       if (!isPasswordValid) {
-        return NextResponse.json(
-          { success: false, error: 'Current password is incorrect' },
-          { status: 400 }
-        );
+        return errorJson('Current password is incorrect', 400);
       }
     }
     
@@ -59,16 +48,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     user.sessionVersion = Number(user.sessionVersion || 1) + 1;
     await user.save();
     
-    return NextResponse.json({ 
-      success: true, 
+    return successJson({ 
       message: 'Password updated successfully' 
     });
-  } catch (error) {
-    const { id } = await params;
-    console.error(`Error changing password for user ${id}:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to change password' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, `POST /api/users/${id || '[id]'}/change-password`);
   }
 } 

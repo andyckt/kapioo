@@ -1,37 +1,31 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { dayBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Day from '@/models/Day';
 
 export async function GET(
   request: Request,
-  { params }: { params: { dayId: string } }
+  { params }: RouteContext<{ dayId: string }>
 ) {
   try {
     await connectToDatabase();
-    const { dayId } = params;
+    const { dayId } = await params;
     const day = await Day.findOne({ dayId });
     
     if (!day) {
-      return NextResponse.json(
-        { success: false, error: 'Day not found' },
-        { status: 404 }
-      );
+      return errorJson('Day not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: day });
-  } catch (error) {
-    console.error('Error fetching day:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(day);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/days/[dayId]');
   }
 }
 
 export async function PUT(
   request: Request,
-  { params }: { params: { dayId: string } }
+  { params }: RouteContext<{ dayId: string }>
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -40,8 +34,11 @@ export async function PUT(
     }
 
     await connectToDatabase();
-    const { dayId } = params;
-    const data = await request.json();
+    const { dayId } = await params;
+    const { data, error } = await parseJsonBody(request, dayBodySchema.partial());
+    if (error) {
+      return error;
+    }
     
     const day = await Day.findOneAndUpdate(
       { dayId },
@@ -50,25 +47,18 @@ export async function PUT(
     );
     
     if (!day) {
-      return NextResponse.json(
-        { success: false, error: 'Day not found' },
-        { status: 404 }
-      );
+      return errorJson('Day not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: day });
-  } catch (error) {
-    console.error('Error updating day:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(day);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'PUT /api/days/[dayId]');
   }
 }
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { dayId: string } }
+  { params }: RouteContext<{ dayId: string }>
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -77,7 +67,7 @@ export async function DELETE(
     }
 
     await connectToDatabase();
-    const { dayId } = params;
+    const { dayId } = await params;
     
     console.log('DELETE request received for dayId:', dayId);
     
@@ -95,19 +85,12 @@ export async function DELETE(
     const day = await Day.findOneAndDelete({ dayId });
     
     if (!day) {
-      return NextResponse.json(
-        { success: false, error: 'Day not found' },
-        { status: 404 }
-      );
+      return errorJson('Day not found', 404);
     }
     
     console.log('Day deleted successfully:', dayId);
-    return NextResponse.json({ success: true, data: {} });
-  } catch (error) {
-    console.error('Error deleting day:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson({});
+  } catch (error: unknown) {
+    return handleRouteError(error, 'DELETE /api/days/[dayId]');
   }
 }

@@ -1,157 +1,52 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
-import { sendDailyOrderStatusUpdateNotification } from '@/lib/services/notifications';
-import User from '@/models/User';
+import {
+  errorJson,
+  handleRouteError,
+  parseJsonBody,
+  successJson,
+  type RouteContext,
+} from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import { updateDailyOrderStatusBodySchema } from "@/lib/contracts/daily-order";
+import connectToDatabase from "@/lib/db";
+import { sendDailyOrderStatusUpdateNotification } from "@/lib/services/notifications";
+import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
+import User from "@/models/User";
 
-// Define route params interface
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-// Define the interface for the DailyOrder document
-interface DailyOrderDocument extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: string;
-  items: any[];
-  status: 'pending' | 'confirmed' | 'delivery' | 'delivered' | 'cancelled' | 'refunded';
-  voucherCost: {
-    twoDish: number;
-    threeDish: number;
-  };
-  specialInstructions?: string;
-  deliveryAddress: {
-    unitNumber?: string;
-    streetAddress: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
-    buzzCode?: string;
-  };
-  phoneNumber: string;
-  area: string;
-  confirmedAt?: Date;
-  deliveredAt?: Date;
-  refundedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Create a schema for daily orders
-const DailyDeliveryOrderSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  orderId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  items: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'],
-    default: 'pending'
-  },
-  voucherCost: {
-    twoDish: {
-      type: Number,
-      default: 0
-    },
-    threeDish: {
-      type: Number,
-      default: 0
-    }
-  },
-  specialInstructions: String,
-  deliveryAddress: {
-    unitNumber: String,
-    streetAddress: String,
-    city: String,
-    province: String,
-    postalCode: String,
-    country: String,
-    buzzCode: String
-  },
-  phoneNumber: String,
-  area: String,
-  confirmedAt: Date,
-  deliveredAt: Date,
-  refundedAt: Date,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// PATCH handler - update order status
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: Request, { params }: RouteContext<{ id: string }>) {
+  let id = "";
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
     }
-    
-    // First connect to the database
+
     await connectToDatabase();
-    
-    // Initialize the model after database connection is established
-    let DailyDeliveryOrder: mongoose.Model<DailyOrderDocument>;
-    if (mongoose.models.DailyDeliveryOrder) {
-      // Use existing model if it exists
-      DailyDeliveryOrder = mongoose.models.DailyDeliveryOrder as mongoose.Model<DailyOrderDocument>;
-    } else {
-      // Create the model if it doesn't exist
-      DailyDeliveryOrder = mongoose.model<DailyOrderDocument>('DailyDeliveryOrder', DailyDeliveryOrderSchema);
+
+    ({ id } = await params);
+
+    const { data, error } = await parseJsonBody(request, updateDailyOrderStatusBodySchema);
+    if (error) {
+      return error;
     }
-    
-    const { id } = params;
-    const { status } = await request.json();
-    
-    // Validate status
-    const validStatuses = ['pending', 'confirmed', 'delivery', 'delivered', 'cancelled', 'refunded'];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid status' },
-        { status: 400 }
-      );
-    }
-    
-    // Find the order by orderId
+
+    const { status } = data;
+
     const order = await DailyDeliveryOrder.findOne({ orderId: id });
-    
+
     if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
+      return errorJson("Order not found", 404);
     }
-    
-    // Update timestamp based on status
-    const updateData: any = { status };
-    
-    if (status === 'confirmed') {
+
+    const updateData: Record<string, unknown> = { status };
+
+    if (status === "confirmed") {
       updateData.confirmedAt = new Date();
-    } else if (status === 'delivered') {
+    } else if (status === "delivered") {
       updateData.deliveredAt = new Date();
-    } else if (status === 'refunded') {
+    } else if (status === "refunded") {
       updateData.refundedAt = new Date();
-      
-      // If refunded, return vouchers to user
-      if (order.status !== 'refunded') {
+
+      if (order.status !== "refunded") {
         const user = await User.findById(order.userId);
         if (user) {
           user.twoDishVoucher += order.voucherCost.twoDish || 0;
@@ -160,16 +55,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         }
       }
     }
-    
-    // Update the order
+
     const updatedOrder = await DailyDeliveryOrder.findOneAndUpdate(
       { orderId: id },
       { $set: updateData },
       { new: true }
     );
-    
-    // Send notification to user about status change (skip for 'confirmed' and 'delivered' status)
-    if (status !== 'confirmed' && status !== 'delivered') {
+
+    if (status !== "confirmed" && status !== "delivered") {
       try {
         const user = await User.findById(order.userId);
         if (user && user.email) {
@@ -179,27 +72,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
             id,
             status,
             order.items,
-            order.status, // Previous status
-            user.languagePreference || 'zh', // Pass user's language preference from database
-            order.createdAt // Pass the actual order creation date
+            order.status,
+            user.languagePreference || "zh",
+            order.createdAt
           );
         }
       } catch (notificationError) {
-        console.error('Failed to send status update notification:', notificationError);
-        // Don't fail the API call if notification sending fails
+        console.error("Failed to send status update notification:", notificationError);
       }
     }
-    
-    return NextResponse.json({
-      success: true,
-      data: updatedOrder
-    });
-  } catch (error: any) {
-    console.error('Error updating order status:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to update order status', details: error.message },
-      { status: 500 }
-    );
+
+    return successJson(updatedOrder);
+  } catch (error: unknown) {
+    return handleRouteError(error, `PATCH /api/admin/daily-delivery/orders/${id || "[id]"}/status`);
   }
 }

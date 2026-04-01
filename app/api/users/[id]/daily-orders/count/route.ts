@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { errorJson, handleRouteError, successJson, type RouteContext } from '@/lib/api';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
+import { findUserByIdentifier } from '@/lib/api/users';
 import connectToDatabase from '@/lib/db';
 import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
-import User from '@/models/User';
-import mongoose from 'mongoose';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: RouteContext<{ id: string }>
 ) {
   try {
     const { id } = await params;
@@ -19,33 +18,19 @@ export async function GET(
     await connectToDatabase();
     
     // Check if user exists
-    const user = await User.findOne({
-      $or: [
-        { _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null },
-        { userID: id }
-      ]
-    });
+    const user = await findUserByIdentifier(id);
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
     
     // Count total daily orders for the user
     const dailyOrdersCount = await DailyDeliveryOrder.countDocuments({ userId: user._id });
     
-    return NextResponse.json({
-      success: true,
+    return successJson({
       count: dailyOrdersCount
     });
-  } catch (error: any) {
-    console.error('Error counting user daily orders:', error);
-    
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to count daily orders' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/users/[id]/daily-orders/count');
   }
 }

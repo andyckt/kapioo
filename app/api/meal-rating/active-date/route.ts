@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/api';
 import connectToDatabase from '@/lib/db';
 import Settings from '@/models/Settings';
 
@@ -12,11 +13,7 @@ export async function GET() {
       ? setting.value
       : null;
     return NextResponse.json({ date });
-  } catch (error) {
-    console.error('[meal-rating/active-date] GET error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch active date' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/meal-rating/active-date');
   }
 }

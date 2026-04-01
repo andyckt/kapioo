@@ -1,17 +1,13 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
+import { emailCodeBodySchema } from '@/lib/contracts/auth';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.code || !data.email) {
-      return NextResponse.json(
-        { success: false, error: 'Verification code and email are required' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, emailCodeBodySchema);
+    if (error) {
+      return error;
     }
     
     await connectToDatabase();
@@ -24,10 +20,7 @@ export async function POST(request: Request) {
     });
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid or expired verification code' },
-        { status: 400 }
-      );
+      return errorJson('Invalid or expired verification code', 400);
     }
     
     // Mark user as verified
@@ -44,16 +37,11 @@ export async function POST(request: Request) {
     delete userResponse.resetPasswordCode;
     delete userResponse.resetPasswordExpires;
     
-    return NextResponse.json({
-      success: true,
+    return successJson({
       message: 'Email successfully verified',
       user: userResponse
     });
-  } catch (error) {
-    console.error('Error verifying email:', error);
-    return NextResponse.json(
-      { success: false, error: 'Email verification failed' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/auth/verify-email');
   }
 } 

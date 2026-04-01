@@ -1,15 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { errorJson, handleRouteError, successJson, type RouteContext } from '@/lib/api';
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { findUserByIdentifier } from '@/lib/api/users';
 import User from '@/models/User';
 
 // GET handler - fetch user's voucher balance
 export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
+  request: Request,
+  { params }: RouteContext<{ id: string }>
 ) {
   try {
-    const id = context.params.id;
+    const { id } = await params;
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
       return response;
@@ -18,27 +19,17 @@ export async function GET(
     await connectToDatabase();
     
     // Find the user
-    const user = await User.findById(id).select('twoDishVoucher threeDishVoucher');
+    const user = await findUserByIdentifier(id);
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
     
-    return NextResponse.json({
-      success: true,
-      data: {
-        twoDishVoucher: user.twoDishVoucher,
-        threeDishVoucher: user.threeDishVoucher
-      }
+    return successJson({
+      twoDishVoucher: user.twoDishVoucher,
+      threeDishVoucher: user.threeDishVoucher
     });
-  } catch (error) {
-    console.error('Error fetching user voucher balance:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch user voucher balance' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/users/[id]/vouchers');
   }
 }

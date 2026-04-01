@@ -1,33 +1,14 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
+import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
 import { sendMenuUpdateEmail } from '@/lib/services/email';
 import type { Language } from '@/lib/email-translations';
-
-// User schema interface
-interface UserDocument extends mongoose.Document {
-  email: string;
-  name: string;
-  language: Language;
-  twoDishVoucher: number;
-  threeDishVoucher: number;
-}
-
-// Define User schema
-const UserSchema = new mongoose.Schema({
-  email: { type: String, required: true },
-  name: { type: String, required: true },
-  language: { type: String, default: 'zh' },
-  twoDishVoucher: { type: Number, default: 0 },
-  threeDishVoucher: { type: Number, default: 0 }
-});
+import User from '@/models/User';
 
 // Response type for streaming updates
 interface ProgressUpdate {
   type: 'progress' | 'batch_start' | 'batch_complete' | 'email_sent' | 'email_failed' | 'complete' | 'error';
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 /**
@@ -56,9 +37,6 @@ export async function POST(request: Request) {
         await connectToDatabase();
         
         sendUpdate({ type: 'progress', message: 'Fetching users with vouchers...' });
-        
-        // Get or create User model
-        const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema);
         
         // Find all users who have daily delivery vouchers (2-dish or 3-dish)
         const usersWithVouchers = await User.find({

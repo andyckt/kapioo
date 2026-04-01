@@ -1,17 +1,11 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from '@/lib/api';
 import connectToDatabase from '@/lib/db';
+import { updateUserBodySchema } from '@/lib/contracts/user';
 import { requireAdminMfa, requireSelfOrAdmin } from '@/lib/auth/guards';
 import User from '@/models/User';
 
-// Interface for route params
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
 // GET handler - return a specific user by ID
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteContext<{ id: string }>) {
   let id = '';
   try {
     ({ id } = await params);
@@ -28,37 +22,30 @@ export async function GET(request: Request, { params }: RouteParams) {
     }).select('-password -salt -resetPasswordCode -resetPasswordExpires -verificationCode -verificationExpires -adminMfaCodeHash -adminMfaCodeExpires');
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: user });
-  } catch (error) {
-    console.error(`Error fetching user ${id}:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch user' },
-      { status: 500 }
-    );
+    return successJson(user);
+  } catch (error: unknown) {
+    return handleRouteError(error, `GET /api/users/${id || '[id]'}`);
   }
 }
 
 // PATCH handler - update a user
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: Request, { params }: RouteContext<{ id: string }>) {
   try {
     const { id } = await params;
     const { actor, response } = await requireSelfOrAdmin(id);
     if (!actor || response) {
       return response;
     }
-    const data = await request.json();
+    const { data, error } = await parseJsonBody(request, updateUserBodySchema);
+    if (error) {
+      return error;
+    }
 
     if ('password' in data) {
-      return NextResponse.json(
-        { success: false, error: 'Use the dedicated change-password route to update passwords' },
-        { status: 400 }
-      );
+      return errorJson('Use the dedicated change-password route to update passwords', 400);
     }
     
     await connectToDatabase();
@@ -69,20 +56,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     });
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
     
     // Handle email update - check if new email is already in use
     if (data.email && data.email !== user.email) {
       const existingUserWithEmail = await User.findOne({ email: data.email });
       if (existingUserWithEmail) {
-        return NextResponse.json(
-          { success: false, error: 'Email is already in use' },
-          { status: 409 }
-        );
+        return errorJson('Email is already in use', 409);
       }
     }
     
@@ -100,7 +81,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (!isAdmin) {
       Object.keys(data).forEach((key) => {
         if (!allowedSelfFields.has(key)) {
-          delete data[key];
+          delete data[key as keyof typeof data];
         }
       });
     }
@@ -108,18 +89,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     // Handle userID update - admin only
     if (data.userID && data.userID !== user.userID) {
       if (!isAdmin) {
-        return NextResponse.json(
-          { success: false, error: 'Only admins can change user ID' },
-          { status: 403 }
-        );
+        return errorJson('Only admins can change user ID', 403);
       }
 
       const existingUserWithID = await User.findOne({ userID: data.userID });
       if (existingUserWithID) {
-        return NextResponse.json(
-          { success: false, error: 'User ID is already in use' },
-          { status: 409 }
-        );
+        return errorJson('User ID is already in use', 409);
       }
     }
     
@@ -133,7 +108,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         key !== 'adminMfaCodeHash' &&
         key !== 'adminMfaCodeExpires'
       ) {
-        user[key] = data[key];
+        user.set(key, data[key as keyof typeof data]);
       }
     });
     
@@ -150,18 +125,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     delete userResponse.adminMfaCodeHash;
     delete userResponse.adminMfaCodeExpires;
     
-    return NextResponse.json({ success: true, data: userResponse });
-  } catch (error) {
-    console.error(`Error updating user:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update user' },
-      { status: 500 }
-    );
+    return successJson(userResponse);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'PATCH /api/users/[id]');
   }
 }
 
 // DELETE handler - delete a user
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteContext<{ id: string }>) {
   let id = '';
   try {
     ({ id } = await params);
@@ -178,21 +149,13 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     });
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
     
-    return NextResponse.json({ 
-      success: true, 
+    return successJson({ 
       message: 'User deleted successfully' 
     });
-  } catch (error) {
-    console.error(`Error deleting user ${id}:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete user' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, `DELETE /api/users/${id || '[id]'}`);
   }
 } 

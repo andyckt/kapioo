@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
+import { NextResponse } from "next/server";
+import { errorJson, parseSearchParams } from "@/lib/api";
+import { adminWeeklyOrdersExportQuerySchema } from "@/lib/contracts/weekly-order";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import mongoose from "mongoose";
 import User from '@/models/User';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import * as XLSX from 'xlsx';
@@ -161,15 +163,14 @@ export async function GET(request: Request) {
       return response;
     }
 
+    const { data: q, error: queryError } = parseSearchParams(request, adminWeeklyOrdersExportQuerySchema);
+    if (queryError || !q) {
+      return queryError;
+    }
+
+    const { status, search, area, deliveryDate, deliveryDateEnd } = q;
+
     await connectToDatabase();
-    
-    // Get query parameters
-    const url = new URL(request.url);
-    const status = url.searchParams.get('status');
-    const search = url.searchParams.get('search');
-    const area = url.searchParams.get('area');
-    const deliveryDate = url.searchParams.get('deliveryDate');
-    const deliveryDateEnd = url.searchParams.get('deliveryDateEnd');
     
     // Build query
     const query: any = {};
@@ -340,11 +341,7 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    console.error('Error exporting weekly subscription orders:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to export orders' },
-      { status: 500 }
-    );
+    console.error("Error exporting weekly subscription orders:", error);
+    return errorJson("Failed to export orders", 500);
   }
 }

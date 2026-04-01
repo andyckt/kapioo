@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         languagePreference: u.languagePreference || "zh",
         isVerified: Boolean(u.isVerified),
         address,
-        area: u.area || address?.province || "",
+        area: address?.province || "",
       },
     });
   } catch (error) {

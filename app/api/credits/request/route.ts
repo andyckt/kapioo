@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, parseSearchParams, successJson } from '@/lib/api';
 import { requireUser } from '@/lib/auth/guards';
+import {
+  createCreditRequestBodySchema,
+  creditRequestsQuerySchema,
+} from '@/lib/contracts/credit-request';
 import connectToDatabase from '@/lib/db';
-import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
+import CreditPurchaseRequest, { type ICreditPurchaseRequest } from '@/models/CreditPurchaseRequest';
 import User from '@/models/User';
 import mongoose from 'mongoose';
-import PromoCode from '@/models/PromoCode';
+import PromoCode, { type IPromoCode } from '@/models/PromoCode';
 import PromoCodeRedemption from '@/models/PromoCodeRedemption';
 import { sendAdminCreditRequestNotification, sendUserCreditRequestConfirmation } from '@/lib/services/email';
 import {
@@ -26,14 +30,15 @@ import {
 export async function POST(request: Request) {
   try {
     const { actor, response } = await requireUser();
-    // #region agent log
-    const dbg = (msg: string, hypothesisId: string, d?: Record<string, unknown>) => { fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'credits/request/route.ts:POST',message:msg,data:{hypothesisId,...d},timestamp:Date.now(),hypothesisId})}).catch(()=>{}); };
-    if (!actor || response) { dbg('requireUser_failed','C',{hasActor:!!actor}); return response; }
-    dbg('requireUser_ok','C',{userId:String(actor.user._id)});
-    // #endregion
+    if (!actor || response) {
+      return response;
+    }
 
     console.log('Credit request POST received');
-    const data = await request.json();
+    const { data, error } = await parseJsonBody(request, createCreditRequestBodySchema);
+    if (error) {
+      return error;
+    }
     console.log('Credit request data:', JSON.stringify(data));
 
     const effectiveUserId =
@@ -47,10 +52,7 @@ export async function POST(request: Request) {
       String(data.userId) !== String(actor.user._id) &&
       String(data.userId) !== String(actor.user.userID)
     ) {
-      return NextResponse.json(
-        { success: false, error: 'You cannot submit requests for another user' },
-        { status: 403 }
-      );
+      return errorJson('You cannot submit requests for another user', 403);
     }
     
     // Validate required fields
@@ -61,18 +63,12 @@ export async function POST(request: Request) {
         paymentMethod: !!data.paymentMethod,
         referenceNumber: !!data.referenceNumber
       });
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return errorJson('Missing required fields', 400);
     }
     
     // Validate payment method
     if (data.paymentMethod !== 'wechat' && data.paymentMethod !== 'emt') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid payment method' },
-        { status: 400 }
-      );
+      return errorJson('Invalid payment method', 400);
     }
     
     await connectToDatabase();
@@ -80,18 +76,17 @@ export async function POST(request: Request) {
     // Find user to ensure they exist
     const user = await User.findById(effectiveUserId);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson('User not found', 404);
     }
 
     // Phone is required for all credit requests
     const normalizedUserPhone = normalizePhone(user.phone);
-    // #region agent log
-    if (!normalizedUserPhone) { fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'credits/request/route.ts:POST',message:'phone_required_failed',data:{hypothesisId:'D',hasPhone:false},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{}); return NextResponse.json({ success: false, error: 'Phone number is required for credit requests. Please add your phone number and try again.' }, { status: 400 }); }
-    fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'credits/request/route.ts:POST',message:'phone_ok',data:{hypothesisId:'D',hasPhone:true},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
+    if (!normalizedUserPhone) {
+      return errorJson(
+        'Phone number is required for credit requests. Please add your phone number and try again.',
+        400
+      );
+    }
 
     const duration = Number(data.mealPlanQuantity || data.duration);
     const mealsPerWeek = Number(data.mealsPerWeek || String(data.mealPlanType || '').replace('aweek', ''));
@@ -104,10 +99,7 @@ export async function POST(request: Request) {
     const planBasePrice = weeklyPlan?.basePrice;
 
     if (!planBasePrice) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid weekly plan combination' },
-        { status: 400 }
-      );
+      return errorJson('Invalid weekly plan combination', 400);
     }
 
     const mealSubtotal = parseFloat(planBasePrice.toFixed(2));
@@ -118,7 +110,7 @@ export async function POST(request: Request) {
     const taxRate = 0.13;
     const effectivePaymentMethod = data.paymentMethod as 'wechat' | 'emt';
     const normalizedPromoCode = normalizePromoCode(data.promoCode || '');
-    let promoDoc: any = null;
+    let promoDoc: IPromoCode | null = null;
 
     let pricing = {
       currency: 'CAD' as const,
@@ -137,13 +129,12 @@ export async function POST(request: Request) {
       pricing.taxAmount = 0;
       pricing.finalTotal = pricing.discountedSubtotal;
       if (normalizedPromoCode) {
-        return NextResponse.json(
+        return errorJson(
+          'Promo code is only valid for EMT payment on weekly top-up.',
+          400,
           {
-            success: false,
             errorCode: PromoErrorCode.PAYMENT_METHOD_NOT_ELIGIBLE,
-            error: 'Promo code is only valid for EMT payment on weekly top-up.'
-          },
-          { status: 400 }
+          }
         );
       }
     } else {
@@ -163,13 +154,12 @@ export async function POST(request: Request) {
         });
 
         if (!preview.ok) {
-          return NextResponse.json(
+          return errorJson(
+            preview.message || 'Promo code is not valid',
+            400,
             {
-              success: false,
               errorCode: preview.errorCode || PromoErrorCode.INVALID_CODE,
-              error: preview.message || 'Promo code is not valid'
-            },
-            { status: 400 }
+            }
           );
         }
         pricing = preview.breakdown!;
@@ -188,13 +178,10 @@ export async function POST(request: Request) {
     const requestId = data.requestId || (await CreditPurchaseRequest.generateRequestId());
     const existingRequest = await CreditPurchaseRequest.findOne({ requestId });
     if (existingRequest) {
-      return NextResponse.json({
-        success: true,
-        data: existingRequest
-      });
+      return successJson(existingRequest);
     }
 
-    let savedRequest: any;
+    let savedRequest: ICreditPurchaseRequest | null = null;
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
@@ -280,18 +267,23 @@ export async function POST(request: Request) {
         );
         savedRequest = created[0];
       });
-    } catch (txError: any) {
-      const code = txError?.message as PromoErrorCode;
-      if (Object.values(PromoErrorCode).includes(code)) {
-        return NextResponse.json(
-          { success: false, errorCode: code, error: code.replaceAll('_', ' ') },
-          { status: 400 }
-        );
+    } catch (txError: unknown) {
+      const code = txError instanceof Error ? (txError.message as PromoErrorCode) : undefined;
+      if (code && Object.values(PromoErrorCode).includes(code)) {
+        return errorJson(code.replaceAll('_', ' '), 400, {
+          errorCode: code,
+        });
       }
       throw txError;
     } finally {
       await session.endSession();
     }
+
+    if (!savedRequest) {
+      return errorJson('Failed to create credit purchase request', 500);
+    }
+
+    const persistedRequest = savedRequest as ICreditPurchaseRequest;
     
     // Send notification to admin
     try {
@@ -312,18 +304,18 @@ export async function POST(request: Request) {
         userId: user._id.toString(),
         userName: user.name || user.userID,
         userEmail: user.email,
-        amount: savedRequest.amount,
+        amount: persistedRequest.amount,
         paymentMethod: effectivePaymentMethod,
-        originalPrice: savedRequest.originalPrice,
-        originalSubtotal: savedRequest.originalSubtotal,
-        finalTotal: savedRequest.finalTotal,
-        taxRate: savedRequest.taxRate,
-        taxAmount: savedRequest.taxAmount,
-        mealSubtotal: savedRequest.mealSubtotal,
-        deliveryFeePerWeek: savedRequest.deliveryFeePerWeek,
-        deliveryFeeTotal: savedRequest.deliveryFeeTotal,
-        promoCode: savedRequest.promoCode,
-        promoDiscountAmount: savedRequest.promoDiscountAmount,
+        originalPrice: persistedRequest.originalPrice,
+        originalSubtotal: persistedRequest.originalSubtotal,
+        finalTotal: persistedRequest.finalTotal,
+        taxRate: pricing.taxRate,
+        taxAmount: persistedRequest.taxAmount,
+        mealSubtotal: persistedRequest.mealSubtotal,
+        deliveryFeePerWeek: persistedRequest.deliveryFeePerWeek,
+        deliveryFeeTotal: persistedRequest.deliveryFeeTotal,
+        promoCode: persistedRequest.promoCode,
+        promoDiscountAmount: persistedRequest.promoDiscountAmount,
         imageProofUrl: data.imageProof,
         referenceNumber: data.referenceNumber,
         notes: data.notes,
@@ -345,18 +337,18 @@ export async function POST(request: Request) {
         userId: user._id.toString(),
         userName: user.name || user.userID,
         userEmail: user.email,
-        amount: savedRequest.amount,
+        amount: persistedRequest.amount,
         paymentMethod: effectivePaymentMethod,
-        originalPrice: savedRequest.originalPrice,
-        originalSubtotal: savedRequest.originalSubtotal,
-        finalTotal: savedRequest.finalTotal,
-        taxRate: savedRequest.taxRate,
-        taxAmount: savedRequest.taxAmount,
-        mealSubtotal: savedRequest.mealSubtotal,
-        deliveryFeePerWeek: savedRequest.deliveryFeePerWeek,
-        deliveryFeeTotal: savedRequest.deliveryFeeTotal,
-        promoCode: savedRequest.promoCode,
-        promoDiscountAmount: savedRequest.promoDiscountAmount,
+        originalPrice: persistedRequest.originalPrice,
+        originalSubtotal: persistedRequest.originalSubtotal,
+        finalTotal: persistedRequest.finalTotal,
+        taxRate: pricing.taxRate,
+        taxAmount: persistedRequest.taxAmount,
+        mealSubtotal: persistedRequest.mealSubtotal,
+        deliveryFeePerWeek: persistedRequest.deliveryFeePerWeek,
+        deliveryFeeTotal: persistedRequest.deliveryFeeTotal,
+        promoCode: persistedRequest.promoCode,
+        promoDiscountAmount: persistedRequest.promoDiscountAmount,
         referenceNumber: data.referenceNumber,
         planDescription: data.planDescription || '',
         mealPlanQuantity: duration,
@@ -368,40 +360,34 @@ export async function POST(request: Request) {
       // Continue with the process even if email fails
     }
     
-    return NextResponse.json({
-      success: true,
-      data: savedRequest
-    });
-  } catch (error: any) {
-    console.error('Error creating credit purchase request:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to create credit purchase request' },
-      { status: 500 }
-    );
+    return successJson(persistedRequest);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/credits/request');
   }
 }
 
 // GET handler - get credit purchase requests for a user
 export async function GET(request: Request) {
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-    const status = url.searchParams.get('status');
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const { data, error } = parseSearchParams(request, creditRequestsQuerySchema);
+    if (error) {
+      return error;
+    }
+
+    const userId = data.userId;
+    const status = data.status;
+    const page = data.page ?? 1;
+    const limit = data.limit ?? 10;
     const skip = (page - 1) * limit;
     
     if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
+      return errorJson('User ID is required', 400);
     }
     
     await connectToDatabase();
     
     // Build query
-    const query: any = { userId };
+    const query: Record<string, unknown> = { userId };
     
     // Filter by status if provided
     if (status) {
@@ -424,7 +410,7 @@ export async function GET(request: Request) {
       return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
     };
 
-    const normalizedRequests = requests.map((request: any) => {
+    const normalizedRequests = requests.map((request) => {
       const plain = typeof request?.toObject === 'function' ? request.toObject() : request;
       const normalizedAmount = toSafeNumber(plain?.amount);
       const normalizedSubtotal = normalizeAmountField(plain?.originalSubtotal, normalizedAmount);
@@ -448,21 +434,14 @@ export async function GET(request: Request) {
     // Get total count for pagination
     const totalRequests = await CreditPurchaseRequest.countDocuments(query);
     
-    return NextResponse.json({ 
-      success: true, 
-      data: {
-        requests: normalizedRequests,
-        page,
-        limit,
-        total: totalRequests,
-        pages: Math.ceil(totalRequests / limit)
-      }
+    return successJson({
+      requests: normalizedRequests,
+      page,
+      limit,
+      total: totalRequests,
+      pages: Math.ceil(totalRequests / limit)
     });
-  } catch (error: any) {
-    console.error('Error fetching credit purchase requests:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch credit purchase requests' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/credits/request');
   }
 }

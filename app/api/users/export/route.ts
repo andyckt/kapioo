@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import { logAuditEvent } from '@/lib/security/audit';
@@ -29,15 +29,8 @@ export async function GET(request: Request) {
       request,
     });
     
-    return NextResponse.json({ 
-      success: true, 
-      data: users
-    });
-  } catch (error) {
-    console.error('Error fetching all users for export:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch users for export' },
-      { status: 500 }
-    );
+    return successJson(users);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/users/export');
   }
 }

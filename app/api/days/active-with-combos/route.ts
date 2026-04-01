@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, successJson } from '@/lib/api';
 import connectToDatabase from '@/lib/db';
 import Day from '@/models/Day';
 import Combo from '@/models/Combo';
@@ -15,10 +15,7 @@ export async function GET(request: Request) {
     const days = await Day.find({ isActive: true }).sort({ week: 1 }).lean();
     
     if (!days || days.length === 0) {
-      return NextResponse.json({ 
-        success: true, 
-        data: [] 
-      });
+      return successJson([]);
     }
     
     // Extract all dayIds
@@ -30,7 +27,7 @@ export async function GET(request: Request) {
     }).lean();
     
     // Group combos by dayId for efficient lookup
-    const combosByDay: Record<string, any[]> = {};
+    const combosByDay: Record<string, Array<Record<string, unknown>>> = {};
     combos.forEach((combo) => {
       if (!combosByDay[combo.dayId]) {
         combosByDay[combo.dayId] = [];
@@ -54,19 +51,9 @@ export async function GET(request: Request) {
       combos: combosByDay[day.dayId] || []
     }));
     
-    return NextResponse.json({ 
-      success: true, 
-      data: daysWithCombos 
-    });
-  } catch (error) {
-    console.error('Error fetching active days with combos:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      },
-      { status: 500 }
-    );
+    return successJson(daysWithCombos);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/days/active-with-combos');
   }
 }
 

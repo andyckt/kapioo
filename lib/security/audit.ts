@@ -6,7 +6,7 @@ import AuditLog from "@/models/AuditLog";
 
 type AuditInput = {
   actor?: {
-    user?: { _id?: string; email?: string };
+    user?: { _id?: unknown; email?: string };
     role?: "user" | "admin";
   } | null;
   action: string;

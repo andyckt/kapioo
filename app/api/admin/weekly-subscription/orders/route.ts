@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
+import { handleRouteError, parseSearchParams, successJson } from "@/lib/api";
+import { adminWeeklyOrdersQuerySchema } from "@/lib/contracts/weekly-order";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import mongoose from "mongoose";
 import User from '@/models/User';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import {
@@ -18,19 +19,18 @@ export async function GET(request: Request) {
     if (!actor || response) {
       return response;
     }
-    
-    await connectToDatabase();
-    
-    // Get query parameters
-    const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '10');
-    const status = url.searchParams.get('status');
-    const search = url.searchParams.get('search');
-    const area = url.searchParams.get('area');
-    const deliveryDate = url.searchParams.get('deliveryDate');
-    const deliveryDateEnd = url.searchParams.get('deliveryDateEnd');
+
+    const { data: q, error: queryError } = parseSearchParams(request, adminWeeklyOrdersQuerySchema);
+    if (queryError || !q) {
+      return queryError;
+    }
+
+    const page = q.page ?? 1;
+    const limit = q.limit ?? 10;
+    const { status, search, area, deliveryDate, deliveryDateEnd } = q;
     const skip = (page - 1) * limit;
+
+    await connectToDatabase();
     
     // Build query
     const query: any = {};
@@ -43,45 +43,6 @@ export async function GET(request: Request) {
     // Filter by area if provided
     if (area) {
       query.area = area;
-    }
-    
-    // Helper function to parse and format dates in various formats
-    function parseAndFormatDate(dateStr: string): string {
-      try {
-        // First try standard parsing
-        const dateObj = new Date(dateStr);
-        if (!isNaN(dateObj.getTime())) {
-          // Get month and day parts
-          const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
-          const day = dateObj.getDate();
-          // Format with leading zero for days under 10
-          const formattedDay = day < 10 ? `0${day}` : `${day}`;
-          return `${month} ${formattedDay}`;
-        }
-        
-        // Handle 'MM DD' format (e.g., '04 01' for April 1)
-        const mmDdMatch = dateStr.match(/^(\d{1,2})\s+(\d{1,2})$/);
-        if (mmDdMatch) {
-          const month = parseInt(mmDdMatch[1]) - 1; // JS months are 0-indexed
-          const day = parseInt(mmDdMatch[2]);
-          if (month >= 0 && month < 12 && day >= 1 && day <= 31) {
-            const year = new Date().getFullYear();
-            const dateObj = new Date(year, month, day);
-            // Get month name
-            const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-            // Format with leading zero for days under 10
-            const formattedDay = day < 10 ? `0${day}` : `${day}`;
-            return `${monthName} ${formattedDay}`;
-          }
-        }
-        
-        // If all parsing attempts fail, return the original string
-        // This allows direct matching of database formats like 'Oct 26'
-        return dateStr;
-      } catch (e) {
-        console.error('Error parsing date:', dateStr, e);
-        return dateStr;
-      }
     }
     
     // Filter by delivery date if provided
@@ -206,22 +167,14 @@ export async function GET(request: Request) {
       }
     }));
     
-    return NextResponse.json({
-      success: true,
-      data: {
-        orders: ordersWithUserInfo,
-        page,
-        limit,
-        total: totalOrders,
-        pages: Math.ceil(totalOrders / limit)
-      }
+    return successJson({
+      orders: ordersWithUserInfo,
+      page,
+      limit,
+      total: totalOrders,
+      pages: Math.ceil(totalOrders / limit),
     });
-  } catch (error: any) {
-    console.error('Error fetching weekly subscription orders:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch orders', details: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleRouteError(error, "GET /api/admin/weekly-subscription/orders");
   }
 }

@@ -1,12 +1,13 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { dishBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Dish from '@/models/Dish';
 
 // GET a specific dish by name
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: RouteContext<{ name: string }>
 ) {
   try {
     const { name } = await params;
@@ -15,26 +16,19 @@ export async function GET(
     const dish = await Dish.findOne({ name: decodeURIComponent(name) });
     
     if (!dish) {
-      return NextResponse.json(
-        { success: false, error: 'Dish not found' },
-        { status: 404 }
-      );
+      return errorJson('Dish not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: dish });
-  } catch (error) {
-    console.error('Error fetching dish:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(dish);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/dishes/[name]');
   }
 }
 
 // PUT - Update a dish's English translation
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: RouteContext<{ name: string }>
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -43,7 +37,10 @@ export async function PUT(
     }
 
     const { name } = await params;
-    const data = await request.json();
+    const { data, error } = await parseJsonBody(request, dishBodySchema.partial());
+    if (error) {
+      return error;
+    }
     await connectToDatabase();
     
     const dish = await Dish.findOneAndUpdate(
@@ -53,19 +50,12 @@ export async function PUT(
     );
     
     if (!dish) {
-      return NextResponse.json(
-        { success: false, error: 'Dish not found' },
-        { status: 404 }
-      );
+      return errorJson('Dish not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: dish });
-  } catch (error) {
-    console.error('Error updating dish:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(dish);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'PUT /api/dishes/[name]');
   }
 }
 

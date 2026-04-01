@@ -1,49 +1,42 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { mealBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Meal from '@/models/Meal';
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 // GET handler - return a specific meal by ID
-export async function GET(request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: RouteContext<{ id: string }>) {
+  let id = '';
   try {
-    const { id } = params;
+    ({ id } = await params);
     
     await connectToDatabase();
     const meal = await Meal.findById(id);
     
     if (!meal) {
-      return NextResponse.json(
-        { success: false, error: 'Meal not found' },
-        { status: 404 }
-      );
+      return errorJson('Meal not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: meal });
-  } catch (error) {
-    console.error(`Error fetching meal ${params.id}:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch meal' },
-      { status: 500 }
-    );
+    return successJson(meal);
+  } catch (error: unknown) {
+    return handleRouteError(error, `GET /api/meals/${id || '[id]'}`);
   }
 }
 
 // PUT handler - update a specific meal by ID
-export async function PUT(request: Request, { params }: Params) {
+export async function PUT(request: Request, { params }: RouteContext<{ id: string }>) {
+  let id = '';
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
     }
 
-    const id = params.id;
-    const data = await request.json();
+    ({ id } = await params);
+    const { data, error } = await parseJsonBody(request, mealBodySchema.partial());
+    if (error) {
+      return error;
+    }
     
     await connectToDatabase();
     
@@ -55,31 +48,25 @@ export async function PUT(request: Request, { params }: Params) {
     );
     
     if (!updatedMeal) {
-      return NextResponse.json(
-        { success: false, error: 'Meal not found' },
-        { status: 404 }
-      );
+      return errorJson('Meal not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: updatedMeal });
-  } catch (error) {
-    console.error(`Error updating meal ${params.id}:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update meal' },
-      { status: 500 }
-    );
+    return successJson(updatedMeal);
+  } catch (error: unknown) {
+    return handleRouteError(error, `PUT /api/meals/${id || '[id]'}`);
   }
 }
 
 // DELETE handler - delete a specific meal by ID
-export async function DELETE(request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: RouteContext<{ id: string }>) {
+  let id = '';
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
     }
 
-    const { id } = params;
+    ({ id } = await params);
     
     await connectToDatabase();
     
@@ -87,21 +74,13 @@ export async function DELETE(request: Request, { params }: Params) {
     const deletedMeal = await Meal.findByIdAndDelete(id);
     
     if (!deletedMeal) {
-      return NextResponse.json(
-        { success: false, error: 'Meal not found' },
-        { status: 404 }
-      );
+      return errorJson('Meal not found', 404);
     }
     
-    return NextResponse.json({ 
-      success: true, 
-      data: { message: 'Meal deleted successfully' } 
+    return successJson({ 
+      message: 'Meal deleted successfully' 
     });
-  } catch (error) {
-    console.error(`Error deleting meal ${params.id}:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete meal' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, `DELETE /api/meals/${id || '[id]'}`);
   }
 } 

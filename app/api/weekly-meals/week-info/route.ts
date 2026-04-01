@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, successJson } from '@/lib/api';
 import connectToDatabase from '@/lib/db';
 import WeeklyMeal from '@/models/WeeklyMeal';
 
@@ -13,15 +13,16 @@ function getCurrentWeekYear() {
 }
 
 // GET handler - return the current week and year
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await connectToDatabase();
-    
+
     // Find any weekly meal to get the week/year info
     const latestMeal = await WeeklyMeal.findOne().sort({ year: -1, week: -1 });
-    
-    let week, year;
-    
+
+    let week: number;
+    let year: number;
+
     if (latestMeal) {
       // Get the week/year from the database
       console.log(`[Week Info API] Found meal with week=${latestMeal.week}, year=${latestMeal.year}`);
@@ -30,27 +31,23 @@ export async function GET(request: Request) {
     } else {
       // If no meals in database, calculate current week/year
       const current = getCurrentWeekYear();
-      console.log(`[Week Info API] No meals found, using calculated week=${current.week}, year=${current.year}`);
+      console.log(
+        `[Week Info API] No meals found, using calculated week=${current.week}, year=${current.year}`
+      );
       week = current.week;
       year = current.year;
     }
-    
+
     // Add logging to help debug
     console.log(`[Week Info API] Returning week=${week}, year=${year}`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: { week, year }
-    });
-  } catch (error) {
+
+    return successJson({ week, year });
+  } catch (error: unknown) {
     console.error('[Week Info API] Error getting week/year info:', error);
-    
+
     // Fallback to calculating week/year if database access fails
     const { week, year } = getCurrentWeekYear();
-    
-    return NextResponse.json(
-      { success: true, data: { week, year } },
-      { status: 200 }
-    );
+
+    return successJson({ week, year });
   }
-} 
+}

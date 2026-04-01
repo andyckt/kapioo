@@ -1,15 +1,12 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
+import { errorJson, successJson, type RouteContext } from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import NextWeekMenuEmailJob from "@/models/NextWeekMenuEmailJob";
 
-type Params = {
-  params: Promise<{
-    jobId: string;
-  }>;
-};
-
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(
+  _request: Request,
+  { params }: RouteContext<{ jobId: string }>
+) {
   try {
     const { actor, response } = await requireAdminMfa(_request);
     if (!actor || response) {
@@ -22,10 +19,7 @@ export async function GET(_request: Request, { params }: Params) {
     const job = await NextWeekMenuEmailJob.findById(jobId).lean();
 
     if (!job) {
-      return NextResponse.json(
-        { success: false, error: 'Email job not found' },
-        { status: 404 }
-      );
+      return errorJson("Email job not found", 404);
     }
 
     const progress =
@@ -33,29 +27,23 @@ export async function GET(_request: Request, { params }: Params) {
         ? Math.round(((job.sentCount + job.failedCount) / job.totalUsers) * 100)
         : 0;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        jobId: String(job._id),
-        status: job.status,
-        criteriaType: job.criteriaType,
-        totalUsers: job.totalUsers,
-        sentCount: job.sentCount,
-        failedCount: job.failedCount,
-        cursor: job.cursor,
-        progress,
-        failedEmails: job.failedEmails || [],
-        createdAt: job.createdAt,
-        startedAt: job.startedAt,
-        completedAt: job.completedAt,
-        lastProcessedAt: job.lastProcessedAt
-      }
+    return successJson({
+      jobId: String(job._id),
+      status: job.status,
+      criteriaType: job.criteriaType,
+      totalUsers: job.totalUsers,
+      sentCount: job.sentCount,
+      failedCount: job.failedCount,
+      cursor: job.cursor,
+      progress,
+      failedEmails: job.failedEmails || [],
+      createdAt: job.createdAt,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      lastProcessedAt: job.lastProcessedAt,
     });
-  } catch (error) {
-    console.error('Error fetching next-week email job status:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch email job status' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Error fetching next-week email job status:", error);
+    return errorJson("Failed to fetch email job status", 500);
   }
 }

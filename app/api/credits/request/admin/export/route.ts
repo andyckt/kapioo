@@ -1,8 +1,11 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import CreditPurchaseRequest from '@/models/CreditPurchaseRequest';
-import { format } from 'date-fns';
+import { NextResponse } from "next/server";
+import { format } from "date-fns";
+
+import { errorJson, parseSearchParams } from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import { creditPurchaseRequestExportQuerySchema } from "@/lib/contracts/credit-request";
+import connectToDatabase from "@/lib/db";
+import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
 
 export async function GET(request: Request) {
   try {
@@ -11,137 +14,131 @@ export async function GET(request: Request) {
       return response;
     }
 
-    const url = new URL(request.url);
-    const status = url.searchParams.get('status');
-    const startDate = url.searchParams.get('startDate');
-    const endDate = url.searchParams.get('endDate');
-    
-    await connectToDatabase();
-    
-    // Build query
-    const query: any = {};
-    
-    // Filter by status if provided
-    if (status && status !== 'all') {
-      query.status = status;
+    const { data: query, error: queryError } = parseSearchParams(
+      request,
+      creditPurchaseRequestExportQuerySchema
+    );
+    if (queryError) {
+      return queryError;
     }
-    
-    // Filter by date range if provided
+
+    const { status, startDate, endDate } = query;
+
+    await connectToDatabase();
+
+    const mongoQuery: Record<string, unknown> = {};
+
+    if (status && status !== "all") {
+      mongoQuery.status = status;
+    }
+
     if (startDate || endDate) {
-      query.createdAt = {};
-      
+      const createdAt: Record<string, Date> = {};
       if (startDate) {
-        query.createdAt.$gte = new Date(startDate);
+        createdAt.$gte = new Date(startDate);
       }
-      
       if (endDate) {
-        // Set to end of the day for the end date
         const endOfDay = new Date(endDate);
         endOfDay.setHours(23, 59, 59, 999);
-        query.createdAt.$lte = endOfDay;
+        createdAt.$lte = endOfDay;
       }
+      mongoQuery.createdAt = createdAt;
     }
-    
-    // Find all requests matching the query
-    const requests = await CreditPurchaseRequest.find(query)
+
+    const requests = await CreditPurchaseRequest.find(mongoQuery)
       .sort({ createdAt: -1 })
-      .populate('userId', 'name email userID phone');
-    
-    // Convert to CSV
+      .populate("userId", "name email userID phone");
+
     const csv = convertToCSV(requests);
-    
-    // Set headers for CSV download
+
     const headers = new Headers();
-    headers.set('Content-Type', 'text/csv');
-    headers.set('Content-Disposition', `attachment; filename="credit-requests-${format(new Date(), 'yyyy-MM-dd')}.csv"`);
-    
+    headers.set("Content-Type", "text/csv");
+    headers.set(
+      "Content-Disposition",
+      `attachment; filename="credit-requests-${format(new Date(), "yyyy-MM-dd")}.csv"`
+    );
+
     return new NextResponse(csv, {
       status: 200,
-      headers
+      headers,
     });
-  } catch (error: any) {
-    console.error('Error exporting credit purchase requests:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to export credit purchase requests' },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error("Error exporting credit purchase requests:", error);
+    return errorJson("Failed to export credit purchase requests", 500);
   }
 }
 
-function convertToCSV(requests: any[]) {
-  // Define CSV headers
+function convertToCSV(requests: unknown[]) {
   const headers = [
-    'Request ID',
-    'User Name',
-    'User Email',
-    'User ID',
-    'Phone',
-    'Meal Plan Type',
-    'Plan Description',
-    'Meal Plan Quantity',
-    'Amount',
-    'Status',
-    'Created Date',
-    'Approved/Declined Date',
-    'Admin Notes',
-    'Payment Method',
-    'Payment Reference',
-    'Approved Six Meals',
-    'Approved Eight Meals',
-    'Approved Ten Meals',
-    'Approved Twelve Meals',
-    'Approved Sixteen Meals',
-    'Approved Plans'
+    "Request ID",
+    "User Name",
+    "User Email",
+    "User ID",
+    "Phone",
+    "Meal Plan Type",
+    "Plan Description",
+    "Meal Plan Quantity",
+    "Amount",
+    "Status",
+    "Created Date",
+    "Approved/Declined Date",
+    "Admin Notes",
+    "Payment Method",
+    "Payment Reference",
+    "Approved Six Meals",
+    "Approved Eight Meals",
+    "Approved Ten Meals",
+    "Approved Twelve Meals",
+    "Approved Sixteen Meals",
+    "Approved Plans",
   ];
-  
-  // Start with headers
-  let csvContent = headers.join(',') + '\n';
-  
-  // Add each request as a row
-  for (const request of requests) {
-    const user = request.userId || {};
-    
-    // Format dates
-    const createdDate = request.createdAt ? format(new Date(request.createdAt), 'yyyy-MM-dd HH:mm:ss') : '';
-    const statusDate = request.approvedAt || request.declinedAt ? 
-      format(new Date(request.approvedAt || request.declinedAt), 'yyyy-MM-dd HH:mm:ss') : '';
-    
-    // Escape fields that might contain commas or quotes
+
+  let csvContent = headers.join(",") + "\n";
+
+  for (const req of requests) {
+    const r = req as Record<string, unknown>;
+    const user = (r.userId as Record<string, string>) || {};
+
+    const createdDate = r.createdAt
+      ? format(new Date(r.createdAt as string), "yyyy-MM-dd HH:mm:ss")
+      : "";
+    const statusDate =
+      r.approvedAt || r.declinedAt
+        ? format(new Date((r.approvedAt || r.declinedAt) as string), "yyyy-MM-dd HH:mm:ss")
+        : "";
+
     const row = [
-      escapeCsvField(request.requestId || ''),
-      escapeCsvField(user.name || ''),
-      escapeCsvField(user.email || ''),
-      escapeCsvField(user.userID || ''),
-      escapeCsvField(user.phone || ''),
-      escapeCsvField(request.mealPlanType || ''),
-      escapeCsvField(request.planDescription || ''),
-      request.mealPlanQuantity || '',
-      request.amount || '',
-      escapeCsvField(request.status || ''),
+      escapeCsvField(String(r.requestId || "")),
+      escapeCsvField(String(user.name || "")),
+      escapeCsvField(String(user.email || "")),
+      escapeCsvField(String(user.userID || "")),
+      escapeCsvField(String(user.phone || "")),
+      escapeCsvField(String(r.mealPlanType || "")),
+      escapeCsvField(String(r.planDescription || "")),
+      String(r.mealPlanQuantity || ""),
+      String(r.amount || ""),
+      escapeCsvField(String(r.status || "")),
       escapeCsvField(createdDate),
       escapeCsvField(statusDate),
-      escapeCsvField(request.adminNotes || ''),
-      escapeCsvField(request.paymentMethod || ''),
-      escapeCsvField(request.paymentReference || ''),
-      request.approvedSixMeals || '',
-      request.approvedEightMeals || '',
-      request.approvedTenMeals || '',
-      request.approvedTwelveMeals || '',
-      request.approvedSixteenMeals || '',
-      escapeCsvField(JSON.stringify(request.approvedPlans || []))
+      escapeCsvField(String(r.adminNotes || "")),
+      escapeCsvField(String(r.paymentMethod || "")),
+      escapeCsvField(String(r.paymentReference || "")),
+      String(r.approvedSixMeals || ""),
+      String(r.approvedEightMeals || ""),
+      String(r.approvedTenMeals || ""),
+      String(r.approvedTwelveMeals || ""),
+      String(r.approvedSixteenMeals || ""),
+      escapeCsvField(JSON.stringify(r.approvedPlans || [])),
     ];
-    
-    csvContent += row.join(',') + '\n';
+
+    csvContent += row.join(",") + "\n";
   }
-  
+
   return csvContent;
 }
 
-// Helper function to escape CSV fields
 function escapeCsvField(field: string) {
-  // If the field contains commas, quotes, or newlines, wrap it in quotes
-  if (field && (field.includes(',') || field.includes('"') || field.includes('\n'))) {
-    // Replace any quotes with double quotes
+  if (field && (field.includes(",") || field.includes('"') || field.includes("\n"))) {
     return `"${field.replace(/"/g, '""')}"`;
   }
   return field;

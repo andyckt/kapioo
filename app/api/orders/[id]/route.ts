@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
+import type { RouteContext } from '@/lib/api';
 import { requireUser } from '@/lib/auth/guards';
 import { annotateLegacyOrderRoute, LEGACY_ORDER_DOMAIN } from '@/lib/orders/domain-contract';
-
-// Interface for route params
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
 
 function legacyOrderJson(body: unknown, init?: ResponseInit) {
   return annotateLegacyOrderRoute(
@@ -17,7 +11,7 @@ function legacyOrderJson(body: unknown, init?: ResponseInit) {
 }
 
 // GET handler - legacy route retired in Phase 2E
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteContext<{ id: string }>) {
   const { actor, response } = await requireUser();
   if (!actor || response) {
     return annotateLegacyOrderRoute(response!, LEGACY_ORDER_DOMAIN.detailRoute);
@@ -35,7 +29,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 // PATCH handler - update order status
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: Request, { params }: RouteContext<{ id: string }>) {
   void request;
   void params;
   return legacyOrderJson(

@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import type { AuthenticatedActor } from "@/lib/api/types";
 import connectToDatabase from "@/lib/db";
+import { errorJson } from "@/lib/api/response";
 import {
   ADMIN_MFA_COOKIE_NAME,
   resolveUserRole,
-  type AuthenticatedRole,
 } from "@/lib/auth/session";
 import { verifySignedAdminMfaCookie } from "@/lib/security/signed-cookie";
 import User from "@/models/User";
-
-export interface AuthenticatedActor {
-  user: any;
-  role: AuthenticatedRole;
-  sessionVersion: number;
-}
 
 type CookieCapableRequest = Request & {
   cookies?: {
@@ -23,11 +18,11 @@ type CookieCapableRequest = Request & {
 };
 
 export function unauthorizedResponse(message: string = "Unauthorized") {
-  return NextResponse.json({ success: false, error: message }, { status: 401 });
+  return errorJson(message, 401);
 }
 
 export function forbiddenResponse(message: string = "Forbidden") {
-  return NextResponse.json({ success: false, error: message }, { status: 403 });
+  return errorJson(message, 403);
 }
 
 export async function getAuthenticatedActor(): Promise<AuthenticatedActor | null> {

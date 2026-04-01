@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import RatingDish from '@/models/RatingDish';
+import { NextResponse } from "next/server";
+
+import { parseJsonBody, parseSearchParams } from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import {
+  ratingDishCreateBodySchema,
+  ratingDishDeleteQuerySchema,
+} from "@/lib/contracts/meal-rating";
+import RatingDish from "@/models/RatingDish";
 
 export async function GET(request: Request) {
   try {
@@ -11,12 +17,14 @@ export async function GET(request: Request) {
     }
 
     await connectToDatabase();
-    const dishes = await RatingDish.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
+    const dishes = await RatingDish.find()
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .lean();
     return NextResponse.json(dishes);
-  } catch (error) {
-    console.error('[admin/rating-dishes] GET error:', error);
+  } catch (error: unknown) {
+    console.error("[admin/rating-dishes] GET error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch dishes' },
+      { error: "Failed to fetch dishes" },
       { status: 500 }
     );
   }
@@ -29,30 +37,27 @@ export async function POST(request: Request) {
       return response;
     }
 
-    const body = await request.json();
-    const { name, nameEn, sortOrder = 0 } = body;
-
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return NextResponse.json(
-        { error: 'name is required' },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(request, ratingDishCreateBodySchema);
+    if (parsed.error) {
+      return parsed.error;
     }
+    const body = parsed.data;
 
     await connectToDatabase();
 
     const doc = await RatingDish.create({
-      name: name.trim(),
-      nameEn: typeof nameEn === 'string' ? nameEn.trim() || undefined : undefined,
-      sortOrder: typeof sortOrder === 'number' ? sortOrder : 0,
+      name: body.name,
+      nameEn:
+        typeof body.nameEn === "string" ? body.nameEn.trim() || undefined : undefined,
+      sortOrder: typeof body.sortOrder === "number" ? body.sortOrder : 0,
       active: true,
     });
 
     return NextResponse.json(doc);
-  } catch (error) {
-    console.error('[admin/rating-dishes] POST error:', error);
+  } catch (error: unknown) {
+    console.error("[admin/rating-dishes] POST error:", error);
     return NextResponse.json(
-      { error: 'Failed to add dish' },
+      { error: "Failed to add dish" },
       { status: 500 }
     );
   }
@@ -65,11 +70,11 @@ export async function DELETE(request: Request) {
       return response;
     }
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    const queryParsed = parseSearchParams(request.url, ratingDishDeleteQuerySchema);
+    if (queryParsed.error) {
+      return queryParsed.error;
     }
+    const { id } = queryParsed.data;
 
     await connectToDatabase();
 
@@ -79,14 +84,14 @@ export async function DELETE(request: Request) {
       { new: true }
     );
     if (!doc) {
-      return NextResponse.json({ error: 'Dish not found' }, { status: 404 });
+      return NextResponse.json({ error: "Dish not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('[admin/rating-dishes] DELETE error:', error);
+  } catch (error: unknown) {
+    console.error("[admin/rating-dishes] DELETE error:", error);
     return NextResponse.json(
-      { error: 'Failed to delete dish' },
+      { error: "Failed to delete dish" },
       { status: 500 }
     );
   }

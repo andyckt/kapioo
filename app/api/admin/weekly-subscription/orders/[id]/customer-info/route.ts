@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from "@/lib/api";
+import { adminWeeklyOrderCustomerInfoPatchSchema } from "@/lib/contracts/weekly-order";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
 import User from '@/models/User';
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas';
 import WeeklyOrder from '@/models/WeeklyOrder';
@@ -13,12 +14,6 @@ import {
   type DeliveryAddress,
   type OrderCustomerOverride,
 } from '@/lib/orders/effective-customer-info';
-
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
 
 function hasOwn<T extends object>(obj: T, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
@@ -51,21 +46,27 @@ function displayValue(value: unknown): string {
   return normalized || '(empty)';
 }
 
-export async function PATCH(request: Request, { params }: RouteParams) {
-  const { id } = await params;
+export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>) {
   try {
+    const { id } = await ctx.params;
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
     }
 
-    await connectToDatabase();
+    const { data: body, error: bodyError } = await parseJsonBody(
+      request,
+      adminWeeklyOrderCustomerInfoPatchSchema
+    );
+    if (bodyError || !body) {
+      return bodyError;
+    }
 
-    const body = await request.json();
+    await connectToDatabase();
 
     const order = await WeeklyOrder.findOne({ orderId: id }).lean();
     if (!order) {
-      return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+      return errorJson("Order not found", 404);
     }
 
     const user = order?.userId ? await User.findById(order.userId).select('name email').lean() : null;
@@ -77,13 +78,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       deliveryAddress: { ...(currentOverride.deliveryAddress || {}) },
     };
 
-    let hasPatchField = false;
-
     const changedFields: string[] = [];
     const changedDetails: Array<{ field: string; from: string; to: string }> = [];
 
     if (hasOwn(body, 'name')) {
-      hasPatchField = true;
       const previous = normalizeOptionalText(effectiveBefore.name);
       nextOverride.name = normalizeOptionalText(body.name as string);
       if (toComparable(previous) !== toComparable(nextOverride.name)) {
@@ -97,7 +95,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     if (hasOwn(body, 'phoneNumber')) {
-      hasPatchField = true;
       const previous = normalizePhoneNumber(effectiveBefore.phoneNumber);
       nextOverride.phoneNumber = normalizePhoneNumber(body.phoneNumber as string);
       if (toComparable(previous) !== toComparable(nextOverride.phoneNumber)) {
@@ -111,11 +108,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     if (hasOwn(body, 'area')) {
-      hasPatchField = true;
       const previous = normalizeOptionalText(effectiveBefore.area);
       const normalizedArea = normalizeOptionalText(body.area as string);
-      if (normalizedArea && !ALL_WEEKLY_AREAS.includes(normalizedArea as any)) {
-        return NextResponse.json({ success: false, error: 'Invalid area value' }, { status: 400 });
+      if (normalizedArea && !ALL_WEEKLY_AREAS.includes(normalizedArea as (typeof ALL_WEEKLY_AREAS)[number])) {
+        return errorJson("Invalid area value", 400);
       }
       nextOverride.area = normalizedArea;
       if (toComparable(previous) !== toComparable(nextOverride.area)) {
@@ -129,7 +125,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     if (hasOwn(body, 'specialInstructions')) {
-      hasPatchField = true;
       const previous = normalizeOptionalText(effectiveBefore.specialInstructions);
       nextOverride.specialInstructions = normalizeOptionalText(body.specialInstructions as string);
       if (toComparable(previous) !== toComparable(nextOverride.specialInstructions)) {
@@ -143,7 +138,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     if (hasOwn(body, 'deliveryAddress')) {
-      hasPatchField = true;
       const previousAddress = effectiveBefore.deliveryAddress || {};
       if (body.deliveryAddress === null) {
         const hadAddressValues = Object.values(previousAddress).some((value) => Boolean(normalizeOptionalText(value)));
@@ -171,7 +165,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       } else {
         const addressPatch = sanitizeAddressPatch(body.deliveryAddress);
         if (!addressPatch) {
-          return NextResponse.json({ success: false, error: 'Invalid deliveryAddress payload' }, { status: 400 });
+          return errorJson("Invalid deliveryAddress payload", 400);
         }
         nextOverride.deliveryAddress = {
           ...(nextOverride.deliveryAddress || {}),
@@ -201,10 +195,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           }
         }
       }
-    }
-
-    if (!hasPatchField) {
-      return NextResponse.json({ success: false, error: 'No editable fields provided' }, { status: 400 });
     }
 
     const shouldPersistOverride =
@@ -264,22 +254,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const updatedUser = updatedOrder?.userId ? await User.findById(updatedOrder.userId).select('name email').lean() : null;
     const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, updatedUser as any);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...updatedOrder,
-        user: updatedUser,
-        effectiveCustomerInfo,
-        hasOrderOnlyOverride: hasOrderCustomerOverride(updatedOrder || {}),
-        orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(updatedOrder || {}),
-      },
+    return successJson({
+      ...updatedOrder,
+      user: updatedUser,
+      effectiveCustomerInfo,
+      hasOrderOnlyOverride: hasOrderCustomerOverride(updatedOrder || {}),
+      orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(updatedOrder || {}),
     });
-  } catch (error: any) {
-    console.error('Error updating weekly order customer info override:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update order customer info', details: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleRouteError(error, "PATCH /api/admin/weekly-subscription/orders/[id]/customer-info");
   }
 }
 

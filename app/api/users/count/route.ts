@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
@@ -36,18 +37,14 @@ export async function GET(request: Request) {
     
     const growthRate = calculateGrowthRate(totalUsers, previousUserCount);
     
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: {
         total: totalUsers,
         growthRate
       }
     });
-  } catch (error) {
-    console.error('Error fetching user count:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch user count' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/users/count');
   }
 } 

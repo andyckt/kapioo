@@ -1,7 +1,10 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import MealRating from '@/models/MealRating';
+import { NextResponse } from "next/server";
+
+import { parseSearchParams } from "@/lib/api";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import { adminMealRatingsQuerySchema } from "@/lib/contracts/meal-rating";
+import MealRating from "@/models/MealRating";
 
 export async function GET(request: Request) {
   try {
@@ -10,11 +13,13 @@ export async function GET(request: Request) {
       return response;
     }
 
-    const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const queryParsed = parseSearchParams(request.url, adminMealRatingsQuerySchema);
+    if (queryParsed.error) {
+      return queryParsed.error;
+    }
+    const { startDate, endDate } = queryParsed.data;
+    const page = queryParsed.data.page ?? 1;
+    const limit = queryParsed.data.limit ?? 20;
     const skip = (page - 1) * limit;
 
     await connectToDatabase();
@@ -22,12 +27,20 @@ export async function GET(request: Request) {
     const filter: Record<string, unknown> = {};
     if (startDate || endDate) {
       filter.deliveryDate = {};
-      if (startDate) (filter.deliveryDate as Record<string, string>).$gte = startDate;
-      if (endDate) (filter.deliveryDate as Record<string, string>).$lte = endDate;
+      if (startDate) {
+        (filter.deliveryDate as Record<string, string>).$gte = startDate;
+      }
+      if (endDate) {
+        (filter.deliveryDate as Record<string, string>).$lte = endDate;
+      }
     }
 
     const [items, total] = await Promise.all([
-      MealRating.find(filter).sort({ submittedAt: -1 }).skip(skip).limit(limit).lean(),
+      MealRating.find(filter)
+        .sort({ submittedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       MealRating.countDocuments(filter),
     ]);
 
@@ -40,10 +53,10 @@ export async function GET(request: Request) {
         pages: Math.ceil(total / limit),
       },
     });
-  } catch (error) {
-    console.error('[admin/meal-rating] GET error:', error);
+  } catch (error: unknown) {
+    console.error("[admin/meal-rating] GET error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch feedback' },
+      { error: "Failed to fetch feedback" },
       { status: 500 }
     );
   }

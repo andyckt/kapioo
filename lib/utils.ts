@@ -1,28 +1,15 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+import type { Meal, WeeklyMeals } from "@/lib/contracts/content"
+import type { PaginationState } from "@/lib/contracts/common"
+import type { UserResponse } from "@/lib/contracts/user"
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export type Meal = {
-  _id?: string;
-  name: string;
-  image: string;
-  description?: string;
-  calories?: number;
-  time?: string;
-  tags?: string[];
-  ingredients?: string[];
-  allergens?: string[];
-  day?: string;
-  date?: string;
-  active?: boolean;
-}
-
-export type WeeklyMeals = {
-  [key: string]: Meal
-}
+export type { Meal, WeeklyMeals } from "@/lib/contracts/content"
 
 const WEEKLY_MEALS_CACHE_DURATION_MS = 2 * 60 * 1000;
 
@@ -449,39 +436,7 @@ export async function setDayActiveStatus(day: string, active: boolean): Promise<
   }
 }
 
-// User interface type
-export interface User {
-  _id: string;
-  userID: string;
-  name: string;
-  nickname?: string;
-  email: string;
-  credits: number;
-  twoDishVoucher: number;
-  threeDishVoucher: number;
-  weeklySIXmeals: number;
-  weeklyEIGHTmeals: number;
-  weeklyTENmeals: number;
-  weeklyTWELVEmeals: number;
-  joined: Date | string;
-  status: string;
-  languagePreference?: 'zh' | 'en';
-  address?: {
-    unitNumber?: string;
-    streetAddress: string;
-    postalCode: string;
-    province: string;
-    country: string;
-    buzzCode?: string;
-  };
-  phone?: string;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
-  isActive?: boolean;
-  totalOrders?: number;
-  dailyOrdersCount?: number;
-  weeklyOrdersCount?: number;
-}
+export type User = UserResponse
 
 // Get all users with pagination and search
 export async function getUsers(
@@ -489,7 +444,7 @@ export async function getUsers(
   limit = 10, 
   search?: string, 
   searchType?: 'all' | 'name' | 'email' | 'userID'
-): Promise<{ users: User[], pagination: any }> {
+): Promise<{ users: User[], pagination: PaginationState }> {
   try {
     let url = `/api/users?page=${page}&limit=${limit}`;
     
@@ -634,7 +589,7 @@ export async function addCreditsToUser(id: string, credits: number): Promise<Use
     const user = await getUserById(id);
     if (!user) return null;
     
-    const newCredits = user.credits + credits;
+    const newCredits = (user.credits ?? 0) + credits;
     return updateUser(id, { credits: newCredits });
   } catch (error) {
     console.error(`Error adding credits to user ${id}:`, error);

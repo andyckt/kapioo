@@ -1,7 +1,9 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
+import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
 import { ADMIN_MFA_COOKIE_NAME } from "@/lib/auth/session";
+import { adminMfaActionBodySchema } from "@/lib/contracts/auth";
 import connectToDatabase from "@/lib/db";
 import User from "@/models/User";
 import { generateVerificationCode, sendAdminMfaCodeEmail } from "@/lib/services/email";
@@ -24,8 +26,7 @@ export async function GET(request: NextRequest) {
   }
 
   const adminMfaEmail = process.env.ADMIN_EMAIL || "kapioomeal@gmail.com";
-  return NextResponse.json({
-    success: true,
+  return successJson({
     requiresCode: true,
     email: adminMfaEmail,
   });
@@ -40,8 +41,12 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const body = await request.json();
-    const action = String(body?.action || "send");
+    const { data: body, error } = await parseJsonBody(request, adminMfaActionBodySchema);
+    if (error) {
+      return error;
+    }
+
+    const action = body.action;
 
     if (action === "send") {
       const now = new Date();
@@ -58,8 +63,7 @@ export async function POST(request: NextRequest) {
         existingCodeSentAt >= cooldownCutoff.getTime();
 
       if (hasReusableRecentCode) {
-        return NextResponse.json({
-          success: true,
+        return successJson({
           message: "Admin MFA code already sent recently",
         });
       }
@@ -85,13 +89,7 @@ export async function POST(request: NextRequest) {
       );
 
       if (!updated) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Please wait before requesting another code",
-          },
-          { status: 429 }
-        );
+        return errorJson("Please wait before requesting another code", 429);
       }
 
       const adminMfaEmail = process.env.ADMIN_EMAIL || "kapioomeal@gmail.com";
@@ -110,38 +108,25 @@ export async function POST(request: NextRequest) {
         request,
       });
 
-      return NextResponse.json({
-        success: true,
+      return successJson({
         message: "Admin MFA code sent successfully",
       });
     }
 
     if (action === "verify") {
-      const code = String(body?.code || "").trim();
-      if (!code) {
-        return NextResponse.json(
-          { success: false, error: "Verification code is required" },
-          { status: 400 }
-        );
-      }
+      const code = String(body.code || "").trim();
 
       const codeExpiresAt = actor.user.adminMfaCodeExpires
         ? new Date(actor.user.adminMfaCodeExpires).getTime()
         : 0;
 
       if (!actor.user.adminMfaCodeHash || !codeExpiresAt || codeExpiresAt < Date.now()) {
-        return NextResponse.json(
-          { success: false, error: "Verification code has expired" },
-          { status: 400 }
-        );
+        return errorJson("Verification code has expired", 400);
       }
 
       const hashedInput = hashAdminMfaCode(code, actor.user.salt);
       if (hashedInput !== actor.user.adminMfaCodeHash) {
-        return NextResponse.json(
-          { success: false, error: "Invalid verification code" },
-          { status: 400 }
-        );
+        return errorJson("Invalid verification code", 400);
       }
 
       actor.user.adminMfaCodeHash = undefined;
@@ -154,8 +139,7 @@ export async function POST(request: NextRequest) {
         exp: Date.now() + ADMIN_MFA_SESSION_TTL_MS,
       });
 
-      const apiResponse = NextResponse.json({
-        success: true,
+      const apiResponse = successJson({
         message: "Admin MFA verified successfully",
       });
 
@@ -178,16 +162,9 @@ export async function POST(request: NextRequest) {
       return apiResponse;
     }
 
-    return NextResponse.json(
-      { success: false, error: "Unsupported admin MFA action" },
-      { status: 400 }
-    );
-  } catch (error) {
-    console.error("Error handling admin MFA:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to process admin MFA request" },
-      { status: 500 }
-    );
+    return errorJson("Unsupported admin MFA action", 400);
+  } catch (error: unknown) {
+    return handleRouteError(error, "POST /api/auth/admin-mfa");
   }
 }
 
@@ -196,8 +173,7 @@ export async function POST(request: NextRequest) {
 // so it is a harmless no-op for them. Requiring admin would cause 403 for
 // regular users during logout (performClientLogout runs for all users).
 export async function DELETE() {
-  const response = NextResponse.json({
-    success: true,
+  const response = successJson({
     message: "Admin MFA cleared",
   });
 

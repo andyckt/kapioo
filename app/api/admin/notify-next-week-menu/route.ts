@@ -1,21 +1,24 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import User from '@/models/User';
-import NextWeekMenuEmailJob from '@/models/NextWeekMenuEmailJob';
+import { NextResponse } from "next/server";
+
+import { errorJson, parseJsonBody, successJson } from "@/lib/api";
+import { adminNotifyNextWeekMenuPostBodySchema } from "@/lib/contracts/admin-routes";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import User from "@/models/User";
+import NextWeekMenuEmailJob from "@/models/NextWeekMenuEmailJob";
 import {
   buildNextWeekMenuUpdateEmail,
-  sendNextWeekMenuUpdateEmail
-} from '@/lib/services/email';
-import { sendBatchEmailsWithResend } from '@/lib/services/resend-email';
+  sendNextWeekMenuUpdateEmail,
+} from "@/lib/services/email";
+import { sendBatchEmailsWithResend } from "@/lib/services/resend-email";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const ELIGIBLE_USER_QUERY = {
   isVerified: true,
-  emailStatus: { $ne: 'bounced' },
-  email: { $exists: true, $nin: ['', null] },
-  'emailPreferences.nextWeekMenuUpdates': { $ne: false }
+  emailStatus: { $ne: "bounced" },
+  email: { $exists: true, $nin: ["", null] },
+  "emailPreferences.nextWeekMenuUpdates": { $ne: false },
 };
 
 // POST handler - enqueue next week menu update job
@@ -27,20 +30,24 @@ export async function POST(request: Request) {
       return response;
     }
 
-    const { userIds, testMode, testEmail, testBatchMode } = await request.json();
+    const bodyParsed = await parseJsonBody(request, adminNotifyNextWeekMenuPostBodySchema);
+    if (bodyParsed.error) {
+      return bodyParsed.error;
+    }
+    const { userIds, testMode, testEmail, testBatchMode } = bodyParsed.data;
 
     // Single test email still sends immediately.
     if (testMode && testEmail) {
       await sendNextWeekMenuUpdateEmail(
         testEmail,
-        'Test User',
-        'test-user-id',
-        'zh'
+        "Test User",
+        "test-user-id",
+        "zh"
       );
 
       return NextResponse.json({
         success: true,
-        message: 'Test email sent successfully'
+        message: "Test email sent successfully",
       });
     }
 
@@ -50,12 +57,12 @@ export async function POST(request: Request) {
         email: string;
         name: string;
         _id: string;
-        languagePreference: 'en' | 'zh';
+        languagePreference: "en" | "zh";
       }> = Array.from({ length: 15 }, (_, idx) => ({
-        email: 'kapioomeal@gmail.com',
+        email: "kapioomeal@gmail.com",
         name: `Test User ${idx + 1}`,
         _id: `test-${idx + 1}`,
-        languagePreference: idx % 3 === 0 ? 'en' : 'zh'
+        languagePreference: idx % 3 === 0 ? "en" : "zh",
       }));
 
       let emailsSent = 0;
@@ -82,20 +89,20 @@ export async function POST(request: Request) {
           failedEmails.push({
             email: user.email,
             name: user.name,
-            error: result?.error || 'Unknown error'
+            error: result?.error || "Unknown error",
           });
         }
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Test batch completed',
+        message: "Test batch completed",
         data: {
           totalUsers: testUsers.length,
           emailsSent,
           emailsFailed,
-          failedEmails
-        }
+          failedEmails,
+        },
       });
     }
 
@@ -103,49 +110,43 @@ export async function POST(request: Request) {
 
     const query: Record<string, unknown> = { ...ELIGIBLE_USER_QUERY };
     const selectedIds = Array.isArray(userIds) ? userIds : [];
-    const criteriaType = selectedIds.length > 0 ? 'selected' : 'all';
+    const criteriaType = selectedIds.length > 0 ? "selected" : "all";
 
-    if (criteriaType === 'selected') {
+    if (criteriaType === "selected") {
       query._id = { $in: selectedIds };
     }
 
-    const users = await User.find(query).select('_id').lean();
-    const eligibleUserIds = users.map((user: any) => String(user._id));
+    const users = await User.find(query).select("_id").lean();
+    const eligibleUserIds = users.map((user: { _id: unknown }) => String(user._id));
 
     if (eligibleUserIds.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No eligible users found for this job' },
-        { status: 400 }
-      );
+      return errorJson("No eligible users found for this job", 400);
     }
 
     const job = await NextWeekMenuEmailJob.create({
-      status: 'pending',
+      status: "pending",
       criteriaType,
       userIds: eligibleUserIds,
       totalUsers: eligibleUserIds.length,
       cursor: 0,
       sentCount: 0,
       failedCount: 0,
-      failedEmails: []
+      failedEmails: [],
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Email job queued',
+      message: "Email job queued",
       data: {
         jobId: String(job._id),
         status: job.status,
         totalUsers: job.totalUsers,
-        progress: 0
-      }
+        progress: 0,
+      },
     });
-  } catch (error) {
-    console.error('Error in notify-next-week-menu route:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to create email job' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Error in notify-next-week-menu route:", error);
+    return errorJson("Failed to create email job", 500);
   }
 }
 
@@ -164,40 +165,34 @@ export async function GET(request: Request) {
     const eligibleUsers = await User.countDocuments(ELIGIBLE_USER_QUERY);
 
     const unsubscribed = await User.countDocuments({
-      'emailPreferences.nextWeekMenuUpdates': false
+      "emailPreferences.nextWeekMenuUpdates": false,
     });
 
     const bounced = await User.countDocuments({
-      emailStatus: 'bounced'
+      emailStatus: "bounced",
     });
 
     const invalid = await User.countDocuments({
-      $or: [{ email: { $exists: false } }, { email: '' }, { email: null }]
+      $or: [{ email: { $exists: false } }, { email: "" }, { email: null }],
     });
 
     const unverified = await User.countDocuments({
-      isVerified: false
+      isVerified: false,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        totalUsers,
-        eligibleUsers,
-        excluded: {
-          unsubscribed,
-          bounced,
-          invalid,
-          unverified,
-          total: totalUsers - eligibleUsers
-        }
-      }
+    return successJson({
+      totalUsers,
+      eligibleUsers,
+      excluded: {
+        unsubscribed,
+        bounced,
+        invalid,
+        unverified,
+        total: totalUsers - eligibleUsers,
+      },
     });
-  } catch (error) {
-    console.error('Error getting user summary:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to get user summary' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Error getting user summary:", error);
+    return errorJson("Failed to get user summary", 500);
   }
 }

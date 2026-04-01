@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server';
+import {
+  ApiError,
+  errorJson,
+  handleRouteError,
+  parseJsonBody,
+  parseSearchParams,
+  successJson,
+} from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { createUserBodySchema, usersQuerySchema } from '@/lib/contracts/user';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { sendVerificationEmail, sendWelcomeEmail } from '@/lib/services/email';
@@ -34,20 +43,21 @@ export async function GET(request: Request) {
       return response;
     }
 
-    const url = new URL(request.url);
-    // Add pagination
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const { data: queryInput, error } = parseSearchParams(request, usersQuerySchema);
+    if (error) {
+      return error;
+    }
+
+    const page = queryInput.page ?? 1;
+    const limit = queryInput.limit ?? 10;
+    const search = queryInput.search ?? '';
+    const searchType = queryInput.searchType ?? 'all';
     const skip = (page - 1) * limit;
-    
-    // Get search parameters
-    const search = url.searchParams.get('search') || '';
-    const searchType = url.searchParams.get('searchType') || 'all';
-    
+
     await connectToDatabase();
     
     // Build query based on search parameters
-    let query = {};
+    let query: Record<string, unknown> = {};
     
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive search
@@ -62,12 +72,16 @@ export async function GET(request: Request) {
         case 'userID':
           query = { userID: searchRegex };
           break;
+        case 'phone':
+          query = { phone: searchRegex };
+          break;
         default: // 'all'
           query = {
             $or: [
               { name: searchRegex },
               { email: searchRegex },
-              { userID: searchRegex }
+              { userID: searchRegex },
+              { phone: searchRegex },
             ]
           };
           break;
@@ -84,8 +98,8 @@ export async function GET(request: Request) {
     // Get total count for pagination with the same search query
     const totalUsers = await User.countDocuments(query);
     
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: users,
       pagination: {
         total: totalUsers,
@@ -95,33 +109,23 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch users' },
-      { status: 500 }
-    );
+    return handleRouteError(error, 'GET /api/users');
   }
 }
 
 // Define MongoDB error interface
 interface MongoError extends Error {
   code?: number;
-  keyValue?: Record<string, any>;
+  keyValue?: Record<string, unknown>;
 }
 
 // POST handler - create a new user
 export async function POST(request: Request) {
   try {
     console.log('Starting user creation process');
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.name || !data.email || !data.password) {
-      console.log('Validation failed: Missing required fields');
-      return NextResponse.json(
-        { success: false, error: 'Name, email, and password are required' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, createUserBodySchema);
+    if (error) {
+      return error;
     }
     
     console.log('Connecting to database...');
@@ -133,10 +137,7 @@ export async function POST(request: Request) {
     
     if (existingUser) {
       console.log('User with this email already exists');
-      return NextResponse.json(
-        { success: false, error: 'User with this email already exists' },
-        { status: 409 }
-      );
+      return errorJson('User with this email already exists', 409);
     }
     
     // Generate a unique userID
@@ -213,11 +214,8 @@ export async function POST(request: Request) {
         // Email failure doesn't affect user creation - user can still log in
       });
     
-    return NextResponse.json(
-      { success: true, data: userResponse },
-      { status: 201 }
-    );
-  } catch (error: any) {
+    return successJson(userResponse, 201);
+  } catch (error: unknown) {
     console.error('Error creating user:', error);
     
     // Log detailed error information
@@ -230,25 +228,24 @@ export async function POST(request: Request) {
     // Check for specific error types
     if (error instanceof mongoose.Error.ValidationError) {
       console.error('Mongoose validation error:', error.errors);
-      return NextResponse.json(
-        { success: false, error: 'Validation error', details: error.errors },
-        { status: 400 }
-      );
+      return errorJson('Validation error', 400, {
+        details: Object.keys(error.errors).join(', '),
+      });
     }
     
     // Check for duplicate key error (MongoDB error code 11000)
     const mongoError = error as MongoError;
     if (mongoError.name === 'MongoError' && mongoError.code === 11000 && mongoError.keyValue) {
       console.error('Duplicate key error:', mongoError.keyValue);
-      return NextResponse.json(
-        { success: false, error: 'Duplicate key error', field: Object.keys(mongoError.keyValue)[0] },
-        { status: 409 }
+      return handleRouteError(
+        new ApiError('Duplicate key error', {
+          status: 409,
+          details: `field:${Object.keys(mongoError.keyValue)[0]}`,
+        }),
+        'POST /api/users'
       );
     }
     
-    return NextResponse.json(
-      { success: false, error: 'Failed to create user' },
-      { status: 500 }
-    );
+    return handleRouteError(error, 'POST /api/users');
   }
 } 

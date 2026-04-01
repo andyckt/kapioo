@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
+import { sendVerificationBodySchema } from '@/lib/contracts/auth';
 import connectToDatabase from '@/lib/db';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import User from '@/models/User';
@@ -6,19 +7,14 @@ import { sendVerificationEmail } from '@/lib/services/email';
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const { data, error } = await parseJsonBody(request, sendVerificationBodySchema);
+    if (error) {
+      return error;
+    }
     const ipAddress =
       request.headers.get('x-forwarded-for') ||
       request.headers.get('x-real-ip') ||
       'unknown';
-    
-    // Validate required fields
-    if (!data.email || !data.name || !data.code) {
-      return NextResponse.json(
-        { success: false, error: 'Email, name, and verification code are required' },
-        { status: 400 }
-      );
-    }
 
     const rateLimitResult = checkRateLimit(
       `send-verification:${ipAddress}:${String(data.email).toLowerCase()}`,
@@ -26,10 +22,7 @@ export async function POST(request: Request) {
       15 * 60 * 1000
     );
     if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { success: false, error: 'Too many verification requests. Please try again later.' },
-        { status: 429 }
-      );
+      return errorJson('Too many verification requests. Please try again later.', 429);
     }
     
     await connectToDatabase();
@@ -38,10 +31,7 @@ export async function POST(request: Request) {
     const existingUser = await User.findOne({ email: data.email.toLowerCase() });
     
     if (existingUser) {
-      return NextResponse.json(
-        { success: false, error: 'User with this email already exists' },
-        { status: 409 }
-      );
+      return errorJson('User with this email already exists', 409);
     }
     
     // Send verification email with the provided code
@@ -52,21 +42,13 @@ export async function POST(request: Request) {
       console.log('Verification email sent successfully to:', data.email);
     } catch (emailError) {
       console.error('Error sending verification email:', emailError);
-      return NextResponse.json(
-        { success: false, error: 'Failed to send verification email' },
-        { status: 500 }
-      );
+      return errorJson('Failed to send verification email', 500);
     }
     
-    return NextResponse.json({
-      success: true,
+    return successJson({
       message: 'Verification email sent successfully'
     });
-  } catch (error) {
-    console.error('Error sending verification email:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to send verification email' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/auth/send-verification-code');
   }
 }

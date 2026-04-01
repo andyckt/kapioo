@@ -1,37 +1,31 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { tagBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import Tag from '@/models/Tag';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteContext<{ id: string }>
 ) {
   try {
     await connectToDatabase();
-    const { id } = params;
+    const { id } = await params;
     const tag = await Tag.findById(id);
     
     if (!tag) {
-      return NextResponse.json(
-        { success: false, error: 'Tag not found' },
-        { status: 404 }
-      );
+      return errorJson('Tag not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: tag });
-  } catch (error) {
-    console.error('Error fetching tag:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(tag);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/tags/[id]');
   }
 }
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteContext<{ id: string }>
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -40,24 +34,16 @@ export async function PUT(
     }
 
     await connectToDatabase();
-    const { id } = params;
-    const data = await request.json();
-    
-    // Validate required fields
-    if (!data.name) {
-      return NextResponse.json(
-        { success: false, error: 'Tag name is required' },
-        { status: 400 }
-      );
+    const { id } = await params;
+    const { data, error } = await parseJsonBody(request, tagBodySchema);
+    if (error) {
+      return error;
     }
     
     // Check if tag with new name already exists (but is not this tag)
     const existingTag = await Tag.findOne({ name: data.name, _id: { $ne: id } });
     if (existingTag) {
-      return NextResponse.json(
-        { success: false, error: 'Tag name already in use' },
-        { status: 409 }
-      );
+      return errorJson('Tag name already in use', 409);
     }
     
     const tag = await Tag.findByIdAndUpdate(
@@ -67,25 +53,18 @@ export async function PUT(
     );
     
     if (!tag) {
-      return NextResponse.json(
-        { success: false, error: 'Tag not found' },
-        { status: 404 }
-      );
+      return errorJson('Tag not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: tag });
-  } catch (error) {
-    console.error('Error updating tag:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(tag);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'PUT /api/tags/[id]');
   }
 }
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteContext<{ id: string }>
 ) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -94,23 +73,16 @@ export async function DELETE(
     }
 
     await connectToDatabase();
-    const { id } = params;
+    const { id } = await params;
     
     const tag = await Tag.findByIdAndDelete(id);
     
     if (!tag) {
-      return NextResponse.json(
-        { success: false, error: 'Tag not found' },
-        { status: 404 }
-      );
+      return errorJson('Tag not found', 404);
     }
     
-    return NextResponse.json({ success: true, data: {} });
-  } catch (error) {
-    console.error('Error deleting tag:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson({});
+  } catch (error: unknown) {
+    return handleRouteError(error, 'DELETE /api/tags/[id]');
   }
 }

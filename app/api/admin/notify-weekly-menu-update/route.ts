@@ -1,41 +1,14 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
+import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from '@/lib/db';
-import mongoose from 'mongoose';
 import { sendWeeklyMenuUpdateEmail } from '@/lib/services/email';
 import type { Language } from '@/lib/email-translations';
-
-// User schema interface
-interface UserDocument extends mongoose.Document {
-  email: string;
-  name: string;
-  language: Language;
-  credits: number;
-  weeklySIXmeals: number;
-  weeklyEIGHTmeals: number;
-  weeklyTENmeals: number;
-  weeklyTWELVEmeals: number;
-  weeklySIXTEENmeals: number;
-}
-
-// Define User schema
-const UserSchema = new mongoose.Schema({
-  email: { type: String, required: true },
-  name: { type: String, required: true },
-  language: { type: String, default: 'zh' },
-  credits: { type: Number, default: 0 },
-  weeklySIXmeals: { type: Number, default: 0 },
-  weeklyEIGHTmeals: { type: Number, default: 0 },
-  weeklyTENmeals: { type: Number, default: 0 },
-  weeklyTWELVEmeals: { type: Number, default: 0 },
-  weeklySIXTEENmeals: { type: Number, default: 0 }
-});
+import User from '@/models/User';
 
 // Response type for streaming updates
 interface ProgressUpdate {
   type: 'progress' | 'batch_start' | 'batch_complete' | 'email_sent' | 'email_failed' | 'complete' | 'error';
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 /**
@@ -64,9 +37,6 @@ export async function POST(request: Request) {
         await connectToDatabase();
         
         sendUpdate({ type: 'progress', message: 'Fetching users with weekly meal plans...' });
-        
-        // Get or create User model
-        const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema);
         
         // Find all users who have any weekly meal plan
         const usersWithWeeklyPlans = await User.find({

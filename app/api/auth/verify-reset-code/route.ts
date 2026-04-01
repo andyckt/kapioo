@@ -1,23 +1,19 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
+import { emailCodeBodySchema } from '@/lib/contracts/auth';
 import connectToDatabase from '@/lib/db';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import User from '@/models/User';
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const { data, error } = await parseJsonBody(request, emailCodeBodySchema);
+    if (error) {
+      return error;
+    }
     const ipAddress =
       request.headers.get('x-forwarded-for') ||
       request.headers.get('x-real-ip') ||
       'unknown';
-    
-    // Validate required fields
-    if (!data.code || !data.email) {
-      return NextResponse.json(
-        { success: false, error: 'Code and email are required' },
-        { status: 400 }
-      );
-    }
 
     const rateLimitResult = checkRateLimit(
       `verify-reset:${ipAddress}:${String(data.email).toLowerCase()}`,
@@ -25,10 +21,7 @@ export async function POST(request: Request) {
       15 * 60 * 1000
     );
     if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { success: false, error: 'Too many verification attempts. Please try again later.' },
-        { status: 429 }
-      );
+      return errorJson('Too many verification attempts. Please try again later.', 429);
     }
     
     await connectToDatabase();
@@ -41,21 +34,13 @@ export async function POST(request: Request) {
     });
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid or expired reset code' },
-        { status: 400 }
-      );
+      return errorJson('Invalid or expired reset code', 400);
     }
     
-    return NextResponse.json({
-      success: true,
+    return successJson({
       message: 'Reset code is valid'
     });
-  } catch (error) {
-    console.error('Error verifying reset code:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to verify reset code' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'POST /api/auth/verify-reset-code');
   }
 } 

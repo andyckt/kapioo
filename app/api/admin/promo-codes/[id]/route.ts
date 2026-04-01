@@ -1,16 +1,20 @@
-import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import PromoCode from '@/models/PromoCode';
+import mongoose from "mongoose";
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
+import {
+  errorJson,
+  parseJsonBody,
+  successJson,
+  type RouteContext,
+} from "@/lib/api";
+import { adminPatchPromoCodeBodySchema } from "@/lib/contracts/admin-routes";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import PromoCode from "@/models/PromoCode";
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(
+  _request: Request,
+  { params }: RouteContext<{ id: string }>
+) {
   try {
     const { actor, response } = await requireAdminMfa(_request);
     if (!actor || response) {
@@ -22,17 +26,20 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const promo = await PromoCode.findById(id).lean();
 
     if (!promo) {
-      return NextResponse.json({ success: false, error: 'Promo code not found' }, { status: 404 });
+      return errorJson("Promo code not found", 404);
     }
 
-    return NextResponse.json({ success: true, data: promo });
-  } catch (error: any) {
-    console.error('Error fetching promo code:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch promo code' }, { status: 500 });
+    return successJson(promo);
+  } catch (error: unknown) {
+    console.error("Error fetching promo code:", error);
+    return errorJson("Failed to fetch promo code", 500);
   }
 }
 
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(
+  request: Request,
+  { params }: RouteContext<{ id: string }>
+) {
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
@@ -43,23 +50,28 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ success: false, error: 'Invalid promo code id' }, { status: 400 });
+      return errorJson("Invalid promo code id", 400);
     }
 
-    const body = await request.json();
+    const bodyParsed = await parseJsonBody(request, adminPatchPromoCodeBodySchema);
+    if (bodyParsed.error) {
+      return bodyParsed.error;
+    }
+    const body = bodyParsed.data as Record<string, unknown>;
+
     const updateData: Record<string, unknown> = {};
 
     const allowedFields = [
-      'description',
-      'active',
-      'discountType',
-      'discountValue',
-      'startsAt',
-      'expiresAt',
-      'maxUses',
-      'oneUsePerUser',
-      'promoOnlyEmt',
-      'appliesTo'
+      "description",
+      "active",
+      "discountType",
+      "discountValue",
+      "startsAt",
+      "expiresAt",
+      "maxUses",
+      "oneUsePerUser",
+      "promoOnlyEmt",
+      "appliesTo",
     ];
 
     for (const field of allowedFields) {
@@ -77,19 +89,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       updateData.discountValue = Number(updateData.discountValue);
     }
 
-    const updated = await PromoCode.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true }
-    );
+    const updated = await PromoCode.findByIdAndUpdate(id, { $set: updateData }, { new: true });
 
     if (!updated) {
-      return NextResponse.json({ success: false, error: 'Promo code not found' }, { status: 404 });
+      return errorJson("Promo code not found", 404);
     }
 
-    return NextResponse.json({ success: true, data: updated });
-  } catch (error: any) {
-    console.error('Error updating promo code:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update promo code' }, { status: 500 });
+    return successJson(updated);
+  } catch (error: unknown) {
+    console.error("Error updating promo code:", error);
+    return errorJson("Failed to update promo code", 500);
   }
 }

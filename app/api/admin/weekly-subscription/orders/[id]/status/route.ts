@@ -1,64 +1,48 @@
-import { NextResponse } from 'next/server';
-import { requireAdminMfa } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
+import { NextResponse } from "next/server";
+import { errorJson, handleRouteError, parseJsonBody, type RouteContext } from "@/lib/api";
+import { updateWeeklyOrderStatusBodySchema } from "@/lib/contracts/weekly-order";
+import { requireAdminMfa } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
 import {
   resolveWeeklyStatusTransition,
   WEEKLY_OPERATOR_ORDER_STATUSES,
-} from '@/lib/orders/weekly-status';
-import { sendDailyOrderStatusUpdateNotification } from '@/lib/services/notifications';
-import User from '@/models/User';
-import WeeklyOrder from '@/models/WeeklyOrder';
+} from "@/lib/orders/weekly-status";
+import { sendDailyOrderStatusUpdateNotification } from "@/lib/services/notifications";
+import User from "@/models/User";
+import WeeklyOrder from "@/models/WeeklyOrder";
 
-// Define route params interface
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
-// PATCH handler - update weekly subscription order status
-export async function PATCH(request: Request, { params }: RouteParams) {
-  const { id } = await params;
+export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>) {
   try {
+    const { id } = await ctx.params;
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
       return response;
     }
-    
-    // First connect to the database
-    await connectToDatabase();
-    
-    const { status } = await request.json();
 
-    if (typeof status !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid status' },
-        { status: 400 }
-      );
+    const { data, error: bodyError } = await parseJsonBody(request, updateWeeklyOrderStatusBodySchema);
+    if (bodyError || !data) {
+      return bodyError;
     }
-    
-    // Find the order by orderId
+
+    const { status } = data;
+
+    await connectToDatabase();
+
     const order = await WeeklyOrder.findOne({ orderId: id });
-    
+
     if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
+      return errorJson("Order not found", 404);
     }
-    
+
     const transition = resolveWeeklyStatusTransition(order, status);
     if (!transition.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: transition.error,
+      return errorJson(transition.error ?? "Invalid status transition", 409, {
+        extra: {
           allowedNextStatuses: transition.allowedNextStatuses,
           validStatuses: WEEKLY_OPERATOR_ORDER_STATUSES,
           currentStatus: transition.currentStatus,
         },
-        { status: 409 }
-      );
+      });
     }
 
     if (transition.noOp) {
@@ -70,7 +54,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           nextStatus: transition.nextStatus,
           noOp: true,
           allowedNextStatuses: transition.allowedNextStatuses,
-        }
+        },
       });
     }
 
@@ -82,14 +66,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     );
 
     if (!updatedOrder) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found after update attempt' },
-        { status: 404 }
-      );
+      return errorJson("Order not found after update attempt", 404);
     }
-    
-    // Send notification to user about status change (skip for 'confirmed' and 'delivered' status)
-    if (transition.nextStatus !== 'confirmed' && transition.nextStatus !== 'delivered') {
+
+    if (transition.nextStatus !== "confirmed" && transition.nextStatus !== "delivered") {
       try {
         const user = await User.findById(order.userId);
         if (user && user.email) {
@@ -99,17 +79,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
             id,
             transition.nextStatus,
             order.items,
-            order.status, // Previous status
-            user.languagePreference || 'zh', // Pass user's language preference from database
-            order.createdAt // Pass the actual order creation date
+            order.status,
+            user.languagePreference || "zh",
+            order.createdAt
           );
         }
       } catch (notificationError) {
-        console.error('Failed to send status update notification:', notificationError);
-        // Don't fail the API call if notification sending fails
+        console.error("Failed to send status update notification:", notificationError);
       }
     }
-    
+
     return NextResponse.json({
       success: true,
       data: updatedOrder,
@@ -118,14 +97,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         nextStatus: transition.nextStatus,
         noOp: false,
         allowedNextStatuses: transition.allowedNextStatuses,
-      }
+      },
     });
-  } catch (error: any) {
-    console.error('Error updating weekly subscription order status:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to update order status', details: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleRouteError(error, "PATCH /api/admin/weekly-subscription/orders/[id]/status");
   }
 }

@@ -1,22 +1,18 @@
-import { NextResponse } from 'next/server';
+import { handleRouteError, successJson, type RouteContext } from '@/lib/api';
 import connectToDatabase from '@/lib/db';
 import Combo from '@/models/Combo';
 
 export async function GET(
   request: Request,
-  { params }: { params: { dayId: string } }
+  { params }: RouteContext<{ dayId: string }>
 ) {
   try {
     await connectToDatabase();
-    const { dayId } = params;
+    const { dayId } = await params;
     const combos = await Combo.find({ dayId });
     
-    return NextResponse.json({ success: true, data: combos });
-  } catch (error) {
-    console.error('Error fetching combos for day:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return successJson(combos);
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/days/[dayId]/combos');
   }
 }

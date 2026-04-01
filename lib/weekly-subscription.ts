@@ -1,34 +1,11 @@
-// Types for weekly subscription
-export type MealOption = {
-  id: string;
-  name: string;
-  nameEn?: string; // English translation of the dish name
-  tags?: string[];
-  active: boolean;
-}
+import type {
+  CartItem,
+  DeliveryDay,
+  DeliverySection,
+  MealOption,
+} from "@/lib/contracts/weekly-subscription";
 
-export type DeliveryDay = {
-  id: string;
-  day: 'sunday' | 'tuesday';
-  name: string;
-  date: string;
-  weekOffset: number; // 0 for current week, 1 for next week, 2 for week 3
-  active: boolean;
-  options: MealOption[];
-}
-
-export type DeliverySection = {
-  id: string;
-  title: string;
-  day: DeliveryDay;
-}
-
-export type CartItem = {
-  dayId: string;
-  optionId: string;
-  quantity: number;
-  weekOffset?: number; // Add weekOffset to identify which week's delivery
-}
+export type { CartItem, DeliveryDay, DeliverySection, MealOption } from "@/lib/contracts/weekly-subscription";
 
 // Get all delivery days and meal options for admin
 export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {

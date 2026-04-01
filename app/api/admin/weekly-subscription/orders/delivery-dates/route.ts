@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+
+import { handleRouteError } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import WeeklyOrder from '@/models/WeeklyOrder';
@@ -139,13 +141,8 @@ export async function GET(request: Request) {
       success: true,
       deliveryDates: result
     });
-  } catch (error) {
-    console.error('Error fetching delivery dates:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch delivery dates' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleRouteError(error, 'GET /api/admin/weekly-subscription/orders/delivery-dates');
   }
 }
 

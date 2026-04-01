@@ -1,15 +1,16 @@
-import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guards';
-import connectToDatabase from '@/lib/db';
-import PromoCode from '@/models/PromoCode';
-import User from '@/models/User';
+import { errorJson, parseJsonBody, successJson } from "@/lib/api";
+import { requireUser } from "@/lib/auth/guards";
+import connectToDatabase from "@/lib/db";
+import { applyPromoCodePreviewBodySchema } from "@/lib/contracts/promo";
 import {
   PromoErrorCode,
   normalizePromoCode,
   validatePromoForPreview,
+  type PromoPaymentMethod,
   type PromoPurchaseType,
-  type PromoPaymentMethod
-} from '@/lib/promo-code';
+} from "@/lib/promo-code";
+import PromoCode from "@/models/PromoCode";
+import User from "@/models/User";
 
 export async function POST(request: Request) {
   try {
@@ -18,45 +19,43 @@ export async function POST(request: Request) {
       return response;
     }
 
+    const parsed = await parseJsonBody(request, applyPromoCodePreviewBodySchema);
+    if (parsed.error) {
+      return parsed.error;
+    }
+    const body = parsed.data;
+
     await connectToDatabase();
-    const body = await request.json();
 
     const code = normalizePromoCode(body.code);
-    const userId = (body.userId as string) || String(actor.user._id);
+    const userId = body.userId || String(actor.user._id);
     if (
-      actor.role !== 'admin' &&
+      actor.role !== "admin" &&
       String(userId) !== String(actor.user._id) &&
       String(userId) !== String(actor.user.userID)
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR,
-          error: 'You cannot preview a promo code for another user'
-        },
-        { status: 403 }
-      );
+      return errorJson("You cannot preview a promo code for another user", 403, {
+        errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR,
+      });
     }
 
     const purchaseType = body.purchaseType as PromoPurchaseType;
     const paymentMethod = body.paymentMethod as PromoPaymentMethod;
-    const mealSubtotal = Number(body.mealSubtotal ?? body.subtotal);
-    const deliveryFeeTotal = Number(body.deliveryFeeTotal ?? 0);
-    const taxRate = Number(body.taxRate ?? 0.13);
+    const { mealSubtotal, deliveryFeeTotal, taxRate } = body;
 
-    if (!code || !userId || !purchaseType || !paymentMethod || Number.isNaN(mealSubtotal) || Number.isNaN(deliveryFeeTotal)) {
-      return NextResponse.json(
-        { success: false, errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR, error: 'Missing required fields' },
-        { status: 400 }
-      );
+    if (!code || !userId || !purchaseType || !paymentMethod) {
+      return errorJson("Missing required fields", 400, {
+        errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR,
+      });
     }
 
-    const user = await User.findById(userId).select('phone').lean() as { phone?: string } | null;
+    const user = (await User.findById(userId).select("phone").lean()) as {
+      phone?: string;
+    } | null;
     if (!user) {
-      return NextResponse.json(
-        { success: false, errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson("User not found", 404, {
+        errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR,
+      });
     }
 
     const promo = await PromoCode.findOne({ code });
@@ -68,38 +67,25 @@ export async function POST(request: Request) {
         purchaseType,
         paymentMethod,
         mealSubtotal,
-        deliveryFeeTotal
+        deliveryFeeTotal,
       },
-      taxRate
+      taxRate,
     });
 
     if (!result.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          errorCode: result.errorCode || PromoErrorCode.INTERNAL_VALIDATION_ERROR,
-          error: result.message || 'Promo code is not valid'
-        },
-        { status: 400 }
-      );
+      return errorJson(result.message || "Promo code is not valid", 400, {
+        errorCode: result.errorCode || PromoErrorCode.INTERNAL_VALIDATION_ERROR,
+      });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        code,
-        breakdown: result.breakdown
-      }
+    return successJson({
+      code,
+      breakdown: result.breakdown,
     });
-  } catch (error: any) {
-    console.error('Error applying promo code:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR,
-        error: 'Failed to apply promo code'
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Error applying promo code:", error);
+    return errorJson("Failed to apply promo code", 500, {
+      errorCode: PromoErrorCode.INTERNAL_VALIDATION_ERROR,
+    });
   }
 }

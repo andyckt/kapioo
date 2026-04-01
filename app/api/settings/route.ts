@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { ApiError, handleRouteError, parseJsonBody, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { updateSettingBodySchema } from '@/lib/contracts/settings';
 import connectToDatabase from '@/lib/db';
 import { isPublicSettingsKey } from '@/lib/settings-access';
 import Settings from '@/models/Settings';
@@ -26,30 +27,26 @@ export async function GET(request: Request) {
       if (!setting) {
         // Return default values if setting doesn't exist
         if (key === 'cutoffTime') {
-          return NextResponse.json({ 
-            success: true, 
-            data: { key: 'cutoffTime', value: { hour: 11, minute: 59 } }
+          return successJson({
+            key: 'cutoffTime',
+            value: { hour: 11, minute: 59 },
           });
         }
         
-        return NextResponse.json(
-          { success: false, error: 'Setting not found' },
-          { status: 404 }
+        return handleRouteError(
+          new ApiError('Setting not found', { status: 404 }),
+          'GET /api/settings'
         );
       }
       
-      return NextResponse.json({ success: true, data: setting });
+      return successJson(setting);
     } else {
       // Get all settings
       const settings = await Settings.find({});
-      return NextResponse.json({ success: true, data: settings });
+      return successJson(settings);
     }
   } catch (error) {
-    console.error('Error fetching settings:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return handleRouteError(error, 'GET /api/settings');
   }
 }
 
@@ -62,13 +59,9 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
-    const data = await request.json();
-    
-    if (!data.key) {
-      return NextResponse.json(
-        { success: false, error: 'Setting key is required' },
-        { status: 400 }
-      );
+    const { data, error } = await parseJsonBody(request, updateSettingBodySchema);
+    if (error) {
+      return error;
     }
     
     // Update or create setting
@@ -82,13 +75,9 @@ export async function POST(request: Request) {
       { upsert: true, new: true, runValidators: true }
     );
     
-    return NextResponse.json({ success: true, data: setting });
+    return successJson(setting);
   } catch (error) {
-    console.error('Error updating setting:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return handleRouteError(error, 'POST /api/settings');
   }
 }
 

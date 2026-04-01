@@ -1,5 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminMfa, requireUser } from '@/lib/auth/guards';
+import { NextRequest, NextResponse } from "next/server";
+
+import { errorJson, handleRouteError, parseJsonBody, parseSearchParams } from "@/lib/api";
+import { requireAdminMfa, requireUser } from "@/lib/auth/guards";
+import {
+  createVoucherPurchaseRequestBodySchema,
+  voucherRequestsListQuerySchema,
+} from "@/lib/contracts/voucher-request";
 import connectToDatabase from '@/lib/db';
 import VoucherPurchaseRequest from '@/models/VoucherPurchaseRequest';
 import User from '@/models/User';
@@ -9,11 +15,10 @@ import PromoCodeRedemption from '@/models/PromoCodeRedemption';
 import { sendAdminVoucherRequestNotification, sendUserVoucherRequestConfirmation } from '@/lib/services/email';
 import {
   PromoErrorCode,
-  calculatePromoBreakdown,
   normalizePhone,
   normalizePromoCode,
-  validatePromoForPreview
-} from '@/lib/promo-code';
+  validatePromoForPreview,
+} from "@/lib/promo-code";
 import { derivePlanIdFromDaily, getDailyPlanBy, getDailyPlanById, toDailyPlanId } from '@/lib/plans/service';
 
 // GET handler - fetch voucher purchase requests
@@ -24,52 +29,49 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
+    const { data: query, error: queryError } = parseSearchParams(
+      request.url,
+      voucherRequestsListQuerySchema
+    );
+    if (queryError) {
+      return queryError;
+    }
+
     await connectToDatabase();
-    
-    // Get query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-    const status = searchParams.get('status');
-    const search = String(searchParams.get('search') || '').trim();
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '10', 10);
-    const safePage = Number.isFinite(page) && page > 0 ? page : 1;
-    const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 100) : 10;
+
+    const safePage = query.page ?? 1;
+    const safeLimit = query.limit ?? 10;
+    const { userId, status, startDate, endDate } = query;
+    const search = String(query.search ?? "").trim();
     const skip = (safePage - 1) * safeLimit;
     
-    // Build query
-    const query: any = {};
+    const mongoQuery: Record<string, unknown> = {};
     if (userId) {
       const isSelf =
         String(actor.user._id) === String(userId) ||
         String(actor.user.userID) === String(userId);
-      if (!isSelf && actor.role !== 'admin') {
-        return NextResponse.json(
-          { success: false, error: 'You do not have access to these voucher requests' },
-          { status: 403 }
-        );
+      if (!isSelf && actor.role !== "admin") {
+        return errorJson("You do not have access to these voucher requests", 403);
       }
 
-      if (!isSelf && actor.role === 'admin') {
+      if (!isSelf && actor.role === "admin") {
         const { response: adminMfaResponse } = await requireAdminMfa(request);
         if (adminMfaResponse) {
           return adminMfaResponse;
         }
       }
 
-      query.userId = userId;
-    } else if (actor.role !== 'admin') {
-      query.userId = actor.user._id;
+      mongoQuery.userId = userId;
+    } else if (actor.role !== "admin") {
+      mongoQuery.userId = actor.user._id;
     } else {
       const { response: adminMfaResponse } = await requireAdminMfa(request);
       if (adminMfaResponse) {
         return adminMfaResponse;
       }
     }
-    if (status && ['pending', 'approved', 'declined'].includes(status)) {
-      query.status = status;
+    if (status) {
+      mongoQuery.status = status;
     }
     if (startDate || endDate) {
       const createdAt: Record<string, Date> = {};
@@ -82,35 +84,33 @@ export async function GET(request: NextRequest) {
       if (endDate) {
         const parsedEnd = new Date(`${endDate}T00:00:00.000Z`);
         if (!Number.isNaN(parsedEnd.getTime())) {
-          // Inclusive end date (entire day)
           createdAt.$lt = new Date(parsedEnd.getTime() + 24 * 60 * 60 * 1000);
         }
       }
       if (Object.keys(createdAt).length > 0) {
-        query.createdAt = createdAt;
+        mongoQuery.createdAt = createdAt;
       }
     }
 
     if (search) {
-      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escaped, 'i');
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escaped, "i");
       const matchedUsers = await User.find({
-        $or: [{ name: regex }, { email: regex }]
+        $or: [{ name: regex }, { email: regex }],
       })
-        .select('_id')
+        .select("_id")
         .lean();
-      const matchedUserIds = matchedUsers.map((u: any) => u._id);
+      const matchedUserIds = matchedUsers.map((u: { _id: unknown }) => u._id);
 
-      query.$or = [
+      mongoQuery.$or = [
         { requestId: regex },
         { referenceNumber: regex },
-        ...(matchedUserIds.length > 0 ? [{ userId: { $in: matchedUserIds } }] : [])
+        ...(matchedUserIds.length > 0 ? [{ userId: { $in: matchedUserIds } }] : []),
       ];
     }
-    
-    // Execute query with pagination
-    const totalCount = await VoucherPurchaseRequest.countDocuments(query);
-    const requests = await VoucherPurchaseRequest.find(query)
+
+    const totalCount = await VoucherPurchaseRequest.countDocuments(mongoQuery);
+    const requests = await VoucherPurchaseRequest.find(mongoQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(safeLimit)
@@ -154,15 +154,11 @@ export async function GET(request: NextRequest) {
         total: totalCount,
         page: safePage,
         limit: safeLimit,
-        pages: totalPages
-      }
+        pages: totalPages,
+      },
     });
   } catch (error) {
-    console.error('Error fetching voucher purchase requests:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch voucher purchase requests' },
-      { status: 500 }
-    );
+    return handleRouteError(error, "GET /api/voucher-requests");
   }
 }
 
@@ -174,10 +170,16 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
+    const { data: body, error: bodyError } = await parseJsonBody(
+      request,
+      createVoucherPurchaseRequestBodySchema
+    );
+    if (bodyError) {
+      return bodyError;
+    }
+
     await connectToDatabase();
-    
-    // Parse request body
-    const body = await request.json();
+
     const {
       userId,
       type,
@@ -186,7 +188,7 @@ export async function POST(request: NextRequest) {
       referenceNumber,
       notes,
       promoCode,
-      requestId: clientRequestId
+      requestId: clientRequestId,
     } = body;
     
     const effectiveUserId =
@@ -195,70 +197,40 @@ export async function POST(request: NextRequest) {
         : String(actor.user._id);
 
     if (
-      actor.role !== 'admin' &&
+      actor.role !== "admin" &&
       userId &&
       String(userId) !== String(actor.user._id) &&
       String(userId) !== String(actor.user.userID)
     ) {
-      return NextResponse.json(
-        { success: false, error: 'You cannot submit requests for another user' },
-        { status: 403 }
-      );
+      return errorJson("You cannot submit requests for another user", 403);
     }
 
-    // Validate required fields
-    if (!effectiveUserId || !type || !quantity || !imageProof || !referenceNumber) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-    
-    // Validate voucher type
-    if (type !== 'twoDish' && type !== 'threeDish') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid voucher type' },
-        { status: 400 }
-      );
-    }
-    
-    // Validate quantity
-    if (quantity <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Quantity must be a positive number' },
-        { status: 400 }
-      );
-    }
-    
-    // Verify user exists
     const user = await User.findById(effectiveUserId);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return errorJson("User not found", 404);
     }
 
-    // Phone is required for all voucher requests
     const normalizedUserPhone = normalizePhone(user.phone);
     if (!normalizedUserPhone) {
-      return NextResponse.json(
-        { success: false, error: 'Phone number is required for voucher requests. Please add your phone number and try again.' },
-        { status: 400 }
+      return errorJson(
+        "Phone number is required for voucher requests. Please add your phone number and try again.",
+        400
       );
     }
 
     const voucherType = type as 'twoDish' | 'threeDish';
     const planId =
       body.planId ||
-      (Number.isFinite(Number(quantity)) ? toDailyPlanId(voucherType, Number(quantity)) : derivePlanIdFromDaily(voucherType, Number(quantity)));
+      (Number.isFinite(Number(quantity))
+        ? toDailyPlanId(voucherType, Number(quantity))
+        : derivePlanIdFromDaily(voucherType, Number(quantity)));
+    if (!planId) {
+      return errorJson("Invalid plan quantity for selected voucher type", 400);
+    }
     const dailyPlan = getDailyPlanById(planId) || getDailyPlanBy(voucherType, Number(quantity));
     const baseSubtotal = dailyPlan?.basePrice;
     if (!baseSubtotal) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid plan quantity for selected voucher type' },
-        { status: 400 }
-      );
+      return errorJson("Invalid plan quantity for selected voucher type", 400);
     }
 
     const requestId = clientRequestId || (await VoucherPurchaseRequest.generateRequestId());
@@ -300,14 +272,9 @@ export async function POST(request: NextRequest) {
       });
 
       if (!preview.ok) {
-        return NextResponse.json(
-          {
-            success: false,
-            errorCode: preview.errorCode || PromoErrorCode.INVALID_CODE,
-            error: preview.message || 'Promo code is not valid'
-          },
-          { status: 400 }
-        );
+        return errorJson(preview.message || "Promo code is not valid", 400, {
+          errorCode: preview.errorCode || PromoErrorCode.INVALID_CODE,
+        });
       }
 
       promoBreakdown = preview.breakdown!;
@@ -401,10 +368,7 @@ export async function POST(request: NextRequest) {
     } catch (txError: any) {
       const code = txError?.message as PromoErrorCode;
       if (Object.values(PromoErrorCode).includes(code)) {
-        return NextResponse.json(
-          { success: false, errorCode: code, error: code.replaceAll('_', ' ') },
-          { status: 400 }
-        );
+        return errorJson(code.replaceAll("_", " "), 400, { errorCode: code });
       }
       throw txError;
     } finally {
@@ -481,10 +445,6 @@ export async function POST(request: NextRequest) {
       message: 'Voucher purchase request submitted successfully'
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating voucher purchase request:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to create voucher purchase request' },
-      { status: 500 }
-    );
+    return handleRouteError(error, "POST /api/voucher-requests");
   }
 }

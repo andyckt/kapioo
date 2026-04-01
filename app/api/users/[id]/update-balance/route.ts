@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { errorJson, handleRouteError, parseJsonBody, type RouteContext } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
+import { updateBalanceBodySchema } from '@/lib/contracts/user';
 import {
   applyBalanceMutations,
   type ApplyBalanceMutationsResult,
@@ -10,20 +11,12 @@ import {
   toSafeUserBalanceResponse,
 } from '@/lib/balances/mutations';
 import connectToDatabase from '@/lib/db';
-import User from '@/models/User';
 import mongoose from 'mongoose';
 import { sendEmail } from '@/lib/services/email';
 import { getTranslations, type Language } from '@/lib/email-translations';
 
-// Define the route params interface
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
 // POST handler - update user balance (credits or vouchers)
-export async function POST(request: Request, { params }: RouteParams) {
+export async function POST(request: Request, { params }: RouteContext<{ id: string }>) {
   try {
     const { actor, response } = await requireAdminMfa(request);
     if (!actor || response) {
@@ -31,29 +24,29 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const { field, amount, operation, description } = await request.json();
+    const { data, error } = await parseJsonBody(request, updateBalanceBodySchema);
+    if (error) {
+      return error;
+    }
+
+    const field = data.field ?? data.type;
+    const { amount, operation, description } = data;
     
     // Validate input
     if (!field || !Number.isInteger(amount) || !operation || amount <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid input' },
-        { status: 400 }
-      );
+      return errorJson('Invalid input', 400);
     }
     
     if (!isBalanceMutationField(field)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid field', allowedFields: BALANCE_MUTATION_FIELDS },
-        { status: 400 }
+      return errorJson(
+        `Invalid field. Allowed fields: ${BALANCE_MUTATION_FIELDS.join(', ')}`,
+        400
       );
     }
     
     // Make sure operation is either add or deduct
     if (operation !== 'add' && operation !== 'deduct') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid operation' },
-        { status: 400 }
-      );
+      return errorJson('Invalid operation', 400);
     }
     
     await connectToDatabase();
@@ -103,7 +96,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const session = await mongoose.startSession();
-    let updatedUser: any = null;
+    let updatedUser:
+      | (Record<string, unknown> & {
+          email?: string;
+          name?: string;
+          languagePreference?: Language;
+        })
+      | null = null;
     const mutationResultRef: { current: ApplyBalanceMutationsResult | null } = { current: null };
     try {
       await session.withTransaction(async () => {
@@ -135,7 +134,11 @@ export async function POST(request: Request, { params }: RouteParams) {
           },
         });
 
-        updatedUser = mutationResultRef.current.user;
+        updatedUser = mutationResultRef.current.user as Record<string, unknown> & {
+          email?: string;
+          name?: string;
+          languagePreference?: Language;
+        };
         const newBalance = Number(updatedUser[field]) || 0;
         console.log(`[${requestId}] Balance updated successfully - Old: ${currentBalance}, New: ${newBalance}`);
       });
@@ -144,13 +147,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (!updatedUser) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to update user balance' },
-        { status: 500 }
-      );
+      return errorJson('Failed to update user balance', 500);
     }
 
-    const newBalance = Number(updatedUser[field]) || 0;
+    const resolvedUser = updatedUser as Record<string, unknown> & {
+      email?: string;
+      name?: string;
+      languagePreference?: Language;
+    };
+
+    const newBalance = Number(resolvedUser[field]) || 0;
     
     // Send email notification when vouchers are added (not when deducted)
     if (operation === 'add' && field !== 'credits') {
@@ -159,7 +165,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         
         // Get user's language preference
-        const language: Language = updatedUser.languagePreference || 'zh';
+        const language: Language = resolvedUser.languagePreference || 'zh';
         const t = getTranslations(language);
         
         // Get voucher type display name based on language
@@ -208,8 +214,8 @@ export async function POST(request: Request, { params }: RouteParams) {
           ? `${voucherTypeName}已添加到您的账户`
           : `${voucherTypeName} added to your account`;
         const voucherSuccessfullyAdded = language === 'zh'
-          ? `亲爱的 ${updatedUser.name}，${voucherTypeName}已成功添加到您的账户。`
-          : `Dear ${updatedUser.name}, ${voucherTypeName} have been successfully added to your account.`;
+          ? `亲爱的 ${resolvedUser.name}，${voucherTypeName}已成功添加到您的账户。`
+          : `Dear ${resolvedUser.name}, ${voucherTypeName} have been successfully added to your account.`;
         const dateLocale = language === 'zh' ? 'zh-CN' : 'en-US';
         const voucherUnit = language === 'zh' ? '张' : '';
         const newBalanceLabel = language === 'zh' ? `新${voucherTypeName}余额` : `New ${voucherTypeName} Balance`;
@@ -262,9 +268,14 @@ export async function POST(request: Request, { params }: RouteParams) {
             </div>
           </div>
         `;
+
+        if (!resolvedUser.email) {
+          console.warn('Skipping voucher added email because user email is missing');
+          return;
+        }
         
         await sendEmail({
-          to: updatedUser.email,
+          to: resolvedUser.email,
           subject,
           html
         });
@@ -276,28 +287,23 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
     
-    const userResponse = toSafeUserBalanceResponse(updatedUser);
+    const userResponse = toSafeUserBalanceResponse(resolvedUser);
 
-    return NextResponse.json({ 
-      success: true, 
+    return Response.json({
+      success: true,
       data: userResponse,
       meta: {
         transaction: mutationResultRef.current?.transaction || null,
       },
       message: `${operation === 'add' ? 'Added' : 'Deducted'} ${amount} ${field} ${operation === 'add' ? 'to' : 'from'} user's account`
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof BalanceMutationError) {
-      return NextResponse.json(
-        { success: false, error: error.message, details: error.details },
-        { status: error.status }
-      );
+      return errorJson(error.message, error.status, {
+        details: JSON.stringify(error.details),
+      });
     }
 
-    console.error(`Error updating user balance:`, error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update user balance', details: error.message },
-      { status: 500 }
-    );
+    return handleRouteError(error, 'POST /api/users/[id]/update-balance');
   }
 }

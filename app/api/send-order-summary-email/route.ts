@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guards';
+import { NextResponse } from "next/server";
+
+import { errorJson, handleRouteError, parseJsonBody } from "@/lib/api";
+import { sendOrderSummaryEmailBodySchema } from "@/lib/contracts/support-routes";
+import { requireUser } from "@/lib/auth/guards";
 import connectToDatabase from '@/lib/db';
 import { resolveEffectiveOrderCustomerInfo } from '@/lib/orders/effective-customer-info';
 import { sendDailyOrderSummaryEmail, sendWeeklyOrderSummaryEmail, sendAdminDailyOrderSummaryEmail, sendAdminWeeklyOrderSummaryEmail } from '@/lib/services/email';
@@ -8,11 +11,6 @@ import User from '@/models/User';
 import WeeklyOrder from '@/models/WeeklyOrder';
 
 export const dynamic = 'force-dynamic';
-
-interface SummaryEmailRequest {
-  type?: 'daily' | 'weekly';
-  orderIds?: string[];
-}
 
 interface SummaryUser {
   name?: string;
@@ -129,23 +127,13 @@ export async function POST(request: Request) {
       return response;
     }
 
-    const data = (await request.json()) as SummaryEmailRequest;
-    const type = data.type;
+    const { data, error: bodyError } = await parseJsonBody(request, sendOrderSummaryEmailBodySchema);
+    if (bodyError) {
+      return bodyError;
+    }
+
+    const { type } = data;
     const orderIds = normalizeOrderIds(data.orderIds);
-
-    if (!type) {
-      return NextResponse.json(
-        { success: false, error: 'Missing type field' },
-        { status: 400 }
-      );
-    }
-
-    if (orderIds.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid orderIds array' },
-        { status: 400 }
-      );
-    }
 
     await connectToDatabase();
     
@@ -156,37 +144,25 @@ export async function POST(request: Request) {
         }).lean()) as DailySummaryOrderRecord[];
 
         if (dailyOrders.length !== orderIds.length) {
-          return NextResponse.json(
-            { success: false, error: 'One or more orders were not found' },
-            { status: 404 }
-          );
+          return errorJson("One or more orders were not found", 404);
         }
 
         const orderedDailyOrders = sortOrdersByRequestOrder(dailyOrders, orderIds);
         const dailyUserIds = new Set(orderedDailyOrders.map((order) => String(order.userId)));
         if (dailyUserIds.size !== 1) {
-          return NextResponse.json(
-            { success: false, error: 'Order summary emails must target a single user' },
-            { status: 400 }
-          );
+          return errorJson("Order summary emails must target a single user", 400);
         }
 
         const orderUserId = String(orderedDailyOrders[0].userId);
-        if (actor.role !== 'admin' && String(actor.user._id) !== orderUserId) {
-          return NextResponse.json(
-            { success: false, error: 'You do not have access to these orders' },
-            { status: 403 }
-          );
+        if (actor.role !== "admin" && String(actor.user._id) !== orderUserId) {
+          return errorJson("You do not have access to these orders", 403);
         }
 
         const user = (await User.findById(orderUserId)
-          .select('name email languagePreference')
+          .select("name email languagePreference")
           .lean()) as SummaryUser | null;
         if (!user?.email) {
-          return NextResponse.json(
-            { success: false, error: 'Order user not found' },
-            { status: 404 }
-          );
+          return errorJson("Order user not found", 404);
         }
 
         const summaryCustomerInfo = resolveEffectiveOrderCustomerInfo(orderedDailyOrders[0], user);
@@ -226,37 +202,25 @@ export async function POST(request: Request) {
         }).lean()) as WeeklySummaryOrderRecord[];
 
         if (weeklyOrders.length !== orderIds.length) {
-          return NextResponse.json(
-            { success: false, error: 'One or more orders were not found' },
-            { status: 404 }
-          );
+          return errorJson("One or more orders were not found", 404);
         }
 
         const orderedWeeklyOrders = sortOrdersByRequestOrder(weeklyOrders, orderIds);
         const weeklyUserIds = new Set(orderedWeeklyOrders.map((order) => String(order.userId)));
         if (weeklyUserIds.size !== 1) {
-          return NextResponse.json(
-            { success: false, error: 'Order summary emails must target a single user' },
-            { status: 400 }
-          );
+          return errorJson("Order summary emails must target a single user", 400);
         }
 
         const orderUserId = String(orderedWeeklyOrders[0].userId);
-        if (actor.role !== 'admin' && String(actor.user._id) !== orderUserId) {
-          return NextResponse.json(
-            { success: false, error: 'You do not have access to these orders' },
-            { status: 403 }
-          );
+        if (actor.role !== "admin" && String(actor.user._id) !== orderUserId) {
+          return errorJson("You do not have access to these orders", 403);
         }
 
         const user = (await User.findById(orderUserId)
-          .select('name email languagePreference')
+          .select("name email languagePreference")
           .lean()) as SummaryUser | null;
         if (!user?.email) {
-          return NextResponse.json(
-            { success: false, error: 'Order user not found' },
-            { status: 404 }
-          );
+          return errorJson("Order user not found", 404);
         }
 
         const summaryCustomerInfo = resolveEffectiveOrderCustomerInfo(orderedWeeklyOrders[0], user);
@@ -290,29 +254,19 @@ export async function POST(request: Request) {
           summaryCustomerInfo.specialInstructions
         );
       } else {
-        return NextResponse.json(
-          { success: false, error: 'Invalid type. Must be "daily" or "weekly"' },
-          { status: 400 }
-        );
+        return errorJson('Invalid type. Must be "daily" or "weekly"', 400);
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Order summary emails sent successfully'
+        message: "Order summary emails sent successfully",
       });
-      
-    } catch (emailError: any) {
-      return NextResponse.json(
-        { success: false, error: `Failed to send email: ${emailError?.message || 'Unknown error'}` },
-        { status: 500 }
-      );
+    } catch (emailError: unknown) {
+      const message =
+        emailError instanceof Error ? emailError.message : "Unknown error";
+      return errorJson(`Failed to send email: ${message}`, 500);
     }
-    
-  } catch (error: any) {
-    console.error('Error in send-order-summary-email route:', error);
-    return NextResponse.json(
-      { success: false, error: `Internal server error: ${error?.message || 'Unknown error'}` },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleRouteError(error, "POST /api/send-order-summary-email");
   }
 }

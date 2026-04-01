@@ -24,7 +24,7 @@ export type BalanceMutationOperation = 'add' | 'deduct';
 type UserLike = Record<string, any>;
 
 type AuditActor = {
-  user?: { _id?: string; email?: string };
+  user?: { _id?: unknown; email?: string };
   role?: 'user' | 'admin';
 } | null;
 
