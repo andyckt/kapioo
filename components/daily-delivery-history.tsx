@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, RefreshCcw } from "lucide-react"
+import { formatDate, formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
 
 import { Button } from "@/components/ui/button"
@@ -131,6 +132,16 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
   });
   const { toast } = useToast();
   const { t, language } = useLanguage();
+  const locale = language === "en" ? "en-US" : "zh-CN";
+  const formatOrderDate = (dateString: string) => formatDate(dateString, { locale, month: "long" });
+  const formatOrderDateTime = (dateString: string) =>
+    formatDateTime(dateString, {
+      locale,
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: language === "en" ? true : undefined,
+    });
 
   // Fetch daily delivery orders for the user
   const fetchOrders = async (page = 1, options?: { signal?: AbortSignal }) => {
@@ -256,12 +267,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                     <div>
                       <p className="font-medium text-sm">{language === 'en' ? 'Order' : '订单'} {order.orderId}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleDateString(
-                          language === 'en' ? 'en-US' : 'zh-CN', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        {formatOrderDate(order.createdAt)}
                       </p>
                     </div>
                     <OrderStatus status={order.status} />
@@ -320,14 +326,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                           <DialogHeader>
                             <DialogTitle>{language === 'en' ? 'Order' : '订单'} {selectedOrder.orderId}</DialogTitle>
                             <DialogDescription>
-                              {language === 'en' ? 'Placed on' : '下单于'} {new Date(selectedOrder.createdAt).toLocaleDateString(
-                                language === 'en' ? 'en-US' : 'zh-CN', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                              {language === 'en' ? 'Placed on' : '下单于'} {formatOrderDateTime(selectedOrder.createdAt)}
                             </DialogDescription>
                           </DialogHeader>
                           
@@ -375,12 +374,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                                   {language === 'en' ? 'Order has been refunded' : '订单已退款'}
                                   {selectedOrder.refundedAt && (
                                     <div className="mt-1">
-                                      {language === 'en' ? 'Refunded on' : '退款日期'} {new Date(selectedOrder.refundedAt).toLocaleDateString(
-                                        language === 'en' ? 'en-US' : 'zh-CN', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                      })}
+                                      {language === 'en' ? 'Refunded on' : '退款日期'} {formatOrderDate(selectedOrder.refundedAt)}
                                     </div>
                                   )}
                                 </div>

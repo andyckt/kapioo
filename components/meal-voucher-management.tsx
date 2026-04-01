@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { formatDateTime } from '@/lib/format'
 import { 
   Check, 
   X, 
@@ -162,17 +163,12 @@ export function MealVoucherManagement() {
     return () => controller.abort()
   }, [fetchVoucherRequests])
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+  const formatRequestDate = (dateString: string) =>
+    formatDateTime(dateString, {
+      locale: 'en-US',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
-  }
 
   // Handle refresh
   const handleRefresh = () => {
@@ -559,7 +555,7 @@ export function MealVoucherManagement() {
                             </div>
                           )}
                         </td>
-                        <td className="p-4 align-middle">{formatDate(request.createdAt)}</td>
+                        <td className="p-4 align-middle">{formatRequestDate(request.createdAt)}</td>
                         <td className="p-4 align-middle">{getStatusBadge(request.status)}</td>
                         <td className="p-4 align-middle text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -671,7 +667,7 @@ export function MealVoucherManagement() {
                         {/* Date */}
                         <div className="flex items-center gap-2">
                           <span className="text-muted-foreground w-12 flex-shrink-0">Date:</span>
-                          <span>{formatDate(request.createdAt)}</span>
+                          <span>{formatRequestDate(request.createdAt)}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -778,7 +774,7 @@ export function MealVoucherManagement() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <p className="text-sm text-muted-foreground">
-                      Submitted on {formatDate(selectedRequest.createdAt)}
+                      Submitted on {formatRequestDate(selectedRequest.createdAt)}
                     </p>
                   </div>
                   <div>
@@ -786,13 +782,13 @@ export function MealVoucherManagement() {
                     
                     {selectedRequest.status === 'approved' && selectedRequest.approvedAt && (
                       <p className="text-xs text-muted-foreground mt-1 text-right">
-                        Approved on {formatDate(selectedRequest.approvedAt)}
+                        Approved on {formatRequestDate(selectedRequest.approvedAt)}
                       </p>
                     )}
                     
                     {selectedRequest.status === 'declined' && selectedRequest.declinedAt && (
                       <p className="text-xs text-muted-foreground mt-1 text-right">
-                        Declined on {formatDate(selectedRequest.declinedAt)}
+                        Declined on {formatRequestDate(selectedRequest.declinedAt)}
                       </p>
                     )}
                   </div>

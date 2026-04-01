@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, RefreshCcw } from "lucide-react"
+import { formatDate, formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
 
 import { Button } from "@/components/ui/button"
@@ -137,6 +138,16 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
   });
   const { toast } = useToast();
   const { t, language } = useLanguage();
+  const locale = language === "en" ? "en-US" : "zh-CN";
+  const formatOrderDate = (dateString: string) => formatDate(dateString, { locale, month: "long" });
+  const formatOrderDateTime = (dateString: string) =>
+    formatDateTime(dateString, {
+      locale,
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: language === "en" ? true : undefined,
+    });
 
   // Fetch weekly subscription orders for the user
   const fetchOrders = async (page = 1, options?: { signal?: AbortSignal }) => {
@@ -262,12 +273,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                     <div>
                       <p className="font-medium text-sm">{language === 'zh' ? '订单号' : 'Order'} {order.orderId}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleDateString(
-                          language === 'en' ? 'en-US' : 'zh-CN', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        {formatOrderDate(order.createdAt)}
                       </p>
                     </div>
                     <OrderStatus status={order.status} />
@@ -323,14 +329,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                           <DialogHeader>
                             <DialogTitle>{language === 'zh' ? '订单号' : 'Order'} {selectedOrder.orderId}</DialogTitle>
                             <DialogDescription>
-                              {language === 'zh' ? '下单时间：' : 'Placed on: '} {new Date(selectedOrder.createdAt).toLocaleDateString(
-                                language === 'en' ? 'en-US' : 'zh-CN', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                              {language === 'zh' ? '下单时间：' : 'Placed on: '} {formatOrderDateTime(selectedOrder.createdAt)}
                             </DialogDescription>
                           </DialogHeader>
                           
@@ -380,12 +379,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                                     : `Your meal plan has been refunded`}
                                   {selectedOrder.refundedAt && (
                                     <div className="mt-1">
-                                      {language === 'zh' ? '退款日期：' : 'Refunded on: '} {new Date(selectedOrder.refundedAt).toLocaleDateString(
-                                        language === 'en' ? 'en-US' : 'zh-CN', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                      })}
+                                      {language === 'zh' ? '退款日期：' : 'Refunded on: '} {formatOrderDate(selectedOrder.refundedAt)}
                                     </div>
                                   )}
                                 </div>

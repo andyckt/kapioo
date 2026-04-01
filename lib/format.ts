@@ -1,21 +1,43 @@
-export function formatDate(date: Date | string): string {
+type DateFormatOptions = Intl.DateTimeFormatOptions & {
+  locale?: string
+}
+
+function toDate(date: Date | string) {
+  const dateObj = date instanceof Date ? date : new Date(date)
+  return Number.isNaN(dateObj.getTime()) ? null : dateObj
+}
+
+export function formatDate(date: Date | string, options: DateFormatOptions = {}): string {
+  const dateObj = toDate(date)
+  if (!dateObj) {
+    return String(date)
+  }
+
+  const { locale = "en-US", ...formatOptions } = options
+
   try {
-    const dateObj = date instanceof Date ? date : new Date(date)
-    return dateObj.toLocaleDateString("en-US", {
+    return dateObj.toLocaleDateString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
       timeZone: "America/Toronto",
+      ...formatOptions,
     })
   } catch {
     return String(date)
   }
 }
 
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string, options: DateFormatOptions = {}): string {
+  const dateObj = toDate(date)
+  if (!dateObj) {
+    return String(date)
+  }
+
+  const { locale = "en-US", ...formatOptions } = options
+
   try {
-    const dateObj = date instanceof Date ? date : new Date(date)
-    return dateObj.toLocaleString("en-US", {
+    return dateObj.toLocaleString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -23,6 +45,7 @@ export function formatDateTime(date: Date | string): string {
       minute: "2-digit",
       hour12: true,
       timeZone: "America/Toronto",
+      ...formatOptions,
     })
   } catch {
     return String(date)

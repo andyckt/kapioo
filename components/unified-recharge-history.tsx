@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
 import { buildCanonicalBreakdown } from "@/lib/price-breakdown"
 import {
@@ -31,6 +32,7 @@ export function UnifiedRechargeHistory({
 }: UnifiedRechargeHistoryProps) {
   const { language } = useLanguage();
   const { toast } = useToast();
+  const locale = language === "en" ? "en-US" : "zh-CN";
   const toNumber = (value: unknown) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -133,17 +135,14 @@ export function UnifiedRechargeHistory({
     }
   };
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(
-      language === 'en' ? 'en-US' : 'zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  const formatRequestDate = (dateString: string) =>
+    formatDateTime(dateString, {
+      locale,
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: language === "en" ? true : undefined,
     });
-  };
 
   // Request status badge
   const RequestStatusBadge = ({ status }: { status: string }) => {
@@ -270,7 +269,7 @@ export function UnifiedRechargeHistory({
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(request.createdAt)}
+                          {formatRequestDate(request.createdAt)}
                         </p>
                       </div>
                     </div>
@@ -422,7 +421,7 @@ export function UnifiedRechargeHistory({
                         {language === 'zh' ? '请求日期' : 'Requested On'}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDate(selectedRequest.createdAt)}
+                        {formatRequestDate(selectedRequest.createdAt)}
                       </p>
                     </div>
                     
@@ -432,7 +431,7 @@ export function UnifiedRechargeHistory({
                           {language === 'zh' ? '批准日期' : 'Approved On'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {formatDate(selectedRequest.approvedAt)}
+                          {formatRequestDate(selectedRequest.approvedAt)}
                         </p>
                       </div>
                     )}
@@ -443,7 +442,7 @@ export function UnifiedRechargeHistory({
                           {language === 'zh' ? '拒绝日期' : 'Declined On'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {formatDate(selectedRequest.declinedAt)}
+                          {formatRequestDate(selectedRequest.declinedAt)}
                         </p>
                       </div>
                     )}
