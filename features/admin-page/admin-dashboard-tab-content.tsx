@@ -5,16 +5,13 @@ import type { Dispatch, SetStateAction } from "react"
 import { AnimatePresence } from "framer-motion"
 import { Loader2 } from "lucide-react"
 
-import { DailyDeliveryManagement } from "@/components/daily-delivery-management"
 import { MealVoucherManagement } from "@/components/meal-voucher-management"
 import { NextWeekMenuEmail } from "@/components/next-week-menu-email"
 import { PromoCodeManagement } from "@/components/promo-code-management"
 import { SettingsManagement } from "@/components/settings-management"
-import { ViewAllOrders } from "@/components/view-all-orders"
-import { ViewWeeklyOrders } from "@/components/view-weekly-orders"
 import { WeeklySubscriptionManagement } from "@/components/weekly-subscription-management"
 import type { AdminUserSearchType } from "@/features/admin-users/use-admin-users"
-import { AdminTabPanel } from "@/features/admin-shell"
+import { AdminTabPanel, AdminTabSkeleton } from "@/features/admin-shell"
 import type { AdminDateRange, AdminTransaction, CreditRequest } from "@/lib/types/admin"
 import type { PaginationState } from "@/lib/types/pagination"
 import type { User } from "@/lib/utils"
@@ -65,6 +62,30 @@ const RatingDishManagement = dynamic(
       </div>
     ),
   }
+)
+
+const AdminDailyOrdersTab = dynamic(
+  () =>
+    import("@/features/admin-daily-orders").then((m) => ({
+      default: m.AdminDailyOrdersTab,
+    })),
+  { loading: () => <AdminTabSkeleton /> }
+)
+
+const AdminWeeklyOrdersTab = dynamic(
+  () =>
+    import("@/features/admin-weekly-orders").then((m) => ({
+      default: m.AdminWeeklyOrdersTab,
+    })),
+  { loading: () => <AdminTabSkeleton /> }
+)
+
+const AdminDailyMenuTab = dynamic(
+  () =>
+    import("@/features/admin-daily-menu").then((m) => ({
+      default: m.DailyDeliveryManagement,
+    })),
+  { loading: () => <AdminTabSkeleton /> }
 )
 
 export interface AdminDashboardTabContentProps {
@@ -183,7 +204,7 @@ export function AdminDashboardTabContent(p: AdminDashboardTabContentProps) {
 
       {p.activeTab === "daily-delivery" && (
         <AdminTabPanel panelKey="daily-delivery" className="space-y-6">
-          <DailyDeliveryManagement />
+          <AdminDailyMenuTab />
         </AdminTabPanel>
       )}
 
@@ -241,13 +262,13 @@ export function AdminDashboardTabContent(p: AdminDashboardTabContentProps) {
 
       {p.activeTab === "view-all-orders" && (
         <AdminTabPanel panelKey="view-all-orders">
-          <ViewAllOrders />
+          <AdminDailyOrdersTab />
         </AdminTabPanel>
       )}
 
       {p.activeTab === "view-weekly-orders" && (
         <AdminTabPanel panelKey="view-weekly-orders">
-          <ViewWeeklyOrders />
+          <AdminWeeklyOrdersTab />
         </AdminTabPanel>
       )}
 
