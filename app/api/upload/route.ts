@@ -5,6 +5,13 @@ import { v4 as uuidv4 } from "uuid";
 import { errorJson } from "@/lib/api";
 import { requireUser } from "@/lib/auth/guards";
 import { getS3Config } from "@/lib/env";
+import {
+  getPaymentProofExtension,
+  PAYMENT_PROOF_DOCUMENT_MIME_TYPES,
+  PAYMENT_PROOF_IMAGE_MIME_TYPES,
+  PAYMENT_PROOF_MAX_SIZE_BYTES,
+  validatePaymentProofFile,
+} from "@/lib/upload/payment-proof";
 
 function getS3Client() {
   const { accessKeyId, secretAccessKey, region } = getS3Config();
@@ -15,22 +22,6 @@ function getS3Client() {
       secretAccessKey,
     },
   });
-}
-
-function getFileExtension(mimeType: string): string {
-  const extensions: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/heic": "heic",
-    "image/heif": "heif",
-    "image/tiff": "tiff",
-    "image/bmp": "bmp",
-    "application/pdf": "pdf",
-  };
-
-  return extensions[mimeType] || "jpg";
 }
 
 export async function POST(request: NextRequest) {
@@ -50,70 +41,26 @@ export async function POST(request: NextRequest) {
       return errorJson("No file provided", 400);
     }
 
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-      "image/heic",
-      "image/heif",
-      "image/tiff",
-      "image/bmp",
-      "application/pdf",
-    ];
+    const validation = validatePaymentProofFile(file, { allowPdf: true });
 
-    let isValidType = allowedTypes.includes(file.type);
-
-    if (!isValidType && (!file.type || file.type === "")) {
-      const fileExt = file.name.split(".").pop()?.toLowerCase();
-      isValidType =
-        fileExt === "jpg" ||
-        fileExt === "jpeg" ||
-        fileExt === "png" ||
-        fileExt === "webp" ||
-        fileExt === "heic" ||
-        fileExt === "heif" ||
-        fileExt === "tiff" ||
-        fileExt === "tif" ||
-        fileExt === "bmp" ||
-        fileExt === "pdf";
-    }
-
-    if (!isValidType) {
+    if (!validation.ok && validation.code === "invalid_type") {
       return errorJson(
-        "Invalid file type. Only JPEG, PNG, WebP, HEIC, HEIF, TIFF, BMP, and PDF files are allowed.",
+        `Invalid file type. Only ${[
+          ...PAYMENT_PROOF_IMAGE_MIME_TYPES,
+          ...PAYMENT_PROOF_DOCUMENT_MIME_TYPES,
+        ].join(", ")} files are allowed.`,
         400
       );
     }
 
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return errorJson("File size exceeds the 5MB limit", 400);
+    if (!validation.ok && validation.code === "too_large") {
+      return errorJson(
+        `File size exceeds the ${Math.floor(PAYMENT_PROOF_MAX_SIZE_BYTES / (1024 * 1024))}MB limit`,
+        400
+      );
     }
 
-    let fileExtension: string;
-    if (!file.type || file.type === "") {
-      const fileExt = file.name.split(".").pop()?.toLowerCase();
-      if (fileExt === "jpg" || fileExt === "jpeg") {
-        fileExtension = "jpg";
-      } else if (fileExt === "png") {
-        fileExtension = "png";
-      } else if (fileExt === "webp") {
-        fileExtension = "webp";
-      } else if (fileExt === "heic" || fileExt === "heif") {
-        fileExtension = "jpg";
-      } else if (fileExt === "tiff" || fileExt === "tif") {
-        fileExtension = "tiff";
-      } else if (fileExt === "bmp") {
-        fileExtension = "bmp";
-      } else if (fileExt === "pdf") {
-        fileExtension = "pdf";
-      } else {
-        fileExtension = "jpg";
-      }
-    } else {
-      fileExtension = getFileExtension(file.type);
-    }
+    const fileExtension = getPaymentProofExtension(file);
 
     const fileName = `voucher-proofs/${uuidv4()}.${fileExtension}`;
 

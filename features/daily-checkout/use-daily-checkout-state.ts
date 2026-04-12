@@ -1,0 +1,244 @@
+"use client"
+
+import { useEffect, useState } from "react"
+
+import type { CheckoutAddressFormData } from "@/components/checkout-address-form"
+import { mergeStoredUser } from "@/lib/client-user-cache"
+import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
+import { useLanguage } from "@/lib/language-context"
+import { useToast } from "@/hooks/use-toast"
+
+export type DailyCheckoutFormData = {
+  name: string
+  phone: string
+  area: string
+  specialInstructions: string
+}
+
+const INITIAL_FORM_DATA: DailyCheckoutFormData = {
+  name: "",
+  phone: "",
+  area: "",
+  specialInstructions: "",
+}
+
+const INITIAL_ADDRESS_FORM_DATA: CheckoutAddressFormData = {
+  unitNumber: "",
+  streetAddress: "",
+  province: "",
+  postalCode: "",
+  country: "Canada",
+  buzzCode: "",
+}
+
+type UseDailyCheckoutStateOptions = {
+  deliveryRegions: readonly string[]
+}
+
+export function useDailyCheckoutState({
+  deliveryRegions,
+}: UseDailyCheckoutStateOptions) {
+  const { language } = useLanguage()
+  const { toast } = useToast()
+  const sharedUserProfile = useOptionalUserProfile()
+
+  const [userData, setUserData] = useState<any>(null)
+  const [formData, setFormData] = useState<DailyCheckoutFormData>(INITIAL_FORM_DATA)
+  const [addressFormData, setAddressFormData] = useState<CheckoutAddressFormData>(
+    INITIAL_ADDRESS_FORM_DATA
+  )
+  const [editingAddress, setEditingAddress] = useState(false)
+  const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
+  const [tempSelectedArea, setTempSelectedArea] = useState("")
+
+  useEffect(() => {
+    const applyUserToForm = (user: any) => {
+      setUserData(user)
+      setFormData({
+        name: user.name || "",
+        phone: user.phone || "",
+        area: user.area || user.address?.province || "",
+        specialInstructions: "",
+      })
+
+      if (user.address) {
+        setAddressFormData({
+          unitNumber: user.address.unitNumber || "",
+          streetAddress: user.address.streetAddress || "",
+          province: user.address.province || "",
+          postalCode: user.address.postalCode || "",
+          country: user.address.country || "Canada",
+          buzzCode: user.address.buzzCode || "",
+        })
+        const userArea = user.address.province || ""
+        setIsValidDeliveryArea(deliveryRegions.includes(userArea))
+      } else {
+        setIsValidDeliveryArea(false)
+      }
+    }
+
+    if (sharedUserProfile) {
+      if (sharedUserProfile.userData) {
+        applyUserToForm(sharedUserProfile.userData)
+      } else {
+        const storedUser = localStorage.getItem("user")
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser)
+            applyUserToForm(user)
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      return
+    }
+
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      applyUserToForm(user)
+
+      const needsAddress = !user.address || !user.address.streetAddress
+      if (user._id && needsAddress) {
+        fetch(`/api/users/${user._id}`)
+          .then((res) => res.json())
+          .then((result) => {
+            if (result?.success && result?.data) {
+              const fullUser = result.data
+              applyUserToForm(fullUser)
+              mergeStoredUser({
+                ...user,
+                address: fullUser.address,
+                phone: fullUser.phone,
+                area: fullUser.area || fullUser.address?.province,
+              })
+            }
+          })
+          .catch(() => {})
+      }
+    }
+  }, [deliveryRegions, sharedUserProfile?.userData])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target
+    setFormData((current) => ({
+      ...current,
+      [id]: value,
+    }))
+  }
+
+  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setAddressFormData((current) => ({
+      ...current,
+      [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+    }))
+  }
+
+  const handleAreaSelect = (area: string) => {
+    setAddressFormData((current) => ({
+      ...current,
+      province: area,
+    }))
+    setPopoverOpen(false)
+    setTempSelectedArea(area)
+  }
+
+  const handleSaveAddress = async () => {
+    const selectedArea = addressFormData.province
+    const isValid = deliveryRegions.includes(selectedArea)
+    setIsValidDeliveryArea(isValid)
+
+    if (!isValid) {
+      toast({
+        title: language === "zh" ? "无效区域" : "Invalid Area",
+        description:
+          language === "zh"
+            ? "请选择每日直送服务覆盖的区域"
+            : "Please select an area covered by daily delivery service",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setTempSelectedArea("")
+
+    setUserData((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            address: { ...addressFormData },
+          }
+        : null
+    )
+
+    if (saveAddressForFuture && userData?._id) {
+      try {
+        const response = await fetch(`/api/users/${userData._id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            address: addressFormData,
+          }),
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          mergeStoredUser({
+            address: { ...addressFormData },
+            area: addressFormData.province || "",
+          })
+
+          toast({
+            title: language === "zh" ? "地址已保存" : "Address Saved",
+            description: language === "zh" ? "您的地址已更新" : "Your address has been updated",
+          })
+        } else {
+          toast({
+            title: language === "zh" ? "出错了" : "Error Occurred",
+            description:
+              result.error ||
+              (language === "zh" ? "保存地址时出错" : "Error saving address"),
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("Error saving address:", error)
+        toast({
+          title: language === "zh" ? "出错了" : "Error Occurred",
+          description: language === "zh" ? "保存地址时出错" : "Error saving address",
+          variant: "destructive",
+        })
+      }
+    }
+
+    setEditingAddress(false)
+  }
+
+  return {
+    userData,
+    setUserData,
+    formData,
+    setFormData,
+    addressFormData,
+    editingAddress,
+    saveAddressForFuture,
+    popoverOpen,
+    isValidDeliveryArea,
+    tempSelectedArea,
+    setEditingAddress,
+    setSaveAddressForFuture,
+    setPopoverOpen,
+    setTempSelectedArea,
+    handleInputChange,
+    handleAddressInputChange,
+    handleAreaSelect,
+    handleSaveAddress,
+  }
+}

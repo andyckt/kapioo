@@ -15,10 +15,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getUserWeeklySubscription, sortDeliveryDays, getAdjacentDates, validateSelectedDates } from '@/lib/weekly-subscription'
 import { DeliveryDay, MealOption, CartItem } from '@/lib/weekly-subscription'
 import { WeeklySubscriptionCheckout } from '@/components/weekly-subscription-checkout'
+import { MenuUpdateBanner } from '@/components/menu-update-banner'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
+import { WeeklyDeliveryDaysGrid } from '@/features/weekly-ordering/weekly-delivery-days-grid'
+import { useWeeklyCart } from '@/features/weekly-ordering/use-weekly-cart'
+import { useRegionAddressUpdate } from '@/hooks/use-region-address-update'
 import { DEFAULT_DASHBOARD_CUTOFF_TIME, useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
-import { mergeStoredUser } from '@/lib/client-user-cache'
+import { getDeliveryDayAvailability } from '@/lib/orders/delivery-day-availability'
 
 interface WeeklySubscriptionProps {
   userCredits?: number;
@@ -42,7 +46,6 @@ export default function WeeklySubscription({
   const { t, language } = useLanguage()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
-  const [cart, setCart] = useState<CartItem[]>([])
   const [deliveryDays, setDeliveryDays] = useState<DeliveryDay[]>([])
   
   // NEW: State for consecutive date validation
@@ -70,128 +73,31 @@ export default function WeeklySubscription({
   const [lastFetchedDates, setLastFetchedDates] = useState<string>('')
   const toastRef = useRef(toast)
   toastRef.current = toast
-  
+  const { handleRegionChange } = useRegionAddressUpdate({
+    onSuccess: setUserRegion,
+  })
   // Function to check if a day is unavailable for ordering
   // Updated to use dynamic cutoff time from settings
   const isDayUnavailable = (day: DeliveryDay): { unavailable: boolean, reason: string } => {
-    try {
-      // Get current date and time in Toronto timezone
-      const torontoOptions = { timeZone: 'America/Toronto' };
-      const now = new Date();
-      
-      // Format the Toronto time as a string to work with
-      const torontoDateString = now.toLocaleString('en-US', torontoOptions);
-      const torontoDate = new Date(torontoDateString);
-      
-      // Get the current hour and minute in Toronto
-      const currentHour = torontoDate.getHours();
-      const currentMinute = torontoDate.getMinutes();
-      
-      // Check if we have a date for this meal
-      if (!day || !day.date) {
-        return { 
-          unavailable: true, 
-          reason: language === 'zh' ? "此餐点无可用日期" : "Date not available for this meal" 
-        };
-      }
-      
-      const mealDate = day.date;
-      
-      // Parse the date (expected format like "Jan 01" or "Oct 10")
-      try {
-        const parts = mealDate.split(' ');
-        
-        // Handle formats like "Jan 01" or "Oct 10"
-        if (parts.length === 2) {
-          const monthStr = parts[0];
-          const dayStr = parts[1];
-          
-          // Get month index (0-11) using short month names
-          const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-          const monthIndex = shortMonths.findIndex(m => 
-            monthStr.toLowerCase() === m.toLowerCase());
-          
-          // Parse day number
-          const dayNum = parseInt(dayStr);
-          
-          if (monthIndex !== -1 && !isNaN(dayNum)) {
-            // Create a date for the meal's specific date (use current year)
-            const mealSpecificDate = new Date(
-              torontoDate.getFullYear(), 
-              monthIndex, 
-              dayNum
-            );
-            
-            // Compare with today's date
-            const todayYMD = new Date(
-              torontoDate.getFullYear(), 
-              torontoDate.getMonth(), 
-              torontoDate.getDate()
-            );
-            
-            // Create tomorrow's date for comparison
-            const tomorrowYMD = new Date(
-              torontoDate.getFullYear(),
-              torontoDate.getMonth(),
-              torontoDate.getDate() + 1
-            );
-            
-            // If meal date is before today
-            if (mealSpecificDate < todayYMD) {
-              return { 
-                unavailable: true, 
-                reason: language === 'zh' ? "此日期已过" : "This specific date has already passed" 
-              };
-            }
-            
-            // If it's for tomorrow and it's past the cutoff time today
-            if (mealSpecificDate.getTime() === tomorrowYMD.getTime() && 
-                (currentHour > cutoffTime.hour || (currentHour === cutoffTime.hour && currentMinute > cutoffTime.minute))) {
-              const period = cutoffTime.hour >= 12 ? 'PM' : 'AM';
-              const displayHour = cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour;
-              const displayMinute = cutoffTime.minute.toString().padStart(2, '0');
-              const timeStr = `${displayHour}:${displayMinute} ${period}`;
-              return { 
-                unavailable: true, 
-                reason: language === 'zh' ? `订单必须在配送前一天的${timeStr}前下单` : `Orders must be placed by ${timeStr} the day before delivery` 
-              };
-            }
-            
-            // If it's for today (same-day ordering not allowed)
-            if (mealSpecificDate.getTime() === todayYMD.getTime()) {
-              const period = cutoffTime.hour >= 12 ? 'PM' : 'AM';
-              const displayHour = cutoffTime.hour === 0 ? 12 : cutoffTime.hour > 12 ? cutoffTime.hour - 12 : cutoffTime.hour;
-              const displayMinute = cutoffTime.minute.toString().padStart(2, '0');
-              const timeStr = `${displayHour}:${displayMinute} ${period}`;
-              return { 
-                unavailable: true, 
-                reason: language === 'zh' ? `订单必须在配送前一天的${timeStr}前下单` : `Orders must be placed by ${timeStr} the day before delivery`
-              };
-            }
-            
-            // If we have a valid date and it's at least 2 days in the future or tomorrow before/at cutoff time, it's available
-            return { unavailable: false, reason: "" };
-          }
-        }
-        
-        // If we couldn't parse the date properly
-        return { 
-          unavailable: true, 
-          reason: language === 'zh' ? "日期格式无效" : "Invalid date format" 
-        };
-      } catch (error) {
-        console.error('Error parsing meal date:', error);
-        return { 
-          unavailable: true, 
-          reason: language === 'zh' ? "解析日期时出错" : "Error parsing date" 
-        };
-      }
-    } catch (error) {
-      console.error('Error in isDayUnavailable:', error);
-      return { unavailable: false, reason: "" }; // Default to available on error
-    }
-  };
+    return getDeliveryDayAvailability({
+      dateLabel: day?.date,
+      cutoffTime,
+      language,
+    })
+  }
+  
+  const {
+    addToCart,
+    cart,
+    getQuantityInCart,
+    removeFromCart,
+    setCart,
+    totalCredits,
+    totalItems,
+  } = useWeeklyCart({
+    deliveryDays,
+    isDayUnavailable,
+  })
   
   // Update meal plan values when props change
   useEffect(() => {
@@ -422,109 +328,6 @@ export default function WeeklySubscription({
     }
   }
   
-  // Add item to cart
-  const addToCart = (dayId: string, optionId: string, weekOffset?: number) => {
-    // Find the day to check availability
-    // CRITICAL FIX: Match by BOTH dayId AND weekOffset to handle multiple weeks
-    const day = weekOffset !== undefined 
-      ? deliveryDays.find(d => d.id === dayId && d.weekOffset === weekOffset)
-      : deliveryDays.find(d => d.id === dayId);
-    
-    console.log(`🔍 FRONTEND DEBUG: Adding to cart - dayId: ${dayId}, weekOffset: ${weekOffset}, optionId: ${optionId}`);
-    console.log(`🔍 FRONTEND DEBUG: Found day:`, day ? { id: day.id, date: day.date, weekOffset: day.weekOffset } : 'NOT FOUND');
-    
-    if (day) {
-      // Check if the day is unavailable
-      const { unavailable, reason } = isDayUnavailable(day);
-      
-      /* Commented out the red warning
-      if (unavailable) {
-        // Show warning toast but still allow adding to cart
-        toast({
-          title: language === 'zh' ? "此日期不可用" : "This day is unavailable",
-          description: reason,
-          variant: "destructive"
-        });
-      }
-      */
-    }
-    
-    const existingItemIndex = cart.findIndex(
-      item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset
-    )
-    
-    if (existingItemIndex >= 0) {
-      // Item exists, update quantity
-      const updatedCart = [...cart]
-      updatedCart[existingItemIndex].quantity += 1
-      setCart(updatedCart)
-      console.log(`🔍 FRONTEND DEBUG: Updated cart item quantity to ${updatedCart[existingItemIndex].quantity}`);
-    } else {
-      // Add new item with weekOffset
-      const newCart = [
-        ...cart,
-        {
-          dayId,
-          optionId,
-          quantity: 1,
-          weekOffset: day?.weekOffset // Include weekOffset to identify which week
-        }
-      ];
-      setCart(newCart);
-      console.log(`🔍 FRONTEND DEBUG: Added new item to cart with weekOffset: ${day?.weekOffset}. Total cart items: ${newCart.length}`);
-    }
-    
-    console.log(`🔍 FRONTEND DEBUG: Current cart state:`, cart);
-  }
-  
-  // Remove item from cart
-  const removeFromCart = (dayId: string, optionId: string, weekOffset?: number) => {
-    // Find the day to get weekOffset
-    // CRITICAL FIX: Match by BOTH dayId AND weekOffset to handle multiple weeks
-    const day = weekOffset !== undefined
-      ? deliveryDays.find(d => d.id === dayId && d.weekOffset === weekOffset)
-      : deliveryDays.find(d => d.id === dayId);
-    
-    const existingItemIndex = cart.findIndex(
-      item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset
-    )
-    
-    if (existingItemIndex >= 0) {
-      const updatedCart = [...cart]
-      if (updatedCart[existingItemIndex].quantity > 1) {
-        // Reduce quantity if more than 1
-        updatedCart[existingItemIndex].quantity -= 1
-        setCart(updatedCart)
-      } else {
-        // Remove item if quantity would be 0
-        setCart(cart.filter((_, index) => index !== existingItemIndex))
-      }
-    }
-  }
-  
-  // Get quantity of specific item in cart
-  const getQuantityInCart = (dayId: string, optionId: string, weekOffset?: number): number => {
-    // Find the day to get weekOffset
-    // CRITICAL FIX: Match by BOTH dayId AND weekOffset to handle multiple weeks
-    const day = weekOffset !== undefined
-      ? deliveryDays.find(d => d.id === dayId && d.weekOffset === weekOffset)
-      : deliveryDays.find(d => d.id === dayId);
-    const item = cart.find(item => item.dayId === dayId && item.optionId === optionId && item.weekOffset === day?.weekOffset)
-    return item ? item.quantity : 0
-  }
-  
-  // Calculate total items
-  const getTotalItems = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0)
-  }
-  
-  // Calculate total credits needed
-  const getTotalCredits = () => {
-    // Simply return the number of items in the cart
-    return getTotalItems()
-  }
-  
-  
   // State for checkout
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   
@@ -540,7 +343,7 @@ export default function WeeklySubscription({
     }
     
     // Check if total items matches one of the user's available meal plans
-    const totalItems = getTotalItems();
+    const currentTotalItems = totalItems;
     
     // Create an array of available meal plan sizes
     const availableMealPlans = [];
@@ -560,12 +363,12 @@ export default function WeeklySubscription({
         variant: "destructive"
       })
       return
-    } else if (!availableMealPlans.includes(totalItems)) {
+    } else if (!availableMealPlans.includes(currentTotalItems)) {
       toast({
         title: language === 'zh' ? '订单数量无效' : 'Invalid Order Quantity',
         description: language === 'zh' 
-          ? `订单必须为${availableMealPlans.join('份或')}份餐点，当前数量：${totalItems}` 
-          : `Orders must be for ${availableMealPlans.join(' or ')} meals. Current quantity: ${totalItems}`,
+          ? `订单必须为${availableMealPlans.join('份或')}份餐点，当前数量：${currentTotalItems}` 
+          : `Orders must be for ${availableMealPlans.join(' or ')} meals. Current quantity: ${currentTotalItems}`,
         variant: "destructive"
       })
       return
@@ -599,82 +402,6 @@ export default function WeeklySubscription({
     // Open checkout form
     setShowAddressDialog(false);
     setCheckoutOpen(true);
-  }
-  
-  // Handle region change from dialog
-  const handleRegionChange = async (region: string, addressData?: any): Promise<void> => {
-    try {
-      // Get user data from localStorage
-      const userData = localStorage.getItem('user')
-      if (!userData) {
-        throw new Error('User not logged in')
-      }
-      
-      const user = JSON.parse(userData)
-      
-      // Update user's address with the new region and optional address data
-      let updatedAddress = {
-        ...user.address,
-        province: region
-      }
-      
-      // If additional address data is provided, merge it with the updated address
-      if (addressData) {
-        updatedAddress = {
-          ...updatedAddress,
-          unitNumber: addressData.unitNumber !== undefined ? addressData.unitNumber : updatedAddress.unitNumber,
-          streetAddress: addressData.streetAddress !== undefined ? addressData.streetAddress : updatedAddress.streetAddress,
-          city: addressData.city !== undefined ? addressData.city : updatedAddress.city,
-          postalCode: addressData.postalCode !== undefined ? addressData.postalCode : updatedAddress.postalCode,
-          country: addressData.country !== undefined ? addressData.country : 'Canada',
-          buzzCode: addressData.buzzCode !== undefined ? addressData.buzzCode : updatedAddress.buzzCode
-        }
-      }
-      
-      // Update user data in the database
-      const response = await fetch(`/api/users/${user._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: updatedAddress
-        }),
-      })
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        mergeStoredUser({ address: updatedAddress })
-        
-        // Update state
-        setUserRegion(region)
-        
-        const toastMessage = addressData 
-          ? (language === 'zh' ? "地址已更新" : "Address Updated") 
-          : (language === 'zh' ? "区域已更新" : "Region Updated")
-          
-        const toastDescription = addressData
-          ? (language === 'zh' ? "您的配送地址已成功更新" : "Your delivery address has been successfully updated")
-          : (language === 'zh' ? "您的区域已成功更新" : "Your region has been successfully updated")
-        
-        toast({
-          title: toastMessage,
-          description: toastDescription
-        })
-      } else {
-        throw new Error(result.error || 'Failed to update region')
-      }
-    } catch (error) {
-      console.error('Error updating region:', error)
-      toast({
-        title: language === 'zh' ? "更新失败" : "Update Failed",
-        description: error instanceof Error ? error.message : 
-          (language === 'zh' ? "更新地址时出现错误" : "An error occurred while updating your address"),
-        variant: "destructive"
-      })
-      throw error
-    }
   }
   
   // Handle checkout success
@@ -784,7 +511,7 @@ export default function WeeklySubscription({
               onClick={handleCheckout}
             >
               <ShoppingCart className="h-4 w-4" />
-              <span>{getTotalItems()}</span>
+              <span>{totalItems}</span>
               <span className="ml-1 border-l border-[#C2884E]/20 pl-2">
                 {language === 'zh' ? '结账' : 'Checkout'}
               </span>
@@ -822,42 +549,7 @@ export default function WeeklySubscription({
       ) : (
         <div className="space-y-8">
           {/* Menu Update Notification Banner */}
-          {menuUpdateAvailable && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 border-2 border-[#C2884E] rounded-xl shadow-sm"
-            >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="flex-shrink-0 w-10 h-10 bg-[#C2884E] rounded-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-[#6B5F53]">
-                      {language === 'zh' ? '菜单已更新！' : 'Menu Updated!'}
-                    </p>
-                    <p className="text-sm text-[#6B5F53]/80">
-                      {language === 'zh' 
-                        ? '请点击刷新以查看最新内容' 
-                        : 'Please press to refresh'}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleRefreshMenu}
-                  className="bg-[#C2884E] hover:bg-[#B67A45] text-white flex items-center gap-2 w-full sm:w-auto"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                  </svg>
-                  {language === 'zh' ? '刷新菜单' : 'Refresh Menu'}
-                </Button>
-              </div>
-            </motion.div>
-          )}
+          {menuUpdateAvailable && <MenuUpdateBanner language={language} onRefresh={handleRefreshMenu} />}
           
           {/* Order Notice - Visible on all devices */}
           <div className="text-left mb-6 pl-3 border-l-2 border-[#C2884E]">
@@ -906,108 +598,15 @@ export default function WeeklySubscription({
                 </p>
               </div>
             ) : (
-              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                {visibleDeliveryDays.map((day) => {
-                  // Check if this date is disabled by consecutive rule
-                  const isDateDisabled = disabledDates.has(day.date);
-                  const isDateSelected = selectedDates.includes(day.date);
-                  const { unavailable, reason } = isDayUnavailable(day);
-                  
-                  return (
-                <motion.div 
-                  key={`${day.id}-${day.weekOffset}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex flex-col"
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <Calendar className="h-5 w-5 text-[#C2884E]" />
-                    <h3 className="text-xl font-semibold text-[#6B5F53]">{day.name}</h3>
-                    <span className="text-sm text-[#6B5F53]/70">{day.date}</span>
-                  </div>
-                  
-                  <div className="space-y-4 relative">
-                    {/* NEW: Disabled Overlay for Consecutive Rule */}
-                    {isDateDisabled && (
-                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl z-10 flex items-center justify-center p-4">
-                        <div className="text-center">
-                          <div className="bg-[#F5EDE4] rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
-                            <Info className="h-6 w-6 text-[#C2884E]" />
-                          </div>
-                          <p className="text-xs font-medium text-[#6B5F53] max-w-[200px]">
-                            {language === 'zh' 
-                              ? '您必须选择连续的配送日期（周日+周二 或 周二+周日）' 
-                              : 'You must select consecutive delivery days (Sun+Tue or Tue+Sun)'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {day.options.map((option) => (
-                      <Card 
-                        key={option.id}
-                        className={cn(
-                          "overflow-hidden transition-all duration-300 border-[#C2884E]/10 bg-white rounded-lg",
-                          !isDateDisabled && "hover:shadow-md hover:border-[#C2884E]/30 hover:rounded-xl"
-                        )}
-                      >
-                        <CardContent className="p-0">
-                          <div className="p-4">
-                                <div className="flex items-start justify-between">
-                                  <h4 className="font-medium text-[#6B5F53]">
-                                    {language === 'en' && option.nameEn ? option.nameEn : option.name}
-                                  </h4>
-                                </div>
-                                
-                                {/* Display tags if available */}
-                                {option.tags && option.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {option.tags.map((tag, tagIndex) => (
-                                      <span 
-                                        key={tagIndex}
-                                        className="px-2 py-0.5 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] font-medium"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center justify-end mt-4">
-                                <div className="flex items-center gap-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    className="h-7 w-7 bg-white/80"
-                                    onClick={() => removeFromCart(day.id, option.id, day.weekOffset)}
-                                    disabled={getQuantityInCart(day.id, option.id, day.weekOffset) === 0 || isDateDisabled}
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className="w-5 text-center text-sm">
-                                    {getQuantityInCart(day.id, option.id, day.weekOffset)}
-                                  </span>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    className="h-7 w-7 bg-white/80"
-                                    onClick={() => addToCart(day.id, option.id, day.weekOffset)}
-                                    disabled={isDateDisabled}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </motion.div>
-                );
-                })}
-            </div>
+              <WeeklyDeliveryDaysGrid
+                addToCart={addToCart}
+                disabledDates={disabledDates}
+                getQuantityInCart={getQuantityInCart}
+                isDayUnavailable={isDayUnavailable}
+                language={language}
+                removeFromCart={removeFromCart}
+                visibleDeliveryDays={visibleDeliveryDays}
+              />
             )}
           </div>
           

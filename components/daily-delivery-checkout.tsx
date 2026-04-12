@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // Helper function to convert English day names to Chinese
 const getChineseDayName = (englishDayName: string): string => {
@@ -20,33 +20,19 @@ const getChineseDayName = (englishDayName: string): string => {
 };
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { CheckoutAddressForm } from '@/components/checkout-address-form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { 
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import { Check, MapPin } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { DailyCheckoutSummary } from '@/features/daily-checkout/daily-checkout-summary'
+import { submitDailyCheckout } from '@/features/daily-checkout/submit-daily-checkout'
+import { useDailyCheckoutState } from '@/features/daily-checkout/use-daily-checkout-state'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Loader2 } from 'lucide-react'
-import { CartItem, DayData, submitDailyOrder, formatAddress } from '@/lib/daily-delivery'
-import { mergeStoredUser } from '@/lib/client-user-cache'
-import { useOptionalUserProfile } from '@/lib/dashboard-user-profile'
+import { Loader2 } from 'lucide-react'
+import { CartItem, DayData, formatAddress } from '@/lib/daily-delivery'
 
 // Define the supported regions for daily delivery
 const DAILY_DELIVERY_REGIONS = [
@@ -79,48 +65,30 @@ export function DailyDeliveryCheckout({
   days,
   dishTranslations
 }: DailyDeliveryCheckoutProps) {
-  const { t, language } = useLanguage()
+  const { language } = useLanguage()
   const { toast } = useToast()
-  const sharedUserProfile = useOptionalUserProfile()
   const [isLoading, setIsLoading] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    area: '',
-    specialInstructions: ''
+  const {
+    userData,
+    formData,
+    setFormData,
+    addressFormData,
+    editingAddress,
+    saveAddressForFuture,
+    popoverOpen,
+    isValidDeliveryArea,
+    tempSelectedArea,
+    setEditingAddress,
+    setSaveAddressForFuture,
+    setPopoverOpen,
+    setTempSelectedArea,
+    handleInputChange,
+    handleAddressInputChange,
+    handleAreaSelect,
+    handleSaveAddress,
+  } = useDailyCheckoutState({
+    deliveryRegions: DAILY_DELIVERY_REGIONS,
   })
-  const [addressFormData, setAddressFormData] = useState({
-    unitNumber: '',
-    streetAddress: '',
-    province: '',
-    postalCode: '',
-    country: 'Canada', // Always Canada, not shown in UI
-    buzzCode: ''
-  })
-  const [editingAddress, setEditingAddress] = useState(false)
-  const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
-  const [popoverOpen, setPopoverOpen] = useState(false)
-  const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
-  const [tempSelectedArea, setTempSelectedArea] = useState<string>("")
-
-  // Helper function to translate combo names
-  const translateComboName = (name: string): string => {
-    if (language === 'zh') return name
-    // Translate common combo name patterns
-    if (name.includes('套餐')) {
-      return name.replace(/套餐/g, 'Combo')
-    }
-    return name
-  }
-  
-  // Helper function to translate dish names
-  const translateDishName = (dishName: string): string => {
-    if (language === 'zh' || !dishTranslations[dishName]) {
-      return dishName
-    }
-    return dishTranslations[dishName] || dishName
-  }
 
   // Calculate total vouchers needed by type
   const vouchersNeeded = cart.reduce(
@@ -135,175 +103,6 @@ export function DailyDeliveryCheckout({
     { twoDish: 0, threeDish: 0 }
   )
   
-  // Load user data: inside dashboard provider = never fetch (use shared or localStorage while waiting)
-  useEffect(() => {
-    const applyUserToForm = (user: any) => {
-      setUserData(user)
-      setFormData({
-        name: user.name || "",
-        phone: user.phone || "",
-        area: user.area || user.address?.province || "",
-        specialInstructions: ''
-      })
-      if (user.address) {
-        setAddressFormData({
-          unitNumber: user.address.unitNumber || "",
-          streetAddress: user.address.streetAddress || "",
-          province: user.address.province || "",
-          postalCode: user.address.postalCode || "",
-          country: user.address.country || "Canada",
-          buzzCode: user.address.buzzCode || ""
-        })
-        const userArea = user.address.province || ""
-        setIsValidDeliveryArea(DAILY_DELIVERY_REGIONS.includes(userArea))
-      } else {
-        setIsValidDeliveryArea(false)
-      }
-    }
-
-    if (sharedUserProfile) {
-      // Inside provider: never fetch. Use shared data when ready, else localStorage while waiting
-      if (sharedUserProfile.userData) {
-        applyUserToForm(sharedUserProfile.userData)
-      } else {
-        const storedUser = localStorage.getItem('user')
-        if (storedUser) {
-          try {
-            const user = JSON.parse(storedUser)
-            applyUserToForm(user)
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      return
-    }
-
-    // Outside provider: localStorage + fallback fetch when needsAddress
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
-      applyUserToForm(user)
-
-      const needsAddress = !user.address || !user.address.streetAddress
-      if (user._id && needsAddress) {
-        fetch(`/api/users/${user._id}`)
-          .then((res) => res.json())
-          .then((result) => {
-            if (result?.success && result?.data) {
-              const fullUser = result.data
-              applyUserToForm(fullUser)
-              mergeStoredUser({
-                ...user,
-                address: fullUser.address,
-                phone: fullUser.phone,
-                area: fullUser.area || fullUser.address?.province,
-              })
-            }
-          })
-          .catch(() => {})
-      }
-    }
-  }, [sharedUserProfile?.userData])
-
-  // Handle input change for all form fields
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target
-    setFormData({
-      ...formData,
-      [id]: value,
-    })
-  }
-  
-  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target
-    setAddressFormData({
-      ...addressFormData,
-      [id === 'state' ? 'province' : id === 'zip' ? 'postalCode' : id]: value
-    })
-  }
-  
-  const handleAreaSelect = (area: string) => {
-    setAddressFormData({
-      ...addressFormData,
-      province: area
-    })
-    setPopoverOpen(false)
-    
-    // Store the temporarily selected area for visual feedback
-    setTempSelectedArea(area)
-  }
-
-  const handleSaveAddress = async () => {
-    // Validate that the selected area is valid for daily delivery
-    const selectedArea = addressFormData.province
-    const isValid = DAILY_DELIVERY_REGIONS.includes(selectedArea)
-    setIsValidDeliveryArea(isValid)
-    
-    if (!isValid) {
-      toast({
-        title: language === 'zh' ? '无效区域' : 'Invalid Area',
-        description: language === 'zh' ? '请选择每日直送服务覆盖的区域' : 'Please select an area covered by daily delivery service',
-        variant: "destructive"
-      })
-      return
-    }
-    
-    // Clear temp selected area since we're now saving
-    setTempSelectedArea("")
-    
-    // Always update the local userData for display in the current order
-    setUserData((prev: any) => prev ? {
-      ...prev,
-      address: { ...addressFormData }
-    } : null)
-    
-    if (saveAddressForFuture && userData?._id) {
-      try {
-        const response = await fetch(`/api/users/${userData._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            address: addressFormData
-          }),
-        })
-        
-        const result = await response.json()
-        
-        if (result.success) {
-          // Update localStorage
-          mergeStoredUser({
-            address: { ...addressFormData },
-            area: addressFormData.province || '',
-          })
-          
-          toast({
-            title: language === 'zh' ? '地址已保存' : 'Address Saved',
-            description: language === 'zh' ? '您的地址已更新' : 'Your address has been updated',
-          })
-        } else {
-          toast({
-            title: language === 'zh' ? '出错了' : 'Error Occurred',
-            description: result.error || (language === 'zh' ? '保存地址时出错' : 'Error saving address'),
-            variant: "destructive"
-          })
-        }
-      } catch (error) {
-        console.error('Error saving address:', error)
-        toast({
-          title: language === 'zh' ? '出错了' : 'Error Occurred',
-          description: language === 'zh' ? '保存地址时出错' : 'Error saving address',
-          variant: "destructive"
-        })
-      }
-    }
-    
-    // Close the address form
-    setEditingAddress(false)
-  }
-
   // Handle form submission
   const handleCheckout = async () => {
     // Validate form
@@ -403,213 +202,21 @@ export function DailyDeliveryCheckout({
     
     setIsLoading(true)
     
-    try {
-      // Group cart items by date
-      const cartByDate: Record<string, CartItem[]> = {};
-      
-      cart.forEach(item => {
-        if (!cartByDate[item.date]) {
-          cartByDate[item.date] = [];
-        }
-        cartByDate[item.date].push(item);
-      });
-      
-      // Process each date as a separate order
-      const orderResults = [];
-      let totalRemainingVouchers = {
-        twoDish: userVouchers.twoDish,
-        threeDish: userVouchers.threeDish
-      };
-      
-      // Generate a unique batch ID for this checkout session (idempotency)
-      const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Process each date as a separate order
-      let orderIndex = 0;
-      for (const [date, dateItems] of Object.entries(cartByDate)) {
-        // Generate unique idempotency key for THIS specific order
-        const idempotencyKey = `${batchId}-order-${orderIndex}`;
-        orderIndex++;
-        
-        // Enhance cart items with dish details
-        const enhancedDateItems = dateItems.map(item => {
-          const dayData = days[item.day];
-          const combo = dayData?.combos?.find(c => c.id === item.comboId);
-          const dishes = combo ? (item.type === 'A' ? combo.typeA.dishes : combo.typeB.dishes) : [];
-          
-          return {
-            ...item,
-            dishes: dishes // Add dishes to each cart item
-          };
-        });
-        
-        // Calculate vouchers needed for this date
-        const dateVouchersNeeded = enhancedDateItems.reduce(
-          (totals, item) => {
-            if (item.voucherType === 'twoDish') {
-              totals.twoDish += item.quantity;
-            } else if (item.voucherType === 'threeDish') {
-              totals.threeDish += item.quantity;
-            }
-            return totals;
-          },
-          { twoDish: 0, threeDish: 0 }
-        );
-        
-        // Check if we have enough vouchers for this date
-        if (totalRemainingVouchers.twoDish < dateVouchersNeeded.twoDish || 
-            totalRemainingVouchers.threeDish < dateVouchersNeeded.threeDish) {
-          throw new Error('Insufficient vouchers for all orders');
-        }
-        
-        const orderData = {
-          userId: userData._id,
-          items: enhancedDateItems,
-          specialInstructions: formData.specialInstructions,
-          deliveryAddress: editingAddress ? addressFormData : userData.address,
-          phoneNumber: formData.phone,
-          area: formData.area,
-          idempotencyKey: idempotencyKey // ADD IDEMPOTENCY KEY
-        };
-        
-        console.log(`Submitting order ${orderIndex} with idempotency key: ${idempotencyKey}`);
-        
-        // Submit order for this date with retry logic
-        let retryCount = 0;
-        const maxRetries = 2;
-        let result = null;
-        
-        while (retryCount <= maxRetries) {
-          try {
-            result = await submitDailyOrder(orderData);
-            
-            // If successful, break the retry loop
-            if (result && !result.error) {
-              console.log(`Order ${orderIndex} submitted successfully`);
-              break;
-            }
-            
-            // If error but not a timeout, throw immediately
-            if (result.error && !result.error.includes('timeout') && !result.error.includes('timed out')) {
-              throw new Error(result.error);
-            }
-            
-            // If timeout, retry
-            retryCount++;
-            if (retryCount <= maxRetries) {
-              console.log(`Order ${orderIndex} timed out, retrying (${retryCount}/${maxRetries})...`);
-              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
-            }
-          } catch (error: any) {
-            // If it's a fetch/network error, retry
-            if (retryCount < maxRetries && (error.message?.includes('timeout') || error.message?.includes('fetch'))) {
-              retryCount++;
-              console.log(`Order ${orderIndex} network error, retrying (${retryCount}/${maxRetries})...`);
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            } else {
-              throw error;
-            }
-          }
-        }
-        
-        if (!result || result.error) {
-          throw new Error(result?.error || 'Order submission failed');
-        }
-        
-        // Update remaining vouchers
-        totalRemainingVouchers = result.remainingVouchers;
-        
-        // Add result to array
-        orderResults.push(result);
-      }
-      
-      // All orders were successful
-      // Update user vouchers in localStorage
-      if (userData && totalRemainingVouchers) {
-        userData.twoDishVoucher = totalRemainingVouchers.twoDish;
-        userData.threeDishVoucher = totalRemainingVouchers.threeDish;
-        mergeStoredUser({
-          twoDishVoucher: totalRemainingVouchers.twoDish,
-          threeDishVoucher: totalRemainingVouchers.threeDish,
-        });
-        setUserVouchers({
-          twoDish: totalRemainingVouchers.twoDish,
-          threeDish: totalRemainingVouchers.threeDish
-        });
-      }
-      
-      // ✅ NEW: Send order summary email with ALL orders
-      console.log('📧 Sending order summary email...');
-      console.log('📧 Order results:', orderResults);
-      console.log('📧 Number of orders:', orderResults.length);
-      
-      try {
-        const emailPayload = {
-          type: 'daily',
-          orderIds: orderResults
-            .map((result) => {
-              const orderData = result.data || result
-              return orderData?.orderId
-            })
-            .filter(Boolean)
-        };
-        
-        console.log('📧 Email payload:', JSON.stringify(emailPayload, null, 2));
-        
-        const response = await fetch('/api/send-order-summary-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(emailPayload)
-        });
-        
-        console.log('📧 Response status:', response.status);
-        
-        const result = await response.json();
-        console.log('📧 Email API response:', result);
-        
-        if (result.success) {
-          console.log('✅ Order summary email sent successfully');
-        } else {
-          console.error('❌ Email API returned error:', result.error);
-        }
-      } catch (emailError) {
-        console.error('❌ Failed to send order summary email:', emailError);
-        console.error('❌ Error stack:', emailError);
-        // Don't fail the checkout if email fails
-      }
-      
-      const orderCount = Object.keys(cartByDate).length;
-      toast({
-        title: language === 'zh' ? '订单完成' : 'Order Completed',
-        description: language === 'zh' 
-          ? `您的${orderCount}天的订单已成功提交` 
-          : `Your ${orderCount} orders have been successfully placed`,
-      });
-      
-      // Call onSuccess callback to clear the cart and close the checkout
-      onSuccess();
-      
-    } catch (error) {
-      console.error("Error during checkout:", error);
-      toast({
-        title: language === 'zh' ? '订单失败' : 'Order Failed',
-        description: language === 'zh' ? '处理您的订单时出错' : 'Error processing your order',
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await submitDailyCheckout({
+      addressFormData,
+      cart,
+      days,
+      editingAddress,
+      formData,
+      language,
+      onSuccess,
+      setIsLoading,
+      setUserVouchers,
+      toast,
+      userData,
+      userVouchers,
+    })
   }
-
-  // Group cart items by delivery day for display
-  const cartByDay: Record<string, CartItem[]> = {}
-  
-  cart.forEach(item => {
-    if (!cartByDay[item.day]) {
-      cartByDay[item.day] = []
-    }
-    cartByDay[item.day].push(item)
-  })
 
   return (
     <motion.div
@@ -638,82 +245,13 @@ export function DailyDeliveryCheckout({
           <CardDescription>{language === 'zh' ? '确认您的订单详情' : 'Confirm your order details'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '已选餐点' : 'Selected Meals'}</h3>
-            <Card className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-[#C2884E]/20">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {Object.entries(cartByDay).map(([dayId, items]) => (
-                    <div key={dayId} className="pb-3 last:pb-0">
-                      <div className="font-medium capitalize mb-2 flex items-center">
-                        <span className="text-[#6B5F53]">
-                          {language === 'zh' 
-                            ? getChineseDayName(days[dayId]?.displayName || dayId)
-                            : days[dayId]?.displayName || dayId}
-                        </span>
-                        {days[dayId]?.date && (
-                          <span className="text-[#6B5F53]/60 text-sm ml-2">
-                            ({days[dayId].date})
-                          </span>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        {items.map((item, index) => {
-                          // Find the combo details to get dishes
-                          const dayData = days[item.day];
-                          const combo = dayData?.combos?.find(c => c.id === item.comboId);
-                          const dishes = combo ? (item.type === 'A' ? combo.typeA.dishes : combo.typeB.dishes) : [];
-                          
-                          return (
-                            <div key={index} className="bg-white rounded-lg border border-[#C2884E]/10 p-3 mb-2 shadow-sm">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center">
-                                  <div className="bg-[#F5EDE4] p-1.5 rounded-full mr-2">
-                                    <CheckCircle2 className="h-4 w-4 text-[#C2884E]" />
-                                  </div>
-                                  <div>
-                                    <span className="text-[#6B5F53] font-medium">{translateComboName(item.comboName)}</span>
-                                    <span className="text-[#6B5F53]/60 text-xs ml-2">
-                                      ({item.type === 'A' ? (language === 'zh' ? '2菜' : '2-Dish') : (language === 'zh' ? '3菜' : '3-Dish')})
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center">
-                                  <span className="text-[#C2884E] font-medium bg-[#F5EDE4] px-2 py-0.5 rounded-full text-sm">
-                                    x{item.quantity}
-                                  </span>
-                                </div>
-                              </div>
-                              
-                              {/* Display dish details */}
-                              {dishes.length > 0 && (
-                                <div className="pl-8 mt-1 space-y-1">
-                                  {dishes.map((dish, dishIdx) => (
-                                    <div key={dishIdx} className="flex items-center gap-2">
-                                      <div className="w-1 h-1 rounded-full bg-[#C2884E]/40"></div>
-                                      <span className="text-xs text-[#6B5F53]">{translateDishName(dish)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="border-t border-[#C2884E]/20 pt-3 flex justify-between font-medium">
-                    <span className="text-[#6B5F53]">{language === 'zh' ? '总计' : 'Total'}</span>
-                    <div className="text-[#C2884E] flex gap-2">
-                      {vouchersNeeded.twoDish > 0 && <span>{language === 'zh' ? '2菜' : '2-Dish'}: {vouchersNeeded.twoDish}</span>}
-                      {vouchersNeeded.threeDish > 0 && <span>{language === 'zh' ? '3菜' : '3-Dish'}: {vouchersNeeded.threeDish}</span>}
-                      {vouchersNeeded.twoDish === 0 && vouchersNeeded.threeDish === 0 && <span>0</span>}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <DailyCheckoutSummary
+            cart={cart}
+            days={days}
+            dishTranslations={dishTranslations}
+            language={language}
+            vouchersNeeded={vouchersNeeded}
+          />
           
           <div className="space-y-2">
             <h3 className="font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '配送信息' : 'Delivery Information'}</h3>
@@ -786,138 +324,24 @@ export function DailyDeliveryCheckout({
                 </div>
                 
                 {editingAddress ? (
-                  <div className="mt-2 space-y-4 p-4 rounded-md border border-primary/30 bg-primary/5 shadow-sm">
-                    <div className="text-sm font-medium text-primary mb-2">
-                      Edit Delivery Details
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="unitNumber" className="text-sm">
-                          Unit/Apt Number
-                        </Label>
-                        <Input 
-                          id="unitNumber" 
-                          value={addressFormData.unitNumber} 
-                          onChange={handleAddressInputChange} 
-                        />
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="streetAddress" className="text-sm">
-                          Street name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="streetAddress" 
-                          value={addressFormData.streetAddress} 
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state" className="text-sm flex items-center gap-2">
-                          <span>Area <span className="text-red-500">*</span></span>
-                          {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
-                            <span className="text-xs text-red-600 font-medium">
-                              ({language === 'zh' ? '请选择有效区域' : 'Please select valid area'})
-                            </span>
-                          )}
-                        </Label>
-                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="w-full justify-between"
-                            >
-                              {addressFormData.province || (language === 'zh' ? "选择区域..." : "Select area...")}
-                              <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-content-available-width)]">
-                            <Command>
-                              <CommandInput placeholder={language === 'zh' ? "搜索区域..." : "Search area..."} />
-                              <CommandList className="max-h-[200px] overflow-y-auto">
-                                <CommandEmpty>{language === 'zh' ? "未找到匹配的区域" : "No matching areas found"}</CommandEmpty>
-                                <CommandGroup>
-                                  {DAILY_DELIVERY_REGIONS.map((region) => (
-                                    <CommandItem
-                                      key={region}
-                                      value={region}
-                                      onSelect={() => handleAreaSelect(region)}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          addressFormData.province === region ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      {region}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="zip" className="text-sm">
-                          ZIP Code <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="zip" 
-                          value={addressFormData.postalCode} 
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="buzzCode" className="text-sm">
-                          Buzz Code 
-                          <span className="text-muted-foreground text-xs ml-1">
-                            (Optional)
-                          </span>
-                        </Label>
-                        <Input 
-                          id="buzzCode" 
-                          value={addressFormData.buzzCode} 
-                          onChange={handleAddressInputChange} 
-                          placeholder={language === 'zh' ? '用于访问您的建筑物' : 'For accessing your building'}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 bg-background p-2 rounded-md">
-                      <Checkbox 
-                        id="saveAddress" 
-                        checked={saveAddressForFuture}
-                        onCheckedChange={(checked) => setSaveAddressForFuture(checked === true)}
-                      />
-                      <Label htmlFor="saveAddress" className="text-sm font-normal">
-                        {language === 'zh' ? '保存地址以便将来使用' : 'Save address for future orders'}
-                      </Label>
-                    </div>
-                    
-                    <div className="flex justify-end space-x-2 mt-4 pt-2 border-t border-primary/20">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          setEditingAddress(false)
-                          setTempSelectedArea("") // Reset temp area on cancel
-                        }}
-                        disabled={isLoading}
-                      >
-                        {language === 'zh' ? '取消' : 'Cancel'}
-                      </Button>
-                      <Button 
-                        size="sm"
-                        onClick={handleSaveAddress}
-                        disabled={isLoading}
-                      >
-                        {language === 'zh' ? '保存地址' : 'Save Address'}
-                      </Button>
-                    </div>
-                  </div>
+                  <CheckoutAddressForm
+                    addressFormData={addressFormData}
+                    availableRegions={DAILY_DELIVERY_REGIONS}
+                    language={language}
+                    popoverOpen={popoverOpen}
+                    saveAddressForFuture={saveAddressForFuture}
+                    disabled={isLoading}
+                    showAreaValidationHint={!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea)}
+                    onPopoverOpenChange={setPopoverOpen}
+                    onAddressInputChange={handleAddressInputChange}
+                    onAreaSelect={handleAreaSelect}
+                    onSaveAddressForFutureChange={setSaveAddressForFuture}
+                    onCancel={() => {
+                      setEditingAddress(false)
+                      setTempSelectedArea("")
+                    }}
+                    onSave={handleSaveAddress}
+                  />
                 ) : (
                   <div className={`p-3 rounded-md border ${!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) ? 'bg-red-50 border-red-200' : 'bg-muted/20'}`}>
                     {userData?.address ? (

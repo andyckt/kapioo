@@ -1,11 +1,8 @@
 "use client"
 
-import dynamic from "next/dynamic"
 import type { ChangeEvent } from "react"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 
-import { CommunityRecipes } from "@/components/community-recipes"
-import { OrderSectionNavigation } from "@/components/order-section-navigation"
 import type { DashboardUserData } from "@/lib/dashboard-user-profile"
 import type { useLanguage } from "@/lib/language-context"
 import type {
@@ -15,42 +12,15 @@ import type {
 } from "@/features/dashboard-settings/dashboard-settings-tab"
 
 import {
+  LazyDashboardCommunityTab,
   LazyDashboardCreditsTab,
+  LazyDashboardDailyDeliveryTab,
+  LazyDashboardMealVouchersTab,
   LazyDashboardOverviewTab,
+  LazyDashboardOrdersTab,
   LazyDashboardSettingsTab,
+  LazyDashboardWeeklySubscriptionTab,
 } from "./dashboard-lazy-tabs"
-
-const DailyDelivery = dynamic(() => import("@/components/daily-delivery"), { ssr: false })
-const WeeklySubscription = dynamic(() => import("@/components/weekly-subscription"), { ssr: false })
-const WeeklySubscriptionHistory = dynamic(
-  () =>
-    import("@/components/weekly-subscription-history").then((mod) => ({
-      default: mod.WeeklySubscriptionHistory,
-    })),
-  { ssr: false }
-)
-const DailyDeliveryHistory = dynamic(
-  () =>
-    import("@/components/daily-delivery-history").then((mod) => ({
-      default: mod.DailyDeliveryHistory,
-    })),
-  { ssr: false }
-)
-const MealVoucherPurchase = dynamic(() => import("@/components/meal-voucher-purchase"), { ssr: false })
-const VoucherPurchaseHistory = dynamic(
-  () =>
-    import("@/components/voucher-purchase-history").then((mod) => ({
-      default: mod.VoucherPurchaseHistory,
-    })),
-  { ssr: false }
-)
-const UnifiedRechargeHistory = dynamic(
-  () =>
-    import("@/components/unified-recharge-history").then((mod) => ({
-      default: mod.UnifiedRechargeHistory,
-    })),
-  { ssr: false }
-)
 
 type TFn = ReturnType<typeof useLanguage>["t"]
 
@@ -133,68 +103,18 @@ export function DashboardTabContent({
       )}
 
       {activeTab === "orders" && (
-        <motion.div
-          key="orders"
-          initial={{ y: 10 }}
-          animate={{ y: 0 }}
-          exit={{ y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
-        >
-          <div className="flex items-center justify-between mt-4">
-            <h2 className="text-3xl font-bold tracking-tight">{t("myOrders")}</h2>
-          </div>
-
-          <OrderSectionNavigation
-            activeSection={orderActiveSection}
-            onSectionChange={onOrderSectionChange}
-          />
-
-          {userData && orderActiveSection === "orders" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              <WeeklySubscriptionHistory userId={userData._id} />
-              <DailyDeliveryHistory userId={userData._id} />
-            </motion.div>
-          )}
-
-          {userData && orderActiveSection === "recharges" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              <UnifiedRechargeHistory
-                userId={userData._id}
-                weeklyRefreshKey={purchaseHistoryKey}
-                dailyRefreshKey={voucherHistoryKey}
-              />
-            </motion.div>
-          )}
-        </motion.div>
+        <LazyDashboardOrdersTab
+          t={t}
+          userData={userData}
+          orderActiveSection={orderActiveSection}
+          purchaseHistoryKey={purchaseHistoryKey}
+          voucherHistoryKey={voucherHistoryKey}
+          onOrderSectionChange={onOrderSectionChange}
+        />
       )}
 
       {activeTab === "community" && (
-        <motion.div
-          key="community"
-          initial={{ y: 10 }}
-          animate={{ y: 0 }}
-          exit={{ y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
-        >
-          <div className="flex items-center justify-between mt-4">
-            <h2 className="text-3xl font-bold tracking-tight">Community</h2>
-          </div>
-          <CommunityRecipes />
-        </motion.div>
+        <LazyDashboardCommunityTab />
       )}
 
       {activeTab === "credits" && (
@@ -227,58 +147,23 @@ export function DashboardTabContent({
       )}
 
       {activeTab === "daily-delivery" && (
-        <motion.div
-          key="daily-delivery"
-          initial={{ y: 10 }}
-          animate={{ y: 0 }}
-          exit={{ y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
-        >
-          <DailyDelivery />
-        </motion.div>
+        <LazyDashboardDailyDeliveryTab />
       )}
 
       {activeTab === "meal-vouchers" && (
-        <motion.div
-          key="meal-vouchers"
-          initial={{ y: 10 }}
-          animate={{ y: 0 }}
-          exit={{ y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
-        >
-          <div className="space-y-6">
-            <MealVoucherPurchase onSuccess={onVoucherPurchaseSuccess} />
-
-            {userData && userData._id && (
-              <div className="mt-8">
-                <VoucherPurchaseHistory userId={userData._id} refreshKey={voucherHistoryKey} />
-              </div>
-            )}
-          </div>
-        </motion.div>
+        <LazyDashboardMealVouchersTab
+          userData={userData}
+          voucherHistoryKey={voucherHistoryKey}
+          onVoucherPurchaseSuccess={onVoucherPurchaseSuccess}
+        />
       )}
 
       {activeTab === "weekly-subscription" && (
-        <motion.div
-          key="weekly-subscription"
-          initial={{ y: 10 }}
-          animate={{ y: 0 }}
-          exit={{ y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
-        >
-          <WeeklySubscription
-            userCredits={credits}
-            weeklySIXmeals={userData?.weeklySIXmeals}
-            weeklyEIGHTmeals={(userData as DashboardUserData & { weeklyEIGHTmeals?: number })?.weeklyEIGHTmeals}
-            weeklyTENmeals={userData?.weeklyTENmeals}
-            weeklyTWELVEmeals={(userData as DashboardUserData & { weeklyTWELVEmeals?: number })?.weeklyTWELVEmeals}
-            weeklySIXTEENmeals={(userData as DashboardUserData & { weeklySIXTEENmeals?: number })?.weeklySIXTEENmeals}
-            onVoucherUpdate={onWeeklyVoucherUpdate}
-          />
-        </motion.div>
+        <LazyDashboardWeeklySubscriptionTab
+          credits={credits}
+          userData={userData}
+          onWeeklyVoucherUpdate={onWeeklyVoucherUpdate}
+        />
       )}
     </AnimatePresence>
   )

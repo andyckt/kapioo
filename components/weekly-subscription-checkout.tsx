@@ -1,36 +1,22 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { CheckoutAddressForm } from '@/components/checkout-address-form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { 
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import { Check, MapPin } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { WeeklyCheckoutSummary } from '@/features/weekly-checkout/weekly-checkout-summary'
+import { submitWeeklyCheckout } from '@/features/weekly-checkout/submit-weekly-checkout'
+import { useWeeklyCheckoutState } from '@/features/weekly-checkout/use-weekly-checkout-state'
 import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Loader2 } from 'lucide-react'
-import { CartItem, DeliveryDay, submitUserSubscription, validateSelectedDates, sortDeliveryDays } from '@/lib/weekly-subscription'
+import { Loader2 } from 'lucide-react'
+import { CartItem, DeliveryDay } from '@/lib/weekly-subscription'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
-import { mergeStoredUser } from '@/lib/client-user-cache'
-import { useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 
 // Use centralized area list
 const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
@@ -60,201 +46,36 @@ export function WeeklySubscriptionCheckout({
   onSuccess,
   userCredits,
   setUserCredits,
-  weeklySIXmeals,
   setWeeklySIXmeals,
-  weeklyEIGHTmeals,
   setWeeklyEIGHTmeals,
-  weeklyTENmeals,
   setWeeklyTENmeals,
-  weeklyTWELVEmeals,
   setWeeklyTWELVEmeals,
-  weeklySIXTEENmeals,
   setWeeklySIXTEENmeals,
   deliveryDays
 }: WeeklySubscriptionCheckoutProps) {
-  const { t, language } = useLanguage()
+  const { language } = useLanguage()
   const { toast } = useToast()
-  const sharedUserProfile = useOptionalUserProfile()
   const [isLoading, setIsLoading] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    area: '',
-    specialInstructions: ''
-  })
-  const [addressFormData, setAddressFormData] = useState({
-    unitNumber: '',
-    streetAddress: '',
-    province: '',
-    postalCode: '',
-    country: 'Canada', // Always Canada, not shown in UI
-    buzzCode: ''
-  })
-  const [editingAddress, setEditingAddress] = useState(false)
-  const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  const {
+    userData,
+    formData,
+    setFormData,
+    addressFormData,
+    editingAddress,
+    saveAddressForFuture,
+    popoverOpen,
+    setEditingAddress,
+    setSaveAddressForFuture,
+    setPopoverOpen,
+    handleInputChange,
+    handleAddressInputChange,
+    handleAreaSelect,
+    handleSaveAddress,
+  } = useWeeklyCheckoutState()
 
   // Calculate total items and cost
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0)
   
-  // Load user data: inside dashboard provider = never fetch (use shared or localStorage while waiting)
-  useEffect(() => {
-    const applyUserToForm = (user: any) => {
-      setUserData(user)
-      setFormData({
-        name: user.name || "",
-        phone: user.phone || "",
-        area: user.area || user.address?.province || "",
-        specialInstructions: ''
-      })
-      if (user.address) {
-        setAddressFormData({
-          unitNumber: user.address.unitNumber || "",
-          streetAddress: user.address.streetAddress || "",
-          province: user.address.province || "",
-          postalCode: user.address.postalCode || "",
-          country: "Canada",
-          buzzCode: user.address.buzzCode || ""
-        })
-      }
-    }
-
-    if (sharedUserProfile) {
-      // Inside provider: never fetch. Use shared data when ready, else localStorage while waiting
-      if (sharedUserProfile.userData) {
-        applyUserToForm(sharedUserProfile.userData)
-      } else {
-        const storedUser = localStorage.getItem('user')
-        if (storedUser) {
-          try {
-            const user = JSON.parse(storedUser)
-            applyUserToForm(user)
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      return
-    }
-
-    // Outside provider: localStorage + fallback fetch when needsAddress
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
-      applyUserToForm(user)
-
-      const needsAddress = !user.address || !user.address.streetAddress
-      if (user._id && needsAddress) {
-        fetch(`/api/users/${user._id}`)
-          .then((res) => res.json())
-          .then((result) => {
-            if (result?.success && result?.data) {
-              const fullUser = result.data
-              applyUserToForm(fullUser)
-              mergeStoredUser({
-                ...user,
-                address: fullUser.address,
-                phone: fullUser.phone,
-                area: fullUser.area || fullUser.address?.province,
-              })
-            }
-          })
-          .catch(() => {})
-      }
-    }
-  }, [sharedUserProfile?.userData])
-
-  // Handle input change for all form fields
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target
-    setFormData({
-      ...formData,
-      [id]: value,
-    })
-  }
-  
-  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target
-    setAddressFormData({
-      ...addressFormData,
-      [id === 'state' ? 'province' : id === 'zip' ? 'postalCode' : id]: value
-    })
-  }
-  
-  const handleAreaSelect = (area: string) => {
-    setAddressFormData({
-      ...addressFormData,
-      province: area
-    })
-    setPopoverOpen(false)
-  }
-  
-  // Handle region change from dialog
-  const handleSaveAddress = async () => {
-    // Always update the local userData for display in the current order
-    setUserData((prev: any) => prev ? {
-      ...prev,
-      address: { ...addressFormData }
-    } : null)
-    
-    if (saveAddressForFuture && userData?._id) {
-      try {
-        const response = await fetch(`/api/users/${userData._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            address: {
-              ...addressFormData,
-              country: 'Canada' // Always force to Canada
-            }
-          }),
-        })
-        
-        const result = await response.json()
-        
-        if (result.success) {
-          // Update localStorage
-          mergeStoredUser({
-            address: {
-              ...addressFormData,
-              country: 'Canada',
-            },
-            area: addressFormData.province || '',
-          })
-          
-          toast({
-            title: language === 'zh' ? '地址已保存' : 'Address Saved',
-            description: language === 'zh' ? '您的地址已更新' : 'Your address has been updated',
-          })
-        } else {
-          toast({
-            title: language === 'zh' ? '出错了' : 'Error Occurred',
-            description: result.error || (language === 'zh' ? '保存地址时出错' : 'Error saving address'),
-            variant: "destructive"
-          })
-        }
-      } catch (error) {
-        console.error('Error saving address:', error)
-        toast({
-          title: language === 'zh' ? '出错了' : 'Error Occurred',
-          description: language === 'zh' ? '保存地址时出错' : 'Error saving address',
-          variant: "destructive"
-        })
-      }
-    } else {
-      // Show toast that address is used only for this order
-      toast({
-        title: language === 'zh' ? '地址已更新' : 'Address Updated',
-        description: language === 'zh' ? '此地址仅用于当前订单' : 'This address will be used only for this order',
-      })
-    }
-    
-    setEditingAddress(false)
-  }
-
   const handleCheckout = async () => {
     console.log("handleCheckout called")
     
@@ -281,7 +102,26 @@ export function WeeklySubscriptionCheckout({
       
       // Directly proceed to submit without showing address dialog
       // Users can already see and edit their address in the form above
-      await handleSubmit()
+      await submitWeeklyCheckout({
+        addressFormData,
+        cart,
+        deliveryDays,
+        editingAddress,
+        formData,
+        language,
+        onSuccess,
+        setIsLoading,
+        setUserCredits,
+        setWeeklyEIGHTmeals,
+        setWeeklySIXTEENmeals,
+        setWeeklySIXmeals,
+        setWeeklyTENmeals,
+        setWeeklyTWELVEmeals,
+        toast,
+        totalItems,
+        userCredits,
+        userData,
+      })
     } catch (error) {
       console.error("Error in handleCheckout:", error);
       toast({
@@ -293,488 +133,6 @@ export function WeeklySubscriptionCheckout({
     }
   }
   
-  // The actual submission function that will be called after address confirmation
-  const handleSubmit = async () => {
-    if (!userData?.address && !editingAddress) {
-      toast({
-        title: language === 'zh' ? '出错了' : 'Error Occurred',
-        description: language === 'zh' ? '请添加配送地址' : 'Please add a delivery address',
-        variant: "destructive"
-      })
-      return
-    }
-    
-    // Use either the form address data (if editing) or the stored user address
-    // Always force country to "Canada" regardless of what's stored
-    const deliveryAddress = {
-      ...(editingAddress ? addressFormData : userData?.address),
-      country: 'Canada' // Force country to Canada
-    }
-    
-    if (!deliveryAddress || !deliveryAddress.streetAddress || 
-        !deliveryAddress.province || !deliveryAddress.postalCode) {
-      toast({
-        title: language === 'zh' ? '出错了' : 'Error Occurred',
-        description: language === 'zh' ? '请填写完整的地址信息' : 'Please provide a complete address',
-        variant: "destructive"
-      })
-      setIsLoading(false);
-      return
-    }
-    
-    // Note: isLoading is now managed by handleCheckout, not here
-    
-    try {
-      // Parse user data from localStorage
-      const userDataStr = localStorage.getItem('user')
-      if (!userDataStr) {
-        toast({
-          title: language === 'zh' ? '请先登录' : 'Please Log In',
-          description: language === 'zh' ? '您需要登录才能完成订阅' : 'You need to log in to complete your subscription',
-          variant: "destructive"
-        })
-        setIsLoading(false);
-        return
-      }
-      
-      const userData = JSON.parse(userDataStr)
-      
-      // CRITICAL FIX: Fetch fresh user data from database before checkout validation
-      // This ensures we have the most up-to-date coupon counts, especially for newly approved users
-      console.log('=== CHECKOUT DEBUG: Fetching fresh user data from database ===');
-      console.log('User ID:', userData._id);
-      console.log('Props before fetch - weeklySIXmeals:', weeklySIXmeals, 'weeklyEIGHTmeals:', weeklyEIGHTmeals, 'weeklyTENmeals:', weeklyTENmeals, 'weeklyTWELVEmeals:', weeklyTWELVEmeals);
-      
-      // CRITICAL FIX: Fetch fresh user data and delivery days in parallel before checkout validation.
-      // This keeps validation up to date without adding an avoidable waterfall.
-      console.log('=== CHECKOUT DEBUG: Fetching fresh delivery days from database ===');
-      console.log('Delivery days prop before fetch:', deliveryDays.map(d => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
-
-      const [freshUserData, freshDeliveryDaysData] = await Promise.all([
-        fetch(`/api/users/${userData._id}`).then((response) => response.json()),
-        fetch('/api/weekly-subscription/user').then((response) => response.json()),
-      ]);
-
-      if (!freshUserData.success || !freshUserData.data) {
-        console.error('Failed to fetch fresh user data:', freshUserData.error);
-        throw new Error(freshUserData.error || 'Failed to fetch user data for validation');
-      }
-      
-      if (!freshDeliveryDaysData.success || !freshDeliveryDaysData.data) {
-        console.error('Failed to fetch fresh delivery days:', freshDeliveryDaysData.error);
-        throw new Error('Failed to fetch current delivery schedule');
-      }
-      
-      const freshUser = freshUserData.data;
-      console.log('Fresh user data from DB - weeklySIXmeals:', freshUser.weeklySIXmeals, 'weeklyEIGHTmeals:', freshUser.weeklyEIGHTmeals, 'weeklyTENmeals:', freshUser.weeklyTENmeals, 'weeklyTWELVEmeals:', freshUser.weeklyTWELVEmeals);
-      
-      const freshDeliveryDays = freshDeliveryDaysData.data;
-      console.log('Fresh delivery days from DB:', freshDeliveryDays.map((d: any) => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
-      
-      // Use fresh delivery days for date mapping instead of stale props
-      const currentDeliveryDays = freshDeliveryDays;
-
-      // NEW: Validate consecutive dates BEFORE processing
-      // Extract unique dates from cart using the fresh schedule
-      const uniqueDates = Array.from(new Set(
-        cart.map(item => {
-          const day = currentDeliveryDays.find((deliveryDay: any) => (
-            deliveryDay.id === item.dayId && deliveryDay.weekOffset === item.weekOffset
-          ));
-          return day?.date;
-        }).filter(Boolean)
-      )) as string[];
-      
-      console.log('🔍 CHECKOUT VALIDATION: Unique dates in cart:', uniqueDates);
-      
-      // Validate consecutive dates against the current delivery schedule
-      const validation = validateSelectedDates(uniqueDates, currentDeliveryDays);
-      
-      if (!validation.isValid) {
-        console.log('❌ CHECKOUT VALIDATION: Failed -', validation.error);
-        throw new Error(
-          validation.error || 
-          (language === 'zh' 
-            ? '请选择连续的配送日期（周日+周二 或 周二+周日）' 
-            : 'Please select consecutive delivery dates (Sun+Tue or Tue+Sun)')
-        );
-      }
-      
-      console.log('✅ CHECKOUT VALIDATION: Consecutive dates check passed');
-      
-      // Use fresh data for validation instead of stale props
-      const freshSixMeals = freshUser.weeklySIXmeals || 0;
-      const freshEightMeals = freshUser.weeklyEIGHTmeals || 0;
-      const freshTenMeals = freshUser.weeklyTENmeals || 0;
-      const freshTwelveMeals = freshUser.weeklyTWELVEmeals || 0;
-      const freshSixteenMeals = freshUser.weeklySIXTEENmeals || 0;
-      
-      // Group cart items by date using FRESH delivery days
-      const cartByDate: Record<string, CartItem[]> = {};
-      
-      console.log('🔍 DEBUG: Starting cart grouping by date');
-      console.log('🔍 DEBUG: Cart items:', cart);
-      console.log('🔍 DEBUG: Using FRESH delivery days:', currentDeliveryDays.map((d: any) => ({ id: d.id, date: d.date, weekOffset: d.weekOffset })));
-      
-      // CRITICAL VALIDATION: Check if all cart items have matching delivery days in fresh data
-      const invalidItems: CartItem[] = [];
-      
-      cart.forEach(item => {
-        // CRITICAL FIX: Find the corresponding delivery day by BOTH dayId AND weekOffset
-        // Use FRESH delivery days to prevent stale date issues
-        const deliveryDay = currentDeliveryDays.find((day: any) => day.id === item.dayId && day.weekOffset === item.weekOffset);
-        console.log(`🔍 DEBUG: Processing cart item - dayId: ${item.dayId}, weekOffset: ${item.weekOffset}, optionId: ${item.optionId}, quantity: ${item.quantity}`);
-        console.log(`🔍 DEBUG: Found delivery day:`, deliveryDay ? { id: deliveryDay.id, date: deliveryDay.date, weekOffset: deliveryDay.weekOffset } : 'NOT FOUND');
-        
-        if (deliveryDay) {
-          const date = deliveryDay.date;
-          console.log(`🔍 DEBUG: Using FRESH date: ${date} for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
-          if (!cartByDate[date]) {
-            cartByDate[date] = [];
-          }
-          cartByDate[date].push(item);
-        } else {
-          console.error(`🚨 ERROR: Could not find delivery day for dayId: ${item.dayId}, weekOffset: ${item.weekOffset}`);
-          console.error(`🚨 This might mean the delivery schedule was updated while you were browsing.`);
-          invalidItems.push(item);
-        }
-      });
-      
-      // If any items couldn't be mapped to valid delivery days, show error and stop
-      if (invalidItems.length > 0) {
-        console.error('🚨 CHECKOUT BLOCKED: Some cart items reference outdated delivery schedule');
-        console.error('Invalid items:', invalidItems);
-        throw new Error(
-          language === 'zh'
-            ? '配送日期已更新，请刷新页面重新选择餐点'
-            : 'Delivery schedule has been updated. Please refresh the page and re-select your meals.'
-        );
-      }
-      
-      console.log('🔍 DEBUG: Final cartByDate grouping:', cartByDate);
-      console.log('Cart grouped by date:', Object.keys(cartByDate).map(date => `${date}: ${cartByDate[date].length} items`));
-      
-      // Process each date as a separate order
-      const orderResults = [];
-      let totalRemainingCredits = userCredits;
-      let totalRemainingSixMeals = freshSixMeals; // Use fresh data
-      let totalRemainingEightMeals = freshEightMeals; // Use fresh data
-      let totalRemainingTenMeals = freshTenMeals; // Use fresh data
-      let totalRemainingTwelveMeals = freshTwelveMeals; // Use fresh data
-      let totalRemainingSixteenMeals = freshSixteenMeals; // Use fresh data
-      
-      // Determine the meal plan type based on total items across all dates
-      const allCartItems = Object.values(cartByDate).flat();
-      const totalItemsAcrossAllDates = allCartItems.reduce((total, item) => total + item.quantity, 0);
-      
-      console.log('Total items across all dates:', totalItemsAcrossAllDates);
-      
-      // Choose the meal plan type based on the total items in the entire cart
-      // CRITICAL: Use fresh data from database, not stale props
-      let selectedMealPlanType: '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek' | undefined;
-      if (totalItemsAcrossAllDates === 6 && freshSixMeals > 0) {
-        selectedMealPlanType = '6aweek';
-        console.log('Selected meal plan type: 6aweek (freshSixMeals:', freshSixMeals, ')');
-      } else if (totalItemsAcrossAllDates === 8 && freshEightMeals > 0) {
-        selectedMealPlanType = '8aweek';
-        console.log('Selected meal plan type: 8aweek (freshEightMeals:', freshEightMeals, ')');
-      } else if (totalItemsAcrossAllDates === 10 && freshTenMeals > 0) {
-        selectedMealPlanType = '10aweek';
-        console.log('Selected meal plan type: 10aweek (freshTenMeals:', freshTenMeals, ')');
-      } else if (totalItemsAcrossAllDates === 12 && freshTwelveMeals > 0) {
-        selectedMealPlanType = '12aweek';
-        console.log('Selected meal plan type: 12aweek (freshTwelveMeals:', freshTwelveMeals, ')');
-      } else if (totalItemsAcrossAllDates === 16 && freshSixteenMeals > 0) {
-        selectedMealPlanType = '16aweek';
-        console.log('Selected meal plan type: 16aweek (freshSixteenMeals:', freshSixteenMeals, ')');
-      } else {
-        // This shouldn't happen because we validate in the previous screen,
-        // but just in case, set a fallback based on what's available
-        console.log('No exact match, using fallback logic');
-        if (freshSixMeals > 0) {
-          selectedMealPlanType = '6aweek';
-          console.log('Fallback: Selected 6aweek (freshSixMeals:', freshSixMeals, ')');
-        } else if (freshEightMeals > 0) {
-          selectedMealPlanType = '8aweek';
-          console.log('Fallback: Selected 8aweek (freshEightMeals:', freshEightMeals, ')');
-        } else if (freshTenMeals > 0) {
-          selectedMealPlanType = '10aweek';
-          console.log('Fallback: Selected 10aweek (freshTenMeals:', freshTenMeals, ')');
-        } else if (freshTwelveMeals > 0) {
-          selectedMealPlanType = '12aweek';
-          console.log('Fallback: Selected 12aweek (freshTwelveMeals:', freshTwelveMeals, ')');
-        } else if (freshSixteenMeals > 0) {
-          selectedMealPlanType = '16aweek';
-          console.log('Fallback: Selected 16aweek (freshSixteenMeals:', freshSixteenMeals, ')');
-        }
-      }
-      
-      // Check if we have enough meal plans for the entire cart
-      // CRITICAL: Use fresh data from database, not stale props
-      let hasEnoughMeals = false;
-      if (selectedMealPlanType === '6aweek') {
-        hasEnoughMeals = freshSixMeals >= 1;
-      } else if (selectedMealPlanType === '8aweek') {
-        hasEnoughMeals = freshEightMeals >= 1;
-      } else if (selectedMealPlanType === '10aweek') {
-        hasEnoughMeals = freshTenMeals >= 1;
-      } else if (selectedMealPlanType === '12aweek') {
-        hasEnoughMeals = freshTwelveMeals >= 1;
-      } else if (selectedMealPlanType === '16aweek') {
-        hasEnoughMeals = freshSixteenMeals >= 1;
-      }
-      
-      console.log('Validation check - selectedMealPlanType:', selectedMealPlanType, 'hasEnoughMeals:', hasEnoughMeals);
-      
-      if (!hasEnoughMeals) {
-        console.error('VALIDATION FAILED: Insufficient meal plans. Selected type:', selectedMealPlanType, 'Available:', {
-          freshSixMeals,
-          freshEightMeals,
-          freshTenMeals,
-          freshTwelveMeals,
-          freshSixteenMeals
-        });
-        throw new Error(language === 'zh' ? '餐券不足，请先购买餐券' : 'Insufficient meal plans, please purchase more');
-      }
-      
-      console.log('Validation PASSED. Proceeding with checkout...');
-      
-      // Flag to track if we've already deducted a voucher
-      let voucherDeducted = false;
-      
-      // Get the dates in a consistent order to ensure deterministic processing
-      const sortedDates = Object.keys(cartByDate).sort();
-      console.log(`=== Processing ${sortedDates.length} orders for dates: ${sortedDates.join(', ')} ===`);
-      const isSplitWeeklyCheckout = sortedDates.length > 1;
-      const weeklyEntitlementGroupId = isSplitWeeklyCheckout
-        ? `weg-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`}`
-        : undefined;
-      
-      // Process first date WITH voucher deduction
-      if (sortedDates.length > 0) {
-        const firstDate = sortedDates[0];
-        const firstDateItems = cartByDate[firstDate];
-        
-        console.log(`\n--- Processing FIRST order (${firstDate}) ---`);
-        console.log('Items:', firstDateItems.map(item => `${item.quantity}x ${item.optionId}`));
-        console.log('🔍 DEBUG: Full items being sent to API:', firstDateItems);
-        console.log('Meal plan type:', selectedMealPlanType);
-        console.log('Deduct voucher: TRUE');
-        
-        // First order should deduct a voucher
-        const firstResult = await submitUserSubscription({
-          items: firstDateItems,
-          userId: userData._id,
-          specialInstructions: formData.specialInstructions,
-          deliveryAddress: deliveryAddress,
-          phoneNumber: formData.phone,
-          area: formData.area,
-          mealPlanType: selectedMealPlanType,
-          deductVoucher: true, // First order deducts voucher
-          weeklyEntitlementGroupId,
-          weeklyEntitlementTotalMeals: isSplitWeeklyCheckout ? totalItems : undefined,
-          splitDeliveryCount: isSplitWeeklyCheckout ? sortedDates.length : undefined,
-        });
-        
-        console.log('🔍 DEBUG: First order API response:', firstResult);
-        
-        console.log('First order result:', firstResult.error ? `ERROR: ${firstResult.error}` : 'SUCCESS');
-        
-        if (firstResult.error) {
-          console.error('First order failed with error:', firstResult.error);
-          throw new Error(firstResult.error);
-        }
-        
-        // Update remaining meal plans based on the first order
-        if (firstResult.voucherDeducted) {
-          console.log(`Voucher was deducted for date ${firstDate}, updating remaining counts`);
-          
-          if (firstResult.updatedUser) {
-            if (firstResult.usedMealPlanType === '6aweek') {
-              totalRemainingSixMeals = firstResult.updatedUser.weeklySIXmeals;
-            } else if (firstResult.usedMealPlanType === '8aweek') {
-              totalRemainingEightMeals = firstResult.updatedUser.weeklyEIGHTmeals;
-            } else if (firstResult.usedMealPlanType === '10aweek') {
-              totalRemainingTenMeals = firstResult.updatedUser.weeklyTENmeals;
-            } else if (firstResult.usedMealPlanType === '12aweek') {
-              totalRemainingTwelveMeals = firstResult.updatedUser.weeklyTWELVEmeals;
-            } else if (firstResult.usedMealPlanType === '16aweek') {
-              totalRemainingSixteenMeals = firstResult.updatedUser.weeklySIXTEENmeals;
-            } else {
-              totalRemainingCredits = firstResult.updatedUser.credits;
-            }
-          } else if (firstResult.remainingCredits !== undefined) {
-            // Legacy support for old API response format
-            totalRemainingCredits = firstResult.remainingCredits;
-          }
-        } else {
-          console.log(`Warning: No voucher was deducted for first date ${firstDate}`);
-        }
-        
-        // Add first result to array
-        orderResults.push(firstResult);
-        
-        // Process remaining dates WITHOUT voucher deduction
-        for (let i = 1; i < sortedDates.length; i++) {
-          const date = sortedDates[i];
-          const dateItems = cartByDate[date];
-          
-          console.log(`\n--- Processing additional order ${i+1}/${sortedDates.length} (${date}) ---`);
-          console.log('Items:', dateItems.map(item => `${item.quantity}x ${item.optionId}`));
-          console.log('Meal plan type:', selectedMealPlanType);
-          console.log('Deduct voucher: FALSE');
-          
-          const result = await submitUserSubscription({
-            items: dateItems,
-            userId: userData._id,
-            specialInstructions: formData.specialInstructions,
-            deliveryAddress: deliveryAddress,
-            phoneNumber: formData.phone,
-            area: formData.area,
-            mealPlanType: selectedMealPlanType,
-            deductVoucher: false, // Explicitly set to false for additional orders
-            weeklyEntitlementGroupId,
-            weeklyEntitlementTotalMeals: totalItems,
-            splitDeliveryCount: sortedDates.length,
-          });
-          
-          console.log(`Order ${i+1} result:`, result.error ? `ERROR: ${result.error}` : 'SUCCESS');
-          
-          if (result.error) {
-            console.error(`Order ${i+1} failed with error:`, result.error);
-            throw new Error(result.error);
-          }
-          
-          // Add result to array
-          orderResults.push(result);
-        }
-      }
-      
-      console.log(`\n=== All ${sortedDates.length} orders completed successfully ===`);
-      
-      // All orders were successful
-      // Update user data in localStorage with the final counts
-      console.log('Updating localStorage and state with final counts:', {
-        totalRemainingSixMeals,
-        totalRemainingEightMeals,
-        totalRemainingTenMeals,
-        totalRemainingTwelveMeals,
-        totalRemainingSixteenMeals
-      });
-      
-      userData.credits = totalRemainingCredits;
-      userData.weeklySIXmeals = totalRemainingSixMeals;
-      userData.weeklyEIGHTmeals = totalRemainingEightMeals;
-      userData.weeklyTENmeals = totalRemainingTenMeals;
-      userData.weeklyTWELVEmeals = totalRemainingTwelveMeals;
-      userData.weeklySIXTEENmeals = totalRemainingSixteenMeals;
-      mergeStoredUser({
-        credits: totalRemainingCredits,
-        weeklySIXmeals: totalRemainingSixMeals,
-        weeklyEIGHTmeals: totalRemainingEightMeals,
-        weeklyTENmeals: totalRemainingTenMeals,
-        weeklyTWELVEmeals: totalRemainingTwelveMeals,
-        weeklySIXTEENmeals: totalRemainingSixteenMeals,
-      });
-      
-      // Update state with new values
-      setUserCredits(totalRemainingCredits);
-      setWeeklySIXmeals(totalRemainingSixMeals);
-      setWeeklyEIGHTmeals(totalRemainingEightMeals);
-      setWeeklyTENmeals(totalRemainingTenMeals);
-      setWeeklyTWELVEmeals(totalRemainingTwelveMeals);
-      setWeeklySIXTEENmeals(totalRemainingSixteenMeals);
-      
-      // ✅ NEW: Send order summary email with ALL orders
-      console.log('📧 Sending order summary email...');
-      console.log('📧 Order results:', orderResults);
-      console.log('📧 Number of orders:', orderResults.length);
-      
-      try {
-        const emailPayload = {
-          type: 'weekly',
-          orderIds: orderResults
-            .map((result) => {
-              const orderData = result.order || result
-              return orderData?.orderId
-            })
-            .filter(Boolean)
-        };
-        
-        console.log('📧 Email payload:', JSON.stringify(emailPayload, null, 2));
-        
-        const response = await fetch('/api/send-order-summary-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(emailPayload)
-        });
-        
-        console.log('📧 Response status:', response.status);
-        
-        const result = await response.json();
-        console.log('📧 Email API response:', result);
-        
-        if (result.success) {
-          console.log('✅ Order summary email sent successfully');
-        } else {
-          console.error('❌ Email API returned error:', result.error);
-        }
-      } catch (emailError) {
-        console.error('❌ Failed to send order summary email:', emailError);
-        console.error('❌ Error stack:', emailError);
-        // Don't fail the checkout if email fails
-      }
-      
-      const orderCount = Object.keys(cartByDate).length;
-      toast({
-        title: language === 'zh' ? '订单完成' : 'Order Completed',
-        description: language === 'zh' 
-          ? `您的${orderCount}天的订单已成功提交` 
-          : `Your ${orderCount} orders have been successfully placed`,
-      })
-      
-      // Call onSuccess callback to clear the cart and close the checkout
-      onSuccess()
-      
-    } catch (error) {
-      console.error("Error during checkout:", error);
-      toast({
-        title: language === 'zh' ? '订单失败' : 'Order Failed',
-        description: language === 'zh' ? '处理您的订单时出错' : 'Error processing your order',
-        variant: "destructive"
-      });
-      setIsLoading(false);
-      throw error; // Re-throw to be caught by handleCheckout
-    }
-  }
-
-  // Create a lookup map for meal options
-  const mealOptions = useMemo(() => {
-    const optionsMap: Record<string, Record<string, string>> = {}
-    
-    deliveryDays.forEach((day) => {
-      optionsMap[day.id] = {}
-      day.options.forEach((option) => {
-        // Store the meal name by option ID
-        optionsMap[day.id][option.id] = option.name
-      })
-    })
-    
-    return optionsMap
-  }, [deliveryDays])
-  
-  // CRITICAL FIX: Group cart items by delivery day + weekOffset for display
-  // Use a composite key: "dayId-weekOffset" to distinguish same day across different weeks
-  const cartByDay: Record<string, CartItem[]> = {}
-  
-  cart.forEach(item => {
-    // Create composite key to uniquely identify day across weeks
-    const compositeKey = `${item.dayId}-${item.weekOffset ?? 0}`;
-    if (!cartByDay[compositeKey]) {
-      cartByDay[compositeKey] = []
-    }
-    cartByDay[compositeKey].push(item)
-  })
 
   return (
     <motion.div
@@ -803,93 +161,12 @@ export function WeeklySubscriptionCheckout({
           <CardDescription>{language === 'zh' ? '确认您的订单详情' : 'Confirm your order details'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '已选餐点' : 'Selected Meals'}</h3>
-            <Card className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-[#C2884E]/20">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {Object.entries(cartByDay).map(([compositeKey, items]) => {
-                    // CRITICAL FIX: Extract dayId and weekOffset from composite key (format: "dayId-weekOffset")
-                    const [dayId, weekOffsetStr] = compositeKey.split('-');
-                    const weekOffset = parseInt(weekOffsetStr, 10);
-                    
-                    return (
-                    <div key={compositeKey} className="pb-3 last:pb-0">
-                      <div className="font-medium capitalize mb-2 flex items-center">
-                        <span className="text-[#6B5F53]">
-                          {dayId === 'sunday' ? (language === 'zh' ? '周日' : 'Sunday') : 
-                           dayId === 'tuesday' ? (language === 'zh' ? '周二' : 'Tuesday') : dayId}
-                        </span>
-                        {(() => {
-                          // Find the date using the extracted weekOffset
-                          const matchingDay = deliveryDays.find(
-                            day => day.id === dayId && day.weekOffset === weekOffset
-                          );
-                          if (matchingDay && matchingDay.date) {
-                            return (
-                              <span className="text-[#6B5F53]/60 text-sm ml-2">
-                                ({matchingDay.date})
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                      <div className="space-y-2">
-                        {items.map((item, index) => {
-                          // CRITICAL FIX: Find the option in matching delivery day by BOTH dayId AND weekOffset
-                          let optionName = item.optionId;
-                          const matchingDay = deliveryDays.find(
-                            day => day.id === item.dayId && day.weekOffset === item.weekOffset
-                          );
-                          if (matchingDay) {
-                            const option = matchingDay.options.find(opt => opt.id === item.optionId);
-                            if (option) {
-                              // Use English name if available and language is English
-                              optionName = (language === 'en' && option.nameEn) ? option.nameEn : option.name;
-                            }
-                          }
-                          
-                          return (
-                            <div key={index} className="flex justify-between text-sm">
-                              <div className="flex items-center flex-1">
-                                <CheckCircle2 className="h-4 w-4 text-[#C2884E] mr-2 flex-shrink-0" />
-                                <span>{optionName}{item.quantity > 1 ? ` x${item.quantity}` : ''}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {Object.keys(cartByDay).length > 1 && 
-                       Object.keys(cartByDay).indexOf(compositeKey) < Object.keys(cartByDay).length - 1 && (
-                        <div className="border-b border-[#C2884E]/20 mt-3"></div>
-                      )}
-                    </div>
-                    );
-                  })}
-                  
-                  <div className="border-t border-[#C2884E]/20 pt-2 mt-2 flex justify-between font-medium">
-                    <span>{language === 'zh' ? '总计' : 'Total'}</span>
-                    <span>
-                      {(() => {
-                        if (totalItems === 6) {
-                          return language === 'zh' ? '6餐一周: 1张' : '6 meals/week: 1 voucher';
-                        } else if (totalItems === 8) {
-                          return language === 'zh' ? '8餐一周: 1张' : '8 meals/week: 1 voucher';
-                        } else if (totalItems === 10) {
-                          return language === 'zh' ? '10餐一周: 1张' : '10 meals/week: 1 voucher';
-                        } else if (totalItems === 12) {
-                          return language === 'zh' ? '12餐一周: 1张' : '12 meals/week: 1 voucher';
-                        } else {
-                          return `${totalItems} ${language === 'zh' ? '餐' : 'meals'}`;
-                        }
-                      })()}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <WeeklyCheckoutSummary
+            cart={cart}
+            deliveryDays={deliveryDays}
+            language={language}
+            totalItems={totalItems}
+          />
 
           <div className="space-y-4">
             <h3 className="font-medium">{language === 'zh' ? '配送信息' : 'Delivery Information'}</h3>
@@ -956,128 +233,19 @@ export function WeeklySubscriptionCheckout({
               </div>
               
               {editingAddress ? (
-                <div className="mt-2 space-y-4 p-4 rounded-md border border-primary/30 bg-primary/5 shadow-sm">
-                  <div className="text-sm font-medium text-primary mb-2">
-                    Edit Delivery Details
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="unitNumber" className="text-sm">
-                        Unit/Apt Number
-                      </Label>
-                      <Input 
-                        id="unitNumber" 
-                        value={addressFormData.unitNumber} 
-                        onChange={handleAddressInputChange} 
-                      />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="streetAddress" className="text-sm">
-                        Street name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input 
-                        id="streetAddress" 
-                        value={addressFormData.streetAddress} 
-                        onChange={handleAddressInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="state" className="text-sm">
-                        Area <span className="text-red-500">*</span>
-                      </Label>
-                      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between"
-                          >
-                            {addressFormData.province || (language === 'zh' ? "选择区域..." : "Select area...")}
-                            <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-content-available-width)]">
-                          <Command>
-                            <CommandInput placeholder={language === 'zh' ? "搜索区域..." : "Search area..."} />
-                            <CommandList className="max-h-[200px] overflow-y-auto">
-                              <CommandEmpty>{language === 'zh' ? "未找到匹配的区域" : "No matching areas found"}</CommandEmpty>
-                              <CommandGroup>
-                                {WEEKLY_DELIVERY_REGIONS.map((region) => (
-                                  <CommandItem
-                                    key={region}
-                                    value={region}
-                                    onSelect={() => handleAreaSelect(region)}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        addressFormData.province === region ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {region}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="zip" className="text-sm">
-                        ZIP Code <span className="text-red-500">*</span>
-                      </Label>
-                      <Input 
-                        id="zip" 
-                        value={addressFormData.postalCode} 
-                        onChange={handleAddressInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="buzzCode" className="text-sm">
-                        Buzz Code 
-                        <span className="text-muted-foreground text-xs ml-1">
-                          (Optional)
-                        </span>
-                      </Label>
-                      <Input 
-                        id="buzzCode" 
-                        value={addressFormData.buzzCode} 
-                        onChange={handleAddressInputChange} 
-                        placeholder={language === 'zh' ? '用于访问您的建筑物' : 'For accessing your building'}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 bg-background p-2 rounded-md">
-                    <Checkbox 
-                      id="saveAddress" 
-                      checked={saveAddressForFuture}
-                      onCheckedChange={(checked) => setSaveAddressForFuture(checked === true)}
-                    />
-                    <Label htmlFor="saveAddress" className="text-sm font-normal">
-                        {language === 'zh' ? '保存地址以便将来使用' : 'Save address for future orders'}
-                    </Label>
-                  </div>
-                  
-                  <div className="flex justify-end space-x-2 mt-4 pt-2 border-t border-primary/20">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setEditingAddress(false)}
-                    >
-                      {language === 'zh' ? '取消' : 'Cancel'}
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={handleSaveAddress}
-                    >
-                      {language === 'zh' ? '保存地址' : 'Save Address'}
-                    </Button>
-                  </div>
-                </div>
+                <CheckoutAddressForm
+                  addressFormData={addressFormData}
+                  availableRegions={WEEKLY_DELIVERY_REGIONS}
+                  language={language}
+                  popoverOpen={popoverOpen}
+                  saveAddressForFuture={saveAddressForFuture}
+                  onPopoverOpenChange={setPopoverOpen}
+                  onAddressInputChange={handleAddressInputChange}
+                  onAreaSelect={handleAreaSelect}
+                  onSaveAddressForFutureChange={setSaveAddressForFuture}
+                  onCancel={() => setEditingAddress(false)}
+                  onSave={handleSaveAddress}
+                />
               ) : userData?.address ? (
                 <div className="mt-2 p-4 rounded-md border">
                   <div className="space-y-1">

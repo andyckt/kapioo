@@ -1,7 +1,7 @@
 ---
 title: Foundation Hardening Plan
-status: phase-2e-plus-weekly-refinements-complete
-updated: 2026-03-16
+status: phase-3bc-complete-dashboard-checkout-remaining
+updated: 2026-04-01
 ---
 
 # Foundation Hardening Plan
@@ -17,17 +17,23 @@ How to read this plan:
 - `Fact`: Phase 1 high-risk hardening work has been completed.
 - `Fact`: Phase 2A through 2E are complete.
 - `Fact`: Post-Phase 2E weekly-domain refinements are complete: split-order parent-child model, voucher/meal display fixes, admin traceability, and status-only child cancellation.
-- `Fact`: The next major work area is Phase 3 maintainability improvements.
-- `Inference`: The weekly domain is now in a materially better state than when the original plan was written; Phase 3 can proceed with reduced concern for weekly-order confusion.
+- `Fact`: **Phase 3b (admin decomposition)** is complete: domain slices under `features/admin-*`, shared `components/admin-orders`, lazy-loaded admin tab content, and thin legacy re-exports where applicable.
+- `Fact`: **Phase 3c (typed API contracts)** is complete: `lib/api` response/validation helpers, `lib/contracts` Zod schemas, and route-by-route migration across `app/api` (Auth.js passthrough and SSE shapes preserved where needed).
+- `Fact`: **Phase 3b cleanup (date formatting)** is complete: duplicated dashboard/history `formatDate` logic consolidated into `lib/format.ts` with optional locale for en/zh surfaces.
+- `Fact`: The **next** major maintainability slices are **remaining Phase 3** work: further `app/dashboard/page.tsx` decomposition, checkout/management extraction if desired, and **Phase 4** integration tests. **Must Fix #1–4** remain correctness targets; Phase 3c reduces contract drift but does not replace transactional canonicalization.
+- `Inference`: The weekly domain is in a materially better state than when the original plan was written; admin and API surfaces are now easier to change safely than pre–Phase 3b/3c.
 
-## Checkpoint Summary (post–Phase 2E + weekly refinements)
+## Checkpoint Summary (post–Phase 2E + weekly refinements + Phase 3b/3c)
 
 | Area | Status |
 |------|--------|
 | **Phase 2** | 2A–2E complete. Post-2E weekly refinements (split parent-child, display fixes, traceability, status-only cancellation) complete. |
-| **Next phase** | Phase 3 (maintainability). Start with admin-page decomposition. |
-| **Build next** | Extract lowest-risk admin slices (settings, promo) first, then order/balance sections. |
-| **Wait on** | Must Fix #1–4 (daily canonical, transactions, balance consolidation, schema) remain; Phase 3 does not block them but lowers risk. |
+| **Phase 3b** | Admin-page decomposition complete (feature folders, lazy tabs, shared admin order types/hooks). |
+| **Phase 3c** | Shared API infrastructure and Zod contracts; `app/api` migrated to the new pattern where applicable. |
+| **Phase 3b cleanup** | Dashboard/history date display deduped via `lib/format.ts`. |
+| **Next phase** | Remaining Phase 3 (dashboard/checkout/management extraction as needed) → **Phase 4** tests. |
+| **Build next** | Optional: slim `app/dashboard/page.tsx`; extract heavy checkout/management components; add integration tests for orders/refunds/balances. |
+| **Wait on** | Must Fix #1–4 remain for full correctness closure; Phase 3c improves maintainability and validation, not atomic order+balance writes. |
 | **Risks to watch** | Daily-order path changes before #1 consolidation; order/balance mutations without transactions (#2); manual-balance tooling bypassing update-balance service. |
 
 ## Foundation Summary
@@ -72,6 +78,7 @@ How to read this plan:
 - Expected benefit: Lower drift risk and cleaner ownership.
 - Implementation difficulty: Medium.
 - Risk if left unfixed: Medium to High.
+- `Fact` (2026-04): **Phase 3c** removed inline Mongoose schemas from many API routes in favor of canonical `models/*` imports and shared **Zod** request/query contracts in [`lib/contracts/`](lib/contracts/). Re-audit any remaining daily-admin hotspots against this bar; item 4 is **partially** addressed at scale but **not** automatically closed for every edge route.
 
 ## Should Fix Soon
 
@@ -92,6 +99,7 @@ How to read this plan:
 - Expected benefit: Safer refactors and clearer API contracts.
 - Implementation difficulty: Medium.
 - Risk if left unfixed: Medium to High.
+- `Fact` (2026-04): **Phase 3c** delivered shared Zod contracts and validation helpers across most `app/api` routes; remaining gap is mainly **end-to-end typing on the client** and any stragglers found by audit.
 
 ### 7. Remove dead or conflicting framework artifacts
 - Problem: The repo still contains dead or conflicting framework/security artifacts.
@@ -482,20 +490,20 @@ Reduce change risk by shrinking orchestration layers and standardizing contracts
 
 ### Reassessment (post–Phase 2E and weekly refinements)
 - `Fact`: Phase 2B through 2E are complete. Post-Phase 2E weekly refinements are complete. Backend contracts for orders, balances, and weekly lifecycle are materially stable.
-- `Inference`: Phase 3 is still the correct next phase. The weekly domain is no longer a major source of confusion; admin/dashboard decomposition can proceed without weekly-order uncertainty.
-- `Inference`: Implementation order inside Phase 3 should prioritize admin-page decomposition first, then dashboard, then shared schema adoption, because admin is the most coupled and highest regression-risk surface.
+- `Fact` (2026-04): **Phase 3b** (admin decomposition) and **Phase 3c** (API contracts + route migration) are complete; **Phase 3b cleanup** (shared date formatting) is complete.
+- `Inference`: Remaining Phase 3 work is **dashboard** and **checkout/management** extraction plus **client** alignment with contracts where still hand-rolled; weekly domain is not blocking this.
 
 ### What should be done
-1. Split [`app/admin/page.tsx`](app/admin/page.tsx) into smaller domain composition layers (highest impact first).
+1. ~~Split [`app/admin/page.tsx`](app/admin/page.tsx) into smaller domain composition layers (highest impact first).~~ **Done (Phase 3b).**
 2. Split [`app/dashboard/page.tsx`](app/dashboard/page.tsx) into clearer slices.
 3. Extract shared hooks, client adapters, and view components from the large checkout and management files.
-4. Standardize request schemas and typed client contracts now that the backend has stabilized.
+4. ~~Standardize request schemas and typed route contracts~~ **Done at the API layer (Phase 3c).** Optional follow-up: align more **client** fetchers and UI types with [`lib/contracts/`](lib/contracts/).
 
 ### Recommended Phase 3 implementation order
-1. Admin-page decomposition (start with lowest-risk slices: settings, promo, then order/balance sections).
+1. ~~Admin-page decomposition~~ **Done.**
 2. Dashboard decomposition (profile, order history, subscription views).
-3. Shared schema adoption in clients (typed request/response for core APIs).
-4. Checkout and management component extraction (after admin/dashboard are split).
+3. ~~Shared schema adoption for APIs~~ **Done (`lib/contracts` + `lib/api`).** Extend to clients as needed.
+4. Checkout and management component extraction (after dashboard is split or in parallel where isolated).
 
 ### Dependencies
 - Phase 2B through 2E are complete. Backend contracts are stable enough for Phase 3.
@@ -508,6 +516,19 @@ Reduce change risk by shrinking orchestration layers and standardizing contracts
 ### Verify after completion
 - The largest controller-style files have reduced scope.
 - Client flows depend on typed shared contracts instead of hand-built fetch shapes.
+
+### Phase 3b execution record (admin decomposition)
+- `Fact`: Admin order and daily-menu UI were decomposed into `features/admin-daily-orders`, `features/admin-weekly-orders`, `features/admin-daily-menu`, and shared `components/admin-orders` with `lib/types/orders.ts`. Legacy `view-all-orders`, `view-weekly-orders`, and `daily-delivery-management` became thin re-exports where applicable.
+- `Fact`: Admin tab shell uses lazy-loaded feature modules from `features/admin-page/admin-dashboard-tab-content.tsx` to reduce initial bundle and clarify boundaries.
+
+### Phase 3c execution record (typed API contracts)
+- `Fact`: Shared helpers live under [`lib/api/`](lib/api/) (`successJson`, `errorJson`, `handleRouteError`, Zod-backed `parseJsonBody` / `parseSearchParams`, `AuthenticatedActor` typing).
+- `Fact`: Domain Zod schemas live under [`lib/contracts/`](lib/contracts/) with a barrel export; many routes in [`app/api/`](app/api/) were migrated while preserving legacy JSON response shapes where clients depend on them.
+- `Inference`: Full-repo `tsc` clean is still a separate goal; isolated checks were used during migration. Phase 4 tests will lock behavior as types are tightened further.
+
+### Phase 3b cleanup execution record (formatting)
+- `Fact`: [`lib/format.ts`](lib/format.ts) `formatDate` / `formatDateTime` accept optional `locale` and `Intl.DateTimeFormatOptions` so en/zh history views can share Toronto timezone defaults without duplicating `toLocaleDateString` blocks.
+- `Fact`: Migrated components include meal voucher admin, unified recharge history, credit/voucher purchase history, weekly subscription history, and daily delivery history.
 
 ## Phase 4: Test Coverage And Hardening
 
@@ -552,10 +573,10 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 
 ## Recommended First Implementation Batch
 
-### Next step: Phase 3 (roughly 1–2 weeks to first measurable impact)
-- Start with admin-page decomposition: extract lowest-risk slices (settings, promo) first, then order/balance sections.
-- This reduces regression blast radius before touching the most coupled admin logic.
-- Weekly domain is now stable; no need to defer Phase 3 for weekly-order uncertainty.
+### Next step: Finish remaining Phase 3 + Phase 4
+- **Remaining Phase 3**: Further decomposition of [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and optional extraction from large checkout/management components ([`components/weekly-subscription-checkout.tsx`](components/weekly-subscription-checkout.tsx), [`components/daily-delivery-checkout.tsx`](components/daily-delivery-checkout.tsx), etc.) if still monolithic.
+- **Phase 4**: Add integration coverage for auth boundaries, daily/weekly orders, refunds, and balance mutations against canonical routes/services.
+- Admin decomposition and API contract layer are **already in place**; weekly domain remains stable.
 
 ### Before any major new core-commerce feature work
 - Phase 2B through 2E are complete.
@@ -585,7 +606,10 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - [x] Complete Phase 2D balance-mutation consolidation.
 - [x] Complete Phase 2E consumer cleanup and dead-path removal.
 - [x] Post-Phase 2E weekly refinements (split parent-child, display, traceability, status-only cancellation).
-- [ ] Split `app/admin/page.tsx` and `app/dashboard/page.tsx` (Phase 3; backend contracts stable).
-- [ ] Standardize shared request/response schemas for core business flows.
-- [ ] Add integration coverage for auth, orders, refunds, and balance correctness.
+- [x] Phase 3b: Admin-page decomposition (feature slices, lazy tabs, `components/admin-orders`, `lib/types/orders.ts`).
+- [x] Phase 3c: Standardize shared request/response schemas and API validation (`lib/api`, `lib/contracts`, `app/api` migration).
+- [x] Phase 3b cleanup: Dedupe dashboard/history date formatting via [`lib/format.ts`](lib/format.ts).
+- [x] Phase 3 (remaining): Further split [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and extract checkout/management orchestration as needed.
+- [ ] Add integration coverage for auth, orders, refunds, and balance correctness (Phase 4).
 - [ ] Optional: delete 410-stub route files under `app/api/orders` once no external callers remain (Phase 2E retired paths and removed `lib/middleware.ts`).
+- [ ] Must Fix #1–4: Track to closure (daily canonical completeness, transactional order+balance writes, balance-path consolidation, any remaining schema drift).

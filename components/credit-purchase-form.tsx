@@ -20,7 +20,10 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
-import { convertHeicToJpeg } from "@/lib/heic-conversion"
+import {
+  PaymentProofClientError,
+  preparePaymentProofFile,
+} from "@/lib/upload/payment-proof-client"
 
 interface CreditPurchaseFormProps {
   userId: string;
@@ -66,52 +69,7 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
     setIsLoading(true);
     
     try {
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp'];
-      
-      // Check if file is HEIC/HEIF
-      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || 
-                    (file.type === '' && (file.name.endsWith('.heic') || file.name.endsWith('.heif')));
-      
-      if (!validTypes.includes(file.type) && !isHeic) {
-        toast({
-          title: language === 'en' ? "Invalid file type" : "无效的文件类型",
-          description: language === 'en' ? "Please upload a valid image format" : "请上传有效的图片格式",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Validate file size (10MB max)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        toast({
-          title: language === 'en' ? "File too large" : "文件过大",
-          description: language === 'en' ? "File size must be less than 10MB" : "文件大小必须小于10MB",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      let processedFile = file;
-      
-      // Load HEIC conversion only when a HEIC/HEIF file is actually selected.
-      if (isHeic) {
-        try {
-          processedFile = await convertHeicToJpeg(file, 0.8)
-        } catch (conversionError) {
-          console.error('Error converting HEIC to JPEG:', conversionError);
-          toast({
-            title: language === 'en' ? "Conversion failed" : "转换失败",
-            description: language === 'en' ? "Failed to convert HEIC image. Please try another format." : "无法转换HEIC图片。请尝试其他格式。",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
+      const processedFile = await preparePaymentProofFile(file)
 
       // Create preview
       const reader = new FileReader();
@@ -126,11 +84,33 @@ export function CreditPurchaseForm({ userId, onSuccess }: CreditPurchaseFormProp
       reader.readAsDataURL(processedFile);
     } catch (error) {
       console.error('Error processing file:', error);
-      toast({
-        title: language === 'en' ? "Error" : "错误",
-        description: language === 'en' ? "Failed to process the image" : "处理图片失败",
-        variant: "destructive"
-      });
+
+      if (error instanceof PaymentProofClientError && error.code === 'invalid_type') {
+        toast({
+          title: language === 'en' ? "Invalid file type" : "无效的文件类型",
+          description: language === 'en' ? "Please upload a valid image format" : "请上传有效的图片格式",
+          variant: "destructive"
+        });
+      } else if (error instanceof PaymentProofClientError && error.code === 'too_large') {
+        toast({
+          title: language === 'en' ? "File too large" : "文件过大",
+          description: language === 'en' ? "File size must be less than 5MB" : "文件大小必须小于5MB",
+          variant: "destructive"
+        });
+      } else if (error instanceof PaymentProofClientError && error.code === 'conversion_failed') {
+        toast({
+          title: language === 'en' ? "Conversion failed" : "转换失败",
+          description: language === 'en' ? "Failed to convert HEIC image. Please try another format." : "无法转换HEIC图片。请尝试其他格式。",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: language === 'en' ? "Error" : "错误",
+          description: language === 'en' ? "Failed to process the image" : "处理图片失败",
+          variant: "destructive"
+        });
+      }
+
       setIsLoading(false);
     }
   };

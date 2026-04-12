@@ -3,13 +3,20 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { usePromoCode } from '@/hooks/use-promo-code'
+import { useRegionAddressUpdate } from '@/hooks/use-region-address-update'
+import { useUserPhoneSync } from '@/hooks/use-user-phone-sync'
 import { useToast } from '@/hooks/use-toast'
-import { mergeStoredUser } from '@/lib/client-user-cache'
 import { useLanguage } from '@/lib/language-context'
-import { ensureUserPhone, getStoredUser, normalizePhoneInput } from '@/lib/phone-helper'
-import { convertHeicToJpeg } from '@/lib/heic-conversion'
+import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
 import { listDailyPlans } from '@/lib/plans/service'
+import type { PricingBreakdown } from '@/lib/promo-code-shared'
+import {
+  PaymentProofClientError,
+  preparePaymentProofFile,
+  uploadPaymentProof,
+} from '@/lib/upload/payment-proof-client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,7 +24,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { useRouter } from 'next/navigation'
+import { MealVoucherPlanGrid } from '@/features/meal-voucher-purchase/meal-voucher-plan-grid'
+import { MealVoucherUploadStep } from '@/features/meal-voucher-purchase/meal-voucher-upload-step'
 import { 
   CreditCard, 
   Upload, 
@@ -58,18 +66,8 @@ interface MealVoucherPurchaseProps {
   onSuccess?: () => void;
 }
 
-interface PromoPreviewBreakdown {
-  currency: 'CAD';
-  originalSubtotal: number;
-  discountAmount: number;
-  discountedSubtotal: number;
-  taxRate: number;
-  taxAmount: number;
-  finalTotal: number;
-}
-
 export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchaseProps = {}) {
-  const { t, language } = useLanguage()
+  const { language } = useLanguage()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -81,18 +79,9 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [interacEmail, setInteracEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
-  const router = useRouter()
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   const [showRegionDialog, setShowRegionDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
-  const [selectedRegion, setSelectedRegion] = useState<string>("")
-  const [popoverOpen, setPopoverOpen] = useState(false)
-  const [promoCodeInput, setPromoCodeInput] = useState('')
-  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null)
-  const [promoBreakdown, setPromoBreakdown] = useState<PromoPreviewBreakdown | null>(null)
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false)
-  const [promoError, setPromoError] = useState('')
-
   const allDailyPlans: VoucherPlan[] = listDailyPlans().map((plan) => ({
     id: plan.id,
     type: plan.dishType,
@@ -109,7 +98,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   // Use centralized daily delivery areas
   const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
 
-  const defaultPricing = selectedPlan
+  const defaultPricing: PricingBreakdown | null = selectedPlan
     ? {
         currency: 'CAD' as const,
         originalSubtotal: selectedPlan.price,
@@ -121,10 +110,47 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       }
     : null
 
+  const storedPromoUser = getStoredUser()
+  const storedUserId = storedPromoUser?._id ?? null
+  const {
+    promoCodeInput,
+    setPromoCodeInput,
+    appliedPromoCode,
+    promoBreakdown,
+    isApplyingPromo,
+    promoError,
+    handleApplyPromo,
+    handleRemovePromo,
+  } = usePromoCode({
+    language,
+    request: selectedPlan
+      ? {
+          userId: storedPromoUser?._id ?? null,
+          purchaseType: 'daily_topup',
+          paymentMethod: 'emt',
+          mealSubtotal: selectedPlan.price,
+          deliveryFeeTotal: 0,
+          taxRate: 0.13,
+        }
+      : null,
+    missingUserError: language === 'zh' ? '请先登录' : 'Please log in first',
+    resetKeys: [selectedPlan?.id],
+    onApplySuccess: () => {
+      toast({
+        title: language === 'zh' ? '优惠码已应用' : 'Promo code applied',
+        description: language === 'zh' ? '折扣将在税前应用。' : 'Discount is applied before tax.'
+      })
+    },
+  })
+
   const effectivePricing = promoBreakdown || defaultPricing
   const discountedUnitPrice = selectedPlan && effectivePricing
     ? effectivePricing.discountedSubtotal / selectedPlan.quantity
     : null
+
+  const { handleRegionChange } = useRegionAddressUpdate({
+    onSuccess: setUserRegion,
+  })
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,63 +162,37 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     setIsLoading(true);
     
     try {
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp'];
-      
-      // Check if file is HEIC/HEIF
-      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || 
-                    (file.type === '' && (file.name.endsWith('.heic') || file.name.endsWith('.heif')));
-      
-      if (!validTypes.includes(file.type) && !isHeic) {
+      const processedFile = await preparePaymentProofFile(file)
+      setPaymentProof(processedFile)
+    } catch (error) {
+      console.error('Error processing file:', error);
+
+      if (error instanceof PaymentProofClientError && error.code === 'invalid_type') {
         toast({
           title: language === 'zh' ? "无效的文件类型" : "Invalid file type",
           description: language === 'zh' ? "请上传有效的图片格式" : "Please upload a valid image format",
           variant: "destructive"
         });
-        setIsLoading(false);
-        return;
-      }
-
-      // Validate file size (10MB max)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
+      } else if (error instanceof PaymentProofClientError && error.code === 'too_large') {
         toast({
           title: language === 'zh' ? "文件过大" : "File too large",
-          description: language === 'zh' ? "文件大小必须小于10MB" : "File size must be less than 10MB",
+          description: language === 'zh' ? "文件大小必须小于5MB" : "File size must be less than 5MB",
           variant: "destructive"
         });
-        setIsLoading(false);
-        return;
+      } else if (error instanceof PaymentProofClientError && error.code === 'conversion_failed') {
+        toast({
+          title: language === 'zh' ? "转换失败" : "Conversion failed",
+          description: language === 'zh' ? "无法转换HEIC图片。请尝试其他格式。" : "Failed to convert HEIC image. Please try another format.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: language === 'zh' ? "错误" : "Error",
+          description: language === 'zh' ? "处理图片失败" : "Failed to process the image",
+          variant: "destructive"
+        });
       }
-      
-      let processedFile = file;
-      
-      // Load HEIC conversion only when a HEIC/HEIF file is actually selected.
-      if (isHeic) {
-        try {
-          processedFile = await convertHeicToJpeg(file, 0.8)
-        } catch (conversionError) {
-          console.error('Error converting HEIC to JPEG:', conversionError);
-          toast({
-            title: language === 'zh' ? "转换失败" : "Conversion failed",
-            description: language === 'zh' ? "无法转换HEIC图片。请尝试其他格式。" : "Failed to convert HEIC image. Please try another format.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-      
-      // Set the processed file
-      setPaymentProof(processedFile);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error processing file:', error);
-      toast({
-        title: language === 'zh' ? "错误" : "Error",
-        description: language === 'zh' ? "处理图片失败" : "Failed to process the image",
-        variant: "destructive"
-      });
+    } finally {
       setIsLoading(false);
     }
   }
@@ -209,88 +209,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       }
     }
   }, [])
-
-  useEffect(() => {
-    setAppliedPromoCode(null)
-    setPromoBreakdown(null)
-    setPromoError('')
-  }, [selectedPlan?.id])
-
-  // Handle region change
-  const handleRegionChange = async (region: string, addressData?: any): Promise<void> => {
-    try {
-      // Get user data from localStorage
-      const userData = localStorage.getItem('user')
-      if (!userData) {
-        throw new Error('User not logged in')
-      }
-
-      const user = JSON.parse(userData)
-      
-      // Update user's address with the new region and optional address data
-      let updatedAddress = {
-        ...user.address,
-        province: region
-      }
-      
-      // If additional address data is provided, merge it with the updated address
-      if (addressData) {
-        updatedAddress = {
-          ...updatedAddress,
-          unitNumber: addressData.unitNumber !== undefined ? addressData.unitNumber : updatedAddress.unitNumber,
-          streetAddress: addressData.streetAddress !== undefined ? addressData.streetAddress : updatedAddress.streetAddress,
-          city: addressData.city !== undefined ? addressData.city : updatedAddress.city,
-          postalCode: addressData.postalCode !== undefined ? addressData.postalCode : updatedAddress.postalCode,
-          country: addressData.country !== undefined ? addressData.country : 'Canada',
-          buzzCode: addressData.buzzCode !== undefined ? addressData.buzzCode : updatedAddress.buzzCode
-        }
-      }
-      
-      // Update user data in the database
-      const response = await fetch(`/api/users/${user._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: updatedAddress
-        }),
-      })
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        mergeStoredUser({ address: updatedAddress })
-        
-        // Update state
-        setUserRegion(region)
-        
-        const toastMessage = addressData 
-          ? (language === 'zh' ? "地址已更新" : "Address Updated") 
-          : (language === 'zh' ? "区域已更新" : "Region Updated")
-          
-        const toastDescription = addressData
-          ? (language === 'zh' ? "您的配送地址已成功更新" : "Your delivery address has been successfully updated")
-          : (language === 'zh' ? "您的区域已成功更新" : "Your region has been successfully updated")
-        
-        toast({
-          title: toastMessage,
-          description: toastDescription
-        })
-      } else {
-        throw new Error(result.error || 'Failed to update region')
-      }
-    } catch (error) {
-      console.error('Error updating region:', error)
-      toast({
-        title: language === 'zh' ? "更新失败" : "Update Failed",
-        description: error instanceof Error ? error.message : 
-          (language === 'zh' ? "更新地址时出现错误" : "An error occurred while updating your address"),
-        variant: "destructive"
-      })
-      throw error
-    }
-  }
 
   // Handle plan selection
   const handlePlanSelect = (plan: VoucherPlan) => {
@@ -320,23 +238,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   }
 
   // Handle file upload to AWS S3
-  const uploadFileToS3 = async (file: File): Promise<string> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Failed to upload file')
-    }
-    
-    const data = await response.json()
-    return data.url
-  }
+  const uploadFileToS3 = async (file: File): Promise<string> => uploadPaymentProof(file)
 
   // Handle payment proof upload and submission
   const handleUpload = async () => {
@@ -361,64 +263,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     await handleSubmitPurchase()
   }
 
-  const handleApplyPromo = async () => {
-    if (!selectedPlan) return
-    const code = promoCodeInput.trim().toUpperCase()
-    if (!code) {
-      setPromoError(language === 'zh' ? '请输入优惠码' : 'Please enter a promo code')
-      return
-    }
-
-    const userData = localStorage.getItem('user')
-    if (!userData) {
-      setPromoError(language === 'zh' ? '请先登录' : 'Please log in first')
-      return
-    }
-
-    const user = JSON.parse(userData)
-    setIsApplyingPromo(true)
-    setPromoError('')
-    try {
-      const response = await fetch('/api/promo-codes/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          userId: user._id,
-          purchaseType: 'daily_topup',
-          paymentMethod: 'emt',
-          mealSubtotal: selectedPlan.price,
-          deliveryFeeTotal: 0,
-          taxRate: 0.13
-        })
-      })
-      const result = await response.json()
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to apply promo code')
-      }
-      setAppliedPromoCode(code)
-      setPromoBreakdown(result.data.breakdown)
-      setPromoCodeInput(code)
-      toast({
-        title: language === 'zh' ? '优惠码已应用' : 'Promo code applied',
-        description: language === 'zh' ? '折扣将在税前应用。' : 'Discount is applied before tax.'
-      })
-    } catch (error: any) {
-      setAppliedPromoCode(null)
-      setPromoBreakdown(null)
-      setPromoError(error?.message || (language === 'zh' ? '优惠码无效' : 'Invalid promo code'))
-    } finally {
-      setIsApplyingPromo(false)
-    }
-  }
-
-  const handleRemovePromo = () => {
-    setAppliedPromoCode(null)
-    setPromoBreakdown(null)
-    setPromoCodeInput('')
-    setPromoError('')
-  }
-
   // Handle purchase submission
   const handleSubmitPurchase = async () => {
     if (!selectedPlan || !paymentProof) {
@@ -433,9 +277,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     setIsLoading(true)
 
     try {
-      const isPromoUsed =
-        !!appliedPromoCode || promoCodeInput.trim() !== ''
-
       const storedUser = getStoredUser()
       if (!storedUser?._id) {
         toast({
@@ -525,665 +366,17 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     }
   }
 
-  // Render the plan cards
-  const renderPlanCards = (plans: VoucherPlan[]) => {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-        {plans.map((plan) => (
-          <motion.div
-            key={plan.id}
-            whileHover={{ y: -8, boxShadow: "0 10px 25px -5px rgba(194, 136, 78, 0.1), 0 8px 10px -6px rgba(194, 136, 78, 0.1)" }}
-            transition={{ duration: 0.3 }}
-            className={`relative flex flex-col h-full rounded-xl border overflow-hidden group ${
-              selectedPlan?.id === plan.id 
-                ? "border-[#C2884E] ring-2 ring-[#C2884E]/30" 
-                : "border-[#C2884E]/10 hover:border-[#C2884E]/30"
-            }`}
-          >
-            {/* Plan tag badge - shows actual tag from catalog (e.g. First Time Recommend!, Best Value) */}
-            {plan.savings && (
-              <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
-                {plan.savings}
-              </div>
-            )}
-            
-            {/* Card header */}
-            <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white p-5 relative overflow-hidden">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="bg-white/20 p-1.5 rounded-full">
-                    <Utensils className="h-3 w-3" />
-                  </div>
-                  <span className="text-sm font-medium opacity-90">
-                    {plan.type === 'twoDish' 
-                      ? (language === 'zh' ? '每餐2菜' : '2-Dish Meal') 
-                      : (language === 'zh' ? '每餐3菜' : '3-Dish Meal')}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold">${plan.price}</span>
-                  <span className="text-sm opacity-80">
-                    / {plan.quantity} {language === 'zh' ? '餐券' : 'vouchers'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Card content */}
-            <div className="flex flex-col flex-1 p-5 bg-gradient-to-b from-white to-[#F5EDE4]/20">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-[#C2884E]" />
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '餐券数量' : 'Vouchers'}
-                    </span>
-                  </div>
-                  <span className="font-bold text-[#C2884E]">{plan.quantity}</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Tag className="h-4 w-4 text-[#C2884E]" />
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '单价' : 'Per meal'}
-                    </span>
-                  </div>
-                  <span className="font-bold text-[#C2884E]">${plan.pricePerMeal.toFixed(2)}</span>
-                </div>
-              </div>
-              
-              <div className="space-y-2 mb-4 pt-3 border-t border-[#C2884E]/10">
-                {/* Show 首次推荐 as first tick if available */}
-                {plan.savings && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
-                    <span className="text-[#6B5F53]">{plan.savings}</span>
-                  </div>
-                )}
-                
-                {/* Show 可转让 as first tick for plans without savings */}
-                {!plan.savings && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
-                    <span className="text-[#6B5F53]">
-                      {language === 'zh' ? '可转让' : 'Transferable'}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Show 可转让 as second tick for plans with savings */}
-                {plan.savings && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
-                    <span className="text-[#6B5F53]">
-                      {language === 'zh' ? '可转让' : 'Transferable'}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Show Valid for 6 months */}
-                <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
-                  <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
-                  </span>
-                </div>
-                
-                {/* Show refund policy */}
-                <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 shrink-0 text-[#C2884E] mt-0.5" />
-                  <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '购买后7天内可退款未用部分' : 'Unused portion refundable within 7 days of purchase'}
-                  </span>
-                </div>
-              </div>
-              
-              <Button
-                className="w-full mt-auto bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
-                onClick={() => handlePlanSelect(plan)}
-              >
-                {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
-              </Button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    )
+  const handleResetPurchaseFlow = () => {
+    setIsSubmitted(false)
+    setSelectedPlan(null)
+    setPaymentProof(null)
+    setNotes('')
+    setPurchaseStep('select')
   }
-
-  // Render success message
-  const renderSuccessMessage = () => {
-    return (
-      <Card className="w-full max-w-2xl mx-auto shadow-lg border-[#C2884E]/10">
-        <CardContent className="p-6 text-center">
-          <div className="mb-6">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="h-10 w-10 text-green-600" />
-            </div>
-            <h3 className="text-xl font-medium text-[#6B5F53] mb-2">
-              {language === 'zh' ? '您的购买请求已提交' : 'Your purchase request has been submitted'}
-            </h3>
-            <p className="text-muted-foreground">
-              {language === 'zh' 
-                ? '我们将在营业时间内（周一至周五上午11点至晚上8点）30-60分钟内处理您的请求' 
-                : 'We process in 30-60 mins during business hours Monday to Friday 11am to 8pm'}
-            </p>
-            <p className="text-muted-foreground mt-2">
-              {language === 'zh' ? '审核结果将通过电子邮件通知您' : 'You will receive an email notification'}
-            </p>
-            <p className="text-muted-foreground mt-2 text-sm">
-              {language === 'zh' ? '通知邮件可能会进入您的垃圾邮件文件夹，请注意查收。' : 'The notification email may be in your spam folder, please check.'}
-            </p>
-          </div>
-          <Button 
-            className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
-            onClick={() => {
-              setIsSubmitted(false);
-              setSelectedPlan(null);
-              setPaymentProof(null);
-              setNotes('');
-              setPurchaseStep('select');
-            }}
-          >
-            {language === 'zh' ? '返回' : 'Return to Plans'}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Render the upload section
-  const renderUploadSection = () => {
-    if (isSubmitted) {
-      return renderSuccessMessage();
-    }
-    
-    return (
-      <Card className="w-full max-w-2xl mx-auto shadow-lg border-[#C2884E]/10">
-        <CardHeader className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-[#C2884E] p-2 rounded-full text-white">
-              <Upload className="h-4 w-4" />
-            </div>
-            <CardTitle>{language === 'zh' ? '上传付款凭证' : 'Upload Payment Proof'}</CardTitle>
-          </div>
-          <CardDescription>
-            {language === 'zh' 
-              ? '请通过Interac e-Transfer转账后上传付款凭证' 
-              : 'Please upload proof of payment after sending Interac e-Transfer'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-          {/* Selected plan summary */}
-          {selectedPlan && (
-            <div className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] p-5 rounded-xl border border-[#C2884E]/10 shadow-sm">
-              <h3 className="font-medium mb-3 text-[#6B5F53] flex items-center gap-2">
-                <Tag className="h-4 w-4 text-[#C2884E]" />
-                {language === 'zh' ? '已选套餐' : 'Selected Plan'}
-              </h3>
-              <div className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] w-10 h-10 rounded-full flex items-center justify-center text-white">
-                    <Utensils className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#6B5F53]">
-                      {selectedPlan.type === 'twoDish' 
-                        ? (language === 'zh' ? '每餐2菜' : '2-Dish Meal') 
-                        : (language === 'zh' ? '每餐3菜' : '3-Dish Meal')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedPlan.quantity} {language === 'zh' ? '餐券' : 'vouchers'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-[#C2884E]">${selectedPlan.price}</p>
-                  <p className="text-xs text-muted-foreground flex items-center justify-end gap-2">
-                    {appliedPromoCode && discountedUnitPrice ? (
-                      <>
-                        <span className="line-through opacity-60">
-                          ${selectedPlan.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
-                        </span>
-                        <span className="font-semibold text-green-700">
-                          ${discountedUnitPrice.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
-                        </span>
-                      </>
-                    ) : (
-                      <span>
-                        ${selectedPlan.pricePerMeal.toFixed(2)} {language === 'zh' ? '每餐' : '/meal'}
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Payment Method and Tax Information - commented out
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <h4 className="font-medium text-amber-800 mb-2">{language === 'zh' ? '付款方式与税费说明' : 'Payment Method & Tax Information'}</h4>
-            <div className="space-y-2 text-sm text-amber-700">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600" />
-                <p>{language === 'zh' ? '通过EMT电子转账支付需额外缴纳13%税费' : 'Additional 13% tax applies when paying via EMT'}</p>
-              </div>
-            </div>
-          </div>
-          */}
-          
-          {/* E-Transfer Information */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? 'Interac e-Transfer 信息' : 'Interac e-Transfer Information'}
-            </h3>
-            
-            <div className="bg-white border border-[#C2884E]/10 rounded-xl overflow-hidden shadow-sm">
-              <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] px-4 py-2 text-white text-sm font-medium">
-                {language === 'zh' ? '付款详情' : 'Payment Details'}
-              </div>
-              <div className="p-4 space-y-3">
-                <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '收款人邮箱' : 'Recipient Email'}</p>
-                  <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
-                </div>
-                <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '小计' : 'Subtotal'}</p>
-                  <p className="font-medium text-[#6B5F53]">${effectivePricing?.originalSubtotal.toFixed(2) || '0.00'}</p>
-                </div>
-                {effectivePricing && effectivePricing.discountAmount > 0 ? (
-                  <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
-                    <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '优惠折扣' : 'Promo Discount'}</p>
-                    <p className="font-medium text-green-700">-${effectivePricing.discountAmount.toFixed(2)}</p>
-                  </div>
-                ) : null}
-                <div className="flex justify-between items-center border-b border-dashed border-[#C2884E]/10 pb-2">
-                  <p className="text-sm text-[#6B5F53]">{language === 'zh' ? '税费 (13%)' : 'Tax (13%)'}</p>
-                  <p className="font-medium text-[#6B5F53]">${effectivePricing?.taxAmount.toFixed(2) || '0.00'}</p>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium text-[#6B5F53]">{language === 'zh' ? '总金额' : 'Total Amount'}</p>
-                  <p className="font-bold text-[#C2884E]">${effectivePricing?.finalTotal.toFixed(2) || '0.00'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Promo Code */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
-              <Ticket className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '优惠码' : 'Promo Code'}
-            </h3>
-            <div className="flex gap-2">
-              <Input
-                value={promoCodeInput}
-                onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
-                placeholder={language === 'zh' ? '输入优惠码' : 'Enter promo code'}
-                className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-              />
-              {appliedPromoCode ? (
-                <Button type="button" variant="outline" onClick={handleRemovePromo}>
-                  {language === 'zh' ? '移除' : 'Remove'}
-                </Button>
-              ) : (
-                <Button type="button" onClick={handleApplyPromo} disabled={isApplyingPromo}>
-                  {isApplyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : language === 'zh' ? '应用' : 'Apply'}
-                </Button>
-              )}
-            </div>
-            {appliedPromoCode ? (
-              <p className="text-xs text-green-700">
-                {language === 'zh' ? '已应用优惠码：' : 'Applied promo code: '}
-                <span className="font-semibold">{appliedPromoCode}</span>
-              </p>
-            ) : null}
-            {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
-          </div>
-
-          {/* Upload Section */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
-              <Upload className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '上传付款凭证' : 'Upload Payment Proof'}
-            </h3>
-            
-            <div 
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 
-                ${paymentProof 
-                  ? 'bg-green-50 border-green-200 hover:bg-green-100/70' 
-                  : 'border-[#C2884E]/20 hover:border-[#C2884E]/40 hover:bg-[#F5EDE4]/30'}`}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {paymentProof ? (
-                <motion.div 
-                  className="space-y-3"
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-sm border border-green-200">
-                    <Check className="h-8 w-8 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-green-700">{paymentProof.name}</p>
-                    <p className="text-sm text-green-600 mt-1">
-                      {language === 'zh' ? '文件已上传' : 'File uploaded'}
-                    </p>
-                    <p className="text-xs text-green-500 mt-2">
-                      {language === 'zh' ? '点击更换文件' : 'Click to change file'}
-                    </p>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  className="space-y-3"
-                  whileHover={{ scale: 1.03 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="bg-[#F5EDE4] w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-sm">
-                    {isLoading ? (
-                      <Loader2 className="h-6 w-6 text-[#C2884E] animate-spin" />
-                    ) : (
-                      <Upload className="h-6 w-6 text-[#C2884E]" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '点击上传付款凭证' : 'Click to upload payment proof'}
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-              <input 
-                ref={fileInputRef}
-                id="payment-proof" 
-                type="file" 
-                className="hidden" 
-                accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif,image/tiff,image/bmp,application/pdf"
-                onChange={handleFileChange}
-              />
-            </div>
-          </div>
-
-          {/* INTERAC Email Section */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? 'INTERAC 电子转账邮箱' : 'INTERAC e-Transfer Email'}
-              <span className="text-red-500">*</span>
-            </h3>
-            <Input
-              id="interacEmail"
-              type="email"
-              placeholder={language === 'zh' ? '输入您用于发送电子转账的邮箱' : 'Enter the email you used to send the e-Transfer'}
-              value={interacEmail}
-              onChange={(e) => setInteracEmail(e.target.value)}
-              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-              required
-            />
-            <p className="text-xs text-[#8A7968]">
-              {language === 'zh' ? '我们将使用此邮箱来匹配您的付款和订单。' : "We'll use this to match your payment to your order."}
-            </p>
-          </div>
-
-          {/* Phone Section */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
-              <Phone className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '手机号码' : 'Phone number'}
-              <span className="text-red-500">*</span>
-            </h3>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder={language === 'zh' ? '输入您的手机号' : 'Enter your phone number'}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-            />
-          </div>
-
-          {/* Notes Section */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-[#6B5F53] flex items-center gap-2">
-              <Info className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '备注 (可选)' : 'Notes (Optional)'}
-            </h3>
-            <Textarea 
-              id="notes" 
-              placeholder={language === 'zh' ? '添加任何其他相关信息' : 'Add any other relevant information'}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between border-t border-[#C2884E]/10 bg-gradient-to-r from-[#FBF7F2]/50 to-[#F5EDE4]/50">
-          <Button 
-            variant="outline" 
-            onClick={() => setPurchaseStep('select')}
-            className="border-[#C2884E]/20 text-[#6B5F53] hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            {language === 'zh' ? '返回' : 'Back'}
-          </Button>
-            <Button 
-              onClick={handleUpload}
-              className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] hover:opacity-90"
-              disabled={!paymentProof || isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {language === 'zh' ? '提交中...' : 'Submitting...'}
-                </>
-              ) : (
-                <>
-                  {language === 'zh' ? '提交' : 'Submit'}
-                </>
-              )}
-            </Button>
-        </CardFooter>
-      </Card>
-    )
-  }
-
-  // Render the confirmation section
-  const renderConfirmSection = () => {
-    return (
-      <Card className="w-full max-w-2xl mx-auto shadow-lg border-[#C2884E]/10">
-        <CardHeader className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] border-b border-[#C2884E]/10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-[#C2884E] p-2 rounded-full text-white">
-              <Check className="h-4 w-4" />
-            </div>
-            <CardTitle>{language === 'zh' ? '确认购买' : 'Confirm Purchase'}</CardTitle>
-          </div>
-          <CardDescription>
-            {language === 'zh' 
-              ? '请确认您的购买信息' 
-              : 'Please confirm your purchase information'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-          {/* Order Summary */}
-          <div className="bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4] p-5 rounded-xl border border-[#C2884E]/10 shadow-sm">
-            <h3 className="font-medium mb-4 text-[#6B5F53] flex items-center gap-2">
-              <Tag className="h-4 w-4 text-[#C2884E]" />
-              {language === 'zh' ? '订单摘要' : 'Order Summary'}
-            </h3>
-            
-            {/* Plan details */}
-            <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-              <div className="flex justify-between items-center mb-4 pb-3 border-b border-dashed border-[#C2884E]/10">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] w-12 h-12 rounded-full flex items-center justify-center text-white">
-                    <Utensils className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-[#6B5F53]">
-                      {selectedPlan?.type === 'twoDish' 
-                        ? (language === 'zh' ? '每餐2菜套餐' : '2-Dish Meal Plan') 
-                        : (language === 'zh' ? '每餐3菜套餐' : '3-Dish Meal Plan')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedPlan?.quantity} {language === 'zh' ? '餐券' : 'vouchers'} × ${selectedPlan?.pricePerMeal.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-[#C2884E]">${selectedPlan?.price}</p>
-                </div>
-              </div>
-              
-              {/* Payment details */}
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm">
-                  <p className="text-[#6B5F53]">{language === 'zh' ? '付款方式' : 'Payment Method'}</p>
-                  <p className="font-medium text-[#6B5F53]">Interac e-Transfer</p>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <p className="text-[#6B5F53]">{language === 'zh' ? '收款人邮箱' : 'Recipient Email'}</p>
-                  <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <p className="text-[#6B5F53]">{language === 'zh' ? '付款凭证' : 'Payment Proof'}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <Check className="h-3 w-3 text-green-600" />
-                    </div>
-                    <p className="font-medium text-[#6B5F53]">{paymentProof?.name}</p>
-                  </div>
-                </div>
-                {notes && (
-                  <div className="flex justify-between items-center text-sm">
-                    <p className="text-[#6B5F53]">{language === 'zh' ? '备注' : 'Notes'}</p>
-                    <p className="font-medium text-[#6B5F53] max-w-[250px] text-right truncate" title={notes}>{notes}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* What happens next */}
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <h4 className="font-medium text-[#6B5F53] mb-3 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[#C2884E]" />
-                {language === 'zh' ? '接下来会发生什么' : 'What Happens Next'}
-              </h4>
-              
-              <ol className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <div className="bg-[#F5EDE4] w-6 h-6 rounded-full flex items-center justify-center text-[#C2884E] font-medium mt-0.5">
-                    1
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '审核请求' : 'Review Request'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {language === 'zh' ? '我们的团队将审核您的购买请求和付款凭证' : 'Our team will review your purchase request and payment proof'}
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="bg-[#F5EDE4] w-6 h-6 rounded-full flex items-center justify-center text-[#C2884E] font-medium mt-0.5">
-                    2
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '确认付款' : 'Confirm Payment'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {language === 'zh' ? '我们将确认收到您的e-Transfer付款' : 'We will confirm receipt of your e-Transfer payment'}
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="bg-[#F5EDE4] w-6 h-6 rounded-full flex items-center justify-center text-[#C2884E] font-medium mt-0.5">
-                    3
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '添加餐券' : 'Add Vouchers'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {language === 'zh' ? '餐券将添加到您的账户，您将收到确认电子邮件' : 'Vouchers will be added to your account and you will receive a confirmation email'}
-                    </p>
-                  </div>
-                </li>
-              </ol>
-            </div>
-          </div>
-
-          {/* Important Note */}
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100/50 border border-amber-200/70 rounded-xl p-5 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="bg-amber-100 p-2 rounded-full shadow-sm">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="font-bold text-amber-800">
-                  {language === 'zh' ? '重要提示' : 'Important Note'}
-                </p>
-                <p className="text-sm text-amber-700 mt-2">
-                  {language === 'zh' 
-                    ? '您的购买请求将在我们确认收到付款后处理。这通常需要1-2个工作日。' 
-                    : 'Your purchase request will be processed after we confirm receipt of payment. This typically takes 1-2 business days.'}
-                </p>
-                <p className="text-sm text-amber-700 mt-2">
-                  {language === 'zh' 
-                    ? '提交后，您可以在此页面查看购买请求状态。' 
-                    : 'After submission, you can check the status of your purchase request on this page.'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between border-t border-[#C2884E]/10 bg-gradient-to-r from-[#FBF7F2]/50 to-[#F5EDE4]/50">
-          <Button 
-            variant="outline" 
-            onClick={() => setPurchaseStep('upload')}
-            className="border-[#C2884E]/20 text-[#6B5F53] hover:bg-[#F5EDE4]/50 hover:text-[#C2884E]"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            {language === 'zh' ? '返回' : 'Back'}
-          </Button>
-          <Button 
-            onClick={handleSubmitPurchase} 
-            disabled={isLoading}
-            className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] hover:opacity-90"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {language === 'zh' ? '提交中...' : 'Submitting...'}
-              </>
-            ) : (
-              <>
-                {language === 'zh' ? '提交购买请求' : 'Submit Purchase Request'}
-                <Sparkles className="h-4 w-4 ml-1" />
-              </>
-            )}
-          </Button>
-        </CardFooter>
-      </Card>
-    )
-  }
-
-  // Define step indicators
-  const steps = [
-    { id: 'select', label: language === 'zh' ? '选择套餐' : 'Select Plan' },
-    { id: 'upload', label: language === 'zh' ? '上传凭证' : 'Upload Proof' }
-  ]
 
   // Add a counter effect for the user's current vouchers
   const [currentTwoDishVouchers, setCurrentTwoDishVouchers] = useState(0)
   const [currentThreeDishVouchers, setCurrentThreeDishVouchers] = useState(0)
-  const [isLoadingVouchers, setIsLoadingVouchers] = useState(false)
-
   // Prefill phone from stored user profile if available
   useEffect(() => {
     const storedUser = getStoredUser()
@@ -1192,27 +385,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     }
   }, [])
 
-  useEffect(() => {
-    const storedUser = getStoredUser()
-    const userId = storedUser?._id
-    const normalizedPhone = normalizePhoneInput(phone)
-    const storedPhone = normalizePhoneInput(storedUser?.phone || '')
-    const needsSync = Boolean(userId && normalizedPhone) && normalizedPhone !== storedPhone
-
-    if (!needsSync) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void ensureUserPhone({
-        userId: userId as string,
-        phoneInput: normalizedPhone,
-        requirePhone: false,
-      })
-    }, 400)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [phone])
+  useUserPhoneSync({ phone, userId: storedUserId })
   
   // Track if component is mounted to prevent state updates after unmount
   const isMounted = useRef(true);
@@ -1237,7 +410,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       if (apiCallAttempted) return;
       apiCallAttempted = true;
       
-      setIsLoadingVouchers(true);
       const userData = localStorage.getItem('user');
       
       if (userData) {
@@ -1252,13 +424,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
         } catch (error) {
           console.error('Error parsing user data:', error);
         } finally {
-          if (isMounted.current) {
-            setIsLoadingVouchers(false);
-          }
-        }
-      } else {
-        if (isMounted.current) {
-          setIsLoadingVouchers(false);
+          // no-op
         }
       }
     };
@@ -1754,7 +920,12 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                   >
-                    {renderPlanCards(twoDishPlans)}
+                    <MealVoucherPlanGrid
+                      language={language}
+                      plans={twoDishPlans}
+                      selectedPlanId={selectedPlan?.id}
+                      onSelectPlan={handlePlanSelect}
+                    />
                     
                     {/* Payment method and tax information - commented out
                     <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -1778,7 +949,12 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                   >
-                    {renderPlanCards(threeDishPlans)}
+                    <MealVoucherPlanGrid
+                      language={language}
+                      plans={threeDishPlans}
+                      selectedPlanId={selectedPlan?.id}
+                      onSelectPlan={handlePlanSelect}
+                    />
                     
                     {/* Payment method and tax information - commented out
                     <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -1805,7 +981,33 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
-            {renderUploadSection()}
+            <MealVoucherUploadStep
+              appliedPromoCode={appliedPromoCode}
+              discountedUnitPrice={discountedUnitPrice}
+              effectivePricing={effectivePricing}
+              fileInputRef={fileInputRef}
+              handleApplyPromo={handleApplyPromo}
+              handleFileChange={handleFileChange}
+              handleRemovePromo={handleRemovePromo}
+              interacEmail={interacEmail}
+              isApplyingPromo={isApplyingPromo}
+              isLoading={isLoading}
+              isSubmitted={isSubmitted}
+              language={language}
+              notes={notes}
+              onBack={() => setPurchaseStep('select')}
+              onInteracEmailChange={setInteracEmail}
+              onNotesChange={setNotes}
+              onPhoneChange={setPhone}
+              onPromoCodeInputChange={setPromoCodeInput}
+              onReset={handleResetPurchaseFlow}
+              onSubmit={handleUpload}
+              paymentProof={paymentProof}
+              phone={phone}
+              promoCodeInput={promoCodeInput}
+              promoError={promoError}
+              selectedPlan={selectedPlan}
+            />
           </motion.div>
         )}
       </AnimatePresence>

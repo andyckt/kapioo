@@ -12,6 +12,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
+import { WeeklyMenuEditDialog } from "@/features/admin-weekly-menu/weekly-menu-edit-dialog"
+import { useWeeklyMenuHistory } from "@/features/admin-weekly-menu/use-weekly-menu-history"
+import { WeeklyMenuHistoryDialog } from "@/features/admin-weekly-menu/weekly-menu-history-dialog"
+import {
+  WeeklyMenuNotificationDialogs,
+  type WeeklyMenuNotificationProgress,
+} from "@/features/admin-weekly-menu/weekly-menu-notification-dialogs"
 import { 
   MealOption, 
   DeliveryDay, 
@@ -34,11 +41,6 @@ export function WeeklySubscriptionManagement() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [mealToDelete, setMealToDelete] = useState<MealOption | null>(null)
   const [isRollingForward, setIsRollingForward] = useState(false)
-  const [showHistoryModal, setShowHistoryModal] = useState(false)
-  const [historyData, setHistoryData] = useState<any[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
-  const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any | null>(null)
-  const [deletingHistoryId, setDeletingHistoryId] = useState<string | null>(null)
   const [addingMealToSection, setAddingMealToSection] = useState<string | null>(null)
   const [newInlineMealName, setNewInlineMealName] = useState('')
   const [isSavingInlineMeal, setIsSavingInlineMeal] = useState(false)
@@ -53,17 +55,28 @@ export function WeeklySubscriptionManagement() {
   const [isSendingNotifications, setIsSendingNotifications] = useState(false)
   const [showNotificationDialog, setShowNotificationDialog] = useState(false)
   const [showProgressDialog, setShowProgressDialog] = useState(false)
-  const [notificationProgress, setNotificationProgress] = useState({
+  const [notificationProgress, setNotificationProgress] = useState<WeeklyMenuNotificationProgress>({
     totalUsers: 0,
     emailsSent: 0,
     emailsFailed: 0,
     currentBatch: 0,
     totalBatches: 0,
     progress: 0,
-    logs: [] as Array<{ type: string; message: string; timestamp: Date; data?: any }>,
-    failedEmails: [] as Array<{ email: string; name: string; error: string }>,
+    logs: [],
+    failedEmails: [],
     isComplete: false
   })
+  const {
+    showHistoryModal,
+    setShowHistoryModal,
+    historyData,
+    isLoadingHistory,
+    selectedHistoryEntry,
+    setSelectedHistoryEntry,
+    deletingHistoryId,
+    fetchHistory,
+    handleDeleteHistory,
+  } = useWeeklyMenuHistory()
   
   // Fetch delivery sections from API
   const fetchData = async () => {
@@ -143,71 +156,6 @@ export function WeeklySubscriptionManagement() {
     
     // Format back to "MMMM D" format
     return formatDateToString(date);
-  };
-  
-  // Fetch history data
-  const fetchHistory = async () => {
-    setIsLoadingHistory(true);
-    try {
-      const response = await fetch('/api/weekly-delivery-history?limit=100');
-      const data = await response.json();
-      
-      if (data.success) {
-        setHistoryData(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching history:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load history data",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
-  
-  // Delete history entry
-  const handleDeleteHistory = async (historyId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation(); // Prevent card click when clicking delete
-    }
-    
-    setDeletingHistoryId(historyId);
-    
-    try {
-      const response = await fetch(`/api/weekly-delivery-history/${historyId}`, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Remove from local state
-        setHistoryData(prev => prev.filter(entry => entry.historyId !== historyId));
-        
-        // If we're viewing the deleted entry, go back to list
-        if (selectedHistoryEntry?.historyId === historyId) {
-          setSelectedHistoryEntry(null);
-        }
-        
-        toast({
-          title: "History deleted",
-          description: "The history entry has been deleted successfully."
-        });
-      } else {
-        throw new Error(data.error || 'Failed to delete history');
-      }
-    } catch (error) {
-      console.error('Error deleting history:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete history entry",
-        variant: "destructive"
-      });
-    } finally {
-      setDeletingHistoryId(null);
-    }
   };
   
   // Roll Forward Week function
@@ -1399,126 +1347,22 @@ export function WeeklySubscriptionManagement() {
         )}
       </div>
       
-      {/* Edit Meal Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Meal Option</DialogTitle>
-            <DialogDescription>
-              Make changes to the meal option details below.
-            </DialogDescription>
-          </DialogHeader>
-          {editingMeal && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-                <Label htmlFor="meal-name" className="sm:text-right">
-                  Name (Chinese)
-                </Label>
-                <Input
-                  id="meal-name"
-                  value={editingMeal.name}
-                  onChange={(e) => setEditingMeal({...editingMeal, name: e.target.value})}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSaveMeal();
-                    }
-                  }}
-                  className="sm:col-span-3"
-                  placeholder="e.g., 红烧肉"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-                <Label htmlFor="meal-name-en" className="sm:text-right">
-                  Name (English)
-                </Label>
-                <Input
-                  id="meal-name-en"
-                  value={editingMeal.nameEn || ''}
-                  onChange={(e) => setEditingMeal({...editingMeal, nameEn: e.target.value})}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSaveMeal();
-                    }
-                  }}
-                  className="sm:col-span-3"
-                  placeholder="e.g., Braised Pork Belly"
-                />
-              </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-4">
-              <Label htmlFor="meal-tags" className="sm:text-right sm:pt-2">
-                Tags
-              </Label>
-              <div className="sm:col-span-3 space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {editingMeal.tags?.map((tag, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary" 
-                      className="px-2 py-1 flex items-center gap-1"
-                    >
-                      {tag}
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-4 w-4 p-0 hover:bg-transparent" 
-                        onClick={() => {
-                          const newTags = [...(editingMeal.tags || [])];
-                          newTags.splice(index, 1);
-                          setEditingMeal({ ...editingMeal, tags: newTags });
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-                <Input
-                  id="meal-tags"
-                  placeholder="Type a tag and press Enter"
-                  className="w-full"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                      e.preventDefault();
-                      const newTag = e.currentTarget.value.trim();
-                      if (newTag && (!editingMeal.tags || !editingMeal.tags.includes(newTag))) {
-                        setEditingMeal({
-                          ...editingMeal,
-                          tags: [...(editingMeal.tags || []), newTag]
-                        });
-                        e.currentTarget.value = '';
-                      }
-                    }
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">Press Enter to add a tag</p>
-              </div>
-            </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="meal-active" className="text-right">
-                  Active
-                </Label>
-                <div className="col-span-3 flex items-center">
-                  <Switch 
-                    id="meal-active" 
-                    checked={editingMeal.active} 
-                    onCheckedChange={(checked) => setEditingMeal({...editingMeal, active: checked})} 
-                  />
-                  <Label htmlFor="meal-active" className="ml-2">
-                    {editingMeal.active ? 'Active' : 'Inactive'}
-                  </Label>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveMeal}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <WeeklyMenuEditDialog
+        editingMeal={editingMeal}
+        onOpenChange={setEditDialogOpen}
+        onRemoveTag={(index) => {
+          if (!editingMeal) {
+            return
+          }
+
+          const newTags = [...(editingMeal.tags || [])]
+          newTags.splice(index, 1)
+          setEditingMeal({ ...editingMeal, tags: newTags })
+        }}
+        onSave={handleSaveMeal}
+        onUpdateMeal={setEditingMeal}
+        open={editDialogOpen}
+      />
       
       {/* Delete Confirmation Dialog */}
       <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
@@ -1536,441 +1380,32 @@ export function WeeklySubscriptionManagement() {
         </DialogContent>
       </Dialog>
       
-      {/* History Modal */}
-      <Dialog open={showHistoryModal} onOpenChange={(open) => {
-        setShowHistoryModal(open);
-        if (!open) {
-          setSelectedHistoryEntry(null);
-        }
-      }}>
-        <DialogContent className="max-w-[1100px] max-h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>
-              {selectedHistoryEntry ? (
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setSelectedHistoryEntry(null)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span>Delivery Details</span>
-                </div>
-              ) : (
-                'Weekly Delivery History'
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedHistoryEntry 
-                ? `Viewing details for ${selectedHistoryEntry.date}`
-                : 'Select a date to view archived meal details'
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto pr-2 -mr-2 min-h-0">
-            {isLoadingHistory ? (
-              <div className="flex justify-center items-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : historyData.length === 0 ? (
-              <div className="flex justify-center items-center py-20">
-                <p className="text-muted-foreground">No history available</p>
-              </div>
-            ) : selectedHistoryEntry ? (
-              // Step 2: Show meal details for selected date
-              <div className="space-y-4 pb-4">
-                <Card className="border-2">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground mb-1">
-                          {selectedHistoryEntry.displayName}
-                        </p>
-                        <CardTitle className="text-2xl">{selectedHistoryEntry.date}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Archived: {new Date(selectedHistoryEntry.archivedAt).toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={selectedHistoryEntry.archivedReason === 'rolled_forward' ? 'default' : 'secondary'} className="text-sm px-3 py-1">
-                          {selectedHistoryEntry.archivedReason === 'rolled_forward' ? 'Rolled Forward' : 'Manually Deleted'}
-                        </Badge>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteHistory(selectedHistoryEntry.historyId)}
-                          disabled={deletingHistoryId === selectedHistoryEntry.historyId}
-                        >
-                          {deletingHistoryId === selectedHistoryEntry.historyId ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-                
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Meal Options ({selectedHistoryEntry.mealOptions?.length || 0})
-                  </h3>
-                  {selectedHistoryEntry.mealOptions && selectedHistoryEntry.mealOptions.length > 0 ? (
-                    selectedHistoryEntry.mealOptions.map((option: any, idx: number) => (
-                      <Card key={idx} className="border-l-4 border-l-primary/30 hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-base">{option.name}</h4>
-                                <Badge variant={option.active ? 'default' : 'secondary'} className="text-xs">
-                                  {option.active ? 'Active' : 'Inactive'}
-                                </Badge>
-                              </div>
-                              {option.nameEn && (
-                                <div className="text-sm text-muted-foreground italic mb-2">
-                                  {option.nameEn}
-                                </div>
-                              )}
-                              {option.tags && option.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                  {option.tags.map((tag: string, tagIdx: number) => (
-                                    <Badge key={tagIdx} variant="outline" className="text-xs px-2 py-0.5">
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <p className="text-sm text-muted-foreground">No meal options available</p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </div>
-            ) : (
-              // Step 1: Cute square date picker grid
-              <div className="space-y-4 pb-4">
-                <div className="text-center mb-6">
-                  <p className="text-sm text-muted-foreground">
-                    Click on a date to view its meal details
-                  </p>
-                </div>
-                <div className="grid grid-cols-4 gap-4">
-                  {historyData.map((entry) => {
-                    // Parse the date to extract day and month
-                    const dateMatch = entry.date.match(/(\w+)\s+(\d+)/);
-                    const month = dateMatch ? dateMatch[1] : '';
-                    const day = dateMatch ? dateMatch[2] : '';
-                    
-                    return (
-                      <Card 
-                        key={entry.historyId}
-                        className="cursor-pointer hover:border-primary hover:shadow-lg transition-all duration-200 group overflow-hidden relative"
-                        onClick={() => setSelectedHistoryEntry(entry)}
-                      >
-                        {/* Delete Button - Top Right Corner */}
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-md"
-                          onClick={(e) => handleDeleteHistory(entry.historyId, e)}
-                          disabled={deletingHistoryId === entry.historyId}
-                        >
-                          {deletingHistoryId === entry.historyId ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3 w-3" />
-                          )}
-                        </Button>
-                        
-                        <CardContent className="p-0">
-                          {/* Date Display - Square Top Section */}
-                          <div className="bg-gradient-to-br from-primary/10 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 transition-colors p-6 text-center border-b">
-                            <div className="text-4xl font-bold text-primary mb-1">
-                              {day}
-                            </div>
-                            <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                              {month}
-                            </div>
-                          </div>
-                          
-                          {/* Info Section */}
-                          <div className="p-4 space-y-2">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <span className="truncate">
-                                {entry.displayName.replace('This Week ', '').replace('Next Week ', '')}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {entry.mealOptions?.length || 0} meal{entry.mealOptions?.length !== 1 ? 's' : ''}
-                              </Badge>
-                              <Badge 
-                                variant={entry.archivedReason === 'rolled_forward' ? 'default' : 'secondary'} 
-                                className="text-xs"
-                              >
-                                {entry.archivedReason === 'rolled_forward' ? 'Rolled' : 'Deleted'}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <WeeklyMenuHistoryDialog
+        deletingHistoryId={deletingHistoryId}
+        handleDeleteHistory={handleDeleteHistory}
+        historyData={historyData}
+        isLoadingHistory={isLoadingHistory}
+        onOpenChange={setShowHistoryModal}
+        open={showHistoryModal}
+        selectedHistoryEntry={selectedHistoryEntry}
+        setSelectedHistoryEntry={setSelectedHistoryEntry}
+      />
       
-      {/* Weekly Menu Update Notification Dialog */}
-      <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-blue-600" />
-              Send Weekly Menu Update Notification
-            </DialogTitle>
-            <DialogDescription>
-              This will send an email notification to all users who have weekly subscription credits.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Email Details:
-              </h4>
-              <ul className="text-sm text-blue-800 space-y-1 ml-6 list-disc">
-                <li>Bilingual: English for English users, Chinese for Chinese users</li>
-                <li>Eye-catching, minimalistic, high-end design</li>
-                <li>Informs users about menu update without specific details</li>
-                <li>Includes call-to-action button to view menu</li>
-              </ul>
-            </div>
-            
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
-                <Send className="h-4 w-4" />
-                Batch Processing:
-              </h4>
-              <p className="text-sm text-amber-800">
-                Emails will be sent in batches of 50 with 2-second delays between batches to ensure smooth delivery and avoid rate limits.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowNotificationDialog(false)}
-              disabled={isSendingNotifications}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={sendWeeklyMenuUpdateNotifications}
-              disabled={isSendingNotifications}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isSendingNotifications ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send Notifications
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Real-time Progress Tracking Dialog */}
-      <Dialog open={showProgressDialog} onOpenChange={(open) => {
-        // Only allow closing if process is complete
-        if (!open && notificationProgress.isComplete) {
-          setShowProgressDialog(false);
-        }
-      }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-blue-600" />
-              Sending Weekly Menu Update Notifications
-            </DialogTitle>
-            <DialogDescription>
-              Real-time progress tracking for email notifications
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
-            {/* Progress Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Total Users</CardDescription>
-                  <CardTitle className="text-2xl">{notificationProgress.totalUsers}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Emails Sent</CardDescription>
-                  <CardTitle className="text-2xl text-green-600">{notificationProgress.emailsSent}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Failed</CardDescription>
-                  <CardTitle className="text-2xl text-red-600">{notificationProgress.emailsFailed}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Progress</CardDescription>
-                  <CardTitle className="text-2xl">{notificationProgress.progress}%</CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {notificationProgress.currentBatch > 0 && (
-                    <>Batch {notificationProgress.currentBatch} of {notificationProgress.totalBatches}</>
-                  )}
-                </span>
-                <span className="font-medium">{notificationProgress.progress}%</span>
-              </div>
-              <Progress value={notificationProgress.progress} className="h-2" />
-            </div>
-            
-            {/* Status Badge */}
-            <div className="flex items-center gap-2">
-              {!notificationProgress.isComplete ? (
-                <Badge className="bg-blue-600">
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Processing...
-                </Badge>
-              ) : notificationProgress.emailsFailed === 0 ? (
-                <Badge className="bg-green-600">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Complete - All emails sent successfully
-                </Badge>
-              ) : (
-                <Badge className="bg-orange-600">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Complete - {notificationProgress.emailsFailed} emails failed
-                </Badge>
-              )}
-            </div>
-            
-            {/* Failed Emails Section */}
-            {notificationProgress.failedEmails.length > 0 && (
-              <Card className="border-red-200 bg-red-50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-red-900 flex items-center gap-2">
-                    <XCircle className="h-4 w-4" />
-                    Failed Emails ({notificationProgress.failedEmails.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-32">
-                    <div className="space-y-2">
-                      {notificationProgress.failedEmails.map((failed, idx) => (
-                        <div key={idx} className="text-xs bg-white p-2 rounded border border-red-200">
-                          <div className="font-medium text-red-900">{failed.name} ({failed.email})</div>
-                          <div className="text-red-700 mt-1">{failed.error}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Live Log */}
-            <Card className="flex-1 flex flex-col overflow-hidden">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <History className="h-4 w-4" />
-                  Live Activity Log
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-hidden pb-0">
-                <ScrollArea className="h-full pr-4">
-                  <div className="space-y-1 font-mono text-xs">
-                    {notificationProgress.logs.map((log, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`py-1 px-2 rounded ${
-                          log.type === 'error' || log.type === 'email_failed' 
-                            ? 'bg-red-50 text-red-900' 
-                            : log.type === 'email_sent'
-                            ? 'bg-green-50 text-green-900'
-                            : log.type === 'batch_start' || log.type === 'batch_complete'
-                            ? 'bg-blue-50 text-blue-900 font-semibold'
-                            : log.type === 'complete'
-                            ? 'bg-green-100 text-green-900 font-bold'
-                            : 'bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        <span className="text-gray-500 mr-2">
-                          {log.timestamp.toLocaleTimeString()}
-                        </span>
-                        {log.message}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Footer Actions */}
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div className="text-sm text-muted-foreground">
-              {notificationProgress.isComplete ? (
-                <>Process completed at {notificationProgress.logs[notificationProgress.logs.length - 1]?.timestamp.toLocaleTimeString()}</>
-              ) : (
-                <>Please wait while emails are being sent...</>
-              )}
-            </div>
-            <Button
-              onClick={() => setShowProgressDialog(false)}
-              disabled={!notificationProgress.isComplete}
-              variant={notificationProgress.isComplete ? "default" : "outline"}
-            >
-              {notificationProgress.isComplete ? 'Close' : 'Processing...'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <WeeklyMenuNotificationDialogs
+        isSendingNotifications={isSendingNotifications}
+        notificationProgress={notificationProgress}
+        onCloseNotificationDialog={() => setShowNotificationDialog(false)}
+        onCloseProgressDialog={() => setShowProgressDialog(false)}
+        onOpenNotificationDialogChange={setShowNotificationDialog}
+        onOpenProgressDialogChange={(open) => {
+          if (!open && notificationProgress.isComplete) {
+            setShowProgressDialog(false)
+          }
+        }}
+        onSendNotifications={sendWeeklyMenuUpdateNotifications}
+        showNotificationDialog={showNotificationDialog}
+        showProgressDialog={showProgressDialog}
+      />
     </div>
   )
 }
