@@ -1,7 +1,7 @@
 ---
 title: Foundation Hardening Plan
-status: phase-3bc-complete-dashboard-checkout-remaining
-updated: 2026-04-01
+status: phase-4-test-hardening-complete
+updated: 2026-04-12
 ---
 
 # Foundation Hardening Plan
@@ -552,6 +552,13 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 ### Verify after completion
 - High-risk business flows are protected before major new core-commerce work resumes.
 
+### Phase 4 execution record
+- `Fact`: A new Vitest-based test harness is in place via [`vitest.config.ts`](vitest.config.ts), root `package.json` test scripts, and shared helpers under [`__tests__/helpers/`](__tests__/helpers/).
+- `Fact`: Regression coverage now protects pure balance and pricing logic in [`__tests__/unit/balances.test.ts`](__tests__/unit/balances.test.ts), [`__tests__/unit/weekly-status.test.ts`](__tests__/unit/weekly-status.test.ts), [`__tests__/unit/weekly-refund.test.ts`](__tests__/unit/weekly-refund.test.ts), and [`__tests__/unit/promo-code-shared.test.ts`](__tests__/unit/promo-code-shared.test.ts).
+- `Fact`: Integration coverage now exercises the shared balance mutation service, auth guard boundaries, canonical daily/weekly order routes, and the admin balance update route via [`__tests__/integration/balance-mutations.test.ts`](__tests__/integration/balance-mutations.test.ts), [`__tests__/integration/auth-guards.test.ts`](__tests__/integration/auth-guards.test.ts), [`__tests__/integration/daily-order-route.test.ts`](__tests__/integration/daily-order-route.test.ts), [`__tests__/integration/weekly-order-route.test.ts`](__tests__/integration/weekly-order-route.test.ts), and [`__tests__/integration/admin-balance-route.test.ts`](__tests__/integration/admin-balance-route.test.ts).
+- `Fact`: The shared in-memory Mongo test database now runs as a replica set in [`__tests__/helpers/db.ts`](__tests__/helpers/db.ts), allowing transaction-backed routes like [`app/api/users/[id]/update-balance/route.ts`](app/api/users/[id]/update-balance/route.ts) to be tested under realistic conditions.
+- `Fact`: `npm test` passes with 84 tests. `npx tsc --noEmit` still reports pre-existing repo-wide TypeScript errors outside the new test files. `npm run lint` cannot complete yet because the repository does not have a configured ESLint setup and `next lint` prompts for initial configuration.
+
 ## Build Readiness Verdict
 
 ### Safe to build now
@@ -610,6 +617,6 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - [x] Phase 3c: Standardize shared request/response schemas and API validation (`lib/api`, `lib/contracts`, `app/api` migration).
 - [x] Phase 3b cleanup: Dedupe dashboard/history date formatting via [`lib/format.ts`](lib/format.ts).
 - [x] Phase 3 (remaining): Further split [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and extract checkout/management orchestration as needed.
-- [ ] Add integration coverage for auth, orders, refunds, and balance correctness (Phase 4).
+- [x] Add integration coverage for auth, orders, refunds, and balance correctness (Phase 4).
 - [ ] Optional: delete 410-stub route files under `app/api/orders` once no external callers remain (Phase 2E retired paths and removed `lib/middleware.ts`).
 - [ ] Must Fix #1–4: Track to closure (daily canonical completeness, transactional order+balance writes, balance-path consolidation, any remaining schema drift).
