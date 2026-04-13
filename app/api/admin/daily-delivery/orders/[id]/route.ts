@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { errorJson, handleRouteError, successJson, type RouteContext } from "@/lib/api";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
+import { deleteDailyOrder } from "@/lib/orders/daily-admin-mutations";
 import {
   getOrderOnlyOverrideMeta,
   hasOrderCustomerOverride,
@@ -66,19 +67,12 @@ export async function DELETE(request: Request, { params }: RouteContext<{ id: st
       return errorJson("Order not found", 404);
     }
 
-    if (returnVouchers && order.status !== "refunded") {
-      const user = await User.findById(order.userId);
-      if (user) {
-        const twoDishReturned = order.voucherCost?.twoDish || 0;
-        const threeDishReturned = order.voucherCost?.threeDish || 0;
-
-        user.twoDishVoucher += twoDishReturned;
-        user.threeDishVoucher += threeDishReturned;
-        await user.save();
-      }
-    }
-
-    await DailyDeliveryOrder.deleteOne({ orderId: id });
+    await deleteDailyOrder({
+      orderId: id,
+      returnVouchers,
+      actor,
+      request,
+    });
 
     return NextResponse.json({
       success: true,

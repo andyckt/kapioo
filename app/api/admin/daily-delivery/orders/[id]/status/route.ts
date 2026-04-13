@@ -8,6 +8,7 @@ import {
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { updateDailyOrderStatusBodySchema } from "@/lib/contracts/daily-order";
 import connectToDatabase from "@/lib/db";
+import { refundDailyOrder } from "@/lib/orders/daily-admin-mutations";
 import { sendDailyOrderStatusUpdateNotification } from "@/lib/services/notifications";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
@@ -37,30 +38,36 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
       return errorJson("Order not found", 404);
     }
 
-    const updateData: Record<string, unknown> = { status };
+    let updatedOrder = order;
 
-    if (status === "confirmed") {
-      updateData.confirmedAt = new Date();
-    } else if (status === "delivered") {
-      updateData.deliveredAt = new Date();
-    } else if (status === "refunded") {
-      updateData.refundedAt = new Date();
+    if (status === "refunded") {
+      const refundResult = await refundDailyOrder({
+        orderId: id,
+        actor,
+        request,
+      });
+      updatedOrder = refundResult.updatedOrder;
+    } else {
+      const updateData: Record<string, unknown> = { status };
 
-      if (order.status !== "refunded") {
-        const user = await User.findById(order.userId);
-        if (user) {
-          user.twoDishVoucher += order.voucherCost.twoDish || 0;
-          user.threeDishVoucher += order.voucherCost.threeDish || 0;
-          await user.save();
-        }
+      if (status === "confirmed") {
+        updateData.confirmedAt = new Date();
+      } else if (status === "delivered") {
+        updateData.deliveredAt = new Date();
       }
-    }
 
-    const updatedOrder = await DailyDeliveryOrder.findOneAndUpdate(
-      { orderId: id },
-      { $set: updateData },
-      { new: true }
-    );
+      const savedOrder = await DailyDeliveryOrder.findOneAndUpdate(
+        { orderId: id },
+        { $set: updateData },
+        { new: true }
+      );
+
+      if (!savedOrder) {
+        return errorJson("Order not found after update attempt", 404);
+      }
+
+      updatedOrder = savedOrder;
+    }
 
     if (status !== "confirmed" && status !== "delivered") {
       try {

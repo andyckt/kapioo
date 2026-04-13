@@ -10,12 +10,15 @@ import {
 import { requireUser } from "@/lib/auth/guards";
 import {
   createDailyOrderBodySchema,
-  type CreateDailyOrderItemInput,
   preprocessDailyOrderCreateBody,
   userDailyOrdersListQuerySchema,
 } from "@/lib/contracts/daily-order";
 import connectToDatabase from "@/lib/db";
 import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-customer-info";
+import {
+  InsufficientDailyVouchersError,
+  placeDailyOrder,
+} from "@/lib/orders/place-daily-order";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
 
@@ -64,114 +67,46 @@ export async function POST(request: Request) {
       return errorJson("You cannot create orders for another user", 403);
     }
 
-    const user = await User.findById(effectiveUserId);
-    if (!user) {
-      return errorJson("User not found", 404);
-    }
-
-    const vouchersNeeded = data.items.reduce(
-      (totals: { twoDish: number; threeDish: number }, item: CreateDailyOrderItemInput) => {
-        if (item.voucherType === "twoDish") {
-          totals.twoDish += item.quantity as number;
-        } else if (item.voucherType === "threeDish") {
-          totals.threeDish += item.quantity as number;
-        }
-        return totals;
-      },
-      { twoDish: 0, threeDish: 0 }
-    );
-
-    if (
-      user.twoDishVoucher < vouchersNeeded.twoDish ||
-      user.threeDishVoucher < vouchersNeeded.threeDish
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Insufficient vouchers",
-          required: vouchersNeeded,
-          available: {
-            twoDish: user.twoDishVoucher,
-            threeDish: user.threeDishVoucher,
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    const randomNumbers = Math.floor(10000000 + Math.random() * 90000000);
-    const orderId = `DD-${randomNumbers}`;
-
-    const totalVouchers = {
-      twoDish: vouchersNeeded.twoDish,
-      threeDish: vouchersNeeded.threeDish,
-    };
-
-    const itemsToSave = data.items.map((item: CreateDailyOrderItemInput) => ({
-      day: String(item.day ?? ""),
-      date: String(item.date ?? ""),
-      comboId: String(item.comboId ?? ""),
-      comboName: String(item.comboName ?? ""),
-      type: String(item.type ?? ""),
-      quantity: Number(item.quantity ?? 0),
-      voucherType: String(item.voucherType ?? ""),
-      dishes: Array.isArray(item.dishes) ? item.dishes : [],
-    }));
-
-    let dailyOrder;
     try {
-      dailyOrder = await DailyDeliveryOrder.create({
-        userId: user._id,
-        orderId,
-        items: itemsToSave,
-        status: "pending",
-        voucherCost: totalVouchers,
-        taxIncluded: data.taxIncluded ?? true,
-        taxRate: data.taxRate ?? 0.13,
-        specialInstructions: data.specialInstructions ?? "",
-        deliveryAddress: data.deliveryAddress ?? {},
-        phoneNumber: data.phoneNumber ?? "",
-        area: data.area ?? "",
+      const { order, updatedUser } = await placeDailyOrder({
+        userId: effectiveUserId,
+        data,
+        actor,
+        request,
       });
-    } catch (createErr: unknown) {
-      const message =
-        createErr instanceof Error ? createErr.message : "Unknown error";
-      return errorJson("Failed to create order", 500, { details: message });
+
+      const responseData = {
+        success: true,
+        data: order,
+        remainingVouchers: {
+          twoDish: updatedUser.twoDishVoucher,
+          threeDish: updatedUser.threeDishVoucher,
+        },
+      };
+
+      if (idempotencyKey) {
+        idempotencyStore.set(idempotencyKey, responseData);
+        setTimeout(() => {
+          idempotencyStore.delete(idempotencyKey);
+        }, 3600000);
+      }
+
+      return NextResponse.json(responseData, { status: 200 });
+    } catch (error) {
+      if (error instanceof InsufficientDailyVouchersError) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: error.message,
+            required: error.required,
+            available: error.available,
+          },
+          { status: error.status }
+        );
+      }
+
+      throw error;
     }
-
-    const updateFields: {
-      $inc: { twoDishVoucher: number; threeDishVoucher: number };
-      $set?: { phone: string };
-    } = {
-      $inc: {
-        twoDishVoucher: -vouchersNeeded.twoDish,
-        threeDishVoucher: -vouchersNeeded.threeDish,
-      },
-    };
-
-    if (data.phoneNumber && String(data.phoneNumber).trim()) {
-      updateFields.$set = { phone: String(data.phoneNumber).trim() };
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(user._id, updateFields, { new: true });
-
-    const responseData = {
-      success: true,
-      data: dailyOrder,
-      remainingVouchers: {
-        twoDish: updatedUser!.twoDishVoucher,
-        threeDish: updatedUser!.threeDishVoucher,
-      },
-    };
-
-    if (idempotencyKey) {
-      idempotencyStore.set(idempotencyKey, responseData);
-      setTimeout(() => {
-        idempotencyStore.delete(idempotencyKey);
-      }, 3600000);
-    }
-
-    return NextResponse.json(responseData, { status: 200 });
   } catch (error: unknown) {
     return handleRouteError(error, "POST /api/daily-delivery/order");
   }

@@ -1,4 +1,5 @@
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder"
+import Transaction from "@/models/Transaction"
 
 import { clearCollections, setupTestDb, teardownTestDb } from "../helpers/db"
 import { createTestUser } from "../helpers/factories"
@@ -92,6 +93,7 @@ describe("app/api/daily-delivery/order", () => {
     const json = await response.json()
     const savedUser = await User.findById(user._id).lean()
     const savedOrders = await DailyDeliveryOrder.find().lean()
+    const transactions = await Transaction.find().lean()
 
     expect(response.status).toBe(200)
     expect(json.success).toBe(true)
@@ -108,6 +110,13 @@ describe("app/api/daily-delivery/order", () => {
       twoDishVoucher: 2,
       threeDishVoucher: 1,
       phone: "416-555-1234",
+    })
+    expect(transactions).toHaveLength(1)
+    expect(transactions[0]).toMatchObject({
+      userId: user._id,
+      type: "Deduct",
+      amount: 3,
+      description: expect.stringContaining("Placed daily order"),
     })
   })
 
@@ -144,6 +153,7 @@ describe("app/api/daily-delivery/order", () => {
       error: "Insufficient vouchers",
     })
     expect(await DailyDeliveryOrder.countDocuments()).toBe(0)
+    expect(await Transaction.countDocuments()).toBe(0)
   })
 
   it("rejects invalid request bodies", async () => {

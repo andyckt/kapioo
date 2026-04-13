@@ -1,7 +1,7 @@
 ---
 title: Foundation Hardening Plan
-status: phase-4-test-hardening-complete
-updated: 2026-04-12
+status: must-fix-2-transactional-order-writes-complete
+updated: 2026-04-13
 ---
 
 # Foundation Hardening Plan
@@ -20,7 +20,7 @@ How to read this plan:
 - `Fact`: **Phase 3b (admin decomposition)** is complete: domain slices under `features/admin-*`, shared `components/admin-orders`, lazy-loaded admin tab content, and thin legacy re-exports where applicable.
 - `Fact`: **Phase 3c (typed API contracts)** is complete: `lib/api` response/validation helpers, `lib/contracts` Zod schemas, and route-by-route migration across `app/api` (Auth.js passthrough and SSE shapes preserved where needed).
 - `Fact`: **Phase 3b cleanup (date formatting)** is complete: duplicated dashboard/history `formatDate` logic consolidated into `lib/format.ts` with optional locale for en/zh surfaces.
-- `Fact`: The **next** major maintainability slices are **remaining Phase 3** work: further `app/dashboard/page.tsx` decomposition, checkout/management extraction if desired, and **Phase 4** integration tests. **Must Fix #1–4** remain correctness targets; Phase 3c reduces contract drift but does not replace transactional canonicalization.
+- `Fact`: **Must Fix #2 (transactional order + balance writes)** is complete for the canonical daily and weekly order creation flows, plus daily admin refund/delete reversals. Remaining highest-priority correctness work is now **Must Fix #1, #3, and #4**.
 - `Inference`: The weekly domain is in a materially better state than when the original plan was written; admin and API surfaces are now easier to change safely than pre–Phase 3b/3c.
 
 ## Checkpoint Summary (post–Phase 2E + weekly refinements + Phase 3b/3c)
@@ -33,8 +33,8 @@ How to read this plan:
 | **Phase 3b cleanup** | Dashboard/history date display deduped via `lib/format.ts`. |
 | **Next phase** | Remaining Phase 3 (dashboard/checkout/management extraction as needed) → **Phase 4** tests. |
 | **Build next** | Optional: slim `app/dashboard/page.tsx`; extract heavy checkout/management components; add integration tests for orders/refunds/balances. |
-| **Wait on** | Must Fix #1–4 remain for full correctness closure; Phase 3c improves maintainability and validation, not atomic order+balance writes. |
-| **Risks to watch** | Daily-order path changes before #1 consolidation; order/balance mutations without transactions (#2); manual-balance tooling bypassing update-balance service. |
+| **Wait on** | Must Fix #1, #3, and #4 remain for full correctness closure; daily/weekly canonical order placement is now transaction-backed. |
+| **Risks to watch** | Daily-order path changes before #1 consolidation; manual-balance tooling bypassing update-balance service; any remaining non-service order reversals outside the canonical paths. |
 
 ## Foundation Summary
 - `Fact`: The healthiest centralized parts of the repo are plan/config logic in [`lib/plans/catalog.ts`](lib/plans/catalog.ts), [`lib/plans/service.ts`](lib/plans/service.ts), [`lib/plans/balances.ts`](lib/plans/balances.ts), [`lib/promo-code.ts`](lib/promo-code.ts), and [`lib/constants/areas.ts`](lib/constants/areas.ts).
@@ -60,6 +60,7 @@ How to read this plan:
 - Expected benefit: Correctness under retries and failure.
 - Implementation difficulty: High.
 - Risk if left unfixed: Critical.
+- `Fact` (2026-04): Canonical daily and weekly order placement now run through transaction-backed domain services in [`lib/orders/place-daily-order.ts`](lib/orders/place-daily-order.ts) and [`lib/orders/place-weekly-order.ts`](lib/orders/place-weekly-order.ts), and admin daily refund/delete reversals now use [`lib/orders/daily-admin-mutations.ts`](lib/orders/daily-admin-mutations.ts). Canonical create/refund/delete paths now keep order rows, user balances, transaction records, and audit writes aligned under MongoDB transactions.
 
 ### 3. Consolidate overlapping balance-mutation paths
 - Problem: Credits, vouchers, and weekly balances are still mutated through several overlapping admin endpoints.
@@ -555,9 +556,15 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 ### Phase 4 execution record
 - `Fact`: A new Vitest-based test harness is in place via [`vitest.config.ts`](vitest.config.ts), root `package.json` test scripts, and shared helpers under [`__tests__/helpers/`](__tests__/helpers/).
 - `Fact`: Regression coverage now protects pure balance and pricing logic in [`__tests__/unit/balances.test.ts`](__tests__/unit/balances.test.ts), [`__tests__/unit/weekly-status.test.ts`](__tests__/unit/weekly-status.test.ts), [`__tests__/unit/weekly-refund.test.ts`](__tests__/unit/weekly-refund.test.ts), and [`__tests__/unit/promo-code-shared.test.ts`](__tests__/unit/promo-code-shared.test.ts).
-- `Fact`: Integration coverage now exercises the shared balance mutation service, auth guard boundaries, canonical daily/weekly order routes, and the admin balance update route via [`__tests__/integration/balance-mutations.test.ts`](__tests__/integration/balance-mutations.test.ts), [`__tests__/integration/auth-guards.test.ts`](__tests__/integration/auth-guards.test.ts), [`__tests__/integration/daily-order-route.test.ts`](__tests__/integration/daily-order-route.test.ts), [`__tests__/integration/weekly-order-route.test.ts`](__tests__/integration/weekly-order-route.test.ts), and [`__tests__/integration/admin-balance-route.test.ts`](__tests__/integration/admin-balance-route.test.ts).
+- `Fact`: Integration coverage now exercises the shared balance mutation service, auth guard boundaries, canonical daily/weekly order routes, admin daily order refund/delete routes, and the admin balance update route via [`__tests__/integration/balance-mutations.test.ts`](__tests__/integration/balance-mutations.test.ts), [`__tests__/integration/auth-guards.test.ts`](__tests__/integration/auth-guards.test.ts), [`__tests__/integration/daily-order-route.test.ts`](__tests__/integration/daily-order-route.test.ts), [`__tests__/integration/admin-daily-order-routes.test.ts`](__tests__/integration/admin-daily-order-routes.test.ts), [`__tests__/integration/weekly-order-route.test.ts`](__tests__/integration/weekly-order-route.test.ts), and [`__tests__/integration/admin-balance-route.test.ts`](__tests__/integration/admin-balance-route.test.ts).
 - `Fact`: The shared in-memory Mongo test database now runs as a replica set in [`__tests__/helpers/db.ts`](__tests__/helpers/db.ts), allowing transaction-backed routes like [`app/api/users/[id]/update-balance/route.ts`](app/api/users/[id]/update-balance/route.ts) to be tested under realistic conditions.
-- `Fact`: `npm test` passes with 84 tests. `npx tsc --noEmit` still reports pre-existing repo-wide TypeScript errors outside the new test files. `npm run lint` cannot complete yet because the repository does not have a configured ESLint setup and `next lint` prompts for initial configuration.
+- `Fact`: `npm test` passes with 88 tests. Project-wide `npx tsc --noEmit -p tsconfig.json` still reports pre-existing repo-wide TypeScript errors, but filtered output shows no errors from the Must Fix #2 files added/edited in this batch. `npm run lint` cannot complete yet because the repository does not have a configured ESLint setup and `next lint` prompts for initial configuration.
+
+### Must Fix #2 execution record
+- `Fact`: Order creation is now thin-route + domain-service based for the canonical flows: [`app/api/daily-delivery/order/route.ts`](app/api/daily-delivery/order/route.ts) calls [`lib/orders/place-daily-order.ts`](lib/orders/place-daily-order.ts), and [`app/api/weekly-subscription/user/route.ts`](app/api/weekly-subscription/user/route.ts) calls [`lib/orders/place-weekly-order.ts`](lib/orders/place-weekly-order.ts).
+- `Fact`: Daily admin refund/delete reversals now run in transactions through [`lib/orders/daily-admin-mutations.ts`](lib/orders/daily-admin-mutations.ts), and the routes under [`app/api/admin/daily-delivery/orders/[id]`](app/api/admin/daily-delivery/orders/[id]) no longer perform multi-document balance/order writes inline.
+- `Fact`: Canonical order placement and daily refund/delete now use [`lib/balances/mutations.ts`](lib/balances/mutations.ts) inside MongoDB sessions so balance validation, user mutation, [`models/Transaction.ts`](models/Transaction.ts) ledger writes, and audit writes commit or roll back together.
+- `Fact`: Verification for this batch included full-suite Vitest (`88` passing tests), targeted integration assertions for daily create + refund/delete + weekly create, clean lints on edited files, and filtered project typecheck output with no errors from the changed Must Fix #2 files.
 
 ## Build Readiness Verdict
 
@@ -576,19 +583,19 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 
 ### Especially dangerous right now
 - Phase 2B, 2C, 2D, and 2E are complete. The prior "before Phase 2X is complete" warnings no longer apply.
-- Remaining high-risk areas: changes to daily-order canonical path (Must Fix #1) before consolidation; changes to order placement or balance mutation without transactions (Must Fix #2); new manual-balance tooling that bypasses the consolidated update-balance service.
+- Remaining high-risk areas: changes to daily-order canonical path (Must Fix #1) before consolidation; new manual-balance tooling that bypasses the consolidated update-balance service; any remaining non-canonical order/balance mutations that do not yet use the shared service layer.
 
 ## Recommended First Implementation Batch
 
-### Next step: Finish remaining Phase 3 + Phase 4
+### Next step: Finish remaining Must Fix items + optional Phase 3 cleanup
 - **Remaining Phase 3**: Further decomposition of [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and optional extraction from large checkout/management components ([`components/weekly-subscription-checkout.tsx`](components/weekly-subscription-checkout.tsx), [`components/daily-delivery-checkout.tsx`](components/daily-delivery-checkout.tsx), etc.) if still monolithic.
-- **Phase 4**: Add integration coverage for auth boundaries, daily/weekly orders, refunds, and balance mutations against canonical routes/services.
-- Admin decomposition and API contract layer are **already in place**; weekly domain remains stable.
+- **Correctness follow-up**: Close Must Fix #1, #3, and #4 now that transactional order placement is in place.
+- Admin decomposition, API contract layer, Phase 4 test coverage, and Must Fix #2 transactional order writes are **already in place**.
 
 ### Before any major new core-commerce feature work
 - Phase 2B through 2E are complete.
-- Phase 4 must provide regression coverage for orders, refunds, and balance mutation before high-risk expansion.
-- Must Fix items 1–4 remain for correctness and maintainability; Phase 3 does not block them but reduces risk when addressing them.
+- Phase 4 regression coverage is now in place for the canonical order/refund/balance paths.
+- Must Fix items #1, #3, and #4 remain for correctness and maintainability; Phase 3 does not block them but reduces risk when addressing them.
 
 ## Confidence And Risk View
 - `Fact`: The remaining work is concentrated in the most coupled domains in the repo.
@@ -619,4 +626,4 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - [x] Phase 3 (remaining): Further split [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and extract checkout/management orchestration as needed.
 - [x] Add integration coverage for auth, orders, refunds, and balance correctness (Phase 4).
 - [ ] Optional: delete 410-stub route files under `app/api/orders` once no external callers remain (Phase 2E retired paths and removed `lib/middleware.ts`).
-- [ ] Must Fix #1–4: Track to closure (daily canonical completeness, transactional order+balance writes, balance-path consolidation, any remaining schema drift).
+- [ ] Must Fix #1, #3, and #4: Track to closure (daily canonical completeness, balance-path consolidation, any remaining schema drift).

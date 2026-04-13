@@ -3,13 +3,14 @@ import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/a
 import { weeklySubscriptionUserOrderBodySchema } from "@/lib/contracts/weekly-subscription";
 import { requireUser } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
+import {
+  InsufficientWeeklyEntitlementError,
+  placeWeeklyOrder,
+} from "@/lib/orders/place-weekly-order";
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
-import UserSubscription from '@/models/UserSubscription';
 import WeeklyOrder from '@/models/WeeklyOrder';
-import WeeklyEntitlementGroup from '@/models/WeeklyEntitlementGroup';
 import User from "@/models/User";
-import { toWeeklyPlanId } from "@/lib/plans/service";
 import { format, addDays, addWeeks } from 'date-fns';
 
 // Types for consecutive date validation
@@ -307,10 +308,6 @@ export async function POST(request: Request) {
         }
 
         // Create comparable keys from the recent order's items
-        const recentDayKeys = recentOrder.items.map((item: any) => 
-          `${item.dayId}-${item.date}`
-        ).sort().join(',');
-        
         // Compare items: check if dayIds, quantities, and optionIds match
         const itemsMatch = data.items.length === recentOrder.items.length &&
           data.items.every((dataItem: any) => {
@@ -446,12 +443,6 @@ export async function POST(request: Request) {
       }
     }
     
-    // Find existing active subscription for this user
-    const existingSubscription = await UserSubscription.findOne({
-      userId: user._id,
-      status: 'active'
-    });
-    
     // Load meal option names for the order
     const mealOptionIds = data.items.map((item: any) => item.optionId);
     const mealOptions = await WeeklyMealOption.find({
@@ -508,10 +499,6 @@ export async function POST(request: Request) {
     
     console.log('🔍 API DEBUG: Final dayDateMap:', dayDateMap);
     
-    // Generate a unique order ID with only numbers
-    const randomNumbers = Math.floor(10000000 + Math.random() * 90000000); // 8-digit number
-    const orderId = `WS-${randomNumbers}`;
-    
     // Create order items with names and dates - FIXED: Use weekOffset in lookup
     const orderItems = data.items.map((item: any) => {
       const key = `${item.dayId}-${item.weekOffset}`;
@@ -529,157 +516,65 @@ export async function POST(request: Request) {
     
     console.log('🔍 API DEBUG: Final orderItems to be saved:', JSON.stringify(orderItems, null, 2));
 
-    if (weeklyEntitlementGroupId) {
-      const existingEntitlementGroup = await WeeklyEntitlementGroup.findOne({ groupId: weeklyEntitlementGroupId });
-      if (existingEntitlementGroup) {
-        if (String(existingEntitlementGroup.userId) !== String(user._id)) {
-          return errorJson("Weekly entitlement group belongs to a different user", 409);
-        }
+    console.log(`API received deductVoucher=${data.deductVoucher}, will deduct voucher: ${shouldDeductVoucher}`);
 
-        if (String(existingEntitlementGroup.mealPlanType) !== String(mealPlanType)) {
-          return errorJson("Weekly entitlement group meal plan type mismatch", 409);
-        }
+    try {
+      const { order, subscription, updatedUser } = await placeWeeklyOrder({
+        userId: effectiveUserId,
+        data,
+        orderItems,
+        mealPlanType,
+        shouldDeductVoucher,
+        totalItems,
+        weeklyEntitlementGroupId,
+        weeklyEntitlementTotalMeals,
+        splitDeliveryCount,
+        actor,
+        request,
+      });
 
-        if (Number(existingEntitlementGroup.totalMealsForWeek) !== weeklyEntitlementTotalMeals) {
-          return errorJson("Weekly entitlement group total meals mismatch", 409);
-        }
-      } else {
-        await WeeklyEntitlementGroup.create({
-          userId: user._id,
-          groupId: weeklyEntitlementGroupId,
-          mealPlanType,
-          voucherCountUsed: mealPlanType === 'legacy' ? 0 : 1,
-          totalMealsForWeek: weeklyEntitlementTotalMeals,
-          splitDeliveryCount,
+      // ✅ SKIP individual order confirmation email
+      // Summary email will be sent from frontend after all orders are placed
+      console.log('⏭️ Skipping individual order confirmation email (summary email will be sent after all orders)');
+      
+      // ✅ SKIP individual admin notification emails
+      // Admin summary email will be sent from frontend after all orders are placed
+      console.log('⏭️ Skipping individual admin notification email (admin summary email will be sent after all orders)');
+      
+      return NextResponse.json(
+        { 
+          success: true, 
+          data: {
+            subscription,
+            order
+          },
+          remainingCredits: updatedUser.credits, // For backward compatibility
+          updatedUser: {
+            credits: updatedUser.credits,
+            weeklySIXmeals: updatedUser.weeklySIXmeals,
+            weeklyEIGHTmeals: updatedUser.weeklyEIGHTmeals,
+            weeklyTENmeals: updatedUser.weeklyTENmeals,
+            weeklyTWELVEmeals: updatedUser.weeklyTWELVEmeals,
+            weeklySIXTEENmeals: updatedUser.weeklySIXTEENmeals,
+            planBalances: updatedUser.planBalances || {}
+          },
+          usedMealPlanType: mealPlanType,
+          voucherDeducted: shouldDeductVoucher // Include whether a voucher was deducted
+        },
+        { status: 200 }
+      );
+    } catch (error) {
+      if (error instanceof InsufficientWeeklyEntitlementError) {
+        return errorJson(error.message, 400, {
+          extra: {
+            requiredCredits: error.requiredCredits,
+            availableCredits: error.availableCredits,
+            mealPlanType: error.mealPlanType,
+          },
         });
       }
+      throw error;
     }
-    
-    // Create a new weekly order
-    const weeklyOrder = await WeeklyOrder.create({
-      userId: user._id,
-      orderId,
-      items: orderItems,
-      status: 'pending',
-      creditCost: totalItems,
-      mealPlanType,
-      voucherDeducted: shouldDeductVoucher,
-      weeklyEntitlementGroupId: weeklyEntitlementGroupId || undefined,
-      allocatedMealCount: totalItems,
-      specialInstructions: data.specialInstructions || '',
-      deliveryAddress: data.deliveryAddress || {},
-      phoneNumber: data.phoneNumber || '',
-      area: data.area || ''
-    });
-    
-    let subscription;
-    
-    if (existingSubscription) {
-      // Update existing subscription
-      subscription = await UserSubscription.findByIdAndUpdate(
-        existingSubscription._id,
-        {
-          $set: {
-            items: data.items
-          }
-        },
-        { new: true }
-      );
-    } else {
-      // Create new subscription with additional delivery information
-      subscription = await UserSubscription.create({
-        userId: user._id,
-        items: data.items,
-        status: 'active',
-        specialInstructions: data.specialInstructions || '',
-        deliveryAddress: data.deliveryAddress || {},
-        phoneNumber: data.phoneNumber || '',
-        area: data.area || ''
-      });
-    }
-    
-    console.log(`API received deductVoucher=${data.deductVoucher}, will deduct voucher: ${shouldDeductVoucher}`);
-    
-    let updatedUser = user;
-    
-    // Only deduct a voucher if the flag is true
-    if (shouldDeductVoucher) {
-      // Prepare the update object based on meal plan type
-      const updateField = mealPlanType === '6aweek' ? 'weeklySIXmeals' :
-                         mealPlanType === '8aweek' ? 'weeklyEIGHTmeals' :
-                         mealPlanType === '10aweek' ? 'weeklyTENmeals' :
-                         mealPlanType === '12aweek' ? 'weeklyTWELVEmeals' :
-                         mealPlanType === '16aweek' ? 'weeklySIXTEENmeals' :
-                         'credits';
-      
-      const updateObj: any = {
-        $inc: {}
-      };
-      updateObj.$inc[updateField] = mealPlanType === 'legacy' ? -totalItems : -1;
-      if (mealPlanType !== 'legacy') {
-        const weeklyMeals = Number(String(mealPlanType).replace('aweek', ''));
-        if (Number.isFinite(weeklyMeals)) {
-          const planBalanceKey = `planBalances.${toWeeklyPlanId(weeklyMeals, 1)}`;
-          updateObj.$inc[planBalanceKey] = -1;
-        }
-      }
-      
-      // Update phone number if provided in order
-      if (data.phoneNumber && data.phoneNumber.trim()) {
-        updateObj.$set = { phone: data.phoneNumber.trim() };
-      }
-      
-      // Deduct from the appropriate meal plan field and update phone
-      updatedUser = await User.findByIdAndUpdate(
-        user._id,
-        updateObj,
-        { new: true }
-      );
-      
-      console.log(`Voucher deducted: ${updateField} ${mealPlanType === 'legacy' ? -totalItems : -1}`);
-    } else {
-      console.log('Skipping voucher deduction as requested');
-      
-      // Even if not deducting voucher, still update phone number if provided
-      if (data.phoneNumber && data.phoneNumber.trim()) {
-        updatedUser = await User.findByIdAndUpdate(
-          user._id,
-          { $set: { phone: data.phoneNumber.trim() } },
-          { new: true }
-        );
-      }
-    }
-    
-    // ✅ SKIP individual order confirmation email
-    // Summary email will be sent from frontend after all orders are placed
-    console.log('⏭️ Skipping individual order confirmation email (summary email will be sent after all orders)');
-    
-    // ✅ SKIP individual admin notification emails
-    // Admin summary email will be sent from frontend after all orders are placed
-    console.log('⏭️ Skipping individual admin notification email (admin summary email will be sent after all orders)');
-    
-    return NextResponse.json(
-      { 
-        success: true, 
-        data: {
-          subscription,
-          order: weeklyOrder
-        },
-        remainingCredits: updatedUser.credits, // For backward compatibility
-        updatedUser: {
-          credits: updatedUser.credits,
-          weeklySIXmeals: updatedUser.weeklySIXmeals,
-          weeklyEIGHTmeals: updatedUser.weeklyEIGHTmeals,
-          weeklyTENmeals: updatedUser.weeklyTENmeals,
-          weeklyTWELVEmeals: updatedUser.weeklyTWELVEmeals,
-          weeklySIXTEENmeals: updatedUser.weeklySIXTEENmeals,
-          planBalances: updatedUser.planBalances || {}
-        },
-        usedMealPlanType: mealPlanType,
-        voucherDeducted: shouldDeductVoucher // Include whether a voucher was deducted
-      },
-      { status: 200 }
-    );
   } catch (error) {
     return handleRouteError(error, "POST /api/weekly-subscription/user");
   }
