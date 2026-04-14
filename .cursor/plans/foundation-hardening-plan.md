@@ -1,6 +1,6 @@
 ---
 title: Foundation Hardening Plan
-status: must-fix-2-transactional-order-writes-complete
+status: must-fix-3-balance-mutation-consolidation-complete
 updated: 2026-04-13
 ---
 
@@ -21,7 +21,8 @@ How to read this plan:
 - `Fact`: **Phase 3c (typed API contracts)** is complete: `lib/api` response/validation helpers, `lib/contracts` Zod schemas, and route-by-route migration across `app/api` (Auth.js passthrough and SSE shapes preserved where needed).
 - `Fact`: **Phase 3b cleanup (date formatting)** is complete: duplicated dashboard/history `formatDate` logic consolidated into `lib/format.ts` with optional locale for en/zh surfaces.
 - `Fact`: **Must Fix #1 (daily-order canonicalization)** is complete: the legacy `Order` model has been removed, legacy notification consumers now resolve canonical `DailyDeliveryOrder` data, and the remaining legacy daily-order routes are explicit `410` retirement stubs.
-- `Fact`: **Must Fix #2 (transactional order + balance writes)** is complete for the canonical daily and weekly order creation flows, plus daily admin refund/delete reversals. Remaining highest-priority correctness work is now **Must Fix #3 and #4**.
+- `Fact`: **Must Fix #2 (transactional order + balance writes)** is complete for the canonical daily and weekly order creation flows, plus daily admin refund/delete reversals.
+- `Fact`: **Must Fix #3 (balance-mutation path consolidation)** is complete: admin manual adjustments, credit/voucher approvals, and weekly delete-time entitlement restoration now all write through `applyBalanceMutations`, while legacy compatibility endpoints remain explicit `410` retirement stubs for caller safety.
 - `Inference`: The weekly domain is in a materially better state than when the original plan was written; admin and API surfaces are now easier to change safely than pre–Phase 3b/3c.
 
 ## Checkpoint Summary (post–Phase 2E + weekly refinements + Phase 3b/3c)
@@ -34,8 +35,8 @@ How to read this plan:
 | **Phase 3b cleanup** | Dashboard/history date display deduped via `lib/format.ts`. |
 | **Next phase** | Remaining Phase 3 (dashboard/checkout/management extraction as needed) → **Phase 4** tests. |
 | **Build next** | Optional: slim `app/dashboard/page.tsx`; extract heavy checkout/management components; add integration tests for orders/refunds/balances. |
-| **Wait on** | Must Fix #3 and #4 remain for full correctness closure; daily/weekly canonical order placement is now transaction-backed and daily-order canonicalization is complete. |
-| **Risks to watch** | Manual-balance tooling bypassing update-balance service; any remaining non-service order reversals outside the canonical paths. |
+| **Wait on** | Must Fix #4 remains for final correctness closure; daily/weekly canonical order placement is transaction-backed, daily-order canonicalization is complete, and balance mutations are now consolidated behind the shared service. |
+| **Risks to watch** | Any new admin tooling or refund path that mutates balances outside `applyBalanceMutations`; remaining route-local schema ownership in daily admin order flows. |
 
 ## Foundation Summary
 - `Fact`: The healthiest centralized parts of the repo are plan/config logic in [`lib/plans/catalog.ts`](lib/plans/catalog.ts), [`lib/plans/service.ts`](lib/plans/service.ts), [`lib/plans/balances.ts`](lib/plans/balances.ts), [`lib/promo-code.ts`](lib/promo-code.ts), and [`lib/constants/areas.ts`](lib/constants/areas.ts).
@@ -72,6 +73,7 @@ How to read this plan:
 - Expected benefit: Correct accounting behavior and simpler future plan growth.
 - Implementation difficulty: High.
 - Risk if left unfixed: High.
+- `Fact` (2026-04): The last live bypass path was removed from [`app/api/admin/weekly-subscription/orders/[id]/route.ts`](app/api/admin/weekly-subscription/orders/[id]/route.ts); delete-time weekly entitlement restoration now resolves the refund target via [`lib/orders/weekly-refund.ts`](lib/orders/weekly-refund.ts) and applies the write through [`lib/balances/mutations.ts`](lib/balances/mutations.ts), producing the same transaction + audit behavior as the other balance write paths. The legacy admin credit routes remain as explicit `410` retirement stubs for compatibility safety instead of being deleted outright.
 
 ### 4. Replace route-local schema duplication in admin order flows
 - Problem: Admin order routes still redefine schema structures inline.
@@ -405,6 +407,7 @@ Create one coherent entitlement mutation model across admin adjustments, purchas
 - `Fact`: Audit logging in [`lib/security/audit.ts`](lib/security/audit.ts) now supports MongoDB sessions, allowing balance mutations and audit rows to be written within the same transaction boundary.
 - `Fact`: Admin mutation endpoints [`app/api/users/[id]/credits/route.ts`](app/api/users/[id]/credits/route.ts), [`app/api/users/[id]/add-credits/route.ts`](app/api/users/[id]/add-credits/route.ts), [`app/api/users/[id]/deduct-credits/route.ts`](app/api/users/[id]/deduct-credits/route.ts), and [`app/api/users/[id]/update-balance/route.ts`](app/api/users/[id]/update-balance/route.ts) now route their writes through the shared service instead of owning separate balance-mutation logic.
 - `Fact`: Purchase approval flows in [`app/api/credits/request/admin/route.ts`](app/api/credits/request/admin/route.ts) and [`app/api/voucher-requests/[requestId]/route.ts`](app/api/voucher-requests/[requestId]/route.ts) now use the same mutation service for credits, daily vouchers, and weekly-plan entitlement grants, while keeping their existing API responses and compatibility URLs.
+- `Fact`: The last remaining weekly delete-time refund bypass now also uses the shared mutation service, so active balance writes no longer mutate user entitlements outside [`lib/balances/mutations.ts`](lib/balances/mutations.ts).
 - `Fact`: Targeted lint checks passed for all touched files. `npx tsc --noEmit` still reports unrelated pre-existing route-context typing failures elsewhere in the repo and no longer reports errors in the touched 2D files.
 - `Inference`: Phase 2E can now focus on consumer cleanup because the highest-risk mutation drift has been reduced at the service layer even where legacy URLs remain for compatibility.
 
@@ -482,7 +485,7 @@ Work completed after Phase 2E to simplify weekly split-order modeling, fix displ
 - `Fact`: Admin weekly status API [`app/api/admin/weekly-subscription/orders/[id]/status/route.ts`](app/api/admin/weekly-subscription/orders/[id]/status/route.ts) no longer performs automatic entitlement restoration on status change; it is a pure status-update route.
 - `Fact`: "Mark as Refunded" and "Refunded" batch option were removed from weekly admin UI in [`components/view-weekly-orders.tsx`](components/view-weekly-orders.tsx).
 - `Fact`: Weekly child-order cancellation is now a fulfillment status change only. Partial cancellation is handled by human support; no automatic refund/restoration from child-order status changes.
-- `Fact`: Exceptional manual refund/delete path (delete with `returnCredits=true`) remains unchanged and separate from normal status flow.
+- `Fact`: Exceptional manual refund/delete path (delete with `returnCredits=true`) remains separate from normal status flow by design, but it now routes any entitlement restoration through the shared balance mutation service instead of mutating the user document directly.
 
 #### Assumptions now outdated
 - The original "Must Fix Now" item 4 listed admin weekly schema duplication; Phase 2C-1 already addressed weekly admin route schema ownership. Item 4 now applies primarily to daily-order admin routes.
@@ -611,7 +614,7 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - `High` for Phase 2C-1 by itself.
 - `Medium` for Phase 2C-2 by itself.
 - `Medium` for Phase 2C-3 by itself.
-- `Medium-low` for Phase 2D if attempted together with 2B or 2C.
+- `Medium-low` for Phase 2D if attempted together with 2B or 2C. This risk is no longer active because 2D is complete.
 - `High` for 2E after the earlier subphases are done.
 
 ## Prioritized Checklist
@@ -630,4 +633,4 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - [x] Phase 3 (remaining): Further split [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and extract checkout/management orchestration as needed.
 - [x] Add integration coverage for auth, orders, refunds, and balance correctness (Phase 4).
 - [ ] Optional: delete 410-stub route files under `app/api/orders` once no external callers remain (Phase 2E retired paths and removed `lib/middleware.ts`).
-- [ ] Must Fix #1, #3, and #4: Track to closure (daily canonical completeness, balance-path consolidation, any remaining schema drift).
+- [ ] Must Fix #4: Track to closure (remaining schema drift in daily admin order flows).

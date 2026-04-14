@@ -1,6 +1,7 @@
 import Transaction from "@/models/Transaction"
 import User from "@/models/User"
-import { restoreWeeklyOrderEntitlement } from "@/lib/orders/weekly-refund"
+import { applyBalanceMutations } from "@/lib/balances/mutations"
+import { resolveWeeklyRefundTarget, toWeeklyRefundBalanceMutation } from "@/lib/orders/weekly-refund"
 
 import { clearCollections, setupTestDb, teardownTestDb } from "../helpers/db"
 import { createTestAdmin, createTestUser } from "../helpers/factories"
@@ -196,7 +197,7 @@ describe("app/api/users/[id]/update-balance", () => {
   })
 })
 
-describe("lib/orders/weekly-refund with real user documents", () => {
+describe("weekly refund mutations with real user documents", () => {
   beforeAll(async () => {
     await setupTestDb()
   })
@@ -212,12 +213,21 @@ describe("lib/orders/weekly-refund with real user documents", () => {
   it("restores legacy credits on refund", async () => {
     const user = await createTestUser({ credits: 2 })
 
-    const refundTarget = restoreWeeklyOrderEntitlement(user, {
+    const refundTarget = resolveWeeklyRefundTarget({
       mealPlanType: "legacy",
       voucherDeducted: true,
       creditCost: 3,
     })
-    await user.save()
+    const mutation = toWeeklyRefundBalanceMutation(refundTarget)
+    if (!mutation) {
+      throw new Error("Expected a credit refund mutation")
+    }
+
+    await applyBalanceMutations({
+      user,
+      mutations: [mutation],
+      createTransaction: false,
+    })
 
     const savedUser = (await User.findById(user._id).lean()) as { credits: number } | null
 
@@ -230,12 +240,21 @@ describe("lib/orders/weekly-refund with real user documents", () => {
     user.set("planBalances", { "weekly-6x1": 0 })
     await user.save()
 
-    const refundTarget = restoreWeeklyOrderEntitlement(user, {
+    const refundTarget = resolveWeeklyRefundTarget({
       mealPlanType: "6aweek",
       voucherDeducted: true,
       creditCost: 6,
     })
-    await user.save()
+    const mutation = toWeeklyRefundBalanceMutation(refundTarget)
+    if (!mutation) {
+      throw new Error("Expected a weekly-plan refund mutation")
+    }
+
+    await applyBalanceMutations({
+      user,
+      mutations: [mutation],
+      createTransaction: false,
+    })
 
     const savedUser = (await User.findById(user._id).lean()) as {
       weeklySIXmeals: number
@@ -261,12 +280,13 @@ describe("lib/orders/weekly-refund with real user documents", () => {
       weeklySIXmeals: 2,
     })
 
-    const refundTarget = restoreWeeklyOrderEntitlement(user, {
+    const refundTarget = resolveWeeklyRefundTarget({
       mealPlanType: "6aweek",
       voucherDeducted: false,
       creditCost: 6,
     })
-    await user.save()
+    const mutation = toWeeklyRefundBalanceMutation(refundTarget)
+    expect(mutation).toBeNull()
 
     const savedUser = (await User.findById(user._id).lean()) as {
       credits: number

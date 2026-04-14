@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { errorJson, handleRouteError, successJson, type RouteContext } from "@/lib/api";
 import { requireAdminMfa } from "@/lib/auth/guards";
+import { applyBalanceMutations } from "@/lib/balances/mutations";
 import connectToDatabase from "@/lib/db";
 import mongoose from "mongoose";
 import { buildWeeklyEntitlementSummary } from "@/lib/orders/weekly-entitlement-display";
 import {
   describeWeeklyRefundTarget,
   resolveWeeklyRefundTarget,
-  restoreWeeklyOrderEntitlement,
+  toWeeklyRefundBalanceMutation,
 } from "@/lib/orders/weekly-refund";
 import User from "@/models/User";
 import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
@@ -137,17 +138,35 @@ export async function DELETE(request: Request, ctx: RouteContext<{ id: string }>
     const refundTarget = shouldRestoreEntitlement
       ? resolveWeeklyRefundTarget(order)
       : ({ kind: "none", amount: 0 } as const);
+    const refundMutation = shouldRestoreEntitlement
+      ? toWeeklyRefundBalanceMutation(refundTarget)
+      : null;
 
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
-        if (shouldRestoreEntitlement && refundTarget.kind !== "none") {
+        if (refundMutation) {
           const user = await User.findById(order.userId).session(session);
           if (!user) {
             throw new Error("User not found for entitlement restoration");
           }
-          restoreWeeklyOrderEntitlement(user, order);
-          await user.save({ session });
+
+          await applyBalanceMutations({
+            user,
+            mutations: [refundMutation],
+            description: `Refunded weekly order ${order.orderId}`,
+            transactionType: "refund",
+            session,
+            actor,
+            request,
+            auditAction: "weekly-order.delete.restore-entitlement",
+            auditTargetType: "weekly-order",
+            auditTargetId: order.orderId,
+            auditMetadata: {
+              returnCredits: true,
+              refundTarget,
+            },
+          });
         }
 
         const deleteResult = await WeeklyOrder.deleteOne({ orderId: id }, { session });

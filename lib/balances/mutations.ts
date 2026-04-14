@@ -36,6 +36,10 @@ const WEEKLY_FIELD_TO_PLAN_ID: Partial<Record<BalanceMutationField, string>> = {
   weeklySIXTEENmeals: toWeeklyPlanId(16, 1),
 };
 
+const PLAN_ID_TO_WEEKLY_FIELD = Object.fromEntries(
+  Object.entries(WEEKLY_FIELD_TO_PLAN_ID).map(([field, planId]) => [planId, field])
+) as Partial<Record<string, BalanceMutationField>>;
+
 export class BalanceMutationError extends Error {
   status: number;
   code: string;
@@ -86,6 +90,10 @@ export interface ApplyBalanceMutationsResult {
 
 export function isBalanceMutationField(value: unknown): value is BalanceMutationField {
   return typeof value === 'string' && BALANCE_MUTATION_FIELDS.includes(value as BalanceMutationField);
+}
+
+export function getBalanceMutationFieldForPlanId(planId: string): BalanceMutationField | null {
+  return PLAN_ID_TO_WEEKLY_FIELD[planId] ?? null;
 }
 
 export async function findBalanceMutationUser(

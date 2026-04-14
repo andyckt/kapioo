@@ -1,4 +1,5 @@
-import { incrementBalance } from '@/lib/plans/balances';
+import type { BalanceMutationEntry } from '@/lib/balances/mutations';
+import { getBalanceMutationFieldForPlanId } from '@/lib/balances/mutations';
 import { toWeeklyPlanId } from '@/lib/plans/service';
 
 export type RefundWeeklyMealPlanType = 'legacy' | '6aweek' | '8aweek' | '10aweek' | '12aweek' | '16aweek';
@@ -43,23 +44,35 @@ export function resolveWeeklyRefundTarget(order: RefundableWeeklyOrder): RefundT
   };
 }
 
-export function restoreWeeklyOrderEntitlement(
-  user: Record<string, any>,
-  order: RefundableWeeklyOrder
-) {
-  const refundTarget = resolveWeeklyRefundTarget(order);
-
+export function toWeeklyRefundBalanceMutation(
+  refundTarget: RefundTarget
+): BalanceMutationEntry | null {
   if (refundTarget.kind === 'none') {
-    return refundTarget;
+    return null;
   }
 
   if (refundTarget.kind === 'credits') {
-    user.credits = (Number(user.credits) || 0) + refundTarget.amount;
-    return refundTarget;
+    if (refundTarget.amount <= 0) {
+      return null;
+    }
+
+    return {
+      field: 'credits',
+      amount: refundTarget.amount,
+      operation: 'add',
+    };
   }
 
-  incrementBalance(user, refundTarget.planId, refundTarget.amount);
-  return refundTarget;
+  const field = getBalanceMutationFieldForPlanId(refundTarget.planId);
+  if (!field) {
+    throw new Error(`Unsupported weekly refund planId: ${refundTarget.planId}`);
+  }
+
+  return {
+    field,
+    amount: refundTarget.amount,
+    operation: 'add',
+  };
 }
 
 export function describeWeeklyRefundTarget(refundTarget: RefundTarget): string {

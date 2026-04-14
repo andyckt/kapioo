@@ -1,7 +1,7 @@
 import {
   describeWeeklyRefundTarget,
   resolveWeeklyRefundTarget,
-  restoreWeeklyOrderEntitlement,
+  toWeeklyRefundBalanceMutation,
 } from "@/lib/orders/weekly-refund"
 
 describe("lib/orders/weekly-refund", () => {
@@ -61,55 +61,52 @@ describe("lib/orders/weekly-refund", () => {
     })
   })
 
-  describe("restoreWeeklyOrderEntitlement", () => {
-    it("adds credits back for legacy refunds", () => {
-      const user = { credits: 4 }
-
-      const refundTarget = restoreWeeklyOrderEntitlement(user, {
-        voucherDeducted: true,
-        mealPlanType: "legacy",
-        creditCost: 3,
+  describe("toWeeklyRefundBalanceMutation", () => {
+    it("maps legacy credit refunds to balance mutations", () => {
+      expect(
+        toWeeklyRefundBalanceMutation({
+          kind: "credits",
+          amount: 3,
+        })
+      ).toEqual({
+        field: "credits",
+        amount: 3,
+        operation: "add",
       })
-
-      expect(refundTarget).toEqual({ kind: "credits", amount: 3 })
-      expect(user.credits).toBe(7)
     })
 
-    it("restores weekly plan balances and legacy fields for modern plans", () => {
-      const user = {
-        weeklySIXmeals: 0,
-      }
-
-      const refundTarget = restoreWeeklyOrderEntitlement(user, {
-        voucherDeducted: true,
-        mealPlanType: "6aweek",
-        creditCost: 6,
-      })
-
-      expect(refundTarget).toEqual({
-        kind: "weekly-plan",
+    it("maps modern weekly-plan refunds to canonical weekly balance fields", () => {
+      expect(
+        toWeeklyRefundBalanceMutation({
+          kind: "weekly-plan",
+          amount: 1,
+          planId: "weekly-6x1",
+        })
+      ).toEqual({
+        field: "weeklySIXmeals",
         amount: 1,
-        planId: "weekly-6x1",
-      })
-      expect(user).toMatchObject({
-        weeklySIXmeals: 1,
-        planBalances: {
-          "weekly-6x1": 1,
-        },
+        operation: "add",
       })
     })
 
-    it("does nothing when there is nothing to restore", () => {
-      const user = { credits: 10, weeklyEIGHTmeals: 2 }
+    it("returns null when there is nothing to restore or the legacy credit amount is zero", () => {
+      expect(toWeeklyRefundBalanceMutation({ kind: "none", amount: 0 })).toBeNull()
+      expect(
+        toWeeklyRefundBalanceMutation({
+          kind: "credits",
+          amount: 0,
+        })
+      ).toBeNull()
+    })
 
-      const refundTarget = restoreWeeklyOrderEntitlement(user, {
-        voucherDeducted: false,
-        mealPlanType: "8aweek",
-        creditCost: 8,
-      })
-
-      expect(refundTarget).toEqual({ kind: "none", amount: 0 })
-      expect(user).toEqual({ credits: 10, weeklyEIGHTmeals: 2 })
+    it("throws for unsupported weekly plan ids", () => {
+      expect(() =>
+        toWeeklyRefundBalanceMutation({
+          kind: "weekly-plan",
+          amount: 1,
+          planId: "weekly-999x1",
+        })
+      ).toThrow("Unsupported weekly refund planId: weekly-999x1")
     })
   })
 
