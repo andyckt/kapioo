@@ -63,11 +63,15 @@ export const LEGACY_ORDER_CONSUMERS = [
     surface: 'legacy-notification-lookups',
     file: 'app/api/notifications/route.ts',
     routes: ['/api/notifications'],
+    status: 'retired',
+    notes: 'Legacy Order lookup removed; route now resolves canonical DailyDeliveryOrder by orderId.',
   },
   {
     surface: 'legacy-notification-service-types',
     file: 'lib/services/notifications.ts',
     routes: ['internal-model-dependency'],
+    status: 'retired',
+    notes: 'Legacy Order-based notification helpers removed; service now uses canonical daily-order notifications.',
   },
 ] as const;
 

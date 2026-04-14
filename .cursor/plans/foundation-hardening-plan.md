@@ -20,7 +20,8 @@ How to read this plan:
 - `Fact`: **Phase 3b (admin decomposition)** is complete: domain slices under `features/admin-*`, shared `components/admin-orders`, lazy-loaded admin tab content, and thin legacy re-exports where applicable.
 - `Fact`: **Phase 3c (typed API contracts)** is complete: `lib/api` response/validation helpers, `lib/contracts` Zod schemas, and route-by-route migration across `app/api` (Auth.js passthrough and SSE shapes preserved where needed).
 - `Fact`: **Phase 3b cleanup (date formatting)** is complete: duplicated dashboard/history `formatDate` logic consolidated into `lib/format.ts` with optional locale for en/zh surfaces.
-- `Fact`: **Must Fix #2 (transactional order + balance writes)** is complete for the canonical daily and weekly order creation flows, plus daily admin refund/delete reversals. Remaining highest-priority correctness work is now **Must Fix #1, #3, and #4**.
+- `Fact`: **Must Fix #1 (daily-order canonicalization)** is complete: the legacy `Order` model has been removed, legacy notification consumers now resolve canonical `DailyDeliveryOrder` data, and the remaining legacy daily-order routes are explicit `410` retirement stubs.
+- `Fact`: **Must Fix #2 (transactional order + balance writes)** is complete for the canonical daily and weekly order creation flows, plus daily admin refund/delete reversals. Remaining highest-priority correctness work is now **Must Fix #3 and #4**.
 - `Inference`: The weekly domain is in a materially better state than when the original plan was written; admin and API surfaces are now easier to change safely than pre–Phase 3b/3c.
 
 ## Checkpoint Summary (post–Phase 2E + weekly refinements + Phase 3b/3c)
@@ -33,8 +34,8 @@ How to read this plan:
 | **Phase 3b cleanup** | Dashboard/history date display deduped via `lib/format.ts`. |
 | **Next phase** | Remaining Phase 3 (dashboard/checkout/management extraction as needed) → **Phase 4** tests. |
 | **Build next** | Optional: slim `app/dashboard/page.tsx`; extract heavy checkout/management components; add integration tests for orders/refunds/balances. |
-| **Wait on** | Must Fix #1, #3, and #4 remain for full correctness closure; daily/weekly canonical order placement is now transaction-backed. |
-| **Risks to watch** | Daily-order path changes before #1 consolidation; manual-balance tooling bypassing update-balance service; any remaining non-service order reversals outside the canonical paths. |
+| **Wait on** | Must Fix #3 and #4 remain for full correctness closure; daily/weekly canonical order placement is now transaction-backed and daily-order canonicalization is complete. |
+| **Risks to watch** | Manual-balance tooling bypassing update-balance service; any remaining non-service order reversals outside the canonical paths. |
 
 ## Foundation Summary
 - `Fact`: The healthiest centralized parts of the repo are plan/config logic in [`lib/plans/catalog.ts`](lib/plans/catalog.ts), [`lib/plans/service.ts`](lib/plans/service.ts), [`lib/plans/balances.ts`](lib/plans/balances.ts), [`lib/promo-code.ts`](lib/promo-code.ts), and [`lib/constants/areas.ts`](lib/constants/areas.ts).
@@ -51,6 +52,7 @@ How to read this plan:
 - Expected benefit: One model, one lifecycle, lower regression risk.
 - Implementation difficulty: High.
 - Risk if left unfixed: Critical.
+- `Fact` (2026-04): Legacy `Order` model usage has been fully removed from application code. [`app/api/notifications/route.ts`](app/api/notifications/route.ts) now resolves canonical [`models/DailyDeliveryOrder.ts`](models/DailyDeliveryOrder.ts) records by `orderId`, [`lib/services/notifications.ts`](lib/services/notifications.ts) now sends canonical daily-order notifications, and [`models/Order.ts`](models/Order.ts) has been deleted. Remaining legacy daily-order endpoints are retirement stubs that return `410`.
 
 ### 2. Make order placement and balance mutation transactional
 - Problem: Order creation and entitlement mutation are still not consistently atomic.
@@ -245,9 +247,11 @@ Move the system onto one canonical daily-order domain and retire the conflicting
 ### Phase 2B execution record
 - `Fact`: Legacy compatibility components now resolve through canonical daily-order surfaces by routing [`components/order-management.tsx`](components/order-management.tsx) to [`components/view-all-orders.tsx`](components/view-all-orders.tsx) and [`components/order-history.tsx`](components/order-history.tsx) to [`components/daily-delivery-history.tsx`](components/daily-delivery-history.tsx).
 - `Fact`: Live stats and count consumers that were still reading legacy daily orders now read canonical data through [`app/api/orders/stats/route.ts`](app/api/orders/stats/route.ts), [`app/api/users/[id]/orders/count/route.ts`](app/api/users/[id]/orders/count/route.ts), [`app/api/users/[id]/order-count/route.ts`](app/api/users/[id]/order-count/route.ts), [`app/api/users/[id]/daily-orders/count/route.ts`](app/api/users/[id]/daily-orders/count/route.ts), [`app/api/users/[id]/activity/route.ts`](app/api/users/[id]/activity/route.ts), and [`app/api/users/with-order-counts/route.ts`](app/api/users/with-order-counts/route.ts).
-- `Fact`: The legacy user-order list route [`app/api/users/[id]/orders/route.ts`](app/api/users/[id]/orders/route.ts) now reads from [`models/DailyDeliveryOrder.ts`](models/DailyDeliveryOrder.ts) instead of [`models/Order.ts`](models/Order.ts).
+- `Fact`: The legacy user-order list route [`app/api/users/[id]/orders/route.ts`](app/api/users/[id]/orders/route.ts) is now an explicit retirement stub that returns `410` with a canonical replacement hint instead of reading from the removed legacy model.
 - `Fact`: Legacy write entrypoints for daily orders were explicitly retired by returning `410` from [`app/api/orders/route.ts`](app/api/orders/route.ts) `POST` and [`app/api/orders/[id]/route.ts`](app/api/orders/[id]/route.ts) `PATCH`, preventing new writes from re-entering the deprecated `Order` path.
-- `Inference`: Phase 2B materially reduced the chance of silent domain drift because active dashboards, counts, and compatibility surfaces now derive daily-order state from the canonical collection, while legacy write paths no longer mutate stale order data.
+- `Fact`: The last runtime consumers of the legacy model were removed by migrating [`app/api/notifications/route.ts`](app/api/notifications/route.ts) and [`lib/services/notifications.ts`](lib/services/notifications.ts) to canonical daily-order data and notification helpers.
+- `Fact`: The deprecated model file [`models/Order.ts`](models/Order.ts) has been removed after code search confirmed zero remaining application imports.
+- `Inference`: Phase 2B is complete. Active dashboards, counts, notifications, and admin/customer daily-order flows now derive from the canonical collection, while legacy write/read paths are either canonicalized or explicitly retired.
 
 ## Phase 2C: Weekly Order Lifecycle Cleanup
 

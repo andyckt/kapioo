@@ -8,7 +8,7 @@ import {
   handleOrderNotification,
   NotificationType,
 } from "@/lib/services/notifications";
-import Order from "@/models/Order";
+import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
 
 export async function POST(request: Request) {
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     let user = null;
 
     if (orderId) {
-      order = await Order.findOne({ orderId });
+      order = await DailyDeliveryOrder.findOne({ orderId });
       if (!order) {
         return errorJson("Order not found", 404);
       }
