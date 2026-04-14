@@ -7,6 +7,25 @@ alwaysApply: true
 
 Every edit and new feature must respect these principles. Apply them before considering work complete.
 
+## 0. Live users, existing data, and continuity (non-negotiable)
+
+Every change must explicitly account for **people already using the product** and **data already stored** (including old shapes, optional fields, and legacy paths). The default is **no surprise breakage** of current behavior.
+
+**Before considering work complete, answer at least:**
+
+- **Who can be affected?** End users, admins, background jobs, emails, old bookmarks, mobile apps, cached tabs.
+- **What existing data might hit this path?** Old documents, null/legacy fields, partial migrations, users who never completed a step.
+- **Will this change break a stable contract?** API response shape, status values, required fields, redirects, error codes, or client expectations—unless you have a deliberate migration and rollout plan.
+- **Is the failure mode acceptable?** Prefer graceful degradation, clear errors, and safe no-ops over hard failures for ambiguous legacy input.
+
+**Do not:**
+
+- Assume production data looks like fresh seed data or “happy path” fixtures only.
+- Remove or narrow validation, routes, or fields without checking **real** consumers and **backfill/migration** where needed.
+- Ship behavior that silently corrupts balances, orders, or entitlements for users who did nothing different.
+
+**When tightening behavior** (stricter validation, new required fields, removing endpoints): provide compatibility (defaults, feature flags, dual-read, deprecation period, or documented migration) unless the risk is explicitly accepted and scoped.
+
 ## 1. Data fetching — prevent problems through design (not AbortController)
 
 Design so the effect runs only when it should. If you get this right, you won't have duplicate fetches — no need for AbortController to "fix" them.
@@ -78,5 +97,6 @@ Design so the effect runs only when it should. If you get this right, you won't 
 - [ ] **Errors**: Failures handled with user feedback? No silent catches?
 - [ ] **Types**: No new `any`; API responses typed?
 - [ ] **Tests**: Business logic or API changes have tests?
+- [ ] **Live users & legacy data** (see section 0): Existing users and stored data considered? No unintended break of current flows or contracts?
 - [ ] Plan changes → catalog updated, no hardcoded fallbacks?
 - [ ] Lint passes; Network tab shows no duplicate requests for the same endpoint?
