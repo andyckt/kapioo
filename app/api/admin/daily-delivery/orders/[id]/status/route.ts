@@ -8,6 +8,7 @@ import {
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { updateDailyOrderStatusBodySchema } from "@/lib/contracts/daily-order";
 import connectToDatabase from "@/lib/db";
+import { enrichAdminOrderResponse } from "@/lib/orders/admin-order-response";
 import { refundDailyOrder } from "@/lib/orders/daily-admin-mutations";
 import { sendDailyOrderStatusUpdateNotification } from "@/lib/services/notifications";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
@@ -89,7 +90,7 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
       }
     }
 
-    return successJson(updatedOrder);
+    return successJson(await enrichAdminOrderResponse(updatedOrder.toObject()));
   } catch (error: unknown) {
     return handleRouteError(error, `PATCH /api/admin/daily-delivery/orders/${id || "[id]"}/status`);
   }

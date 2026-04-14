@@ -4,6 +4,7 @@ import { requireAdminMfa } from "@/lib/auth/guards";
 import { applyBalanceMutations } from "@/lib/balances/mutations";
 import connectToDatabase from "@/lib/db";
 import mongoose from "mongoose";
+import { buildAdminOrderResponse, findAdminOrderUser } from "@/lib/orders/admin-order-response";
 import { buildWeeklyEntitlementSummary } from "@/lib/orders/weekly-entitlement-display";
 import {
   describeWeeklyRefundTarget,
@@ -13,11 +14,6 @@ import {
 import User from "@/models/User";
 import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
 import WeeklyOrder from "@/models/WeeklyOrder";
-import {
-  getOrderOnlyOverrideMeta,
-  hasOrderCustomerOverride,
-  resolveEffectiveOrderCustomerInfo,
-} from "@/lib/orders/effective-customer-info";
 
 function toAllocatedMealCount(order: {
   allocatedMealCount?: unknown;
@@ -71,7 +67,7 @@ export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) 
       return errorJson("Order not found", 404);
     }
 
-    const user = await User.findById(order.userId).select("name email").lean();
+    const user = await findAdminOrderUser(order.userId);
     const entitlementGroup =
       typeof order.weeklyEntitlementGroupId === "string" && order.weeklyEntitlementGroupId
         ? await WeeklyEntitlementGroup.findOne({ groupId: order.weeklyEntitlementGroupId }).lean()
@@ -92,22 +88,21 @@ export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) 
         deliveryDateSummary: toDeliveryDateSummary(linkedOrder),
       }));
 
-    const orderWithUserInfo = {
-      ...order,
-      user,
-      weeklyEntitlementSummary: buildWeeklyEntitlementSummary(order, entitlementGroup as never),
-      linkedWeeklyGroup: order.weeklyEntitlementGroupId
-        ? {
-            groupId: order.weeklyEntitlementGroupId,
-            parentRecordExists: Boolean(entitlementGroup),
-            linkedChildOrderCount: linkedChildOrders.length,
-            otherLinkedChildOrders,
-          }
-        : null,
-      effectiveCustomerInfo: resolveEffectiveOrderCustomerInfo(order, user as never),
-      hasOrderOnlyOverride: hasOrderCustomerOverride(order),
-      orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order),
-    };
+    const orderWithUserInfo = buildAdminOrderResponse(
+      {
+        ...order,
+        weeklyEntitlementSummary: buildWeeklyEntitlementSummary(order, entitlementGroup as never),
+        linkedWeeklyGroup: order.weeklyEntitlementGroupId
+          ? {
+              groupId: order.weeklyEntitlementGroupId,
+              parentRecordExists: Boolean(entitlementGroup),
+              linkedChildOrderCount: linkedChildOrders.length,
+              otherLinkedChildOrders,
+            }
+          : null,
+      },
+      user
+    );
 
     return successJson(orderWithUserInfo);
   } catch (error) {

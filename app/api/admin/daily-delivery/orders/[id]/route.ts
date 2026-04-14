@@ -3,20 +3,9 @@ import { NextResponse } from "next/server";
 import { errorJson, handleRouteError, successJson, type RouteContext } from "@/lib/api";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
+import { enrichAdminOrderResponse } from "@/lib/orders/admin-order-response";
 import { deleteDailyOrder } from "@/lib/orders/daily-admin-mutations";
-import {
-  getOrderOnlyOverrideMeta,
-  hasOrderCustomerOverride,
-  resolveEffectiveOrderCustomerInfo,
-} from "@/lib/orders/effective-customer-info";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
-import User from "@/models/User";
-
-type AdminDailyOrderUser = {
-  _id?: unknown;
-  name?: string;
-  email?: string;
-} | null;
 
 export async function GET(request: Request, { params }: RouteContext<{ id: string }>) {
   let id = "";
@@ -36,17 +25,7 @@ export async function GET(request: Request, { params }: RouteContext<{ id: strin
       return errorJson("Order not found", 404);
     }
 
-    const user = (await User.findById(order.userId).select("name email").lean()) as AdminDailyOrderUser;
-
-    const orderWithUserInfo = {
-      ...order,
-      user,
-      effectiveCustomerInfo: resolveEffectiveOrderCustomerInfo(order, user),
-      hasOrderOnlyOverride: hasOrderCustomerOverride(order),
-      orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order),
-    };
-
-    return successJson(orderWithUserInfo);
+    return successJson(await enrichAdminOrderResponse(order));
   } catch (error: unknown) {
     return handleRouteError(error, `GET /api/admin/daily-delivery/orders/${id || "[id]"}`);
   }

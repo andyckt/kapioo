@@ -3,6 +3,7 @@ import { errorJson, handleRouteError, parseJsonBody, type RouteContext } from "@
 import { updateWeeklyOrderStatusBodySchema } from "@/lib/contracts/weekly-order";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
+import { enrichAdminOrderResponse } from "@/lib/orders/admin-order-response";
 import {
   resolveWeeklyStatusTransition,
   WEEKLY_OPERATOR_ORDER_STATUSES,
@@ -48,7 +49,7 @@ export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>)
     if (transition.noOp) {
       return NextResponse.json({
         success: true,
-        data: order,
+        data: await enrichAdminOrderResponse(order.toObject()),
         meta: {
           currentStatus: transition.currentStatus,
           nextStatus: transition.nextStatus,
@@ -91,7 +92,7 @@ export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>)
 
     return NextResponse.json({
       success: true,
-      data: updatedOrder,
+      data: await enrichAdminOrderResponse(updatedOrder.toObject()),
       meta: {
         currentStatus: transition.currentStatus,
         nextStatus: transition.nextStatus,

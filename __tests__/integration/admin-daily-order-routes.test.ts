@@ -148,6 +148,45 @@ describe("admin daily order mutation routes", () => {
     expect(await Transaction.countDocuments()).toBe(0)
   })
 
+  it("returns resolved customer info after a status update", async () => {
+    const admin = await createTestAdmin()
+    const user = await createTestUser({
+      name: "Daily Customer",
+      email: "daily@example.com",
+    })
+    const order = await createDailyOrderForUser(user._id)
+
+    requireAdminMfaMock.mockResolvedValue({
+      response: null,
+      actor: createActor(admin),
+    })
+
+    const response = await PATCH(
+      buildJsonRequest(
+        `http://localhost:3000/api/admin/daily-delivery/orders/${order.orderId}/status`,
+        { status: "confirmed" },
+        { method: "PATCH" }
+      ),
+      { params: Promise.resolve({ id: order.orderId }) }
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+    expect(json.data).toMatchObject({
+      orderId: order.orderId,
+      status: "confirmed",
+      user: {
+        name: "Daily Customer",
+        email: "daily@example.com",
+      },
+      effectiveCustomerInfo: {
+        name: "Daily Customer",
+        email: "daily@example.com",
+      },
+    })
+  })
+
   it("deletes an order and returns vouchers atomically when requested", async () => {
     const admin = await createTestAdmin()
     const user = await createTestUser({ twoDishVoucher: 1, threeDishVoucher: 0 })

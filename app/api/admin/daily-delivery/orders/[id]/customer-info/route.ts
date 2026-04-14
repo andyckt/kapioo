@@ -9,9 +9,8 @@ import { requireAdminMfa } from "@/lib/auth/guards";
 import { dailyOrderCustomerInfoPatchBodySchema } from "@/lib/contracts/daily-order";
 import { ALL_WEEKLY_AREAS } from "@/lib/constants/areas";
 import connectToDatabase from "@/lib/db";
+import { enrichAdminOrderResponse } from "@/lib/orders/admin-order-response";
 import {
-  getOrderOnlyOverrideMeta,
-  hasOrderCustomerOverride,
   normalizeOptionalText,
   normalizePhoneNumber,
   resolveEffectiveOrderCustomerInfo,
@@ -274,18 +273,11 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
     }
 
     const updatedOrder = await DailyDeliveryOrder.findOne({ orderId: id }).lean();
-    const updatedUser = updatedOrder?.userId
-      ? ((await User.findById(updatedOrder.userId).select("name email").lean()) as AdminCustomerInfoUser)
-      : null;
-    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, updatedUser);
+    if (!updatedOrder) {
+      return errorJson("Order not found after update attempt", 404);
+    }
 
-    return successJson({
-      ...updatedOrder,
-      user: updatedUser,
-      effectiveCustomerInfo,
-      hasOrderOnlyOverride: hasOrderCustomerOverride(updatedOrder || {}),
-      orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(updatedOrder || {}),
-    });
+    return successJson(await enrichAdminOrderResponse(updatedOrder));
   } catch (error: unknown) {
     return handleRouteError(
       error,

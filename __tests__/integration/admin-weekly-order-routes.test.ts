@@ -4,7 +4,7 @@ import WeeklyOrder from "@/models/WeeklyOrder"
 
 import { clearCollections, setupTestDb, teardownTestDb } from "../helpers/db"
 import { createTestAdmin, createTestUser } from "../helpers/factories"
-import { buildRequest } from "../helpers/request"
+import { buildJsonRequest, buildRequest } from "../helpers/request"
 
 const { requireAdminMfaMock, connectToDatabaseMock } = vi.hoisted(() => ({
   requireAdminMfaMock: vi.fn(),
@@ -20,6 +20,7 @@ vi.mock("@/lib/db", () => ({
 }))
 
 import { DELETE } from "@/app/api/admin/weekly-subscription/orders/[id]/route"
+import { PATCH } from "@/app/api/admin/weekly-subscription/orders/[id]/status/route"
 
 function createActor(user: Record<string, unknown>, role: "user" | "admin" = "admin") {
   return {
@@ -117,5 +118,44 @@ describe("admin weekly order mutation routes", () => {
         description: `Refunded weekly order ${order.orderId}`,
       }),
     ])
+  })
+
+  it("returns resolved customer info after a weekly status update", async () => {
+    const admin = await createTestAdmin()
+    const user = await createTestUser({
+      name: "Weekly Customer",
+      email: "weekly@example.com",
+    })
+    const order = await createWeeklyOrderForUser(user._id)
+
+    requireAdminMfaMock.mockResolvedValue({
+      response: null,
+      actor: createActor(admin),
+    })
+
+    const response = await PATCH(
+      buildJsonRequest(
+        `http://localhost:3000/api/admin/weekly-subscription/orders/${order.orderId}/status`,
+        { status: "confirmed" },
+        { method: "PATCH" }
+      ),
+      { params: Promise.resolve({ id: order.orderId }) }
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+    expect(json.data).toMatchObject({
+      orderId: order.orderId,
+      status: "confirmed",
+      user: {
+        name: "Weekly Customer",
+        email: "weekly@example.com",
+      },
+      effectiveCustomerInfo: {
+        name: "Weekly Customer",
+        email: "weekly@example.com",
+      },
+    })
   })
 })

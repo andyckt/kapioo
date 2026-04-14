@@ -3,14 +3,9 @@ import { adminWeeklyOrdersQuerySchema } from "@/lib/contracts/weekly-order";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
 import mongoose from "mongoose";
+import { enrichAdminOrderResponse } from "@/lib/orders/admin-order-response";
 import User from '@/models/User';
 import WeeklyOrder from '@/models/WeeklyOrder';
-import {
-  getOrderOnlyOverrideMeta,
-  hasOrderCustomerOverride,
-  resolveEffectiveOrderCustomerInfo,
-  type OrderCustomerOverride,
-} from '@/lib/orders/effective-customer-info';
 
 // GET handler - get all weekly subscription orders with pagination and filtering
 export async function GET(request: Request) {
@@ -138,34 +133,15 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('userId', 'name email phoneNumber')
       .lean();
     
     // Get total count for pagination
     const totalOrders = await WeeklyOrder.countDocuments(query);
     
     // Fetch user information for each order
-    const ordersWithUserInfo = await Promise.all(orders.map(async (order: any) => {
-      try {
-        const user = await User.findById(order.userId).select('name email').lean();
-        const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user as any);
-        return {
-          ...order,
-          user,
-          effectiveCustomerInfo,
-          hasOrderOnlyOverride: hasOrderCustomerOverride(order),
-          orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order)
-        };
-      } catch (error) {
-        return {
-          ...order,
-          user: null,
-          effectiveCustomerInfo: resolveEffectiveOrderCustomerInfo(order, null),
-          hasOrderOnlyOverride: hasOrderCustomerOverride(order),
-          orderOnlyOverrideMeta: getOrderOnlyOverrideMeta(order)
-        };
-      }
-    }));
+    const ordersWithUserInfo = await Promise.all(
+      orders.map(async (order) => enrichAdminOrderResponse(order))
+    );
     
     return successJson({
       orders: ordersWithUserInfo,
