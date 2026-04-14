@@ -1,6 +1,6 @@
 ---
 title: Foundation Hardening Plan
-status: must-fix-3-balance-mutation-consolidation-complete
+status: must-fix-4-admin-daily-order-contract-drift-complete
 updated: 2026-04-13
 ---
 
@@ -23,6 +23,7 @@ How to read this plan:
 - `Fact`: **Must Fix #1 (daily-order canonicalization)** is complete: the legacy `Order` model has been removed, legacy notification consumers now resolve canonical `DailyDeliveryOrder` data, and the remaining legacy daily-order routes are explicit `410` retirement stubs.
 - `Fact`: **Must Fix #2 (transactional order + balance writes)** is complete for the canonical daily and weekly order creation flows, plus daily admin refund/delete reversals.
 - `Fact`: **Must Fix #3 (balance-mutation path consolidation)** is complete: admin manual adjustments, credit/voucher approvals, and weekly delete-time entitlement restoration now all write through `applyBalanceMutations`, while legacy compatibility endpoints remain explicit `410` retirement stubs for caller safety.
+- `Fact`: **Must Fix #4 (admin daily-order schema / contract drift)** is complete: the canonical `DailyDeliveryOrder` schema now owns admin override fields, shared admin daily-order query construction now drives both list and export routes, and address typing is aligned across model, contracts, and effective-customer-info helpers.
 - `Inference`: The weekly domain is in a materially better state than when the original plan was written; admin and API surfaces are now easier to change safely than pre–Phase 3b/3c.
 
 ## Checkpoint Summary (post–Phase 2E + weekly refinements + Phase 3b/3c)
@@ -35,8 +36,8 @@ How to read this plan:
 | **Phase 3b cleanup** | Dashboard/history date display deduped via `lib/format.ts`. |
 | **Next phase** | Remaining Phase 3 (dashboard/checkout/management extraction as needed) → **Phase 4** tests. |
 | **Build next** | Optional: slim `app/dashboard/page.tsx`; extract heavy checkout/management components; add integration tests for orders/refunds/balances. |
-| **Wait on** | Must Fix #4 remains for final correctness closure; daily/weekly canonical order placement is transaction-backed, daily-order canonicalization is complete, and balance mutations are now consolidated behind the shared service. |
-| **Risks to watch** | Any new admin tooling or refund path that mutates balances outside `applyBalanceMutations`; remaining route-local schema ownership in daily admin order flows. |
+| **Wait on** | Must Fix items are complete. Remaining work is optional Phase 3/4 follow-up and future feature expansion. |
+| **Risks to watch** | Any new admin tooling or refund path that mutates balances outside `applyBalanceMutations`; any future daily-order model changes that update routes/contracts without extending the canonical model and shared helpers together. |
 
 ## Foundation Summary
 - `Fact`: The healthiest centralized parts of the repo are plan/config logic in [`lib/plans/catalog.ts`](lib/plans/catalog.ts), [`lib/plans/service.ts`](lib/plans/service.ts), [`lib/plans/balances.ts`](lib/plans/balances.ts), [`lib/promo-code.ts`](lib/promo-code.ts), and [`lib/constants/areas.ts`](lib/constants/areas.ts).
@@ -83,7 +84,8 @@ How to read this plan:
 - Expected benefit: Lower drift risk and cleaner ownership.
 - Implementation difficulty: Medium.
 - Risk if left unfixed: Medium to High.
-- `Fact` (2026-04): **Phase 3c** removed inline Mongoose schemas from many API routes in favor of canonical `models/*` imports and shared **Zod** request/query contracts in [`lib/contracts/`](lib/contracts/). Re-audit any remaining daily-admin hotspots against this bar; item 4 is **partially** addressed at scale but **not** automatically closed for every edge route.
+- `Fact` (2026-04): **Phase 3c** removed inline Mongoose schemas from many API routes in favor of canonical `models/*` imports and shared **Zod** request/query contracts in [`lib/contracts/`](lib/contracts/).
+- `Fact` (2026-04): The remaining daily-admin contract drift has now been closed: [`models/DailyDeliveryOrder.ts`](models/DailyDeliveryOrder.ts) owns `orderCustomerOverride` and `orderCustomerOverrideLogs`, [`lib/orders/effective-customer-info.ts`](lib/orders/effective-customer-info.ts) now carries the full daily-order address shape including `city` and `province`, and [`lib/orders/admin-daily-query.ts`](lib/orders/admin-daily-query.ts) is the shared filter builder for both [`app/api/admin/daily-delivery/orders/route.ts`](app/api/admin/daily-delivery/orders/route.ts) and [`app/api/admin/daily-delivery/orders/export/route.ts`](app/api/admin/daily-delivery/orders/export/route.ts).
 
 ## Should Fix Soon
 
@@ -566,6 +568,7 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - `Fact`: Integration coverage now exercises the shared balance mutation service, auth guard boundaries, canonical daily/weekly order routes, admin daily order refund/delete routes, and the admin balance update route via [`__tests__/integration/balance-mutations.test.ts`](__tests__/integration/balance-mutations.test.ts), [`__tests__/integration/auth-guards.test.ts`](__tests__/integration/auth-guards.test.ts), [`__tests__/integration/daily-order-route.test.ts`](__tests__/integration/daily-order-route.test.ts), [`__tests__/integration/admin-daily-order-routes.test.ts`](__tests__/integration/admin-daily-order-routes.test.ts), [`__tests__/integration/weekly-order-route.test.ts`](__tests__/integration/weekly-order-route.test.ts), and [`__tests__/integration/admin-balance-route.test.ts`](__tests__/integration/admin-balance-route.test.ts).
 - `Fact`: The shared in-memory Mongo test database now runs as a replica set in [`__tests__/helpers/db.ts`](__tests__/helpers/db.ts), allowing transaction-backed routes like [`app/api/users/[id]/update-balance/route.ts`](app/api/users/[id]/update-balance/route.ts) to be tested under realistic conditions.
 - `Fact`: `npm test` passes with 88 tests. Project-wide `npx tsc --noEmit -p tsconfig.json` still reports pre-existing repo-wide TypeScript errors, but filtered output shows no errors from the Must Fix #2 files added/edited in this batch. `npm run lint` cannot complete yet because the repository does not have a configured ESLint setup and `next lint` prompts for initial configuration.
+- `Fact` (2026-04): Must Fix #4 added focused regression coverage for admin daily-order customer-info overrides and the shared admin daily-order query builder, bringing `npm test` to 92 passing tests on a local machine with the in-memory Mongo replica set available.
 
 ### Must Fix #2 execution record
 - `Fact`: Order creation is now thin-route + domain-service based for the canonical flows: [`app/api/daily-delivery/order/route.ts`](app/api/daily-delivery/order/route.ts) calls [`lib/orders/place-daily-order.ts`](lib/orders/place-daily-order.ts), and [`app/api/weekly-subscription/user/route.ts`](app/api/weekly-subscription/user/route.ts) calls [`lib/orders/place-weekly-order.ts`](lib/orders/place-weekly-order.ts).
@@ -590,22 +593,22 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 
 ### Especially dangerous right now
 - Phase 2B, 2C, 2D, and 2E are complete. The prior "before Phase 2X is complete" warnings no longer apply.
-- Remaining high-risk areas: changes to daily-order canonical path (Must Fix #1) before consolidation; new manual-balance tooling that bypasses the consolidated update-balance service; any remaining non-canonical order/balance mutations that do not yet use the shared service layer.
+- Remaining high-risk areas: introducing new daily-order fields without updating the canonical model + contracts + shared admin helpers together; new manual-balance tooling that bypasses the consolidated update-balance service; future non-canonical order/balance mutations outside the shared service layer.
 
 ## Recommended First Implementation Batch
 
 ### Next step: Finish remaining Must Fix items + optional Phase 3 cleanup
 - **Remaining Phase 3**: Further decomposition of [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and optional extraction from large checkout/management components ([`components/weekly-subscription-checkout.tsx`](components/weekly-subscription-checkout.tsx), [`components/daily-delivery-checkout.tsx`](components/daily-delivery-checkout.tsx), etc.) if still monolithic.
-- **Correctness follow-up**: Close Must Fix #1, #3, and #4 now that transactional order placement is in place.
+- **Correctness follow-up**: Must Fix items #1 through #4 are complete; remaining work is optional maintainability cleanup and future feature prep.
 - Admin decomposition, API contract layer, Phase 4 test coverage, and Must Fix #2 transactional order writes are **already in place**.
 
 ### Before any major new core-commerce feature work
 - Phase 2B through 2E are complete.
 - Phase 4 regression coverage is now in place for the canonical order/refund/balance paths.
-- Must Fix items #1, #3, and #4 remain for correctness and maintainability; Phase 3 does not block them but reduces risk when addressing them.
+- Must Fix items #1 through #4 are complete; Phase 3 follow-up remains optional and does not block launch.
 
 ## Confidence And Risk View
-- `Fact`: The remaining work is concentrated in the most coupled domains in the repo.
+- `Fact`: The remaining work is concentrated in the most coupled domains in the repo, but the original Must Fix set is now complete.
 - `Inference`: Doing all of old Phase 2 in one implementation batch would be high risk.
 - `Inference`: Breaking Phase 2 into 2A, 2B, 2C, 2D, and 2E is the safer path and gives cleaner rollback and verification points.
 - Confidence to execute each smaller phase safely:
@@ -633,4 +636,4 @@ Protect the cleaned foundation with meaningful automated regression coverage.
 - [x] Phase 3 (remaining): Further split [`app/dashboard/page.tsx`](app/dashboard/page.tsx) and extract checkout/management orchestration as needed.
 - [x] Add integration coverage for auth, orders, refunds, and balance correctness (Phase 4).
 - [ ] Optional: delete 410-stub route files under `app/api/orders` once no external callers remain (Phase 2E retired paths and removed `lib/middleware.ts`).
-- [ ] Must Fix #4: Track to closure (remaining schema drift in daily admin order flows).
+- [x] Must Fix #4: Track to closure (remaining schema drift in daily admin order flows).

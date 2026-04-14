@@ -9,6 +9,9 @@ export const CANONICAL_DAILY_ORDER_DOMAIN = {
   adminListRoute: '/api/admin/daily-delivery/orders',
   adminDetailRoute: '/api/admin/daily-delivery/orders/[id]',
   adminStatusRoute: '/api/admin/daily-delivery/orders/[id]/status',
+  adminCustomerInfoRoute: '/api/admin/daily-delivery/orders/[id]/customer-info',
+  schemaOwnershipNotes:
+    'Canonical DailyDeliveryOrder schema owns admin override fields and shared admin query behavior; routes no longer rely on strict:false writes or duplicated list/export filter builders.',
 } as const;
 
 export const LEGACY_ORDER_DOMAIN = {

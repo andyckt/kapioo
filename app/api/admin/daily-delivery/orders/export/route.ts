@@ -4,15 +4,25 @@ import { errorJson, parseSearchParams } from "@/lib/api";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { adminDailyOrdersQuerySchema } from "@/lib/contracts/daily-order";
 import connectToDatabase from "@/lib/db";
-import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-customer-info";
+import { buildAdminDailyOrdersMongoQuery } from "@/lib/orders/admin-daily-query";
+import {
+  resolveEffectiveOrderCustomerInfo,
+  type DeliveryAddress,
+  type EffectiveCustomerInfo,
+} from "@/lib/orders/effective-customer-info";
 import Combo from "@/models/Combo";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import Day from "@/models/Day";
 import User from "@/models/User";
-import mongoose from "mongoose";
 import * as XLSX from "xlsx";
 
-function formatAddress(address: Record<string, unknown> | null | undefined): string {
+type AdminExportUser = {
+  _id?: unknown;
+  name?: string;
+  email?: string;
+};
+
+function formatAddress(address: DeliveryAddress | null | undefined): string {
   if (!address) return "No address provided";
 
   let formattedAddress = "";
@@ -167,19 +177,18 @@ async function convertToWorksheetData(
     const deliveryDay =
       items && items.length > 0 ? (items[0].day ? items[0].day.split("-")[0] : "N/A") : "N/A";
 
-    const effectiveInfo = (order.effectiveCustomerInfo as Record<string, unknown>) || {};
+    const effectiveInfo = (order.effectiveCustomerInfo as EffectiveCustomerInfo | undefined) || undefined;
     const address = formatAddress(
-      (effectiveInfo.deliveryAddress as Record<string, unknown>) ||
-        (order.deliveryAddress as Record<string, unknown>)
+      effectiveInfo?.deliveryAddress || (order.deliveryAddress as DeliveryAddress | undefined)
     );
 
     const baseRow = [
       order.orderId,
       order.userName || "",
       order.userEmail || "",
-      effectiveInfo.phoneNumber || order.phoneNumber || "",
+      effectiveInfo?.phoneNumber || order.phoneNumber || "",
       address,
-      effectiveInfo.area || order.area || "",
+      effectiveInfo?.area || order.area || "",
     ];
 
     const comboQuantities: Record<string, number> = {};
@@ -209,7 +218,7 @@ async function convertToWorksheetData(
       dateCreated,
       voucherCost?.twoDish || 0,
       voucherCost?.threeDish || 0,
-      effectiveInfo.specialInstructions || order.specialInstructions || "",
+      effectiveInfo?.specialInstructions || order.specialInstructions || "",
     ];
 
     const fullRow = [...baseRow, ...comboQuantitiesRow, ...dateStatusRow];
@@ -233,102 +242,7 @@ export async function GET(request: Request) {
       return error;
     }
 
-    const status = data.status;
-    const search = data.search;
-    const area = data.area;
-    const deliveryDate = data.deliveryDate;
-    const deliveryDateEnd = data.deliveryDateEnd;
-    const comboName = data.comboName;
-
-    const query: Record<string, unknown> = {};
-
-    if (status) {
-      query.status = status;
-    }
-
-    if (area) {
-      query.area = area;
-    }
-
-    if (deliveryDate) {
-      if (deliveryDateEnd) {
-        const [startYear, startMonth, startDay] = deliveryDate.split("-").map(Number);
-        const [endYear, endMonth, endDay] = deliveryDateEnd.split("-").map(Number);
-
-        const startDate = new Date(startYear, startMonth - 1, startDay);
-        const endDate = new Date(endYear, endMonth - 1, endDay);
-
-        const dateFormats: string[] = [];
-        const currentDate = new Date(startDate);
-
-        while (currentDate <= endDate) {
-          const monthName = currentDate.toLocaleDateString("en-US", { month: "short" });
-          const dayNum = currentDate.getDate();
-          const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
-          const formattedWithoutZero = `${monthName} ${dayNum}`;
-          dateFormats.push(formattedWithZero, formattedWithoutZero);
-
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        const uniqueDateFormats = [...new Set(dateFormats)];
-
-        query.items = {
-          $elemMatch: {
-            date: { $in: uniqueDateFormats },
-          },
-        };
-      } else {
-        const [year, month, day] = deliveryDate.split("-").map(Number);
-        const dateObj = new Date(year, month - 1, day);
-
-        const monthName = dateObj.toLocaleDateString("en-US", { month: "short" });
-        const dayNum = dateObj.getDate();
-
-        const formattedWithZero = `${monthName} ${dayNum < 10 ? `0${dayNum}` : `${dayNum}`}`;
-        const formattedWithoutZero = `${monthName} ${dayNum}`;
-
-        query.items = {
-          $elemMatch: {
-            date: { $in: [formattedWithZero, formattedWithoutZero] },
-          },
-        };
-      }
-    }
-
-    if (comboName && comboName !== "all") {
-      query["items.comboName"] = comboName;
-    }
-
-    if (search) {
-      const searchRegex = new RegExp(search, "i");
-      const matchingUsers = await User.find({
-        $or: [{ name: searchRegex }, { email: searchRegex }, { phoneNumber: searchRegex }],
-      })
-        .select("_id")
-        .lean();
-
-      const matchingUserIds = matchingUsers.map((u) => u._id);
-
-      query.$or = [
-        { orderId: searchRegex },
-        { "items.comboName": searchRegex },
-        { "items.day": searchRegex },
-        { "items.date": searchRegex },
-        { "deliveryAddress.streetAddress": searchRegex },
-        { "deliveryAddress.postalCode": searchRegex },
-        { phoneNumber: searchRegex },
-        { area: searchRegex },
-      ];
-
-      if (matchingUserIds.length > 0) {
-        (query.$or as object[]).push({ userId: { $in: matchingUserIds } });
-      }
-
-      if (mongoose.Types.ObjectId.isValid(search)) {
-        (query.$or as object[]).push({ userId: search });
-      }
-    }
+    const query = await buildAdminDailyOrdersMongoQuery(data);
 
     const orders = await DailyDeliveryOrder.find(query).sort({ createdAt: -1 }).lean();
 
@@ -357,8 +271,8 @@ export async function GET(request: Request) {
     };
 
     const ordersWithUserInfo = orders.map((order) => {
-      const user = userMap[order.userId.toString()];
-      const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user as never);
+      const user = userMap[order.userId.toString()] as AdminExportUser | undefined;
+      const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(order, user);
       const userName = effectiveCustomerInfo.name || user?.name || "Unknown";
       const formattedUserName = formatUserNameWithPhone(
         userName,

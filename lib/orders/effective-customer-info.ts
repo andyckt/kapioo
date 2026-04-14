@@ -3,6 +3,8 @@ type NullableString = string | null | undefined;
 export interface DeliveryAddress {
   unitNumber?: string;
   streetAddress?: string;
+  city?: string;
+  province?: string;
   postalCode?: string;
   country?: string;
   buzzCode?: string;
@@ -68,6 +70,8 @@ function normalizeAddress(address?: DeliveryAddress | null): DeliveryAddress {
   return {
     unitNumber: normalizeOptionalText(address.unitNumber),
     streetAddress: normalizeOptionalText(address.streetAddress),
+    city: normalizeOptionalText(address.city),
+    province: normalizeOptionalText(address.province),
     postalCode: normalizeOptionalText(address.postalCode),
     country: normalizeOptionalText(address.country),
     buzzCode: normalizeOptionalText(address.buzzCode),
@@ -109,6 +113,8 @@ export function resolveEffectiveOrderCustomerInfo(order: ResolveOrderInput, user
   const effectiveAddress: DeliveryAddress = {
     unitNumber: overrideAddress.unitNumber ?? orderAddress.unitNumber ?? '',
     streetAddress: overrideAddress.streetAddress ?? orderAddress.streetAddress ?? '',
+    city: overrideAddress.city ?? orderAddress.city ?? '',
+    province: overrideAddress.province ?? orderAddress.province ?? '',
     postalCode: overrideAddress.postalCode ?? orderAddress.postalCode ?? '',
     country: overrideAddress.country ?? orderAddress.country ?? '',
     buzzCode: overrideAddress.buzzCode ?? orderAddress.buzzCode ?? '',

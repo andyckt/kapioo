@@ -21,6 +21,22 @@ import {
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
 
+type AdminCustomerInfoUser = {
+  _id?: unknown;
+  name?: string;
+  email?: string;
+} | null;
+
+const DELIVERY_ADDRESS_FIELD_MAP: Array<{ key: keyof DeliveryAddress; label: string }> = [
+  { key: "unitNumber", label: "unit number" },
+  { key: "streetAddress", label: "street address" },
+  { key: "city", label: "city" },
+  { key: "province", label: "province" },
+  { key: "postalCode", label: "postal code" },
+  { key: "country", label: "country" },
+  { key: "buzzCode", label: "buzz code" },
+];
+
 function hasOwn<T extends object>(obj: T, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
@@ -36,6 +52,8 @@ function sanitizeAddressPatch(value: unknown): DeliveryAddress | undefined {
   return {
     unitNumber: normalizeOptionalText(input.unitNumber as string),
     streetAddress: normalizeOptionalText(input.streetAddress as string),
+    city: normalizeOptionalText(input.city as string),
+    province: normalizeOptionalText(input.province as string),
     postalCode: normalizeOptionalText(input.postalCode as string),
     country: normalizeOptionalText(input.country as string),
     buzzCode: normalizeOptionalText(input.buzzCode as string),
@@ -74,11 +92,12 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
       return errorJson("Order not found", 404);
     }
 
-    const user = order?.userId ? await User.findById(order.userId).select("name email").lean() : null;
-    const effectiveBefore = resolveEffectiveOrderCustomerInfo(order as never, user as never);
+    const user = order?.userId
+      ? ((await User.findById(order.userId).select("name email").lean()) as AdminCustomerInfoUser)
+      : null;
+    const effectiveBefore = resolveEffectiveOrderCustomerInfo(order, user);
 
-    const currentOverride: OrderCustomerOverride =
-      (order as { orderCustomerOverride?: OrderCustomerOverride }).orderCustomerOverride || {};
+    const currentOverride: OrderCustomerOverride = order.orderCustomerOverride || {};
     const nextOverride: OrderCustomerOverride = {
       ...currentOverride,
       deliveryAddress: { ...(currentOverride.deliveryAddress || {}) },
@@ -159,14 +178,7 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
         nextOverride.deliveryAddress = {};
         if (hadAddressValues) {
           changedFields.push("address");
-          const fieldMap: Array<{ key: keyof DeliveryAddress; label: string }> = [
-            { key: "unitNumber", label: "unit number" },
-            { key: "streetAddress", label: "street address" },
-            { key: "postalCode", label: "postal code" },
-            { key: "country", label: "country" },
-            { key: "buzzCode", label: "buzz code" },
-          ];
-          for (const field of fieldMap) {
+          for (const field of DELIVERY_ADDRESS_FIELD_MAP) {
             const before = normalizeOptionalText(previousAddress[field.key]);
             if (toComparable(before)) {
               changedDetails.push({
@@ -187,15 +199,7 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
           ...addressPatch,
         };
 
-        const fieldMap: Array<{ key: keyof DeliveryAddress; label: string }> = [
-          { key: "unitNumber", label: "unit number" },
-          { key: "streetAddress", label: "street address" },
-          { key: "postalCode", label: "postal code" },
-          { key: "country", label: "country" },
-          { key: "buzzCode", label: "buzz code" },
-        ];
-
-        for (const field of fieldMap) {
+        for (const field of DELIVERY_ADDRESS_FIELD_MAP) {
           if (Object.prototype.hasOwnProperty.call(addressPatch, field.key)) {
             const before = normalizeOptionalText(previousAddress[field.key]);
             const after = normalizeOptionalText((nextOverride.deliveryAddress || {})[field.key]);
@@ -254,7 +258,7 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
         };
       }
 
-      await DailyDeliveryOrder.findOneAndUpdate({ orderId: id }, updateDoc, { strict: false });
+      await DailyDeliveryOrder.findOneAndUpdate({ orderId: id }, updateDoc);
     } else {
       const updateDoc: Record<string, unknown> = { $unset: { orderCustomerOverride: "" } };
       if (changeLogEntry) {
@@ -266,17 +270,14 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
         };
       }
 
-      await DailyDeliveryOrder.findOneAndUpdate({ orderId: id }, updateDoc, { strict: false });
+      await DailyDeliveryOrder.findOneAndUpdate({ orderId: id }, updateDoc);
     }
 
     const updatedOrder = await DailyDeliveryOrder.findOne({ orderId: id }).lean();
     const updatedUser = updatedOrder?.userId
-      ? await User.findById(updatedOrder.userId).select("name email").lean()
+      ? ((await User.findById(updatedOrder.userId).select("name email").lean()) as AdminCustomerInfoUser)
       : null;
-    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(
-      updatedOrder || {},
-      updatedUser as never
-    );
+    const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(updatedOrder || {}, updatedUser);
 
     return successJson({
       ...updatedOrder,
