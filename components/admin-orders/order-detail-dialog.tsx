@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDateTime } from "@/lib/format"
+import { getAdminOrderItemDisplay } from "@/lib/orders/admin-order-item-display"
 import type { AdminOrder } from "@/lib/types/orders"
 
 import { formatAddress, getEffectiveCustomerInfo, getOrderUpdateLogs } from "./order-helpers"
@@ -125,24 +126,39 @@ export function OrderDetailDialog({
               </CardHeader>
               <CardContent className="space-y-3">
                 {Array.isArray(order.items) && order.items.length > 0 ? (
-                  order.items.map((item, index) => (
-                    <div key={`${order._id}-item-${index}`} className="rounded-md border p-3 text-sm">
-                      <p className="font-medium">
-                        {(typeof item.comboName === "string" && item.comboName) ||
-                          (typeof item.itemType === "string" && item.itemType) ||
-                          "Order item"}
-                      </p>
-                      {item.deliveryDate && (
-                        <p className="text-muted-foreground">
-                          <Calendar className="mr-1 inline h-3.5 w-3.5" />
-                          {formatDateTime(String(item.deliveryDate))}
-                        </p>
-                      )}
-                      {typeof item.quantity === "number" && (
-                        <p className="text-muted-foreground">Quantity: {item.quantity}</p>
-                      )}
-                    </div>
-                  ))
+                  order.items.map((item, index) => {
+                    const displayItem = getAdminOrderItemDisplay(item)
+
+                    return (
+                      <div key={`${order._id}-item-${index}`} className="rounded-md border p-3 text-sm">
+                        <p className="font-medium">{displayItem.title}</p>
+                        {displayItem.typeLabel && (
+                          <p className="text-muted-foreground">{displayItem.typeLabel}</p>
+                        )}
+                        {displayItem.scheduleLabel && (
+                          <p className="text-muted-foreground">
+                            <Calendar className="mr-1 inline h-3.5 w-3.5" />
+                            {displayItem.scheduleLabel}
+                          </p>
+                        )}
+                        {displayItem.quantity !== null && (
+                          <p className="text-muted-foreground">Quantity: {displayItem.quantity}</p>
+                        )}
+                        {displayItem.dishes.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Included dishes
+                            </p>
+                            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                              {displayItem.dishes.map((dish, dishIndex) => (
+                                <li key={`${order._id}-item-${index}-dish-${dishIndex}`}>{dish}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
                 ) : (
                   <p className="text-sm text-muted-foreground">No line items available.</p>
                 )}

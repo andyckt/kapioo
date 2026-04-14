@@ -1,4 +1,5 @@
 import type { AdminOrder, AdminOrderFilters, AdminOrderItem } from "@/lib/types/orders"
+import { getDailyComboTypeLabel } from "@/lib/orders/admin-order-item-display"
 
 export function getDailyOrderRouteId(order: AdminOrder) {
   return (typeof order.orderId === "string" && order.orderId) || order._id
@@ -53,7 +54,7 @@ export function getFilteredDailyOrderItems(order: AdminOrder, filters: AdminOrde
 
 export function formatDailyOrderItem(item: AdminOrderItem) {
   const comboName = typeof item.comboName === "string" ? item.comboName : "Combo"
-  const comboType = item.type === "A" ? "2 dishes" : item.type === "B" ? "3 dishes" : "Order"
+  const comboType = getDailyComboTypeLabel(item.type) || "Order"
   const quantity = typeof item.quantity === "number" ? item.quantity : 1
   return `${comboName} (${comboType}) x${quantity}`
 }

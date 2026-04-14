@@ -35,11 +35,19 @@ export const adminOrderUpdateLogSchema = z
 
 export type AdminOrderUpdateLog = z.infer<typeof adminOrderUpdateLogSchema>;
 
+const adminOrderDishSchema = z
+  .object({
+    dishId: z.string().optional(),
+    name: z.string().optional(),
+  })
+  .catchall(z.unknown());
+
 export const adminOrderItemSchema = z
   .object({
     comboId: z.string().optional(),
     comboName: z.string().optional(),
     itemType: z.string().optional(),
+    type: z.string().optional(),
     date: z.string().optional(),
     day: z.string().optional(),
     dayId: z.string().optional(),
@@ -47,6 +55,7 @@ export const adminOrderItemSchema = z
     optionName: z.string().optional(),
     deliveryDate: z.string().optional(),
     quantity: z.number().optional(),
+    dishes: z.array(z.union([z.string(), adminOrderDishSchema])).optional(),
   })
   .catchall(z.unknown());
 
