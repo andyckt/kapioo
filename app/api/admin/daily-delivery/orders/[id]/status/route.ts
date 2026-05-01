@@ -82,7 +82,8 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
             order.items,
             order.status,
             user.languagePreference || "zh",
-            order.createdAt
+            order.createdAt,
+            order.voucherCost
           );
         }
       } catch (notificationError) {

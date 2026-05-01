@@ -1,9 +1,10 @@
 import type { Language } from '@/lib/email-translations';
 import { getOrderStatusInfo, getStatusUpdateSubject, getTranslations } from '@/lib/email-translations';
+import { formatOrderStatusEmailLineHtml } from '@/lib/email/order-status-email';
 import type { IDailyDeliveryOrder } from '@/models/DailyDeliveryOrder';
-import { sendEmail } from './email';
+import { sendEmail, formatDailyVoucherTotalsLine } from './email';
 
-const LOGO_URL = 'https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/src/Kapioo.png';
+const LOGO_URL = 'https://www.kapioo.com/kapioo-logo.png';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 export enum NotificationType {
@@ -56,22 +57,22 @@ export const sendCreditsAddedNotification = async (
   transactionId: string
 ): Promise<void> => {
   try {
-    const subject = `餐卷已添加 - Kapioo`;
+    const subject = `餐券已添加 - Kapioo`;
 
     const html = `
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
         <div style="text-align: center; margin-bottom: 30px;">
           <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
         </div>
-        <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">餐卷已添加到您的账户</h2>
+        <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">餐券已添加到您的账户</h2>
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-          亲爱的 ${user.name}，您的账户已成功添加餐卷。
+          亲爱的 ${user.name}，您的账户已成功添加餐券。
         </p>
         
         <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
           <div style="margin-bottom: 15px;">
             <h3 style="color: #C2884E; margin: 0 0 5px 0;">交易确认</h3>
-            <p style="color: #666; margin: 0;">餐卷已添加到您的账户</p>
+            <p style="color: #666; margin: 0;">餐券已添加到您的账户</p>
           </div>
           
           <table style="width: 100%; border-collapse: collapse;">
@@ -85,17 +86,17 @@ export const sendCreditsAddedNotification = async (
             </tr>
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">添加数量:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount} 餐卷</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount} 餐券</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">新餐卷余额:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${user.credits} 餐卷</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">新餐券余额:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${user.credits} 餐券</td>
             </tr>
           </table>
         </div>
         
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
-          您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中使用这些餐卷订购餐点。
+          您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中使用这些餐券订购餐点。
         </p>
         
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
@@ -130,10 +131,13 @@ export const sendDailyOrderStatusUpdateNotification = async (
     comboName?: string;
     type?: string;
     quantity?: number;
+    dayId?: string;
+    optionName?: string;
   }>,
   previousStatus: string = 'pending',
   language: Language = 'zh',
-  orderCreatedAt?: Date
+  orderCreatedAt?: Date,
+  voucherCost?: { twoDish: number; threeDish: number } | null
 ): Promise<void> => {
   try {
     const t = getTranslations(language);
@@ -153,16 +157,22 @@ export const sendDailyOrderStatusUpdateNotification = async (
     const statusColor = currentStatusInfo.color;
     const previousStatusText = previousStatusInfo.text;
     const formattedItems = items
-      .map((item) => {
-        const dishType = item.type === 'A' ? t.order.twoDish : t.order.threeDish;
-        return `<li>
-        <span style="font-weight: bold;">${item.day || ''} (${item.date || ''})</span>: ${item.comboName || ''}
-        <span style="color: #666;">
-          (${dishType}) x${item.quantity || 0}
-        </span>
-      </li>`;
-      })
+      .map((item) => `<li style="margin-bottom: 6px;">${formatOrderStatusEmailLineHtml(item, language)}</li>`)
       .join('');
+
+    const vTwo = Number(voucherCost?.twoDish) || 0;
+    const vThree = Number(voucherCost?.threeDish) || 0;
+    const voucherTotalsHtml =
+      voucherCost != null && (vTwo > 0 || vThree > 0)
+        ? `
+        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 16px 20px; margin-bottom: 25px;">
+          <h3 style="color: #C2884E; margin-top: 0; margin-bottom: 8px; font-size: 16px;">${t.common.total}</h3>
+          <p style="margin: 0; color: #333; font-size: 15px; line-height: 1.6;">
+            ${formatDailyVoucherTotalsLine(vTwo, vThree, language)}
+          </p>
+        </div>
+        `
+        : '';
 
     const locale = language === 'zh' ? 'zh-CN' : 'en-US';
     const dashboardText = language === 'zh' ? 'Kapioo 账户' : 'Kapioo account';
@@ -228,6 +238,8 @@ export const sendDailyOrderStatusUpdateNotification = async (
         </div>
         ` : ''}
         
+        ${voucherTotalsHtml}
+        
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
           ${language === 'zh' ? '您可以在您的' : 'You can'} <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">${dashboardText}</a> ${viewDetailsText}.
         </p>
@@ -287,7 +299,8 @@ export const handleOrderNotification = async (
           Array.isArray(order.items) ? order.items : [],
           previousStatus || 'pending',
           resolveNotificationLanguage(user.languagePreference),
-          order.createdAt
+          order.createdAt,
+          order.voucherCost
         );
         break;
 

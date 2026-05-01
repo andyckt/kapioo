@@ -161,7 +161,7 @@ export async function POST(request: Request, { params }: RouteContext<{ id: stri
     // Send email notification when vouchers are added (not when deducted)
     if (operation === 'add' && field !== 'credits') {
       try {
-        const LOGO_URL = 'https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/src/Kapioo.png';
+        const LOGO_URL = 'https://www.kapioo.com/kapioo-logo.png';
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         
         // Get user's language preference
@@ -217,8 +217,29 @@ export async function POST(request: Request, { params }: RouteContext<{ id: stri
           ? `亲爱的 ${resolvedUser.name}，${voucherTypeName}已成功添加到您的账户。`
           : `Dear ${resolvedUser.name}, ${voucherTypeName} have been successfully added to your account.`;
         const dateLocale = language === 'zh' ? 'zh-CN' : 'en-US';
-        const voucherUnit = language === 'zh' ? '张' : '';
         const newBalanceLabel = language === 'zh' ? `新${voucherTypeName}余额` : `New ${voucherTypeName} Balance`;
+
+        const addedAmountDisplay =
+          language === 'zh'
+            ? field === 'twoDishVoucher' || field === 'threeDishVoucher'
+              ? `+${amount}张${voucherTypeName}`
+              : `+${amount} ${voucherTypeName}`
+            : field === 'twoDishVoucher'
+              ? `+${amount} x ${amount === 1 ? '2-dish voucher' : '2-dish vouchers'}`
+              : field === 'threeDishVoucher'
+                ? `+${amount} x ${amount === 1 ? '3-dish voucher' : '3-dish vouchers'}`
+                : `+${amount} ${voucherTypeName}`;
+
+        const newBalanceDisplay =
+          language === 'zh'
+            ? field === 'twoDishVoucher' || field === 'threeDishVoucher'
+              ? `${newBalance}张${voucherTypeName}`
+              : `${newBalance} ${voucherTypeName}`
+            : field === 'twoDishVoucher'
+              ? `${newBalance} x ${newBalance === 1 ? '2-dish voucher' : '2-dish vouchers'}`
+              : field === 'threeDishVoucher'
+                ? `${newBalance} x ${newBalance === 1 ? '3-dish voucher' : '3-dish vouchers'}`
+                : `${newBalance} ${voucherTypeName}`;
         const yourAccount = language === 'zh' ? 'Kapioo 账户' : 'Kapioo Account';
         const contactUs = language === 'zh' 
           ? '如有任何问题，请随时联系我们'
@@ -247,11 +268,11 @@ export async function POST(request: Request, { params }: RouteContext<{ id: stri
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.account.addedAmount}:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount}${voucherUnit} ${voucherTypeName}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">${addedAmountDisplay}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${newBalanceLabel}:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${newBalance}${voucherUnit} ${voucherTypeName}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${newBalanceDisplay}</td>
                 </tr>
               </table>
             </div>

@@ -462,7 +462,7 @@ export const weeklyMenuUpdateTranslations = {
     ctaButton: '立即查看菜单',
     footerNote: '感谢您选择 Kapioo！',
     reminderTitle: '温馨提示',
-    reminderText: '您目前拥有周次订餐积分。立即使用，享受我们的新鲜美味！'
+    reminderText: '欢迎查看本周菜单并尽快选餐，享用我们的新鲜美味！'
   },
   en: {
     subject: '[Kapioo] Weekly Menu Updated - Explore Our New Dishes!',
@@ -495,7 +495,7 @@ export const nextWeekMenuUpdateTranslations = {
     title: 'Next Week Menu is updated.',
     greeting: (name: string) => `Dear ${name},`,
     mainMessage: 'Kapioo\'s menu for next week is ready to be viewed.',
-    description: 'This week we have carefully prepared fresh new delicious dishes and look forward to bringing you more delightful surprises.',
+    description: 'Next week we have carefully prepared fresh new delicious dishes and look forward to bringing you more delightful surprises.',
     subHeading: '',
     ctaButton: 'View Next Week Menu',
     footerNote: '',

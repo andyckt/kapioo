@@ -47,6 +47,51 @@ function formatEmailAddress(addr: any, unitLabel: string, buzzLabel: string): st
   return out;
 }
 
+/** English daily voucher totals: "10 x 3-dish vouchers" (quantifier before type). */
+function formatEnglishDailyVoucherQuantity(count: number, dishType: 'two' | 'three'): string {
+  const label = dishType === 'two' ? '2-dish' : '3-dish';
+  const noun = count === 1 ? 'voucher' : 'vouchers';
+  return `${count} x ${label} ${noun}`;
+}
+
+function formatZhDailyVoucherTotals(twoDish: number, threeDish: number): string {
+  const parts: string[] = [];
+  if (twoDish > 0) parts.push(`${twoDish}张2菜餐券`);
+  if (threeDish > 0) parts.push(`${threeDish}张3菜餐券`);
+  return parts.length > 0 ? parts.join('，') : '0张餐券';
+}
+
+function formatEnglishDailyVoucherTotals(twoDish: number, threeDish: number): string {
+  const parts: string[] = [];
+  if (twoDish > 0) parts.push(formatEnglishDailyVoucherQuantity(twoDish, 'two'));
+  if (threeDish > 0) parts.push(formatEnglishDailyVoucherQuantity(threeDish, 'three'));
+  return parts.length > 0 ? parts.join(', ') : '0 vouchers';
+}
+
+export function formatDailyVoucherTotalsLine(twoDish: number, threeDish: number, language: 'zh' | 'en'): string {
+  return language === 'zh'
+    ? formatZhDailyVoucherTotals(twoDish, threeDish)
+    : formatEnglishDailyVoucherTotals(twoDish, threeDish);
+}
+
+function weeklyPlanMealsFromTotalCredits(totalCredits: number): number | null {
+  const map: Record<number, number> = { 6: 6, 8: 8, 10: 10, 12: 12, 16: 16 };
+  return map[totalCredits] ?? null;
+}
+
+/** User-facing weekly order "total" line (one plan voucher or legacy meal count). */
+function formatWeeklyOrderCreditTotalSummary(totalCredits: number, language: 'zh' | 'en'): string {
+  const meals = weeklyPlanMealsFromTotalCredits(totalCredits);
+  if (meals !== null) {
+    return language === 'zh'
+      ? `${meals}餐一周：1张`
+      : `1 x ${meals} meals/week voucher`;
+  }
+  return language === 'zh'
+    ? `${totalCredits}份餐点`
+    : `${totalCredits} meals`;
+}
+
 // Send a welcome email to new users
 export const sendWelcomeEmail = async (to: string, name: string, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -772,7 +817,7 @@ export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, r
     statusColor = '#4CAF50';
     statusMessage = language === 'zh'
       ? `您的${voucherTypeText}购买请求已获批准，${quantity}张${voucherTypeText}已添加到您的账户。`
-      : `Your ${voucherTypeText} purchase request has been approved. ${quantity} ${voucherTypeText} vouchers have been added to your account.`;
+      : `Your ${voucherTypeText} purchase request has been approved. ${formatEnglishDailyVoucherQuantity(quantity, voucherType === 'twoDish' ? 'two' : 'three')} ${quantity === 1 ? 'has' : 'have'} been added to your account.`;
   } else {
     statusText = t.account.requestDeclined;
     statusColor = '#F44336';
@@ -907,10 +952,7 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
       contactSupport: '如有任何问题，请联系我们的客服团队。',
       allRightsReserved: '保留所有权利。',
       sunday: '周日',
-      tuesday: '周二',
-      meals: '餐',
-      voucher: '张',
-      mealsPerWeek: (count: number) => `${count}餐一周`
+      tuesday: '周二'
     },
     en: {
       orderConfirmation: 'Order Confirmation',
@@ -930,10 +972,7 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
       contactSupport: 'If you have any questions, please contact our customer service team.',
       allRightsReserved: 'All rights reserved.',
       sunday: 'Sunday',
-      tuesday: 'Tuesday',
-      meals: 'meals',
-      voucher: 'voucher',
-      mealsPerWeek: (count: number) => `${count} Meals/Week`
+      tuesday: 'Tuesday'
     }
   };
   
@@ -1002,19 +1041,7 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
           <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
             <span style="font-weight: bold; color: #333;">${t.total}:</span>
             <span style="font-weight: bold; color: #C2884E;">
-              ${(() => {
-                if (orderDetails.totalCredits === 6) {
-                  return `${t.mealsPerWeek(6)}: 1 ${t.voucher}`;
-                } else if (orderDetails.totalCredits === 8) {
-                  return `${t.mealsPerWeek(8)}: 1 ${t.voucher}`;
-                } else if (orderDetails.totalCredits === 10) {
-                  return `${t.mealsPerWeek(10)}: 1 ${t.voucher}`;
-                } else if (orderDetails.totalCredits === 12) {
-                  return `${t.mealsPerWeek(12)}: 1 ${t.voucher}`;
-                } else {
-                  return `${orderDetails.totalCredits} ${t.meals}`;
-                }
-              })()}
+              ${formatWeeklyOrderCreditTotalSummary(orderDetails.totalCredits, language)}
             </span>
           </div>
         </div>
@@ -1139,19 +1166,7 @@ export const sendAdminWeeklyOrderNotification = async (orderDetails: {
           <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
             <span style="font-weight: bold; color: #333;">总计:</span>
             <span style="font-weight: bold; color: #C2884E;">
-              ${(() => {
-                if (orderDetails.totalCredits === 6) {
-                  return '6餐一周: 1张';
-                } else if (orderDetails.totalCredits === 8) {
-                  return '8餐一周: 1张';
-                } else if (orderDetails.totalCredits === 10) {
-                  return '10餐一周: 1张';
-                } else if (orderDetails.totalCredits === 12) {
-                  return '12餐一周: 1张';
-                } else {
-                  return `${orderDetails.totalCredits} 餐`;
-                }
-              })()}
+              ${formatWeeklyOrderCreditTotalSummary(orderDetails.totalCredits, 'zh')}
             </span>
           </div>
         </div>
@@ -1270,8 +1285,6 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
       orderNumber: '订单号',
       selectedMeals: '已选餐点',
       total: '总计',
-      twoDishVoucher: '2菜餐券',
-      threeDishVoucher: '3菜餐券',
       deliveryInfo: '配送信息',
       area: '区域',
       phone: '电话',
@@ -1290,8 +1303,6 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
       orderNumber: 'Order Number',
       selectedMeals: 'Selected Meals',
       total: 'Total',
-      twoDishVoucher: '2-Dish Vouchers',
-      threeDishVoucher: '3-Dish Vouchers',
       deliveryInfo: 'Delivery Information',
       area: 'Area',
       phone: 'Phone',
@@ -1373,8 +1384,7 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
           <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
             <span style="font-weight: bold; color: #333;">${t.total}:</span>
             <span style="font-weight: bold; color: #C2884E;">
-              ${t.twoDishVoucher}: ${orderDetails.voucherCost.twoDish}, 
-              ${t.threeDishVoucher}: ${orderDetails.voucherCost.threeDish}
+              ${formatDailyVoucherTotalsLine(orderDetails.voucherCost.twoDish, orderDetails.voucherCost.threeDish, language)}
             </span>
           </div>
         </div>
@@ -1514,8 +1524,7 @@ export const sendAdminDailyOrderNotification = async (orderDetails: {
           <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #C2884E30; display: flex; justify-content: space-between;">
             <span style="font-weight: bold; color: #333;">总计:</span>
             <span style="font-weight: bold; color: #C2884E;">
-              2菜餐券: ${orderDetails.voucherCost.twoDish}, 
-              3菜餐券: ${orderDetails.voucherCost.threeDish}
+              ${formatDailyVoucherTotalsLine(orderDetails.voucherCost.twoDish, orderDetails.voucherCost.threeDish, 'zh')}
             </span>
           </div>
         </div>
@@ -1827,8 +1836,6 @@ export const sendDailyOrderSummaryEmail = async (
       orderNumber: '订单号',
       selectedMeals: '已选餐点',
       total: '总计',
-      twoDishVoucher: '2菜餐券',
-      threeDishVoucher: '3菜餐券',
       deliveryInfo: '配送信息',
       area: '区域',
       phone: '电话',
@@ -1850,8 +1857,6 @@ export const sendDailyOrderSummaryEmail = async (
       orderNumber: 'Order Number',
       selectedMeals: 'Selected Meals',
       total: 'Total',
-      twoDishVoucher: '2-Dish Vouchers',
-      threeDishVoucher: '3-Dish Vouchers',
       deliveryInfo: 'Delivery Information',
       area: 'Area',
       phone: 'Phone',
@@ -1938,8 +1943,7 @@ export const sendDailyOrderSummaryEmail = async (
         <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
           <span style="color: #666;">${t.total}: </span>
           <span style="color: #C2884E; font-weight: 500;">
-            ${t.twoDishVoucher}: ${order.voucherCost.twoDish}, 
-            ${t.threeDishVoucher}: ${order.voucherCost.threeDish}
+            ${formatDailyVoucherTotalsLine(order.voucherCost.twoDish, order.voucherCost.threeDish, language)}
           </span>
         </div>
       </div>
@@ -1973,8 +1977,7 @@ export const sendDailyOrderSummaryEmail = async (
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: bold; color: #333; font-size: 16px;">${t.grandTotal}:</span>
             <span style="font-weight: bold; color: #C2884E; font-size: 16px;">
-              ${t.twoDishVoucher}: ${grandTotal.twoDish}, 
-              ${t.threeDishVoucher}: ${grandTotal.threeDish}
+              ${formatDailyVoucherTotalsLine(grandTotal.twoDish, grandTotal.threeDish, language)}
             </span>
           </div>
         </div>
@@ -2084,7 +2087,7 @@ export const sendWeeklyOrderSummaryEmail = async (
       selectedMeals: '已选餐点',
       total: '总计',
       credits: '积分',
-      meals: '分餐点',
+      meals: '份餐点',
       deliveryInfo: '配送信息',
       area: '区域',
       phone: '电话',
@@ -2098,9 +2101,7 @@ export const sendWeeklyOrderSummaryEmail = async (
       sunday: '周日',
       tuesday: '周二',
       grandTotal: '总计',
-      vouchersUsed: '已使用',
-      voucher: '餐劵',
-      voucherCount: '张'
+      vouchersUsed: '已使用'
     },
     en: {
       orderSummary: 'Order Summary',
@@ -2124,16 +2125,11 @@ export const sendWeeklyOrderSummaryEmail = async (
       sunday: 'Sunday',
       tuesday: 'Tuesday',
       grandTotal: 'Grand Total',
-      vouchersUsed: 'Vouchers Used',
-      voucher: 'Voucher',
-      voucherCount: 'voucher(s)'
+      vouchersUsed: 'Vouchers Used'
     }
   };
   
   const t = text[language];
-  
-  // Calculate grand total credits
-  const grandTotalCredits = orders.reduce((total, order) => total + order.totalCredits, 0);
   
   // Calculate voucher usage summary
   const voucherUsage: Record<string, number> = {};
@@ -2158,9 +2154,9 @@ export const sendWeeklyOrderSummaryEmail = async (
   if (Object.keys(voucherUsage).length > 0) {
     const voucherParts = Object.entries(voucherUsage).map(([type, count]) => {
       const voucherName = getVoucherName(type);
-      return language === 'zh' 
-        ? `${voucherName}${t.voucher}: ${count}${t.voucherCount}`
-        : `${voucherName} ${t.voucher}: ${count} ${t.voucherCount}`;
+      return language === 'zh'
+        ? `${voucherName}：${count}张`
+        : `${count} x ${voucherName} voucher${count === 1 ? '' : 's'}`;
     });
     voucherUsageText = voucherParts.join(', ');
   }
@@ -2393,7 +2389,7 @@ export const sendAdminDailyOrderSummaryEmail = async (
         <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
           <span style="color: #666;">本订单使用: </span>
           <span style="color: #C2884E; font-weight: 500;">
-            2菜餐券: ${order.voucherCost.twoDish}张, 3菜餐券: ${order.voucherCost.threeDish}张
+            ${formatDailyVoucherTotalsLine(order.voucherCost.twoDish, order.voucherCost.threeDish, 'zh')}
           </span>
         </div>
       </div>
@@ -2438,7 +2434,7 @@ export const sendAdminDailyOrderSummaryEmail = async (
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: bold; color: #333; font-size: 16px;">总计使用: </span>
             <span style="font-weight: bold; color: #C2884E; font-size: 16px;">
-              2菜餐券: ${totalTwoDish}张, 3菜餐券: ${totalThreeDish}张
+              ${formatDailyVoucherTotalsLine(totalTwoDish, totalThreeDish, 'zh')}
             </span>
           </div>
         </div>
@@ -2532,7 +2528,7 @@ export const sendAdminWeeklyOrderSummaryEmail = async (
   if (Object.keys(voucherUsage).length > 0) {
     const voucherParts = Object.entries(voucherUsage).map(([type, count]) => {
       const voucherName = getVoucherName(type);
-      return `${voucherName}餐劵: ${count}张`;
+      return `${voucherName}：${count}张`;
     });
     voucherUsageText = voucherParts.join(', ');
   }
@@ -2583,7 +2579,7 @@ export const sendAdminWeeklyOrderSummaryEmail = async (
         <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #C2884E30; font-size: 13px;">
           <span style="color: #666;">本订单: </span>
           <span style="color: #C2884E; font-weight: 500;">
-            ${orderMealCount}分餐点
+            ${orderMealCount}份餐点
           </span>
         </div>
       </div>
