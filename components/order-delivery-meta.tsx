@@ -21,12 +21,16 @@ export function OrderDeliveryMeta({ items, service, className }: OrderDeliveryMe
 
   return (
     <div className={className ?? "mt-1.5 text-sm"}>
-      <p className="text-muted-foreground mb-2">
-        <span className="font-medium text-foreground">{t("orderDeliveryDates")}</span> {datesText}
-      </p>
-      <p className="text-muted-foreground">
-        <span className="font-medium text-foreground">{t("orderDeliveryTime")}</span> {windowText}
-      </p>
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-medium text-[#4A3F36]">{t("orderDeliveryDates")}</p>
+          <p className="mt-1 text-sm font-medium leading-snug text-[#3D3630]">{datesText}</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-[#4A3F36]">{t("orderDeliveryTime")}</p>
+          <p className="mt-1 text-sm font-medium leading-snug text-[#3D3630]">{windowText}</p>
+        </div>
+      </div>
     </div>
   )
 }
