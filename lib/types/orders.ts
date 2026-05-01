@@ -16,6 +16,7 @@ export type {
   AdminOrderDeliveryDateOption,
   AdminOrderFilters,
   AdminOrderItem,
+  AdminOrderOverrideChangeDetail,
   AdminOrderOverrideForm,
   AdminOrderUpdateLog,
   AdminOrdersListResponse,

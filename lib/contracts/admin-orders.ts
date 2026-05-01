@@ -23,11 +23,21 @@ export const adminOrderCustomerInfoSchema = z.object({
 
 export type AdminOrderCustomerInfo = z.infer<typeof adminOrderCustomerInfoSchema>;
 
+export const adminOrderOverrideChangeDetailSchema = z.object({
+  field: z.string(),
+  from: z.string(),
+  to: z.string(),
+});
+
+export type AdminOrderOverrideChangeDetail = z.infer<typeof adminOrderOverrideChangeDetailSchema>;
+
 export const adminOrderUpdateLogSchema = z
   .object({
     updatedAt: z.string().optional(),
     updatedBy: z.string().optional(),
     reason: z.string().optional(),
+    changedFields: z.array(z.string()).optional(),
+    changedDetails: z.array(adminOrderOverrideChangeDetailSchema).optional(),
     previousCustomerInfo: adminOrderCustomerInfoSchema.optional(),
     newCustomerInfo: adminOrderCustomerInfoSchema.optional(),
   })

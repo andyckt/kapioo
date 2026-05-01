@@ -26,11 +26,11 @@ type AdminCustomerInfoUser = {
   email?: string;
 } | null;
 
+/** Address keys compared for override audit logs (province omitted — not shown in admin history). */
 const DELIVERY_ADDRESS_FIELD_MAP: Array<{ key: keyof DeliveryAddress; label: string }> = [
   { key: "unitNumber", label: "unit number" },
   { key: "streetAddress", label: "street address" },
   { key: "city", label: "city" },
-  { key: "province", label: "province" },
   { key: "postalCode", label: "postal code" },
   { key: "country", label: "country" },
   { key: "buzzCode", label: "buzz code" },
@@ -229,6 +229,9 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
     const adminMarker =
       request.headers.get("x-admin-email") ||
       request.headers.get("x-admin-id") ||
+      (typeof actor.user.email === "string" && actor.user.email.trim()
+        ? actor.user.email.trim()
+        : String(actor.user._id ?? "")) ||
       "admin";
 
     const now = new Date();

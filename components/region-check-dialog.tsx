@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Dialog,
   DialogContent,
@@ -9,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button'
-import { MapPin } from 'lucide-react'
+import { ArrowLeft, MapPin } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
 
@@ -28,7 +29,12 @@ export function RegionCheckDialog({
   currentRegion
 }: RegionCheckDialogProps) {
   const { language } = useLanguage()
-  
+  const router = useRouter()
+
+  const handleBack = () => {
+    onClose()
+    router.back()
+  }
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 sm:border-[#C2884E]/10 shadow-xl rounded-xl sm:rounded-[24px]">
@@ -62,12 +68,22 @@ export function RegionCheckDialog({
             </div>
           </div>
           
-          <div className="flex justify-center pt-4 border-t border-[#C2884E]/10">
+          <div className="flex flex-row flex-wrap justify-center gap-2 pt-4 border-t border-[#C2884E]/10 sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#C2884E]/25 text-[#6B5F53] hover:bg-[#fff6ef]"
+              onClick={handleBack}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+              {language === 'zh' ? '返回' : 'Back'}
+            </Button>
             <Button 
+              type="button"
               className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white px-8"
               onClick={onClose}
             >
-              {language === 'zh' ? '我只是看看' : "I'm Just Browsing"}
+              {language === 'zh' ? '我只是看看' : "I'm just browsing"}
             </Button>
           </div>
         </div>

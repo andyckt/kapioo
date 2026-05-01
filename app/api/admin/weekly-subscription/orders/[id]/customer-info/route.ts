@@ -206,6 +206,9 @@ export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>)
     const adminMarker =
       request.headers.get('x-admin-email') ||
       request.headers.get('x-admin-id') ||
+      (typeof actor.user.email === 'string' && actor.user.email.trim()
+        ? actor.user.email.trim()
+        : String(actor.user._id ?? '')) ||
       'admin';
 
     const now = new Date();

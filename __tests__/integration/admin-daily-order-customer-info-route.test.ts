@@ -123,6 +123,7 @@ describe("admin daily order customer-info route", () => {
     })
     expect(savedOrder?.orderCustomerOverrideLogs).toMatchObject([
       {
+        updatedBy: admin.email,
         changedFields: expect.arrayContaining([
           "phone number",
           "unit number",
@@ -132,8 +133,24 @@ describe("admin daily order customer-info route", () => {
           "country",
           "buzz code",
         ]),
+        changedDetails: expect.arrayContaining([
+          expect.objectContaining({
+            field: "phone number",
+            from: expect.any(String),
+            to: "647 555 0000",
+          }),
+          expect.objectContaining({
+            field: "street address",
+            from: "123 Old Street",
+            to: "500 New Street",
+          }),
+        ]),
       },
     ])
+    expect(json.data.orderCustomerOverrideLogs?.[0]).toMatchObject({
+      updatedBy: admin.email,
+      changedDetails: expect.arrayContaining([expect.objectContaining({ field: "phone number" })]),
+    })
     expect(json.data.effectiveCustomerInfo.deliveryAddress).toMatchObject({
       unitNumber: "8",
       streetAddress: "500 New Street",

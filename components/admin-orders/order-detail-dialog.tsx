@@ -15,10 +15,124 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDateTime } from "@/lib/format"
 import { getAdminOrderItemDisplay } from "@/lib/orders/admin-order-item-display"
-import type { AdminOrder } from "@/lib/types/orders"
+import type { AdminOrder, AdminOrderCustomerInfo, AdminOrderUpdateLog } from "@/lib/types/orders"
 
 import { formatAddress, getEffectiveCustomerInfo, getOrderUpdateLogs } from "./order-helpers"
 import { OrderStatusBadge } from "./order-status-badge"
+
+function summarizeCustomerSnapshot(info: AdminOrderCustomerInfo | undefined): string {
+  if (!info) {
+    return "—"
+  }
+  const parts: string[] = []
+  if (info.name) {
+    parts.push(`Name: ${info.name}`)
+  }
+  if (info.phoneNumber) {
+    parts.push(`Phone: ${info.phoneNumber}`)
+  }
+  if (info.area) {
+    parts.push(`Area: ${info.area}`)
+  }
+  if (info.email) {
+    parts.push(`Email: ${info.email}`)
+  }
+  if (info.specialInstructions) {
+    parts.push(`Special request: ${info.specialInstructions}`)
+  }
+  const addr = formatAddress(info.deliveryAddress, info.area)
+  if (addr !== "N/A") {
+    parts.push(`Delivery: ${addr}`)
+  }
+  return parts.length > 0 ? parts.join("\n") : "—"
+}
+
+function isHiddenOverrideAuditField(field: string): boolean {
+  return field.trim().toLowerCase() === "province"
+}
+
+function OverrideHistoryEntry({ log }: { log: AdminOrderUpdateLog }) {
+  const details =
+    Array.isArray(log.changedDetails) && log.changedDetails.length > 0
+      ? log.changedDetails
+          .filter(
+            (row) =>
+              typeof row?.field === "string" &&
+              typeof row?.from === "string" &&
+              typeof row?.to === "string" &&
+              !isHiddenOverrideAuditField(row.field)
+          )
+      : []
+
+  const fieldsOnly =
+    details.length === 0 && Array.isArray(log.changedFields) && log.changedFields.length > 0
+      ? log.changedFields.filter((f) => typeof f === "string" && !isHiddenOverrideAuditField(f))
+      : []
+
+  return (
+    <div className="space-y-3 rounded-md border p-3 text-sm">
+      <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-4">
+        <p className="font-medium">
+          {log.updatedAt ? formatDateTime(log.updatedAt) : "Override update"}
+        </p>
+        {log.updatedBy ? (
+          <p className="text-muted-foreground">
+            Edited by <span className="text-foreground">{log.updatedBy}</span>
+          </p>
+        ) : null}
+      </div>
+      {log.reason ? <p className="text-muted-foreground">{log.reason}</p> : null}
+      {details.length > 0 ? (
+        <div className="overflow-x-auto rounded-md border bg-muted/20">
+          <table className="w-full min-w-[280px] text-xs">
+            <thead>
+              <tr className="border-b bg-muted/40 text-left">
+                <th className="px-2 py-2 font-medium text-muted-foreground">Field</th>
+                <th className="px-2 py-2 font-medium text-muted-foreground">Previous</th>
+                <th className="px-2 py-2 font-medium text-muted-foreground">New</th>
+              </tr>
+            </thead>
+            <tbody>
+              {details.map((row, i) => (
+                <tr key={`${row.field}-${i}`} className="border-b border-border/60 last:border-0">
+                  <td className="px-2 py-2 align-top font-medium">{row.field}</td>
+                  <td className="max-w-[200px] break-words px-2 py-2 align-top text-muted-foreground">
+                    {row.from}
+                  </td>
+                  <td className="max-w-[200px] break-words px-2 py-2 align-top">{row.to}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : fieldsOnly.length > 0 ? (
+        <p className="text-muted-foreground">
+          <span className="font-medium text-foreground">Updated fields: </span>
+          {fieldsOnly.join(", ")}
+        </p>
+      ) : log.previousCustomerInfo || log.newCustomerInfo ? (
+        <div className="grid gap-3 sm:grid-cols-2 text-xs">
+          <div className="rounded-md border bg-muted/10 p-2">
+            <p className="mb-1 font-medium text-foreground">Previous</p>
+            <p className="whitespace-pre-wrap text-muted-foreground">
+              {summarizeCustomerSnapshot(log.previousCustomerInfo)}
+            </p>
+          </div>
+          <div className="rounded-md border bg-muted/10 p-2">
+            <p className="mb-1 font-medium text-foreground">New</p>
+            <p className="whitespace-pre-wrap text-muted-foreground">
+              {summarizeCustomerSnapshot(log.newCustomerInfo)}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          No field-level details were stored for this entry.
+        </p>
+      )}
+    </div>
+  )
+}
 
 interface OrderDetailDialogProps {
   open: boolean
@@ -172,12 +286,7 @@ export function OrderDetailDialog({
               <CardContent className="space-y-3">
                 {logs.length > 0 ? (
                   logs.map((log, index) => (
-                    <div key={`${order._id}-log-${index}`} className="rounded-md border p-3 text-sm">
-                      <p className="font-medium">
-                        {log.updatedAt ? formatDateTime(log.updatedAt) : "Override update"}
-                      </p>
-                      {log.reason && <p className="text-muted-foreground">{log.reason}</p>}
-                    </div>
+                    <OverrideHistoryEntry key={`${order._id}-log-${index}`} log={log} />
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground">No override history found.</p>

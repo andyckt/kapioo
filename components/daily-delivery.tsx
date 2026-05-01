@@ -670,10 +670,26 @@ export default function DailyDelivery() {
   return (
     <div className="flex flex-col h-full space-y-6">
       {/* Region Check Dialog */}
-      <RegionCheckDialog 
-        open={showRegionDialog} 
-        onClose={() => setShowRegionDialog(false)} 
+      <RegionCheckDialog
+        open={showRegionDialog}
+        onClose={() => setShowRegionDialog(false)}
         currentRegion={userRegion}
+        userId={sharedUserProfile?.userData?._id}
+        onRegionUpdated={() => {
+          const id = sharedUserProfile?.userData?._id
+          if (id) {
+            void fetchUserData(id)
+            return
+          }
+          try {
+            const raw = localStorage.getItem("user")
+            if (!raw) return
+            const parsed = JSON.parse(raw) as { _id?: string }
+            if (parsed?._id) void fetchUserData(parsed._id)
+          } catch {
+            // ignore
+          }
+        }}
       />
       
       {/* Menu Update Notification Banner */}
