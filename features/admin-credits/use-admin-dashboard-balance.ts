@@ -3,7 +3,7 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 
 import type { User } from "@/lib/utils"
-import { NotificationType } from "@/lib/services/notifications"
+import { getUserDisplayName } from "@/lib/users/display"
 
 function getVoucherTypeLabel(field: string) {
   if (field === "twoDishVoucher") return "2-Dish vouchers"
@@ -126,7 +126,7 @@ export function useAdminDashboardBalance({
 
           toast({
             title: "Balance updated",
-            description: `${operation === "add" ? "Added" : "Deducted"} ${creditAmount} ${getVoucherTypeLabel(voucherType)} ${operation === "add" ? "to" : "from"} ${selectedUser.name}'s account`,
+            description: `${operation === "add" ? "Added" : "Deducted"} ${creditAmount} ${getVoucherTypeLabel(voucherType)} ${operation === "add" ? "to" : "from"} ${getUserDisplayName(selectedUser)}'s account`,
           })
         } else {
           toast({
@@ -179,7 +179,7 @@ export function useAdminDashboardBalance({
         const updatedUser = data.data as User
         toast({
           title: "Credits added",
-          description: `Added ${creditAmount} credits to ${selectedUser.name}`,
+          description: `Added ${creditAmount} credits to ${getUserDisplayName(selectedUser)}`,
         })
 
         const updatedUsers = users.map((user) => (user._id === selectedUser._id ? updatedUser : user))
@@ -190,23 +190,6 @@ export function useAdminDashboardBalance({
 
         if (activeTab === "credits") {
           fetchTransactions()
-        }
-
-        try {
-          await fetch("/api/notifications", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              notificationType: NotificationType.CREDITS_ADDED,
-              userId: selectedUser._id,
-              transactionId: data.meta?.transaction?.transactionId,
-              amount: creditAmount,
-            }),
-          })
-        } catch (notificationError) {
-          console.error("Error sending credit notification:", notificationError)
         }
 
         setAddCreditsOpen(false)
@@ -272,7 +255,7 @@ export function useAdminDashboardBalance({
 
         toast({
           title: "Credits deducted",
-          description: `Deducted ${deductAmount} credits from ${selectedUser.userID}'s account`,
+          description: `Deducted ${deductAmount} credits from ${getUserDisplayName(selectedUser)}'s account`,
         })
       } else {
         toast({

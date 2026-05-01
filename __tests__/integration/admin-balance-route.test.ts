@@ -87,7 +87,13 @@ describe("app/api/users/[id]/update-balance", () => {
       amount: 4,
       description: "Manual credit top-up",
     })
-    expect(sendEmailMock).not.toHaveBeenCalled()
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: user.email,
+        subject: expect.stringContaining("Kapioo"),
+        html: expect.stringContaining("+4"),
+      })
+    )
   })
 
   it("deducts credits correctly", async () => {
@@ -117,6 +123,70 @@ describe("app/api/users/[id]/update-balance", () => {
     expect(response.status).toBe(200)
     expect(json.success).toBe(true)
     expect(savedUser?.credits).toBe(4)
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: user.email,
+        html: expect.stringContaining("-2"),
+      })
+    )
+  })
+
+  it("uses legacy-safe display names and emails voucher deductions", async () => {
+    const admin = await createTestAdmin()
+    const legacyUserId = await User.collection.insertOne({
+      userID: "legacy-user-001",
+      email: "legacy.customer@example.com",
+      password: "legacy-password-hash",
+      salt: "legacy-salt",
+      role: "user",
+      joined: new Date(),
+      status: "Active",
+      sessionVersion: 1,
+      credits: 0,
+      twoDishVoucher: 3,
+      threeDishVoucher: 0,
+      weeklySIXmeals: 0,
+      weeklyEIGHTmeals: 0,
+      weeklyTENmeals: 0,
+      weeklyTWELVEmeals: 0,
+      weeklySIXTEENmeals: 0,
+      languagePreference: "en",
+    })
+
+    requireAdminMfaMock.mockResolvedValue({
+      response: null,
+      actor: createActor(admin),
+    })
+
+    const response = await POST(
+      buildJsonRequest(`http://localhost:3000/api/users/${String(legacyUserId.insertedId)}/update-balance`, {
+        field: "twoDishVoucher",
+        amount: 1,
+        operation: "deduct",
+      }),
+      { params: Promise.resolve({ id: String(legacyUserId.insertedId) }) }
+    )
+    if (!response) {
+      throw new Error("Expected update-balance route to return a response")
+    }
+
+    const json = await response.json()
+    const savedUser = await User.findById(legacyUserId.insertedId).lean()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+    expect(json.data.name).toBe("legacy.customer")
+    expect(savedUser).toMatchObject({
+      name: "legacy.customer",
+      twoDishVoucher: 2,
+    })
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "legacy.customer@example.com",
+        subject: expect.stringContaining("deducted"),
+        html: expect.stringContaining("legacy.customer"),
+      })
+    )
   })
 
   it("rejects deductions larger than the available balance", async () => {

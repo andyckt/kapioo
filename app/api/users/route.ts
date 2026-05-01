@@ -13,6 +13,7 @@ import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { sendVerificationEmail, sendWelcomeEmail } from '@/lib/services/email';
 import mongoose from 'mongoose';
+import { withUserDisplayName } from '@/lib/users/display';
 
 // Function to generate a unique userID
 async function generateUniqueUserID() {
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
       
       switch (searchType) {
         case 'name':
-          query = { name: searchRegex };
+          query = { $or: [{ name: searchRegex }, { nickname: searchRegex }] };
           break;
         case 'email':
           query = { email: searchRegex };
@@ -79,6 +80,7 @@ export async function GET(request: Request) {
           query = {
             $or: [
               { name: searchRegex },
+              { nickname: searchRegex },
               { email: searchRegex },
               { userID: searchRegex },
               { phone: searchRegex },
@@ -93,14 +95,15 @@ export async function GET(request: Request) {
       .select('-password -salt -verificationCode -resetPasswordCode -verificationExpires -resetPasswordExpires')
       .sort({ joined: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
     
     // Get total count for pagination with the same search query
     const totalUsers = await User.countDocuments(query);
     
     return NextResponse.json({
       success: true,
-      data: users,
+      data: users.map((user) => withUserDisplayName(user)),
       pagination: {
         total: totalUsers,
         page,

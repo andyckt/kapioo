@@ -7,6 +7,7 @@ import connectToDatabase from "@/lib/db";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
 import WeeklyOrder from "@/models/WeeklyOrder";
+import { withUserDisplayName } from "@/lib/users/display";
 
 /**
  * Optimized endpoint that fetches users with their order counts in a single request
@@ -37,11 +38,15 @@ export async function GET(request: Request) {
       if (searchType === "all") {
         mongoQuery.$or = [
           { name: { $regex: trimmedSearch, $options: "i" } },
+          { nickname: { $regex: trimmedSearch, $options: "i" } },
           { email: { $regex: trimmedSearch, $options: "i" } },
           { userID: { $regex: trimmedSearch, $options: "i" } },
         ];
       } else if (searchType === "name") {
-        mongoQuery.name = { $regex: trimmedSearch, $options: "i" };
+        mongoQuery.$or = [
+          { name: { $regex: trimmedSearch, $options: "i" } },
+          { nickname: { $regex: trimmedSearch, $options: "i" } },
+        ];
       } else if (searchType === "email") {
         mongoQuery.email = { $regex: trimmedSearch, $options: "i" };
       } else if (searchType === "userID") {
@@ -101,7 +106,8 @@ export async function GET(request: Request) {
       .map((user) => ({
         ...user,
         totalOrders: (user.dailyOrdersCount || 0) + (user.weeklyOrdersCount || 0),
-      }));
+      }))
+      .map((user) => withUserDisplayName(user));
 
     const pages = Math.ceil(total / limit);
 

@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils"
 import type { AdminTransaction } from "@/lib/types/admin"
 import type { PaginationState } from "@/lib/types/pagination"
 import type { User } from "@/lib/utils"
+import { getUserDisplayName } from "@/lib/users/display"
 
 export interface AdminCreditsTabProps {
   users: User[]
@@ -148,7 +149,9 @@ export function AdminCreditsTab({
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" className="w-full justify-between">
-                      {selectedUser ? `${selectedUser.name} (${selectedUser.userID})` : "Search for a user..."}
+                      {selectedUser
+                        ? `${getUserDisplayName(selectedUser)} (${selectedUser.userID})`
+                        : "Search for a user..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -174,7 +177,7 @@ export function AdminCreditsTab({
                             (searchResults.length > 0 ? searchResults : users).map((user) => (
                               <CommandItem
                                 key={user._id}
-                                value={`${user.name} ${user.userID} ${user.email}`}
+                                value={`${getUserDisplayName(user)} ${user.nickname || ""} ${user.userID} ${user.email}`}
                                 onSelect={() => {
                                   setSelectedUser(user)
                                   setServiceType("daily")
@@ -188,7 +191,7 @@ export function AdminCreditsTab({
                                   )}
                                 />
                                 <div className="flex flex-col">
-                                  <span>{user.name}</span>
+                                  <span>{getUserDisplayName(user)}</span>
                                   <span className="text-xs text-muted-foreground">
                                     {user.userID} - {user.email}
                                   </span>
@@ -400,7 +403,9 @@ export function AdminCreditsTab({
                   transactions.map((transaction) => {
                     const userForTransaction = users.find((u) => u._id === transaction.userId)
 
-                    const displayUser = usersLoading ? (
+                    const displayUser = transaction.userName ? (
+                      <span>{transaction.userName}</span>
+                    ) : usersLoading ? (
                       <div className="flex items-center">
                         <span className="text-muted-foreground">Loading...</span>
                         <div className="ml-2 animate-pulse w-3 h-3 rounded-full bg-muted" />
@@ -463,7 +468,9 @@ export function AdminCreditsTab({
                 const isPositive = isPositiveTransaction(transaction)
                 const voucherLabel = getTransactionVoucherLabel(transaction.description)
 
-                const displayUser = usersLoading ? (
+                    const displayUser = transaction.userName ? (
+                      <span className="text-sm font-medium">{transaction.userName}</span>
+                    ) : usersLoading ? (
                   <span className="text-muted-foreground text-xs">Loading...</span>
                 ) : userForTransaction ? (
                   <span className="text-sm font-medium">{userForTransaction.name || userForTransaction.userID}</span>

@@ -3,6 +3,8 @@ import { requireAdminMfa, requireUser } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
 import { transactionsQuerySchema } from "@/lib/contracts/common";
 import Transaction from "@/models/Transaction";
+import User from "@/models/User";
+import { getUserDisplayName } from "@/lib/users/display";
 import mongoose from "mongoose";
 
 export async function GET(request: Request) {
@@ -69,14 +71,38 @@ export async function GET(request: Request) {
       const transactions = await Transaction.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .lean();
 
       console.log(`Found ${transactions.length} transactions`);
 
       const totalTransactions = await Transaction.countDocuments(query);
 
+      const userIds = Array.from(
+        new Set(
+          transactions
+            .map((transaction) => String(transaction.userId || ""))
+            .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        )
+      );
+      const users = userIds.length > 0
+        ? await User.find({ _id: { $in: userIds } })
+            .select("_id name nickname email userID")
+            .lean()
+        : [];
+      const userById = new Map(users.map((user) => [String(user._id), user]));
+      const transactionsWithUsers = transactions.map((transaction) => {
+        const user = userById.get(String(transaction.userId));
+        return {
+          ...transaction,
+          userName: user ? getUserDisplayName(user) : undefined,
+          userEmail: typeof user?.email === "string" ? user.email : undefined,
+          userID: typeof user?.userID === "string" ? user.userID : undefined,
+        };
+      });
+
       return successJson({
-        transactions,
+        transactions: transactionsWithUsers,
         page,
         limit,
         total: totalTransactions,
