@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
+import { OrderDeliveryMeta } from "@/components/order-delivery-meta"
 
 // Order status component with appropriate icon and color
 function OrderStatus({ status }: { status: string }) {
@@ -296,9 +297,10 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                   <div className="mt-2 grid md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="font-medium">{t('deliveryAddress')}</p>
-                      <p className="text-muted-foreground truncate max-w-full">
+                      <p className="text-muted-foreground break-words max-w-full">
                         {formatAddress(order.deliveryAddress, language, order.area)}
                       </p>
+                      <OrderDeliveryMeta items={order.items} service="daily" />
                     </div>
                     <div>
                       <p className="font-medium">{language === 'zh' ? '电话' : 'Phone'}</p>
@@ -428,9 +430,10 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                               
                               <div>
                                 <h3 className="font-semibold mb-1">{t('deliveryAddress')}</h3>
-                                <p className="text-muted-foreground">
+                                <p className="text-muted-foreground break-words">
                                   {formatAddress(selectedOrder.deliveryAddress, language, selectedOrder.area)}
                                 </p>
+                                <OrderDeliveryMeta items={selectedOrder.items} service="daily" className="mt-2 space-y-1 text-sm" />
                               </div>
                               
                               {selectedOrder.specialInstructions && (

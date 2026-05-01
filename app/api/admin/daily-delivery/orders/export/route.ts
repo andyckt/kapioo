@@ -125,7 +125,7 @@ async function convertToWorksheetData(
       comboDisplayNames.push(displayName);
     });
 
-  const baseHeaders = ["Order ID", "User Name", "Email", "Phone Number", "Delivery Address", "Area"];
+  const baseHeaders = ["Order ID", "User Name", "Email", "Phone Number", "Delivery address", "Area"];
 
   const dateStatusHeaders = [
     "Status",

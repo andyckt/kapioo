@@ -65,7 +65,7 @@ export function DailyDeliveryCheckout({
   days,
   dishTranslations
 }: DailyDeliveryCheckoutProps) {
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const {
@@ -304,7 +304,7 @@ export function DailyDeliveryCheckout({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Label>Delivery Address</Label>
+                    <Label>{t('deliveryAddress')}</Label>
                     {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
                       <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded border border-red-200">
                         {language === 'zh' ? '不在服务范围内' : 'Not in service area'}
@@ -365,7 +365,7 @@ export function DailyDeliveryCheckout({
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
-                        Please add a delivery address
+                        {language === 'zh' ? '请添加配送地址' : 'Please add a delivery address'}
                       </p>
                     )}
                   </div>
@@ -416,7 +416,7 @@ export function DailyDeliveryCheckout({
                 {language === 'zh' ? '处理中...' : 'Processing...'}
               </>
             ) : !isValidDeliveryArea ? (
-              language === 'zh' ? '请更新配送地址' : 'Please Update Delivery Address'
+              language === 'zh' ? '请更新配送地址' : 'Please update your delivery address'
             ) : (
               language === 'zh' ? '完成结账' : 'Complete Checkout'
             )}

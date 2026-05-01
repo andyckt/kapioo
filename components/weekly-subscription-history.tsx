@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
+import { OrderDeliveryMeta } from "@/components/order-delivery-meta"
 
 // Order status component with appropriate icon and color
 function OrderStatus({ status }: { status: string }) {
@@ -303,10 +304,11 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                     </div>
                   </div>
                   <div className="mt-2 text-sm">
-                    <p className="font-medium">{language === 'zh' ? '配送地址' : 'Delivery Address'}</p>
-                    <p className="text-muted-foreground truncate max-w-full">
+                    <p className="font-medium">{t('deliveryAddress')}</p>
+                    <p className="text-muted-foreground break-words max-w-full">
                       {formatAddress(order.deliveryAddress, language, order.area)}
                     </p>
+                    <OrderDeliveryMeta items={order.items} service="weekly" />
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0 flex justify-end">
@@ -420,10 +422,11 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                               </div>
                               
                               <div>
-                                <h3 className="font-semibold mb-1">{language === 'zh' ? '配送地址' : 'Delivery Address'}</h3>
-                                <p className="text-muted-foreground">
+                                <h3 className="font-semibold mb-1">{t('deliveryAddress')}</h3>
+                                <p className="text-muted-foreground break-words">
                                   {formatAddress(selectedOrder.deliveryAddress, language, selectedOrder.area)}
                                 </p>
+                                <OrderDeliveryMeta items={selectedOrder.items} service="weekly" className="mt-2 space-y-1 text-sm" />
                               </div>
                               
                               {selectedOrder.specialInstructions && (

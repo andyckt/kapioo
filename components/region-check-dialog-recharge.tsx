@@ -60,7 +60,7 @@ export function RegionCheckDialogRecharge({
   isValidRegion = false,
   existingAddress
 }: RegionCheckDialogRechargeProps) {
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const { toast } = useToast()
   const [selectedRegion, setSelectedRegion] = useState<string>(isValidRegion && currentRegion ? currentRegion : "")
   const [popoverOpen, setPopoverOpen] = useState(false)
@@ -267,7 +267,7 @@ export function RegionCheckDialogRecharge({
             <Home className="h-4 w-4 text-[#C2884E]" />
           </div>
           <h3 className="text-lg font-medium text-[#6B5F53]">
-            {language === 'zh' ? '配送地址' : 'Delivery Address'}
+            {t('deliveryAddress')}
           </h3>
         </div>
         
@@ -410,7 +410,7 @@ export function RegionCheckDialogRecharge({
           <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
             {step === 'region' 
               ? (language === 'zh' ? '区域服务提示' : 'Service Area Notice') 
-              : (language === 'zh' ? '配送地址' : 'Delivery Address')}
+              : t('deliveryAddress')}
           </DialogTitle>
           <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
             {step === 'region' 

@@ -59,7 +59,7 @@ type TranslationKey =
   | 'verificationSuccess' | 'verificationFailed' | 'invalidCode' | 'resendSuccess' | 'resendFailed'
   | 'cannotFindRegistration' | 'pleaseCheckEmail'
   // Address page translations
-  | 'deliveryAddress' | 'whereDeliver' | 'unitNumber' | 'streetAddress' | 'city'
+  | 'deliveryAddress' | 'deliverToAreaLabel' | 'unitNumber' | 'streetAddress' | 'city'
   | 'postalCode' | 'province' | 'country' | 'buzzCode' | 'completeRegistration'
   // Forgot password translations
   | 'resetPassword' | 'enterPhoneReset' | 'createNewPassword' | 'verifyPhoneNumber'
@@ -91,7 +91,7 @@ type TranslationKey =
   | 'orderConfirmed' | 'outForDelivery' | 'delivered' | 'pendingStatus' | 'confirmedStatus'
   | 'deliveryStatus' | 'deliveredStatus' | 'cancelledStatus' | 'refundedStatus'
   | 'orderCancelled' | 'creditsReturned' | 'refundedOn' | 'orderRefunded'
-  | 'noOrdersYet' | 'orderHistoryAppearHere' | 'pageXofY'
+  | 'noOrdersYet' | 'orderHistoryAppearHere' | 'pageXofY' | 'orderDeliveryDates' | 'orderDeliveryTime'
   // Select Meals tab
   | 'weeklyMenu' | 'selectDaysDelivery' | 'loadingMeals' | 'selectedCount' | 'proceedToCheckout' | 'itemAddedToCart' | 'checkoutNotImplemented' | 'featureComingSoon' | 'cartEmpty' | 'addItemsToCart' | 'loading'
   | 'checkoutTitle' | 'confirmOrderDetails' | 'deliveryInfo' | 'editAddress' | 'addAddress'
@@ -324,8 +324,8 @@ const translations: TranslationsType = {
     pleaseCheckEmail: "发送了一个6位数的验证码",
     
     // Address page
-    deliveryAddress: "送货地址",
-    whereDeliver: "我们应该把餐点送到哪里？",
+    deliveryAddress: "配送地址",
+    deliverToAreaLabel: "配送至",
     unitNumber: "单元号码",
     streetAddress: "Street Address",
     city: "City",
@@ -403,8 +403,8 @@ const translations: TranslationsType = {
     email: "电子邮箱",
     phone: "电话",
     saveChanges: "保存更改",
-    deliveryAddressTitle: "Delivery Address",
-    updateDeliveryInfo: "Update your delivery information",
+    deliveryAddressTitle: "配送地址",
+    updateDeliveryInfo: "更新配送信息",
     unitAptNumber: "Unit/Apt Number",
     state: "Area",
     zipCode: "ZIP Code",
@@ -459,6 +459,8 @@ const translations: TranslationsType = {
     noOrdersYet: "暂无订单",
     orderHistoryAppearHere: "下单后，您的订单历史将显示在这里。",
     pageXofY: "第 X 页，共 Y 页",
+    orderDeliveryDates: "配送日期",
+    orderDeliveryTime: "配送时间",
     // Select Meals tab
     weeklyMenu: "Kapioo的每周菜单",
     selectDaysDelivery: "选择您想要配送餐点的日期",
@@ -692,8 +694,8 @@ const translations: TranslationsType = {
     pleaseCheckEmail: "a 6-digit verification code",
     
     // Address page
-    deliveryAddress: "Delivery Address",
-    whereDeliver: "Where should we deliver your meals?",
+    deliveryAddress: "Delivery address",
+    deliverToAreaLabel: "Deliver to",
     unitNumber: "Unit Number",
     streetAddress: "Street Address",
     city: "City",
@@ -771,7 +773,7 @@ const translations: TranslationsType = {
     email: "Email",
     phone: "Phone",
     saveChanges: "Save Changes",
-    deliveryAddressTitle: "Delivery Address",
+    deliveryAddressTitle: "Delivery address",
     updateDeliveryInfo: "Update your delivery information",
     unitAptNumber: "Unit/Apt Number",
     state: "Area",
@@ -827,6 +829,8 @@ const translations: TranslationsType = {
     noOrdersYet: "No orders yet",
     orderHistoryAppearHere: "Your order history will appear here once you place your first order.",
     pageXofY: "Page X of Y",
+    orderDeliveryDates: "Delivery date(s)",
+    orderDeliveryTime: "Delivery time",
     // Select Meals tab
     weeklyMenu: "Kapioo's Weekly Menu",
     selectDaysDelivery: "Select the days you want meals delivered",

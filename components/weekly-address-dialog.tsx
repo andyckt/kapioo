@@ -59,7 +59,7 @@ export function WeeklyAddressDialog({
   onProceed,
   existingAddress
 }: WeeklyAddressDialogProps) {
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   
@@ -162,7 +162,7 @@ export function WeeklyAddressDialog({
       <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 sm:border-[#C2884E]/10 shadow-xl rounded-xl sm:rounded-[24px] max-h-[90vh] w-[95vw] sm:w-auto">
         <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
           <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
-            {language === 'zh' ? '配送地址' : 'Delivery Address'}
+            {t('deliveryAddress')}
           </DialogTitle>
           <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
             {language === 'zh' ? '请确认您的详细地址' : 'Please confirm your address details'}
@@ -175,7 +175,7 @@ export function WeeklyAddressDialog({
               <Home className="h-4 w-4 text-[#C2884E]" />
             </div>
             <h3 className="text-lg font-medium text-[#6B5F53]">
-              {language === 'zh' ? '配送地址' : 'Delivery Address'}
+              {t('deliveryAddress')}
             </h3>
           </div>
           

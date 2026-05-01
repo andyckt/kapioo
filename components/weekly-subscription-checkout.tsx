@@ -53,7 +53,7 @@ export function WeeklySubscriptionCheckout({
   setWeeklySIXTEENmeals,
   deliveryDays
 }: WeeklySubscriptionCheckoutProps) {
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const {
@@ -220,7 +220,7 @@ export function WeeklySubscriptionCheckout({
             
             <div className="pt-4">
               <div className="flex justify-between items-center">
-                <Label className="font-medium">Delivery Address</Label>
+                <Label className="font-medium">{t('deliveryAddress')}</Label>
                 {!editingAddress && (
                   <Button 
                     variant="default" 
