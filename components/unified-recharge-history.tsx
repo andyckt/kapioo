@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, ExternalLink, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Image as ImageIcon, Gem, Ticket } from "lucide-react"
+import { Loader2, ExternalLink, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { formatDateTime } from "@/lib/format"
@@ -14,10 +13,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 
 interface UnifiedRechargeHistoryProps {
   userId: string;
@@ -62,7 +61,18 @@ function parseWeeklyFromPlanDescription(desc: string): { meals: number; weeks: n
 
 function weeklyVoucherTypeLabel(mealsPerWeek: number, language: string): string {
   if (mealsPerWeek <= 0) return language === "zh" ? "—" : "—";
-  return language === "zh" ? `${mealsPerWeek}餐一周` : `${mealsPerWeek} meals/week`;
+  return language === "zh" ? `${mealsPerWeek}餐/周套餐` : `${mealsPerWeek} meals/week plan`;
+}
+
+function formatPaymentMethodName(method: string | undefined, language: string): string {
+  if (method === "wechat") return language === "zh" ? "微信支付" : "WeChat Pay";
+  if (method === "emt") return language === "zh" ? "Interac 电子转账" : "Interac e-Transfer";
+  return language === "zh" ? "—" : "—";
+}
+
+function paymentReferenceFieldLabel(method: string | undefined, language: string): string {
+  if (method === "wechat") return language === "zh" ? "支付账号" : "Payment account";
+  return language === "zh" ? "转账邮箱" : "Transfer email";
 }
 
 export function UnifiedRechargeHistory({ 
@@ -189,46 +199,42 @@ export function UnifiedRechargeHistory({
     switch (status) {
       case 'pending':
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {language === 'en' ? 'Pending' : '待处理'}
+          <Badge variant="outline" className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full border-[#E8C9A0]/90 bg-[#FFF4E8] px-2.5 py-1 text-[11px] font-semibold text-[#A06A28] shadow-sm sm:text-xs">
+            <Clock className="h-3 w-3 shrink-0 opacity-90" strokeWidth={2} />
+            {language === 'en' ? 'Pending review' : '待审核'}
           </Badge>
         );
       case 'approved':
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" />
+          <Badge variant="outline" className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full border-[#B4D4BE]/90 bg-[#EDF6F0] px-2.5 py-1 text-[11px] font-semibold text-[#2E6B45] shadow-sm sm:text-xs">
+            <CheckCircle className="h-3 w-3 shrink-0 opacity-90" strokeWidth={2} />
             {language === 'en' ? 'Approved' : '已批准'}
           </Badge>
         );
       case 'declined':
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
-            <XCircle className="h-3 w-3" />
+          <Badge variant="outline" className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full border-[#E0B8B8]/90 bg-[#F9EFEF] px-2.5 py-1 text-[11px] font-semibold text-[#984545] shadow-sm sm:text-xs">
+            <XCircle className="h-3 w-3 shrink-0 opacity-90" strokeWidth={2} />
             {language === 'en' ? 'Declined' : '已拒绝'}
           </Badge>
         );
       default:
         return (
-          <Badge variant="outline">
+          <Badge variant="outline" className="inline-flex w-fit shrink-0 rounded-full border-[#D8CFC4]/90 bg-[#F5F0EA] px-2.5 py-1 text-[11px] font-semibold text-[#6B6056] sm:text-xs">
             {status}
           </Badge>
         );
     }
   };
 
-  const getRequestTypeIcon = (type: string) => {
-    if (type === 'weekly') {
-      return <Gem className="h-4 w-4 text-[#C2884E]" />;
-    } else {
-      return <Ticket className="h-4 w-4 text-[#C2884E]" />;
-    }
-  };
-
   const getDisplayType = (request: { requestType?: string }) =>
-    request.requestType === 'weekly'
-      ? (language === 'zh' ? '周次Meal Box' : 'Weekly Subscription')
-      : (language === 'zh' ? '每日直送' : 'Daily Delivery');
+    request.requestType === "weekly"
+      ? language === "zh"
+        ? "周餐盒充值"
+        : "Weekly meal box recharge"
+      : language === "zh"
+        ? "每日直送充值"
+        : "Daily delivery recharge";
 
   // Get voucher/plan details display (weekly uses mealPlanType + mealPlanQuantity; not planDescription locale)
   const getRequestDetails = (request: any) => {
@@ -280,107 +286,101 @@ export function UnifiedRechargeHistory({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{language === 'zh' ? '充值请求历史' : 'Recharge Request History'}</CardTitle>
-        <CardDescription>
-          {language === 'zh' 
-            ? '查看您的所有充值请求历史和状态' 
-            : 'View all your recharge request history and status'
-          }
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <>
+    <div className="w-full">
         {isLoading ? (
-          <div className="flex justify-center items-center py-10">
+          <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">
+            <span className="ml-2 text-sm text-muted-foreground">
               {language === 'zh' ? '加载请求中...' : 'Loading requests...'}
             </span>
           </div>
         ) : requests.length > 0 ? (
-          <div className="space-y-4">
-            {requests.map((request) => (
-              <Card key={request._id || request.requestId} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="p-4 pb-2 bg-muted/20">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-                        {getRequestTypeIcon(request.requestType)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">{getDisplayType(request)}</p>
-                          <Badge variant="outline" className="bg-[#F5EDE4] text-[#6B5F53] border-[#C2884E]/20">
-                            {request.requestId}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {formatRequestDate(request.createdAt)}
-                        </p>
-                      </div>
+          <div className="space-y-3">
+            {requests.map((request) => {
+              const promoAmt = toNumber(request.promoDiscountAmount);
+              const showPromoOnCard = Boolean(request.promoCode?.trim()) && promoAmt > 0;
+
+              return (
+              <div
+                key={request._id || request.requestId}
+                role="article"
+                className="overflow-hidden rounded-2xl border border-[#C2884E]/12 bg-[#FFFCF9] shadow-sm ring-1 ring-[#C2884E]/5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4 sm:px-5">
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                      <span className="text-sm font-semibold leading-snug text-[#3D342C] sm:text-[15px]">
+                        {getDisplayType(request)}
+                      </span>
+                      <span className="inline-flex max-w-full rounded-full border-2 border-[#C2884E]/40 bg-gradient-to-b from-white to-[#fff6ef]/90 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-[#5C4D42] shadow-sm">
+                        {request.requestId}
+                      </span>
                     </div>
+                    <p className="text-xs leading-snug text-[#6B5F53] sm:text-[13px]">
+                      {formatRequestDate(request.createdAt)}
+                    </p>
+                  </div>
+                  <div className="shrink-0">
                     <RequestStatusBadge status={request.status} />
                   </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="grid md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium">
-                        {language === 'zh' ? '充值详情' : 'Recharge Details'}
-                      </p>
-                      <p className="text-muted-foreground">
-                        {getRequestDetails(request)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {language === 'zh' ? '支付金额' : 'Amount Paid'}
-                      </p>
-                      <p className="text-muted-foreground">${formatMoney(request.amount)}</p>
-                      {request.promoCode && (
-                        <p className="text-xs text-green-700 mt-1">
-                          {language === 'zh' ? '优惠码:' : 'Promo:'} {request.promoCode} (-${Number(request.promoDiscountAmount || 0).toFixed(2)})
-                        </p>
-                      )}
-                      {request.referenceNumber && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          <span className="font-medium">{language === 'zh' ? 'INTERAC 电子转账邮箱:' : 'INTERAC e-Transfer Email:'}</span> {request.referenceNumber}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {language === 'zh' ? '状态' : 'Status'}
-                      </p>
-                      <RequestStatusBadge status={request.status} />
-                    </div>
+                </div>
+
+                <div className="space-y-2 px-4 pb-4 pt-3 sm:px-5">
+                  <div>
+                    <p className="text-[11px] font-medium text-[#8B7D6E]">
+                      {language === "zh" ? "充值详情" : "Recharge details"}
+                    </p>
+                    <p className="mt-0.5 text-[15px] font-semibold leading-snug text-[#3D342C]">
+                      {getRequestDetails(request)}
+                    </p>
                   </div>
-                </CardContent>
-                <CardFooter className="p-4 pt-0 flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-1.5"
+
+                  <div>
+                    <p className="text-xl font-semibold tabular-nums tracking-tight text-[#3D342C]">
+                      ${formatMoney(request.amount)}
+                    </p>
+                    {request.paymentMethod ? (
+                      <p className="mt-0.5 text-sm font-medium text-[#6B5F53]">
+                        {formatPaymentMethodName(request.paymentMethod, language)}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {showPromoOnCard ? (
+                    <p className="w-fit max-w-full rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-2.5 py-1.5 text-sm font-semibold leading-snug text-[#1F5A3C]">
+                      {language === "zh"
+                        ? `优惠码 ${request.promoCode}（-$${formatMoney(request.promoDiscountAmount)}）`
+                        : `Promo ${request.promoCode} (-$${formatMoney(request.promoDiscountAmount)})`}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 border-t border-[#C2884E]/10 px-4 py-3 sm:flex sm:justify-end sm:gap-2.5 sm:px-5">
+                  <Button
+                    variant="outline"
+                    className="h-10 min-h-10 rounded-xl border border-[#C2884E]/12 bg-[#FFFCF9]/90 text-[13px] font-medium leading-tight text-[#6B5F53] shadow-none hover:border-[#C2884E]/20 hover:bg-[#fff6ef] sm:min-w-[128px]"
                     onClick={() => {
                       setSelectedRequest(request);
                       setImageDialogOpen(true);
                     }}
                   >
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    {language === 'zh' ? '查看证明' : 'View Proof'}
+                    <ImageIcon className="mr-1.5 h-3.5 w-3.5 shrink-0 text-[#C2884E] opacity-95 sm:h-4 sm:w-4" strokeWidth={2} />
+                    {language === "zh" ? "查看证明" : "View proof"}
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setSelectedRequest(request)}
+                  <Button
+                    className="h-10 min-h-10 rounded-xl bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-[13px] font-semibold leading-tight text-white shadow-md shadow-[#C2884E]/15 transition-opacity hover:opacity-90 sm:min-w-[100px]"
+                    onClick={() => {
+                      setImageDialogOpen(false);
+                      setSelectedRequest(request);
+                    }}
                   >
-                    {language === 'zh' ? '详情' : 'Details'}
+                    {language === "zh" ? "详情" : "Details"}
                   </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                </div>
+              </div>
+            );
+            })}
             
             {/* Pagination */}
             {pagination.pages > 1 && (
@@ -388,6 +388,7 @@ export function UnifiedRechargeHistory({
                 <Button 
                   variant="outline" 
                   size="sm" 
+                  className="text-[13px] leading-tight"
                   onClick={() => handlePagination('prev')}
                   disabled={pagination.page === 1}
                 >
@@ -403,6 +404,7 @@ export function UnifiedRechargeHistory({
                 <Button 
                   variant="outline" 
                   size="sm" 
+                  className="text-[13px] leading-tight"
                   onClick={() => handlePagination('next')}
                   disabled={pagination.page === pagination.pages}
                 >
@@ -413,260 +415,286 @@ export function UnifiedRechargeHistory({
             )}
           </div>
         ) : (
-          <div className="text-center py-10 border rounded-md bg-muted/10">
+          <div className="rounded-xl border border-[#C2884E]/12 bg-[#FBF7F2]/60 py-12 text-center">
             <div className="mb-3">
-              <Clock className="h-12 w-12 mx-auto text-muted-foreground" />
+              <Clock className="mx-auto h-12 w-12 text-[#C2884E]/35" />
             </div>
-            <h3 className="text-lg font-medium">
+            <h3 className="text-lg font-medium text-[#6B5F53]">
               {language === 'zh' ? '暂无请求' : 'No requests yet'}
             </h3>
-            <p className="text-muted-foreground mt-1">
-              {language === 'zh' 
-                ? '您的充值请求将显示在这里' 
-                : 'Your recharge requests will appear here'
-              }
+            <p className="mt-1 text-sm text-[#6B5F53]/80">
+              {language === 'zh'
+                ? '您的充值请求将显示在这里'
+                : 'Your recharge requests will appear here'}
             </p>
           </div>
         )}
-      </CardContent>
-      
+    </div>
+
       {/* Request Details Dialog */}
       <Dialog open={!!selectedRequest && !imageDialogOpen} onOpenChange={(open) => {
         if (!open) setSelectedRequest(null);
       }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="w-[calc(100vw-1.25rem)] sm:max-w-[560px] max-h-[min(90vh,780px)] overflow-y-auto gap-0 border-[#E8DDD4] p-0 shadow-lg sm:rounded-2xl">
           {selectedRequest && (
             <>
-              <DialogHeader>
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-                    {getRequestTypeIcon(selectedRequest.requestType)}
-                  </div>
-                  <div>
-                    <DialogTitle>
-                      {getDisplayType(selectedRequest)} {language === 'zh' ? '请求详情' : 'Request Details'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {selectedRequest.requestId}
-                    </DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
-              
-              <div className="py-4">
-                <div className="grid gap-4">
-                  <div className="flex justify-between items-center p-3 bg-muted rounded-md">
-                    <span className="text-sm font-medium">
-                      {language === 'zh' ? '状态' : 'Status'}
-                    </span>
+              <VisuallyHidden>
+                <DialogTitle>
+                  {language === 'zh' ? '充值请求详情' : 'Recharge request details'}
+                </DialogTitle>
+              </VisuallyHidden>
+              <div className="border-b border-[#C2884E]/10 bg-gradient-to-b from-[#FBF7F2] to-[#FFFCF9] px-5 pt-5 pb-4 sm:px-6">
+                <DialogHeader className="space-y-1 text-left">
+                  <DialogTitle className="text-lg font-semibold leading-snug text-[#6B5F53]">
+                    {language === 'zh' ? '请求编号' : 'Request'}{' '}
+                    <span className="font-mono text-base tracking-tight">{selectedRequest.requestId}</span>
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#6B5F53]/70 sm:text-sm">
+                    {getDisplayType(selectedRequest)}
+                    {' · '}
+                    {language === 'zh' ? '提交时间：' : 'Submitted: '}
+                    {formatRequestDate(selectedRequest.createdAt)}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="space-y-5 px-5 py-5 sm:px-6">
+                <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                      {language === 'zh' ? '请求状态' : 'Request status'}
+                    </h2>
                     <RequestStatusBadge status={selectedRequest.status} />
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
+                </section>
+
+                <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                  <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                    {language === 'zh' ? '请求信息' : 'Request information'}
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <p className="text-sm font-medium">
-                        {language === 'zh' ? '请求日期' : 'Requested On'}
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {language === 'zh' ? '请求日期' : 'Requested on'}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="mt-0.5 text-sm font-medium leading-relaxed text-[#6B5F53]">
                         {formatRequestDate(selectedRequest.createdAt)}
                       </p>
                     </div>
-                    
-                    {selectedRequest.status === 'approved' && selectedRequest.approvedAt && (
+                    {selectedRequest.status === 'approved' && selectedRequest.approvedAt ? (
                       <div>
-                        <p className="text-sm font-medium">
-                          {language === 'zh' ? '批准日期' : 'Approved On'}
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {language === 'zh' ? '批准日期' : 'Approved on'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="mt-0.5 text-sm font-medium leading-relaxed text-[#6B5F53]">
                           {formatRequestDate(selectedRequest.approvedAt)}
                         </p>
                       </div>
-                    )}
-                    
-                    {selectedRequest.status === 'declined' && selectedRequest.declinedAt && (
+                    ) : null}
+                    {selectedRequest.status === 'declined' && selectedRequest.declinedAt ? (
                       <div>
-                        <p className="text-sm font-medium">
-                          {language === 'zh' ? '拒绝日期' : 'Declined On'}
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {language === 'zh' ? '拒绝日期' : 'Declined on'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="mt-0.5 text-sm font-medium leading-relaxed text-[#6B5F53]">
                           {formatRequestDate(selectedRequest.declinedAt)}
                         </p>
                       </div>
-                    )}
+                    ) : null}
                   </div>
-                  
-                  {/* Weekly: same layout as daily — 餐券类型 / 数量 */}
-                  {selectedRequest.requestType === 'weekly' && (() => {
-                    let meals = parseMealsPerWeekFromWeeklyRequest(selectedRequest);
-                    let weeks = parseDurationWeeksFromWeeklyRequest(selectedRequest);
-                    if ((meals <= 0 || weeks <= 0) && typeof selectedRequest.planDescription === "string") {
-                      const parsed = parseWeeklyFromPlanDescription(selectedRequest.planDescription);
-                      if (meals <= 0) meals = parsed.meals;
-                      if (weeks <= 0) weeks = parsed.weeks;
-                    }
-                    const typeDisplay =
-                      meals > 0
-                        ? weeklyVoucherTypeLabel(meals, language)
-                        : typeof selectedRequest.planDescription === "string" && selectedRequest.planDescription.trim()
-                          ? selectedRequest.planDescription
-                          : "—";
-                    return (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {language === 'zh' ? '餐券类型' : 'Voucher Type'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{typeDisplay}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {language === 'zh' ? '数量' : 'Quantity'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {weeks > 0
-                              ? `${weeks}${language === 'zh' ? ' 张' : ''}`
-                              : '—'}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  
-                  {/* Daily specific fields */}
-                  {selectedRequest.requestType === 'daily' && (
-                    <div className="grid grid-cols-2 gap-4">
+
+                  {selectedRequest.requestType === 'weekly'
+                    ? (() => {
+                        let meals = parseMealsPerWeekFromWeeklyRequest(selectedRequest);
+                        let weeks = parseDurationWeeksFromWeeklyRequest(selectedRequest);
+                        if ((meals <= 0 || weeks <= 0) && typeof selectedRequest.planDescription === 'string') {
+                          const parsed = parseWeeklyFromPlanDescription(selectedRequest.planDescription);
+                          if (meals <= 0) meals = parsed.meals;
+                          if (weeks <= 0) weeks = parsed.weeks;
+                        }
+                        const typeDisplay =
+                          meals > 0
+                            ? weeklyVoucherTypeLabel(meals, language)
+                            : typeof selectedRequest.planDescription === 'string' && selectedRequest.planDescription.trim()
+                              ? selectedRequest.planDescription
+                              : '—';
+                        return (
+                          <div className="mt-4 grid grid-cols-1 gap-4 border-t border-[#C2884E]/10 pt-4 sm:grid-cols-2">
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">
+                                {language === 'zh' ? '餐券类型' : 'Voucher type'}
+                              </p>
+                              <p className="mt-0.5 text-sm font-medium leading-relaxed text-[#6B5F53]">{typeDisplay}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">
+                                {language === 'zh' ? '数量' : 'Quantity'}
+                              </p>
+                              <p className="mt-0.5 text-sm font-medium leading-relaxed text-[#6B5F53]">
+                                {weeks > 0 ? `${weeks}${language === 'zh' ? ' 张' : ''}` : '—'}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    : null}
+
+                  {selectedRequest.requestType === 'daily' ? (
+                    <div className="mt-4 grid grid-cols-1 gap-4 border-t border-[#C2884E]/10 pt-4 sm:grid-cols-2">
                       <div>
-                        <p className="text-sm font-medium">
-                          {language === 'zh' ? '餐券类型' : 'Voucher Type'}
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {language === 'zh' ? '餐券类型' : 'Voucher type'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedRequest.type === 'twoDish' 
-                            ? (language === 'zh' ? '2菜餐券' : '2-Dish Voucher')
-                            : (language === 'zh' ? '3菜餐券' : '3-Dish Voucher')
-                          }
+                        <p className="mt-0.5 text-sm font-medium leading-relaxed text-[#6B5F53]">
+                          {selectedRequest.type === 'twoDish'
+                            ? language === 'zh'
+                              ? '2菜餐券'
+                              : '2-Dish Voucher'
+                            : language === 'zh'
+                              ? '3菜餐券'
+                              : '3-Dish Voucher'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium">
+                        <p className="text-xs font-medium text-muted-foreground">
                           {language === 'zh' ? '数量' : 'Quantity'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="mt-0.5 text-sm font-medium leading-relaxed text-[#6B5F53]">
                           {selectedRequest.quantity} {language === 'zh' ? '张' : ''}
                         </p>
                       </div>
                     </div>
-                  )}
-                  
-                  <div>
-                    <p className="text-sm font-medium">
-                      {language === 'zh' ? '支付金额' : 'Amount Paid'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      ${formatMoney(selectedRequest.amount)}
-                    </p>
-                  </div>
+                  ) : null}
+                </section>
 
-                  <div className="rounded-md border p-3 bg-muted/20">
+                <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                  <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                    {language === 'zh' ? '支付信息' : 'Payment'}
+                  </h2>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {language === 'zh' ? '支付金额' : 'Amount paid'}
+                  </p>
+                  <p className="mt-1 text-base font-semibold tabular-nums text-[#2E2823]">
+                    ${formatMoney(selectedRequest.amount)}
+                  </p>
+
+                  <div className="mt-3 rounded-lg bg-[#FBF7F2]/80 px-3 py-2.5 text-sm">
                     {(() => {
                       const breakdown = getPaymentBreakdown(selectedRequest);
                       return (
-                        <div className="space-y-1.5 text-sm">
-                          <div className="flex justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between gap-4 text-[#6B5F53]">
                             <span>{language === 'zh' ? '小计' : 'Subtotal'}</span>
-                            <span>${breakdown.mealSubtotal.toFixed(2)}</span>
+                            <span className="tabular-nums">${breakdown.mealSubtotal.toFixed(2)}</span>
                           </div>
                           {selectedRequest.requestType === 'weekly' ? (
-                            <div className="flex justify-between">
+                            <div className="flex justify-between gap-4 text-[#6B5F53]">
                               <span>{language === 'zh' ? '配送费' : 'Delivery fee'}</span>
-                              <span>${breakdown.deliveryFeeTotal.toFixed(2)}</span>
+                              <span className="tabular-nums">${breakdown.deliveryFeeTotal.toFixed(2)}</span>
                             </div>
                           ) : null}
                           {selectedRequest.promoCode ? (
-                            <div className="flex justify-between text-green-700">
-                              <span>{language === 'zh' ? '优惠折扣' : 'Promo Discount'} ({selectedRequest.promoCode})</span>
-                              <span>- ${breakdown.promoDiscount.toFixed(2)}</span>
+                            <div className="flex justify-between gap-4 font-medium text-[#5A7A52]">
+                              <span>
+                                {language === 'zh' ? '优惠折扣' : 'Promo discount'} ({selectedRequest.promoCode})
+                              </span>
+                              <span className="tabular-nums">- ${breakdown.promoDiscount.toFixed(2)}</span>
                             </div>
                           ) : null}
-                          <div className="flex justify-between">
+                          <div className="flex justify-between gap-4 text-[#6B5F53]">
                             <span>{language === 'zh' ? '税费' : 'Tax'}</span>
-                            <span>${breakdown.taxAmount.toFixed(2)}</span>
+                            <span className="tabular-nums">${breakdown.taxAmount.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between font-semibold pt-1 border-t">
-                            <span>{language === 'zh' ? '总金额' : 'Final Total'}</span>
-                            <span>${breakdown.finalTotal.toFixed(2)}</span>
+                          <div className="flex justify-between gap-4 border-t border-[#C2884E]/15 pt-2 font-semibold text-[#2E2823]">
+                            <span>{language === 'zh' ? '总金额' : 'Final total'}</span>
+                            <span className="tabular-nums">${breakdown.finalTotal.toFixed(2)}</span>
                           </div>
                         </div>
                       );
                     })()}
                   </div>
-                  
-                  {selectedRequest.referenceNumber && (
-                    <div>
-                      <p className="text-sm font-medium">
-                        {language === 'zh' ? 'INTERAC 电子转账邮箱' : 'INTERAC e-Transfer Email'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedRequest.referenceNumber}
-                      </p>
+
+                  {(selectedRequest.paymentMethod || selectedRequest.referenceNumber) && (
+                    <div className="mt-3 space-y-3 border-t border-[#C2884E]/10 pt-3">
+                      {selectedRequest.paymentMethod ? (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {language === 'zh' ? '支付方式' : 'Payment method'}
+                          </p>
+                          <p className="mt-0.5 text-sm font-medium text-[#6B5F53]">
+                            {formatPaymentMethodName(selectedRequest.paymentMethod, language)}
+                          </p>
+                        </div>
+                      ) : null}
+                      {selectedRequest.referenceNumber ? (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {paymentReferenceFieldLabel(selectedRequest.paymentMethod, language)}
+                          </p>
+                          <p className="mt-0.5 select-text break-words text-sm font-medium leading-relaxed text-[#6B5F53] [overflow-wrap:anywhere]">
+                            {selectedRequest.referenceNumber}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                   )}
-                  
-                  {selectedRequest.status === 'approved' && selectedRequest.requestType === 'daily' && (
-                    <div>
-                      <p className="text-sm font-medium">
-                        {language === 'zh' ? '批准餐券' : 'Approved Vouchers'}
-                      </p>
-                      <p className="text-sm text-green-600 font-medium">
-                        {selectedRequest.quantity} {selectedRequest.type === 'twoDish' 
-                          ? (language === 'zh' ? '2菜餐券' : '2-Dish Voucher')
-                          : (language === 'zh' ? '3菜餐券' : '3-Dish Voucher')
-                        }
-                      </p>
-                    </div>
-                  )}
-                  
-                  {selectedRequest.notes && (
-                    <div>
-                      <p className="text-sm font-medium">
-                        {language === 'zh' ? '您的备注' : 'Your Notes'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedRequest.notes}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {selectedRequest.adminNotes && (
-                    <div>
-                      <p className="text-sm font-medium">
-                        {language === 'zh' ? '管理员备注' : 'Admin Notes'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedRequest.adminNotes}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full gap-2"
-                      onClick={() => {
-                        setImageDialogOpen(true);
-                      }}
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                      {language === 'zh' ? '查看付款证明' : 'View Payment Proof'}
-                    </Button>
-                  </div>
-                </div>
+                </section>
+
+                {selectedRequest.status === 'approved' && selectedRequest.requestType === 'daily' ? (
+                  <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                    <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                      {language === 'zh' ? '批准餐券' : 'Approved vouchers'}
+                    </h2>
+                    <p className="text-sm font-semibold text-[#2F5A3C]">
+                      {selectedRequest.quantity}{' '}
+                      {selectedRequest.type === 'twoDish'
+                        ? language === 'zh'
+                          ? '2菜餐券'
+                          : '2-Dish Voucher'
+                        : language === 'zh'
+                          ? '3菜餐券'
+                          : '3-Dish Voucher'}
+                    </p>
+                  </section>
+                ) : null}
+
+                {selectedRequest.notes ? (
+                  <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                    <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                      {language === 'zh' ? '您的备注' : 'Your notes'}
+                    </h2>
+                    <p className="text-sm leading-relaxed text-[#6B5F53]">{selectedRequest.notes}</p>
+                  </section>
+                ) : null}
+
+                {selectedRequest.adminNotes ? (
+                  <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                    <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                      {language === 'zh' ? '管理员备注' : 'Admin notes'}
+                    </h2>
+                    <p className="text-sm leading-relaxed text-[#6B5F53]">{selectedRequest.adminNotes}</p>
+                  </section>
+                ) : null}
               </div>
-              
-              <DialogFooter>
-                <Button onClick={() => setSelectedRequest(null)}>
+
+              <div className="flex flex-col gap-3 border-t border-[#C2884E]/10 bg-[#FBF7F2]/35 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+                <Button
+                  variant="outline"
+                  className="h-11 min-h-11 w-full gap-2 rounded-xl border border-[#C2884E]/20 bg-white/90 text-base font-medium text-[#6B5F53] shadow-sm hover:bg-[#fff6ef] sm:w-auto sm:px-5"
+                  onClick={() => {
+                    setImageDialogOpen(true);
+                  }}
+                >
+                  <ImageIcon className="h-4 w-4 shrink-0 text-[#C2884E]" />
+                  {language === 'zh' ? '查看付款证明' : 'View payment proof'}
+                </Button>
+                <Button
+                  className="h-11 min-h-11 w-full rounded-xl bg-gradient-to-r from-[#C2884E] to-[#D1A46C] px-5 text-base font-semibold text-white shadow-md shadow-[#C2884E]/15 hover:opacity-90 sm:w-auto"
+                  onClick={() => setSelectedRequest(null)}
+                >
                   {language === 'zh' ? '关闭' : 'Close'}
                 </Button>
-              </DialogFooter>
+              </div>
             </>
           )}
         </DialogContent>
@@ -674,54 +702,54 @@ export function UnifiedRechargeHistory({
       
       {/* Image Preview Dialog */}
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-auto">
+        <DialogContent className="w-[calc(100vw-1.25rem)] sm:max-w-[700px] max-h-[min(90vh,780px)] gap-0 overflow-y-auto border-[#E8DDD4] p-0 shadow-lg sm:rounded-2xl">
           {selectedRequest && (
             <>
-              <DialogHeader>
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-                    {getRequestTypeIcon(selectedRequest.requestType)}
-                  </div>
-                  <div>
-                    <DialogTitle>
-                      {language === 'zh' ? '付款证明' : 'Payment Proof'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {selectedRequest.requestId}
-                    </DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
-              
-              <div className="py-4">
+              <VisuallyHidden>
+                <DialogTitle>{language === 'zh' ? '付款证明' : 'Payment proof'}</DialogTitle>
+              </VisuallyHidden>
+              <div className="border-b border-[#C2884E]/10 bg-gradient-to-b from-[#FBF7F2] to-[#FFFCF9] px-5 pt-5 pb-4 sm:px-6">
+                <DialogHeader className="space-y-1 text-left">
+                  <DialogTitle className="text-lg font-semibold leading-snug text-[#6B5F53]">
+                    {language === 'zh' ? '付款证明' : 'Payment proof'}
+                  </DialogTitle>
+                  <DialogDescription className="font-mono text-xs text-[#6B5F53]/70 sm:text-sm">
+                    {selectedRequest.requestId}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="px-5 py-5 sm:px-6">
                 <div className="flex flex-col items-center">
-                  <img 
-                    src={selectedRequest.imageProof} 
-                    alt="Payment proof" 
-                    className="max-w-full rounded-md border shadow-sm"
+                  <img
+                    src={selectedRequest.imageProof}
+                    alt={language === 'zh' ? '付款凭证' : 'Payment proof'}
+                    className="max-w-full rounded-xl border border-[#C2884E]/12 shadow-sm"
                   />
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-4 gap-2"
+
+                  <Button
+                    variant="outline"
+                    className="mt-4 gap-2 rounded-xl border border-[#C2884E]/20 bg-white/90 px-4 font-medium text-[#6B5F53] hover:bg-[#fff6ef]"
                     onClick={() => window.open(selectedRequest.imageProof, '_blank')}
                   >
                     <ExternalLink className="h-4 w-4" />
-                    {language === 'zh' ? '在新标签页中打开' : 'Open in New Tab'}
+                    {language === 'zh' ? '在新标签页中打开' : 'Open in new tab'}
                   </Button>
                 </div>
               </div>
-              
-              <DialogFooter>
-                <Button onClick={() => setImageDialogOpen(false)}>
+
+              <div className="border-t border-[#C2884E]/10 bg-[#FBF7F2]/35 px-5 py-4 sm:px-6">
+                <Button
+                  className="h-11 w-full rounded-xl bg-gradient-to-r from-[#C2884E] to-[#D1A46C] font-semibold text-white shadow-md shadow-[#C2884E]/15 hover:opacity-90 sm:ml-auto sm:w-auto"
+                  onClick={() => setImageDialogOpen(false)}
+                >
                   {language === 'zh' ? '关闭' : 'Close'}
                 </Button>
-              </DialogFooter>
+              </div>
             </>
           )}
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }

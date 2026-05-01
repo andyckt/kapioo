@@ -86,7 +86,7 @@ type TranslationKey =
   // Credits tab
   | 'currentAvailableCredits' | 'creditsUsageHistory'
   // Orders tab
-  | 'orderHistory' | 'viewOrdersAndStatus' | 'loadingOrders' | 'orderTitle' | 'orderPlacedOn'
+  | 'orderHistory' | 'orderHistoryTypeToggleAria' | 'orderHistorySubfilterLabel' | 'viewOrdersAndStatus' | 'loadingOrders' | 'orderTitle' | 'orderPlacedOn'
   | 'selectedMeals' | 'creditsUsed' | 'viewDetails' | 'orderStatusTitle' | 'orderPlaced'
   | 'orderConfirmed' | 'outForDelivery' | 'delivered' | 'pendingStatus' | 'confirmedStatus'
   | 'deliveryStatus' | 'deliveredStatus' | 'cancelledStatus' | 'refundedStatus'
@@ -136,7 +136,7 @@ const translations: TranslationsType = {
     mealPlanOptionsTitle: "餐食订阅计划",
     selectAreaText: "选择您所在的区域，查看可用的餐食计划选项",
     servicesOverviewTitle: "服务概览",
-    weeklySubscriptionTitle: "周次Meal Box",
+    weeklySubscriptionTitle: "周餐盒",
     weeklySubscriptionDesc: "包周配送 一周配送2次 周日&周二 | 晚间送达",
     dailyDeliveryTitle: "每日直送系列",
     dailyDeliveryDesc: "每天新鲜制作，每天直送 | 午间送达",
@@ -350,7 +350,7 @@ const translations: TranslationsType = {
     myOrders: "我的订单",
     selectMeals: "选择餐点",
     dailyDelivery: "每日直送",
-    weeklySubscription: "周次Meal Box",
+    weeklySubscription: "周餐盒",
     deliveryTracking: "配送追踪",
     credits: "餐券",
     viewPlans: "查看计划",
@@ -434,6 +434,8 @@ const translations: TranslationsType = {
     creditsUsageHistory: "您的充值和使用历史",
     // Orders tab
     orderHistory: "订单历史",
+    orderHistoryTypeToggleAria: "在周餐盒订单与每日直送订单之间切换",
+    orderHistorySubfilterLabel: "订单类型",
     viewOrdersAndStatus: "查看您的餐点订单和配送状态",
     loadingOrders: "正在加载您的订单...",
     orderTitle: "订单",
@@ -804,6 +806,8 @@ const translations: TranslationsType = {
     creditsUsageHistory: "Your credits purchase and usage history",
     // Orders tab
     orderHistory: "Order History",
+    orderHistoryTypeToggleAria: "Switch between weekly meal box and daily delivery orders",
+    orderHistorySubfilterLabel: "Order type",
     viewOrdersAndStatus: "View your meal orders and delivery status",
     loadingOrders: "Loading your orders...",
     orderTitle: "Order",

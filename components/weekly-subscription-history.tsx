@@ -1,13 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Truck, CheckCircle, Clock, Package, AlertCircle, Loader2, RefreshCcw } from "lucide-react"
+import { Loader2, Package } from "lucide-react"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -19,68 +17,13 @@ import {
 } from "@/components/ui/dialog"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { OrderDeliveryMeta } from "@/components/order-delivery-meta"
+import { CustomerOrderStatusBadge } from "@/components/customer-order-status-badge"
 import { parseWeeklyMealPlanMeals } from "@/lib/orders/weekly-entitlement-display"
 import {
   formatDeliveryDatesList,
   getStandardDeliveryWindow,
   uniqueDeliveryDatesFromOrderItems,
 } from "@/lib/user-order-delivery-display"
-
-// Order status component with appropriate icon and color
-function OrderStatus({ status }: { status: string }) {
-  const { t } = useLanguage();
-  
-  switch (status) {
-    case 'pending':
-      return (
-        <Badge variant="outline" className="flex items-center gap-1 border-[#DCC29A]/60 bg-[#FFF8ED] px-2.5 py-0.5 text-[#7A5C2E] shadow-sm">
-          <Clock className="h-3 w-3 shrink-0 opacity-90" />
-          {t('pendingStatus')}
-        </Badge>
-      )
-    case 'confirmed':
-      return (
-        <Badge variant="outline" className="flex items-center gap-1 border-[#B8C9DA]/80 bg-[#F2F6FA] px-2.5 py-0.5 text-[#3D5A72] shadow-sm">
-          <CheckCircle className="h-3 w-3 shrink-0 opacity-90" />
-          {t('confirmedStatus')}
-        </Badge>
-      )
-    case 'delivery':
-      return (
-        <Badge variant="outline" className="flex items-center gap-1 border-[#C5B8D4]/70 bg-[#F5F2FA] px-2.5 py-0.5 text-[#57466D] shadow-sm">
-          <Truck className="h-3 w-3 shrink-0 opacity-90" />
-          {t('deliveryStatus')}
-        </Badge>
-      )
-    case 'delivered':
-      return (
-        <Badge variant="outline" className="flex items-center gap-1 border-[#A8C9B0]/80 bg-[#F1F8F3] px-2.5 py-0.5 text-[#2F5A3C] shadow-sm">
-          <CheckCircle className="h-3 w-3 shrink-0 opacity-90" />
-          {t('deliveredStatus')}
-        </Badge>
-      )
-    case 'cancelled':
-      return (
-        <Badge variant="outline" className="flex items-center gap-1 border-[#E0BCBC]/90 bg-[#FCF4F4] px-2.5 py-0.5 text-[#8F3D3D] shadow-sm">
-          <AlertCircle className="h-3 w-3 shrink-0 opacity-90" />
-          {t('cancelledStatus')}
-        </Badge>
-      )
-    case 'refunded':
-      return (
-        <Badge variant="outline" className="flex items-center gap-1 border-[#E5C4A8]/90 bg-[#FFF6ED] px-2.5 py-0.5 text-[#9A5C2E] shadow-sm">
-          <RefreshCcw className="h-3 w-3 shrink-0 opacity-90" />
-          {t('refundedStatus')}
-        </Badge>
-      )
-    default:
-      return (
-        <Badge variant="outline">
-          {status}
-        </Badge>
-      )
-  }
-}
 
 // Format address for display
 function formatAddress(address: any, language: string, area?: string) {
@@ -107,6 +50,18 @@ function formatAddress(address: any, language: string, area?: string) {
   }
   
   return formattedAddress;
+}
+
+function formatAddressShort(address: unknown, language: string, area?: string) {
+  if (!address || typeof address !== "object") {
+    return language === "en" ? "—" : "—";
+  }
+  const a = address as { streetAddress?: string };
+  const street = (a.streetAddress || "").trim();
+  const ar = (area || "").trim();
+  if (!street && !ar) return language === "en" ? "—" : "—";
+  if (street && ar) return `${street}, ${ar}`;
+  return street || ar;
 }
 
 function weeklyMealOptionDisplayName(
@@ -327,16 +282,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
   };
 
   return (
-    <Card className="overflow-hidden border border-[#C2884E]/12 bg-gradient-to-br from-white to-[#FFFCF9] shadow-sm sm:rounded-2xl">
-      <CardHeader className="border-b border-[#C2884E]/10 bg-[#FBF7F2]/50 pb-4">
-        <CardTitle className="text-lg font-semibold text-[#6B5F53]">
-          {language === 'zh' ? '周餐盒配送记录' : 'Weekly meal box deliveries'}
-        </CardTitle>
-        <CardDescription className="text-[#6B5F53]/70">
-          {language === 'zh' ? '查看您的周餐盒订单及配送状态' : 'View your weekly meal box orders and delivery status'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
+    <div className="w-full">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -345,7 +291,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
             </span>
           </div>
         ) : orders.length > 0 ? (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {orders.map((order) => {
               const { datesText, windowText } = weeklyListDeliverySummaryLines(order.items, language);
               const mealTotal = order.items.reduce((total: number, item: any) => total + item.quantity, 0);
@@ -354,98 +300,49 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
               <div
                 key={order._id}
                 role="article"
-                className="overflow-hidden rounded-2xl border border-[#C2884E]/14 bg-gradient-to-b from-[#FFFCF9] via-[#FFFBF7] to-white shadow-[0_10px_40px_-18px_rgba(194,136,78,0.35)]"
+                className="overflow-hidden rounded-2xl border border-[#C2884E]/12 bg-[#FFFCF9] shadow-sm ring-1 ring-[#C2884E]/5"
               >
-                {/* Header: order id + status */}
-                <div className="flex flex-wrap items-start justify-between gap-3 px-4 pb-4 pt-5 sm:px-6">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#6B5F53]/72">
-                      {language === 'zh' ? '订单号' : 'Order'}
-                    </p>
-                    <p className="mt-1 break-all font-mono text-base font-semibold leading-snug text-[#3D3630]">
-                      {order.orderId}
-                    </p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-[#6B5F53]/75">
-                      {formatOrderDate(order.createdAt)}
-                    </p>
-                  </div>
-                  <div className="shrink-0 pt-0.5">
-                    <OrderStatus status={order.status} />
+                <div className="flex items-start justify-between gap-3 px-4 pt-4 sm:px-5">
+                  <p className="min-w-0 break-all font-mono text-[15px] font-semibold leading-snug text-[#3D342C]">
+                    {order.orderId}
+                  </p>
+                  <div className="shrink-0">
+                    <CustomerOrderStatusBadge status={order.status} />
                   </div>
                 </div>
 
-                <div className="px-4 sm:px-6">
-                  <div className="h-px w-full bg-gradient-to-r from-transparent via-[#C2884E]/18 to-transparent" />
-                </div>
-
-                <div className="space-y-6 px-4 pb-6 pt-5 sm:px-6">
-                  {/* Delivery schedule — prominent, calm */}
-                  <div className="rounded-xl bg-[#FDF6ED]/95 px-4 py-4 ring-1 ring-[#C2884E]/[0.07]">
-                    <p className="text-xs font-medium tracking-wide text-[#6B5F53]/72">
-                      {language === 'zh' ? '配送时间' : 'Delivery time'}
-                    </p>
-                    <p className="mt-2 text-base font-semibold leading-snug text-[#2E2823]">
-                      {datesText}
-                    </p>
-                    <p className="mt-1.5 text-base font-semibold leading-snug text-[#2E2823]">
-                      {windowText}
-                    </p>
-                  </div>
-
-                  {/* This delivery */}
+                <div className="space-y-3 px-4 pb-4 pt-3 sm:px-5">
                   <div>
-                    <p className="text-xs font-medium tracking-wide text-[#6B5F53]/72">
-                      {language === 'zh' ? '本次配送' : 'This delivery'}
+                    <p className="text-[11px] font-medium text-[#8B7D6E]">
+                      {language === "zh" ? "配送时间" : "Delivery time"}
                     </p>
-                    <p className="mt-2 text-base font-semibold leading-relaxed text-[#2E2823]">
-                      {language === 'zh'
+                    <p className="mt-1 text-[15px] font-semibold leading-snug text-[#3D342C]">{datesText}</p>
+                    <p className="text-sm font-medium leading-snug text-[#6B5F53]">{windowText}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[15px] font-semibold leading-snug text-[#3D342C]">
+                      {language === "zh"
                         ? `${mealTotal} 份餐`
-                        : `${mealTotal} ${mealTotal === 1 ? 'meal' : 'meals'}`}
+                        : `${mealTotal} ${mealTotal === 1 ? "meal" : "meals"}`}
                     </p>
+                    <p className="text-sm text-[#6B5F53]">{formatWeeklyCardPlanUsage(order, language)}</p>
                   </div>
 
-                  {/* Plan / vouchers */}
-                  <div>
-                    <p className="text-xs font-medium tracking-wide text-[#6B5F53]/72">
-                      {language === 'zh' ? '使用套餐' : 'Plan usage'}
-                    </p>
-                    <p className="mt-2 text-base font-semibold leading-relaxed text-[#2E2823]">
-                      {formatWeeklyCardPlanUsage(order, language)}
-                    </p>
-                  </div>
+                  <p className="text-sm leading-relaxed text-[#6B5F53]">
+                    {formatAddressShort(order.deliveryAddress, language, order.area)}
+                  </p>
+                </div>
 
-                  <div className="h-px w-full bg-[#C2884E]/10" />
-
-                  {/* Delivery details */}
-                  <div className="space-y-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6B5F53]/65">
-                      {language === 'zh' ? '配送信息' : 'Delivery details'}
-                    </p>
-                    <div>
-                      <p className="text-xs font-medium text-[#6B5F53]/65">{t('deliveryAddress')}</p>
-                      <p className="mt-2 whitespace-pre-wrap break-words text-base font-medium leading-[1.65] text-[#2E2823]">
-                        {formatAddress(order.deliveryAddress, language, order.area)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-[#6B5F53]/65">
-                        {language === 'zh' ? '联系电话' : 'Phone'}
-                      </p>
-                      <p className="mt-2 break-all text-base font-semibold tabular-nums text-[#2E2823]">
-                        {order.phoneNumber || '—'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-1">
+                  <div className="border-t border-[#C2884E]/10 px-4 py-3 sm:px-5">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
-                        className="h-11 min-h-11 w-full rounded-xl border-[#C2884E]/35 bg-white/80 px-5 text-base font-medium text-[#5A4A3C] shadow-sm hover:bg-[#FBF7F2] sm:w-auto"
+                        className="h-10 min-h-10 w-full rounded-xl border border-[#C2884E]/20 bg-white px-4 text-[13px] font-semibold leading-tight text-[#6B5F53] shadow-sm hover:bg-[#fff6ef]"
                         onClick={() => fetchOrderDetails(order.orderId)}
                       >
-                        {language === 'zh' ? '查看详情' : 'View Details'}
+                        {language === "zh" ? "查看详情" : "View Details"}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="w-[calc(100vw-1.25rem)] sm:max-w-[560px] max-h-[min(90vh,780px)] overflow-y-auto gap-0 border-[#E8DDD4] p-0 shadow-lg sm:rounded-2xl">
@@ -473,7 +370,7 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                                 <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
                                   {language === 'zh' ? '订单状态' : 'Order status'}
                                 </h2>
-                                <OrderStatus status={selectedOrder.status} />
+                                <CustomerOrderStatusBadge status={selectedOrder.status} />
                               </div>
 
                               {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'refunded' && (
@@ -612,7 +509,6 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                     </DialogContent>
                   </Dialog>
                   </div>
-                </div>
               </div>
             );
             })}
@@ -622,7 +518,8 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
               <div className="flex items-center justify-between pt-2">
                 <Button 
                   variant="outline" 
-                  size="sm" 
+                  size="sm"
+                  className="text-[13px] leading-tight" 
                   onClick={() => handlePagination('prev')}
                   disabled={pagination.page === 1}
                 >
@@ -635,7 +532,8 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                 </div>
                 <Button 
                   variant="outline" 
-                  size="sm" 
+                  size="sm"
+                  className="text-[13px] leading-tight" 
                   onClick={() => handlePagination('next')}
                   disabled={pagination.page === pagination.pages}
                 >
@@ -645,19 +543,18 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
             )}
           </div>
         ) : (
-          <div className="rounded-xl border border-[#C2884E]/12 bg-[#FBF7F2]/40 py-12 text-center">
+          <div className="rounded-xl border border-[#C2884E]/12 bg-[#FBF7F2]/60 py-12 text-center">
             <div className="mb-3">
-              <Package className="mx-auto h-12 w-12 text-[#C2884E]/50" />
+              <Package className="mx-auto h-12 w-12 text-[#C2884E]/35" />
             </div>
             <h3 className="text-lg font-medium text-[#6B5F53]">
               {language === 'zh' ? '暂无订阅订单' : 'No Subscription Orders Yet'}
             </h3>
-            <p className="mt-1 text-sm text-[#6B5F53]/65">
+            <p className="mt-1 text-sm text-[#6B5F53]/80">
               {language === 'zh' ? '您的订阅订单将显示在这里' : 'Your subscription orders will appear here'}
             </p>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   )
 }
