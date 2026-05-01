@@ -340,15 +340,10 @@ export function UnifiedRechargeHistory({
                     <p className="text-xl font-semibold tabular-nums tracking-tight text-[#3D342C]">
                       ${formatMoney(request.amount)}
                     </p>
-                    {request.paymentMethod ? (
-                      <p className="mt-0.5 text-sm font-medium text-[#6B5F53]">
-                        {formatPaymentMethodName(request.paymentMethod, language)}
-                      </p>
-                    ) : null}
                   </div>
 
                   {showPromoOnCard ? (
-                    <p className="w-fit max-w-full rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-2.5 py-1.5 text-sm font-semibold leading-snug text-[#1F5A3C]">
+                    <p className="w-fit max-w-full rounded-md border border-emerald-200/90 bg-emerald-50/90 px-2 py-1 text-[11px] font-medium leading-snug text-[#1F5A3C] sm:text-xs">
                       {language === "zh"
                         ? `优惠码 ${request.promoCode}（-$${formatMoney(request.promoDiscountAmount)}）`
                         : `Promo ${request.promoCode} (-$${formatMoney(request.promoDiscountAmount)})`}
