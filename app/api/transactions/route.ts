@@ -4,8 +4,47 @@ import connectToDatabase from "@/lib/db";
 import { transactionsQuerySchema } from "@/lib/contracts/common";
 import Transaction from "@/models/Transaction";
 import User from "@/models/User";
+import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
+import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 import { getUserDisplayName } from "@/lib/users/display";
 import mongoose from "mongoose";
+
+function extractSourceRequestId(description?: unknown): string | undefined {
+  if (typeof description !== "string") {
+    return undefined;
+  }
+
+  const match = description.match(/Request ID:\s*([^)]+)/i);
+  return match?.[1]?.trim();
+}
+
+function buildSourceRequestSummary(request: Record<string, unknown> | undefined) {
+  if (!request) {
+    return undefined;
+  }
+
+  const type = typeof request.type === "string" ? request.type : undefined;
+  const quantity = typeof request.quantity === "number" ? request.quantity : undefined;
+  const planDescription =
+    typeof request.planDescription === "string"
+      ? request.planDescription
+      : type === "twoDish"
+        ? `${quantity || 0} x 2-dish vouchers`
+        : type === "threeDish"
+          ? `${quantity || 0} x 3-dish vouchers`
+          : undefined;
+
+  return {
+    requestId: typeof request.requestId === "string" ? request.requestId : undefined,
+    planDescription,
+    status: typeof request.status === "string" ? request.status : undefined,
+    amount: typeof request.amount === "number" ? request.amount : undefined,
+    finalTotal: typeof request.finalTotal === "number" ? request.finalTotal : undefined,
+    paymentMethod: typeof request.paymentMethod === "string" ? request.paymentMethod : undefined,
+    referenceNumber:
+      typeof request.referenceNumber === "string" ? request.referenceNumber : undefined,
+  };
+}
 
 export async function GET(request: Request) {
   try {
@@ -91,13 +130,42 @@ export async function GET(request: Request) {
             .lean()
         : [];
       const userById = new Map(users.map((user) => [String(user._id), user]));
+      const sourceRequestIds = Array.from(
+        new Set(
+          transactions
+            .map((transaction) => extractSourceRequestId(transaction.description))
+            .filter((requestId): requestId is string => Boolean(requestId))
+        )
+      );
+      const [creditRequests, voucherRequests] = sourceRequestIds.length > 0
+        ? await Promise.all([
+            CreditPurchaseRequest.find({ requestId: { $in: sourceRequestIds } })
+              .select("requestId planDescription status amount finalTotal paymentMethod referenceNumber")
+              .lean(),
+            VoucherPurchaseRequest.find({ requestId: { $in: sourceRequestIds } })
+              .select("requestId type quantity status amount finalTotal referenceNumber")
+              .lean(),
+          ])
+        : [[], []];
+      const sourceRequestById = new Map(
+        [...creditRequests, ...voucherRequests].map((request) => [
+          String(request.requestId),
+          buildSourceRequestSummary(request),
+        ])
+      );
       const transactionsWithUsers = transactions.map((transaction) => {
         const user = userById.get(String(transaction.userId));
+        const sourceRequestId = extractSourceRequestId(transaction.description);
+        const sourceRequest = sourceRequestId
+          ? sourceRequestById.get(sourceRequestId)
+          : undefined;
         return {
           ...transaction,
           userName: user ? getUserDisplayName(user) : undefined,
           userEmail: typeof user?.email === "string" ? user.email : undefined,
           userID: typeof user?.userID === "string" ? user.userID : undefined,
+          sourceRequestId,
+          sourceRequest,
         };
       });
 

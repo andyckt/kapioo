@@ -80,6 +80,18 @@ export const adminTransactionSchema = z.object({
   userName: z.string().optional(),
   userEmail: z.string().optional(),
   userID: z.string().optional(),
+  sourceRequestId: z.string().optional(),
+  sourceRequest: z
+    .object({
+      requestId: z.string().optional(),
+      planDescription: z.string().optional(),
+      status: z.string().optional(),
+      amount: z.number().optional(),
+      finalTotal: z.number().optional(),
+      paymentMethod: z.string().optional(),
+      referenceNumber: z.string().optional(),
+    })
+    .optional(),
   type: z.string(),
   amount: z.number().optional(),
   description: z.string().optional(),

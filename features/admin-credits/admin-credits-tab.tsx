@@ -1,6 +1,6 @@
 "use client"
 
-import type { Dispatch, SetStateAction } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 
 import {
   Calendar as CalendarIcon,
@@ -14,6 +14,14 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Command,
   CommandEmpty,
@@ -103,6 +111,29 @@ function getTransactionVoucherLabel(description?: string) {
   return ""
 }
 
+function formatTransactionDate(date: string) {
+  return new Date(date).toLocaleString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+function getTransactionDisplayId(transaction: AdminTransaction) {
+  return transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`
+}
+
+function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="grid grid-cols-3 gap-3 border-b py-2 text-sm last:border-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="col-span-2 break-words font-medium">{value || "N/A"}</dd>
+    </div>
+  )
+}
+
 export function AdminCreditsTab({
   users,
   usersLoading,
@@ -126,6 +157,8 @@ export function AdminCreditsTab({
   onTransactionPagination,
   onChangeTransactionsPageSize,
 }: AdminCreditsTabProps) {
+  const [selectedTransaction, setSelectedTransaction] = useState<AdminTransaction | null>(null)
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -390,12 +423,13 @@ export function AdminCreditsTab({
                   <th className="text-left p-4 font-medium">Type</th>
                   <th className="text-left p-4 font-medium">Amount</th>
                   <th className="text-left p-4 font-medium">Date</th>
+                  <th className="text-left p-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {transactionsLoading ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center">
+                    <td colSpan={6} className="p-8 text-center">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                     </td>
                   </tr>
@@ -422,9 +456,7 @@ export function AdminCreditsTab({
 
                     return (
                       <tr key={transaction._id} className="border-b">
-                        <td className="p-4">
-                          {transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`}
-                        </td>
+                        <td className="p-4">{getTransactionDisplayId(transaction)}</td>
                         <td className="p-4">{displayUser}</td>
                         <td className="p-4">{getTransactionTypeLabel(transaction)}</td>
                         <td className="p-4">
@@ -441,12 +473,21 @@ export function AdminCreditsTab({
                             day: "numeric",
                           })}
                         </td>
+                        <td className="p-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedTransaction(transaction)}
+                          >
+                            Details
+                          </Button>
+                        </td>
                       </tr>
                     )
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
                       No transactions found
                     </td>
                   </tr>
@@ -490,7 +531,7 @@ export function AdminCreditsTab({
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-sm font-semibold truncate">{displayUser}</CardTitle>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {transaction.transactionId || `Legacy-${transaction._id.toString().substring(0, 6)}`}
+                            {getTransactionDisplayId(transaction)}
                           </p>
                         </div>
                         <Badge variant={isPositive ? "default" : "destructive"} className="text-xs">
@@ -517,6 +558,14 @@ export function AdminCreditsTab({
                           })}
                         </span>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setSelectedTransaction(transaction)}
+                      >
+                        View details
+                      </Button>
                     </CardContent>
                   </Card>
                 )
@@ -574,6 +623,90 @@ export function AdminCreditsTab({
           </div>
         </CardFooter>
       </Card>
+
+      <Dialog
+        open={Boolean(selectedTransaction)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTransaction(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+            <DialogDescription>
+              Transaction ID is the internal ledger entry. Request ID is the customer purchase request
+              that created it, when applicable.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTransaction && (
+            <div className="space-y-4">
+              <dl className="rounded-md border p-3">
+                <DetailRow
+                  label="Transaction ID"
+                  value={getTransactionDisplayId(selectedTransaction)}
+                />
+                <DetailRow
+                  label="Request ID"
+                  value={selectedTransaction.sourceRequestId}
+                />
+                <DetailRow label="User" value={selectedTransaction.userName} />
+                <DetailRow label="User ID" value={selectedTransaction.userID} />
+                <DetailRow label="Email" value={selectedTransaction.userEmail} />
+                <DetailRow label="Type" value={getTransactionTypeLabel(selectedTransaction)} />
+                <DetailRow
+                  label="Amount"
+                  value={`${isPositiveTransaction(selectedTransaction) ? "+" : "-"}${selectedTransaction.amount || 0}${getTransactionVoucherSuffix(selectedTransaction.description)}`}
+                />
+                <DetailRow
+                  label="Date"
+                  value={formatTransactionDate(selectedTransaction.createdAt)}
+                />
+                <DetailRow label="Description" value={selectedTransaction.description} />
+              </dl>
+
+              {selectedTransaction.sourceRequest && (
+                <dl className="rounded-md border p-3">
+                  <DetailRow
+                    label="Request Plan"
+                    value={selectedTransaction.sourceRequest.planDescription}
+                  />
+                  <DetailRow
+                    label="Request Status"
+                    value={selectedTransaction.sourceRequest.status}
+                  />
+                  <DetailRow
+                    label="Paid Amount"
+                    value={
+                      typeof selectedTransaction.sourceRequest.finalTotal === "number"
+                        ? `$${selectedTransaction.sourceRequest.finalTotal.toFixed(2)}`
+                        : typeof selectedTransaction.sourceRequest.amount === "number"
+                          ? `$${selectedTransaction.sourceRequest.amount.toFixed(2)}`
+                          : undefined
+                    }
+                  />
+                  <DetailRow
+                    label="Payment Method"
+                    value={selectedTransaction.sourceRequest.paymentMethod}
+                  />
+                  <DetailRow
+                    label="Reference"
+                    value={selectedTransaction.sourceRequest.referenceNumber}
+                  />
+                </dl>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedTransaction(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
