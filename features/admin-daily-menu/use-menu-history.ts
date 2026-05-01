@@ -25,6 +25,7 @@ export function useMenuHistory() {
 
       if (data.success && Array.isArray(data.data)) {
         setHistoryData(data.data)
+        setSelectedHistoryEntry((current) => current || data.data[0] || null)
         return
       }
 
@@ -80,6 +81,62 @@ export function useMenuHistory() {
     [selectedHistoryEntry]
   )
 
+  const deleteHistoryWeek = useCallback(
+    async (entries: DayHistoryEntry[], label: string) => {
+      const historyIds = entries
+        .map((entry) => entry.historyId || entry._id || "")
+        .filter(Boolean)
+
+      if (historyIds.length === 0) {
+        toastRef.current({
+          title: "Error",
+          description: "No history entries found for this week",
+          variant: "destructive",
+        })
+        return false
+      }
+
+      try {
+        for (const historyId of historyIds) {
+          const response = await fetch(`/api/day-history/${encodeURIComponent(historyId)}`, {
+            method: "DELETE",
+          })
+          const data = await response.json()
+
+          if (!data.success) {
+            throw new Error(data.error || `Failed to delete ${historyId}`)
+          }
+        }
+
+        setHistoryData((prev) =>
+          prev.filter((entry) => !historyIds.includes(entry.historyId || entry._id || ""))
+        )
+        if (
+          selectedHistoryEntry &&
+          historyIds.includes(selectedHistoryEntry.historyId || selectedHistoryEntry._id || "")
+        ) {
+          setSelectedHistoryEntry(null)
+        }
+        toastRef.current({
+          title: "Week deleted",
+          description: `Deleted archived week ${label}`,
+        })
+        return true
+      } catch (error) {
+        console.error("Error deleting archived week:", error)
+        toastRef.current({
+          title: "Error",
+          description: `Failed to delete archived week: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          variant: "destructive",
+        })
+        return false
+      }
+    },
+    [selectedHistoryEntry]
+  )
+
   return {
     showHistoryModal,
     setShowHistoryModal,
@@ -91,5 +148,6 @@ export function useMenuHistory() {
     setSelectedWeekRange,
     fetchHistory,
     deleteHistoryEntry,
+    deleteHistoryWeek,
   }
 }

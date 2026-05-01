@@ -182,7 +182,6 @@ export function DailyDeliveryManagement() {
               setCalculatedDates={schedule.setCalculatedDates}
               isRollingForward={weekOperations.isRollingForward}
               rollForwardWeek={() => void weekOperations.rollForwardWeek()}
-              initializeNextWeek={() => void weekOperations.initializeNextWeek()}
             />
           </TabsContent>
 
@@ -236,6 +235,7 @@ export function DailyDeliveryManagement() {
         selectedHistoryEntry={history.selectedHistoryEntry}
         setSelectedHistoryEntry={history.setSelectedHistoryEntry}
         deleteHistoryEntry={(historyId) => void history.deleteHistoryEntry(historyId)}
+        deleteHistoryWeek={(entries, label) => history.deleteHistoryWeek(entries, label)}
         showNotificationDialog={notifications.showNotificationDialog}
         setShowNotificationDialog={notifications.setShowNotificationDialog}
         showProgressDialog={notifications.showProgressDialog}

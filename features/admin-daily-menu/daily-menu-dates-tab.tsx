@@ -1,5 +1,6 @@
 "use client"
 
+import type { Dispatch, SetStateAction } from "react"
 import { Calendar as CalendarIcon, Check, Edit, Loader2, Plus, RefreshCcw, Trash2, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/table"
 
 import { sortDaysByWeekAndName } from "./helpers"
-import type { DayData } from "./types"
+import type { DailyMenuCalculatedDates, DayData } from "./types"
 
 interface DailyMenuDatesTabProps {
   days: Record<string, DayData>
@@ -53,11 +54,10 @@ interface DailyMenuDatesTabProps {
   setStartDate: (value: string) => void
   createDay: () => void
   resetDayCreation: () => void
-  calculateDatesForWeek: (startDay: string, startDate: string) => Record<string, string>
-  setCalculatedDates: (dates: Record<string, string>) => void
+  calculateDatesForWeek: (startDay: string, startDate: string) => DailyMenuCalculatedDates
+  setCalculatedDates: Dispatch<SetStateAction<DailyMenuCalculatedDates>>
   isRollingForward: boolean
   rollForwardWeek: () => void
-  initializeNextWeek: () => void
 }
 
 export function DailyMenuDatesTab({
@@ -91,7 +91,6 @@ export function DailyMenuDatesTab({
   setCalculatedDates,
   isRollingForward,
   rollForwardWeek,
-  initializeNextWeek,
 }: DailyMenuDatesTabProps) {
   const sortedDays = sortDaysByWeekAndName(Object.entries(days)).filter(
     ([_, day]) => activeWeekFilter === null || day.week === activeWeekFilter
@@ -153,10 +152,6 @@ export function DailyMenuDatesTab({
               >
                 <Plus className="mr-1 h-3 w-3" />
                 Add Day (Next Week)
-              </Button>
-              <Button size="sm" variant="outline" onClick={initializeNextWeek}>
-                <Plus className="mr-1 h-3 w-3" />
-                Initialize Next Week
               </Button>
               <Button size="sm" variant="outline" onClick={rollForwardWeek} disabled={isRollingForward}>
                 {isRollingForward ? (

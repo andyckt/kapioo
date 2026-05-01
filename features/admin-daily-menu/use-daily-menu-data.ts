@@ -9,6 +9,7 @@ import type { ComboItem, DayData } from "./types"
 function formatCombo(combo: Record<string, unknown>): ComboItem {
   return {
     id: String(combo.comboId || combo.id || ""),
+    comboId: typeof combo.comboId === "string" ? combo.comboId : undefined,
     name: String(combo.name || ""),
     calories: Number(combo.calories || 0),
     tags: Array.isArray(combo.tags) ? combo.tags.map(String) : [],

@@ -193,6 +193,38 @@ function DishEditor({
   )
 }
 
+function ComboDishPreview({ combo }: { combo: ComboItem }) {
+  return (
+    <CardContent className="grid gap-4 pt-4 lg:grid-cols-2">
+      {(["typeA", "typeB"] as const).map((type) => (
+        <div
+          key={type}
+          className={`space-y-3 rounded-md p-4 ${
+            type === "typeA" ? "bg-blue-50" : "bg-green-50"
+          }`}
+        >
+          <h4 className="flex items-center font-medium">
+            <Package className="mr-2 h-4 w-4" />
+            {type === "typeA" ? "2-Dish Voucher Option" : "3-Dish Voucher Option"}
+          </h4>
+          {combo[type].dishes.length > 0 ? (
+            <ol className="space-y-2">
+              {combo[type].dishes.map((dish, index) => (
+                <li key={`${combo.id}-${type}-${dish}-${index}`} className="rounded-md border bg-white p-2 text-sm">
+                  <span className="mr-2 text-muted-foreground">{index + 1}.</span>
+                  {dish}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-muted-foreground">No dishes added.</p>
+          )}
+        </div>
+      ))}
+    </CardContent>
+  )
+}
+
 export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
   const sortedDays = sortDaysByWeekAndName(Object.entries(props.days))
   const selectedDayData = props.days[props.selectedDay]
@@ -484,7 +516,9 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                       ))}
                     </div>
                   </CardContent>
-                ) : null}
+                ) : (
+                  <ComboDishPreview combo={combo} />
+                )}
               </Card>
             ))
           )}

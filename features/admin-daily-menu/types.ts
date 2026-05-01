@@ -7,6 +7,7 @@ export interface ComboDishState {
 
 export interface ComboItem {
   id: string
+  comboId?: string
   name: string
   calories: number
   tags: string[]
