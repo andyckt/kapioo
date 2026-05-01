@@ -4,6 +4,12 @@ import { CheckCircle2 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import type { CartItem, DayData } from "@/lib/daily-delivery"
+import {
+  dailyMealTypeShortLabel,
+  dailyVoucherTypeCountLabel,
+  translateDailyComboDisplayName,
+  translateHistoryDishName,
+} from "@/lib/daily-order-display-i18n"
 
 type DailyCheckoutSummaryProps = {
   cart: CartItem[]
@@ -29,24 +35,6 @@ function getChineseDayName(englishDayName: string): string {
 
   const baseDayName = englishDayName?.toLowerCase()?.split("-")[0]
   return dayMap[baseDayName] || englishDayName || ""
-}
-
-function translateComboName(name: string, language: "en" | "zh"): string {
-  if (language === "zh") {
-    return name
-  }
-  return name.includes("套餐") ? name.replace(/套餐/g, "Combo") : name
-}
-
-function translateDishName(
-  dishName: string,
-  dishTranslations: Record<string, string>,
-  language: "en" | "zh"
-) {
-  if (language === "zh" || !dishTranslations[dishName]) {
-    return dishName
-  }
-  return dishTranslations[dishName]
 }
 
 export function DailyCheckoutSummary({
@@ -110,17 +98,11 @@ export function DailyCheckoutSummary({
                             </div>
                             <div>
                               <span className="font-medium text-[#6B5F53]">
-                                {translateComboName(item.comboName, language)}
+                                {translateDailyComboDisplayName(item.comboName, language)}
                               </span>
                               <span className="ml-2 text-xs text-[#6B5F53]/60">
                                 (
-                                {item.type === "A"
-                                  ? language === "zh"
-                                    ? "2菜"
-                                    : "2-Dish"
-                                  : language === "zh"
-                                    ? "3菜"
-                                    : "3-Dish"}
+                                {dailyMealTypeShortLabel(item.type, language)}
                                 )
                               </span>
                             </div>
@@ -138,7 +120,7 @@ export function DailyCheckoutSummary({
                               <div key={dishIndex} className="flex items-center gap-2">
                                 <div className="h-1 w-1 rounded-full bg-[#C2884E]/40" />
                                 <span className="text-xs text-[#6B5F53]">
-                                  {translateDishName(dish, dishTranslations, language)}
+                                  {translateHistoryDishName(dish, dishTranslations, language)}
                                 </span>
                               </div>
                             ))}
@@ -156,12 +138,12 @@ export function DailyCheckoutSummary({
               <div className="flex gap-2 text-[#C2884E]">
                 {vouchersNeeded.twoDish > 0 ? (
                   <span>
-                    {language === "zh" ? "2菜" : "2-Dish"}: {vouchersNeeded.twoDish}
+                    {dailyVoucherTypeCountLabel("two", language)}: {vouchersNeeded.twoDish}
                   </span>
                 ) : null}
                 {vouchersNeeded.threeDish > 0 ? (
                   <span>
-                    {language === "zh" ? "3菜" : "3-Dish"}: {vouchersNeeded.threeDish}
+                    {dailyVoucherTypeCountLabel("three", language)}: {vouchersNeeded.threeDish}
                   </span>
                 ) : null}
                 {vouchersNeeded.twoDish === 0 && vouchersNeeded.threeDish === 0 ? <span>0</span> : null}

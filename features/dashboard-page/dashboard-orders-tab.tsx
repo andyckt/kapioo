@@ -30,8 +30,10 @@ export function DashboardOrdersTab({
 }: DashboardOrdersTabProps) {
   return (
     <DashboardTabPanel panelKey="orders" className="space-y-6">
-      <div className="flex items-center justify-between mt-4">
-        <h2 className="text-3xl font-bold tracking-tight">{t("myOrders")}</h2>
+      <div className="mt-4 flex items-center justify-between">
+        <h2 className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
+          {t("myOrders")}
+        </h2>
       </div>
 
       <OrderSectionNavigation

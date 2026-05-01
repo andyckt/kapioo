@@ -346,10 +346,14 @@ export function DashboardOverviewTab({
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#C2884E]/10">
-                  <span className="text-sm font-medium text-[#6B5F53]">待配送订单：</span>
+                  <span className="text-sm font-medium text-[#6B5F53]">
+                    {language === "en" ? "Upcoming Orders:" : "待配送订单："}
+                  </span>
                   <div className="flex items-center">
                     <span className="text-xl font-bold text-[#C2884E]">{upcomingDeliveries}</span>
-                    <span className="ml-1 text-sm text-[#6B5F53]">个</span>
+                    {language === "zh" ? (
+                      <span className="ml-1 text-sm text-[#6B5F53]">个</span>
+                    ) : null}
                   </div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
@@ -359,7 +363,7 @@ export function DashboardOverviewTab({
                     onClick={() => onTabChange("orders")}
                   >
                     <History className="h-4 w-4 mr-2" />
-                    查看订单
+                    {language === "en" ? "View orders" : "查看订单"}
                   </Button>
                 </div>
               </CardContent>

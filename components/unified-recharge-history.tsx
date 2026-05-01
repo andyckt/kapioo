@@ -25,6 +25,46 @@ interface UnifiedRechargeHistoryProps {
   dailyRefreshKey?: number;
 }
 
+/** From stored weekly credit request (mealPlanType / mealPlanQuantity). */
+function parseMealsPerWeekFromWeeklyRequest(request: any): number {
+  const direct = Number(request?.mealsPerWeek);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const t = request?.mealPlanType;
+  if (typeof t === "string" && /^\d+aweek$/i.test(t)) {
+    return parseInt(t.replace(/aweek/i, ""), 10);
+  }
+  return 0;
+}
+
+function parseDurationWeeksFromWeeklyRequest(request: any): number {
+  const q = request?.mealPlanQuantity ?? request?.duration;
+  const n = Number(q);
+  if (Number.isFinite(n) && n > 0) return n;
+  return 0;
+}
+
+/** When mealPlanType / mealPlanQuantity are missing (legacy), parse planDescription. */
+function parseWeeklyFromPlanDescription(desc: string): { meals: number; weeks: number } {
+  const s = desc.trim();
+  if (!s) return { meals: 0, weeks: 0 };
+  let meals = 0;
+  let weeks = 0;
+  const zhMeals = s.match(/(\d+)\s*餐一周/);
+  const zhWeeks = s.match(/(\d+)\s*星期/);
+  const enMeals = s.match(/(\d+)\s*meals\/week/i);
+  const enWeeks = s.match(/(\d+)\s*weeks?/i);
+  if (zhMeals) meals = parseInt(zhMeals[1], 10);
+  else if (enMeals) meals = parseInt(enMeals[1], 10);
+  if (zhWeeks) weeks = parseInt(zhWeeks[1], 10);
+  else if (enWeeks) weeks = parseInt(enWeeks[1], 10);
+  return { meals, weeks };
+}
+
+function weeklyVoucherTypeLabel(mealsPerWeek: number, language: string): string {
+  if (mealsPerWeek <= 0) return language === "zh" ? "—" : "—";
+  return language === "zh" ? `${mealsPerWeek}餐一周` : `${mealsPerWeek} meals/week`;
+}
+
 export function UnifiedRechargeHistory({ 
   userId, 
   weeklyRefreshKey = 0, 
@@ -190,28 +230,35 @@ export function UnifiedRechargeHistory({
       ? (language === 'zh' ? '周次Meal Box' : 'Weekly Subscription')
       : (language === 'zh' ? '每日直送' : 'Daily Delivery');
 
-  // Get voucher/plan details display
+  // Get voucher/plan details display (weekly uses mealPlanType + mealPlanQuantity; not planDescription locale)
   const getRequestDetails = (request: any) => {
-    if (request.requestType === 'weekly') {
-      // Weekly subscription request
-      // Use planDescription if available, otherwise format it consistently
-      if (request.planDescription) {
-        return request.planDescription;
+    if (request.requestType === "weekly") {
+      let meals = parseMealsPerWeekFromWeeklyRequest(request);
+      let weeks = parseDurationWeeksFromWeeklyRequest(request);
+      if ((meals <= 0 || weeks <= 0) && typeof request.planDescription === "string") {
+        const parsed = parseWeeklyFromPlanDescription(request.planDescription);
+        if (meals <= 0) meals = parsed.meals;
+        if (weeks <= 0) weeks = parsed.weeks;
       }
-      
-      const mealsPerWeek = request.mealsPerWeek || 0;
-      const duration = request.duration || 1;
-      
-      // Format similar to the 套餐 field in credit-purchase-history
-      return `${mealsPerWeek} meals/week × ${duration}`;
-    } else {
-      // Daily delivery request
-      const type = request.type === 'twoDish'
-        ? (language === 'zh' ? '2菜餐券' : '2-Dish Voucher')
-        : (language === 'zh' ? '3菜餐券' : '3-Dish Voucher');
-      
-      return `${type} × ${request.quantity}`;
+      if (meals > 0 && weeks > 0) {
+        const typeLabel = weeklyVoucherTypeLabel(meals, language);
+        return `${typeLabel} × ${weeks}`;
+      }
+      return typeof request.planDescription === "string" && request.planDescription.trim()
+        ? request.planDescription
+        : "—";
     }
+
+    const type =
+      request.type === "twoDish"
+        ? language === "zh"
+          ? "2菜餐券"
+          : "2-Dish Voucher"
+        : language === "zh"
+          ? "3菜餐券"
+          : "3-Dish Voucher";
+
+    return `${type} × ${request.quantity}`;
   };
 
   const getPaymentBreakdown = (request: any) => {
@@ -448,27 +495,42 @@ export function UnifiedRechargeHistory({
                     )}
                   </div>
                   
-                  {/* Weekly specific fields */}
-                  {selectedRequest.requestType === 'weekly' && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {language === 'zh' ? '每周餐数' : 'Meals Per Week'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedRequest.mealsPerWeek}
-                        </p>
+                  {/* Weekly: same layout as daily — 餐券类型 / 数量 */}
+                  {selectedRequest.requestType === 'weekly' && (() => {
+                    let meals = parseMealsPerWeekFromWeeklyRequest(selectedRequest);
+                    let weeks = parseDurationWeeksFromWeeklyRequest(selectedRequest);
+                    if ((meals <= 0 || weeks <= 0) && typeof selectedRequest.planDescription === "string") {
+                      const parsed = parseWeeklyFromPlanDescription(selectedRequest.planDescription);
+                      if (meals <= 0) meals = parsed.meals;
+                      if (weeks <= 0) weeks = parsed.weeks;
+                    }
+                    const typeDisplay =
+                      meals > 0
+                        ? weeklyVoucherTypeLabel(meals, language)
+                        : typeof selectedRequest.planDescription === "string" && selectedRequest.planDescription.trim()
+                          ? selectedRequest.planDescription
+                          : "—";
+                    return (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {language === 'zh' ? '餐券类型' : 'Voucher Type'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{typeDisplay}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {language === 'zh' ? '数量' : 'Quantity'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {weeks > 0
+                              ? `${weeks}${language === 'zh' ? ' 张' : ''}`
+                              : '—'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {language === 'zh' ? '周数' : 'Duration'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedRequest.duration} {language === 'zh' ? '周' : (selectedRequest.duration > 1 ? 'weeks' : 'week')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                   
                   {/* Daily specific fields */}
                   {selectedRequest.requestType === 'daily' && (

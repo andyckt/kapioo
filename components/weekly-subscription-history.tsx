@@ -104,6 +104,19 @@ function formatAddress(address: any, language: string, area?: string) {
   return formattedAddress;
 }
 
+function weeklyMealOptionDisplayName(
+  optionId: unknown,
+  storedName: string,
+  language: string,
+  optionsById: Map<string, { nameEn?: string }>
+): string {
+  if (language === "zh") return storedName;
+  const id = String(optionId ?? "");
+  const meta = optionsById.get(id);
+  if (meta?.nameEn?.trim()) return meta.nameEn.trim();
+  return storedName;
+}
+
 function getWeeklyEntitlementLabel(order: any, language: string) {
   if (order?.weeklyEntitlementSummary) {
     return language === 'zh'
@@ -139,6 +152,27 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
   });
   const { toast } = useToast();
   const { t, language } = useLanguage();
+  const [weeklyOptionNames, setWeeklyOptionNames] = useState<Map<string, { nameEn?: string }>>(() => new Map());
+
+  useEffect(() => {
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/weekly-subscription/meal-options", { signal: ac.signal });
+        const json = await res.json();
+        if (!json.success || !Array.isArray(json.data)) return;
+        const next = new Map<string, { nameEn?: string }>();
+        for (const opt of json.data as { _id?: string; id?: string; nameEn?: string }[]) {
+          const id = opt._id != null ? String(opt._id) : opt.id != null ? String(opt.id) : "";
+          if (id) next.set(id, { nameEn: opt.nameEn });
+        }
+        setWeeklyOptionNames(next);
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+      }
+    })();
+    return () => ac.abort();
+  }, []);
   const locale = language === "en" ? "en-US" : "zh-CN";
   const formatOrderDate = (dateString: string) => formatDate(dateString, { locale, month: "long" });
   const formatOrderDateTime = (dateString: string) =>
@@ -254,111 +288,157 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{language === 'zh' ? '周次Meal Box订单' : 'Weekly Meal Box Orders'}</CardTitle>
-        <CardDescription>{language === 'zh' ? '查看您的周次Meal Box订单及状态' : 'View your weekly meal box orders and their status'}</CardDescription>
+    <Card className="overflow-hidden border border-[#C2884E]/12 bg-gradient-to-br from-white to-[#FFFCF9] shadow-sm sm:rounded-2xl">
+      <CardHeader className="border-b border-[#C2884E]/10 bg-[#FBF7F2]/50 pb-4">
+        <CardTitle className="text-lg font-semibold text-[#6B5F53]">
+          {language === 'zh' ? '周次Meal Box订单' : 'Weekly Meal Box Orders'}
+        </CardTitle>
+        <CardDescription className="text-[#6B5F53]/70">
+          {language === 'zh' ? '查看您的周次Meal Box订单及状态' : 'View your weekly meal box orders and their status'}
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {isLoading ? (
-          <div className="flex justify-center items-center py-10">
+          <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">{language === 'zh' ? '加载中...' : 'Loading...'}</span>
+            <span className="ml-2 text-sm text-muted-foreground">
+              {language === 'zh' ? '加载中...' : 'Loading...'}
+            </span>
           </div>
         ) : orders.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {orders.map((order) => (
-              <Card key={order._id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="p-4 pb-2 bg-muted/20">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-sm">{language === 'zh' ? '订单号' : 'Order'} {order.orderId}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatOrderDate(order.createdAt)}
+              <Card
+                key={order._id}
+                className="overflow-hidden rounded-xl border border-[#C2884E]/15 bg-white shadow-sm transition-all hover:border-[#C2884E]/28 hover:shadow-md"
+              >
+                <div className="border-b border-[#C2884E]/10 bg-gradient-to-b from-[#FBF7F2] to-[#FFFCF9] px-4 py-3.5 sm:px-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                        {language === 'zh' ? '订单号' : 'Order'}
                       </p>
+                      <p className="mt-0.5 break-all font-mono text-sm font-semibold leading-snug text-[#6B5F53] sm:text-[0.9375rem]">
+                        {order.orderId}
+                      </p>
+                      <p className="mt-1 text-xs text-[#6B5F53]/65">{formatOrderDate(order.createdAt)}</p>
                     </div>
-                    <OrderStatus status={order.status} />
+                    <div className="shrink-0">
+                      <OrderStatus status={order.status} />
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="grid md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium">{language === 'zh' ? '餐点数量' : 'Meal Count'}</p>
-                      <p className="text-muted-foreground">
-                        {order.items.reduce((total: number, item: any) => total + item.quantity, 0)} {language === 'zh' ? '份餐点' : 'meals'}
+                </div>
+                <CardContent className="space-y-4 p-4 sm:p-5">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
+                    <div className="rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                        {language === 'zh' ? '餐点' : 'Meals'}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold tabular-nums text-[#6B5F53]">
+                        {order.items.reduce((total: number, item: any) => total + item.quantity, 0)}
+                        <span className="ml-1 text-xs font-normal text-[#6B5F53]/75">
+                          {language === 'zh' ? '份' : 'meals'}
+                        </span>
                       </p>
                     </div>
-                    <div>
-                      <p className="font-medium">{language === 'zh' ? '使用餐券' : 'Meal Plan Used'}</p>
-                      <p className="text-muted-foreground">
+                    <div className="min-w-0 rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                        {language === 'zh' ? '餐券' : 'Voucher'}
+                      </p>
+                      <p className="mt-1 break-words text-sm font-medium leading-snug text-[#6B5F53]">
                         {getWeeklyEntitlementLabel(order, language)}
                       </p>
                     </div>
-                    <div>
-                      <p className="font-medium">{language === 'zh' ? '区域' : 'Area'}</p>
-                      <p className="text-muted-foreground">{order.area}</p>
+                    <div className="rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                        {language === 'zh' ? '区域' : 'Area'}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-[#6B5F53]">{order.area || '—'}</p>
                     </div>
-                    <div>
-                      <p className="font-medium">{language === 'zh' ? '电话' : 'Phone'}</p>
-                      <p className="text-muted-foreground">{order.phoneNumber}</p>
+                    <div className="rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                        {language === 'zh' ? '电话' : 'Phone'}
+                      </p>
+                      <p className="mt-1 break-all text-sm font-medium tabular-nums text-[#6B5F53]">
+                        {order.phoneNumber || '—'}
+                      </p>
                     </div>
                   </div>
-                  <div className="mt-2 text-sm">
-                    <p className="font-medium">{t('deliveryAddress')}</p>
-                    <p className="text-muted-foreground break-words max-w-full">
+
+                  <div className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                    <h3 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                      {language === 'zh' ? '配送信息' : 'Delivery'}
+                    </h3>
+                    <p className="text-xs font-medium text-muted-foreground">{t('deliveryAddress')}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#6B5F53]">
                       {formatAddress(order.deliveryAddress, language, order.area)}
                     </p>
-                    <OrderDeliveryMeta items={order.items} service="weekly" />
+                    <OrderDeliveryMeta
+                      items={order.items}
+                      service="weekly"
+                      className="mt-3 rounded-lg bg-[#FBF7F2]/80 px-3 py-2.5 text-sm"
+                    />
                   </div>
                 </CardContent>
-                <CardFooter className="p-4 pt-0 flex justify-end">
+                <CardFooter className="flex justify-end border-t border-[#C2884E]/10 bg-[#FBF7F2]/35 px-4 py-3 sm:px-5">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg border-[#C2884E]/30 text-[#6B5F53] shadow-sm hover:bg-[#F5EDE4]"
                         onClick={() => fetchOrderDetails(order.orderId)}
                       >
                         {language === 'zh' ? '查看详情' : 'View Details'}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
+                    <DialogContent className="w-[calc(100vw-1.25rem)] sm:max-w-[560px] max-h-[min(90vh,780px)] overflow-y-auto gap-0 border-[#E8DDD4] p-0 shadow-lg sm:rounded-2xl">
                       <VisuallyHidden>
                         <DialogTitle>{language === 'zh' ? '订单详情' : 'Order Details'}</DialogTitle>
                       </VisuallyHidden>
                       {selectedOrder && selectedOrder.orderId === order.orderId ? (
                         <>
-                          <DialogHeader>
-                            <DialogTitle>{language === 'zh' ? '订单号' : 'Order'} {selectedOrder.orderId}</DialogTitle>
-                            <DialogDescription>
-                              {language === 'zh' ? '下单时间：' : 'Placed on: '} {formatOrderDateTime(selectedOrder.createdAt)}
-                            </DialogDescription>
-                          </DialogHeader>
-                          
-                          <div className="py-4">
-                            <div className="mb-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-semibold">{language === 'zh' ? '订单状态' : 'Order Status'}</h3>
+                          <div className="border-b border-[#C2884E]/10 bg-gradient-to-b from-[#FBF7F2] to-[#FFFCF9] px-5 pt-5 pb-4 sm:px-6">
+                            <DialogHeader className="space-y-1 text-left">
+                              <DialogTitle className="text-lg font-semibold leading-snug text-[#6B5F53]">
+                                {language === 'zh' ? '订单号' : 'Order'}{' '}
+                                <span className="font-mono text-base tracking-tight">{selectedOrder.orderId}</span>
+                              </DialogTitle>
+                              <DialogDescription className="text-xs text-[#6B5F53]/70 sm:text-sm">
+                                {language === 'zh' ? '下单时间：' : 'Placed on: '}
+                                {formatOrderDateTime(selectedOrder.createdAt)}
+                              </DialogDescription>
+                            </DialogHeader>
+                          </div>
+
+                          <div className="space-y-5 px-5 py-5 sm:px-6">
+                            <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                              <div className="mb-3 flex items-center justify-between gap-3">
+                                <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                  {language === 'zh' ? '订单状态' : 'Order status'}
+                                </h2>
                                 <OrderStatus status={selectedOrder.status} />
                               </div>
-                              
-                              {/* Status Timeline */}
+
                               {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'refunded' && (
-                                <div className="relative mt-4 mb-6">
-                                  <div className="absolute left-0 top-[9px] w-full h-1 bg-muted"></div>
-                                  <div className="flex justify-between relative">
+                                <div className="relative mt-1 overflow-x-auto pb-1">
+                                  <div className="absolute left-2 right-2 top-[9px] h-0.5 rounded-full bg-muted sm:left-3 sm:right-3" />
+                                  <div className="relative flex min-w-[280px] justify-between gap-1 sm:min-w-0">
                                     {statusSteps.map((step, index) => {
                                       const currentIndex = getCurrentStepIndex(selectedOrder.status);
                                       const isActive = index <= currentIndex;
-                                      
                                       return (
-                                        <div key={step.status} className="flex flex-col items-center relative">
-                                          <div className={`w-5 h-5 rounded-full z-10 ${
-                                            isActive ? 'bg-primary' : 'bg-muted'
-                                          }`}></div>
-                                          <p className={`text-xs mt-1 ${
-                                            isActive ? 'text-primary font-medium' : 'text-muted-foreground'
-                                          }`}>
+                                        <div key={step.status} className="flex max-w-[25%] flex-1 flex-col items-center">
+                                          <div
+                                            className={`z-10 h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white sm:h-3 sm:w-3 ${
+                                              isActive ? 'bg-[#C2884E]' : 'bg-muted-foreground/25'
+                                            }`}
+                                          />
+                                          <p
+                                            className={`mt-2 text-center text-[10px] leading-tight sm:text-xs ${
+                                              isActive ? 'font-medium text-[#6B5F53]' : 'text-muted-foreground'
+                                            }`}
+                                          >
                                             {step.label}
                                           </p>
                                         </div>
@@ -367,90 +447,110 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                                   </div>
                                 </div>
                               )}
-                              
+
                               {selectedOrder.status === 'cancelled' && (
-                                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 my-3">
+                                <div className="rounded-lg border border-red-200 bg-red-50/90 px-3 py-2.5 text-sm text-red-800">
                                   {language === 'zh' ? '此订单已取消' : 'This order has been cancelled'}
                                 </div>
                               )}
 
                               {selectedOrder.status === 'refunded' && (
-                                <div className="bg-orange-50 border border-orange-200 rounded-md p-3 text-sm text-orange-700 my-3">
-                                  {language === 'zh' 
-                                    ? `已退还餐券` 
-                                    : `Your meal plan has been refunded`}
+                                <div className="rounded-lg border border-orange-200 bg-orange-50/90 px-3 py-2.5 text-sm text-orange-900">
+                                  <p>{language === 'zh' ? '已退还餐券' : 'Your meal plan has been refunded'}</p>
                                   {selectedOrder.refundedAt && (
-                                    <div className="mt-1">
-                                      {language === 'zh' ? '退款日期：' : 'Refunded on: '} {formatOrderDate(selectedOrder.refundedAt)}
-                                    </div>
+                                    <p className="mt-1 text-xs text-orange-800/90">
+                                      {language === 'zh' ? '退款日期：' : 'Refunded on: '}
+                                      {formatOrderDate(selectedOrder.refundedAt)}
+                                    </p>
                                   )}
                                 </div>
                               )}
-                            </div>
-                            
-                            <div className="grid gap-3 text-sm border-t pt-3">
-                              <div>
-                                <h3 className="font-semibold mb-1">{language === 'zh' ? '已选餐点' : 'Selected Meals'}</h3>
-                                <ul className="ml-5 list-disc space-y-1">
-                                  {selectedOrder.items.map((item: any, index: number) => (
-                                    <li key={index}>
-                                      <span>
-                                        {item.optionName} x{item.quantity}
-                                      </span>
-                                      <span className="text-muted-foreground ml-1">
-                                        ({item.dayId === 'sunday' ? (language === 'zh' ? '周日' : 'Sunday') : (language === 'zh' ? '周二' : 'Tuesday')}, {item.date})
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            </section>
+
+                            <section>
+                              <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                {language === 'zh' ? '已选餐点' : 'Selected meals'}
+                              </h2>
+                              <ul className="space-y-2">
+                                {selectedOrder.items.map((item: any, index: number) => (
+                                  <li
+                                    key={index}
+                                    className="flex items-start justify-between gap-3 rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5"
+                                  >
+                                    <span className="min-w-0 flex-1 text-sm leading-snug text-[#6B5F53]">
+                                      {weeklyMealOptionDisplayName(
+                                        item.optionId,
+                                        String(item.optionName ?? ''),
+                                        language,
+                                        weeklyOptionNames
+                                      )}
+                                    </span>
+                                    <span className="shrink-0 rounded-md bg-[#C2884E]/12 px-2 py-0.5 text-xs font-semibold tabular-nums text-[#8B6914]">
+                                      ×{item.quantity}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+
+                            <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                              <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                {language === 'zh' ? '配送信息' : 'Delivery'}
+                              </h2>
+                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                                 <div>
-                                  <h3 className="font-semibold mb-1">{language === 'zh' ? '区域' : 'Area'}</h3>
-                                  <p className="text-muted-foreground">
-                                    {selectedOrder.area}
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    {language === 'zh' ? '区域' : 'Area'}
                                   </p>
+                                  <p className="mt-0.5 text-sm text-[#6B5F53]">{selectedOrder.area}</p>
                                 </div>
-                                
                                 <div>
-                                  <h3 className="font-semibold mb-1">{language === 'zh' ? '电话' : 'Phone Number'}</h3>
-                                  <p className="text-muted-foreground">
-                                    {selectedOrder.phoneNumber}
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    {language === 'zh' ? '电话' : 'Phone'}
                                   </p>
+                                  <p className="mt-0.5 text-sm text-[#6B5F53]">{selectedOrder.phoneNumber}</p>
                                 </div>
                               </div>
-                              
-                              <div>
-                                <h3 className="font-semibold mb-1">{t('deliveryAddress')}</h3>
-                                <p className="text-muted-foreground break-words">
+                              <div className="mt-3 border-t border-[#C2884E]/10 pt-3">
+                                <p className="text-xs font-medium text-muted-foreground">{t('deliveryAddress')}</p>
+                                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#6B5F53]">
                                   {formatAddress(selectedOrder.deliveryAddress, language, selectedOrder.area)}
                                 </p>
-                                <OrderDeliveryMeta items={selectedOrder.items} service="weekly" className="mt-2 space-y-1 text-sm" />
+                                <OrderDeliveryMeta
+                                  items={selectedOrder.items}
+                                  service="weekly"
+                                  className="mt-3 rounded-lg bg-[#FBF7F2]/80 px-3 py-2.5 text-sm"
+                                />
                               </div>
-                              
-                              {selectedOrder.specialInstructions && (
-                                <div>
-                                  <h3 className="font-semibold mb-1">{language === 'zh' ? '特别说明' : 'Special Instructions'}</h3>
-                                  <p className="text-muted-foreground">
-                                    {selectedOrder.specialInstructions}
-                                  </p>
-                                </div>
-                              )}
-                              
-                              <div>
-                                <h3 className="font-semibold mb-1">{language === 'zh' ? '使用餐券' : 'Meal Plan Used'}</h3>
-                                <p className="text-muted-foreground">
-                                  {getWeeklyEntitlementLabel(selectedOrder, language)}
+                            </section>
+
+                            {selectedOrder.specialInstructions ? (
+                              <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                                <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                  {language === 'zh' ? '特别说明' : 'Special instructions'}
+                                </h2>
+                                <p className="text-sm leading-relaxed text-[#6B5F53]/90">
+                                  {selectedOrder.specialInstructions}
                                 </p>
-                              </div>
-                            </div>
+                              </section>
+                            ) : null}
+
+                            <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                              <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                {language === 'zh' ? '使用的餐券' : 'Voucher Used'}
+                              </h2>
+                              <p className="text-sm text-[#6B5F53]">
+                                {getWeeklyEntitlementLabel(selectedOrder, language)}
+                              </p>
+                            </section>
                           </div>
                         </>
                       ) : (
-                        <div className="flex justify-center items-center h-[200px]">
+                        <div className="flex h-[200px] items-center justify-center px-6">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                          <span className="ml-2">{language === 'zh' ? '加载中...' : 'Loading...'}</span>
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {language === 'zh' ? '加载中...' : 'Loading...'}
+                          </span>
                         </div>
                       )}
                     </DialogContent>
@@ -487,12 +587,14 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
             )}
           </div>
         ) : (
-          <div className="text-center py-10 border rounded-md bg-muted/10">
+          <div className="rounded-xl border border-[#C2884E]/12 bg-[#FBF7F2]/40 py-12 text-center">
             <div className="mb-3">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground" />
+              <Package className="mx-auto h-12 w-12 text-[#C2884E]/50" />
             </div>
-            <h3 className="text-lg font-medium">{language === 'zh' ? '暂无订阅订单' : 'No Subscription Orders Yet'}</h3>
-            <p className="text-muted-foreground mt-1">
+            <h3 className="text-lg font-medium text-[#6B5F53]">
+              {language === 'zh' ? '暂无订阅订单' : 'No Subscription Orders Yet'}
+            </h3>
+            <p className="mt-1 text-sm text-[#6B5F53]/65">
               {language === 'zh' ? '您的订阅订单将显示在这里' : 'Your subscription orders will appear here'}
             </p>
           </div>

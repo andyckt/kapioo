@@ -172,7 +172,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
             <div className="flex items-center justify-between">
               <div className="flex items-center text-sm">
                 <Ticket className="mr-2 h-4 w-4 text-green-500" />
-                <span>2菜餐券</span>
+                <span>{language === "en" ? "2-Dish Voucher" : "2菜餐券"}</span>
               </div>
               <Badge variant="outline" className="ml-auto font-medium">
                 {userData.twoDishVoucher}
@@ -185,7 +185,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
             <div className="flex items-center justify-between">
               <div className="flex items-center text-sm">
                 <Ticket className="mr-2 h-4 w-4 text-blue-500" />
-                <span>3菜餐券</span>
+                <span>{language === "en" ? "3-Dish Voucher" : "3菜餐券"}</span>
               </div>
               <Badge variant="outline" className="ml-auto font-medium">
                 {userData.threeDishVoucher}
@@ -198,7 +198,7 @@ export function UserNav({ setActiveTab }: { setActiveTab?: (tab: string) => void
             <div className="flex items-center justify-between">
               <div className="flex items-center text-sm">
                 <ShoppingCart className="mr-2 h-4 w-4 text-purple-500" />
-                <span>待配送订单</span>
+                <span>{language === "en" ? "Upcoming Orders" : "待配送订单"}</span>
               </div>
               <Badge variant="outline" className="ml-auto font-medium">
                 {upcomingDeliveries}

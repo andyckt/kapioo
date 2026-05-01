@@ -20,6 +20,13 @@ import {
 } from "@/components/ui/dialog"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { OrderDeliveryMeta } from "@/components/order-delivery-meta"
+import {
+  dailyMealTypeShortLabel,
+  dailyVoucherTypeCountLabel,
+  translateDailyComboDisplayName,
+  translateHistoryDishName,
+} from "@/lib/daily-order-display-i18n"
+import { uniqueDeliveryDatesFromOrderItems } from "@/lib/user-order-delivery-display"
 
 // Order status component with appropriate icon and color
 function OrderStatus({ status }: { status: string }) {
@@ -104,17 +111,25 @@ function formatAddress(address: any, language: string, area?: string) {
   return formattedAddress;
 }
 
-// Format items for display
-function formatItems(items: any[]) {
+/** e.g. monday-w1 → Monday (only used when an order spans multiple delivery days). */
+function daySlotLabelFromDailyItem(item: { day?: string }): string {
+  const day = item?.day;
+  if (!day || typeof day !== "string") return "";
+  const base = day.split("-")[0]?.toLowerCase();
+  if (!base) return "";
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+/** Card snippet only: combo lines (delivery date/day appears under 配送日期). */
+function formatItemsSnippet(items: any[], language: string) {
   if (!items || !items.length) return "-";
-  
-  return items.map(item => {
-    // Extract day name from item.day (e.g., "monday-w1" -> "Monday")
-    const dayName = item.day.split('-')[0].charAt(0).toUpperCase() + item.day.split('-')[0].slice(1);
-    const dayInfo = `${item.date} ${dayName}`;
-    const comboInfo = `${item.comboName} (${item.type === 'A' ? '2菜' : '3菜'}) x${item.quantity}`;
-    return `${dayInfo}: ${comboInfo}`;
-  }).join('\n');
+
+  return items
+    .map(
+      (item) =>
+        `${translateDailyComboDisplayName(String(item.comboName ?? ""), language)} (${dailyMealTypeShortLabel(item.type, language)}) x${item.quantity}`
+    )
+    .join("\n");
 }
 
 interface DailyDeliveryHistoryProps {
@@ -133,6 +148,27 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
   });
   const { toast } = useToast();
   const { t, language } = useLanguage();
+  const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({});
+  // Dish name zh -> en for English order history
+  useEffect(() => {
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/dishes", { signal: ac.signal });
+        const result = await res.json();
+        if (!result.success || !Array.isArray(result.data)) return;
+        const map: Record<string, string> = {};
+        for (const dish of result.data as { name?: string; nameEn?: string }[]) {
+          if (dish?.name && dish?.nameEn) map[dish.name] = dish.nameEn;
+        }
+        setDishTranslations(map);
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
   const locale = language === "en" ? "en-US" : "zh-CN";
   const formatOrderDate = (dateString: string) => formatDate(dateString, { locale, month: "long" });
   const formatOrderDateTime = (dateString: string) =>
@@ -248,114 +284,155 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{language === 'en' ? 'Daily Delivery Orders' : '每日直送订单'}</CardTitle>
-        <CardDescription>{language === 'en' ? 'View your daily delivery orders and status' : '查看您的每日直送订单和状态'}</CardDescription>
+    <Card className="overflow-hidden border border-[#C2884E]/12 bg-gradient-to-br from-white to-[#FFFCF9] shadow-sm sm:rounded-2xl">
+      <CardHeader className="border-b border-[#C2884E]/10 bg-[#FBF7F2]/50 pb-4">
+        <CardTitle className="text-lg font-semibold text-[#6B5F53]">
+          {language === 'en' ? 'Daily Delivery Orders' : '每日直送订单'}
+        </CardTitle>
+        <CardDescription className="text-[#6B5F53]/70">
+          {language === 'en' ? 'View your daily delivery orders and status' : '查看您的每日直送订单和状态'}
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {isLoading ? (
-          <div className="flex justify-center items-center py-10">
+          <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">{t('loadingOrders')}</span>
+            <span className="ml-2 text-sm text-muted-foreground">{t('loadingOrders')}</span>
           </div>
         ) : orders.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {orders.map((order) => (
-              <Card key={order._id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="p-4 pb-2 bg-muted/20">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-sm">{language === 'en' ? 'Order' : '订单'} {order.orderId}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatOrderDate(order.createdAt)}
+              <Card
+                key={order._id}
+                className="overflow-hidden rounded-xl border border-[#C2884E]/15 bg-white shadow-sm transition-all hover:border-[#C2884E]/28 hover:shadow-md"
+              >
+                <div className="border-b border-[#C2884E]/10 bg-gradient-to-b from-[#FBF7F2] to-[#FFFCF9] px-4 py-3.5 sm:px-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                        {language === 'en' ? 'Order' : '订单号'}
                       </p>
-                    </div>
-                    <OrderStatus status={order.status} />
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="grid md:grid-cols-4 gap-4 text-sm">
-                    <div className="md:col-span-2">
-                      <p className="font-medium">{language === 'en' ? 'Items' : '餐点'}</p>
-                      <div className="text-muted-foreground max-w-[400px] whitespace-pre-line">
-                        {formatItems(order.items)}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="font-medium">{language === 'en' ? 'Vouchers Used' : '使用的餐券'}</p>
-                      <p className="text-muted-foreground">
-                        2菜: {order.voucherCost?.twoDish || 0}, 
-                        3菜: {order.voucherCost?.threeDish || 0}
+                      <p className="mt-0.5 break-all font-mono text-sm font-semibold leading-snug text-[#6B5F53] sm:text-[0.9375rem]">
+                        {order.orderId}
                       </p>
+                      <p className="mt-1 text-xs text-[#6B5F53]/65">{formatOrderDate(order.createdAt)}</p>
                     </div>
-                    <div>
-                      <p className="font-medium">{language === 'zh' ? '区域' : 'Area'}</p>
-                      <p className="text-muted-foreground">{order.area || '-'}</p>
+                    <div className="shrink-0">
+                      <OrderStatus status={order.status} />
                     </div>
                   </div>
-                  <div className="mt-2 grid md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium">{t('deliveryAddress')}</p>
-                      <p className="text-muted-foreground break-words max-w-full">
-                        {formatAddress(order.deliveryAddress, language, order.area)}
+                </div>
+                <CardContent className="space-y-4 p-4 sm:p-5">
+                  <div className="rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                      {language === 'en' ? 'Items' : '餐点'}
+                    </p>
+                    <div className="mt-1 max-w-full whitespace-pre-line text-sm font-medium leading-relaxed text-[#6B5F53]">
+                      {formatItemsSnippet(order.items, language)}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+                    <div className="rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                        {language === 'en' ? 'Vouchers' : '餐券'}
                       </p>
-                      <OrderDeliveryMeta items={order.items} service="daily" />
+                      <p className="mt-1 text-sm font-medium leading-snug text-[#6B5F53]">
+                        {dailyVoucherTypeCountLabel('two', language)}: {order.voucherCost?.twoDish || 0}
+                        {language === 'zh' ? '，' : ', '}
+                        {dailyVoucherTypeCountLabel('three', language)}: {order.voucherCost?.threeDish || 0}
+                      </p>
                     </div>
-                    <div>
-                      <p className="font-medium">{language === 'zh' ? '电话' : 'Phone'}</p>
-                      <p className="text-muted-foreground">{order.phoneNumber || '-'}</p>
+                    <div className="rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                        {language === 'zh' ? '区域' : 'Area'}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-[#6B5F53]">{order.area || '—'}</p>
                     </div>
+                    <div className="rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-[#4A3F36]">
+                        {language === 'zh' ? '电话' : 'Phone'}
+                      </p>
+                      <p className="mt-1 break-all text-sm font-medium tabular-nums text-[#6B5F53]">
+                        {order.phoneNumber || '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                    <h3 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                      {language === 'zh' ? '配送信息' : 'Delivery'}
+                    </h3>
+                    <p className="text-xs font-medium text-muted-foreground">{t('deliveryAddress')}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#6B5F53]">
+                      {formatAddress(order.deliveryAddress, language, order.area)}
+                    </p>
+                    <OrderDeliveryMeta
+                      items={order.items}
+                      service="daily"
+                      className="mt-3 rounded-lg bg-[#FBF7F2]/80 px-3 py-2.5 text-sm"
+                    />
                   </div>
                 </CardContent>
-                <CardFooter className="p-4 pt-0 flex justify-end">
+                <CardFooter className="flex justify-end border-t border-[#C2884E]/10 bg-[#FBF7F2]/35 px-4 py-3 sm:px-5">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg border-[#C2884E]/30 text-[#6B5F53] shadow-sm hover:bg-[#F5EDE4]"
                         onClick={() => fetchOrderDetails(order.orderId)}
                       >
                         {t('viewDetails')}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
+                    <DialogContent className="w-[calc(100vw-1.25rem)] sm:max-w-[560px] max-h-[min(90vh,780px)] overflow-y-auto gap-0 border-[#E8DDD4] p-0 shadow-lg sm:rounded-2xl">
                       <VisuallyHidden>
                         <DialogTitle>{language === 'zh' ? '订单详情' : 'Order Details'}</DialogTitle>
                       </VisuallyHidden>
                       {selectedOrder && selectedOrder.orderId === order.orderId ? (
                         <>
-                          <DialogHeader>
-                            <DialogTitle>{language === 'en' ? 'Order' : '订单'} {selectedOrder.orderId}</DialogTitle>
-                            <DialogDescription>
-                              {language === 'en' ? 'Placed on' : '下单于'} {formatOrderDateTime(selectedOrder.createdAt)}
-                            </DialogDescription>
-                          </DialogHeader>
-                          
-                          <div className="py-4">
-                            <div className="mb-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-semibold">{t('orderStatusTitle')}</h3>
+                          <div className="border-b border-[#C2884E]/10 bg-gradient-to-b from-[#FBF7F2] to-[#FFFCF9] px-5 pt-5 pb-4 sm:px-6">
+                            <DialogHeader className="space-y-1 text-left">
+                              <DialogTitle className="text-lg font-semibold leading-snug text-[#6B5F53]">
+                                {language === 'zh' ? '订单号' : 'Order'}{' '}
+                                <span className="font-mono text-base tracking-tight">{selectedOrder.orderId}</span>
+                              </DialogTitle>
+                              <DialogDescription className="text-xs text-[#6B5F53]/70 sm:text-sm">
+                                {language === 'zh' ? '下单时间：' : 'Placed on: '}
+                                {formatOrderDateTime(selectedOrder.createdAt)}
+                              </DialogDescription>
+                            </DialogHeader>
+                          </div>
+
+                          <div className="space-y-5 px-5 py-5 sm:px-6">
+                            <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                              <div className="mb-3 flex items-center justify-between gap-3">
+                                <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                  {language === 'zh' ? '订单状态' : 'Order status'}
+                                </h2>
                                 <OrderStatus status={selectedOrder.status} />
                               </div>
-                              
-                              {/* Status Timeline */}
-                              {selectedOrder.status !== 'cancelled' && (
-                                <div className="relative mt-4 mb-6">
-                                  <div className="absolute left-0 top-[9px] w-full h-1 bg-muted"></div>
-                                  <div className="flex justify-between relative">
+
+                              {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'refunded' && (
+                                <div className="relative mt-1 overflow-x-auto pb-1">
+                                  <div className="absolute left-2 right-2 top-[9px] h-0.5 rounded-full bg-muted sm:left-3 sm:right-3" />
+                                  <div className="relative flex min-w-[280px] justify-between gap-1 sm:min-w-0">
                                     {statusSteps.map((step, index) => {
                                       const currentIndex = getCurrentStepIndex(selectedOrder.status);
                                       const isActive = index <= currentIndex;
-                                      
                                       return (
-                                        <div key={step.status} className="flex flex-col items-center relative">
-                                          <div className={`w-5 h-5 rounded-full z-10 ${
-                                            isActive ? 'bg-primary' : 'bg-muted'
-                                          }`}></div>
-                                          <p className={`text-xs mt-1 ${
-                                            isActive ? 'text-primary font-medium' : 'text-muted-foreground'
-                                          }`}>
+                                        <div key={step.status} className="flex max-w-[25%] flex-1 flex-col items-center">
+                                          <div
+                                            className={`z-10 h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white sm:h-3 sm:w-3 ${
+                                              isActive ? 'bg-[#C2884E]' : 'bg-muted-foreground/25'
+                                            }`}
+                                          />
+                                          <p
+                                            className={`mt-2 text-center text-[10px] leading-tight sm:text-xs ${
+                                              isActive ? 'font-medium text-[#6B5F53]' : 'text-muted-foreground'
+                                            }`}
+                                          >
                                             {step.label}
                                           </p>
                                         </div>
@@ -364,101 +441,137 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                                   </div>
                                 </div>
                               )}
-                              
+
                               {selectedOrder.status === 'cancelled' && (
-                                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 my-3">
+                                <div className="rounded-lg border border-red-200 bg-red-50/90 px-3 py-2.5 text-sm text-red-800">
                                   {t('orderCancelled')}
                                 </div>
                               )}
 
                               {selectedOrder.status === 'refunded' && (
-                                <div className="bg-orange-50 border border-orange-200 rounded-md p-3 text-sm text-orange-700 my-3">
-                                  {language === 'en' ? 'Order has been refunded' : '订单已退款'}
+                                <div className="rounded-lg border border-orange-200 bg-orange-50/90 px-3 py-2.5 text-sm text-orange-900">
+                                  <p>{language === 'en' ? 'Order has been refunded' : '订单已退款'}</p>
                                   {selectedOrder.refundedAt && (
-                                    <div className="mt-1">
-                                      {language === 'en' ? 'Refunded on' : '退款日期'} {formatOrderDate(selectedOrder.refundedAt)}
-                                    </div>
+                                    <p className="mt-1 text-xs text-orange-800/90">
+                                      {language === 'en' ? 'Refunded on: ' : '退款日期：'}
+                                      {formatOrderDate(selectedOrder.refundedAt)}
+                                    </p>
                                   )}
                                 </div>
                               )}
-                            </div>
-                            
-                            <div className="grid gap-3 text-sm border-t pt-3">
-                              <div>
-                                <h3 className="font-semibold mb-1">{language === 'en' ? 'Ordered Items' : '订购的餐点'}</h3>
-                                <ul className="ml-5 list-disc space-y-1">
-                                  {selectedOrder.items.map((item: any, index: number) => (
-                                    <li key={index} className="mb-2">
-                                      <div>
-                                        <span className="font-medium">{item.date} {item.day.split('-')[0].charAt(0).toUpperCase() + item.day.split('-')[0].slice(1)}</span>: {item.comboName} 
-                                        <span className="text-muted-foreground ml-1">
-                                          ({item.type === 'A' ? '2菜' : '3菜'}) x{item.quantity}
-                                        </span>
-                                      </div>
-                                      
-                                      {/* Display dish details if available */}
-                                      {item.dishes && item.dishes.length > 0 && (
-                                        <div className="mt-1 pl-4 space-y-1">
-                                          {item.dishes.map((dish: string, dishIndex: number) => (
-                                            <div key={dishIndex} className="flex items-center gap-1.5">
-                                              <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]/40"></div>
-                                              <span className="text-xs text-[#6B5F53]">{dish}</span>
+                            </section>
+
+                            <section>
+                              <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                {language === 'zh' ? '已选餐点' : 'Selected meals'}
+                              </h2>
+                              {(() => {
+                                const items = selectedOrder.items ?? [];
+                                const multiDay = uniqueDeliveryDatesFromOrderItems(items).length > 1;
+                                return (
+                                  <ul className="space-y-2">
+                                    {items.map((item: any, index: number) => (
+                                      <li
+                                        key={index}
+                                        className="flex items-start justify-between gap-3 rounded-lg border border-[#C2884E]/10 bg-[#FFFCF9] px-3 py-2.5"
+                                      >
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-sm leading-snug text-[#6B5F53]">
+                                            {translateDailyComboDisplayName(String(item.comboName ?? ""), language)}
+                                            {multiDay ? (
+                                              <span className="text-muted-foreground">
+                                                {" "}
+                                                · {daySlotLabelFromDailyItem(item)}
+                                              </span>
+                                            ) : null}
+                                          </p>
+                                          <p className="mt-0.5 text-xs text-muted-foreground">
+                                            ({dailyMealTypeShortLabel(item.type, language)})
+                                          </p>
+                                          {item.dishes && item.dishes.length > 0 ? (
+                                            <div className="mt-2 space-y-1 border-t border-[#C2884E]/10 pt-2">
+                                              {item.dishes.map((dish: string, dishIndex: number) => (
+                                                <div key={dishIndex} className="flex items-center gap-1.5">
+                                                  <div className="h-1 w-1 shrink-0 rounded-full bg-[#C2884E]/40" />
+                                                  <span className="text-xs text-[#6B5F53]">
+                                                    {translateHistoryDishName(dish, dishTranslations, language)}
+                                                  </span>
+                                                </div>
+                                              ))}
                                             </div>
-                                          ))}
+                                          ) : null}
                                         </div>
-                                      )}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <span className="shrink-0 rounded-md bg-[#C2884E]/12 px-2 py-0.5 text-xs font-semibold tabular-nums text-[#8B6914]">
+                                          ×{item.quantity}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                );
+                              })()}
+                            </section>
+
+                            <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                              <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                {language === 'zh' ? '配送信息' : 'Delivery'}
+                              </h2>
+                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                                 <div>
-                                  <h3 className="font-semibold mb-1">{language === 'zh' ? '区域' : 'Area'}</h3>
-                                  <p className="text-muted-foreground">
-                                    {selectedOrder.area || '-'}
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    {language === 'zh' ? '区域' : 'Area'}
                                   </p>
+                                  <p className="mt-0.5 text-sm text-[#6B5F53]">{selectedOrder.area || "—"}</p>
                                 </div>
-                                
                                 <div>
-                                  <h3 className="font-semibold mb-1">{language === 'zh' ? '电话' : 'Phone Number'}</h3>
-                                  <p className="text-muted-foreground">
-                                    {selectedOrder.phoneNumber || '-'}
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    {language === 'zh' ? '电话' : 'Phone'}
                                   </p>
+                                  <p className="mt-0.5 text-sm text-[#6B5F53]">{selectedOrder.phoneNumber || "—"}</p>
                                 </div>
                               </div>
-                              
-                              <div>
-                                <h3 className="font-semibold mb-1">{t('deliveryAddress')}</h3>
-                                <p className="text-muted-foreground break-words">
+                              <div className="mt-3 border-t border-[#C2884E]/10 pt-3">
+                                <p className="text-xs font-medium text-muted-foreground">{t('deliveryAddress')}</p>
+                                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#6B5F53]">
                                   {formatAddress(selectedOrder.deliveryAddress, language, selectedOrder.area)}
                                 </p>
-                                <OrderDeliveryMeta items={selectedOrder.items} service="daily" className="mt-2 space-y-1 text-sm" />
+                                <OrderDeliveryMeta
+                                  items={selectedOrder.items}
+                                  service="daily"
+                                  className="mt-3 rounded-lg bg-[#FBF7F2]/80 px-3 py-2.5 text-sm"
+                                />
                               </div>
-                              
-                              {selectedOrder.specialInstructions && (
-                                <div>
-                                  <h3 className="font-semibold mb-1">{t('specialInstructions')}</h3>
-                                  <p className="text-muted-foreground">
-                                    {selectedOrder.specialInstructions}
-                                  </p>
-                                </div>
-                              )}
-                              
-                              <div>
-                                <h3 className="font-semibold mb-1">{language === 'en' ? 'Vouchers Used' : '使用的餐券'}</h3>
-                                <p className="text-muted-foreground">
-                                  2菜: {selectedOrder.voucherCost?.twoDish || 0}, 
-                                  3菜: {selectedOrder.voucherCost?.threeDish || 0}
+                            </section>
+
+                            {selectedOrder.specialInstructions ? (
+                              <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                                <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                  {language === 'zh' ? '特别说明' : 'Special instructions'}
+                                </h2>
+                                <p className="text-sm leading-relaxed text-[#6B5F53]/90">
+                                  {selectedOrder.specialInstructions}
                                 </p>
-                              </div>
-                            </div>
+                              </section>
+                            ) : null}
+
+                            <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
+                              <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
+                                {language === 'zh' ? '使用的餐券' : 'Voucher Used'}
+                              </h2>
+                              <p className="text-sm text-[#6B5F53]">
+                                {dailyVoucherTypeCountLabel("two", language)}: {selectedOrder.voucherCost?.twoDish || 0}
+                                {language === "zh" ? "，" : ", "}
+                                {dailyVoucherTypeCountLabel("three", language)}:{" "}
+                                {selectedOrder.voucherCost?.threeDish || 0}
+                              </p>
+                            </section>
                           </div>
                         </>
                       ) : (
-                        <div className="flex justify-center items-center h-[200px]">
+                        <div className="flex h-[200px] items-center justify-center px-6">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                          <span className="ml-2">{language === 'en' ? 'Loading...' : '加载中...'}</span>
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {language === 'zh' ? '加载中...' : 'Loading...'}
+                          </span>
                         </div>
                       )}
                     </DialogContent>
@@ -493,12 +606,14 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
             )}
           </div>
         ) : (
-          <div className="text-center py-10 border rounded-md bg-muted/10">
+          <div className="rounded-xl border border-[#C2884E]/12 bg-[#FBF7F2]/40 py-12 text-center">
             <div className="mb-3">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground" />
+              <Package className="mx-auto h-12 w-12 text-[#C2884E]/50" />
             </div>
-            <h3 className="text-lg font-medium">{language === 'en' ? 'No daily delivery orders yet' : '暂无每日直送订单'}</h3>
-            <p className="text-muted-foreground mt-1">
+            <h3 className="text-lg font-medium text-[#6B5F53]">
+              {language === 'en' ? 'No daily delivery orders yet' : '暂无每日直送订单'}
+            </h3>
+            <p className="mt-1 text-sm text-[#6B5F53]/65">
               {language === 'en' ? 'Your daily delivery orders will appear here' : '您的每日直送订单将显示在此处'}
             </p>
           </div>

@@ -20,8 +20,8 @@ export function OrderDeliveryMeta({ items, service, className }: OrderDeliveryMe
   const windowText = getStandardDeliveryWindow(service, language)
 
   return (
-    <div className={className ?? "mt-1.5 space-y-0.5 text-sm"}>
-      <p className="text-muted-foreground">
+    <div className={className ?? "mt-1.5 text-sm"}>
+      <p className="text-muted-foreground mb-2">
         <span className="font-medium text-foreground">{t("orderDeliveryDates")}</span> {datesText}
       </p>
       <p className="text-muted-foreground">
