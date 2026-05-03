@@ -10,11 +10,28 @@ export const passwordResetRequestBodySchema = z.object({
 
 export type PasswordResetRequestBody = z.infer<typeof passwordResetRequestBodySchema>;
 
-export const resetPasswordBodySchema = z.object({
-  email: emailSchema,
-  code: nonEmptyString,
-  newPassword: z.string().min(6),
-});
+export const resetPasswordBodySchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object") {
+      return value;
+    }
+
+    const input = value as Record<string, unknown>;
+    if (typeof input.newPassword !== "string" && typeof input.password === "string") {
+      return {
+        ...input,
+        newPassword: input.password,
+      };
+    }
+
+    return value;
+  },
+  z.object({
+    email: emailSchema,
+    code: nonEmptyString,
+    newPassword: z.string().min(6),
+  })
+);
 
 export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
 

@@ -150,7 +150,7 @@ export default function ResetPasswordCodePage() {
         body: JSON.stringify({
           email: email.trim(),
           code: code.trim(),
-          password: password
+          newPassword: password
         }),
       })
       
