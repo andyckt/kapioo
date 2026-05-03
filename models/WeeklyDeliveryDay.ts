@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { IWeeklyMealOption } from './WeeklyMealOption';
+import type { IWeeklyMealOption } from './WeeklyMealOption';
+import './WeeklyMealOption';
 
 // Define WeeklyDeliveryDay interface
 export interface IWeeklyDeliveryDay extends Document {
