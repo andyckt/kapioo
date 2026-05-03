@@ -8,7 +8,12 @@ vi.mock("@/models/User", () => ({
   },
 }))
 
-import { buildAdminDailyOrdersMongoQuery } from "@/lib/orders/admin-daily-query"
+import {
+  buildAdminDailyOrdersMongoQuery,
+  buildSingleDateFormats,
+  normalizeDailyOrderDateForCompare,
+  pickDayCandidateForExport,
+} from "@/lib/orders/admin-daily-query"
 
 describe("lib/orders/admin-daily-query", () => {
   beforeEach(() => {
@@ -18,6 +23,35 @@ describe("lib/orders/admin-daily-query", () => {
         lean: async () => [],
       }),
     })
+  })
+
+  it("buildSingleDateFormats expands stored daily-order date keys", () => {
+    expect(buildSingleDateFormats("Jun 9")).toEqual(["Jun 09", "Jun 9"])
+    expect(buildSingleDateFormats("Apr 14, 2026")).toEqual(["Apr 14"])
+  })
+
+  it("pickDayCandidateForExport prefers the dayId present on exported items", () => {
+    const candidates = [
+      { dayId: "week1-mon", isActive: true },
+      { dayId: "week2-mon", isActive: true },
+    ]
+    const picked = pickDayCandidateForExport(candidates, new Set(["week2-mon"]))
+    expect(picked?.dayId).toBe("week2-mon")
+  })
+
+  it("pickDayCandidateForExport falls back to an active row when no item dayId matches", () => {
+    const candidates = [
+      { dayId: "week1-mon", isActive: false },
+      { dayId: "week2-mon", isActive: true },
+    ]
+    const picked = pickDayCandidateForExport(candidates, new Set())
+    expect(picked?.dayId).toBe("week2-mon")
+  })
+
+  it("normalizeDailyOrderDateForCompare aligns slash dates with menu-style month tokens", () => {
+    expect(normalizeDailyOrderDateForCompare("Apr 5, 2026")).toBe("2026-04-05")
+    expect(normalizeDailyOrderDateForCompare("4/5/2026")).toBe("2026-04-05")
+    expect(normalizeDailyOrderDateForCompare("2026-04-05")).toBe("2026-04-05")
   })
 
   it("builds flexible single-date filters using stored daily-order date formats", async () => {

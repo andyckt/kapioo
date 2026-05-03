@@ -6,13 +6,14 @@ import { adminDailyOrdersQuerySchema } from "@/lib/contracts/daily-order";
 import connectToDatabase from "@/lib/db";
 import { buildAdminDailyOrdersMongoQuery } from "@/lib/orders/admin-daily-query";
 import {
+  buildAbThreeDishSummaryRow,
+} from "@/lib/orders/daily-delivery-export-reference";
+import {
   resolveEffectiveOrderCustomerInfo,
   type DeliveryAddress,
   type EffectiveCustomerInfo,
 } from "@/lib/orders/effective-customer-info";
-import Combo from "@/models/Combo";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
-import Day from "@/models/Day";
 import User from "@/models/User";
 import * as XLSX from "xlsx";
 
@@ -48,36 +49,7 @@ function formatAddress(address: DeliveryAddress | null | undefined): string {
   return formattedAddress;
 }
 
-function formatCombo(combo: Record<string, unknown>): string {
-  let comboText = (combo.name as string) || "套餐";
-
-  const typeA = combo.typeA as { dishes?: string[] } | undefined;
-  if (typeA?.dishes && typeA.dishes.length > 0) {
-    typeA.dishes.forEach((dish: string, index: number) => {
-      comboText += `\n${index + 1}. ${dish}`;
-    });
-  }
-
-  const typeB = combo.typeB as { dishes?: string[] } | undefined;
-  if (typeB?.dishes && typeB.dishes.length > 0) {
-    const typeADishes = typeA?.dishes || [];
-    const uniqueTypeBDishes = typeB.dishes.filter((dish: string) => !typeADishes.includes(dish));
-
-    if (uniqueTypeBDishes.length > 0) {
-      const dishNumber = (typeA?.dishes?.length || 0) + 1;
-      uniqueTypeBDishes.forEach((dish: string, index: number) => {
-        comboText += `\n${dishNumber + index}. ${dish} (3菜)`;
-      });
-    }
-  }
-
-  return comboText;
-}
-
-async function convertToWorksheetData(
-  data: Array<Record<string, unknown>>,
-  targetDate: string
-): Promise<unknown[][]> {
+function convertToWorksheetData(data: Array<Record<string, unknown>>, targetDate: string): unknown[][] {
   const filteredData = data
     .map((order) => ({
       ...order,
@@ -141,31 +113,8 @@ async function convertToWorksheetData(
 
   const worksheetData: unknown[][] = [];
 
-  try {
-    const firstItems =
-      filteredData.length > 0 &&
-      filteredData[0].items &&
-      (filteredData[0].items as Array<{ day?: string }>).length > 0
-        ? (filteredData[0].items as Array<{ day?: string }>)
-        : null;
-    const firstDayId = firstItems ? firstItems[0].day : null;
-
-    if (firstDayId) {
-      const day = await Day.findOne({ dayId: firstDayId }).lean();
-
-      const dayLean = day as unknown as { dayId?: string } | null;
-      if (dayLean?.dayId) {
-        const combos = await Combo.find({ dayId: dayLean.dayId }).lean();
-
-        if (combos && combos.length > 0) {
-          const formattedCombos = combos.map((combo) => formatCombo(combo as Record<string, unknown>));
-          const emptyColumns = new Array(headers.length - combos.length).fill("");
-          worksheetData.push([...formattedCombos, ...emptyColumns]);
-        }
-      }
-    }
-  } catch (err) {
-    console.error("❌ Error fetching combos for reference row:", err);
+  if (comboKeys.length > 0) {
+    worksheetData.push(buildAbThreeDishSummaryRow(headers.length, comboKeys, comboDetailsMap));
   }
 
   worksheetData.push(headers);
@@ -305,7 +254,7 @@ export async function GET(request: Request) {
     const workbook = XLSX.utils.book_new();
 
     for (const date of sortedDates) {
-      const worksheetData = await convertToWorksheetData(ordersWithUserInfo, date);
+      const worksheetData = convertToWorksheetData(ordersWithUserInfo, date);
 
       if (worksheetData.length > 0) {
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
