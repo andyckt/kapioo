@@ -1,3 +1,4 @@
+import { getEmailLogoAbsoluteUrl } from '@/lib/email/logo-url';
 import { getTranslations, type Language } from '@/lib/email-translations';
 import { buildCanonicalBreakdown } from '@/lib/price-breakdown';
 import { buildPlanLabel, getWeeklyPlanBy } from '@/lib/plans/service';
@@ -31,10 +32,6 @@ export const sendEmail = async (options: EmailOptions) => {
 export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
-
-// Kapioo logo hosted on kapioo.com domain for better email deliverability
-// This is the same image that was previously on S3, now hosted on our domain
-const LOGO_URL = 'https://www.kapioo.com/kapioo-logo.png';
 
 /** Format delivery address for emails. city/province removed — area shown separately. */
 function formatEmailAddress(addr: any, unitLabel: string, buzzLabel: string): string {
@@ -100,7 +97,7 @@ export const sendWelcomeEmail = async (to: string, name: string, language: Langu
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.welcomeToKapioo}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
@@ -172,7 +169,7 @@ export const sendVerificationEmail = async (to: string, code: string, language: 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.verifyYourEmail}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
@@ -219,7 +216,7 @@ export const sendAdminMfaCodeEmail = async (
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">
         ${language === 'zh' ? '管理员二次验证' : 'Admin Multi-Factor Verification'}
@@ -262,7 +259,7 @@ export const sendPasswordResetEmail = async (to: string, code: string, language:
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.resetYourPassword}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
@@ -303,7 +300,7 @@ export const sendAdminNotification = async (subject: string, message: string) =>
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">管理员通知</h2>
       <div style="background: linear-gradient(120deg, #F8F0E5 0%, #FFF6EF 100%); border-radius: 8px; padding: 25px; margin: 30px auto;">
@@ -387,7 +384,7 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的周次充值请求待审核</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
@@ -494,7 +491,7 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.creditRequestSubmitted}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
@@ -587,7 +584,7 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的${voucherTypeText}购买请求待审核</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
@@ -681,7 +678,7 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.account.voucherRequestSubmitted}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
@@ -760,7 +757,7 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${statusUpdate}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
@@ -837,7 +834,7 @@ export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, r
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${statusUpdateTitle}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
@@ -1022,7 +1019,7 @@ export const sendWeeklyOrderConfirmationEmail = async (to: string, name: string,
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.orderConfirmation}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
@@ -1144,7 +1141,7 @@ export const sendAdminWeeklyOrderNotification = async (orderDetails: {
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的每周订单</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
@@ -1365,7 +1362,7 @@ export const sendDailyOrderConfirmationEmail = async (to: string, name: string, 
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${t.orderConfirmation}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
@@ -1502,7 +1499,7 @@ export const sendAdminDailyOrderNotification = async (orderDetails: {
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的每日直送订单</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
@@ -1571,7 +1568,7 @@ export const sendMenuUpdateEmail = async (to: string, userName: string, language
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       
       <h2 style="color: #C2884E; text-align: center; font-size: 28px; margin-bottom: 20px; font-weight: 600;">
@@ -1636,7 +1633,7 @@ export const sendWeeklyMenuUpdateEmail = async (to: string, userName: string, la
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       
       <h2 style="color: #C2884E; text-align: center; font-size: 28px; margin-bottom: 20px; font-weight: 600;">
@@ -1707,7 +1704,7 @@ export const buildNextWeekMenuUpdateEmail = (
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       
       <h2 style="color: #C2884E; text-align: center; font-size: 28px; margin-bottom: 20px; font-weight: 600;">
@@ -1956,7 +1953,7 @@ export const sendDailyOrderSummaryEmail = async (
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">${t.orderSummary}</h2>
@@ -2223,7 +2220,7 @@ export const sendWeeklyOrderSummaryEmail = async (
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">${t.orderSummary}</h2>
@@ -2402,7 +2399,7 @@ export const sendAdminDailyOrderSummaryEmail = async (
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">新的每日直送订单汇总</h2>
@@ -2592,7 +2589,7 @@ export const sendAdminWeeklyOrderSummaryEmail = async (
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 10px;">新的每周订单汇总</h2>

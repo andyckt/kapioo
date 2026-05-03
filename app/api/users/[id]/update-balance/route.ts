@@ -12,12 +12,12 @@ import {
   toSafeUserBalanceResponse,
 } from '@/lib/balances/mutations';
 import connectToDatabase from '@/lib/db';
+import { getEmailLogoAbsoluteUrl } from '@/lib/email/logo-url';
 import mongoose from 'mongoose';
 import { sendEmail } from '@/lib/services/email';
 import type { Language } from '@/lib/email-translations';
 import { getUserDisplayName, withUserDisplayName } from '@/lib/users/display';
 
-const LOGO_URL = 'https://www.kapioo.com/kapioo-logo.png';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 function escapeHtml(value: unknown): string {
@@ -90,7 +90,7 @@ async function sendManualBalanceAdjustmentEmail({
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${LOGO_URL}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+        <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
       <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${escapeHtml(title)}</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">${intro}</p>
