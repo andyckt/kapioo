@@ -14,20 +14,12 @@ import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import SectionNavigation from "@/components/section-navigation"
 import { ScrollReveal } from "@/components/scroll-reveal"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import CustomerReviewsSection from "@/components/customer-reviews-section"
+import { EnglishReviewSection } from "@/components/english-review-section"
 
 const LocationMealPlans = dynamic(
   () => import("@/components/location-meal-plans").then((m) => ({ default: m.default })),
   { loading: () => <div className="h-64 animate-pulse rounded-xl bg-[#FBF7F2]" /> }
-)
-
-const CustomerReviewsSection = dynamic(
-  () => import("@/components/customer-reviews-section").then((m) => ({ default: m.default })),
-  { loading: () => <div className="h-96 animate-pulse rounded-xl bg-[#FBF7F2]" /> }
-)
-
-const EnglishReviewSection = dynamic(
-  () => import("@/components/english-review-section").then((m) => ({ default: m.EnglishReviewSection })),
-  { loading: () => <div className="h-96 animate-pulse rounded-xl bg-[#FBF7F2]" /> }
 )
 
 export default function Home() {
