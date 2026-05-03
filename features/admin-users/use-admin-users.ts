@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useToast } from "@/hooks/use-toast"
 import { formatDateForCSV } from "@/lib/format"
+import { getWeeklyPlanBalanceRows, listWeeklyPlanBalanceOptions } from "@/lib/plans/balances"
 import { deleteUser, getAllUsersForExport, getUsers, type User } from "@/lib/utils"
 import type { PaginationState } from "@/lib/types/pagination"
 
@@ -266,6 +267,7 @@ export function useAdminUsers({ hasVerifiedAdminSession, activeTab }: UseAdminUs
 
       const allUsers = await getAllUsersForExport()
       const processedUsers = await Promise.all(allUsers.map(enrichUserOrderCounts))
+      const weeklyPlanBalanceOptions = listWeeklyPlanBalanceOptions()
 
       const headers = [
         "User ID",
@@ -275,17 +277,16 @@ export function useAdminUsers({ hasVerifiedAdminSession, activeTab }: UseAdminUs
         "Created",
         "2-Dish Vouchers",
         "3-Dish Vouchers",
-        "6 Meals Plan",
-        "8 Meals Plan",
-        "10 Meals Plan",
-        "12 Meals Plan",
+        ...weeklyPlanBalanceOptions.map((plan) => `${plan.mealsPerWeek} Meals Plan`),
         "Daily Orders",
         "Weekly Orders",
         "Total Orders",
       ].join(",")
 
-      const rows = processedUsers.map((user) =>
-        [
+      const rows = processedUsers.map((user) => {
+        const weeklyPlanBalances = getWeeklyPlanBalanceRows(user)
+
+        return [
           formatCSV(user.userID),
           formatCSV(user.name),
           formatCSV(user.phone),
@@ -293,15 +294,12 @@ export function useAdminUsers({ hasVerifiedAdminSession, activeTab }: UseAdminUs
           formatDateForCSV(user.joined),
           user.twoDishVoucher || 0,
           user.threeDishVoucher || 0,
-          user.weeklySIXmeals || 0,
-          user.weeklyEIGHTmeals || 0,
-          user.weeklyTENmeals || 0,
-          user.weeklyTWELVEmeals || 0,
+          ...weeklyPlanBalances.map((plan) => plan.balance),
           user.dailyOrdersCount || 0,
           user.weeklyOrdersCount || 0,
           user.totalOrders || 0,
         ].join(",")
-      )
+      })
 
       const csvContent = [headers, ...rows].join("\n")
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })

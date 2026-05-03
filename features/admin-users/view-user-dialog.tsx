@@ -24,6 +24,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { formatDateTime } from "@/lib/format"
+import { getWeeklyPlanBalanceRows } from "@/lib/plans/balances"
 import type { UserActivity } from "@/lib/types/admin"
 import type { PaginationState } from "@/lib/types/pagination"
 import type { User } from "@/lib/utils"
@@ -58,6 +59,7 @@ export function ViewUserDialog({ open, user, onOpenChange }: ViewUserDialogProps
   const [userActivitiesLoading, setUserActivitiesLoading] = useState(false)
   const [activityType, setActivityType] = useState("all")
   const [activityPagination, setActivityPagination] = useState<PaginationState>(DEFAULT_ACTIVITY_PAGINATION)
+  const weeklyPlanBalances = user ? getWeeklyPlanBalanceRows(user) : []
 
   const fetchUserActivities = useCallback(
     async (userId: string, page = 1, type = "all", options?: { signal?: AbortSignal }) => {
@@ -226,22 +228,12 @@ export function ViewUserDialog({ open, user, onOpenChange }: ViewUserDialogProps
                   <div className="rounded-md border p-3 bg-slate-50">
                     <h4 className="text-sm font-medium">Weekly Subscriptions</h4>
                     <div className="mt-2 space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-sm">6 Meals:</span>
-                        <span className="font-medium">{user.weeklySIXmeals || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">8 Meals:</span>
-                        <span className="font-medium">{user.weeklyEIGHTmeals || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">10 Meals:</span>
-                        <span className="font-medium">{user.weeklyTENmeals || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">12 Meals:</span>
-                        <span className="font-medium">{user.weeklyTWELVEmeals || 0}</span>
-                      </div>
+                      {weeklyPlanBalances.map((plan) => (
+                        <div key={plan.field} className="flex justify-between">
+                          <span className="text-sm">{plan.labelEn}:</span>
+                          <span className="font-medium">{plan.balance}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

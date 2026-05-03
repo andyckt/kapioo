@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { getWeeklyPlanBalanceRows, listWeeklyPlanBalanceOptions } from "@/lib/plans/balances"
 import type { AdminTransaction } from "@/lib/types/admin"
 import type { PaginationState } from "@/lib/types/pagination"
 import type { User } from "@/lib/utils"
@@ -90,10 +91,11 @@ function getTransactionVoucherSuffix(description?: string) {
 
   if (description.includes("2dish") || description.includes("twoDishVoucher")) return "/2dish"
   if (description.includes("3dish") || description.includes("threeDishVoucher")) return "/3dish"
-  if (description.includes("6weekly") || description.includes("weeklySIXmeals")) return "/6weekly"
-  if (description.includes("8weekly") || description.includes("weeklyEIGHTmeals")) return "/8weekly"
-  if (description.includes("10weekly") || description.includes("weeklyTENmeals")) return "/10weekly"
-  if (description.includes("12weekly") || description.includes("weeklyTWELVEmeals")) return "/12weekly"
+
+  const weeklyPlan = listWeeklyPlanBalanceOptions().find(
+    (plan) => description.includes(`${plan.mealsPerWeek}weekly`) || description.includes(plan.field)
+  )
+  if (weeklyPlan) return `/${weeklyPlan.mealsPerWeek}weekly`
 
   return ""
 }
@@ -103,10 +105,11 @@ function getTransactionVoucherLabel(description?: string) {
 
   if (description.includes("2dish") || description.includes("twoDishVoucher")) return "2-Dish"
   if (description.includes("3dish") || description.includes("threeDishVoucher")) return "3-Dish"
-  if (description.includes("6weekly") || description.includes("weeklySIXmeals")) return "6-Meal"
-  if (description.includes("8weekly") || description.includes("weeklyEIGHTmeals")) return "8-Meal"
-  if (description.includes("10weekly") || description.includes("weeklyTENmeals")) return "10-Meal"
-  if (description.includes("12weekly") || description.includes("weeklyTWELVEmeals")) return "12-Meal"
+
+  const weeklyPlan = listWeeklyPlanBalanceOptions().find(
+    (plan) => description.includes(`${plan.mealsPerWeek}weekly`) || description.includes(plan.field)
+  )
+  if (weeklyPlan) return `${weeklyPlan.mealsPerWeek}-Meal`
 
   return ""
 }
@@ -158,6 +161,9 @@ export function AdminCreditsTab({
   onChangeTransactionsPageSize,
 }: AdminCreditsTabProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<AdminTransaction | null>(null)
+  const weeklyPlanBalanceOptions = listWeeklyPlanBalanceOptions()
+  const weeklyPlanBalances = selectedUser ? getWeeklyPlanBalanceRows(selectedUser) : []
+  const defaultWeeklyVoucherType = weeklyPlanBalanceOptions[0]?.field ?? "weeklySIXmeals"
 
   return (
     <>
@@ -259,7 +265,7 @@ export function AdminCreditsTab({
                       variant={serviceType === "weekly" ? "default" : "outline"}
                       onClick={() => {
                         setServiceType("weekly")
-                        setVoucherType("weeklySIXmeals")
+                        setVoucherType(defaultWeeklyVoucherType)
                       }}
                       className="w-full h-10 text-sm"
                     >
@@ -294,34 +300,16 @@ export function AdminCreditsTab({
                   <div className="space-y-2">
                     <Label>Step 3: Select Meal Plan</Label>
                     <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                      <Button
-                        variant={voucherType === "weeklySIXmeals" ? "default" : "outline"}
-                        onClick={() => setVoucherType("weeklySIXmeals")}
-                        className="w-full h-10 text-sm"
-                      >
-                        6 Meals/Week
-                      </Button>
-                      <Button
-                        variant={voucherType === "weeklyEIGHTmeals" ? "default" : "outline"}
-                        onClick={() => setVoucherType("weeklyEIGHTmeals")}
-                        className="w-full h-10 text-sm"
-                      >
-                        8 Meals/Week
-                      </Button>
-                      <Button
-                        variant={voucherType === "weeklyTENmeals" ? "default" : "outline"}
-                        onClick={() => setVoucherType("weeklyTENmeals")}
-                        className="w-full h-10 text-sm"
-                      >
-                        10 Meals/Week
-                      </Button>
-                      <Button
-                        variant={voucherType === "weeklyTWELVEmeals" ? "default" : "outline"}
-                        onClick={() => setVoucherType("weeklyTWELVEmeals")}
-                        className="w-full h-10 text-sm"
-                      >
-                        12 Meals/Week
-                      </Button>
+                      {weeklyPlanBalanceOptions.map((plan) => (
+                        <Button
+                          key={plan.field}
+                          variant={voucherType === plan.field ? "default" : "outline"}
+                          onClick={() => setVoucherType(plan.field)}
+                          className="w-full h-10 text-sm"
+                        >
+                          {plan.mealsPerWeek} Meals/Week
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -385,22 +373,12 @@ export function AdminCreditsTab({
                     <p className="text-xs sm:text-sm text-muted-foreground">3-Dish</p>
                     <p className="font-medium text-base sm:text-lg">{selectedUser.threeDishVoucher || 0}</p>
                   </div>
-                  <div className="p-2 bg-background rounded border">
-                    <p className="text-xs sm:text-sm text-muted-foreground">6-Meal</p>
-                    <p className="font-medium text-base sm:text-lg">{selectedUser.weeklySIXmeals || 0}</p>
-                  </div>
-                  <div className="p-2 bg-background rounded border">
-                    <p className="text-xs sm:text-sm text-muted-foreground">8-Meal</p>
-                    <p className="font-medium text-base sm:text-lg">{selectedUser.weeklyEIGHTmeals || 0}</p>
-                  </div>
-                  <div className="p-2 bg-background rounded border">
-                    <p className="text-xs sm:text-sm text-muted-foreground">10-Meal</p>
-                    <p className="font-medium text-base sm:text-lg">{selectedUser.weeklyTENmeals || 0}</p>
-                  </div>
-                  <div className="p-2 bg-background rounded border">
-                    <p className="text-xs sm:text-sm text-muted-foreground">12-Meal</p>
-                    <p className="font-medium text-base sm:text-lg">{selectedUser.weeklyTWELVEmeals || 0}</p>
-                  </div>
+                  {weeklyPlanBalances.map((plan) => (
+                    <div key={plan.field} className="p-2 bg-background rounded border">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{plan.mealsPerWeek}-Meal</p>
+                      <p className="font-medium text-base sm:text-lg">{plan.balance}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

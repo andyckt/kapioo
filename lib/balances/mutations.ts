@@ -1,7 +1,12 @@
 import type { NextRequest } from 'next/server';
 import mongoose from 'mongoose';
 
-import { decrementBalance, getBalance, incrementBalance } from '@/lib/plans/balances';
+import {
+  decrementBalance,
+  getBalance,
+  incrementBalance,
+  LEGACY_WEEKLY_FIELD_BY_MEALS,
+} from '@/lib/plans/balances';
 import { toWeeklyPlanId } from '@/lib/plans/service';
 import { logAuditEvent } from '@/lib/security/audit';
 import Transaction, { type ITransaction } from '@/models/Transaction';
@@ -11,11 +16,7 @@ export const BALANCE_MUTATION_FIELDS = [
   'credits',
   'twoDishVoucher',
   'threeDishVoucher',
-  'weeklySIXmeals',
-  'weeklyEIGHTmeals',
-  'weeklyTENmeals',
-  'weeklyTWELVEmeals',
-  'weeklySIXTEENmeals',
+  ...Object.values(LEGACY_WEEKLY_FIELD_BY_MEALS),
 ] as const;
 
 export type BalanceMutationField = (typeof BALANCE_MUTATION_FIELDS)[number];
@@ -28,13 +29,12 @@ type AuditActor = {
   role?: 'user' | 'admin';
 } | null;
 
-const WEEKLY_FIELD_TO_PLAN_ID: Partial<Record<BalanceMutationField, string>> = {
-  weeklySIXmeals: toWeeklyPlanId(6, 1),
-  weeklyEIGHTmeals: toWeeklyPlanId(8, 1),
-  weeklyTENmeals: toWeeklyPlanId(10, 1),
-  weeklyTWELVEmeals: toWeeklyPlanId(12, 1),
-  weeklySIXTEENmeals: toWeeklyPlanId(16, 1),
-};
+const WEEKLY_FIELD_TO_PLAN_ID = Object.fromEntries(
+  Object.entries(LEGACY_WEEKLY_FIELD_BY_MEALS).map(([mealsPerWeek, field]) => [
+    field,
+    toWeeklyPlanId(Number(mealsPerWeek), 1),
+  ])
+) as Partial<Record<BalanceMutationField, string>>;
 
 const PLAN_ID_TO_WEEKLY_FIELD = Object.fromEntries(
   Object.entries(WEEKLY_FIELD_TO_PLAN_ID).map(([field, planId]) => [planId, field])

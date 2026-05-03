@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
 import type { DashboardUserData } from "@/lib/dashboard-user-profile"
+import { getWeeklyPlanBalanceRows } from "@/lib/plans/balances"
 
 type DashboardTabId =
   | "orders"
@@ -31,22 +32,18 @@ function hasNoVouchers(userData: DashboardUserData) {
     (userData.credits || 0) === 0 &&
     (userData.twoDishVoucher || 0) === 0 &&
     (userData.threeDishVoucher || 0) === 0 &&
-    (userData.weeklySIXmeals || 0) === 0 &&
-    (userData.weeklyEIGHTmeals || 0) === 0 &&
-    (userData.weeklyTENmeals || 0) === 0 &&
-    (userData.weeklyTWELVEmeals || 0) === 0 &&
-    (userData.weeklySIXTEENmeals || 0) === 0
+    getWeeklyPlanBalanceRows(userData).every((plan) => plan.balance === 0)
   )
 }
 
 function getWeeklyVoucherCounts(userData: DashboardUserData) {
-  return [
-    { labelEn: "6 meals/week", labelZh: "6餐一周", count: userData.weeklySIXmeals || 0 },
-    { labelEn: "8 meals/week", labelZh: "8餐一周", count: userData.weeklyEIGHTmeals || 0 },
-    { labelEn: "10 meals/week", labelZh: "10餐一周", count: userData.weeklyTENmeals || 0 },
-    { labelEn: "12 meals/week", labelZh: "12餐一周", count: userData.weeklyTWELVEmeals || 0 },
-    { labelEn: "16 meals/week", labelZh: "16餐一周", count: userData.weeklySIXTEENmeals || 0 },
-  ].filter((entry) => entry.count > 0)
+  return getWeeklyPlanBalanceRows(userData)
+    .map((plan) => ({
+      labelEn: `${plan.mealsPerWeek} meals/week`,
+      labelZh: plan.labelZh,
+      count: plan.balance,
+    }))
+    .filter((entry) => entry.count > 0)
 }
 
 export function DashboardOverviewTab({
