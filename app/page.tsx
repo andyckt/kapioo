@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import dynamic from "next/dynamic"
 import { useState } from "react"
+import LocationMealPlans from "@/components/location-meal-plans"
 import { ArrowRight, CreditCard, Menu, Truck, UtensilsCrossed } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HeroCarousel } from "@/components/hero-carousel"
@@ -14,11 +15,6 @@ import { ScreenshotCarousel } from "@/components/screenshot-carousel"
 import SectionNavigation from "@/components/section-navigation"
 import { ScrollReveal } from "@/components/scroll-reveal"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-
-const LocationMealPlans = dynamic(
-  () => import("@/components/location-meal-plans").then((m) => ({ default: m.default })),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-[#FBF7F2]" /> }
-)
 
 const CustomerReviewsSection = dynamic(
   () => import("@/components/customer-reviews-section").then((m) => ({ default: m.default })),
