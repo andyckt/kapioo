@@ -3,7 +3,6 @@
 import { Check, Copy } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import type { AdminOrder, AdminOrderFilters } from "@/lib/types/orders"
 import {
   OrderActionsMenu,
@@ -19,6 +18,7 @@ import {
   getWeeklyEntitlementSummary,
   getWeeklyOrderRouteId,
 } from "./weekly-helpers"
+import { WeeklyLinkedGroupDisplay } from "./weekly-linked-group-display"
 
 interface WeeklyOrderTableProps {
   orders: AdminOrder[]
@@ -99,13 +99,11 @@ export function WeeklyOrderTable({
                     </button>
                   </td>
                   <td className="p-4 align-middle">
-                    <div className="space-y-1">
-                      <p>{orderId}</p>
-                      {linkedGroup?.groupId && (
-                        <Badge variant="outline" className="text-[10px]">
-                          Group {linkedGroup.groupId}
-                        </Badge>
-                      )}
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium tabular-nums">{orderId}</p>
+                      {linkedGroup?.groupId ? (
+                        <WeeklyLinkedGroupDisplay groupId={linkedGroup.groupId} className="w-fit" />
+                      ) : null}
                     </div>
                   </td>
                   <td className="p-4 align-middle">

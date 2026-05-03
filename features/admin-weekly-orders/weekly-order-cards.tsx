@@ -4,7 +4,6 @@ import { Check, Copy, Eye, ShoppingCart, Ticket, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import type { AdminOrder } from "@/lib/types/orders"
 import {
   OrderActionsMenu,
@@ -18,6 +17,7 @@ import {
   getWeeklyEntitlementSummary,
   getWeeklyOrderRouteId,
 } from "./weekly-helpers"
+import { WeeklyLinkedGroupDisplay } from "./weekly-linked-group-display"
 
 interface WeeklyOrderCardsProps {
   orders: AdminOrder[]
@@ -126,11 +126,9 @@ export function WeeklyOrderCards({
                 <p className="text-xs text-muted-foreground">
                   Allocated meals: {String(entitlement.allocatedMealCount || 0)}
                 </p>
-                {linkedGroup?.groupId && (
-                  <Badge variant="outline" className="mt-2">
-                    Group {linkedGroup.groupId}
-                  </Badge>
-                )}
+                {linkedGroup?.groupId ? (
+                  <WeeklyLinkedGroupDisplay groupId={linkedGroup.groupId} className="mt-2" />
+                ) : null}
               </div>
             </CardContent>
 
