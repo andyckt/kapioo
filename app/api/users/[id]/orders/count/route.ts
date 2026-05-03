@@ -2,6 +2,7 @@ import { errorJson, handleRouteError, successJson, type RouteContext } from '@/l
 import { requireSelfOrAdmin } from '@/lib/auth/guards';
 import { findUserByIdentifier } from '@/lib/api/users';
 import connectToDatabase from '@/lib/db';
+import { countUpcomingOrders } from '@/lib/orders/upcoming-order-count';
 import DailyDeliveryOrder from '@/models/DailyDeliveryOrder';
 import WeeklyOrder from '@/models/WeeklyOrder';
 
@@ -25,21 +26,23 @@ export async function GET(
       return errorJson('User not found', 404);
     }
     
-    const [dailyOrdersCount, weeklyOrdersCount, upcomingDailyCount, upcomingWeeklyCount] = await Promise.all([
+    const activeUpcomingQuery = {
+      userId: user._id,
+      status: { $in: ['pending', 'confirmed', 'delivery'] },
+    };
+
+    const [dailyOrdersCount, weeklyOrdersCount, activeDailyOrders, activeWeeklyOrders] = await Promise.all([
       DailyDeliveryOrder.countDocuments({ userId: user._id }),
       WeeklyOrder.countDocuments({ userId: user._id }),
-      DailyDeliveryOrder.countDocuments({
-        userId: user._id,
-        status: { $in: ['pending', 'confirmed', 'delivery'] }
-      }),
-      WeeklyOrder.countDocuments({
-        userId: user._id,
-        status: { $in: ['pending', 'confirmed', 'delivery'] }
-      }),
+      DailyDeliveryOrder.find(activeUpcomingQuery).select('status items createdAt').lean(),
+      WeeklyOrder.find(activeUpcomingQuery).select('status items createdAt').lean(),
     ]);
 
     const totalOrdersCount = dailyOrdersCount + weeklyOrdersCount;
-    const upcomingDeliveriesCount = upcomingDailyCount + upcomingWeeklyCount;
+    const upcomingDeliveriesCount = countUpcomingOrders([
+      ...activeDailyOrders,
+      ...activeWeeklyOrders,
+    ]);
     
     return successJson({ 
         totalOrders: totalOrdersCount,
