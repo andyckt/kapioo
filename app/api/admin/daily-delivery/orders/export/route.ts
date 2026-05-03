@@ -10,9 +10,12 @@ import {
 } from "@/lib/orders/daily-delivery-export-reference";
 import {
   resolveEffectiveOrderCustomerInfo,
-  type DeliveryAddress,
   type EffectiveCustomerInfo,
 } from "@/lib/orders/effective-customer-info";
+import {
+  formatExportDeliveryAddress,
+  type ExportDeliveryAddress,
+} from "@/lib/orders/export-address";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
 import * as XLSX from "xlsx";
@@ -22,32 +25,6 @@ type AdminExportUser = {
   name?: string;
   email?: string;
 };
-
-function formatAddress(address: DeliveryAddress | null | undefined): string {
-  if (!address) return "No address provided";
-
-  let formattedAddress = "";
-
-  if (address.unitNumber) {
-    formattedAddress += `Unit ${address.unitNumber}, `;
-  }
-
-  formattedAddress += String(address.streetAddress || "");
-
-  if (address.city || address.province || address.postalCode) {
-    formattedAddress += `, ${address.city || ""} ${address.province || ""} ${address.postalCode || ""}`;
-  }
-
-  if (address.country) {
-    formattedAddress += `, ${address.country}`;
-  }
-
-  if (address.buzzCode) {
-    formattedAddress += ` (Buzz code: ${address.buzzCode})`;
-  }
-
-  return formattedAddress;
-}
 
 function convertToWorksheetData(data: Array<Record<string, unknown>>, targetDate: string): unknown[][] {
   const filteredData = data
@@ -127,8 +104,10 @@ function convertToWorksheetData(data: Array<Record<string, unknown>>, targetDate
       items && items.length > 0 ? (items[0].day ? items[0].day.split("-")[0] : "N/A") : "N/A";
 
     const effectiveInfo = (order.effectiveCustomerInfo as EffectiveCustomerInfo | undefined) || undefined;
-    const address = formatAddress(
-      effectiveInfo?.deliveryAddress || (order.deliveryAddress as DeliveryAddress | undefined)
+    const effectiveArea = effectiveInfo?.area || order.area || "";
+    const address = formatExportDeliveryAddress(
+      effectiveInfo?.deliveryAddress || (order.deliveryAddress as ExportDeliveryAddress | undefined),
+      effectiveArea
     );
 
     const baseRow = [
@@ -137,7 +116,7 @@ function convertToWorksheetData(data: Array<Record<string, unknown>>, targetDate
       order.userEmail || "",
       effectiveInfo?.phoneNumber || order.phoneNumber || "",
       address,
-      effectiveInfo?.area || order.area || "",
+      effectiveArea,
     ];
 
     const comboQuantities: Record<string, number> = {};

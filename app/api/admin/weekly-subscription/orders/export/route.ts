@@ -10,29 +10,7 @@ import * as XLSX from 'xlsx';
 import {
   resolveEffectiveOrderCustomerInfo
 } from '@/lib/orders/effective-customer-info';
-
-// Helper function to format address
-function formatAddress(address: any): string {
-  if (!address) return "No address provided";
-  
-  let formattedAddress = '';
-  
-  if (address.unitNumber) {
-    formattedAddress += `Unit ${address.unitNumber}, `;
-  }
-  
-  formattedAddress += address.streetAddress || '';
-  
-  if (address.province || address.postalCode) {
-    formattedAddress += `, ${address.province || ''} ${address.postalCode || ''}`;
-  }
-  
-  if (address.country) {
-    formattedAddress += `, ${address.country}`;
-  }
-  
-  return formattedAddress;
-}
+import { formatExportDeliveryAddress } from '@/lib/orders/export-address';
 
 function normalizeSpecialInstructions(value: unknown): string {
   if (typeof value !== 'string') return '';
@@ -112,7 +90,11 @@ function convertToWorksheetData(data: any[], targetDate: string): any[][] {
     const deliveryDay = order.items && order.items.length > 0 ? order.items[0].dayId.split('-')[0] : 'N/A';
     
     const effectiveInfo = order.effectiveCustomerInfo || {};
-    const address = formatAddress(effectiveInfo.deliveryAddress || order.deliveryAddress);
+    const effectiveArea = effectiveInfo.area || order.area || '';
+    const address = formatExportDeliveryAddress(
+      effectiveInfo.deliveryAddress || order.deliveryAddress,
+      effectiveArea
+    );
     
     const baseRow = [
       order.orderId,
@@ -120,7 +102,7 @@ function convertToWorksheetData(data: any[], targetDate: string): any[][] {
       order.userEmail || '',
       effectiveInfo.phoneNumber || order.phoneNumber || '',
       address,
-      effectiveInfo.area || order.area || '',
+      effectiveArea,
       normalizeSpecialInstructions(effectiveInfo.specialInstructions || order.specialInstructions)
     ];
     
