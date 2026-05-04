@@ -53,6 +53,9 @@ export async function PATCH(
 
     const normalized = normalizeComboLibraryPatch(data)
     const updateData = { ...normalized, updatedBy: actor.user._id } as Record<string, unknown>
+    if (typeof updateData.internalName === "string") {
+      updateData.name = updateData.internalName
+    }
 
     Object.keys(updateData).forEach((key) => {
       if (updateData[key] === undefined || updateData[key] === "") delete updateData[key]

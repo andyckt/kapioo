@@ -75,18 +75,17 @@ export function WeeklyComboLibraryPickerDialog({ open, onOpenChange, onSelect }:
                     <div className="flex gap-3">
                       {item.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.imageUrl} alt={`${item.name} preview`} className="h-20 w-28 rounded-md object-cover" />
+                        <img src={item.imageUrl} alt={`${item.internalName || item.name} preview`} className="h-20 w-28 rounded-md object-cover" />
                       ) : <div className="flex h-20 w-28 items-center justify-center rounded-md bg-muted text-xs">No image</div>}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-medium leading-tight">{item.name}</h3>
+                          <h3 className="font-medium leading-tight">{item.internalName || item.name}</h3>
                           <Checkbox checked={selected} onCheckedChange={() => toggleItem(item)} />
                         </div>
                         {item.calories ? <p className="mt-1 text-xs text-muted-foreground">{item.calories} kcal</p> : null}
                         <div className="mt-2 flex flex-wrap gap-1">{item.tags.slice(0, 3).map((tag) => <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>)}</div>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">Dishes ({item.dishes.length}): {item.dishes.slice(0, 4).join(" / ") || "-"}</p>
                   </CardContent>
                 </Card>
               )

@@ -9,7 +9,6 @@ export interface IWeeklyMealOption extends Document {
   active: boolean;
   imageUrl?: string; // Optional public URL of the meal photo (S3)
   imageKey?: string; // Optional S3 key used for cleanup on replace/delete
-  dishes?: string[];
   calories?: number;
   allergens?: string[];
   description?: string;
@@ -45,10 +44,6 @@ const WeeklyMealOptionSchema: Schema = new Schema(
     imageKey: {
       type: String,
       required: false,
-    },
-    dishes: {
-      type: [String],
-      default: undefined,
     },
     calories: {
       type: Number,

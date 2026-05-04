@@ -14,7 +14,6 @@ export type WeeklyMealOptionMutation = {
   active?: boolean;
   imageUrl?: string;
   imageKey?: string;
-  dishes?: string[];
   calories?: number;
   allergens?: string[];
   description?: string;
@@ -84,7 +83,6 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
               ...(typeof option.imageKey === 'string' && option.imageKey
                 ? { imageKey: option.imageKey }
                 : {}),
-              ...(Array.isArray(option.dishes) ? { dishes: option.dishes } : {}),
               ...(typeof option.calories === 'number' ? { calories: option.calories } : {}),
               ...(Array.isArray(option.allergens) ? { allergens: option.allergens } : {}),
               ...(typeof option.description === 'string' && option.description

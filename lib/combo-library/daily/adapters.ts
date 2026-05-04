@@ -30,7 +30,7 @@ type DailyMenuComboLike = {
 
 export function mapDailyLibraryComboToDailyMenuCombo(item: DailyComboLibraryItem): DailyComboSnapshot {
   return {
-    name: item.name,
+    name: "套餐 1",
     calories: item.calories,
     tags: item.tags ?? [],
     typeA: {
@@ -53,6 +53,7 @@ export function mapDailyMenuComboToDailyLibraryDraft(
 ): Partial<DailyComboLibraryItem> {
   return {
     name: combo.name,
+    internalName: combo.name,
     typeADishes: combo.typeA?.dishes ?? [],
     typeBDishes: combo.typeB?.dishes ?? [],
     calories: combo.calories ?? 0,
@@ -60,9 +61,6 @@ export function mapDailyMenuComboToDailyLibraryDraft(
     ...(combo.imageUrl ? { imageUrl: combo.imageUrl } : {}),
     ...(combo.imageKey ? { imageKey: combo.imageKey } : {}),
     status: "draft",
-    vegetables: [],
-    allergens: [],
-    dietaryTags: [],
   }
 }
 

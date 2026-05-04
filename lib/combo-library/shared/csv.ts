@@ -5,12 +5,41 @@ import {
   COMBO_LIBRARY_IMPORT_MAX_ROWS,
 } from "@/lib/combo-library/shared/constants"
 
-export function splitArrayCell(input: unknown): string[] {
-  if (Array.isArray(input)) {
-    return input.map(String).map((value) => value.trim()).filter(Boolean)
+const MOJIBAKE_MARKER_REGEX = /[ÃÂÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/
+const CJK_REGEX = /[\u3400-\u9fff]/
+
+function countMatches(input: string, regex: RegExp) {
+  return Array.from(input).filter((char) => regex.test(char)).length
+}
+
+export function repairMojibakeText(input: string) {
+  if (!MOJIBAKE_MARKER_REGEX.test(input)) {
+    return input
   }
 
-  const text = String(input ?? "").trim()
+  const repaired = Buffer.from(input, "latin1").toString("utf8")
+  if (repaired.includes("\uFFFD")) {
+    return input
+  }
+
+  const originalCjk = countMatches(input, CJK_REGEX)
+  const repairedCjk = countMatches(repaired, CJK_REGEX)
+  const originalMarkers = countMatches(input, MOJIBAKE_MARKER_REGEX)
+  const repairedMarkers = countMatches(repaired, MOJIBAKE_MARKER_REGEX)
+
+  if (repairedCjk > originalCjk || repairedMarkers < originalMarkers) {
+    return repaired
+  }
+
+  return input
+}
+
+export function splitArrayCell(input: unknown): string[] {
+  if (Array.isArray(input)) {
+    return input.map(String).map(repairMojibakeText).map((value) => value.trim()).filter(Boolean)
+  }
+
+  const text = repairMojibakeText(String(input ?? "")).trim()
   if (!text) {
     return []
   }

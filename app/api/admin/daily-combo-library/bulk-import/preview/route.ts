@@ -20,21 +20,14 @@ export async function POST(request: Request) {
     await connectToDatabase()
 
     const validRows = rows.filter((row) => row.status === "valid" && row.data)
-    const names = validRows.map((row) => row.data!.name)
-    const internalNames = validRows
-      .map((row) => row.data!.internalName)
-      .filter(Boolean) as string[]
+    const internalNames = validRows.map((row) => row.data!.internalName)
 
     const existingItems = await DailyComboLibraryItem.find({
-      $or: [
-        ...(names.length > 0 ? [{ name: { $in: names } }] : []),
-        ...(internalNames.length > 0 ? [{ internalName: { $in: internalNames } }] : []),
-      ],
+      internalName: { $in: internalNames },
     })
       .select("dailyComboLibraryId name internalName")
       .lean()
 
-    const existingByName = new Map(existingItems.map((item) => [String(item.name), item]))
     const existingByInternalName = new Map(
       existingItems
         .filter((item) => typeof item.internalName === "string" && item.internalName)
@@ -46,9 +39,8 @@ export async function POST(request: Request) {
       if (row.status !== "valid" || !row.data) return row
 
       const existing =
-        existingByName.get(row.data.name) ||
-        (row.data.internalName ? existingByInternalName.get(row.data.internalName) : undefined)
-      const normalizedName = row.data.name.toLocaleLowerCase("en-US")
+        existingByInternalName.get(row.data.internalName)
+      const normalizedName = row.data.internalName.toLocaleLowerCase("en-US")
       const duplicateInFile = seenNames.has(normalizedName)
       seenNames.add(normalizedName)
 
@@ -60,8 +52,8 @@ export async function POST(request: Request) {
           warnings: [
             ...row.warnings,
             duplicateInFile
-              ? "Duplicate name appears earlier in this import file."
-              : "Duplicate name or internalName already exists in the Daily library.",
+              ? "Duplicate internalName appears earlier in this import file."
+              : "Duplicate internalName already exists in the Daily library.",
           ],
         }
       }

@@ -6,24 +6,20 @@ import {
   compactStringArraySchema,
   optionalTrimmedString,
   statusSchema,
-  stringArraySchema,
 } from "@/lib/combo-library/shared/zod-helpers"
 
 export const weeklyComboLibraryItemBodySchema = z.object({
   weeklyComboLibraryId: optionalTrimmedString(120),
-  name: z.string().trim().min(1).max(200),
+  name: optionalTrimmedString(200),
   nameEn: optionalTrimmedString(200),
-  internalName: optionalTrimmedString(200),
+  internalName: z.string().trim().min(1).max(200),
   description: optionalTrimmedString(2000),
-  dishes: stringArraySchema,
   imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
   imageKey: z.string().max(512).optional().or(z.literal("")),
   calories: z.coerce.number().nonnegative().max(10000).optional(),
   tags: compactStringArraySchema,
   allergens: compactStringArraySchema,
-  dietaryTags: compactStringArraySchema,
   status: statusSchema.default("active"),
-  notesForAdmin: optionalTrimmedString(2000),
 })
 
 export const weeklyComboLibraryItemUpdateSchema = weeklyComboLibraryItemBodySchema.partial()

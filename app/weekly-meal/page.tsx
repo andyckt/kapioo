@@ -77,6 +77,9 @@ export default function WeeklyMealPage() {
     name: string;
     nameEn?: string;
     tags?: string[];
+    calories?: number;
+    allergens?: string[];
+    description?: string;
     /** Optional public image URL for the meal option (S3-backed). */
     imageUrl?: string;
   }
@@ -658,9 +661,22 @@ export default function WeeklyMealPage() {
                                           ) : null}
 
                                           <div className="flex flex-1 flex-col p-3 sm:p-4">
-                                            <h4 className="text-sm font-medium leading-snug text-[#6B5F53] sm:text-base">
-                                              {translateOptionName(option)}
-                                            </h4>
+                                            <div className="flex items-start justify-between gap-2">
+                                              <h4 className="text-sm font-medium leading-snug text-[#6B5F53] sm:text-base">
+                                                {translateOptionName(option)}
+                                              </h4>
+                                              {typeof option.calories === "number" ? (
+                                                <span className="shrink-0 rounded-full bg-[#F5EDE4] px-2 py-0.5 text-[10px] font-medium text-[#C2884E] sm:text-xs">
+                                                  {option.calories} KCAL
+                                                </span>
+                                              ) : null}
+                                            </div>
+
+                                            {option.description ? (
+                                              <p className="mt-2 text-xs leading-relaxed text-[#6B5F53]/75 sm:text-sm">
+                                                {option.description}
+                                              </p>
+                                            ) : null}
 
                                             {option.tags && option.tags.length > 0 && (
                                               <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
@@ -674,6 +690,13 @@ export default function WeeklyMealPage() {
                                                 ))}
                                               </div>
                                             )}
+
+                                            {option.allergens && option.allergens.length > 0 ? (
+                                              <p className="mt-2 text-[10px] text-[#6B5F53]/60 sm:text-xs">
+                                                {language === 'zh' ? '过敏原: ' : 'Allergens: '}
+                                                {option.allergens.join(" / ")}
+                                              </p>
+                                            ) : null}
                                           </div>
                                         </div>
                                       ))}

@@ -6,13 +6,11 @@ import type { DailyComboLibraryItem } from "@/lib/combo-library/daily/types"
 
 const baseItem: DailyComboLibraryItem = {
   dailyComboLibraryId: "daily-combo-1",
-  name: "套餐 1",
+  name: "鸡肉素材",
+  internalName: "鸡肉素材",
   typeADishes: ["鸡肉", "花菜"],
   typeBDishes: ["鸡肉", "花菜", "米饭"],
-  vegetables: [],
   tags: ["高蛋白"],
-  allergens: ["soy"],
-  dietaryTags: [],
   status: "active",
   calories: 650,
   imageUrl: "https://example.com/image.jpg",
@@ -26,6 +24,7 @@ describe("daily combo library adapters", () => {
 
     expect(mapped.typeA.dishes).toEqual(["鸡肉", "花菜"])
     expect(mapped.typeB.dishes).toEqual(["鸡肉", "花菜", "米饭"])
+    expect(mapped.name).toBe("套餐 1")
     expect(mapped.sourceComboLibraryId).toBe("daily-combo-1")
   })
 

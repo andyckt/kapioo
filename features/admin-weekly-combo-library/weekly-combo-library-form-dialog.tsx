@@ -9,6 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { getFieldDefinition } from "@/lib/combo-library/shared/fields"
+import {
+  WEEKLY_COMBO_LIBRARY_FIELDS,
+  type WeeklyComboLibraryFieldKey,
+} from "@/lib/combo-library/weekly/fields"
 import type { WeeklyComboLibraryItem } from "@/lib/combo-library/weekly/types"
 import { uploadWeeklyComboLibraryImage } from "@/lib/upload/weekly-combo-library-image-client"
 
@@ -20,20 +25,20 @@ type Props = {
 }
 
 const EMPTY_FORM: Partial<WeeklyComboLibraryItem> = {
+  internalName: "",
   name: "",
-  dishes: [],
+  nameEn: "",
   tags: [],
   allergens: [],
-  dietaryTags: [],
   status: "active",
-}
-
-function joinLines(values?: string[]) {
-  return (values ?? []).join("\n")
 }
 
 function splitLines(value: string) {
   return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean)
+}
+
+function field(key: WeeklyComboLibraryFieldKey) {
+  return getFieldDefinition(WEEKLY_COMBO_LIBRARY_FIELDS, key)
 }
 
 export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved }: Props) {
@@ -46,17 +51,19 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
     setForm({
       ...EMPTY_FORM,
       ...(item ?? {}),
-      dishes: item?.dishes ?? [],
       tags: item?.tags ?? [],
       allergens: item?.allergens ?? [],
-      dietaryTags: item?.dietaryTags ?? [],
       status: item?.status ?? "active",
     })
   }, [item, open])
 
   const save = async () => {
+    if (!form.internalName?.trim()) {
+      toast({ title: "Missing internal name", description: "Internal name is required.", variant: "destructive" })
+      return
+    }
     if (!form.name?.trim()) {
-      toast({ title: "Missing name", description: "Combo name is required.", variant: "destructive" })
+      toast({ title: "Missing Chinese name", description: "Name (Chinese) is required.", variant: "destructive" })
       return
     }
 
@@ -94,40 +101,60 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={form.name ?? ""} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+              <Label>{field("internalName").label}</Label>
+              <Input
+                value={form.internalName ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, internalName: event.target.value }))}
+                placeholder={field("internalName").placeholder}
+              />
             </div>
             <div className="space-y-2">
-              <Label>English Name</Label>
-              <Input value={form.nameEn ?? ""} onChange={(event) => setForm((current) => ({ ...current, nameEn: event.target.value }))} />
+              <Label>{field("name").label}</Label>
+              <Input
+                value={form.name ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder={field("name").placeholder}
+              />
             </div>
             <div className="space-y-2">
-              <Label>Calories (optional)</Label>
+              <Label>{field("nameEn").label}</Label>
+              <Input
+                value={form.nameEn ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, nameEn: event.target.value }))}
+                placeholder={field("nameEn").placeholder}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{field("calories").label}</Label>
               <Input type="number" value={form.calories ?? ""} onChange={(event) => setForm((current) => ({ ...current, calories: event.target.value ? Number(event.target.value) : undefined }))} />
             </div>
             <div className="space-y-2">
-              <Label>Tags (semicolon separated)</Label>
-              <Input value={(form.tags ?? []).join("; ")} onChange={(event) => setForm((current) => ({ ...current, tags: splitLines(event.target.value) }))} />
+              <Label>{field("tags").label}</Label>
+              <Input
+                value={(form.tags ?? []).join("; ")}
+                onChange={(event) => setForm((current) => ({ ...current, tags: splitLines(event.target.value) }))}
+                placeholder={field("tags").placeholder}
+              />
             </div>
             <div className="space-y-2">
-              <Label>Allergens (semicolon separated)</Label>
-              <Input value={(form.allergens ?? []).join("; ")} onChange={(event) => setForm((current) => ({ ...current, allergens: splitLines(event.target.value) }))} />
+              <Label>{field("allergens").label}</Label>
+              <Input
+                value={(form.allergens ?? []).join("; ")}
+                onChange={(event) => setForm((current) => ({ ...current, allergens: splitLines(event.target.value) }))}
+                placeholder={field("allergens").placeholder}
+              />
             </div>
           </div>
           <MenuImageEditor
             label="Weekly Library Image"
-            altText={`${form.name || "combo"} preview`}
+            altText={`${form.internalName || "combo"} preview`}
             imageUrl={form.imageUrl}
             uploadImage={(file) => uploadWeeklyComboLibraryImage(file, form.weeklyComboLibraryId)}
             onChange={(next) => setForm((current) => ({ ...current, imageUrl: next.imageUrl, imageKey: next.imageKey }))}
           />
         </div>
         <div className="space-y-2">
-          <Label>Dishes</Label>
-          <Textarea rows={6} value={joinLines(form.dishes)} onChange={(event) => setForm((current) => ({ ...current, dishes: splitLines(event.target.value) }))} />
-        </div>
-        <div className="space-y-2">
-          <Label>Description</Label>
+          <Label>{field("description").label}</Label>
           <Textarea value={form.description ?? ""} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
         </div>
         <DialogFooter>

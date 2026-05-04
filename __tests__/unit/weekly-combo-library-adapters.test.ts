@@ -6,11 +6,11 @@ import type { WeeklyComboLibraryItem } from "@/lib/combo-library/weekly/types"
 
 const baseItem: WeeklyComboLibraryItem = {
   weeklyComboLibraryId: "weekly-combo-1",
-  name: "周餐 1",
-  dishes: ["鸡肉", "花菜", "米饭"],
+  name: "周餐素材",
+  nameEn: "Weekly Combo",
+  internalName: "周餐素材",
   tags: ["高蛋白"],
   allergens: ["soy"],
-  dietaryTags: [],
   status: "active",
   calories: 650,
   imageUrl: "https://example.com/image.jpg",
@@ -19,10 +19,11 @@ const baseItem: WeeklyComboLibraryItem = {
 }
 
 describe("weekly combo library adapters", () => {
-  it("maps weekly dishes directly into a weekly menu option snapshot", () => {
+  it("maps weekly combo content into a weekly menu option snapshot", () => {
     const mapped = mapWeeklyLibraryComboToWeeklyMenuOption(baseItem)
 
-    expect(mapped.dishes).toEqual(["鸡肉", "花菜", "米饭"])
+    expect(mapped.name).toBe("周餐素材")
+    expect(mapped.nameEn).toBe("Weekly Combo")
     expect(mapped.active).toBe(true)
     expect(mapped.sourceComboLibraryId).toBe("weekly-combo-1")
   })
@@ -30,11 +31,12 @@ describe("weekly combo library adapters", () => {
   it("prefills weekly library drafts from a weekly option", () => {
     const draft = mapWeeklyMenuOptionToWeeklyLibraryDraft({
       name: "红烧肉",
-      dishes: ["肉", "饭"],
+      nameEn: "Braised Pork",
       tags: ["人气"],
     })
 
-    expect(draft.dishes).toEqual(["肉", "饭"])
+    expect(draft.internalName).toBe("红烧肉")
+    expect(draft.nameEn).toBe("Braised Pork")
     expect(draft.tags).toEqual(["人气"])
   })
 })

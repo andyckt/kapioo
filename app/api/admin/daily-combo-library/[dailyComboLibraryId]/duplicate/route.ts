@@ -8,7 +8,7 @@ import connectToDatabase from "@/lib/db"
 import DailyComboLibraryItem from "@/models/DailyComboLibraryItem"
 
 async function createDuplicate(original: Record<string, unknown>, actorId: unknown) {
-  const baseName = `${String(original.name || "Combo")} (Copy)`
+  const baseName = `${String(original.internalName || original.name || "Combo")} (Copy)`
   const baseSlug = `${slugifyComboLibraryId(
     String(original.dailyComboLibraryId || original.name || "combo")
   )}-copy`
@@ -22,6 +22,7 @@ async function createDuplicate(original: Record<string, unknown>, actorId: unkno
         _id: undefined,
         dailyComboLibraryId,
         name: baseName,
+        internalName: baseName,
         status: "draft",
         imageUrl: undefined,
         imageKey: undefined,

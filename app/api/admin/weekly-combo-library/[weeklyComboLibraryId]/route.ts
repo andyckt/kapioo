@@ -19,7 +19,7 @@ export async function GET(
     ;({ weeklyComboLibraryId } = await params)
     await connectToDatabase()
 
-    const item = await WeeklyComboLibraryItem.findOne({ weeklyComboLibraryId }).lean()
+    const item = await WeeklyComboLibraryItem.findOne({ weeklyComboLibraryId }).select("-dishes").lean()
     if (!item) return errorJson("Weekly combo library item not found", 404)
 
     return successJson(item)

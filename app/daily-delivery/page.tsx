@@ -1111,27 +1111,12 @@ export default function DailyDeliveryPage() {
                                             </TabsContent>
                                             <TabsContent value="threeDish" className="mt-2 mb-0">
                                               <div className="mt-3">
-                                                {/* First show the 2-dish meals */}
                                                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                  {combo.typeA.dishes.map((dish, i) => (
+                                                  {combo.typeB.dishes.map((dish, i) => (
                                                     <li key={i} className="flex items-center">
                                                       <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{translateDishName(dish)}</span>
                                                     </li>
                                                   ))}
-                                                </ul>
-                                                
-                                                {/* Then show the additional dish for 3-dish meal */}
-                                                <div className="text-xs font-medium mt-3 mb-2 text-[#6B5F53]/80 italic">
-                                                  {language === 'zh' ? '包含以上的所有菜品，再加:' : 'Includes all dishes above, plus:'}
-                                                </div>
-                                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                  {combo.typeB.dishes
-                                                    .filter(dish => !combo.typeA.dishes.includes(dish))
-                                                    .map((dish, i) => (
-                                                      <li key={i} className="flex items-center">
-                                                        <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{translateDishName(dish)}</span>
-                                                      </li>
-                                                    ))}
                                                 </ul>
                                               </div>
                                             </TabsContent>
@@ -1151,14 +1136,13 @@ export default function DailyDeliveryPage() {
                                             </div>
                                           </div>
                                           
-                                          {/* 3-Dish Voucher Additional Dishes */}
+                                          {/* 3-Dish Voucher Dishes */}
                                           <div className="mt-3">
                                             <div className="text-xs font-medium mb-2 text-[#6B5F53]/80 italic">
-                                              {language === 'zh' ? '包含以上的所有菜品，再加:' : 'Includes all dishes above, plus:'}
+                                              {language === 'zh' ? '3菜套餐包含:' : '3-dish meal includes:'}
                                             </div>
                                             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                               {combo.typeB.dishes
-                                                .filter(dish => !combo.typeA.dishes.includes(dish))
                                                 .map((dish, idx) => (
                                                   <li key={idx} className="flex items-center">
                                                     <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{translateDishName(dish)}</span>

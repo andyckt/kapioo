@@ -1,9 +1,11 @@
 import { randomUUID } from "crypto"
 
+import { repairMojibakeText } from "@/lib/combo-library/shared/csv"
+
 const ASCII_WORD_REGEX = /[^a-z0-9]+/g
 
 export function normalizeText(value: unknown) {
-  return typeof value === "string" ? value.trim() : ""
+  return typeof value === "string" ? repairMojibakeText(value).trim() : ""
 }
 
 export function normalizeArray(values: unknown): string[] {

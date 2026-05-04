@@ -9,7 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import {
+  DAILY_COMBO_LIBRARY_FIELDS,
+  type DailyComboLibraryFieldKey,
+} from "@/lib/combo-library/daily/fields"
 import type { DailyComboLibraryItem } from "@/lib/combo-library/daily/types"
+import { getFieldDefinition } from "@/lib/combo-library/shared/fields"
 import { uploadDailyComboLibraryImage } from "@/lib/upload/daily-combo-library-image-client"
 
 type Props = {
@@ -20,13 +25,10 @@ type Props = {
 }
 
 const EMPTY_FORM: Partial<DailyComboLibraryItem> = {
-  name: "",
+  internalName: "",
   typeADishes: [],
   typeBDishes: [],
   tags: [],
-  allergens: [],
-  dietaryTags: [],
-  vegetables: [],
   calories: 0,
   status: "active",
 }
@@ -37,6 +39,10 @@ function joinLines(values?: string[]) {
 
 function splitLines(value: string) {
   return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean)
+}
+
+function field(key: DailyComboLibraryFieldKey) {
+  return getFieldDefinition(DAILY_COMBO_LIBRARY_FIELDS, key)
 }
 
 export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved }: Props) {
@@ -52,16 +58,13 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
       typeADishes: item?.typeADishes ?? [],
       typeBDishes: item?.typeBDishes ?? [],
       tags: item?.tags ?? [],
-      allergens: item?.allergens ?? [],
-      dietaryTags: item?.dietaryTags ?? [],
-      vegetables: item?.vegetables ?? [],
       status: item?.status ?? "active",
     })
   }, [item, open])
 
   const save = async () => {
-    if (!form.name?.trim()) {
-      toast({ title: "Missing name", description: "Combo name is required.", variant: "destructive" })
+    if (!form.internalName?.trim()) {
+      toast({ title: "Missing internal name", description: "Internal name is required.", variant: "destructive" })
       return
     }
     if (!form.typeADishes?.length || !form.typeBDishes?.length) {
@@ -79,7 +82,7 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
         {
           method: isEdit ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, name: form.internalName }),
         }
       )
       const result = await response.json()
@@ -103,25 +106,29 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={form.name ?? ""} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+              <Label>{field("internalName").label}</Label>
+              <Input
+                value={form.internalName ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, internalName: event.target.value }))}
+                placeholder={field("internalName").placeholder}
+              />
             </div>
             <div className="space-y-2">
-              <Label>English Name</Label>
-              <Input value={form.nameEn ?? ""} onChange={(event) => setForm((current) => ({ ...current, nameEn: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Calories</Label>
+              <Label>{field("calories").label}</Label>
               <Input type="number" value={form.calories ?? 0} onChange={(event) => setForm((current) => ({ ...current, calories: Number(event.target.value) }))} />
             </div>
             <div className="space-y-2">
-              <Label>Tags (semicolon separated)</Label>
-              <Input value={(form.tags ?? []).join("; ")} onChange={(event) => setForm((current) => ({ ...current, tags: splitLines(event.target.value) }))} />
+              <Label>{field("tags").label}</Label>
+              <Input
+                value={(form.tags ?? []).join("; ")}
+                onChange={(event) => setForm((current) => ({ ...current, tags: splitLines(event.target.value) }))}
+                placeholder={field("tags").placeholder}
+              />
             </div>
           </div>
           <MenuImageEditor
             label="Daily Library Image"
-            altText={`${form.name || "combo"} preview`}
+            altText={`${form.internalName || "combo"} preview`}
             imageUrl={form.imageUrl}
             uploadImage={(file) => uploadDailyComboLibraryImage(file, form.dailyComboLibraryId)}
             onChange={(next) => setForm((current) => ({ ...current, imageUrl: next.imageUrl, imageKey: next.imageKey }))}
@@ -130,19 +137,15 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Type A · 2-dish voucher</Label>
+              <Label>{field("typeADishes").label}</Label>
               <Button type="button" size="sm" variant="outline" onClick={() => setForm((current) => ({ ...current, typeBDishes: current.typeADishes ?? [] }))}>Copy A to B</Button>
             </div>
-            <Textarea rows={6} value={joinLines(form.typeADishes)} onChange={(event) => setForm((current) => ({ ...current, typeADishes: splitLines(event.target.value) }))} />
+            <Textarea rows={6} value={joinLines(form.typeADishes)} placeholder={field("typeADishes").placeholder} onChange={(event) => setForm((current) => ({ ...current, typeADishes: splitLines(event.target.value) }))} />
           </div>
           <div className="space-y-2">
-            <Label>Type B · 3-dish voucher</Label>
-            <Textarea rows={6} value={joinLines(form.typeBDishes)} onChange={(event) => setForm((current) => ({ ...current, typeBDishes: splitLines(event.target.value) }))} />
+            <Label>{field("typeBDishes").label}</Label>
+            <Textarea rows={6} value={joinLines(form.typeBDishes)} placeholder={field("typeBDishes").placeholder} onChange={(event) => setForm((current) => ({ ...current, typeBDishes: splitLines(event.target.value) }))} />
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Description</Label>
-          <Textarea value={form.description ?? ""} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

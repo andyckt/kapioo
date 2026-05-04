@@ -3,6 +3,15 @@ import {
   parseImportWorkbook,
   splitArrayCell,
 } from "@/lib/combo-library/shared/csv"
+import {
+  getArrayCsvColumns,
+  getCanonicalCsvColumns,
+} from "@/lib/combo-library/shared/fields"
+import {
+  DAILY_COMBO_LIBRARY_FIELDS,
+  DAILY_COMBO_LIBRARY_HEADER_ALIASES,
+  DAILY_COMBO_LIBRARY_LEGACY_CSV_COLUMNS,
+} from "@/lib/combo-library/daily/fields"
 import { normalizeComboLibraryInput } from "@/lib/combo-library/shared/normalize"
 import {
   dailyComboLibraryBulkImportRowSchema,
@@ -10,67 +19,13 @@ import {
 } from "@/lib/contracts/daily-combo-library"
 
 const ARRAY_COLUMNS = new Set([
-  "typeADishes",
-  "typeBDishes",
-  "dishes",
-  "vegetables",
-  "tags",
-  "allergens",
-  "dietaryTags",
+  ...getArrayCsvColumns(DAILY_COMBO_LIBRARY_FIELDS),
+  ...DAILY_COMBO_LIBRARY_LEGACY_CSV_COLUMNS,
 ])
-
 const CANONICAL_COLUMNS = new Set([
-  "name",
-  "nameEn",
-  "internalName",
-  "description",
-  "typeADishes",
-  "typeBDishes",
-  "dishes",
-  "mainProtein",
-  "carb",
-  "vegetables",
-  "sauce",
-  "calories",
-  "proteinGrams",
-  "carbsGrams",
-  "fatGrams",
-  "tags",
-  "allergens",
-  "dietaryTags",
-  "cuisineType",
-  "spiceLevel",
-  "portionSize",
-  "notesForAdmin",
+  ...getCanonicalCsvColumns(DAILY_COMBO_LIBRARY_FIELDS),
+  ...DAILY_COMBO_LIBRARY_LEGACY_CSV_COLUMNS,
 ])
-
-const HEADER_ALIASES: Record<string, string> = {
-  displayname: "name",
-  display_name: "name",
-  adminname: "internalName",
-  admin_name: "internalName",
-  protein: "mainProtein",
-  typeadishes: "typeADishes",
-  typea_dishes: "typeADishes",
-  typebdishes: "typeBDishes",
-  typeb_dishes: "typeBDishes",
-  proteingrams: "proteinGrams",
-  protein_grams: "proteinGrams",
-  carbsgrams: "carbsGrams",
-  carbs_grams: "carbsGrams",
-  fatgrams: "fatGrams",
-  fat_grams: "fatGrams",
-  dietarytags: "dietaryTags",
-  dietary_tags: "dietaryTags",
-  cuisinetype: "cuisineType",
-  cuisine_type: "cuisineType",
-  spicelevel: "spiceLevel",
-  spice_level: "spiceLevel",
-  portionsize: "portionSize",
-  portion_size: "portionSize",
-  notesforadmin: "notesForAdmin",
-  notes_for_admin: "notesForAdmin",
-}
 
 export type DailyComboLibraryImportPreviewRow = {
   rowIndex: number
@@ -87,7 +42,7 @@ function normalizeRawRow(row: Record<string, unknown>) {
   const unknownColumns: string[] = []
 
   Object.entries(row).forEach(([rawKey, rawValue]) => {
-    const key = normalizeHeader(rawKey, HEADER_ALIASES)
+    const key = normalizeHeader(rawKey, DAILY_COMBO_LIBRARY_HEADER_ALIASES)
     if (!CANONICAL_COLUMNS.has(key)) {
       unknownColumns.push(rawKey)
       return
@@ -112,6 +67,7 @@ function normalizeRawRow(row: Record<string, unknown>) {
   }
 
   delete normalized.dishes
+  normalized.name = normalized.internalName
 
   return { normalized, warnings }
 }

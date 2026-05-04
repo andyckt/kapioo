@@ -30,24 +30,14 @@ function buildListFilter(query: ReturnType<typeof dailyComboLibraryListQuerySche
   const filter: Record<string, unknown> = {}
 
   if (query.status) filter.status = query.status
-  if (query.protein) filter.mainProtein = { $regex: escapeRegex(query.protein), $options: "i" }
-  if (query.cuisine) filter.cuisineType = { $regex: escapeRegex(query.cuisine), $options: "i" }
-  if (query.spice) filter.spiceLevel = query.spice
-
   const tags = splitQueryList(query.tags)
   if (tags.length > 0) filter.tags = { $all: tags }
-
-  const allergens = splitQueryList(query.allergens)
-  if (allergens.length > 0) filter.allergens = { $all: allergens }
 
   if (query.q) {
     const regex = { $regex: escapeRegex(query.q), $options: "i" }
     filter.$or = [
       { name: regex },
-      { nameEn: regex },
       { internalName: regex },
-      { mainProtein: regex },
-      { cuisineType: regex },
       { tags: regex },
       { typeADishes: regex },
       { typeBDishes: regex },
@@ -119,7 +109,6 @@ export async function GET(request: Request) {
     const skip = (parsed.data.page - 1) * parsed.data.limit
     const [items, total] = await Promise.all([
       DailyComboLibraryItem.find(filter)
-        .select("-notesForAdmin -description")
         .sort(buildSort(parsed.data.sort))
         .skip(skip)
         .limit(parsed.data.limit)
@@ -152,6 +141,7 @@ export async function POST(request: Request) {
     await connectToDatabase()
 
     const normalized = normalizeComboLibraryInput(data, "dailyComboLibraryId")
+    normalized.name = normalized.internalName
     const item = await createWithGeneratedId(normalized, actor.user._id)
 
     return successJson(item, 201)

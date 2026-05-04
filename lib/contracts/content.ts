@@ -30,7 +30,6 @@ export const mealOptionSchema = z.object({
   active: z.boolean(),
   imageUrl: z.string().optional(),
   imageKey: z.string().optional(),
-  dishes: z.array(z.string()).optional(),
   calories: z.number().optional(),
   allergens: z.array(z.string()).optional(),
   description: z.string().optional(),

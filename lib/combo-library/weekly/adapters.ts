@@ -7,7 +7,6 @@ type WeeklyMealOptionSnapshot = {
   active: true
   imageUrl?: string
   imageKey?: string
-  dishes?: string[]
   calories?: number
   allergens?: string[]
   description?: string
@@ -19,7 +18,6 @@ type WeeklyMealOptionLike = {
   name: string
   nameEn?: string
   tags?: string[]
-  dishes?: string[]
   imageUrl?: string
   imageKey?: string
   calories?: number
@@ -31,13 +29,12 @@ export function mapWeeklyLibraryComboToWeeklyMenuOption(
   item: WeeklyComboLibraryItem
 ): WeeklyMealOptionSnapshot {
   return {
-    name: item.name,
+    name: item.name || "Dish",
     ...(item.nameEn ? { nameEn: item.nameEn } : {}),
     tags: item.tags ?? [],
     active: true,
     ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
     ...(item.imageKey ? { imageKey: item.imageKey } : {}),
-    ...(item.dishes.length > 0 ? { dishes: item.dishes } : {}),
     ...(typeof item.calories === "number" ? { calories: item.calories } : {}),
     ...(item.allergens.length > 0 ? { allergens: item.allergens } : {}),
     ...(item.description ? { description: item.description } : {}),
@@ -52,7 +49,7 @@ export function mapWeeklyMenuOptionToWeeklyLibraryDraft(
   return {
     name: option.name,
     nameEn: option.nameEn,
-    dishes: option.dishes ?? [],
+    internalName: option.name,
     tags: option.tags ?? [],
     ...(option.imageUrl ? { imageUrl: option.imageUrl } : {}),
     ...(option.imageKey ? { imageKey: option.imageKey } : {}),
@@ -60,6 +57,5 @@ export function mapWeeklyMenuOptionToWeeklyLibraryDraft(
     allergens: option.allergens ?? [],
     description: option.description,
     status: "draft",
-    dietaryTags: [],
   }
 }

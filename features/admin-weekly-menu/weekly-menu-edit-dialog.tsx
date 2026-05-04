@@ -137,27 +137,6 @@ export function WeeklyMenuEditDialog({
                 <p className="text-xs text-muted-foreground">Press Enter to add a tag</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
-              <Label htmlFor="meal-dishes" className="sm:pt-2 sm:text-right">
-                Dishes
-              </Label>
-              <Textarea
-                id="meal-dishes"
-                value={(editingMeal.dishes || []).join("\n")}
-                onChange={(event) =>
-                  onUpdateMeal({
-                    ...editingMeal,
-                    dishes: event.target.value
-                      .split(/\n|;/)
-                      .map((dish) => dish.trim())
-                      .filter(Boolean),
-                  })
-                }
-                className="sm:col-span-3"
-                rows={4}
-                placeholder="One dish per line"
-              />
-            </div>
             <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
               <Label htmlFor="meal-calories" className="sm:text-right">
                 Calories

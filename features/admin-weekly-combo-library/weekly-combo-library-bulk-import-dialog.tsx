@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { buildCsvTemplate } from "@/lib/combo-library/shared/fields"
+import { WEEKLY_COMBO_LIBRARY_FIELDS } from "@/lib/combo-library/weekly/fields"
 
 type ImportRow = {
   rowIndex: number
@@ -18,10 +20,8 @@ type ImportRow = {
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void; onImported?: () => void }
 
-const TEMPLATE_HEADERS = ["name", "nameEn", "internalName", "dishes", "calories", "tags", "allergens", "dietaryTags", "description", "notesForAdmin"]
-
 function downloadTemplate() {
-  const csv = `${TEMPLATE_HEADERS.join(",")}\n周餐A,,周餐A,菜1;菜2;菜3,650,高蛋白,soy;sesame,,描述,`
+  const csv = buildCsvTemplate(WEEKLY_COMBO_LIBRARY_FIELDS)
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
@@ -104,7 +104,7 @@ export function WeeklyComboLibraryBulkImportDialog({ open, onOpenChange, onImpor
                 <label className="ml-auto flex items-center gap-2">Duplicate policy:<select className="h-9 rounded-md border bg-background px-2" value={duplicatePolicy} onChange={(event) => setDuplicatePolicy(event.target.value as typeof duplicatePolicy)}><option value="skip">Skip</option><option value="create">Create</option><option value="update">Update</option></select></label>
               </div>
               <div className="max-h-[420px] overflow-auto rounded-md border">
-                <table className="w-full text-sm"><tbody>{rows.map((row) => <tr key={row.rowIndex} className="border-t"><td className="p-2">{row.rowIndex}</td><td className="p-2">{String(row.data?.name ?? "")}</td><td className="p-2 capitalize">{row.status}</td><td className="p-2 text-xs">{[...row.errors, ...row.warnings].map((message, index) => <div key={index}>{message}</div>)}</td></tr>)}</tbody></table>
+                <table className="w-full text-sm"><tbody>{rows.map((row) => <tr key={row.rowIndex} className="border-t"><td className="p-2">{row.rowIndex}</td><td className="p-2">{String(row.data?.internalName ?? "")}</td><td className="p-2 capitalize">{row.status}</td><td className="p-2 text-xs">{[...row.errors, ...row.warnings].map((message, index) => <div key={index}>{message}</div>)}</td></tr>)}</tbody></table>
               </div>
             </>
           ) : null}

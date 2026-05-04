@@ -219,7 +219,6 @@ export function WeeklySubscriptionManagement() {
                 active: opt.active,
                 imageUrl: opt.imageUrl,
                 imageKey: opt.imageKey,
-                dishes: opt.dishes,
                 calories: opt.calories,
                 allergens: opt.allergens,
                 description: opt.description,
@@ -263,7 +262,6 @@ export function WeeklySubscriptionManagement() {
               active: option.active,
               imageUrl: option.imageUrl,
               imageKey: option.imageKey,
-              dishes: option.dishes,
               calories: option.calories,
               allergens: option.allergens,
               description: option.description,
@@ -320,7 +318,6 @@ export function WeeklySubscriptionManagement() {
               active: option.active,
               imageUrl: option.imageUrl,
               imageKey: option.imageKey,
-              dishes: option.dishes,
               calories: option.calories,
               allergens: option.allergens,
               description: option.description,
@@ -672,7 +669,6 @@ export function WeeklySubscriptionManagement() {
       active: editingMeal.active,
       imageUrl: editingMeal.imageUrl ?? "",
       imageKey: editingMeal.imageKey ?? "",
-      dishes: editingMeal.dishes,
       calories: editingMeal.calories,
       allergens: editingMeal.allergens,
       description: editingMeal.description,
@@ -769,10 +765,11 @@ export function WeeklySubscriptionManagement() {
 
     for (const item of items) {
       try {
+        const snapshot = mapWeeklyLibraryComboToWeeklyMenuOption(item)
         const result = await addMealOption(
           section.day.day,
           section.day.weekOffset,
-          mapWeeklyLibraryComboToWeeklyMenuOption(item)
+          snapshot
         )
         if (result?.mealOption) {
           createdOptions.push({
@@ -783,7 +780,6 @@ export function WeeklySubscriptionManagement() {
             active: result.mealOption.active,
             imageUrl: result.mealOption.imageUrl,
             imageKey: result.mealOption.imageKey,
-            dishes: result.mealOption.dishes,
             calories: result.mealOption.calories,
             allergens: result.mealOption.allergens,
             description: result.mealOption.description,
@@ -791,11 +787,11 @@ export function WeeklySubscriptionManagement() {
             sourceComboLibraryUpdatedAt: result.mealOption.sourceComboLibraryUpdatedAt,
           })
         } else {
-          failures.push({ name: item.name, error: "No meal option returned" })
+          failures.push({ name: item.internalName || item.name, error: "No meal option returned" })
         }
       } catch (error) {
         failures.push({
-          name: item.name,
+          name: item.internalName || item.name,
           error: error instanceof Error ? error.message : "Unknown error",
         })
       }

@@ -49,19 +49,17 @@ type SharedComboLibraryItem = {
 }
 
 function baseFields(doc: SharedComboLibraryItem) {
+  const internalName = doc.internalName || doc.name
   return {
-    name: doc.name,
-    nameEn: doc.nameEn,
-    internalName: doc.internalName,
+    name: internalName,
+    internalName,
     description: doc.description,
     imageUrl: doc.imageUrl,
     imageKey: doc.imageKey,
     calories: doc.calories,
     tags: doc.tags ?? [],
     allergens: doc.allergens ?? [],
-    dietaryTags: doc.dietaryTags ?? [],
     status: doc.status ?? "active",
-    notesForAdmin: doc.notesForAdmin,
     createdBy: doc.createdBy,
     updatedBy: doc.updatedBy,
     createdAt: doc.createdAt,
@@ -93,16 +91,6 @@ async function main() {
               dailyComboLibraryId: doc.comboLibraryId,
               typeADishes: doc.typeADishes ?? [],
               typeBDishes: doc.typeBDishes ?? [],
-              mainProtein: doc.mainProtein,
-              carb: doc.carb,
-              vegetables: doc.vegetables ?? [],
-              sauce: doc.sauce,
-              proteinGrams: doc.proteinGrams,
-              carbsGrams: doc.carbsGrams,
-              fatGrams: doc.fatGrams,
-              cuisineType: doc.cuisineType,
-              spiceLevel: doc.spiceLevel,
-              portionSize: doc.portionSize,
             },
           },
           { upsert: true }
@@ -111,14 +99,14 @@ async function main() {
       }
 
       if (productTypes.includes("weekly-delivery")) {
-        const dishes = doc.typeBDishes?.length ? doc.typeBDishes : doc.typeADishes ?? []
         await weekly.updateOne(
           { weeklyComboLibraryId: doc.comboLibraryId },
           {
             $setOnInsert: {
               ...baseFields(doc),
+              name: doc.name || doc.internalName,
+              nameEn: doc.nameEn,
               weeklyComboLibraryId: doc.comboLibraryId,
-              dishes,
             },
           },
           { upsert: true }

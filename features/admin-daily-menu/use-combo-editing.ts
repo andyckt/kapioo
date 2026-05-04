@@ -437,7 +437,7 @@ export function useComboEditing({
         variant: "destructive",
       })
     }
-  }, [selectedDay, setDays])
+  }, [days, selectedDay, setDays])
 
   const addComboFromLibrary = useCallback(async (libraryItem: DailyComboLibraryItem) => {
     if (!selectedDay) {
@@ -451,6 +451,7 @@ export function useComboEditing({
 
     const newComboId = `${selectedDay}-combo-${Date.now()}`
     const snapshot = mapDailyLibraryComboToDailyMenuCombo(libraryItem)
+    const menuName = `套餐 ${(days[selectedDay]?.combos.length ?? 0) + 1}`
 
     try {
       const response = await fetch("/api/combos", {
@@ -460,6 +461,7 @@ export function useComboEditing({
           comboId: newComboId,
           dayId: selectedDay,
           ...snapshot,
+          name: menuName,
         }),
       })
       const data = await response.json()
@@ -480,6 +482,7 @@ export function useComboEditing({
                 id: newComboId,
                 comboId: newComboId,
                 ...snapshot,
+                name: menuName,
                 imageUrl: snapshot.imageUrl,
                 imageKey: snapshot.imageKey,
               },
@@ -502,7 +505,7 @@ export function useComboEditing({
         variant: "destructive",
       })
     }
-  }, [selectedDay, setDays])
+  }, [days, selectedDay, setDays])
 
   const deleteCombo = useCallback(async (comboId: string) => {
     if (!selectedDay) return

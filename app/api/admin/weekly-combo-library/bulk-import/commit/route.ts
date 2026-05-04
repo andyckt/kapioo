@@ -38,17 +38,15 @@ export async function POST(request: Request) {
     for (const row of data.rows) {
       try {
         const normalized = normalizeComboLibraryInput(row, "weeklyComboLibraryId")
+        normalized.name = normalized.name || normalized.internalName
         const existing = (await WeeklyComboLibraryItem.findOne({
-          $or: [
-            { name: normalized.name },
-            ...(normalized.internalName ? [{ internalName: normalized.internalName }] : []),
-          ],
+          internalName: normalized.internalName,
         })
           .select("_id")
           .lean()) as { _id: unknown } | null
 
         if (existing && data.duplicatePolicy === "skip") {
-          skipped.push({ name: normalized.name, reason: "duplicate" })
+          skipped.push({ name: normalized.internalName, reason: "duplicate" })
           continue
         }
 
@@ -65,7 +63,7 @@ export async function POST(request: Request) {
         }
 
         const weeklyComboLibraryId = await resolveUniqueComboLibraryId(
-          normalized.name,
+          normalized.internalName,
           normalized.weeklyComboLibraryId
         )
         operations.push({
@@ -80,7 +78,7 @@ export async function POST(request: Request) {
         })
       } catch (rowError: unknown) {
         failed.push({
-          name: row.name,
+          name: row.internalName,
           error: rowError instanceof Error ? rowError.message : "Unknown row error",
         })
       }

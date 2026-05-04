@@ -44,7 +44,6 @@ function buildListFilter(query: ReturnType<typeof weeklyComboLibraryListQuerySch
       { nameEn: regex },
       { internalName: regex },
       { tags: regex },
-      { dishes: regex },
       { description: regex },
     ]
   }
@@ -71,7 +70,7 @@ async function createWithGeneratedId(input: Record<string, unknown>, actorId?: u
   const suppliedId =
     typeof input.weeklyComboLibraryId === "string" && input.weeklyComboLibraryId.trim()
       ? [input.weeklyComboLibraryId.trim()]
-      : buildComboLibraryIdCandidates(String(input.name || "combo"))
+      : buildComboLibraryIdCandidates(String(input.internalName || input.name || "combo"))
   const candidates = [...suppliedId, `combo-${randomUUID().slice(0, 8)}`]
   let lastError: unknown
 
@@ -114,7 +113,7 @@ export async function GET(request: Request) {
     const skip = (parsed.data.page - 1) * parsed.data.limit
     const [items, total] = await Promise.all([
       WeeklyComboLibraryItem.find(filter)
-        .select("-notesForAdmin -description")
+        .select("-dishes")
         .sort(buildSort(parsed.data.sort))
         .skip(skip)
         .limit(parsed.data.limit)
@@ -147,6 +146,7 @@ export async function POST(request: Request) {
     await connectToDatabase()
 
     const normalized = normalizeComboLibraryInput(data, "weeklyComboLibraryId")
+    normalized.name = normalized.name || normalized.internalName
     const item = await createWithGeneratedId(normalized, actor.user._id)
 
     return successJson(item, 201)

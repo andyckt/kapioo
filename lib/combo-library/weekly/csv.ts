@@ -3,37 +3,22 @@ import {
   parseImportWorkbook,
   splitArrayCell,
 } from "@/lib/combo-library/shared/csv"
+import {
+  getArrayCsvColumns,
+  getCanonicalCsvColumns,
+} from "@/lib/combo-library/shared/fields"
+import {
+  WEEKLY_COMBO_LIBRARY_FIELDS,
+  WEEKLY_COMBO_LIBRARY_HEADER_ALIASES,
+} from "@/lib/combo-library/weekly/fields"
 import { normalizeComboLibraryInput } from "@/lib/combo-library/shared/normalize"
 import {
   weeklyComboLibraryBulkImportRowSchema,
   type WeeklyComboLibraryItemBody,
 } from "@/lib/contracts/weekly-combo-library"
 
-const ARRAY_COLUMNS = new Set(["dishes", "tags", "allergens", "dietaryTags"])
-
-const CANONICAL_COLUMNS = new Set([
-  "name",
-  "nameEn",
-  "internalName",
-  "description",
-  "dishes",
-  "calories",
-  "tags",
-  "allergens",
-  "dietaryTags",
-  "notesForAdmin",
-])
-
-const HEADER_ALIASES: Record<string, string> = {
-  displayname: "name",
-  display_name: "name",
-  adminname: "internalName",
-  admin_name: "internalName",
-  dietarytags: "dietaryTags",
-  dietary_tags: "dietaryTags",
-  notesforadmin: "notesForAdmin",
-  notes_for_admin: "notesForAdmin",
-}
+const ARRAY_COLUMNS = getArrayCsvColumns(WEEKLY_COMBO_LIBRARY_FIELDS)
+const CANONICAL_COLUMNS = getCanonicalCsvColumns(WEEKLY_COMBO_LIBRARY_FIELDS)
 
 export type WeeklyComboLibraryImportPreviewRow = {
   rowIndex: number
@@ -50,7 +35,7 @@ function normalizeRawRow(row: Record<string, unknown>) {
   const unknownColumns: string[] = []
 
   Object.entries(row).forEach(([rawKey, rawValue]) => {
-    const key = normalizeHeader(rawKey, HEADER_ALIASES)
+    const key = normalizeHeader(rawKey, WEEKLY_COMBO_LIBRARY_HEADER_ALIASES)
     if (!CANONICAL_COLUMNS.has(key)) {
       unknownColumns.push(rawKey)
       return
@@ -62,6 +47,8 @@ function normalizeRawRow(row: Record<string, unknown>) {
   if (unknownColumns.length > 0) {
     warnings.push(`Ignored unknown columns: ${unknownColumns.join(", ")}`)
   }
+
+  normalized.name = normalized.name || normalized.internalName
 
   return { normalized, warnings }
 }

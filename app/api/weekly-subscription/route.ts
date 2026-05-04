@@ -30,6 +30,33 @@ function getNextDeliveryDates() {
   };
 }
 
+type WeeklyDeliveryDayRecord = Record<string, unknown> & {
+  options?: Array<Record<string, unknown>>
+}
+
+function formatDeliveryDaysForAdmin(deliveryDays: WeeklyDeliveryDayRecord[]) {
+  return deliveryDays.map((day: WeeklyDeliveryDayRecord) => ({
+    ...day,
+    options: (Array.isArray(day.options) ? day.options : []).map((option: Record<string, unknown>) => ({
+      _id: option._id,
+      id: option.id,
+      name: option.name,
+      nameEn: option.nameEn,
+      tags: option.tags,
+      active: option.active,
+      imageUrl: option.imageUrl,
+      imageKey: option.imageKey,
+      calories: option.calories,
+      allergens: option.allergens,
+      description: option.description,
+      sourceComboLibraryId: option.sourceComboLibraryId,
+      sourceComboLibraryUpdatedAt: option.sourceComboLibraryUpdatedAt,
+      createdAt: option.createdAt,
+      updatedAt: option.updatedAt,
+    })),
+  }));
+}
+
 export async function GET() {
   try {
     await connectToDatabase();
@@ -100,7 +127,7 @@ export async function GET() {
         .sort({ weekOffset: 1, day: 1 })
         .lean();
 
-      return successJson(newDeliveryDays);
+      return successJson(formatDeliveryDaysForAdmin(newDeliveryDays));
     }
 
     if (!hasWeek3) {
@@ -134,10 +161,10 @@ export async function GET() {
         .sort({ weekOffset: 1, day: 1 })
         .lean();
 
-      return successJson(allDeliveryDays);
+      return successJson(formatDeliveryDaysForAdmin(allDeliveryDays));
     }
 
-    return successJson(deliveryDays);
+    return successJson(formatDeliveryDaysForAdmin(deliveryDays));
   } catch (error) {
     return handleRouteError(error, "GET /api/weekly-subscription");
   }
@@ -180,7 +207,7 @@ export async function POST(request: Request) {
       return errorJson("Delivery day not found", 404);
     }
 
-    return successJson(updatedDeliveryDay);
+    return successJson(formatDeliveryDaysForAdmin([updatedDeliveryDay.toObject()])[0]);
   } catch (error) {
     return handleRouteError(error, "POST /api/weekly-subscription");
   }

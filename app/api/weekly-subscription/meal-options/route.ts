@@ -5,6 +5,13 @@ import connectToDatabase from '@/lib/db';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 
+function formatMealOption(option: Record<string, unknown>) {
+  return {
+    ...option,
+    dishes: undefined,
+  };
+}
+
 // GET handler - return all meal options
 export async function GET() {
   try {
@@ -13,7 +20,7 @@ export async function GET() {
     // Get all meal options
     const mealOptions = await WeeklyMealOption.find().lean();
 
-    return successJson(mealOptions);
+    return successJson(mealOptions.map(formatMealOption));
   } catch (error: unknown) {
     return handleRouteError(error, 'GET /api/weekly-subscription/meal-options');
   }
@@ -46,7 +53,6 @@ export async function POST(request: Request) {
       // as "no image" so we don't store stale empty strings on new docs.
       imageUrl: data.imageUrl ? data.imageUrl : undefined,
       imageKey: data.imageKey ? data.imageKey : undefined,
-      dishes: data.dishes,
       calories: data.calories,
       allergens: data.allergens,
       description: data.description || undefined,
@@ -102,7 +108,7 @@ export async function POST(request: Request) {
 
     return successJson(
       {
-        mealOption: newMealOption,
+        mealOption: formatMealOption(newMealOption.toObject()),
         deliveryDay: updatedDeliveryDay,
       },
       { status: 201 }

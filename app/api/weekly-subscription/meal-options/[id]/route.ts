@@ -8,6 +8,13 @@ import { deleteMenuImageFromS3 } from '@/lib/upload/menu-image';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 
+function formatMealOption(option: Record<string, unknown>) {
+  return {
+    ...option,
+    dishes: undefined,
+  };
+}
+
 // GET handler - return a specific meal option
 export async function GET(_request: Request, { params }: RouteContext<{ id: string }>) {
   let id = '';
@@ -22,7 +29,7 @@ export async function GET(_request: Request, { params }: RouteContext<{ id: stri
       return errorJson('Meal option not found', 404);
     }
 
-    return successJson(mealOption);
+    return successJson(formatMealOption(mealOption as Record<string, unknown>));
   } catch (error: unknown) {
     return handleRouteError(error, `GET /api/weekly-subscription/meal-options/${id || '[id]'}`);
   }
@@ -61,7 +68,6 @@ export async function PUT(request: Request, { params }: RouteContext<{ id: strin
     if (data.nameEn !== undefined) setData.nameEn = data.nameEn;
     if (data.tags !== undefined) setData.tags = data.tags;
     if (data.active !== undefined) setData.active = data.active;
-    if (data.dishes !== undefined) setData.dishes = data.dishes;
     if (data.calories !== undefined) setData.calories = data.calories;
     if (data.allergens !== undefined) setData.allergens = data.allergens;
     if (data.description !== undefined) setData.description = data.description;
@@ -120,7 +126,7 @@ export async function PUT(request: Request, { params }: RouteContext<{ id: strin
       void deleteMenuImageFromS3(previousImageKey);
     }
 
-    return successJson(updatedMealOption);
+    return successJson(formatMealOption(updatedMealOption.toObject()));
   } catch (error: unknown) {
     return handleRouteError(error, `PUT /api/weekly-subscription/meal-options/${id || '[id]'}`);
   }
