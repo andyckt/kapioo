@@ -73,6 +73,8 @@ type MenuPreviewCardButtonProps = {
   /** e.g. "650 KCAL" */
   metaRight?: string | null
   tags?: string[]
+  allergens?: string[]
+  description?: string | null
   onClick: () => void
 }
 
@@ -89,6 +91,8 @@ export function MenuPreviewCardButton({
   subtitle,
   metaRight,
   tags,
+  allergens,
+  description,
   onClick,
 }: MenuPreviewCardButtonProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -150,15 +154,18 @@ export function MenuPreviewCardButton({
           <span className="rounded-full bg-[#C2884E]/10 px-2 py-1 text-xs font-semibold text-[#C2884E]">
             {badge}
           </span>
-          {metaRight ? (
-            <span className="text-xs font-medium text-[#C2884E]">{metaRight}</span>
-          ) : null}
         </div>
         <h3 className="line-clamp-2 text-base font-semibold text-[#6B5F53]">{title}</h3>
         {subtitle ? <p className="mt-2 line-clamp-2 text-xs text-[#6B5F53]/70">{subtitle}</p> : null}
-        {tags && tags.length > 0 ? (
+        {description ? <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#6B5F53]/70">{description}</p> : null}
+        {(metaRight || (tags && tags.length > 0)) ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {tags.slice(0, 3).map((tag, tagIndex) => (
+            {metaRight ? (
+              <span className="rounded-full bg-[#C2884E]/10 px-2 py-0.5 text-[10px] font-semibold text-[#C2884E]">
+                {metaRight}
+              </span>
+            ) : null}
+            {tags?.slice(0, 3).map((tag, tagIndex) => (
               <span
                 key={tagIndex}
                 className="rounded-full bg-[#F5EDE4]/70 px-2 py-0.5 text-[10px] font-medium text-[#6B5F53]"
@@ -166,6 +173,12 @@ export function MenuPreviewCardButton({
                 {tag}
               </span>
             ))}
+          </div>
+        ) : null}
+        {allergens && allergens.length > 0 ? (
+          <div className="mt-2 rounded-lg border border-[#E8D8C7] bg-[#FBF7F2]/70 px-2 py-1 text-[10px] font-medium leading-snug text-[#8A6A4D]">
+            <span className="text-[#6B5F53]">{language === "zh" ? "过敏原: " : "Allergens: "}</span>
+            {allergens.slice(0, 3).join(" / ")}
           </div>
         ) : null}
       </div>

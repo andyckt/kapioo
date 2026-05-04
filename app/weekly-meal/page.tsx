@@ -635,6 +635,9 @@ export default function WeeklyMealPage() {
                                           </h3>
                                         </div>
                                       </div>
+                                      <p className="mt-2 text-left text-[11px] text-[#6B5F53]/55">
+                                        {language === 'zh' ? '* 图片仅供参考' : '* Pictures are for reference only.'}
+                                      </p>
                                     </div>
                                     
                                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-5">
@@ -661,15 +664,10 @@ export default function WeeklyMealPage() {
                                           ) : null}
 
                                           <div className="flex flex-1 flex-col p-3 sm:p-4">
-                                            <div className="flex items-start justify-between gap-2">
+                                            <div>
                                               <h4 className="text-sm font-medium leading-snug text-[#6B5F53] sm:text-base">
                                                 {translateOptionName(option)}
                                               </h4>
-                                              {typeof option.calories === "number" ? (
-                                                <span className="shrink-0 rounded-full bg-[#F5EDE4] px-2 py-0.5 text-[10px] font-medium text-[#C2884E] sm:text-xs">
-                                                  {option.calories} KCAL
-                                                </span>
-                                              ) : null}
                                             </div>
 
                                             {option.description ? (
@@ -678,24 +676,33 @@ export default function WeeklyMealPage() {
                                               </p>
                                             ) : null}
 
-                                            {option.tags && option.tags.length > 0 && (
-                                              <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
-                                                {option.tags.map((tag, tagIndex) => (
-                                                  <span
-                                                    key={tagIndex}
-                                                    className="px-2 py-0.5 sm:py-1 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] sm:text-xs font-medium"
-                                                  >
-                                                    {tag}
-                                                  </span>
-                                                ))}
-                                              </div>
-                                            )}
+                                            {(typeof option.calories === "number" || option.tags?.length || option.allergens?.length) ? (
+                                              <div className="mt-3 space-y-2">
+                                                {(typeof option.calories === "number" || (option.tags && option.tags.length > 0)) ? (
+                                                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                                    {typeof option.calories === "number" ? (
+                                                      <span className="px-2 py-0.5 sm:py-1 bg-[#C2884E]/10 text-[#C2884E] rounded-full text-[10px] sm:text-xs font-semibold">
+                                                        {option.calories} KCAL
+                                                      </span>
+                                                    ) : null}
+                                                    {option.tags?.map((tag, tagIndex) => (
+                                                      <span
+                                                        key={tagIndex}
+                                                        className="px-2 py-0.5 sm:py-1 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] sm:text-xs font-medium"
+                                                      >
+                                                        {tag}
+                                                      </span>
+                                                    ))}
+                                                  </div>
+                                                ) : null}
 
-                                            {option.allergens && option.allergens.length > 0 ? (
-                                              <p className="mt-2 text-[10px] text-[#6B5F53]/60 sm:text-xs">
-                                                {language === 'zh' ? '过敏原: ' : 'Allergens: '}
-                                                {option.allergens.join(" / ")}
-                                              </p>
+                                                {option.allergens && option.allergens.length > 0 ? (
+                                                  <div className="rounded-lg border border-[#E8D8C7] bg-[#FBF7F2]/70 px-2.5 py-1.5 text-[10px] leading-relaxed text-[#8A6A4D] sm:text-xs">
+                                                    <span className="font-medium text-[#6B5F53]">{language === 'zh' ? '过敏原' : 'Allergens'}: </span>
+                                                    {option.allergens.join(" / ")}
+                                                  </div>
+                                                ) : null}
+                                              </div>
                                             ) : null}
                                           </div>
                                         </div>
@@ -922,7 +929,10 @@ export default function WeeklyMealPage() {
                           imageAlt={`${translateOptionName(item.option)} meal`}
                           badge={`${item.dayName} · ${item.dayDate}`}
                           title={translateOptionName(item.option)}
+                          metaRight={typeof item.option.calories === "number" ? `${item.option.calories} KCAL` : null}
+                          description={item.option.description}
                           tags={item.option.tags}
+                          allergens={item.option.allergens}
                           onClick={() => openMenuDialogForDay(item.dayUniqueId)}
                         />
                       ))}

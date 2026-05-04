@@ -215,7 +215,14 @@ export async function GET() {
         id: option._id,
         name: option.name,
         nameEn: option.nameEn, // Include English name
-        tags: option.tags,
+        tags: Array.isArray(option.tags) ? option.tags : [],
+        ...(typeof option.calories === 'number' ? { calories: option.calories } : {}),
+        ...(Array.isArray(option.allergens) && option.allergens.length > 0
+          ? { allergens: option.allergens }
+          : {}),
+        ...(typeof option.description === 'string' && option.description.trim()
+          ? { description: option.description }
+          : {}),
         ...(typeof option.imageUrl === 'string' && option.imageUrl
           ? { imageUrl: option.imageUrl }
           : {}),

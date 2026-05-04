@@ -28,8 +28,12 @@ export function WeeklyDeliveryDaysGrid({
   visibleDeliveryDays,
 }: WeeklyDeliveryDaysGridProps) {
   return (
-    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-      {visibleDeliveryDays.map((day) => {
+    <div className="space-y-4">
+      <p className="text-left text-[10px] leading-tight text-[#6B5F53]/45">
+        {language === "zh" ? "* 图片仅供参考" : "* Pictures are for reference only."}
+      </p>
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        {visibleDeliveryDays.map((day) => {
         const isDateDisabled = disabledDates.has(day.date)
 
         return (
@@ -91,16 +95,27 @@ export function WeeklyDeliveryDaysGrid({
                       </div>
                     ) : null}
 
-                    <div className="p-4">
-                      <div className="flex items-start justify-between">
+                    <div className="space-y-3 p-4">
+                      <div>
                         <h4 className="font-medium text-[#6B5F53]">
                           {optionDisplayName}
                         </h4>
                       </div>
 
-                      {option.tags?.length ? (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {option.tags.map((tag, tagIndex) => (
+                      {option.description ? (
+                        <p className="text-xs leading-relaxed text-[#6B5F53]/70">
+                          {option.description}
+                        </p>
+                      ) : null}
+
+                      {(typeof option.calories === "number" || option.tags?.length) ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {typeof option.calories === "number" ? (
+                            <span className="rounded-full bg-[#C2884E]/10 px-2 py-0.5 text-[10px] font-semibold text-[#C2884E]">
+                              {option.calories} KCAL
+                            </span>
+                          ) : null}
+                          {option.tags?.map((tag, tagIndex) => (
                             <span
                               key={tagIndex}
                               className="rounded-full bg-[#F5EDE4]/70 px-2 py-0.5 text-[10px] font-medium text-[#6B5F53]"
@@ -108,6 +123,13 @@ export function WeeklyDeliveryDaysGrid({
                               {tag}
                             </span>
                           ))}
+                        </div>
+                      ) : null}
+
+                      {option.allergens?.length ? (
+                        <div className="rounded-lg border border-[#E8D8C7] bg-[#FBF7F2]/70 px-2.5 py-1.5 text-[10px] leading-relaxed text-[#8A6A4D]">
+                          <span className="font-medium text-[#6B5F53]">{language === "zh" ? "过敏原" : "Allergens"}: </span>
+                          {option.allergens.join(" / ")}
                         </div>
                       ) : null}
                     </div>
@@ -144,7 +166,8 @@ export function WeeklyDeliveryDaysGrid({
             </div>
           </motion.div>
         )
-      })}
+        })}
+      </div>
     </div>
   )
 }
