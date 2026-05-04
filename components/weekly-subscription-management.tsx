@@ -626,12 +626,16 @@ export function WeeklySubscriptionManagement() {
     
     setEditDialogOpen(false);
     
-    // Update in database
+    // Update in database. Always send imageUrl/imageKey (use "" when missing)
+    // so the backend can distinguish "remove image" (empty string) from
+    // "no change" (undefined) — same convention used by daily combos.
     const updatedMeal = await updateMealOption(editingMeal.id, {
       name: editingMeal.name,
       nameEn: editingMeal.nameEn,
       tags: editingMeal.tags,
-      active: editingMeal.active
+      active: editingMeal.active,
+      imageUrl: editingMeal.imageUrl ?? "",
+      imageKey: editingMeal.imageKey ?? ""
     });
     
     if (updatedMeal) {

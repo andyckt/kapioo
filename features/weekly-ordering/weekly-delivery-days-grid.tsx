@@ -62,19 +62,39 @@ export function WeeklyDeliveryDaysGrid({
                 </div>
               ) : null}
 
-              {day.options.map((option) => (
+              {day.options.map((option) => {
+                const optionDisplayName =
+                  language === "en" && option.nameEn ? option.nameEn : option.name
+
+                return (
                 <Card
                   key={option.id}
                   className={cn(
-                    "overflow-hidden rounded-lg border-[#C2884E]/10 bg-white transition-all duration-300",
+                    "group overflow-hidden rounded-lg border-[#C2884E]/10 bg-white transition-all duration-300",
                     !isDateDisabled && "hover:rounded-xl hover:border-[#C2884E]/30 hover:shadow-md"
                   )}
                 >
-                  <CardContent className="p-0">
+                  <CardContent className="flex flex-col p-0">
+                    {option.imageUrl ? (
+                      <div className="aspect-[16/9] w-full shrink-0 overflow-hidden bg-[#F5EDE4]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={option.imageUrl}
+                          alt={`${optionDisplayName} meal`}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                          onError={(event) => {
+                            event.currentTarget.parentElement?.classList.add("hidden")
+                          }}
+                        />
+                      </div>
+                    ) : null}
+
                     <div className="p-4">
                       <div className="flex items-start justify-between">
                         <h4 className="font-medium text-[#6B5F53]">
-                          {language === "en" && option.nameEn ? option.nameEn : option.name}
+                          {optionDisplayName}
                         </h4>
                       </div>
 
@@ -92,7 +112,7 @@ export function WeeklyDeliveryDaysGrid({
                       ) : null}
                     </div>
 
-                    <div className="mt-4 flex items-center justify-end">
+                    <div className="mb-3 flex items-center justify-end px-4">
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
@@ -119,7 +139,8 @@ export function WeeklyDeliveryDaysGrid({
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )
+              })}
             </div>
           </motion.div>
         )

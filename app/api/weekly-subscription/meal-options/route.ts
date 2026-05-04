@@ -42,6 +42,10 @@ export async function POST(request: Request) {
       nameEn: data.nameEn || undefined, // Optional English name
       tags: data.tags || [],
       active: data.active !== undefined ? data.active : true,
+      // Image fields are optional. Empty strings from the client are treated
+      // as "no image" so we don't store stale empty strings on new docs.
+      imageUrl: data.imageUrl ? data.imageUrl : undefined,
+      imageKey: data.imageKey ? data.imageKey : undefined,
     });
 
     console.log('Created new meal option:', {

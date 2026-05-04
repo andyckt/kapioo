@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { 
+  ArrowRight,
   Calendar,
   Star,
   Check,
@@ -19,7 +20,8 @@ import {
   Loader2,
   MapPin,
   Plus,
-  Minus
+  Minus,
+  Sparkles,
 } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { useSmartBack } from "@/hooks/use-smart-back"
@@ -69,6 +71,8 @@ export default function WeeklyMealPage() {
     name: string;
     nameEn?: string;
     tags?: string[];
+    /** Optional public image URL for the meal option (S3-backed). */
+    imageUrl?: string;
   }
   
   interface MenuDay {
@@ -105,61 +109,73 @@ export default function WeeklyMealPage() {
     return option.nameEn || option.name
   }
   
-  // Fetch weekly menu data when dialog opens
+  // Fetch the weekly menu eagerly on mount (and re-format on language change).
+  // The carousel preview below the hero needs this data even before the dialog
+  // is opened, so we cannot scope the fetch to the dialog-open state.
+  // Single fetcher → no duplicate network requests when the dialog opens.
   useEffect(() => {
-    if (menuDialogOpen) {
-      const fetchWeeklyMenu = async () => {
-        setIsMenuLoading(true);
-        setMenuError(null);
-        try {
-          // Fetch real data from API
-          const data = await getUserWeeklySubscription();
-          
-          if (data && data.length > 0) {
-            // Format dates based on language and create unique IDs
-            const formattedData = data.map(day => ({
-              ...day,
-              // Create a unique ID that includes the week information
-              uniqueId: `${day.id}-week-${day.weekOffset}`,
-              name: language === 'zh' 
-                ? (day.id === 'sunday' ? '周日' : '周二')
-                : (day.id === 'sunday' ? 'Sunday' : 'Tuesday')
-            }));
-            
-            setWeeklyMenu(formattedData);
-            
-            // Set the first day as selected by default
-            if (formattedData.length > 0) {
-              const firstDayOfActiveWeek = formattedData.find(day => day.weekOffset === activeWeek - 1);
-              if (firstDayOfActiveWeek) {
-                setSelectedMenuDay(firstDayOfActiveWeek.uniqueId);
-              }
-            }
-          } else {
-            // If no data is returned, don't use mock data, just set empty menu
-            console.warn('No menu data returned from API, all days may be inactive');
-            setWeeklyMenu([]);
-            setMenuError(language === 'zh' 
-              ? '当前没有可用的菜单，请稍后再试或联系客服' 
-              : 'No menu is currently available. Please try again later or contact customer service.');
-            
-            // No need to set a selected day when there are no days
-            setSelectedMenuDay(null);
-          }
-        } catch (error) {
-          console.error('Error fetching weekly menu:', error);
-          setMenuError(language === 'zh' 
-            ? '加载菜单时出错，请稍后再试' 
-            : 'Error loading menu, please try again later');
-          setWeeklyMenu([]); // Clear any previous data
-        } finally {
+    const controller = new AbortController()
+
+    const fetchWeeklyMenu = async () => {
+      setIsMenuLoading(true);
+      setMenuError(null);
+      try {
+        const data = await getUserWeeklySubscription({ signal: controller.signal });
+
+        if (controller.signal.aborted) return;
+
+        if (data && data.length > 0) {
+          // Format day names based on language and create unique IDs.
+          // imageUrl is preserved through the spread so the carousel can use it.
+          const formattedData = data.map(day => ({
+            ...day,
+            uniqueId: `${day.id}-week-${day.weekOffset}`,
+            name: language === 'zh'
+              ? (day.id === 'sunday' ? '周日' : '周二')
+              : (day.id === 'sunday' ? 'Sunday' : 'Tuesday')
+          }));
+
+          setWeeklyMenu(formattedData);
+        } else {
+          // Empty menu: keep the carousel hidden; surface the error inside the
+          // dialog only (handled by menuError state below) so the landing page
+          // looks normal when no menu is configured yet.
+          console.warn('No menu data returned from API, all days may be inactive');
+          setWeeklyMenu([]);
+          setMenuError(language === 'zh'
+            ? '当前没有可用的菜单，请稍后再试或联系客服'
+            : 'No menu is currently available. Please try again later or contact customer service.');
+          setSelectedMenuDay(null);
+        }
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') return;
+        console.error('Error fetching weekly menu:', error);
+        setMenuError(language === 'zh'
+          ? '加载菜单时出错，请稍后再试'
+          : 'Error loading menu, please try again later');
+        setWeeklyMenu([]);
+      } finally {
+        if (!controller.signal.aborted) {
           setIsMenuLoading(false);
         }
-      };
-      
-      fetchWeeklyMenu();
+      }
+    };
+
+    fetchWeeklyMenu();
+
+    return () => controller.abort();
+  }, [language])
+
+  // When the dialog opens (or activeWeek changes), pick a sensible default day
+  // from the already-loaded data. Pure UI selection, no network calls.
+  useEffect(() => {
+    if (!menuDialogOpen || weeklyMenu.length === 0) return;
+
+    const firstDayOfActiveWeek = weeklyMenu.find(day => day.weekOffset === activeWeek - 1);
+    if (firstDayOfActiveWeek) {
+      setSelectedMenuDay(firstDayOfActiveWeek.uniqueId || firstDayOfActiveWeek.id);
     }
-  }, [menuDialogOpen, activeWeek, language])
+  }, [menuDialogOpen, activeWeek, weeklyMenu])
 
   const durationLabels: Record<number, { en: string; zh: string }> = {
     1: { en: 'One week plan', zh: '1周次卡券' },
@@ -244,6 +260,32 @@ export default function WeeklyMealPage() {
       icon: <Star className="h-6 w-6" />
     }
   ]
+
+  // Build the carousel items: only week-1 options that have an image.
+  // Sorting (sunday → tuesday) matches the dialog so clicking a card opens the
+  // expected day. We render at most 8 cards to keep the section visually tight.
+  const weekDayOrder: Record<string, number> = { sunday: 0, tuesday: 1 }
+  const weeklyMenuPreviewItems = weeklyMenu
+    .filter((day) => day.weekOffset === 0)
+    .sort((a, b) => (weekDayOrder[a.id] ?? 99) - (weekDayOrder[b.id] ?? 99))
+    .flatMap((day) =>
+      day.options
+        .filter((option) => Boolean(option.imageUrl))
+        .map((option) => ({
+          dayUniqueId: day.uniqueId || day.id,
+          dayName: day.name,
+          dayDate: day.date,
+          option,
+        }))
+    )
+
+  // Open the existing dialog and select the day the carousel card belongs to.
+  // Falls back to the first day if the user hasn't chosen anything yet.
+  const openMenuDialogForDay = (dayUniqueId: string) => {
+    setActiveWeek(1)
+    setSelectedMenuDay(dayUniqueId)
+    setMenuDialogOpen(true)
+  }
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -582,27 +624,47 @@ export default function WeeklyMealPage() {
                                       </div>
                                     </div>
                                     
-                                    <div className="space-y-4 sm:space-y-6">
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-5">
                                       {selectedDay.options.map((option, index) => (
                                         <div 
                                           key={option.id}
-                                          className="bg-white/95 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-[#F5EDE4] shadow-sm hover:shadow-md transition-shadow duration-300 mobile-menu-animation"
+                                          className="group flex h-full flex-col overflow-hidden rounded-xl border border-[#F5EDE4] bg-white/95 shadow-sm transition-all duration-300 hover:shadow-md sm:rounded-2xl mobile-menu-animation"
                                           style={{animationDelay: `${index * 0.05}s`}}
                                         >
-                                          <h4 className="text-base sm:text-lg font-medium text-[#6B5F53] mb-2.5 sm:mb-3 leading-tight">{translateOptionName(option)}</h4>
-                                          
-                                          {option.tags && option.tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
-                                              {option.tags.map((tag, tagIndex) => (
-                                                <span 
-                                                  key={tagIndex}
-                                                  className="px-2 py-0.5 sm:py-1 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] sm:text-xs font-medium"
-                                                >
-                                                  {tag}
-                                                </span>
-                                              ))}
+                                          {option.imageUrl ? (
+                                            <div className="aspect-[16/9] w-full shrink-0 overflow-hidden bg-[#F5EDE4]">
+                                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                                              <img
+                                                src={option.imageUrl}
+                                                alt={`${translateOptionName(option)} meal`}
+                                                loading="lazy"
+                                                decoding="async"
+                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                                                onError={(event) => {
+                                                  event.currentTarget.parentElement?.classList.add("hidden")
+                                                }}
+                                              />
                                             </div>
-                                          )}
+                                          ) : null}
+
+                                          <div className="flex flex-1 flex-col p-3 sm:p-4">
+                                            <h4 className="text-sm font-medium leading-snug text-[#6B5F53] sm:text-base">
+                                              {translateOptionName(option)}
+                                            </h4>
+
+                                            {option.tags && option.tags.length > 0 && (
+                                              <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
+                                                {option.tags.map((tag, tagIndex) => (
+                                                  <span
+                                                    key={tagIndex}
+                                                    className="px-2 py-0.5 sm:py-1 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] sm:text-xs font-medium"
+                                                  >
+                                                    {tag}
+                                                  </span>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
                                       ))}
                                     </div>
@@ -776,6 +838,104 @@ export default function WeeklyMealPage() {
                 </div>
               </div>
             </motion.div>
+
+            {/*
+             * "This Week Menu Preview" carousel.
+             * Only renders when at least one week-1 option has an imageUrl,
+             * so menus that haven't uploaded photos yet keep the existing
+             * landing page layout intact (no broken / empty UI).
+             */}
+            {weeklyMenuPreviewItems.length > 0 ? (
+              <motion.div className="w-full" variants={fadeIn}>
+                <div className="rounded-2xl border border-[#C2884E]/10 bg-white/85 p-4 shadow-xl backdrop-blur-sm md:p-6">
+                  <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#C2884E]/10 px-3 py-1 text-xs font-medium text-[#C2884E]">
+                        <Sparkles
+                          className="h-3.5 w-3.5 shrink-0 fill-[#C2884E]/30 text-[#C2884E]"
+                          aria-hidden
+                        />
+                        {language === 'zh' ? '每周更新' : 'Updated Weekly'}
+                      </div>
+                      <h2 className="text-2xl font-bold text-[#6B5F53] md:text-3xl">
+                        {language === 'zh' ? '本周菜单预览' : "This Week's Menu Preview"}
+                      </h2>
+                      <p className="mt-2 text-sm text-[#6B5F53]/75">
+                        {language === 'zh'
+                          ? '每周更新，每周两次配送，每次多款餐食可选。来看看这周的精选餐食吧！'
+                          : "Fresh menu weekly with two deliveries and multiple meal options each. See what's on deck for your week!"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="hidden shrink-0 border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 md:inline-flex"
+                      onClick={() => openMenuDialogForDay(weeklyMenuPreviewItems[0].dayUniqueId)}
+                    >
+                      {language === 'zh' ? '查看完整菜单' : 'View Full Menu'}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-4">
+                    {weeklyMenuPreviewItems.slice(0, 8).map((item) => (
+                      <button
+                        key={`${item.dayUniqueId}-${item.option.id}`}
+                        type="button"
+                        onClick={() => openMenuDialogForDay(item.dayUniqueId)}
+                        className="group min-w-[240px] overflow-hidden rounded-xl border border-[#F5EDE4] bg-white text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#C2884E]/30 hover:shadow-md md:min-w-0"
+                      >
+                        <div className="aspect-[16/9] overflow-hidden bg-[#F5EDE4]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.option.imageUrl}
+                            alt={`${translateOptionName(item.option)} meal`}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                            onError={(event) => {
+                              event.currentTarget.closest('button')?.classList.add('hidden')
+                            }}
+                          />
+                        </div>
+                        <div className="p-4">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <span className="rounded-full bg-[#C2884E]/10 px-2 py-1 text-xs font-semibold text-[#C2884E]">
+                              {item.dayName} · {item.dayDate}
+                            </span>
+                          </div>
+                          <h3 className="line-clamp-2 text-base font-semibold text-[#6B5F53]">
+                            {translateOptionName(item.option)}
+                          </h3>
+                          {item.option.tags && item.option.tags.length > 0 ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {item.option.tags.slice(0, 3).map((tag, tagIndex) => (
+                                <span
+                                  key={tagIndex}
+                                  className="rounded-full bg-[#F5EDE4]/70 px-2 py-0.5 text-[10px] font-medium text-[#6B5F53]"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 md:hidden">
+                    <Button
+                      variant="outline"
+                      className="w-full border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5"
+                      onClick={() => openMenuDialogForDay(weeklyMenuPreviewItems[0].dayUniqueId)}
+                    >
+                      {language === 'zh' ? '查看完整菜单' : 'View Full Menu'}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
           </motion.div>
         </div>
       </section>

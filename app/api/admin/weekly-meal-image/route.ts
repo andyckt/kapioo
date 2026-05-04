@@ -4,6 +4,10 @@ import { errorJson } from "@/lib/api";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { uploadMenuImageToS3, validateMenuImageFile } from "@/lib/upload/menu-image";
 
+/**
+ * Admin-only S3 upload for weekly meal option images.
+ * Mirrors /api/admin/combo-image but writes under the `weekly-meal-images/` prefix.
+ */
 export async function POST(request: NextRequest) {
   try {
     const { actor, response } = await requireAdminMfa(request);
@@ -25,18 +29,18 @@ export async function POST(request: NextRequest) {
 
     const { url, key } = await uploadMenuImageToS3({
       file,
-      prefix: "combo-images",
-      identifier: formData.get("comboId") as string | null,
+      prefix: "weekly-meal-images",
+      identifier: formData.get("optionId") as string | null,
     });
 
     return NextResponse.json({
       success: true,
       url,
       key,
-      message: "Combo image uploaded successfully",
+      message: "Weekly meal image uploaded successfully",
     });
   } catch (error: unknown) {
-    console.error("Error uploading combo image to S3:", error);
-    return errorJson("Failed to upload combo image", 500);
+    console.error("Error uploading weekly meal image to S3:", error);
+    return errorJson("Failed to upload weekly meal image", 500);
   }
 }

@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import type { MealOption } from "@/lib/weekly-subscription"
 
+import { WeeklyMealImageEditor } from "./weekly-meal-image-editor"
+
 type WeeklyMenuEditDialogProps = {
   editingMeal: MealOption | null
   onOpenChange: (open: boolean) => void
@@ -45,6 +47,16 @@ export function WeeklyMenuEditDialog({
         </DialogHeader>
         {editingMeal ? (
           <div className="grid gap-4 py-4">
+            <WeeklyMealImageEditor
+              option={editingMeal}
+              onChange={(updates) =>
+                onUpdateMeal({
+                  ...editingMeal,
+                  imageUrl: updates.imageUrl || undefined,
+                  imageKey: updates.imageKey || undefined,
+                })
+              }
+            />
             <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
               <Label htmlFor="meal-name" className="sm:text-right">
                 Name (Chinese)

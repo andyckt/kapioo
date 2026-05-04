@@ -28,6 +28,8 @@ export const mealOptionSchema = z.object({
   nameEn: z.string().optional(),
   tags: z.array(z.string()).optional(),
   active: z.boolean(),
+  imageUrl: z.string().optional(),
+  imageKey: z.string().optional(),
 });
 
 export type MealOption = z.infer<typeof mealOptionSchema>;

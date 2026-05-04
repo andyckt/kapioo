@@ -22,6 +22,8 @@ export const createWeeklyMealOptionBodySchema = z
     weekOffset: z.coerce.number().optional(),
     tags: z.array(z.string()).optional(),
     active: z.boolean().optional(),
+    imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
+    imageKey: z.string().max(512).optional().or(z.literal("")),
   })
   .refine((d) => Boolean(d.day?.trim()) || Boolean(d.deliveryDayId?.trim()), {
     message: "Name and delivery day information (day or deliveryDayId) are required",
@@ -33,6 +35,8 @@ export const updateWeeklyMealOptionBodySchema = z.object({
   nameEn: z.string().optional(),
   tags: z.array(z.string()).optional(),
   active: z.boolean().optional(),
+  imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
+  imageKey: z.string().max(512).optional().or(z.literal("")),
 });
 
 export const weeklySubscriptionCartItemSchema = z.object({

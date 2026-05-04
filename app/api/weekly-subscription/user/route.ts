@@ -201,7 +201,9 @@ export async function GET() {
       .sort({ weekOffset: 1, day: 1 })
       .lean();
     
-    // Format the response to match the frontend structure
+    // Format the response to match the frontend structure.
+    // imageUrl/imageKey are optional and only forwarded when present so we
+    // don't pollute legacy options with empty strings on the wire.
     const formattedDeliveryDays = deliveryDays.map((day: any) => ({
       id: day.day,
       name: day.name,
@@ -213,7 +215,13 @@ export async function GET() {
         id: option._id,
         name: option.name,
         nameEn: option.nameEn, // Include English name
-        tags: option.tags
+        tags: option.tags,
+        ...(typeof option.imageUrl === 'string' && option.imageUrl
+          ? { imageUrl: option.imageUrl }
+          : {}),
+        ...(typeof option.imageKey === 'string' && option.imageKey
+          ? { imageKey: option.imageKey }
+          : {})
       }))
     }));
     

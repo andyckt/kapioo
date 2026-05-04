@@ -60,7 +60,15 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
               name: option.name,
               nameEn: option.nameEn, // Include English name
               tags: option.tags || [],
-              active: option.active
+              active: option.active,
+              // Image fields are optional. Only forward non-empty values so the
+              // editor's "no image" UI state is unambiguous (undefined, not "").
+              ...(typeof option.imageUrl === 'string' && option.imageUrl
+                ? { imageUrl: option.imageUrl }
+                : {}),
+              ...(typeof option.imageKey === 'string' && option.imageKey
+                ? { imageKey: option.imageKey }
+                : {})
             }))
           }
         };
@@ -125,7 +133,7 @@ export async function updateDeliveryDay(
 export async function addMealOption(
   day: string, 
   weekOffset: number, 
-  mealData: { name: string; nameEn?: string; tags?: string[]; active?: boolean }
+  mealData: { name: string; nameEn?: string; tags?: string[]; active?: boolean; imageUrl?: string; imageKey?: string }
 ): Promise<any> {
   try {
     console.log('Adding meal option:', { day, weekOffset, ...mealData });
@@ -174,7 +182,7 @@ export async function addMealOption(
 }
 
 // Update a meal option
-export async function updateMealOption(id: string, data: { name?: string; nameEn?: string; tags?: string[]; active?: boolean }): Promise<MealOption | null> {
+export async function updateMealOption(id: string, data: { name?: string; nameEn?: string; tags?: string[]; active?: boolean; imageUrl?: string; imageKey?: string }): Promise<MealOption | null> {
   try {
     const response = await fetch(`/api/weekly-subscription/meal-options/${id}`, {
       method: 'PUT',

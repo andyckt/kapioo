@@ -2,37 +2,8 @@ import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteCont
 import { requireAdminMfa } from '@/lib/auth/guards';
 import { comboBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
-import { getS3Config } from '@/lib/env';
+import { deleteMenuImageFromS3 } from '@/lib/upload/menu-image';
 import Combo from '@/models/Combo';
-import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
-
-function getS3Client() {
-  const { accessKeyId, secretAccessKey, region } = getS3Config();
-
-  return new S3Client({
-    region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-  });
-}
-
-async function deleteComboImageByKey(key?: string) {
-  if (!key) return;
-
-  try {
-    const { bucket } = getS3Config();
-    await getS3Client().send(
-      new DeleteObjectCommand({
-        Bucket: bucket,
-        Key: key,
-      })
-    );
-  } catch (error) {
-    console.warn('Failed to delete old combo image from S3:', error);
-  }
-}
 
 export async function GET(
   request: Request,
@@ -103,9 +74,9 @@ export async function PUT(
     );
 
     if (shouldRemoveImage) {
-      void deleteComboImageByKey(previousImageKey);
+      void deleteMenuImageFromS3(previousImageKey);
     } else if (previousImageKey && nextImageKey && previousImageKey !== nextImageKey) {
-      void deleteComboImageByKey(previousImageKey);
+      void deleteMenuImageFromS3(previousImageKey);
     }
     
     return successJson(combo);
@@ -134,7 +105,7 @@ export async function DELETE(
     }
 
     if (typeof combo.imageKey === 'string') {
-      void deleteComboImageByKey(combo.imageKey);
+      void deleteMenuImageFromS3(combo.imageKey);
     }
     
     return successJson({});
