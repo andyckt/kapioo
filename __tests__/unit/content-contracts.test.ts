@@ -62,6 +62,22 @@ describe("content contracts", () => {
       expect(parsed.imageUrl).toContain("/weekly-meal-images/")
       expect(parsed.imageKey).toBe("weekly-meal-images/option-1/photo.jpg")
     })
+
+    it("accepts optional combo library snapshot fields", () => {
+      const parsed = mealOptionSchema.parse({
+        ...baseOption,
+        dishes: ["双椒牛肉", "紫米饭"],
+        calories: 650,
+        allergens: ["soy", "sesame"],
+        description: "Library snapshot",
+        sourceComboLibraryId: "combo-1",
+        sourceComboLibraryUpdatedAt: "2026-05-03T00:00:00.000Z",
+      })
+
+      expect(parsed.dishes).toEqual(["双椒牛肉", "紫米饭"])
+      expect(parsed.calories).toBe(650)
+      expect(parsed.sourceComboLibraryId).toBe("combo-1")
+    })
   })
 
   describe("createWeeklyMealOptionBodySchema", () => {
@@ -78,9 +94,18 @@ describe("content contracts", () => {
         ...baseBody,
         imageUrl: "https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/weekly-meal-images/x/y.jpg",
         imageKey: "weekly-meal-images/x/y.jpg",
+        dishes: ["鸡肉", "紫米饭"],
+        calories: 650,
+        allergens: ["soy"],
+        description: "Snapshot",
+        sourceComboLibraryId: "combo-1",
+        sourceComboLibraryUpdatedAt: "2026-05-03T00:00:00.000Z",
       })
       expect(parsed.imageUrl).toContain("/weekly-meal-images/")
       expect(parsed.imageKey).toBe("weekly-meal-images/x/y.jpg")
+      expect(parsed.dishes).toEqual(["鸡肉", "紫米饭"])
+      expect(parsed.calories).toBe(650)
+      expect(parsed.sourceComboLibraryUpdatedAt).toBeInstanceOf(Date)
     })
 
     it("accepts empty image strings (no-op create)", () => {

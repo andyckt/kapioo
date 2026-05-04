@@ -6,13 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight, Languages, Mail, Send, AlertCircle, CheckCircle, XCircle } from "lucide-react"
+import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight, Languages, Mail, Send, AlertCircle, CheckCircle, XCircle, Package } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 import { WeeklyMenuEditDialog } from "@/features/admin-weekly-menu/weekly-menu-edit-dialog"
+import {
+  WeeklyComboLibraryFormDialog,
+  WeeklyComboLibraryPickerDialog,
+} from "@/features/admin-weekly-combo-library"
 import { useWeeklyMenuHistory } from "@/features/admin-weekly-menu/use-weekly-menu-history"
 import { WeeklyMenuHistoryDialog } from "@/features/admin-weekly-menu/weekly-menu-history-dialog"
 import {
@@ -30,6 +34,11 @@ import {
   deleteMealOption
 } from "@/lib/weekly-subscription"
 import { parseBulkInput } from "@/lib/bulk-parse-utils"
+import {
+  mapWeeklyLibraryComboToWeeklyMenuOption,
+  mapWeeklyMenuOptionToWeeklyLibraryDraft,
+} from "@/lib/combo-library/weekly/adapters"
+import type { WeeklyComboLibraryItem } from "@/lib/combo-library/weekly/types"
 
 export function WeeklySubscriptionManagement() {
   const { toast } = useToast()
@@ -50,6 +59,9 @@ export function WeeklySubscriptionManagement() {
   const [inlineEnglishName, setInlineEnglishName] = useState('')
   const [editingChineseForMealId, setEditingChineseForMealId] = useState<string | null>(null)
   const [inlineChineseName, setInlineChineseName] = useState('')
+  const [libraryPickerSectionId, setLibraryPickerSectionId] = useState<string | null>(null)
+  const [libraryDraftFromMeal, setLibraryDraftFromMeal] = useState<Partial<WeeklyComboLibraryItem> | null>(null)
+  const [highlightedOptionIds, setHighlightedOptionIds] = useState<Set<string>>(new Set())
   
   // State for menu update notification
   const [isSendingNotifications, setIsSendingNotifications] = useState(false)
@@ -204,7 +216,15 @@ export function WeeklySubscriptionManagement() {
                 name: opt.name,
                 nameEn: opt.nameEn, // Include English translation
                 tags: opt.tags,
-                active: opt.active
+                active: opt.active,
+                imageUrl: opt.imageUrl,
+                imageKey: opt.imageKey,
+                dishes: opt.dishes,
+                calories: opt.calories,
+                allergens: opt.allergens,
+                description: opt.description,
+                sourceComboLibraryId: opt.sourceComboLibraryId,
+                sourceComboLibraryUpdatedAt: opt.sourceComboLibraryUpdatedAt,
               }))
             }),
           });
@@ -240,7 +260,15 @@ export function WeeklySubscriptionManagement() {
               name: option.name,
               nameEn: option.nameEn, // ✅ Include English translation
               tags: option.tags,
-              active: option.active
+              active: option.active,
+              imageUrl: option.imageUrl,
+              imageKey: option.imageKey,
+              dishes: option.dishes,
+              calories: option.calories,
+              allergens: option.allergens,
+              description: option.description,
+              sourceComboLibraryId: option.sourceComboLibraryId,
+              sourceComboLibraryUpdatedAt: option.sourceComboLibraryUpdatedAt,
             }),
           });
           
@@ -289,7 +317,15 @@ export function WeeklySubscriptionManagement() {
               name: option.name,
               nameEn: option.nameEn, // ✅ Include English translation
               tags: option.tags,
-              active: option.active
+              active: option.active,
+              imageUrl: option.imageUrl,
+              imageKey: option.imageKey,
+              dishes: option.dishes,
+              calories: option.calories,
+              allergens: option.allergens,
+              description: option.description,
+              sourceComboLibraryId: option.sourceComboLibraryId,
+              sourceComboLibraryUpdatedAt: option.sourceComboLibraryUpdatedAt,
             }),
           });
           
@@ -635,7 +671,13 @@ export function WeeklySubscriptionManagement() {
       tags: editingMeal.tags,
       active: editingMeal.active,
       imageUrl: editingMeal.imageUrl ?? "",
-      imageKey: editingMeal.imageKey ?? ""
+      imageKey: editingMeal.imageKey ?? "",
+      dishes: editingMeal.dishes,
+      calories: editingMeal.calories,
+      allergens: editingMeal.allergens,
+      description: editingMeal.description,
+      sourceComboLibraryId: editingMeal.sourceComboLibraryId,
+      sourceComboLibraryUpdatedAt: editingMeal.sourceComboLibraryUpdatedAt,
     });
     
     if (updatedMeal) {
@@ -714,6 +756,76 @@ export function WeeklySubscriptionManagement() {
       setIsSavingInlineMeal(false);
     }
   };
+
+  const handleInsertLibraryMeals = async (items: WeeklyComboLibraryItem[]) => {
+    const section = deliverySections.find((entry) => entry.id === libraryPickerSectionId)
+    if (!section || items.length === 0) {
+      return
+    }
+
+    setIsSavingInlineMeal(true)
+    const createdOptions: MealOption[] = []
+    const failures: Array<{ name: string; error: string }> = []
+
+    for (const item of items) {
+      try {
+        const result = await addMealOption(
+          section.day.day,
+          section.day.weekOffset,
+          mapWeeklyLibraryComboToWeeklyMenuOption(item)
+        )
+        if (result?.mealOption) {
+          createdOptions.push({
+            id: String(result.mealOption._id || result.mealOption.id),
+            name: result.mealOption.name,
+            nameEn: result.mealOption.nameEn,
+            tags: result.mealOption.tags || [],
+            active: result.mealOption.active,
+            imageUrl: result.mealOption.imageUrl,
+            imageKey: result.mealOption.imageKey,
+            dishes: result.mealOption.dishes,
+            calories: result.mealOption.calories,
+            allergens: result.mealOption.allergens,
+            description: result.mealOption.description,
+            sourceComboLibraryId: result.mealOption.sourceComboLibraryId,
+            sourceComboLibraryUpdatedAt: result.mealOption.sourceComboLibraryUpdatedAt,
+          })
+        } else {
+          failures.push({ name: item.name, error: "No meal option returned" })
+        }
+      } catch (error) {
+        failures.push({
+          name: item.name,
+          error: error instanceof Error ? error.message : "Unknown error",
+        })
+      }
+    }
+
+    await fetchData()
+
+    const ids = new Set(createdOptions.map((option) => option.id))
+    setHighlightedOptionIds(ids)
+    setTimeout(() => setHighlightedOptionIds(new Set()), 3000)
+
+    if (createdOptions.length === 1 && failures.length === 0) {
+      setEditingMeal(createdOptions[0])
+      setEditDialogOpen(true)
+    }
+
+    toast({
+      title: failures.length === 0 ? "Library meals inserted" : "Some meals failed",
+      description:
+        failures.length === 0
+          ? `Added ${createdOptions.length} of ${items.length}.`
+          : `Added ${createdOptions.length} of ${items.length}; failed: ${failures
+              .map((failure) => failure.name)
+              .join(", ")}`,
+      variant: failures.length === 0 ? "default" : "destructive",
+    })
+
+    setLibraryPickerSectionId(null)
+    setIsSavingInlineMeal(false)
+  }
   
   // Bulk add meals
   const handleBulkAddMeals = async (sectionId: string) => {
@@ -1139,7 +1251,9 @@ export function WeeklySubscriptionManagement() {
                     {section.day.options.map((option) => (
                       <div 
                         key={option.id} 
-                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-md border gap-3 ${!option.active ? 'border-dashed opacity-70' : 'bg-muted/50'}`}
+                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-md border gap-3 transition-all ${
+                          highlightedOptionIds.has(option.id) ? 'ring-2 ring-primary' : ''
+                        } ${!option.active ? 'border-dashed opacity-70' : 'bg-muted/50'}`}
                       >
                         <div className="flex-1 min-w-0">
                           {/* Inline Chinese Name Edit */}
@@ -1212,6 +1326,11 @@ export function WeeklySubscriptionManagement() {
                                 <div className="text-xs text-muted-foreground mt-1 italic">{option.nameEn}</div>
                               )}
                               <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
+                                {option.sourceComboLibraryId ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    来源: 素材库 / {option.sourceComboLibraryId}
+                                  </Badge>
+                                ) : null}
                                 {option.tags?.map((tag) => (
                                   <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
                                 ))}
@@ -1298,14 +1417,24 @@ export function WeeklySubscriptionManagement() {
                         </div>
                       </div>
                     ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full mt-2" 
-                        onClick={() => handleAddMealClick(section.id)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" /> Add Meal Option
-                      </Button>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full mt-2" 
+                          onClick={() => setLibraryPickerSectionId(section.id)}
+                        >
+                          <Package className="h-4 w-4 mr-2" /> 从素材库添加
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full mt-2" 
+                          onClick={() => handleAddMealClick(section.id)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" /> Add Meal Option
+                        </Button>
+                      </div>
                     )}
                     
                     {/* Bulk Add Meals Section */}
@@ -1364,8 +1493,29 @@ export function WeeklySubscriptionManagement() {
           setEditingMeal({ ...editingMeal, tags: newTags })
         }}
         onSave={handleSaveMeal}
+        onSaveAsLibraryCombo={() => {
+          if (editingMeal) {
+            setLibraryDraftFromMeal(mapWeeklyMenuOptionToWeeklyLibraryDraft(editingMeal))
+          }
+        }}
         onUpdateMeal={setEditingMeal}
         open={editDialogOpen}
+      />
+
+      <WeeklyComboLibraryPickerDialog
+        open={Boolean(libraryPickerSectionId)}
+        onOpenChange={(open) => {
+          if (!open) setLibraryPickerSectionId(null)
+        }}
+        onSelect={handleInsertLibraryMeals}
+      />
+
+      <WeeklyComboLibraryFormDialog
+        open={Boolean(libraryDraftFromMeal)}
+        onOpenChange={(open) => {
+          if (!open) setLibraryDraftFromMeal(null)
+        }}
+        item={libraryDraftFromMeal}
       />
       
       {/* Delete Confirmation Dialog */}

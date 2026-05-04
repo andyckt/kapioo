@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Check, Edit, Languages, Package, Plus, Trash2, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  DailyComboLibraryFormDialog,
+  DailyComboLibraryPickerDialog,
+} from "@/features/admin-daily-combo-library"
+import { mapDailyMenuComboToDailyLibraryDraft } from "@/lib/combo-library/daily/adapters"
+import type { DailyComboLibraryItem } from "@/lib/combo-library/daily/types"
 import {
   Select,
   SelectContent,
@@ -58,6 +65,7 @@ interface DailyMenuCombosTabProps {
   handleSaveDishTranslation: (dishName: string) => Promise<void>
   addNewTag: () => Promise<void>
   addCombo: () => Promise<void>
+  addComboFromLibrary: (item: DailyComboLibraryItem) => Promise<void>
   deleteCombo: (comboId: string) => Promise<void>
   bulkAddDishes: (comboId: string, type: "typeA" | "typeB") => void
   syncDishesToTypeB: (dayId: string, comboId: string) => void
@@ -229,6 +237,8 @@ function ComboDishPreview({ combo }: { combo: ComboItem }) {
 export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
   const sortedDays = sortDaysByWeekAndName(Object.entries(props.days))
   const selectedDayData = props.days[props.selectedDay]
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [saveAsLibraryCombo, setSaveAsLibraryCombo] = useState<Partial<DailyComboLibraryItem> | null>(null)
 
   return (
     <Card>
@@ -260,10 +270,21 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
               </Select>
             </div>
 
-            <Button onClick={() => void props.addCombo()}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Combo
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPickerOpen(true)}
+                disabled={!props.selectedDay}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                从套餐素材库选择
+              </Button>
+              <Button onClick={() => void props.addCombo()}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add New Combo
+              </Button>
+            </div>
           </div>
 
           {!selectedDayData ? (
@@ -277,6 +298,9 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                       <CardTitle className="text-lg">{combo.name}</CardTitle>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="text-sm text-muted-foreground">{combo.calories} KCAL</span>
+                        {combo.sourceComboLibraryId ? (
+                          <Badge variant="outline">来源: 素材库 / {combo.sourceComboLibraryId}</Badge>
+                        ) : null}
                         {combo.tags.map((tag) => (
                           <Badge key={tag} variant="secondary">
                             {tag}
@@ -312,6 +336,13 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                         <>
                           <Button variant="outline" size="sm" onClick={() => props.setEditingCombo(combo.id)}>
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSaveAsLibraryCombo(mapDailyMenuComboToDailyLibraryDraft(combo))}
+                          >
+                            另存为素材库套餐
                           </Button>
                           <Button
                             variant="outline"
@@ -529,6 +560,19 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
             ))
           )}
         </div>
+
+        <DailyComboLibraryPickerDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          onSelect={props.addComboFromLibrary}
+        />
+        <DailyComboLibraryFormDialog
+          open={Boolean(saveAsLibraryCombo)}
+          onOpenChange={(open) => {
+            if (!open) setSaveAsLibraryCombo(null)
+          }}
+          item={saveAsLibraryCombo}
+        />
       </CardContent>
     </Card>
   )

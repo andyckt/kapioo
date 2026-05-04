@@ -15,6 +15,8 @@ export interface ComboItem {
   typeB: ComboDishState
   imageUrl?: string
   imageKey?: string
+  sourceComboLibraryId?: string
+  sourceComboLibraryUpdatedAt?: string | Date
 }
 
 export interface DayData {

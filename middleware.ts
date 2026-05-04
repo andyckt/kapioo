@@ -64,6 +64,8 @@ const ADMIN_MFA_PAGE = '/admin/mfa';
 
 const ADMIN_API_PATHS = [
   '/api/admin',
+  '/api/admin/daily-combo-library',
+  '/api/admin/weekly-combo-library',
   '/api/credits/request/admin',
   '/api/day-history',
   '/api/notifications',

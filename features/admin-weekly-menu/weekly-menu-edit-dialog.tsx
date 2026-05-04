@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import type { MealOption } from "@/lib/weekly-subscription"
 
 import { WeeklyMealImageEditor } from "./weekly-meal-image-editor"
@@ -19,6 +20,7 @@ type WeeklyMenuEditDialogProps = {
   onOpenChange: (open: boolean) => void
   onRemoveTag: (index: number) => void
   onSave: () => void
+  onSaveAsLibraryCombo?: () => void
   onUpdateMeal: (meal: MealOption) => void
   open: boolean
 }
@@ -28,6 +30,7 @@ export function WeeklyMenuEditDialog({
   onOpenChange,
   onRemoveTag,
   onSave,
+  onSaveAsLibraryCombo,
   onUpdateMeal,
   open,
 }: WeeklyMenuEditDialogProps) {
@@ -47,6 +50,11 @@ export function WeeklyMenuEditDialog({
         </DialogHeader>
         {editingMeal ? (
           <div className="grid gap-4 py-4">
+            {editingMeal.sourceComboLibraryId ? (
+              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                来源: 素材库 / {editingMeal.sourceComboLibraryId}
+              </div>
+            ) : null}
             <WeeklyMealImageEditor
               option={editingMeal}
               onChange={(updates) =>
@@ -129,6 +137,76 @@ export function WeeklyMenuEditDialog({
                 <p className="text-xs text-muted-foreground">Press Enter to add a tag</p>
               </div>
             </div>
+            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-dishes" className="sm:pt-2 sm:text-right">
+                Dishes
+              </Label>
+              <Textarea
+                id="meal-dishes"
+                value={(editingMeal.dishes || []).join("\n")}
+                onChange={(event) =>
+                  onUpdateMeal({
+                    ...editingMeal,
+                    dishes: event.target.value
+                      .split(/\n|;/)
+                      .map((dish) => dish.trim())
+                      .filter(Boolean),
+                  })
+                }
+                className="sm:col-span-3"
+                rows={4}
+                placeholder="One dish per line"
+              />
+            </div>
+            <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-calories" className="sm:text-right">
+                Calories
+              </Label>
+              <Input
+                id="meal-calories"
+                type="number"
+                value={editingMeal.calories ?? ""}
+                onChange={(event) =>
+                  onUpdateMeal({
+                    ...editingMeal,
+                    calories: event.target.value ? Number(event.target.value) : undefined,
+                  })
+                }
+                className="sm:col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-allergens" className="sm:pt-2 sm:text-right">
+                Allergens
+              </Label>
+              <Input
+                id="meal-allergens"
+                value={(editingMeal.allergens || []).join("; ")}
+                onChange={(event) =>
+                  onUpdateMeal({
+                    ...editingMeal,
+                    allergens: event.target.value
+                      .split(";")
+                      .map((allergen) => allergen.trim())
+                      .filter(Boolean),
+                  })
+                }
+                className="sm:col-span-3"
+                placeholder="soy; sesame"
+              />
+            </div>
+            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-description" className="sm:pt-2 sm:text-right">
+                Description
+              </Label>
+              <Textarea
+                id="meal-description"
+                value={editingMeal.description || ""}
+                onChange={(event) => onUpdateMeal({ ...editingMeal, description: event.target.value })}
+                className="sm:col-span-3"
+                rows={3}
+              />
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="meal-active" className="text-right">
                 Active
@@ -147,6 +225,11 @@ export function WeeklyMenuEditDialog({
           </div>
         ) : null}
         <DialogFooter>
+          {editingMeal && onSaveAsLibraryCombo ? (
+            <Button variant="outline" onClick={onSaveAsLibraryCombo}>
+              Save as library combo
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

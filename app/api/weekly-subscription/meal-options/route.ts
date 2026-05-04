@@ -46,6 +46,12 @@ export async function POST(request: Request) {
       // as "no image" so we don't store stale empty strings on new docs.
       imageUrl: data.imageUrl ? data.imageUrl : undefined,
       imageKey: data.imageKey ? data.imageKey : undefined,
+      dishes: data.dishes,
+      calories: data.calories,
+      allergens: data.allergens,
+      description: data.description || undefined,
+      sourceComboLibraryId: data.sourceComboLibraryId || undefined,
+      sourceComboLibraryUpdatedAt: data.sourceComboLibraryUpdatedAt,
     });
 
     console.log('Created new meal option:', {

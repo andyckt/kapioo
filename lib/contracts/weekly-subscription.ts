@@ -24,6 +24,12 @@ export const createWeeklyMealOptionBodySchema = z
     active: z.boolean().optional(),
     imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
     imageKey: z.string().max(512).optional().or(z.literal("")),
+    dishes: z.array(z.string().trim().min(1)).max(20).optional(),
+    calories: z.coerce.number().nonnegative().max(10000).optional(),
+    allergens: z.array(z.string().trim().min(1)).max(20).optional(),
+    description: z.string().max(2000).optional(),
+    sourceComboLibraryId: z.string().max(120).optional(),
+    sourceComboLibraryUpdatedAt: z.coerce.date().optional(),
   })
   .refine((d) => Boolean(d.day?.trim()) || Boolean(d.deliveryDayId?.trim()), {
     message: "Name and delivery day information (day or deliveryDayId) are required",
@@ -37,6 +43,12 @@ export const updateWeeklyMealOptionBodySchema = z.object({
   active: z.boolean().optional(),
   imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
   imageKey: z.string().max(512).optional().or(z.literal("")),
+  dishes: z.array(z.string().trim().min(1)).max(20).optional(),
+  calories: z.coerce.number().nonnegative().max(10000).optional(),
+  allergens: z.array(z.string().trim().min(1)).max(20).optional(),
+  description: z.string().max(2000).optional(),
+  sourceComboLibraryId: z.string().max(120).optional(),
+  sourceComboLibraryUpdatedAt: z.coerce.date().optional(),
 });
 
 export const weeklySubscriptionCartItemSchema = z.object({

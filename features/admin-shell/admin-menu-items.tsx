@@ -8,6 +8,7 @@ import {
   DollarSign,
   Eye,
   Gift,
+  Library,
   Mail,
   Package,
   Settings,
@@ -36,6 +37,8 @@ export const adminSidebarMenuItems: AdminSidebarMenuItem[] = [
     children: [
       { id: "daily-delivery", label: "Daily Delivery", icon: <Truck className="h-4 w-4" /> },
       { id: "weekly-subscription", label: "Weekly Delivery", icon: <Gift className="h-4 w-4" /> },
+      { id: "daily-combo-library", label: "Daily Combo Library", icon: <Library className="h-4 w-4" /> },
+      { id: "weekly-combo-library", label: "Weekly Combo Library", icon: <Library className="h-4 w-4" /> },
       {
         id: "next-week-menu-email",
         label: "Next Week Menu Update Email",

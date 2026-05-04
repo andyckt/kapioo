@@ -88,6 +88,22 @@ const AdminDailyMenuTab = dynamic(
   { loading: () => <AdminTabSkeleton /> }
 )
 
+const AdminDailyComboLibraryTab = dynamic(
+  () =>
+    import("@/features/admin-daily-combo-library").then((m) => ({
+      default: m.DailyComboLibraryTab,
+    })),
+  { loading: () => <AdminTabSkeleton /> }
+)
+
+const AdminWeeklyComboLibraryTab = dynamic(
+  () =>
+    import("@/features/admin-weekly-combo-library").then((m) => ({
+      default: m.WeeklyComboLibraryTab,
+    })),
+  { loading: () => <AdminTabSkeleton /> }
+)
+
 export interface AdminDashboardTabContentProps {
   activeTab: string
   users: User[]
@@ -211,6 +227,18 @@ export function AdminDashboardTabContent(p: AdminDashboardTabContentProps) {
       {p.activeTab === "weekly-subscription" && (
         <AdminTabPanel panelKey="weekly-subscription" className="space-y-6">
           <WeeklySubscriptionManagement />
+        </AdminTabPanel>
+      )}
+
+      {p.activeTab === "daily-combo-library" && (
+        <AdminTabPanel panelKey="daily-combo-library" className="space-y-6">
+          <AdminDailyComboLibraryTab />
+        </AdminTabPanel>
+      )}
+
+      {p.activeTab === "weekly-combo-library" && (
+        <AdminTabPanel panelKey="weekly-combo-library" className="space-y-6">
+          <AdminWeeklyComboLibraryTab />
         </AdminTabPanel>
       )}
 

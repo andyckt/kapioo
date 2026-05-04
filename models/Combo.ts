@@ -16,6 +16,8 @@ export interface ComboDocument extends Document {
   };
   imageUrl?: string;
   imageKey?: string;
+  sourceComboLibraryId?: string;
+  sourceComboLibraryUpdatedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +67,12 @@ const ComboSchema = new Schema({
   },
   imageKey: {
     type: String
+  },
+  sourceComboLibraryId: {
+    type: String
+  },
+  sourceComboLibraryUpdatedAt: {
+    type: Date
   }
 }, { timestamps: true });
 

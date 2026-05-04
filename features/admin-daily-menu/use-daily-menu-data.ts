@@ -29,6 +29,12 @@ function formatCombo(combo: Record<string, unknown>): ComboItem {
     },
     imageUrl: typeof combo.imageUrl === "string" ? combo.imageUrl : undefined,
     imageKey: typeof combo.imageKey === "string" ? combo.imageKey : undefined,
+    sourceComboLibraryId:
+      typeof combo.sourceComboLibraryId === "string" ? combo.sourceComboLibraryId : undefined,
+    sourceComboLibraryUpdatedAt:
+      typeof combo.sourceComboLibraryUpdatedAt === "string" || combo.sourceComboLibraryUpdatedAt instanceof Date
+        ? combo.sourceComboLibraryUpdatedAt
+        : undefined,
   }
 }
 

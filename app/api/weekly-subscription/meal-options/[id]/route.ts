@@ -61,6 +61,16 @@ export async function PUT(request: Request, { params }: RouteContext<{ id: strin
     if (data.nameEn !== undefined) setData.nameEn = data.nameEn;
     if (data.tags !== undefined) setData.tags = data.tags;
     if (data.active !== undefined) setData.active = data.active;
+    if (data.dishes !== undefined) setData.dishes = data.dishes;
+    if (data.calories !== undefined) setData.calories = data.calories;
+    if (data.allergens !== undefined) setData.allergens = data.allergens;
+    if (data.description !== undefined) setData.description = data.description;
+    if (data.sourceComboLibraryId !== undefined) {
+      setData.sourceComboLibraryId = data.sourceComboLibraryId;
+    }
+    if (data.sourceComboLibraryUpdatedAt !== undefined) {
+      setData.sourceComboLibraryUpdatedAt = data.sourceComboLibraryUpdatedAt;
+    }
 
     // Image handling mirrors the daily combo PUT route so behavior stays consistent.
     // Empty string for imageUrl is the explicit "remove image" signal from the

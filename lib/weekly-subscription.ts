@@ -7,6 +7,21 @@ import type {
 
 export type { CartItem, DeliveryDay, DeliverySection, MealOption } from "@/lib/contracts/weekly-subscription";
 
+export type WeeklyMealOptionMutation = {
+  name?: string;
+  nameEn?: string;
+  tags?: string[];
+  active?: boolean;
+  imageUrl?: string;
+  imageKey?: string;
+  dishes?: string[];
+  calories?: number;
+  allergens?: string[];
+  description?: string;
+  sourceComboLibraryId?: string;
+  sourceComboLibraryUpdatedAt?: string | Date;
+};
+
 // Get all delivery days and meal options for admin
 export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
   try {
@@ -68,6 +83,18 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
                 : {}),
               ...(typeof option.imageKey === 'string' && option.imageKey
                 ? { imageKey: option.imageKey }
+                : {}),
+              ...(Array.isArray(option.dishes) ? { dishes: option.dishes } : {}),
+              ...(typeof option.calories === 'number' ? { calories: option.calories } : {}),
+              ...(Array.isArray(option.allergens) ? { allergens: option.allergens } : {}),
+              ...(typeof option.description === 'string' && option.description
+                ? { description: option.description }
+                : {}),
+              ...(typeof option.sourceComboLibraryId === 'string' && option.sourceComboLibraryId
+                ? { sourceComboLibraryId: option.sourceComboLibraryId }
+                : {}),
+              ...(option.sourceComboLibraryUpdatedAt
+                ? { sourceComboLibraryUpdatedAt: option.sourceComboLibraryUpdatedAt }
                 : {})
             }))
           }
@@ -133,7 +160,7 @@ export async function updateDeliveryDay(
 export async function addMealOption(
   day: string, 
   weekOffset: number, 
-  mealData: { name: string; nameEn?: string; tags?: string[]; active?: boolean; imageUrl?: string; imageKey?: string }
+  mealData: WeeklyMealOptionMutation & { name: string }
 ): Promise<any> {
   try {
     console.log('Adding meal option:', { day, weekOffset, ...mealData });
@@ -182,7 +209,7 @@ export async function addMealOption(
 }
 
 // Update a meal option
-export async function updateMealOption(id: string, data: { name?: string; nameEn?: string; tags?: string[]; active?: boolean; imageUrl?: string; imageKey?: string }): Promise<MealOption | null> {
+export async function updateMealOption(id: string, data: WeeklyMealOptionMutation): Promise<MealOption | null> {
   try {
     const response = await fetch(`/api/weekly-subscription/meal-options/${id}`, {
       method: 'PUT',

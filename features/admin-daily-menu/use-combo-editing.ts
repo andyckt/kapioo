@@ -4,6 +4,8 @@ import { useCallback, useRef, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 
 import { useToast } from "@/hooks/use-toast"
+import { mapDailyLibraryComboToDailyMenuCombo } from "@/lib/combo-library/daily/adapters"
+import type { DailyComboLibraryItem } from "@/lib/combo-library/daily/types"
 
 import { createDefaultCombo } from "./helpers"
 import type {
@@ -103,6 +105,8 @@ export function useComboEditing({
           typeB: combo.typeB,
           imageUrl: combo.imageUrl ?? "",
           imageKey: combo.imageKey ?? "",
+          sourceComboLibraryId: combo.sourceComboLibraryId,
+          sourceComboLibraryUpdatedAt: combo.sourceComboLibraryUpdatedAt,
         }),
       })
       const data = await response.json()
@@ -435,6 +439,71 @@ export function useComboEditing({
     }
   }, [selectedDay, setDays])
 
+  const addComboFromLibrary = useCallback(async (libraryItem: DailyComboLibraryItem) => {
+    if (!selectedDay) {
+      toastRef.current({
+        title: "Error",
+        description: "Please select a day first",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const newComboId = `${selectedDay}-combo-${Date.now()}`
+    const snapshot = mapDailyLibraryComboToDailyMenuCombo(libraryItem)
+
+    try {
+      const response = await fetch("/api/combos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          comboId: newComboId,
+          dayId: selectedDay,
+          ...snapshot,
+        }),
+      })
+      const data = await response.json()
+      if (!data.success) {
+        throw new Error(data.error || "Failed to insert library combo")
+      }
+
+      setDays((prev) => {
+        const day = prev[selectedDay]
+        if (!day) return prev
+        return {
+          ...prev,
+          [selectedDay]: {
+            ...day,
+            combos: [
+              ...day.combos,
+              {
+                id: newComboId,
+                comboId: newComboId,
+                ...snapshot,
+                imageUrl: snapshot.imageUrl,
+                imageKey: snapshot.imageKey,
+              },
+            ],
+          },
+        }
+      })
+
+      setEditingCombo(newComboId)
+      toastRef.current({
+        title: "Inserted from library",
+        description: "Review and adjust the menu-specific combo before publishing.",
+      })
+    } catch (error) {
+      toastRef.current({
+        title: "Error",
+        description: `Failed to insert library combo: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      })
+    }
+  }, [selectedDay, setDays])
+
   const deleteCombo = useCallback(async (comboId: string) => {
     if (!selectedDay) return
 
@@ -556,6 +625,7 @@ export function useComboEditing({
     handleSaveDishTranslation,
     addNewTag,
     addCombo,
+    addComboFromLibrary,
     deleteCombo,
     bulkAddDishes,
     syncDishesToTypeB,

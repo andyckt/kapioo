@@ -219,6 +219,7 @@ export function DailyDeliveryManagement() {
               handleSaveDishTranslation={comboEditing.handleSaveDishTranslation}
               addNewTag={comboEditing.addNewTag}
               addCombo={comboEditing.addCombo}
+              addComboFromLibrary={comboEditing.addComboFromLibrary}
               deleteCombo={comboEditing.deleteCombo}
               bulkAddDishes={comboEditing.bulkAddDishes}
               syncDishesToTypeB={comboEditing.syncDishesToTypeB}
