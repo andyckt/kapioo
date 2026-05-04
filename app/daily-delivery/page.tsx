@@ -39,6 +39,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  MenuPreviewCardButton,
+  MenuPreviewCarouselSkeleton,
+  menuPreviewCarouselRowClassName,
+} from "@/components/landing/menu-preview-carousel"
 
 // Define types for voucher plans
 interface VoucherPlan {
@@ -67,7 +72,8 @@ export default function DailyDeliveryPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
   const [weeklyMenu, setWeeklyMenu] = useState<Record<string, DayData>>({})
-  const [isMenuLoading, setIsMenuLoading] = useState(false)
+  /** Start true so menu preview shows skeleton on first paint until active-with-combos returns. */
+  const [isMenuLoading, setIsMenuLoading] = useState(true)
   const [activeWeek, setActiveWeek] = useState<number>(1)
   const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -344,9 +350,10 @@ export default function DailyDeliveryPage() {
   }, [menuDialogOpen, activeWeek, weeklyMenu, isMenuLoading])
 
   useEffect(() => {
-    if (Object.keys(weeklyMenu).length === 0 && !isMenuLoading) {
-      void fetchWeeklyMenu()
-    }
+    // Always load menu on mount for the preview carousel + dialog. Do not gate
+    // on !isMenuLoading: the preview intentionally starts with isMenuLoading true
+    // (skeleton first paint), and that guard would skip this effect entirely.
+    void fetchWeeklyMenu()
   }, [])
 
   const features = [
@@ -413,8 +420,13 @@ export default function DailyDeliveryPage() {
           date: day.date,
           displayName: day.displayName,
           combo,
-        }))
+        }        ))
     )
+
+  const showMenuPreviewSection =
+    isMenuLoading || weeklyMenuPreviewItems.length > 0
+
+  const previewLanguage = language === "zh" ? "zh" : "en"
 
   const openMenuForDay = (dayId: string) => {
     const day = weeklyMenu[dayId]
@@ -1234,9 +1246,9 @@ export default function DailyDeliveryPage() {
               </div>
             </motion.div>
             
-            {weeklyMenuPreviewItems.length > 0 ? (
-              <motion.div className="w-full" variants={fadeIn}>
-                <div className="rounded-2xl border border-[#C2884E]/10 bg-white/85 p-4 shadow-xl backdrop-blur-sm md:p-6">
+            {showMenuPreviewSection ? (
+              <motion.div className="min-w-0 w-full max-w-full self-stretch" variants={fadeIn}>
+                <div className="min-w-0 max-w-full rounded-2xl border border-[#C2884E]/10 bg-white/85 p-4 shadow-xl backdrop-blur-sm md:p-6">
                   <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#C2884E]/10 px-3 py-1 text-xs font-medium text-[#C2884E]">
@@ -1255,67 +1267,50 @@ export default function DailyDeliveryPage() {
                           : "Fresh menu weekly with two combos to choose from each day. See what's on deck for your week!"}
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      className="hidden shrink-0 border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 md:inline-flex"
-                      onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
-                    >
-                      {language === "zh" ? "查看完整菜单" : "View Full Menu"}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-4">
-                    {weeklyMenuPreviewItems.slice(0, 8).map((item) => (
-                      <button
-                        key={`${item.dayId}-${item.combo.id}`}
-                        type="button"
-                        onClick={() => openMenuForDay(item.dayId)}
-                        className="group min-w-[240px] overflow-hidden rounded-xl border border-[#F5EDE4] bg-white text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#C2884E]/30 hover:shadow-md md:min-w-0"
+                    {weeklyMenuPreviewItems.length > 0 ? (
+                      <Button
+                        variant="outline"
+                        className="hidden shrink-0 border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 md:inline-flex"
+                        onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
                       >
-                        <div className="aspect-[16/9] overflow-hidden bg-[#F5EDE4]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={item.combo.imageUrl}
-                            alt={`${translateComboName(item.combo.name)} combo`}
-                            loading="lazy"
-                            decoding="async"
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-                            onError={(event) => {
-                              event.currentTarget.closest("button")?.classList.add("hidden")
-                            }}
-                          />
-                        </div>
-                        <div className="p-4">
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="rounded-full bg-[#C2884E]/10 px-2 py-1 text-xs font-semibold text-[#C2884E]">
-                              {getPreviewDayLabel(item.displayName)} · {item.date}
-                            </span>
-                            <span className="text-xs font-medium text-[#C2884E]">
-                              {item.combo.calories} KCAL
-                            </span>
-                          </div>
-                          <h3 className="line-clamp-2 text-base font-semibold text-[#6B5F53]">
-                            {translateComboName(item.combo.name)}
-                          </h3>
-                          <p className="mt-2 text-xs text-[#6B5F53]/70">
-                            {item.combo.typeA.dishes.slice(0, 3).map(translateDishName).join(" · ")}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
+                        {language === "zh" ? "查看完整菜单" : "View Full Menu"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    ) : null}
                   </div>
 
-                  <div className="mt-5 md:hidden">
-                    <Button
-                      variant="outline"
-                      className="w-full border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5"
-                      onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
-                    >
-                      {language === "zh" ? "查看完整菜单" : "View Full Menu"}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
+                  {isMenuLoading && weeklyMenuPreviewItems.length === 0 ? (
+                    <MenuPreviewCarouselSkeleton variant="daily" />
+                  ) : (
+                    <div className={menuPreviewCarouselRowClassName}>
+                      {weeklyMenuPreviewItems.slice(0, 8).map((item) => (
+                        <MenuPreviewCardButton
+                          key={`${item.dayId}-${item.combo.id}`}
+                          language={previewLanguage}
+                          imageUrl={item.combo.imageUrl!}
+                          imageAlt={`${translateComboName(item.combo.name)} combo`}
+                          badge={`${getPreviewDayLabel(item.displayName)} · ${item.date}`}
+                          title={translateComboName(item.combo.name)}
+                          subtitle={item.combo.typeA.dishes.slice(0, 3).map(translateDishName).join(" · ")}
+                          metaRight={`${item.combo.calories} KCAL`}
+                          onClick={() => openMenuForDay(item.dayId)}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {weeklyMenuPreviewItems.length > 0 ? (
+                    <div className="mt-5 md:hidden">
+                      <Button
+                        variant="outline"
+                        className="w-full border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5"
+                        onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
+                      >
+                        {language === "zh" ? "查看完整菜单" : "View Full Menu"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               </motion.div>
             ) : null}
