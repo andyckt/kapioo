@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Copy, PackagePlus, Pencil, Upload } from "lucide-react"
+import { PackagePlus, Pencil, Trash2, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,31 +33,21 @@ export function DailyComboLibraryTab() {
     }
   }
 
-  const duplicateItem = async (item: DailyComboLibraryItem) => {
-    try {
-      const response = await fetch(`/api/admin/daily-combo-library/${encodeURIComponent(item.dailyComboLibraryId)}/duplicate`, { method: "POST" })
-      const result = await response.json()
-      if (!response.ok || !result.success) throw new Error(result.error || "Failed to duplicate combo")
-      toast({ title: "Duplicated", description: "A draft copy was created." })
-      void refresh()
-    } catch (error) {
-      toast({ title: "Duplicate failed", description: error instanceof Error ? error.message : "Could not duplicate combo", variant: "destructive" })
+  const deleteItem = async (item: DailyComboLibraryItem) => {
+    const itemName = item.internalName || item.name || item.dailyComboLibraryId
+    if (!window.confirm(`Delete "${itemName}" from the Daily Combo Library? This cannot be undone.`)) {
+      return
     }
-  }
-
-  const setStatus = async (item: DailyComboLibraryItem, status: DailyComboLibraryItem["status"]) => {
     try {
       const response = await fetch(`/api/admin/daily-combo-library/${encodeURIComponent(item.dailyComboLibraryId)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        method: "DELETE",
       })
       const result = await response.json()
-      if (!response.ok || !result.success) throw new Error(result.error || "Failed to update status")
-      toast({ title: "Updated", description: `Combo marked as ${status}.` })
+      if (!response.ok || !result.success) throw new Error(result.error || "Failed to delete combo")
+      toast({ title: "Deleted", description: "Daily combo removed from the library." })
       void refresh()
     } catch (error) {
-      toast({ title: "Update failed", description: error instanceof Error ? error.message : "Could not update status", variant: "destructive" })
+      toast({ title: "Delete failed", description: error instanceof Error ? error.message : "Could not delete combo", variant: "destructive" })
     }
   }
 
@@ -80,7 +70,7 @@ export function DailyComboLibraryTab() {
         {items.map((item) => (
           <Card key={item.dailyComboLibraryId}>
             <CardHeader className="pb-3"><div className="flex gap-4">{item.imageUrl ? <img src={item.imageUrl} alt={`${item.internalName || item.name} preview`} className="h-24 w-32 rounded-lg object-cover" /> : <div className="flex h-24 w-32 items-center justify-center rounded-lg bg-muted text-xs">No image</div>}<div className="min-w-0 flex-1"><CardTitle className="text-lg">{item.internalName || item.name}</CardTitle><p className="text-xs text-muted-foreground">{item.dailyComboLibraryId}</p><div className="mt-2 flex flex-wrap gap-1"><Badge>{item.status}</Badge><Badge variant="outline">{item.calories} kcal</Badge></div></div></div></CardHeader>
-            <CardContent className="space-y-3"><div className="grid gap-2 text-sm md:grid-cols-2"><p><span className="font-medium">A:</span> {item.typeADishes.slice(0, 4).join(" / ") || "-"}</p><p><span className="font-medium">B:</span> {item.typeBDishes.slice(0, 4).join(" / ") || "-"}</p></div><div className="flex flex-wrap gap-1">{item.tags.slice(0, 5).map((tag) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div><div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => void editItem(item)}><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void duplicateItem(item)}><Copy className="mr-2 h-4 w-4" />Duplicate</Button><Button type="button" size="sm" variant="outline" onClick={() => void setStatus(item, item.status === "archived" ? "active" : "archived")}>{item.status === "archived" ? "Restore" : "Archive"}</Button></div></CardContent>
+            <CardContent className="space-y-3"><div className="grid gap-2 text-sm md:grid-cols-2"><p><span className="font-medium">A:</span> {item.typeADishes.slice(0, 4).join(" / ") || "-"}</p><p><span className="font-medium">B:</span> {item.typeBDishes.slice(0, 4).join(" / ") || "-"}</p></div><div className="flex flex-wrap gap-1">{item.tags.slice(0, 5).map((tag) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div><div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => void editItem(item)}><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button type="button" size="sm" variant="destructive" onClick={() => void deleteItem(item)}><Trash2 className="mr-2 h-4 w-4" />Delete</Button></div></CardContent>
           </Card>
         ))}
       </div>
