@@ -140,6 +140,13 @@ describe("content contracts", () => {
       expect(parsed.imageKey).toBe("")
     })
 
+    it("accepts featuredInMenuPreview", () => {
+      const parsed = updateWeeklyMealOptionBodySchema.parse({
+        featuredInMenuPreview: true,
+      })
+      expect(parsed.featuredInMenuPreview).toBe(true)
+    })
+
     it("accepts a valid image URL/key", () => {
       const parsed = updateWeeklyMealOptionBodySchema.parse({
         imageUrl: "https://example.com/weekly-meal-images/abc/xyz.jpg",

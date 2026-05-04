@@ -6,7 +6,6 @@ import type { WeeklyComboLibraryItem } from "@/lib/combo-library/weekly/types"
 
 type Filters = {
   q?: string
-  status?: "active" | "archived" | "draft" | ""
   sort?: "updated-desc" | "created-desc" | "name-asc" | "calories-asc" | "calories-desc"
   page?: number
   limit?: number

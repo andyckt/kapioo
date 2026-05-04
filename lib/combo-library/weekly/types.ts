@@ -1,5 +1,3 @@
-import type { ComboLibraryStatus } from "@/lib/combo-library/shared/constants"
-
 export type WeeklyComboLibraryItem = {
   _id?: string
   weeklyComboLibraryId: string
@@ -12,7 +10,6 @@ export type WeeklyComboLibraryItem = {
   calories?: number
   tags: string[]
   allergens: string[]
-  status: ComboLibraryStatus
   createdAt?: string | Date
   updatedAt?: string | Date
   createdBy?: string

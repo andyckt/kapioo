@@ -116,7 +116,7 @@ export async function DELETE(
 
     const reference = await WeeklyMealOption.exists({ sourceComboLibraryId: weeklyComboLibraryId })
     if (reference) {
-      return errorJson("This combo is already used by a Weekly menu. Archive it instead.", 409)
+      return errorJson("This combo is already used by a Weekly menu and cannot be deleted.", 409)
     }
 
     const item = await WeeklyComboLibraryItem.findOneAndDelete({ weeklyComboLibraryId })

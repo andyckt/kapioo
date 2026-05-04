@@ -71,6 +71,9 @@ export async function PUT(request: Request, { params }: RouteContext<{ id: strin
     if (data.calories !== undefined) setData.calories = data.calories;
     if (data.allergens !== undefined) setData.allergens = data.allergens;
     if (data.description !== undefined) setData.description = data.description;
+    if (data.featuredInMenuPreview !== undefined) {
+      setData.featuredInMenuPreview = data.featuredInMenuPreview;
+    }
     if (data.sourceComboLibraryId !== undefined) {
       setData.sourceComboLibraryId = data.sourceComboLibraryId;
     }

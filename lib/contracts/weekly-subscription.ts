@@ -27,6 +27,7 @@ export const createWeeklyMealOptionBodySchema = z
     calories: z.coerce.number().nonnegative().max(10000).optional(),
     allergens: z.array(z.string().trim().min(1)).max(20).optional(),
     description: z.string().max(2000).optional(),
+    featuredInMenuPreview: z.boolean().optional(),
     sourceComboLibraryId: z.string().max(120).optional(),
     sourceComboLibraryUpdatedAt: z.coerce.date().optional(),
   })
@@ -45,6 +46,7 @@ export const updateWeeklyMealOptionBodySchema = z.object({
   calories: z.coerce.number().nonnegative().max(10000).optional(),
   allergens: z.array(z.string().trim().min(1)).max(20).optional(),
   description: z.string().max(2000).optional(),
+  featuredInMenuPreview: z.boolean().optional(),
   sourceComboLibraryId: z.string().max(120).optional(),
   sourceComboLibraryUpdatedAt: z.coerce.date().optional(),
 });

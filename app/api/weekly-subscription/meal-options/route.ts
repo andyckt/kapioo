@@ -56,6 +56,8 @@ export async function POST(request: Request) {
       calories: data.calories,
       allergens: data.allergens,
       description: data.description || undefined,
+      featuredInMenuPreview:
+        data.featuredInMenuPreview !== undefined ? data.featuredInMenuPreview : false,
       sourceComboLibraryId: data.sourceComboLibraryId || undefined,
       sourceComboLibraryUpdatedAt: data.sourceComboLibraryUpdatedAt,
     });

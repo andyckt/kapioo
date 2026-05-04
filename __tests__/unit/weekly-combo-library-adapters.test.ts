@@ -11,7 +11,6 @@ const baseItem: WeeklyComboLibraryItem = {
   internalName: "周餐素材",
   tags: ["高蛋白"],
   allergens: ["soy"],
-  status: "active",
   calories: 650,
   imageUrl: "https://example.com/image.jpg",
   imageKey: "weekly-combo-library-images/combo-1/image.jpg",

@@ -74,10 +74,13 @@ Design so the effect runs only when it should. If you get this right, you won't 
 
 ## 7. Single source of truth
 
-**In general:** For every edit, consider whether single source of truth applies. Can this logic, data, or definition live in one place and be reused? Apply where it makes sense for efficiency and maintainability.
+**Mandatory architecture rule:** Every new feature must start by identifying the canonical owner for its data, types, validation, formatting, and UI behavior. If the same field or rule crosses model → API → client → admin UI, create or extend a shared contract/formatter/service instead of hand-copying one-off shapes in many files. Do not finish with scattered duplicated logic when a shared module can own it.
+
+Before editing, answer: "Where is the source of truth, and which callers should reuse it?" If the answer is unclear, stop and create the shared source first.
 
 - **Plans**: Use `lib/plans/catalog.ts` and service helpers. No hardcoded plan IDs, prices, or counts elsewhere (see plan-catalog-update-playbook).
 - **Shared data**: User profile, dish translations, settings — fetch once, pass down. No redundant fetches for the same data.
+- **Contracts and formatting**: API request/response shapes must be typed and formatted in one shared place where practical; admin and public endpoints should not drift by manually retyping the same fields.
 - **Other**: Validation rules, error messages, constants — if the same logic appears in multiple places, centralize it in `lib/` or a shared module.
 
 ## 8. Structure

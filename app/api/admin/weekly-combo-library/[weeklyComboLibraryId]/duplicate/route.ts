@@ -24,7 +24,6 @@ async function createDuplicate(original: Record<string, unknown>, actorId: unkno
         weeklyComboLibraryId,
         name: baseName,
         internalName: baseName,
-        status: "draft",
         imageUrl: undefined,
         imageKey: undefined,
         createdBy: actorId,

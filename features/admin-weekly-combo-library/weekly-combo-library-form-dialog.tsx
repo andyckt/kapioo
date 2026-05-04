@@ -30,7 +30,6 @@ const EMPTY_FORM: Partial<WeeklyComboLibraryItem> = {
   nameEn: "",
   tags: [],
   allergens: [],
-  status: "active",
 }
 
 function splitLines(value: string) {
@@ -53,7 +52,6 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
       ...(item ?? {}),
       tags: item?.tags ?? [],
       allergens: item?.allergens ?? [],
-      status: item?.status ?? "active",
     })
   }, [item, open])
 

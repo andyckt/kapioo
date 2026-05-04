@@ -5,7 +5,6 @@ import {
   comboLibrarySortSchema,
   compactStringArraySchema,
   optionalTrimmedString,
-  statusSchema,
 } from "@/lib/combo-library/shared/zod-helpers"
 
 export const weeklyComboLibraryItemBodySchema = z.object({
@@ -19,14 +18,12 @@ export const weeklyComboLibraryItemBodySchema = z.object({
   calories: z.coerce.number().nonnegative().max(10000).optional(),
   tags: compactStringArraySchema,
   allergens: compactStringArraySchema,
-  status: statusSchema.default("active"),
 })
 
 export const weeklyComboLibraryItemUpdateSchema = weeklyComboLibraryItemBodySchema.partial()
 
 export const weeklyComboLibraryListQuerySchema = paginationQuerySchema.extend({
   q: z.string().trim().max(200).optional(),
-  status: statusSchema.optional(),
   tags: z.string().trim().max(500).optional(),
   allergens: z.string().trim().max(500).optional(),
   sort: comboLibrarySortSchema,

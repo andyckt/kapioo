@@ -186,6 +186,31 @@ export function WeeklyMenuEditDialog({
                 rows={3}
               />
             </div>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="meal-carousel-preview" className="pt-2 text-right">
+                Carousel preview
+              </Label>
+              <div className="col-span-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="meal-carousel-preview"
+                    checked={Boolean(editingMeal.featuredInMenuPreview)}
+                    disabled={!editingMeal.imageUrl?.trim()}
+                    onCheckedChange={(checked) =>
+                      onUpdateMeal({ ...editingMeal, featuredInMenuPreview: checked })
+                    }
+                  />
+                  <Label htmlFor="meal-carousel-preview" className="text-sm font-normal">
+                    Include on weekly product carousel
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Turn on after the combo has a photo. When any combo is flagged in the Weekly Menu Box,
+                  only flagged combos appear on the `/weekly-meal` preview strip. If none are flagged in the
+                  current menu yet, photos with meals keep showing automatically (prior behaviour).
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="meal-active" className="text-right">
                 Active

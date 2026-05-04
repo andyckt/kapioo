@@ -42,7 +42,8 @@ import {
 import {
   MenuPreviewCardButton,
   MenuPreviewCarouselSkeleton,
-  menuPreviewCarouselRowClassName,
+  MenuPreviewCarouselViewport,
+  menuPreviewCarouselRowInsetClassName,
 } from "@/components/landing/menu-preview-carousel"
 
 // Define types for voucher plans
@@ -1264,9 +1265,12 @@ export default function DailyDeliveryPage() {
                   </div>
 
                   {isMenuLoading && weeklyMenuPreviewItems.length === 0 ? (
-                    <MenuPreviewCarouselSkeleton variant="daily" />
+                    <MenuPreviewCarouselSkeleton
+                      variant="daily"
+                      rowClassName={menuPreviewCarouselRowInsetClassName}
+                    />
                   ) : (
-                    <div className={menuPreviewCarouselRowClassName}>
+                    <MenuPreviewCarouselViewport rowClassName={menuPreviewCarouselRowInsetClassName}>
                       {weeklyMenuPreviewItems.slice(0, 8).map((item) => (
                         <MenuPreviewCardButton
                           key={`${item.dayId}-${item.combo.id}`}
@@ -1280,7 +1284,7 @@ export default function DailyDeliveryPage() {
                           onClick={() => openMenuForDay(item.dayId)}
                         />
                       ))}
-                    </div>
+                    </MenuPreviewCarouselViewport>
                   )}
 
                   {weeklyMenuPreviewItems.length > 0 ? (

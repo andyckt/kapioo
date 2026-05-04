@@ -12,6 +12,8 @@ export interface IWeeklyMealOption extends Document {
   calories?: number;
   allergens?: string[];
   description?: string;
+  /** When true, combo is eligible for the weekly landing menu preview carousel (requires image). */
+  featuredInMenuPreview?: boolean;
   sourceComboLibraryId?: string;
   sourceComboLibraryUpdatedAt?: Date;
   createdAt: Date;
@@ -57,6 +59,10 @@ const WeeklyMealOptionSchema: Schema = new Schema(
       type: String,
       required: false,
     },
+    featuredInMenuPreview: {
+      type: Boolean,
+      default: false,
+    },
     sourceComboLibraryId: {
       type: String,
       required: false,
@@ -71,6 +77,18 @@ const WeeklyMealOptionSchema: Schema = new Schema(
   }
 );
 
-// Create model if it doesn't exist already (for Next.js hot reloading)
-// Explicitly specify the collection name to ensure consistency
+/**
+ * Next dev/hot reload can keep an older compiled Mongoose model around after
+ * adding a schema path. If that happens, strict updates silently drop the new
+ * field and admin toggles appear to "reset" after the next refetch.
+ */
+const existingWeeklyMealOptionModel = mongoose.models.WeeklyMealOption;
+if (
+  existingWeeklyMealOptionModel &&
+  !existingWeeklyMealOptionModel.schema.path('featuredInMenuPreview')
+) {
+  delete mongoose.models.WeeklyMealOption;
+}
+
+// Explicitly specify the collection name to ensure consistency.
 export default mongoose.models.WeeklyMealOption || mongoose.model<IWeeklyMealOption>('WeeklyMealOption', WeeklyMealOptionSchema, 'weeklymealOptions');

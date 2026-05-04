@@ -36,7 +36,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import {
   MenuPreviewCardButton,
   MenuPreviewCarouselSkeleton,
-  menuPreviewCarouselRowClassName,
+  MenuPreviewCarouselViewport,
+  menuPreviewCarouselRowInsetClassName,
 } from "@/components/landing/menu-preview-carousel"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -80,8 +81,8 @@ export default function WeeklyMealPage() {
     calories?: number;
     allergens?: string[];
     description?: string;
-    /** Optional public image URL for the meal option (S3-backed). */
-    imageUrl?: string;
+    /** When true from admin, included in homepage menu preview carousel (still needs photo). */
+    featuredInMenuPreview?: boolean;
   }
   
   interface MenuDay {
@@ -270,13 +271,16 @@ export default function WeeklyMealPage() {
     }
   ]
 
-  // Build the carousel items: only week-1 options that have an image.
-  // Sorting (sunday → tuesday) matches the dialog so clicking a card opens the
-  // expected day. We render at most 8 cards to keep the section visually tight.
+  // Carousel: if admins flag at least one combo for the homepage strip (`featuredInMenuPreview`),
+  // only those flagged combos WITH a photo are shown (honours curation; fix photos if strip is empty).
+  // Before any flags exist on the fetched menu: every combo with an image qualifies (legacy).
   const weekDayOrder: Record<string, number> = { sunday: 0, tuesday: 1 }
-  const weeklyMenuPreviewItems = weeklyMenu
-    .filter((day) => day.weekOffset === 0)
-    .sort((a, b) => (weekDayOrder[a.id] ?? 99) - (weekDayOrder[b.id] ?? 99))
+  const carouselRowsWithImage = [...weeklyMenu]
+    .sort((a, b) => {
+      const w = (a.weekOffset ?? 0) - (b.weekOffset ?? 0)
+      if (w !== 0) return w
+      return (weekDayOrder[a.id] ?? 99) - (weekDayOrder[b.id] ?? 99)
+    })
     .flatMap((day) =>
       day.options
         .filter((option) => Boolean(option.imageUrl))
@@ -288,14 +292,30 @@ export default function WeeklyMealPage() {
         }))
     )
 
+  /** True if admin has flagged at least one combo for the preview strip anywhere in the loaded menu */
+  const menuPreviewCarouselIsCurated = weeklyMenu.some((day) =>
+    day.options.some((opt) => opt.featuredInMenuPreview === true)
+  )
+
+  const carouselRowsFeaturedOnly = carouselRowsWithImage.filter(
+    (row) => row.option.featuredInMenuPreview === true
+  )
+
+  const weeklyMenuPreviewItems = menuPreviewCarouselIsCurated
+    ? carouselRowsFeaturedOnly
+    : carouselRowsWithImage
+
   const previewLanguage = language === "zh" ? "zh" : "en"
 
   const showMenuPreviewSection = isMenuLoading || weeklyMenuPreviewItems.length > 0
 
-  // Open the existing dialog and select the day the carousel card belongs to.
-  // Falls back to the first day if the user hasn't chosen anything yet.
+  // Open the dialog on the tab + day that owns this carousel card (not always "this week").
   const openMenuDialogForDay = (dayUniqueId: string) => {
-    setActiveWeek(1)
+    const target = weeklyMenu.find(
+      (d) => d.uniqueId === dayUniqueId || d.id === dayUniqueId
+    )
+    const w = typeof target?.weekOffset === 'number' ? target.weekOffset : 0
+    setActiveWeek(w + 1)
     setSelectedMenuDay(dayUniqueId)
     setMenuDialogOpen(true)
   }
@@ -918,10 +938,13 @@ export default function WeeklyMealPage() {
                   </div>
 
                   {isMenuLoading && weeklyMenuPreviewItems.length === 0 ? (
-                    <MenuPreviewCarouselSkeleton variant="weekly" />
+                    <MenuPreviewCarouselSkeleton
+                      variant="weekly"
+                      rowClassName={menuPreviewCarouselRowInsetClassName}
+                    />
                   ) : (
-                    <div className={menuPreviewCarouselRowClassName}>
-                      {weeklyMenuPreviewItems.slice(0, 8).map((item) => (
+                    <MenuPreviewCarouselViewport rowClassName={menuPreviewCarouselRowInsetClassName}>
+                      {weeklyMenuPreviewItems.map((item) => (
                         <MenuPreviewCardButton
                           key={`${item.dayUniqueId}-${item.option.id}`}
                           language={previewLanguage}
@@ -936,7 +959,7 @@ export default function WeeklyMealPage() {
                           onClick={() => openMenuDialogForDay(item.dayUniqueId)}
                         />
                       ))}
-                    </div>
+                    </MenuPreviewCarouselViewport>
                   )}
 
                   {weeklyMenuPreviewItems.length > 0 ? (

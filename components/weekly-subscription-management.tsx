@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight, Languages, Mail, Send, AlertCircle, CheckCircle, XCircle, Package } from "lucide-react"
+import { Calendar, Edit, Plus, Trash2, Loader2, Save, RefreshCcw, History, ChevronLeft, ChevronRight, Languages, Mail, Send, AlertCircle, CheckCircle, XCircle, Package, PanelsTopLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -222,6 +222,7 @@ export function WeeklySubscriptionManagement() {
                 calories: opt.calories,
                 allergens: opt.allergens,
                 description: opt.description,
+                featuredInMenuPreview: opt.featuredInMenuPreview === true,
                 sourceComboLibraryId: opt.sourceComboLibraryId,
                 sourceComboLibraryUpdatedAt: opt.sourceComboLibraryUpdatedAt,
               }))
@@ -265,6 +266,7 @@ export function WeeklySubscriptionManagement() {
               calories: option.calories,
               allergens: option.allergens,
               description: option.description,
+              featuredInMenuPreview: option.featuredInMenuPreview === true,
               sourceComboLibraryId: option.sourceComboLibraryId,
               sourceComboLibraryUpdatedAt: option.sourceComboLibraryUpdatedAt,
             }),
@@ -321,6 +323,7 @@ export function WeeklySubscriptionManagement() {
               calories: option.calories,
               allergens: option.allergens,
               description: option.description,
+              featuredInMenuPreview: option.featuredInMenuPreview === true,
               sourceComboLibraryId: option.sourceComboLibraryId,
               sourceComboLibraryUpdatedAt: option.sourceComboLibraryUpdatedAt,
             }),
@@ -516,6 +519,79 @@ export function WeeklySubscriptionManagement() {
     }
   }
   
+  // Toggle homepage menu-preview carousel flag (requires meal photo)
+  const toggleMealMenuPreviewFeatured = async (sectionId: string, mealId: string) => {
+    const section = deliverySections.find((s) => s.id === sectionId)
+    if (!section) return
+    const meal = section.day.options.find((o) => o.id === mealId)
+    if (!meal) return
+
+    const current = meal.featuredInMenuPreview === true
+    const next = !current
+
+    setDeliverySections((sections) =>
+      sections.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              day: {
+                ...s.day,
+                options: s.day.options.map((o) =>
+                  o.id === mealId ? { ...o, featuredInMenuPreview: next } : o,
+                ),
+              },
+            }
+          : s,
+      ),
+    )
+
+    const updatedMeal = await updateMealOption(mealId, {
+      featuredInMenuPreview: next,
+    })
+
+    if (updatedMeal) {
+      setDeliverySections((sections) =>
+        sections.map((s) => ({
+          ...s,
+          day: {
+            ...s.day,
+            options: s.day.options.map((o) =>
+              o.id === mealId
+                ? {
+                    ...o,
+                    ...updatedMeal,
+                    id: o.id,
+                    featuredInMenuPreview: updatedMeal.featuredInMenuPreview === true,
+                  }
+                : o,
+            ),
+          },
+        })),
+      )
+    } else {
+      setDeliverySections((sections) =>
+        sections.map((s) =>
+          s.id === sectionId
+            ? {
+                ...s,
+                day: {
+                  ...s.day,
+                  options: s.day.options.map((o) =>
+                    o.id === mealId ? { ...o, featuredInMenuPreview: current } : o,
+                  ),
+                },
+              }
+            : s,
+        ),
+      )
+      toast({
+        title: "Failed to update",
+        description: "Could not save carousel preference",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Open edit dialog for a meal
   const handleEditMeal = (meal: MealOption) => {
     setEditingMeal({ ...meal })
@@ -672,6 +748,7 @@ export function WeeklySubscriptionManagement() {
       calories: editingMeal.calories,
       allergens: editingMeal.allergens,
       description: editingMeal.description,
+      featuredInMenuPreview: Boolean(editingMeal.featuredInMenuPreview),
       sourceComboLibraryId: editingMeal.sourceComboLibraryId,
       sourceComboLibraryUpdatedAt: editingMeal.sourceComboLibraryUpdatedAt,
     });
@@ -785,6 +862,7 @@ export function WeeklySubscriptionManagement() {
             description: result.mealOption.description,
             sourceComboLibraryId: result.mealOption.sourceComboLibraryId,
             sourceComboLibraryUpdatedAt: result.mealOption.sourceComboLibraryUpdatedAt,
+            featuredInMenuPreview: Boolean(result.mealOption.featuredInMenuPreview),
           })
         } else {
           failures.push({ name: item.internalName || item.name, error: "No meal option returned" })
@@ -1330,6 +1408,14 @@ export function WeeklySubscriptionManagement() {
                                 {option.tags?.map((tag) => (
                                   <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
                                 ))}
+                                {option.featuredInMenuPreview === true ? (
+                                  <Badge
+                                    variant="secondary"
+                                    className="border border-[#C2884E]/30 bg-[#C2884E]/10 text-[10px] font-medium text-[#7c4f2e]"
+                                  >
+                                    Carousel
+                                  </Badge>
+                                ) : null}
                               </div>
                             </>
                           )}
@@ -1346,6 +1432,34 @@ export function WeeklySubscriptionManagement() {
                             </Label>
                           </div>
                           <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant={
+                                option.featuredInMenuPreview === true ? "secondary" : "ghost"
+                              }
+                              size="icon"
+                              disabled={!option.imageUrl?.trim()}
+                              onClick={() => void toggleMealMenuPreviewFeatured(section.id, option.id)}
+                              className={`h-8 w-8 shrink-0 ${
+                                option.featuredInMenuPreview === true
+                                  ? "border border-[#C2884E]/35 bg-[#C2884E]/12 text-[#7c4f2e]"
+                                  : ""
+                              }`}
+                              title={
+                                !option.imageUrl?.trim()
+                                  ? "Upload a meal photo first — carousel cards need an image."
+                                  : option.featuredInMenuPreview === true
+                                    ? "Remove from weekly product page carousel"
+                                    : "Show on weekly product page carousel"
+                              }
+                              aria-label={
+                                option.featuredInMenuPreview === true
+                                  ? "Remove from carousel"
+                                  : "Add to carousel"
+                              }
+                            >
+                              <PanelsTopLeft className="h-4 w-4" />
+                            </Button>
                             <Button 
                               variant={editingEnglishForMealId === option.id ? "default" : "ghost"} 
                               size="icon" 

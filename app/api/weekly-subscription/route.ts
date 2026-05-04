@@ -49,6 +49,7 @@ function formatDeliveryDaysForAdmin(deliveryDays: WeeklyDeliveryDayRecord[]) {
       calories: option.calories,
       allergens: option.allergens,
       description: option.description,
+      featuredInMenuPreview: Boolean(option.featuredInMenuPreview),
       sourceComboLibraryId: option.sourceComboLibraryId,
       sourceComboLibraryUpdatedAt: option.sourceComboLibraryUpdatedAt,
       createdAt: option.createdAt,

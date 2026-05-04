@@ -33,6 +33,7 @@ export const mealOptionSchema = z.object({
   calories: z.number().optional(),
   allergens: z.array(z.string()).optional(),
   description: z.string().optional(),
+  featuredInMenuPreview: z.boolean().optional(),
   sourceComboLibraryId: z.string().optional(),
   sourceComboLibraryUpdatedAt: z.string().or(z.date()).optional(),
 });

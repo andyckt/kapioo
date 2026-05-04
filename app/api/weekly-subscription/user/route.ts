@@ -223,6 +223,7 @@ export async function GET() {
         ...(typeof option.description === 'string' && option.description.trim()
           ? { description: option.description }
           : {}),
+        ...(option.featuredInMenuPreview === true ? { featuredInMenuPreview: true } : {}),
         ...(typeof option.imageUrl === 'string' && option.imageUrl
           ? { imageUrl: option.imageUrl }
           : {}),

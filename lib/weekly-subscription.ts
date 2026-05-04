@@ -17,6 +17,7 @@ export type WeeklyMealOptionMutation = {
   calories?: number;
   allergens?: string[];
   description?: string;
+  featuredInMenuPreview?: boolean;
   sourceComboLibraryId?: string;
   sourceComboLibraryUpdatedAt?: string | Date;
 };
@@ -88,6 +89,7 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
               ...(typeof option.description === 'string' && option.description
                 ? { description: option.description }
                 : {}),
+              featuredInMenuPreview: Boolean(option.featuredInMenuPreview),
               ...(typeof option.sourceComboLibraryId === 'string' && option.sourceComboLibraryId
                 ? { sourceComboLibraryId: option.sourceComboLibraryId }
                 : {}),

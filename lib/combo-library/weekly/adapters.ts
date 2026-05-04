@@ -56,6 +56,5 @@ export function mapWeeklyMenuOptionToWeeklyLibraryDraft(
     calories: option.calories,
     allergens: option.allergens ?? [],
     description: option.description,
-    status: "draft",
   }
 }
