@@ -14,6 +14,12 @@ import {
   useOptionalUserProfile,
 } from '@/lib/dashboard-user-profile'
 import { getCutoffTime, type CutoffTime } from '@/lib/cutoff-time'
+import {
+  formatDailyCombo,
+  type CartItem,
+  type ComboType,
+  type DayData,
+} from '@/lib/daily-delivery'
 import { getDeliveryDayAvailability } from '@/lib/orders/delivery-day-availability'
 import { MenuUpdateBanner } from '@/components/menu-update-banner'
 import { DailyComboGrid } from '@/features/daily-ordering/daily-combo-grid'
@@ -30,43 +36,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-// Type definitions
-type ComboType = 'A' | 'B'
-type ComboItem = {
-  id: string
-  name: string
-  calories: number
-  tags: string[]
-  typeA: {
-    dishes: string[]
-    voucherType: 'twoDish'
-  }
-  typeB: {
-    dishes: string[]
-    voucherType: 'threeDish'
-  }
-}
-
-type DayData = {
-  date: string
-  displayName: string
-  week: number
-  combos: ComboItem[]
-}
-
 type MenuDataResult = {
   currentDates: string
   formattedDays: Record<string, DayData>
-}
-
-type CartItem = {
-  day: string
-  date: string
-  comboId: string
-  comboName: string
-  type: ComboType
-  quantity: number
-  voucherType: 'twoDish' | 'threeDish'
 }
 
 // Helper function to convert English day names to Chinese
@@ -322,14 +294,7 @@ export default function DailyDelivery() {
               date: day.date,
               displayName: day.displayName,
               week: day.week,
-              combos: day.combos.map((combo: any) => ({
-                id: combo.comboId,
-                name: combo.name,
-                calories: combo.calories,
-                tags: combo.tags,
-                typeA: combo.typeA,
-                typeB: combo.typeB
-              }))
+              combos: Array.isArray(day.combos) ? day.combos.map(formatDailyCombo) : []
             };
           });
           
@@ -376,14 +341,7 @@ export default function DailyDelivery() {
               if (options?.signal?.aborted) return null
               
               if (combosData.success) {
-                const formattedCombos = combosData.data.map((combo: any) => ({
-                  id: combo.comboId,
-                  name: combo.name,
-                  calories: combo.calories,
-                  tags: combo.tags,
-                  typeA: combo.typeA,
-                  typeB: combo.typeB
-                }));
+                const formattedCombos = combosData.data.map(formatDailyCombo);
                 
                 return {
                   dayId: day.dayId,
@@ -674,22 +632,6 @@ export default function DailyDelivery() {
         open={showRegionDialog}
         onClose={() => setShowRegionDialog(false)}
         currentRegion={userRegion}
-        userId={sharedUserProfile?.userData?._id}
-        onRegionUpdated={() => {
-          const id = sharedUserProfile?.userData?._id
-          if (id) {
-            void fetchUserData(id)
-            return
-          }
-          try {
-            const raw = localStorage.getItem("user")
-            if (!raw) return
-            const parsed = JSON.parse(raw) as { _id?: string }
-            if (parsed?._id) void fetchUserData(parsed._id)
-          } catch {
-            // ignore
-          }
-        }}
       />
       
       {/* Menu Update Notification Banner */}

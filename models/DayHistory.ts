@@ -21,6 +21,8 @@ export interface DayHistoryDocument extends Document {
       dishes: string[];
       voucherType: 'threeDish';
     };
+    imageUrl?: string;
+    imageKey?: string;
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -75,7 +77,9 @@ const DayHistorySchema = new Schema({
         type: String,
         default: 'threeDish'
       }
-    }
+    },
+    imageUrl: String,
+    imageKey: String
   }]
 }, { timestamps: true });
 

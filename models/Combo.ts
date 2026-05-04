@@ -14,6 +14,8 @@ export interface ComboDocument extends Document {
     dishes: string[];
     voucherType: 'threeDish';
   };
+  imageUrl?: string;
+  imageKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +59,12 @@ const ComboSchema = new Schema({
       type: String,
       default: 'threeDish'
     }
+  },
+  imageUrl: {
+    type: String
+  },
+  imageKey: {
+    type: String
   }
 }, { timestamps: true });
 

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { ComboImageEditor } from "./combo-image-editor"
 import { sortDaysByWeekAndName } from "./helpers"
 import type { ComboItem, DayData, EditingDishState, EditingDishTranslationState } from "./types"
 
@@ -356,6 +357,11 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                         />
                       </div>
                     </div>
+
+                    <ComboImageEditor
+                      combo={combo}
+                      onChange={(updates) => props.updateCombo(props.selectedDay, combo.id, updates)}
+                    />
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">

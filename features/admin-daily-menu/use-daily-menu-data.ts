@@ -27,6 +27,8 @@ function formatCombo(combo: Record<string, unknown>): ComboItem {
       voucherType:
         (combo.typeB as { voucherType?: "threeDish" } | undefined)?.voucherType || "threeDish",
     },
+    imageUrl: typeof combo.imageUrl === "string" ? combo.imageUrl : undefined,
+    imageKey: typeof combo.imageKey === "string" ? combo.imageKey : undefined,
   }
 }
 

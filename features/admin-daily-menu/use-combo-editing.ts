@@ -101,6 +101,8 @@ export function useComboEditing({
           tags: combo.tags,
           typeA: combo.typeA,
           typeB: combo.typeB,
+          imageUrl: combo.imageUrl ?? "",
+          imageKey: combo.imageKey ?? "",
         }),
       })
       const data = await response.json()

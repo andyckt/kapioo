@@ -15,12 +15,14 @@ import {
   ChevronLeft,
   CalendarDays,
   Menu,
+  Sparkles,
   Ticket
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/lib/language-context'
 import { useSmartBack } from '@/hooks/use-smart-back'
+import { formatDailyCombo, type DayData } from '@/lib/daily-delivery'
 import { getDailyDeliveryState, setDailyDeliveryState } from '@/lib/plan-flow-state'
 import { listDailyPlans } from '@/lib/plans/service'
 import {
@@ -51,29 +53,6 @@ interface VoucherPlan {
   originalQuantity?: string;
   displayPricePerMeal?: string;
   originalPricePerMeal?: string;
-}
-
-// Define types for the weekly menu
-interface ComboItem {
-  id: string;
-  name: string;
-  calories: number;
-  tags: string[];
-  typeA: {
-    dishes: string[];
-    voucherType: 'twoDish';
-  };
-  typeB: {
-    dishes: string[];
-    voucherType: 'threeDish';
-  };
-}
-
-interface DayData {
-  date: string;
-  displayName: string;
-  week: number;
-  combos: ComboItem[];
 }
 
 export default function DailyDeliveryPage() {
@@ -251,14 +230,7 @@ export default function DailyDeliveryPage() {
                 date: day.date,
                 displayName: day.displayName,
                 week: day.week,
-                combos: day.combos.map((combo: any) => ({
-                  id: combo.comboId,
-                  name: combo.name,
-                  calories: combo.calories,
-                  tags: combo.tags,
-                  typeA: combo.typeA,
-                  typeB: combo.typeB
-                }))
+                combos: Array.isArray(day.combos) ? day.combos.map(formatDailyCombo) : []
               }
             }
           })
@@ -285,14 +257,7 @@ export default function DailyDeliveryPage() {
                 const combosData = await combosResponse.json()
                 
                 if (combosData.success) {
-                  const formattedCombos = combosData.data.map((combo: any) => ({
-                    id: combo.comboId,
-                    name: combo.name,
-                    calories: combo.calories,
-                    tags: combo.tags,
-                    typeA: combo.typeA,
-                    typeB: combo.typeB
-                  }))
+                  const formattedCombos = combosData.data.map(formatDailyCombo)
                   
                   return {
                     dayId: day.dayId,
@@ -332,7 +297,7 @@ export default function DailyDeliveryPage() {
   // Load menu data when dialog opens and initialize selected day
   useEffect(() => {
     if (menuDialogOpen) {
-      if (Object.keys(weeklyMenu).length === 0) {
+      if (Object.keys(weeklyMenu).length === 0 && !isMenuLoading) {
         fetchWeeklyMenu().then(() => {
           // This will run after fetchWeeklyMenu completes
           if (Object.keys(weeklyMenu).length > 0) {
@@ -376,7 +341,13 @@ export default function DailyDeliveryPage() {
       // Reset selected day when dialog closes
       setSelectedMenuDay(null);
     }
-  }, [menuDialogOpen, activeWeek, weeklyMenu])
+  }, [menuDialogOpen, activeWeek, weeklyMenu, isMenuLoading])
+
+  useEffect(() => {
+    if (Object.keys(weeklyMenu).length === 0 && !isMenuLoading) {
+      void fetchWeeklyMenu()
+    }
+  }, [])
 
   const features = [
     {
@@ -401,6 +372,58 @@ export default function DailyDeliveryPage() {
       </div>
     }
   ]
+
+  const dayOrder: Record<string, number> = {
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+    sunday: 7,
+  }
+
+  const chineseDayLabels: Record<string, string> = {
+    monday: "周一",
+    tuesday: "周二",
+    wednesday: "周三",
+    thursday: "周四",
+    friday: "周五",
+    saturday: "周六",
+    sunday: "周日",
+  }
+
+  const getPreviewDayLabel = (displayName: string) => {
+    const key = displayName.toLowerCase()
+    return language === "zh" ? chineseDayLabels[key] || displayName : displayName.substring(0, 3)
+  }
+
+  const weeklyMenuPreviewItems = Object.entries(weeklyMenu)
+    .filter(([, day]) => day.week === 1)
+    .sort(([, dayA], [, dayB]) => {
+      const dayAKey = dayA.displayName.toLowerCase()
+      const dayBKey = dayB.displayName.toLowerCase()
+      return (dayOrder[dayAKey] || 0) - (dayOrder[dayBKey] || 0)
+    })
+    .flatMap(([dayId, day]) =>
+      day.combos
+        .filter((combo) => Boolean(combo.imageUrl))
+        .map((combo) => ({
+          dayId,
+          date: day.date,
+          displayName: day.displayName,
+          combo,
+        }))
+    )
+
+  const openMenuForDay = (dayId: string) => {
+    const day = weeklyMenu[dayId]
+    if (day) {
+      setActiveWeek(day.week)
+      setSelectedMenuDay(dayId)
+    }
+    setMenuDialogOpen(true)
+  }
   
   // Render the plan cards
   const renderPlanCards = (plans: VoucherPlan[]) => {
@@ -1016,9 +1039,26 @@ export default function DailyDeliveryPage() {
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                                  {weeklyMenu[selectedMenuDay].combos.map((combo, index) => (
+                                  {weeklyMenu[selectedMenuDay].combos.map((combo) => (
                                   <div key={combo.id}>
-                                    <div className="relative backdrop-blur-xl bg-white/90 rounded-2xl p-4 sm:p-5 border border-[#F5EDE4] shadow-sm transition-all duration-300 ease-out h-full">
+                                    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#F5EDE4] bg-white/90 shadow-sm backdrop-blur-xl transition-all duration-300 ease-out">
+                                      {combo.imageUrl ? (
+                                        <div className="aspect-[16/9] w-full shrink-0 overflow-hidden bg-[#F5EDE4]">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img
+                                            src={combo.imageUrl}
+                                            alt={`${translateComboName(combo.name)} combo`}
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                                            onError={(event) => {
+                                              event.currentTarget.parentElement?.classList.add("hidden")
+                                            }}
+                                          />
+                                        </div>
+                                      ) : null}
+
+                                      <div className="flex flex-1 flex-col p-4 sm:p-5">
                                       {/* Combo header - Minimalist Design */}
                                       <div className="flex flex-wrap items-center justify-between mb-4">
                                         <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">{translateComboName(combo.name)}</h3>
@@ -1131,6 +1171,7 @@ export default function DailyDeliveryPage() {
                                           ))}
                                         </div>
                                       </div>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
@@ -1193,6 +1234,92 @@ export default function DailyDeliveryPage() {
               </div>
             </motion.div>
             
+            {weeklyMenuPreviewItems.length > 0 ? (
+              <motion.div className="w-full" variants={fadeIn}>
+                <div className="rounded-2xl border border-[#C2884E]/10 bg-white/85 p-4 shadow-xl backdrop-blur-sm md:p-6">
+                  <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#C2884E]/10 px-3 py-1 text-xs font-medium text-[#C2884E]">
+                        <Sparkles
+                          className="h-3.5 w-3.5 shrink-0 fill-[#C2884E]/30 text-[#C2884E]"
+                          aria-hidden
+                        />
+                        {language === "zh" ? "每周更新" : "Updated Weekly"}
+                      </div>
+                      <h2 className="text-2xl font-bold text-[#6B5F53] md:text-3xl">
+                        {language === "zh" ? "本周菜单预览" : "This Week's Menu Preview"}
+                      </h2>
+                      <p className="mt-2 text-sm text-[#6B5F53]/75">
+                        {language === "zh"
+                          ? "每周更新，每天两款套餐可选。来看看您这周会吃到什么吧！"
+                          : "Fresh menu weekly with two combos to choose from each day. See what's on deck for your week!"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="hidden shrink-0 border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 md:inline-flex"
+                      onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
+                    >
+                      {language === "zh" ? "查看完整菜单" : "View Full Menu"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-4">
+                    {weeklyMenuPreviewItems.slice(0, 8).map((item) => (
+                      <button
+                        key={`${item.dayId}-${item.combo.id}`}
+                        type="button"
+                        onClick={() => openMenuForDay(item.dayId)}
+                        className="group min-w-[240px] overflow-hidden rounded-xl border border-[#F5EDE4] bg-white text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#C2884E]/30 hover:shadow-md md:min-w-0"
+                      >
+                        <div className="aspect-[16/9] overflow-hidden bg-[#F5EDE4]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.combo.imageUrl}
+                            alt={`${translateComboName(item.combo.name)} combo`}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                            onError={(event) => {
+                              event.currentTarget.closest("button")?.classList.add("hidden")
+                            }}
+                          />
+                        </div>
+                        <div className="p-4">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <span className="rounded-full bg-[#C2884E]/10 px-2 py-1 text-xs font-semibold text-[#C2884E]">
+                              {getPreviewDayLabel(item.displayName)} · {item.date}
+                            </span>
+                            <span className="text-xs font-medium text-[#C2884E]">
+                              {item.combo.calories} KCAL
+                            </span>
+                          </div>
+                          <h3 className="line-clamp-2 text-base font-semibold text-[#6B5F53]">
+                            {translateComboName(item.combo.name)}
+                          </h3>
+                          <p className="mt-2 text-xs text-[#6B5F53]/70">
+                            {item.combo.typeA.dishes.slice(0, 3).map(translateDishName).join(" · ")}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 md:hidden">
+                    <Button
+                      variant="outline"
+                      className="w-full border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5"
+                      onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
+                    >
+                      {language === "zh" ? "查看完整菜单" : "View Full Menu"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+
             {/* Pricing Section */}
             <motion.div 
               className="w-full mt-4"

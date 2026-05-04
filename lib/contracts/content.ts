@@ -79,6 +79,8 @@ export const comboBodySchema = z
     dayId: z.string().trim().min(1),
     name: z.string().trim().min(1),
     calories: z.coerce.number(),
+    imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
+    imageKey: z.string().max(512).optional().or(z.literal("")),
   })
   .passthrough();
 

@@ -58,7 +58,9 @@ export async function GET(request: Request) {
         calories: combo.calories,
         tags: combo.tags,
         typeA: combo.typeA,
-        typeB: combo.typeB
+        typeB: combo.typeB,
+        imageUrl: combo.imageUrl,
+        imageKey: combo.imageKey
       });
     });
     

@@ -100,10 +100,27 @@ export function DailyComboGrid({
         {selectedDayData.combos.map((combo) => (
           <div key={combo.id}>
             <div
-              className={`relative h-full rounded-2xl border border-[#C2884E]/20 bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4] p-5 shadow-md backdrop-blur-xl transition-all duration-300 ease-out ${
+              className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#C2884E]/20 bg-gradient-to-br from-[#FBF7F2] to-[#F5EDE4] shadow-md backdrop-blur-xl transition-all duration-300 ease-out ${
                 unavailableState.unavailable ? "opacity-60" : ""
               }`}
             >
+              {combo.imageUrl ? (
+                <div className="aspect-[16/9] w-full shrink-0 overflow-hidden bg-[#F5EDE4]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={combo.imageUrl}
+                    alt={`${translateComboName(combo.name)} combo`}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                    onError={(event) => {
+                      event.currentTarget.parentElement?.classList.add("hidden")
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              <div className="flex flex-1 flex-col p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between">
                 <h3 className="text-lg font-bold tracking-wide text-[#6B5F53]">
                   {translateComboName(combo.name)}
@@ -220,6 +237,7 @@ export function DailyComboGrid({
                     </div>
                   </div>
                 ))}
+              </div>
               </div>
             </div>
           </div>

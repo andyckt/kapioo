@@ -53,6 +53,43 @@ export type ComboItem = {
     dishes: string[]
     voucherType: 'threeDish'
   }
+  imageUrl?: string
+}
+
+type RawCombo = {
+  comboId?: unknown
+  id?: unknown
+  name?: unknown
+  calories?: unknown
+  tags?: unknown
+  typeA?: unknown
+  typeB?: unknown
+  imageUrl?: unknown
+}
+
+function normalizeVoucherOption(
+  option: unknown,
+  voucherType: 'twoDish' | 'threeDish'
+): { dishes: string[]; voucherType: 'twoDish' | 'threeDish' } {
+  const optionRecord = option && typeof option === 'object' ? option as Record<string, unknown> : {}
+  const dishes = Array.isArray(optionRecord.dishes) ? optionRecord.dishes.map(String) : []
+
+  return {
+    dishes,
+    voucherType,
+  }
+}
+
+export function formatDailyCombo(combo: RawCombo): ComboItem {
+  return {
+    id: String(combo.comboId || combo.id || ""),
+    name: String(combo.name || ""),
+    calories: Number(combo.calories || 0),
+    tags: Array.isArray(combo.tags) ? combo.tags.map(String) : [],
+    typeA: normalizeVoucherOption(combo.typeA, 'twoDish') as ComboItem['typeA'],
+    typeB: normalizeVoucherOption(combo.typeB, 'threeDish') as ComboItem['typeB'],
+    imageUrl: typeof combo.imageUrl === "string" && combo.imageUrl ? combo.imageUrl : undefined,
+  }
 }
 
 export type DayData = {
@@ -116,14 +153,7 @@ export async function getActiveDays(): Promise<Record<string, DayData>> {
         
         if (combosData.success) {
           // Format combo data to match our component's expected structure
-          const formattedCombos = combosData.data.map((combo: any) => ({
-            id: combo.comboId,
-            name: combo.name,
-            calories: combo.calories,
-            tags: combo.tags,
-            typeA: combo.typeA,
-            typeB: combo.typeB
-          }))
+          const formattedCombos = combosData.data.map(formatDailyCombo)
           
           formattedDays[day.dayId] = {
             date: day.date,

@@ -13,6 +13,8 @@ export interface ComboItem {
   tags: string[]
   typeA: ComboDishState
   typeB: ComboDishState
+  imageUrl?: string
+  imageKey?: string
 }
 
 export interface DayData {
