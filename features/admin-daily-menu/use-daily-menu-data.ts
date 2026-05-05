@@ -45,6 +45,7 @@ function formatCombo(combo: Record<string, unknown>): ComboItem {
     },
     imageUrl: typeof combo.imageUrl === "string" ? combo.imageUrl : undefined,
     imageKey: typeof combo.imageKey === "string" ? combo.imageKey : undefined,
+    featuredInMenuPreview: combo.featuredInMenuPreview === true,
     sourceComboLibraryId:
       typeof combo.sourceComboLibraryId === "string" ? combo.sourceComboLibraryId : undefined,
     sourceComboLibraryUpdatedAt:

@@ -5,12 +5,33 @@ import { useCallback, useRef, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 
 import { calculateNextWeekDate, createTemplateCombos } from "./helpers"
-import type { DayData } from "./types"
+import type { ComboItem, DayData } from "./types"
 
 interface UseWeekOperationsArgs {
   days: Record<string, DayData>
   fetchData: () => Promise<void> | void
   setActiveWeekFilter: (week: number | null) => void
+}
+
+function serializeComboForCopy(combo: ComboItem) {
+  return {
+    name: combo.name,
+    calories: combo.calories,
+    proteinGrams: combo.proteinGrams,
+    tags: combo.tags,
+    tagsEn: combo.tagsEn,
+    allergensZh: combo.allergensZh,
+    allergensEn: combo.allergensEn,
+    descriptionZh: combo.descriptionZh,
+    descriptionEn: combo.descriptionEn,
+    typeA: combo.typeA,
+    typeB: combo.typeB,
+    imageUrl: combo.imageUrl,
+    imageKey: combo.imageKey,
+    featuredInMenuPreview: combo.featuredInMenuPreview === true,
+    sourceComboLibraryId: combo.sourceComboLibraryId,
+    sourceComboLibraryUpdatedAt: combo.sourceComboLibraryUpdatedAt,
+  }
 }
 
 export function useWeekOperations({
@@ -133,11 +154,7 @@ export function useWeekOperations({
             body: JSON.stringify({
               comboId,
               dayId: newDayId,
-              name: combo.name,
-              calories: combo.calories,
-              tags: combo.tags,
-              typeA: combo.typeA,
-              typeB: combo.typeB,
+              ...serializeComboForCopy(combo),
             }),
           })
           const comboData = await comboResponse.json()
@@ -206,11 +223,7 @@ export function useWeekOperations({
               archivedReason: "rolled_forward",
               combos: thisDay.combos.map((combo) => ({
                 comboId: combo.id,
-                name: combo.name,
-                calories: combo.calories,
-                tags: combo.tags,
-                typeA: combo.typeA,
-                typeB: combo.typeB,
+                ...serializeComboForCopy(combo),
               })),
             }),
           })
@@ -253,11 +266,7 @@ export function useWeekOperations({
               body: JSON.stringify({
                 comboId: newComboId,
                 dayId: thisDayId,
-                name: combo.name,
-                calories: combo.calories,
-                tags: combo.tags,
-                typeA: combo.typeA,
-                typeB: combo.typeB,
+                ...serializeComboForCopy(combo),
               }),
             })
           }
@@ -283,11 +292,7 @@ export function useWeekOperations({
               body: JSON.stringify({
                 comboId: newComboId,
                 dayId: newThisDayId,
-                name: combo.name,
-                calories: combo.calories,
-                tags: combo.tags,
-                typeA: combo.typeA,
-                typeB: combo.typeB,
+                ...serializeComboForCopy(combo),
               }),
             })
           }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Edit, Languages, Package, Plus, Trash2, X } from "lucide-react"
+import { Check, Edit, Languages, Package, Plus, Sparkles, Trash2, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,6 +50,7 @@ interface DailyMenuCombosTabProps {
   setDishTranslationInput: (value: string) => void
   updateCombo: (dayId: string, comboId: string, updatedCombo: Partial<ComboItem>) => void
   saveComboChanges: (dayId: string, comboId: string) => Promise<boolean>
+  toggleComboMenuPreviewFeatured: (dayId: string, comboId: string) => Promise<void>
   addTagToCombo: (dayId: string, comboId: string, tag: string) => void
   removeTagFromCombo: (dayId: string, comboId: string, tag: string) => void
   addDishToCombo: (dayId: string, comboId: string, dish: string, type: "typeA" | "typeB") => void
@@ -307,6 +308,11 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                             {tag}
                           </Badge>
                         ))}
+                        {combo.featuredInMenuPreview === true ? (
+                          <Badge variant="secondary" className="bg-[#C2884E]/10 text-[#7c4f2e]">
+                            Carousel
+                          </Badge>
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -335,6 +341,34 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                         </>
                       ) : (
                         <>
+                          <Button
+                            type="button"
+                            variant={combo.featuredInMenuPreview === true ? "secondary" : "ghost"}
+                            size="icon"
+                            disabled={!combo.imageUrl?.trim()}
+                            onClick={() =>
+                              void props.toggleComboMenuPreviewFeatured(props.selectedDay, combo.id)
+                            }
+                            className={`h-8 w-8 shrink-0 ${
+                              combo.featuredInMenuPreview === true
+                                ? "border border-[#C2884E]/35 bg-[#C2884E]/12 text-[#7c4f2e]"
+                                : ""
+                            }`}
+                            title={
+                              !combo.imageUrl?.trim()
+                                ? "Upload a combo photo first — carousel cards need an image."
+                                : combo.featuredInMenuPreview === true
+                                  ? "Remove from daily product page carousel"
+                                  : "Show on daily product page carousel"
+                            }
+                            aria-label={
+                              combo.featuredInMenuPreview === true
+                                ? "Remove from carousel"
+                                : "Add to carousel"
+                            }
+                          >
+                            <Sparkles className="h-4 w-4" />
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => props.setEditingCombo(combo.id)}>
                             <Edit className="h-4 w-4" />
                           </Button>

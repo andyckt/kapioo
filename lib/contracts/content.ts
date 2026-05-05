@@ -97,6 +97,7 @@ export const comboBodySchema = z
     descriptionEn: z.string().trim().max(1000).optional().or(z.literal("")),
     imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
     imageKey: z.string().max(512).optional().or(z.literal("")),
+    featuredInMenuPreview: z.boolean().optional(),
     sourceComboLibraryId: z.string().max(120).optional(),
     sourceComboLibraryUpdatedAt: z.coerce.date().optional(),
   })

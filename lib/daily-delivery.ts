@@ -62,6 +62,7 @@ export type ComboItem = {
     voucherType: 'threeDish'
   }
   imageUrl?: string
+  featuredInMenuPreview?: boolean
 }
 
 type RawCombo = {
@@ -79,6 +80,7 @@ type RawCombo = {
   typeA?: unknown
   typeB?: unknown
   imageUrl?: unknown
+  featuredInMenuPreview?: unknown
 }
 
 function normalizeStringArray(value: unknown): string[] {
@@ -127,7 +129,15 @@ export function formatDailyCombo(combo: RawCombo): ComboItem {
     typeA: normalizeVoucherOption(combo.typeA, 'twoDish') as ComboItem['typeA'],
     typeB: normalizeVoucherOption(combo.typeB, 'threeDish') as ComboItem['typeB'],
     imageUrl: typeof combo.imageUrl === "string" && combo.imageUrl ? combo.imageUrl : undefined,
+    ...(combo.featuredInMenuPreview === true ? { featuredInMenuPreview: true } : {}),
   }
+}
+
+export function applyDailyMenuPreviewCuration<T extends { combo: Pick<ComboItem, "featuredInMenuPreview"> }>(
+  items: T[]
+): T[] {
+  const featuredItems = items.filter((item) => item.combo.featuredInMenuPreview === true)
+  return featuredItems.length > 0 ? featuredItems : items
 }
 
 /** 3-dish dishes not in the 2-dish set — listed as extras in dashboard + menu preview UIs. */

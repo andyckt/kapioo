@@ -24,6 +24,7 @@ export interface ComboDocument extends Document {
   };
   imageUrl?: string;
   imageKey?: string;
+  featuredInMenuPreview?: boolean;
   sourceComboLibraryId?: string;
   sourceComboLibraryUpdatedAt?: Date;
   createdAt: Date;
@@ -100,6 +101,10 @@ const ComboSchema = new Schema({
   imageKey: {
     type: String
   },
+  featuredInMenuPreview: {
+    type: Boolean,
+    default: false
+  },
   sourceComboLibraryId: {
     type: String
   },
@@ -109,7 +114,11 @@ const ComboSchema = new Schema({
 }, { timestamps: true });
 
 const existingComboModel = mongoose.models.Combo;
-if (existingComboModel && !existingComboModel.schema.path('descriptionEn')) {
+if (
+  existingComboModel &&
+  (!existingComboModel.schema.path('descriptionEn') ||
+    !existingComboModel.schema.path('featuredInMenuPreview'))
+) {
   delete mongoose.models.Combo;
 }
 

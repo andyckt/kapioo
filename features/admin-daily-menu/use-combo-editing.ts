@@ -111,6 +111,7 @@ export function useComboEditing({
           typeB: combo.typeB,
           imageUrl: combo.imageUrl ?? "",
           imageKey: combo.imageKey ?? "",
+          featuredInMenuPreview: combo.featuredInMenuPreview === true,
           sourceComboLibraryId: combo.sourceComboLibraryId,
           sourceComboLibraryUpdatedAt: combo.sourceComboLibraryUpdatedAt,
         }),
@@ -138,6 +139,64 @@ export function useComboEditing({
       return false
     }
   }, [days])
+
+  const toggleComboMenuPreviewFeatured = useCallback(async (dayId: string, comboId: string) => {
+    const day = days[dayId]
+    const combo = day?.combos.find((item) => item.id === comboId)
+    if (!combo) return
+
+    if (!combo.imageUrl?.trim()) {
+      toastRef.current({
+        title: "Photo required",
+        description: "Upload a combo photo before adding it to the daily product carousel.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const current = combo.featuredInMenuPreview === true
+    const next = !current
+
+    setDays((prev) => ({
+      ...prev,
+      [dayId]: {
+        ...prev[dayId],
+        combos: prev[dayId].combos.map((item) =>
+          item.id === comboId ? { ...item, featuredInMenuPreview: next } : item
+        ),
+      },
+    }))
+
+    try {
+      const response = await fetch(`/api/combos/${comboId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featuredInMenuPreview: next }),
+      })
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to update carousel setting")
+      }
+    } catch (error) {
+      setDays((prev) => ({
+        ...prev,
+        [dayId]: {
+          ...prev[dayId],
+          combos: prev[dayId].combos.map((item) =>
+            item.id === comboId ? { ...item, featuredInMenuPreview: current } : item
+          ),
+        },
+      }))
+      toastRef.current({
+        title: "Error",
+        description: `Failed to update carousel setting: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      })
+    }
+  }, [days, setDays])
 
   const addTagToCombo = useCallback((dayId: string, comboId: string, tag: string) => {
     if (!tag) return
@@ -632,6 +691,7 @@ export function useComboEditing({
     setDishTranslationInput,
     updateCombo,
     saveComboChanges,
+    toggleComboMenuPreviewFeatured,
     addTagToCombo,
     removeTagFromCombo,
     addDishToCombo,

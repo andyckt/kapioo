@@ -32,6 +32,7 @@ describe("content contracts", () => {
       const parsed = comboBodySchema.parse({
         ...baseCombo,
         proteinGrams: 32,
+        featuredInMenuPreview: true,
         tags: ["高蛋白"],
         tagsEn: ["High protein"],
         allergensZh: ["大豆"],
@@ -41,6 +42,7 @@ describe("content contracts", () => {
       })
 
       expect(parsed.proteinGrams).toBe(32)
+      expect(parsed.featuredInMenuPreview).toBe(true)
       expect(parsed.tagsEn).toEqual(["High protein"])
       expect(parsed.descriptionEn).toBe("A light high-protein combo.")
     })

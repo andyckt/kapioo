@@ -209,6 +209,7 @@ export function DailyDeliveryManagement() {
               setDishTranslationInput={comboEditing.setDishTranslationInput}
               updateCombo={comboEditing.updateCombo}
               saveComboChanges={comboEditing.saveComboChanges}
+              toggleComboMenuPreviewFeatured={comboEditing.toggleComboMenuPreviewFeatured}
               addTagToCombo={comboEditing.addTagToCombo}
               removeTagFromCombo={comboEditing.removeTagFromCombo}
               addDishToCombo={comboEditing.addDishToCombo}

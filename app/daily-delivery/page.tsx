@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/lib/language-context'
 import { useSmartBack } from '@/hooks/use-smart-back'
 import {
+  applyDailyMenuPreviewCuration,
   formatDailyCombo,
   getDailyComboAllergens,
   getDailyComboDescription,
@@ -419,7 +420,7 @@ export default function DailyDeliveryPage() {
     return language === "zh" ? chineseDayLabels[key] || displayName : displayName.substring(0, 3)
   }
 
-  const weeklyMenuPreviewItems = Object.entries(weeklyMenu)
+  const carouselRowsWithImage = Object.entries(weeklyMenu)
     .filter(([, day]) => day.week === 1)
     .sort(([, dayA], [, dayB]) => {
       const dayAKey = dayA.displayName.toLowerCase()
@@ -436,6 +437,8 @@ export default function DailyDeliveryPage() {
           combo,
         }        ))
     )
+
+  const weeklyMenuPreviewItems = applyDailyMenuPreviewCuration(carouselRowsWithImage)
 
   const showMenuPreviewSection =
     isMenuLoading || weeklyMenuPreviewItems.length > 0

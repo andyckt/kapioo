@@ -22,6 +22,7 @@ export interface ComboItem {
   typeB: ComboDishState
   imageUrl?: string
   imageKey?: string
+  featuredInMenuPreview?: boolean
   sourceComboLibraryId?: string
   sourceComboLibraryUpdatedAt?: string | Date
 }

@@ -66,7 +66,8 @@ export async function GET(request: Request) {
         typeA: combo.typeA,
         typeB: combo.typeB,
         imageUrl: combo.imageUrl,
-        imageKey: combo.imageKey
+        imageKey: combo.imageKey,
+        featuredInMenuPreview: combo.featuredInMenuPreview === true
       });
     });
     
