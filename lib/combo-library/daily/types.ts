@@ -1,5 +1,3 @@
-import type { ComboLibraryStatus } from "@/lib/combo-library/shared/constants"
-
 export type DailyComboLibraryItem = {
   _id?: string
   dailyComboLibraryId: string
@@ -11,7 +9,6 @@ export type DailyComboLibraryItem = {
   imageKey?: string
   calories: number
   tags: string[]
-  status: ComboLibraryStatus
   createdAt?: string | Date
   updatedAt?: string | Date
   createdBy?: string

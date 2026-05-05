@@ -1,7 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose"
 
-import type { ComboLibraryStatus } from "@/lib/combo-library/shared/constants"
-
 export interface DailyComboLibraryItemDocument extends Document {
   dailyComboLibraryId: string
   name: string
@@ -12,7 +10,6 @@ export interface DailyComboLibraryItemDocument extends Document {
   imageKey?: string
   calories: number
   tags: string[]
-  status: ComboLibraryStatus
   createdBy?: mongoose.Types.ObjectId
   updatedBy?: mongoose.Types.ObjectId
   createdAt: Date
@@ -30,19 +27,12 @@ const DailyComboLibraryItemSchema = new Schema(
     imageKey: { type: String },
     calories: { type: Number, required: true },
     tags: { type: [String], default: [] },
-    status: {
-      type: String,
-      enum: ["active", "archived", "draft"],
-      default: "active",
-      index: true,
-    },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 )
 
-DailyComboLibraryItemSchema.index({ status: 1, updatedAt: -1 })
 DailyComboLibraryItemSchema.index({ internalName: 1 })
 
 export default mongoose.models.DailyComboLibraryItem ||

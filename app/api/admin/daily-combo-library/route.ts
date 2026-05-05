@@ -29,7 +29,6 @@ function splitQueryList(input?: string) {
 function buildListFilter(query: ReturnType<typeof dailyComboLibraryListQuerySchema.parse>) {
   const filter: Record<string, unknown> = {}
 
-  if (query.status) filter.status = query.status
   const tags = splitQueryList(query.tags)
   if (tags.length > 0) filter.tags = { $all: tags }
 

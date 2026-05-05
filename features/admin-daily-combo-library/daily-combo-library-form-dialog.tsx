@@ -30,7 +30,6 @@ const EMPTY_FORM: Partial<DailyComboLibraryItem> = {
   typeBDishes: [],
   tags: [],
   calories: 0,
-  status: "active",
 }
 
 function joinLines(values?: string[]) {
@@ -58,7 +57,6 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
       typeADishes: item?.typeADishes ?? [],
       typeBDishes: item?.typeBDishes ?? [],
       tags: item?.tags ?? [],
-      status: item?.status ?? "active",
     })
   }, [item, open])
 

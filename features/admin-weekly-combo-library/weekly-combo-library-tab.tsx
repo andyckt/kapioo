@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { PackagePlus, Pencil, Trash2, Upload } from "lucide-react"
 
+import { ComboLibraryThumbnail } from "@/components/admin/combo-library-thumbnail"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +12,6 @@ import type { WeeklyComboLibraryItem } from "@/lib/combo-library/weekly/types"
 
 import { WeeklyComboLibraryBulkImportDialog } from "./weekly-combo-library-bulk-import-dialog"
 import { WeeklyComboLibraryFormDialog } from "./weekly-combo-library-form-dialog"
-import { WeeklyComboLibraryThumbnail } from "./weekly-combo-library-thumbnail"
 import { useWeeklyComboLibraryList } from "./use-weekly-combo-library-list"
 
 export function WeeklyComboLibraryTab() {
@@ -70,7 +70,7 @@ export function WeeklyComboLibraryTab() {
           <Card key={item.weeklyComboLibraryId} className="overflow-hidden">
             <CardHeader className="p-4 pb-3">
               <div className="flex gap-3">
-                <WeeklyComboLibraryThumbnail item={item} />
+                <ComboLibraryThumbnail item={item} />
                 <div className="min-w-0 flex-1">
                   <CardTitle className="line-clamp-2 text-base leading-snug">
                     {item.internalName || item.name}

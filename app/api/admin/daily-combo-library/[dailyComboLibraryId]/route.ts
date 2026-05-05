@@ -119,7 +119,7 @@ export async function DELETE(
 
     const reference = await Combo.exists({ sourceComboLibraryId: dailyComboLibraryId })
     if (reference) {
-      return errorJson("This combo is already used by a Daily menu. Archive it instead.", 409)
+      return errorJson("This combo is already used by a Daily menu and cannot be deleted.", 409)
     }
 
     const item = await DailyComboLibraryItem.findOneAndDelete({ dailyComboLibraryId })

@@ -11,7 +11,6 @@ const baseItem: DailyComboLibraryItem = {
   typeADishes: ["鸡肉", "花菜"],
   typeBDishes: ["鸡肉", "花菜", "米饭"],
   tags: ["高蛋白"],
-  status: "active",
   calories: 650,
   imageUrl: "https://example.com/image.jpg",
   imageKey: "daily-combo-library-images/combo-1/image.jpg",

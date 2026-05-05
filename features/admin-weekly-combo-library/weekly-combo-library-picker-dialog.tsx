@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 
+import { ComboLibraryThumbnail } from "@/components/admin/combo-library-thumbnail"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -10,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { COMBO_LIBRARY_MULTI_INSERT_MAX } from "@/lib/combo-library/shared/constants"
 import type { WeeklyComboLibraryItem } from "@/lib/combo-library/weekly/types"
 
-import { WeeklyComboLibraryThumbnail } from "./weekly-combo-library-thumbnail"
 import { useWeeklyComboLibraryList } from "./use-weekly-combo-library-list"
 
 type Props = {
@@ -74,7 +74,7 @@ export function WeeklyComboLibraryPickerDialog({ open, onOpenChange, onSelect }:
                 >
                   <CardContent className="p-4">
                     <div className="flex gap-3">
-                      <WeeklyComboLibraryThumbnail item={item} />
+                      <ComboLibraryThumbnail item={item} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="line-clamp-2 font-medium leading-tight">

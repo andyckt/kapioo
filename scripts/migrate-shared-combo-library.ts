@@ -40,7 +40,6 @@ type SharedComboLibraryItem = {
   cuisineType?: string
   spiceLevel?: string
   portionSize?: string
-  status?: string
   notesForAdmin?: string
   createdBy?: unknown
   updatedBy?: unknown
@@ -59,7 +58,6 @@ function baseFields(doc: SharedComboLibraryItem) {
     calories: doc.calories,
     tags: doc.tags ?? [],
     allergens: doc.allergens ?? [],
-    status: doc.status ?? "active",
     createdBy: doc.createdBy,
     updatedBy: doc.updatedBy,
     createdAt: doc.createdAt,

@@ -60,7 +60,6 @@ export function mapDailyMenuComboToDailyLibraryDraft(
     tags: combo.tags ?? [],
     ...(combo.imageUrl ? { imageUrl: combo.imageUrl } : {}),
     ...(combo.imageKey ? { imageKey: combo.imageKey } : {}),
-    status: "draft",
   }
 }
 

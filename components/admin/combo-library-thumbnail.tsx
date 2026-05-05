@@ -1,21 +1,25 @@
 "use client"
 
-import type { WeeklyComboLibraryItem } from "@/lib/combo-library/weekly/types"
+type ComboLibraryThumbnailItem = {
+  imageUrl?: string
+  internalName?: string
+  name?: string
+}
 
-type WeeklyComboLibraryThumbnailProps = {
-  item: Pick<WeeklyComboLibraryItem, "imageUrl" | "internalName" | "name">
+type ComboLibraryThumbnailProps = {
+  item: ComboLibraryThumbnailItem
   className?: string
 }
 
 /**
- * Small, lazy admin thumbnail. The source object may still be the original S3
- * image, so keep the rendered box compact and deprioritize offscreen loading.
+ * Small, lazy admin thumbnail for combo libraries. The source may still be the
+ * original S3 object, so render compactly and deprioritize offscreen images.
  */
-export function WeeklyComboLibraryThumbnail({
+export function ComboLibraryThumbnail({
   item,
   className = "h-16 w-20",
-}: WeeklyComboLibraryThumbnailProps) {
-  const label = item.internalName || item.name || "Weekly combo"
+}: ComboLibraryThumbnailProps) {
+  const label = item.internalName || item.name || "Combo"
 
   if (!item.imageUrl) {
     return (

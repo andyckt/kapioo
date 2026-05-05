@@ -1,7 +1,3 @@
-export const COMBO_LIBRARY_STATUSES = ["active", "archived", "draft"] as const
-
-export type ComboLibraryStatus = (typeof COMBO_LIBRARY_STATUSES)[number]
-
 export const ALLERGEN_CODES = [
   "dairy",
   "nuts",

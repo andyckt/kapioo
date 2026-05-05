@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
+import { ComboLibraryThumbnail } from "@/components/admin/combo-library-thumbnail"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -22,9 +22,7 @@ type Props = {
 export function DailyComboLibraryPickerDialog({ open, onOpenChange, onSelect }: Props) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { items, isLoading, error, filters, pagination, setFilters } = useDailyComboLibraryList({
-    status: "active",
-  })
+  const { items, isLoading, error, filters, pagination, setFilters } = useDailyComboLibraryList()
 
   const insertSingle = async (item: DailyComboLibraryItem) => {
     const guard = evaluateDailyInsertGuards(item)
@@ -60,19 +58,10 @@ export function DailyComboLibraryPickerDialog({ open, onOpenChange, onSelect }: 
                 <Card key={item.dailyComboLibraryId}>
                   <CardContent className="space-y-3 p-4">
                     <div className="flex gap-3">
-                      {item.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.imageUrl} alt={`${item.internalName || item.name} preview`} className="h-20 w-28 rounded-md object-cover" />
-                      ) : <div className="flex h-20 w-28 items-center justify-center rounded-md bg-muted text-xs">No image</div>}
+                      <ComboLibraryThumbnail item={item} />
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-medium leading-tight">{item.internalName || item.name}</h3>
-                        <p className="mt-1 text-xs text-muted-foreground">{item.calories} kcal</p>
-                        <div className="mt-2 flex flex-wrap gap-1">{item.tags.slice(0, 3).map((tag) => <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>)}</div>
+                        <h3 className="line-clamp-2 font-medium leading-tight">{item.internalName || item.name}</h3>
                       </div>
-                    </div>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <p>A ({item.typeADishes.length}): {item.typeADishes.slice(0, 3).join(" / ") || "-"}</p>
-                      <p>B ({item.typeBDishes.length}): {item.typeBDishes.slice(0, 3).join(" / ") || "-"}</p>
                     </div>
                     {guard.level !== "ok" ? <p className="text-xs text-amber-700">{guard.message}</p> : null}
                     <Button type="button" className="w-full" onClick={() => void insertSingle(item)} disabled={isSubmitting || guard.level === "block"}>Insert</Button>
