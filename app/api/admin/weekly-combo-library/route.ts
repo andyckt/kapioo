@@ -42,7 +42,11 @@ function buildListFilter(query: ReturnType<typeof weeklyComboLibraryListQuerySch
       { nameEn: regex },
       { internalName: regex },
       { tags: regex },
+      { tagsEn: regex },
+      { allergens: regex },
+      { allergensEn: regex },
       { description: regex },
+      { descriptionEn: regex },
     ]
   }
 

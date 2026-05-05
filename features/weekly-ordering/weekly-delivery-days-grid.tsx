@@ -70,6 +70,14 @@ export function WeeklyDeliveryDaysGrid({
               {day.options.map((option) => {
                 const optionDisplayName =
                   language === "en" && option.nameEn ? option.nameEn : option.name
+                const optionDescription =
+                  language === "zh" ? option.description : option.descriptionEn || option.description
+                const optionTags =
+                  language === "zh" ? option.tags : option.tagsEn?.length ? option.tagsEn : option.tags
+                const optionAllergens =
+                  language === "zh"
+                    ? option.allergens ?? option.allergensEn ?? []
+                    : option.allergensEn ?? option.allergens ?? []
 
                 return (
                 <Card
@@ -103,20 +111,20 @@ export function WeeklyDeliveryDaysGrid({
                         </h4>
                       </div>
 
-                      {option.description ? (
+                      {optionDescription ? (
                         <p className="text-xs leading-relaxed text-[#6B5F53]/70">
-                          {option.description}
+                          {optionDescription}
                         </p>
                       ) : null}
 
-                      {(typeof option.calories === "number" || option.tags?.length) ? (
+                      {(typeof option.calories === "number" || optionTags?.length) ? (
                         <div className="flex flex-wrap gap-1.5">
                           {typeof option.calories === "number" ? (
                             <span className="rounded-full bg-[#C2884E]/10 px-2 py-0.5 text-[10px] font-semibold text-[#C2884E]">
                               {option.calories} KCAL
                             </span>
                           ) : null}
-                          {option.tags?.map((tag, tagIndex) => (
+                          {optionTags?.map((tag, tagIndex) => (
                             <span
                               key={tagIndex}
                               className="rounded-full bg-[#F5EDE4]/70 px-2 py-0.5 text-[10px] font-medium text-[#6B5F53]"
@@ -128,12 +136,12 @@ export function WeeklyDeliveryDaysGrid({
                       ) : null}
 
                       {(typeof option.proteinGrams === "number" && Number.isFinite(option.proteinGrams)) ||
-                      (option.allergens && option.allergens.length > 0) ? (
+                      optionAllergens.length > 0 ? (
                         <MealProteinAllergenRow
                           language={language}
                           variant="panel"
                           proteinGrams={option.proteinGrams}
-                          allergens={option.allergens ?? []}
+                          allergens={optionAllergens}
                         />
                       ) : null}
                     </div>

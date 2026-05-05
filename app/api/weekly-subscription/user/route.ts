@@ -216,6 +216,9 @@ export async function GET() {
         name: option.name,
         nameEn: option.nameEn, // Include English name
         tags: Array.isArray(option.tags) ? option.tags : [],
+        ...(Array.isArray(option.tagsEn) && option.tagsEn.length > 0
+          ? { tagsEn: option.tagsEn }
+          : {}),
         ...(typeof option.calories === 'number' ? { calories: option.calories } : {}),
         ...(typeof option.proteinGrams === "number" && Number.isFinite(option.proteinGrams)
           ? { proteinGrams: option.proteinGrams }
@@ -223,8 +226,14 @@ export async function GET() {
         ...(Array.isArray(option.allergens) && option.allergens.length > 0
           ? { allergens: option.allergens }
           : {}),
+        ...(Array.isArray(option.allergensEn) && option.allergensEn.length > 0
+          ? { allergensEn: option.allergensEn }
+          : {}),
         ...(typeof option.description === 'string' && option.description.trim()
           ? { description: option.description }
+          : {}),
+        ...(typeof option.descriptionEn === 'string' && option.descriptionEn.trim()
+          ? { descriptionEn: option.descriptionEn }
           : {}),
         ...(option.featuredInMenuPreview === true ? { featuredInMenuPreview: true } : {}),
         ...(typeof option.imageUrl === 'string' && option.imageUrl

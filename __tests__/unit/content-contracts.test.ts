@@ -87,14 +87,20 @@ describe("content contracts", () => {
         ...baseOption,
         calories: 650,
         proteinGrams: 42,
+        tagsEn: ["High protein"],
         allergens: ["soy", "sesame"],
+        allergensEn: ["Soy", "Sesame"],
         description: "Library snapshot",
+        descriptionEn: "English library snapshot",
         sourceComboLibraryId: "combo-1",
         sourceComboLibraryUpdatedAt: "2026-05-03T00:00:00.000Z",
       })
 
       expect(parsed.calories).toBe(650)
       expect(parsed.proteinGrams).toBe(42)
+      expect(parsed.tagsEn).toEqual(["High protein"])
+      expect(parsed.allergensEn).toEqual(["Soy", "Sesame"])
+      expect(parsed.descriptionEn).toBe("English library snapshot")
       expect(parsed.sourceComboLibraryId).toBe("combo-1")
     })
   })
@@ -115,6 +121,9 @@ describe("content contracts", () => {
         imageKey: "weekly-meal-images/x/y.jpg",
         calories: 650,
         allergens: ["soy"],
+        allergensEn: ["Soy"],
+        tagsEn: ["High protein"],
+        descriptionEn: "Snapshot in English",
         proteinGrams: 28,
         description: "Snapshot",
         sourceComboLibraryId: "combo-1",
@@ -124,6 +133,9 @@ describe("content contracts", () => {
       expect(parsed.imageKey).toBe("weekly-meal-images/x/y.jpg")
       expect(parsed.calories).toBe(650)
       expect(parsed.proteinGrams).toBe(28)
+      expect(parsed.tagsEn).toEqual(["High protein"])
+      expect(parsed.allergensEn).toEqual(["Soy"])
+      expect(parsed.descriptionEn).toBe("Snapshot in English")
       expect(parsed.sourceComboLibraryUpdatedAt).toBeInstanceOf(Date)
     })
 

@@ -13,11 +13,15 @@ export const weeklyComboLibraryItemBodySchema = z.object({
   nameEn: optionalTrimmedString(200),
   internalName: z.string().trim().min(1).max(200),
   description: optionalTrimmedString(2000),
+  descriptionEn: optionalTrimmedString(2000),
   imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
   imageKey: z.string().max(512).optional().or(z.literal("")),
   calories: z.coerce.number().nonnegative().max(10000).optional(),
+  proteinGrams: z.coerce.number().nonnegative().max(1000).optional().or(z.literal("")),
   tags: compactStringArraySchema,
+  tagsEn: compactStringArraySchema,
   allergens: compactStringArraySchema,
+  allergensEn: compactStringArraySchema,
 })
 
 export const weeklyComboLibraryItemUpdateSchema = weeklyComboLibraryItemBodySchema.partial()

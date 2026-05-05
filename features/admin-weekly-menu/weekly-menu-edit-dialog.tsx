@@ -94,7 +94,7 @@ export function WeeklyMenuEditDialog({
             </div>
             <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
               <Label htmlFor="meal-tags" className="sm:pt-2 sm:text-right">
-                Tags
+                Tags Chinese
               </Label>
               <div className="space-y-2 sm:col-span-3">
                 <div className="flex flex-wrap gap-2">
@@ -138,6 +138,23 @@ export function WeeklyMenuEditDialog({
                 <p className="text-xs text-muted-foreground">Press Enter to add a tag</p>
               </div>
             </div>
+            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-tags-en" className="sm:pt-2 sm:text-right">
+                Tags English
+              </Label>
+              <DelimitedArrayField
+                id="meal-tags-en"
+                value={editingMeal.tagsEn || []}
+                onChange={(tagsEn) =>
+                  onUpdateMeal({
+                    ...editingMeal,
+                    tagsEn,
+                  })
+                }
+                className="sm:col-span-3"
+                placeholder="high protein; low calorie"
+              />
+            </div>
             <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
               <Label htmlFor="meal-calories" className="sm:text-right">
                 Calories
@@ -176,7 +193,7 @@ export function WeeklyMenuEditDialog({
             </div>
             <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
               <Label htmlFor="meal-allergens" className="sm:pt-2 sm:text-right">
-                Allergens
+                Allergens Chinese
               </Label>
               <DelimitedArrayField
                 id="meal-allergens"
@@ -188,17 +205,46 @@ export function WeeklyMenuEditDialog({
                   })
                 }
                 className="sm:col-span-3"
+                placeholder="大豆; 芝麻"
+              />
+            </div>
+            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-allergens-en" className="sm:pt-2 sm:text-right">
+                Allergens English
+              </Label>
+              <DelimitedArrayField
+                id="meal-allergens-en"
+                value={editingMeal.allergensEn || []}
+                onChange={(allergensEn) =>
+                  onUpdateMeal({
+                    ...editingMeal,
+                    allergensEn,
+                  })
+                }
+                className="sm:col-span-3"
                 placeholder="soy; sesame"
               />
             </div>
             <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
               <Label htmlFor="meal-description" className="sm:pt-2 sm:text-right">
-                Description
+                Description Chinese
               </Label>
               <Textarea
                 id="meal-description"
                 value={editingMeal.description || ""}
                 onChange={(event) => onUpdateMeal({ ...editingMeal, description: event.target.value })}
+                className="sm:col-span-3"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-description-en" className="sm:pt-2 sm:text-right">
+                Description English
+              </Label>
+              <Textarea
+                id="meal-description-en"
+                value={editingMeal.descriptionEn || ""}
+                onChange={(event) => onUpdateMeal({ ...editingMeal, descriptionEn: event.target.value })}
                 className="sm:col-span-3"
                 rows={3}
               />

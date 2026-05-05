@@ -9,8 +9,12 @@ describe("weekly combo library csv helpers", () => {
 
     expect(csv).toContain(getCsvHeaders(WEEKLY_COMBO_LIBRARY_FIELDS).join(","))
     expect(csv).toContain("name,nameEn")
-    expect(csv).not.toContain("dishes")
-    expect(csv).toContain("description")
+    expect(csv).not.toContain("typeADishes")
+    expect(csv).not.toContain("typeBDishes")
+    expect(csv).toContain("tagsEn (optional)")
+    expect(csv).toContain("proteinGrams (optional)")
+    expect(csv).toContain("allergensEn (optional)")
+    expect(csv).toContain("descriptionEn (optional)")
   })
 
   it("splits array cells", () => {
@@ -24,8 +28,13 @@ describe("weekly combo library csv helpers", () => {
         name: "橄榄菜肉末豆角",
         nameEn: "Green Beans with Minced Pork",
         calories: "650",
-        tags: "高蛋白;鸡肉",
-        allergens: "soy;sesame",
+        "proteinGrams (optional)": "32",
+        "tags (optional)": "高蛋白;鸡肉",
+        "tagsEn (optional)": "High protein;Chicken",
+        "allergens (optional)": "大豆;芝麻",
+        "allergensEn (optional)": "soy;sesame",
+        "description (optional)": "这份餐包含三道菜",
+        "descriptionEn (optional)": "A weekly combo with three dishes.",
       },
       2
     )
@@ -34,6 +43,10 @@ describe("weekly combo library csv helpers", () => {
     expect(row.data?.name).toBe("橄榄菜肉末豆角")
     expect(row.data?.nameEn).toBe("Green Beans with Minced Pork")
     expect(row.data?.calories).toBe(650)
+    expect(row.data?.proteinGrams).toBe(32)
+    expect(row.data?.tagsEn).toEqual(["High protein", "Chicken"])
+    expect(row.data?.allergensEn).toEqual(["soy", "sesame"])
+    expect(row.data?.descriptionEn).toBe("A weekly combo with three dishes.")
   })
 
   it("repairs common UTF-8 mojibake from CSV editors", () => {
@@ -45,7 +58,7 @@ describe("weekly combo library csv helpers", () => {
         nameEn: "Green Beans with Minced Pork",
         calories: "650",
         tags: mojibake("高蛋白"),
-        description: mojibake("这份餐包含三道菜"),
+        "description (optional)": mojibake("这份餐包含三道菜"),
       },
       2
     )

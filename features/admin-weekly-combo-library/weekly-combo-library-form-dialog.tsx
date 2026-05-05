@@ -30,7 +30,9 @@ const EMPTY_FORM: Partial<WeeklyComboLibraryItem> = {
   name: "",
   nameEn: "",
   tags: [],
+  tagsEn: [],
   allergens: [],
+  allergensEn: [],
 }
 
 function field(key: WeeklyComboLibraryFieldKey) {
@@ -48,7 +50,9 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
       ...EMPTY_FORM,
       ...(item ?? {}),
       tags: item?.tags ?? [],
+      tagsEn: item?.tagsEn ?? [],
       allergens: item?.allergens ?? [],
+      allergensEn: item?.allergensEn ?? [],
     })
   }, [item, open])
 
@@ -124,6 +128,21 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
               <Input type="number" value={form.calories ?? ""} onChange={(event) => setForm((current) => ({ ...current, calories: event.target.value ? Number(event.target.value) : undefined }))} />
             </div>
             <div className="space-y-2">
+              <Label>{field("proteinGrams").label}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.proteinGrams ?? ""}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    proteinGrams: event.target.value ? Number(event.target.value) : undefined,
+                  }))
+                }
+                placeholder={field("proteinGrams").placeholder}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>{field("tags").label}</Label>
               <DelimitedArrayField
                 value={form.tags}
@@ -132,11 +151,27 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
               />
             </div>
             <div className="space-y-2">
+              <Label>{field("tagsEn").label}</Label>
+              <DelimitedArrayField
+                value={form.tagsEn}
+                onChange={(tagsEn) => setForm((current) => ({ ...current, tagsEn }))}
+                placeholder={field("tagsEn").placeholder}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>{field("allergens").label}</Label>
               <DelimitedArrayField
                 value={form.allergens}
                 onChange={(allergens) => setForm((current) => ({ ...current, allergens }))}
                 placeholder={field("allergens").placeholder}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{field("allergensEn").label}</Label>
+              <DelimitedArrayField
+                value={form.allergensEn}
+                onChange={(allergensEn) => setForm((current) => ({ ...current, allergensEn }))}
+                placeholder={field("allergensEn").placeholder}
               />
             </div>
           </div>
@@ -151,6 +186,10 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
         <div className="space-y-2">
           <Label>{field("description").label}</Label>
           <Textarea value={form.description ?? ""} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+        </div>
+        <div className="space-y-2">
+          <Label>{field("descriptionEn").label}</Label>
+          <Textarea value={form.descriptionEn ?? ""} onChange={(event) => setForm((current) => ({ ...current, descriptionEn: event.target.value }))} />
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

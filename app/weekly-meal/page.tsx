@@ -79,10 +79,13 @@ export default function WeeklyMealPage() {
     name: string;
     nameEn?: string;
     tags?: string[];
+    tagsEn?: string[];
     calories?: number;
     proteinGrams?: number;
     allergens?: string[];
+    allergensEn?: string[];
     description?: string;
+    descriptionEn?: string;
     /** When true from admin, included in homepage menu preview carousel (still needs photo). */
     featuredInMenuPreview?: boolean;
   }
@@ -120,6 +123,17 @@ export default function WeeklyMealPage() {
     }
     return option.nameEn || option.name
   }
+
+  const getOptionDescription = (option: MenuOption) =>
+    language === "zh" ? option.description : option.descriptionEn || option.description
+
+  const getOptionTags = (option: MenuOption) =>
+    language === "zh" ? option.tags : option.tagsEn?.length ? option.tagsEn : option.tags
+
+  const getOptionAllergens = (option: MenuOption) =>
+    language === "zh"
+      ? option.allergens ?? option.allergensEn ?? []
+      : option.allergensEn ?? option.allergens ?? []
   
   // Fetch the weekly menu eagerly on mount (and re-format on language change).
   // The carousel preview below the hero needs this data even before the dialog
@@ -692,22 +706,22 @@ export default function WeeklyMealPage() {
                                               </h4>
                                             </div>
 
-                                            {option.description ? (
+                                            {getOptionDescription(option) ? (
                                               <p className="mt-2 text-xs leading-relaxed text-[#6B5F53]/75 sm:text-sm">
-                                                {option.description}
+                                                {getOptionDescription(option)}
                                               </p>
                                             ) : null}
 
-                                            {(typeof option.calories === "number" || option.tags?.length || option.allergens?.length || typeof option.proteinGrams === "number") ? (
+                                            {(typeof option.calories === "number" || getOptionTags(option)?.length || getOptionAllergens(option).length || typeof option.proteinGrams === "number") ? (
                                               <div className="mt-3 space-y-2">
-                                                {(typeof option.calories === "number" || (option.tags && option.tags.length > 0)) ? (
+                                                {(typeof option.calories === "number" || (getOptionTags(option) && getOptionTags(option)!.length > 0)) ? (
                                                   <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                                     {typeof option.calories === "number" ? (
                                                       <span className="px-2 py-0.5 sm:py-1 bg-[#C2884E]/10 text-[#C2884E] rounded-full text-[10px] sm:text-xs font-semibold">
                                                         {option.calories} KCAL
                                                       </span>
                                                     ) : null}
-                                                    {option.tags?.map((tag, tagIndex) => (
+                                                    {getOptionTags(option)?.map((tag, tagIndex) => (
                                                       <span
                                                         key={tagIndex}
                                                         className="px-2 py-0.5 sm:py-1 bg-[#F5EDE4]/70 text-[#6B5F53] rounded-full text-[10px] sm:text-xs font-medium"
@@ -718,12 +732,12 @@ export default function WeeklyMealPage() {
                                                   </div>
                                                 ) : null}
 
-                                                {(typeof option.proteinGrams === "number" && Number.isFinite(option.proteinGrams)) || (option.allergens && option.allergens.length > 0) ? (
+                                                {(typeof option.proteinGrams === "number" && Number.isFinite(option.proteinGrams)) || getOptionAllergens(option).length > 0 ? (
                                                   <MealProteinAllergenRow
                                                     language={language === "zh" ? "zh" : "en"}
                                                     variant="panel"
                                                     proteinGrams={option.proteinGrams}
-                                                    allergens={option.allergens ?? []}
+                                                    allergens={getOptionAllergens(option)}
                                                   />
                                                 ) : null}
                                               </div>
@@ -957,10 +971,10 @@ export default function WeeklyMealPage() {
                           badge={`${item.dayName} · ${item.dayDate}`}
                           title={translateOptionName(item.option)}
                           metaRight={typeof item.option.calories === "number" ? `${item.option.calories} KCAL` : null}
-                          description={item.option.description}
+                          description={getOptionDescription(item.option)}
                           proteinGrams={item.option.proteinGrams}
-                          tags={item.option.tags}
-                          allergens={item.option.allergens}
+                          tags={getOptionTags(item.option)}
+                          allergens={getOptionAllergens(item.option)}
                           onClick={() => openMenuDialogForDay(item.dayUniqueId)}
                         />
                       ))}

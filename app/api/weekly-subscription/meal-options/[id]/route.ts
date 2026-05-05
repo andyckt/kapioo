@@ -67,11 +67,14 @@ export async function PUT(request: Request, { params }: RouteContext<{ id: strin
     if (data.name !== undefined) setData.name = data.name;
     if (data.nameEn !== undefined) setData.nameEn = data.nameEn;
     if (data.tags !== undefined) setData.tags = data.tags;
+    if (data.tagsEn !== undefined) setData.tagsEn = data.tagsEn;
     if (data.active !== undefined) setData.active = data.active;
     if (data.calories !== undefined) setData.calories = data.calories;
     if (data.proteinGrams !== undefined) setData.proteinGrams = data.proteinGrams;
     if (data.allergens !== undefined) setData.allergens = data.allergens;
+    if (data.allergensEn !== undefined) setData.allergensEn = data.allergensEn;
     if (data.description !== undefined) setData.description = data.description;
+    if (data.descriptionEn !== undefined) setData.descriptionEn = data.descriptionEn;
     if (data.featuredInMenuPreview !== undefined) {
       setData.featuredInMenuPreview = data.featuredInMenuPreview;
     }

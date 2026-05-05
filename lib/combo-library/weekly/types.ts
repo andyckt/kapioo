@@ -5,11 +5,15 @@ export type WeeklyComboLibraryItem = {
   nameEn?: string
   internalName: string
   description?: string
+  descriptionEn?: string
   imageUrl?: string
   imageKey?: string
   calories?: number
+  proteinGrams?: number
   tags: string[]
+  tagsEn?: string[]
   allergens: string[]
+  allergensEn?: string[]
   createdAt?: string | Date
   updatedAt?: string | Date
   createdBy?: string

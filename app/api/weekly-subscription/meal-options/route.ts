@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       name: data.name,
       nameEn: data.nameEn || undefined, // Optional English name
       tags: data.tags || [],
+      tagsEn: data.tagsEn || undefined,
       active: data.active !== undefined ? data.active : true,
       // Image fields are optional. Empty strings from the client are treated
       // as "no image" so we don't store stale empty strings on new docs.
@@ -56,7 +57,9 @@ export async function POST(request: Request) {
       calories: data.calories,
       proteinGrams: data.proteinGrams,
       allergens: data.allergens,
+      allergensEn: data.allergensEn,
       description: data.description || undefined,
+      descriptionEn: data.descriptionEn || undefined,
       featuredInMenuPreview:
         data.featuredInMenuPreview !== undefined ? data.featuredInMenuPreview : false,
       sourceComboLibraryId: data.sourceComboLibraryId || undefined,

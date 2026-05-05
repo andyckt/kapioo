@@ -11,13 +11,16 @@ export type WeeklyMealOptionMutation = {
   name?: string;
   nameEn?: string;
   tags?: string[];
+  tagsEn?: string[];
   active?: boolean;
   imageUrl?: string;
   imageKey?: string;
   calories?: number;
   proteinGrams?: number;
   allergens?: string[];
+  allergensEn?: string[];
   description?: string;
+  descriptionEn?: string;
   featuredInMenuPreview?: boolean;
   sourceComboLibraryId?: string;
   sourceComboLibraryUpdatedAt?: string | Date;
@@ -76,6 +79,7 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
               name: option.name,
               nameEn: option.nameEn, // Include English name
               tags: option.tags || [],
+              ...(Array.isArray(option.tagsEn) ? { tagsEn: option.tagsEn } : {}),
               active: option.active,
               // Image fields are optional. Only forward non-empty values so the
               // editor's "no image" UI state is unambiguous (undefined, not "").
@@ -90,8 +94,12 @@ export async function getAdminWeeklySubscription(): Promise<DeliverySection[]> {
                 ? { proteinGrams: option.proteinGrams }
                 : {}),
               ...(Array.isArray(option.allergens) ? { allergens: option.allergens } : {}),
+              ...(Array.isArray(option.allergensEn) ? { allergensEn: option.allergensEn } : {}),
               ...(typeof option.description === 'string' && option.description
                 ? { description: option.description }
+                : {}),
+              ...(typeof option.descriptionEn === 'string' && option.descriptionEn
+                ? { descriptionEn: option.descriptionEn }
                 : {}),
               featuredInMenuPreview: Boolean(option.featuredInMenuPreview),
               ...(typeof option.sourceComboLibraryId === 'string' && option.sourceComboLibraryId
