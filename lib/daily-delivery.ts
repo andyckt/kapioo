@@ -44,13 +44,21 @@ export type ComboItem = {
   id: string
   name: string
   calories: number
+  proteinGrams?: number
+  descriptionZh?: string
+  descriptionEn?: string
   tags: string[]
+  tagsEn?: string[]
+  allergensZh?: string[]
+  allergensEn?: string[]
   typeA: {
     dishes: string[]
+    dishesEn?: string[]
     voucherType: 'twoDish'
   }
   typeB: {
     dishes: string[]
+    dishesEn?: string[]
     voucherType: 'threeDish'
   }
   imageUrl?: string
@@ -61,21 +69,43 @@ type RawCombo = {
   id?: unknown
   name?: unknown
   calories?: unknown
+  proteinGrams?: unknown
+  descriptionZh?: unknown
+  descriptionEn?: unknown
   tags?: unknown
+  tagsEn?: unknown
+  allergensZh?: unknown
+  allergensEn?: unknown
   typeA?: unknown
   typeB?: unknown
   imageUrl?: unknown
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String).map((item) => item.trim()).filter(Boolean) : []
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined
+}
+
+function normalizeOptionalNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined
+  const numberValue = Number(value)
+  return Number.isFinite(numberValue) ? numberValue : undefined
+}
+
 function normalizeVoucherOption(
   option: unknown,
   voucherType: 'twoDish' | 'threeDish'
-): { dishes: string[]; voucherType: 'twoDish' | 'threeDish' } {
+): { dishes: string[]; dishesEn?: string[]; voucherType: 'twoDish' | 'threeDish' } {
   const optionRecord = option && typeof option === 'object' ? option as Record<string, unknown> : {}
-  const dishes = Array.isArray(optionRecord.dishes) ? optionRecord.dishes.map(String) : []
+  const dishes = normalizeStringArray(optionRecord.dishes)
+  const dishesEn = normalizeStringArray(optionRecord.dishesEn)
 
   return {
     dishes,
+    ...(dishesEn.length > 0 ? { dishesEn } : {}),
     voucherType,
   }
 }
@@ -85,11 +115,57 @@ export function formatDailyCombo(combo: RawCombo): ComboItem {
     id: String(combo.comboId || combo.id || ""),
     name: String(combo.name || ""),
     calories: Number(combo.calories || 0),
-    tags: Array.isArray(combo.tags) ? combo.tags.map(String) : [],
+    ...(normalizeOptionalNumber(combo.proteinGrams) !== undefined
+      ? { proteinGrams: normalizeOptionalNumber(combo.proteinGrams) }
+      : {}),
+    ...(normalizeOptionalString(combo.descriptionZh) ? { descriptionZh: normalizeOptionalString(combo.descriptionZh) } : {}),
+    ...(normalizeOptionalString(combo.descriptionEn) ? { descriptionEn: normalizeOptionalString(combo.descriptionEn) } : {}),
+    tags: normalizeStringArray(combo.tags),
+    ...(normalizeStringArray(combo.tagsEn).length > 0 ? { tagsEn: normalizeStringArray(combo.tagsEn) } : {}),
+    ...(normalizeStringArray(combo.allergensZh).length > 0 ? { allergensZh: normalizeStringArray(combo.allergensZh) } : {}),
+    ...(normalizeStringArray(combo.allergensEn).length > 0 ? { allergensEn: normalizeStringArray(combo.allergensEn) } : {}),
     typeA: normalizeVoucherOption(combo.typeA, 'twoDish') as ComboItem['typeA'],
     typeB: normalizeVoucherOption(combo.typeB, 'threeDish') as ComboItem['typeB'],
     imageUrl: typeof combo.imageUrl === "string" && combo.imageUrl ? combo.imageUrl : undefined,
   }
+}
+
+/** 3-dish dishes not in the 2-dish set — listed as extras in dashboard + menu preview UIs. */
+export function dishesBeyondTwoDishSet(
+  twoDishDishes: string[],
+  threeDishDishes: string[]
+): string[] {
+  return threeDishDishes.filter((dish) => !twoDishDishes.includes(dish))
+}
+
+export type DailyMenuLanguage = "en" | "zh"
+
+export function getDailyComboDescription(combo: ComboItem, language: DailyMenuLanguage) {
+  return language === "zh"
+    ? combo.descriptionZh || combo.descriptionEn
+    : combo.descriptionEn || combo.descriptionZh
+}
+
+export function getDailyComboTags(combo: ComboItem, language: DailyMenuLanguage) {
+  return language === "zh" ? combo.tags : combo.tagsEn?.length ? combo.tagsEn : combo.tags
+}
+
+export function getDailyComboAllergens(combo: ComboItem, language: DailyMenuLanguage) {
+  return language === "zh"
+    ? combo.allergensZh ?? combo.allergensEn ?? []
+    : combo.allergensEn ?? combo.allergensZh ?? []
+}
+
+export function getDailyComboDishName(
+  combo: ComboItem,
+  slot: "typeA" | "typeB",
+  index: number,
+  dish: string,
+  language: DailyMenuLanguage,
+  fallbackTranslateDishName?: (name: string) => string
+) {
+  if (language === "zh") return dish
+  return combo[slot].dishesEn?.[index] || fallbackTranslateDishName?.(dish) || dish
 }
 
 export type DayData = {

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  DailyComboMetadataFields,
   DailyComboLibraryFormDialog,
   DailyComboLibraryPickerDialog,
 } from "@/features/admin-daily-combo-library"
@@ -340,7 +341,11 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSaveAsLibraryCombo(mapDailyMenuComboToDailyLibraryDraft(combo))}
+                            onClick={() =>
+                              setSaveAsLibraryCombo(
+                                mapDailyMenuComboToDailyLibraryDraft(combo, props.dishTranslations)
+                              )
+                            }
                           >
                             另存为素材库套餐
                           </Button>
@@ -374,19 +379,6 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                           }
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label>Calories</Label>
-                        <Input
-                          type="number"
-                          value={combo.calories === 0 ? "" : combo.calories}
-                          placeholder="Enter calories"
-                          onChange={(e) =>
-                            props.updateCombo(props.selectedDay, combo.id, {
-                              calories: e.target.value === "" ? 0 : Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
                     </div>
 
                     <ComboImageEditor
@@ -394,59 +386,10 @@ export function DailyMenuCombosTab(props: DailyMenuCombosTabProps) {
                       onChange={(updates) => props.updateCombo(props.selectedDay, combo.id, updates)}
                     />
 
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>Tags</Label>
-                        <Button variant="outline" size="sm" onClick={() => void props.addNewTag()}>
-                          <Plus className="mr-1 h-3 w-3" />
-                          Create Tag
-                        </Button>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {combo.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                            {tag}
-                            <button onClick={() => props.removeTagFromCombo(props.selectedDay, combo.id, tag)}>
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Input
-                          placeholder="New tag..."
-                          value={props.newTag}
-                          onChange={(e) => props.setNewTag(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && props.newTag.trim()) {
-                              e.preventDefault()
-                              if (props.availableTags.includes(props.newTag)) {
-                                props.addTagToCombo(props.selectedDay, combo.id, props.newTag)
-                                props.setNewTag("")
-                              } else {
-                                void props.addNewTag().then(() =>
-                                  props.addTagToCombo(props.selectedDay, combo.id, props.newTag)
-                                )
-                              }
-                            }
-                          }}
-                        />
-                        <Select onValueChange={(tag) => props.addTagToCombo(props.selectedDay, combo.id, tag)}>
-                          <SelectTrigger className="sm:w-[220px]">
-                            <SelectValue placeholder="Add existing tag" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {props.availableTags
-                              .filter((tag) => !combo.tags.includes(tag))
-                              .map((tag) => (
-                                <SelectItem key={tag} value={tag}>
-                                  {tag}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                    <DailyComboMetadataFields
+                      value={combo}
+                      onChange={(updates) => props.updateCombo(props.selectedDay, combo.id, updates)}
+                    />
 
                     <div className="grid gap-6 lg:grid-cols-2">
                       {(["typeA", "typeB"] as const).map((type) => (

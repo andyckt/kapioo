@@ -39,6 +39,14 @@ export function normalizeOptionalString(value: unknown) {
   return text || undefined
 }
 
+export function normalizeOptionalNumber(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+  const numberValue = Number(value)
+  return Number.isFinite(numberValue) ? numberValue : undefined
+}
+
 export function normalizeComboLibraryInput<T extends Record<string, unknown>>(
   input: T,
   idField: "dailyComboLibraryId" | "weeklyComboLibraryId"
@@ -51,12 +59,20 @@ export function normalizeComboLibraryInput<T extends Record<string, unknown>>(
     internalName: normalizeOptionalString(input.internalName),
     description: normalizeOptionalString(input.description),
     typeADishes: normalizeArray(input.typeADishes),
+    typeADishesEn: normalizeArray(input.typeADishesEn),
     typeBDishes: normalizeArray(input.typeBDishes),
+    typeBDishesEn: normalizeArray(input.typeBDishesEn),
     dishes: normalizeArray(input.dishes),
     vegetables: normalizeArray(input.vegetables),
     tags: normalizeArray(input.tags),
+    tagsEn: normalizeArray(input.tagsEn),
     allergens: normalizeArray(input.allergens),
+    allergensZh: normalizeArray(input.allergensZh),
+    allergensEn: normalizeArray(input.allergensEn),
     dietaryTags: normalizeArray(input.dietaryTags),
+    proteinGrams: normalizeOptionalNumber(input.proteinGrams ?? input.protein),
+    descriptionZh: normalizeOptionalString(input.descriptionZh),
+    descriptionEn: normalizeOptionalString(input.descriptionEn),
     mainProtein: normalizeOptionalString(input.mainProtein),
     carb: normalizeOptionalString(input.carb),
     sauce: normalizeOptionalString(input.sauce),
@@ -79,11 +95,16 @@ export function normalizeComboLibraryPatch(input: Record<string, unknown>) {
     if (
       [
         "typeADishes",
+        "typeADishesEn",
         "typeBDishes",
+        "typeBDishesEn",
         "dishes",
         "vegetables",
         "tags",
+        "tagsEn",
         "allergens",
+        "allergensZh",
+        "allergensEn",
         "dietaryTags",
       ].includes(key)
     ) {
@@ -99,6 +120,8 @@ export function normalizeComboLibraryPatch(input: Record<string, unknown>) {
         "nameEn",
         "internalName",
         "description",
+        "descriptionZh",
+        "descriptionEn",
         "mainProtein",
         "carb",
         "sauce",
@@ -110,6 +133,11 @@ export function normalizeComboLibraryPatch(input: Record<string, unknown>) {
       ].includes(key)
     ) {
       normalized[key] = normalizeOptionalString(value)
+      return
+    }
+
+    if (key === "proteinGrams" || key === "protein") {
+      normalized.proteinGrams = normalizeOptionalNumber(value)
       return
     }
 

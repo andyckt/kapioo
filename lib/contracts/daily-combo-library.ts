@@ -13,11 +13,19 @@ export const dailyComboLibraryItemBodySchema = z.object({
   name: optionalTrimmedString(200),
   internalName: z.string().trim().min(1).max(200),
   typeADishes: stringArraySchema.refine((items) => items.length > 0, "Type A dishes are required"),
+  typeADishesEn: stringArraySchema,
   typeBDishes: stringArraySchema.refine((items) => items.length > 0, "Type B dishes are required"),
+  typeBDishesEn: stringArraySchema,
   imageUrl: z.string().url().max(2048).optional().or(z.literal("")),
   imageKey: z.string().max(512).optional().or(z.literal("")),
   calories: z.coerce.number().nonnegative().max(10000),
+  proteinGrams: z.coerce.number().nonnegative().max(1000).optional().or(z.literal("")),
   tags: compactStringArraySchema,
+  tagsEn: compactStringArraySchema,
+  allergensZh: compactStringArraySchema,
+  allergensEn: compactStringArraySchema,
+  descriptionZh: optionalTrimmedString(1000),
+  descriptionEn: optionalTrimmedString(1000),
 })
 
 export const dailyComboLibraryItemUpdateSchema = dailyComboLibraryItemBodySchema.partial()

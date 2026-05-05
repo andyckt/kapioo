@@ -28,6 +28,23 @@ describe("content contracts", () => {
       expect(parsed.imageKey).toBe("combo-images/monday/image.jpg")
     })
 
+    it("accepts optional localized daily combo metadata", () => {
+      const parsed = comboBodySchema.parse({
+        ...baseCombo,
+        proteinGrams: 32,
+        tags: ["高蛋白"],
+        tagsEn: ["High protein"],
+        allergensZh: ["大豆"],
+        allergensEn: ["Soy"],
+        descriptionZh: "清爽高蛋白组合。",
+        descriptionEn: "A light high-protein combo.",
+      })
+
+      expect(parsed.proteinGrams).toBe(32)
+      expect(parsed.tagsEn).toEqual(["High protein"])
+      expect(parsed.descriptionEn).toBe("A light high-protein combo.")
+    })
+
     it("accepts empty strings so admins can remove an image", () => {
       const parsed = comboBodySchema.parse({
         ...baseCombo,
@@ -67,6 +84,7 @@ describe("content contracts", () => {
       const parsed = mealOptionSchema.parse({
         ...baseOption,
         calories: 650,
+        proteinGrams: 42,
         allergens: ["soy", "sesame"],
         description: "Library snapshot",
         sourceComboLibraryId: "combo-1",
@@ -74,6 +92,7 @@ describe("content contracts", () => {
       })
 
       expect(parsed.calories).toBe(650)
+      expect(parsed.proteinGrams).toBe(42)
       expect(parsed.sourceComboLibraryId).toBe("combo-1")
     })
   })
@@ -94,6 +113,7 @@ describe("content contracts", () => {
         imageKey: "weekly-meal-images/x/y.jpg",
         calories: 650,
         allergens: ["soy"],
+        proteinGrams: 28,
         description: "Snapshot",
         sourceComboLibraryId: "combo-1",
         sourceComboLibraryUpdatedAt: "2026-05-03T00:00:00.000Z",
@@ -101,6 +121,7 @@ describe("content contracts", () => {
       expect(parsed.imageUrl).toContain("/weekly-meal-images/")
       expect(parsed.imageKey).toBe("weekly-meal-images/x/y.jpg")
       expect(parsed.calories).toBe(650)
+      expect(parsed.proteinGrams).toBe(28)
       expect(parsed.sourceComboLibraryUpdatedAt).toBeInstanceOf(Date)
     })
 
@@ -154,6 +175,13 @@ describe("content contracts", () => {
       })
       expect(parsed.imageUrl).toContain("/weekly-meal-images/")
       expect(parsed.imageKey).toBe("weekly-meal-images/abc/xyz.jpg")
+    })
+
+    it("accepts proteinGrams on update body", () => {
+      const parsed = updateWeeklyMealOptionBodySchema.parse({
+        proteinGrams: 30,
+      })
+      expect(parsed.proteinGrams).toBe(30)
     })
   })
 })

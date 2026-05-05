@@ -47,6 +47,7 @@ function formatDeliveryDaysForAdmin(deliveryDays: WeeklyDeliveryDayRecord[]) {
       imageUrl: option.imageUrl,
       imageKey: option.imageKey,
       calories: option.calories,
+      proteinGrams: option.proteinGrams,
       allergens: option.allergens,
       description: option.description,
       featuredInMenuPreview: Boolean(option.featuredInMenuPreview),

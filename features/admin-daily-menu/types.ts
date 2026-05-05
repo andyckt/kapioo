@@ -2,6 +2,7 @@ export type ComboType = "A" | "B"
 
 export interface ComboDishState {
   dishes: string[]
+  dishesEn?: string[]
   voucherType: "twoDish" | "threeDish"
 }
 
@@ -10,7 +11,13 @@ export interface ComboItem {
   comboId?: string
   name: string
   calories: number
+  proteinGrams?: number
   tags: string[]
+  tagsEn?: string[]
+  allergensZh?: string[]
+  allergensEn?: string[]
+  descriptionZh?: string
+  descriptionEn?: string
   typeA: ComboDishState
   typeB: ComboDishState
   imageUrl?: string

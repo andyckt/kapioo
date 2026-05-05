@@ -4,6 +4,12 @@ import { Minus, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { ComboItem, DayData } from "@/lib/daily-delivery"
+import {
+  DailyComboMetadata,
+  DailyComboMealOptionDivider,
+  DailyComboThreeDishExtraDishes,
+  DailyComboTwoDishDishList,
+} from "@/features/daily-ordering/daily-combo-meal-lists"
 
 type DailyComboGridProps = {
   addToCart: (day: string, date: string, combo: ComboItem, type: "A" | "B") => void
@@ -32,8 +38,6 @@ export function DailyComboGrid({
   translateComboName,
   translateDishName,
 }: DailyComboGridProps) {
-  const accentGradient = "from-[#C2884E] to-[#D1A46C]"
-
   if (!days[selectedDay]) {
     return null
   }
@@ -121,13 +125,14 @@ export function DailyComboGrid({
               ) : null}
 
               <div className="flex flex-1 flex-col p-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between">
+              <div className="mb-4">
                 <h3 className="text-lg font-bold tracking-wide text-[#6B5F53]">
                   {translateComboName(combo.name)}
                 </h3>
-                <div className="rounded-md bg-[#C2884E]/5 px-2 py-1 text-sm font-medium text-[#C2884E]">
-                  {combo.calories} KCAL
-                </div>
+              </div>
+
+              <div className="mb-4">
+                <DailyComboMetadata combo={combo} language={language} />
               </div>
 
               <div className="mb-4">
@@ -162,22 +167,14 @@ export function DailyComboGrid({
                   </div>
                 </div>
 
-                <div className="mt-3">
-                  <ul className="grid grid-cols-1 gap-2">
-                    {combo.typeA.dishes.map((dish, index) => (
-                      <li key={index} className="flex items-center">
-                        <span className="w-full rounded-md bg-[#F5EDE4] px-3 py-1.5 text-sm font-medium tracking-wide text-[#6B5F53]">
-                          {translateDishName(dish)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <DailyComboTwoDishDishList
+                  combo={combo}
+                  language={language}
+                  translateDishName={translateDishName}
+                />
               </div>
 
-              <div className="my-3">
-                <div className="w-full border-t border-dashed border-[#6B5F53]/20" />
-              </div>
+              <DailyComboMealOptionDivider />
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
@@ -211,33 +208,13 @@ export function DailyComboGrid({
                   </div>
                 </div>
 
-                <div className="mt-3">
-                  <div className="mb-2 text-xs font-medium italic text-[#6B5F53]/80">
-                    {language === "zh" ? "包含以上的所有菜品，再加:" : "Includes all dishes above, plus:"}
-                  </div>
-                  <ul className="grid grid-cols-1 gap-2">
-                    {combo.typeB.dishes
-                      .filter((dish) => !combo.typeA.dishes.includes(dish))
-                      .map((dish, index) => (
-                        <li key={index} className="flex items-center">
-                          <span className="w-full rounded-md border-l-2 border-[#C2884E] bg-[#F5EDE4]/80 px-3 py-1.5 text-sm font-medium tracking-wide text-[#6B5F53]">
-                            {translateDishName(dish)}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
+                <DailyComboThreeDishExtraDishes
+                  combo={combo}
+                  language={language}
+                  translateDishName={translateDishName}
+                />
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-1">
-                {combo.tags.map((tag, tagIndex) => (
-                  <div key={tagIndex} className="transition-all duration-300">
-                    <div className={`flex items-center rounded-full bg-gradient-to-r ${accentGradient} px-2 py-1 text-white shadow-sm`}>
-                      <span className="text-xs font-medium">{tag}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
               </div>
             </div>
           </div>

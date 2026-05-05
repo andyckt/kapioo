@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
+import { MealProteinAllergenRow } from "@/components/landing/meal-protein-allergen-row"
+
 /** Mobile tile width: definite flex basis so aspect-ratio boxes resolve; avoids vw blowout vs padding. */
 export const menuPreviewCarouselTileWidthClass =
   "w-[min(240px,calc(100vw-3.25rem))] max-w-[min(240px,calc(100vw-3.25rem))] md:w-full md:max-w-none"
@@ -203,12 +205,15 @@ type MenuPreviewCardButtonProps = {
   imageUrl: string
   imageAlt: string
   badge: string
-  title: string
+  title?: string | null
   /** Combo dish line or similar */
   subtitle?: string | null
+  subtitleClassName?: string
   /** e.g. "650 KCAL" */
   metaRight?: string | null
   tags?: string[]
+  /** Shown in the compact allergens row (same row as allergens) */
+  proteinGrams?: number
   allergens?: string[]
   description?: string | null
   onClick: () => void
@@ -225,8 +230,10 @@ export function MenuPreviewCardButton({
   badge,
   title,
   subtitle,
+  subtitleClassName,
   metaRight,
   tags,
+  proteinGrams,
   allergens,
   description,
   onClick,
@@ -296,8 +303,12 @@ export function MenuPreviewCardButton({
             {badge}
           </span>
         </div>
-        <h3 className="line-clamp-2 text-base font-semibold text-[#6B5F53]">{title}</h3>
-        {subtitle ? <p className="mt-2 line-clamp-2 text-xs text-[#6B5F53]/70">{subtitle}</p> : null}
+        {title ? <h3 className="line-clamp-2 text-base font-semibold text-[#6B5F53]">{title}</h3> : null}
+        {subtitle ? (
+          <p className={cn("mt-2 text-xs text-[#6B5F53]/70", subtitleClassName ?? "line-clamp-2")}>
+            {subtitle}
+          </p>
+        ) : null}
         {description ? <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#6B5F53]/70">{description}</p> : null}
         {(metaRight || (tags && tags.length > 0)) ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -316,12 +327,13 @@ export function MenuPreviewCardButton({
             ))}
           </div>
         ) : null}
-        {allergens && allergens.length > 0 ? (
-          <div className="mt-2 rounded-lg border border-[#E8D8C7] bg-[#FBF7F2]/70 px-2 py-1 text-[10px] font-medium leading-snug text-[#8A6A4D]">
-            <span className="text-[#6B5F53]">{language === "zh" ? "过敏原: " : "Allergens: "}</span>
-            {allergens.slice(0, 3).join(" / ")}
-          </div>
-        ) : null}
+        <MealProteinAllergenRow
+          language={language}
+          variant="carousel"
+          maxAllergens={3}
+          proteinGrams={proteinGrams}
+          allergens={allergens ?? []}
+        />
       </div>
     </button>
   )

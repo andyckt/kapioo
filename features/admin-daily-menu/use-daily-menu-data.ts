@@ -7,25 +7,41 @@ import { useToast } from "@/hooks/use-toast"
 import type { ComboItem, DayData } from "./types"
 
 function formatCombo(combo: Record<string, unknown>): ComboItem {
+  const typeA = combo.typeA as { dishes?: unknown[]; dishesEn?: unknown[]; voucherType?: "twoDish" } | undefined
+  const typeB = combo.typeB as { dishes?: unknown[]; dishesEn?: unknown[]; voucherType?: "threeDish" } | undefined
+
   return {
     id: String(combo.comboId || combo.id || ""),
     comboId: typeof combo.comboId === "string" ? combo.comboId : undefined,
     name: String(combo.name || ""),
     calories: Number(combo.calories || 0),
+    proteinGrams:
+      combo.proteinGrams !== undefined && combo.proteinGrams !== null && combo.proteinGrams !== ""
+        ? Number(combo.proteinGrams)
+        : undefined,
     tags: Array.isArray(combo.tags) ? combo.tags.map(String) : [],
+    tagsEn: Array.isArray(combo.tagsEn) ? combo.tagsEn.map(String) : [],
+    allergensZh: Array.isArray(combo.allergensZh) ? combo.allergensZh.map(String) : [],
+    allergensEn: Array.isArray(combo.allergensEn) ? combo.allergensEn.map(String) : [],
+    descriptionZh: typeof combo.descriptionZh === "string" && combo.descriptionZh ? combo.descriptionZh : undefined,
+    descriptionEn: typeof combo.descriptionEn === "string" && combo.descriptionEn ? combo.descriptionEn : undefined,
     typeA: {
-      dishes: Array.isArray((combo.typeA as { dishes?: unknown[] } | undefined)?.dishes)
-        ? ((combo.typeA as { dishes: unknown[] }).dishes.map(String) as string[])
+      dishes: Array.isArray(typeA?.dishes)
+        ? (typeA.dishes.map(String) as string[])
         : [],
-      voucherType:
-        (combo.typeA as { voucherType?: "twoDish" } | undefined)?.voucherType || "twoDish",
+      dishesEn: Array.isArray(typeA?.dishesEn)
+        ? (typeA.dishesEn.map(String) as string[])
+        : [],
+      voucherType: typeA?.voucherType || "twoDish",
     },
     typeB: {
-      dishes: Array.isArray((combo.typeB as { dishes?: unknown[] } | undefined)?.dishes)
-        ? ((combo.typeB as { dishes: unknown[] }).dishes.map(String) as string[])
+      dishes: Array.isArray(typeB?.dishes)
+        ? (typeB.dishes.map(String) as string[])
         : [],
-      voucherType:
-        (combo.typeB as { voucherType?: "threeDish" } | undefined)?.voucherType || "threeDish",
+      dishesEn: Array.isArray(typeB?.dishesEn)
+        ? (typeB.dishesEn.map(String) as string[])
+        : [],
+      voucherType: typeB?.voucherType || "threeDish",
     },
     imageUrl: typeof combo.imageUrl === "string" ? combo.imageUrl : undefined,
     imageKey: typeof combo.imageKey === "string" ? combo.imageKey : undefined,

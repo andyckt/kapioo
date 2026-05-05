@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       imageUrl: data.imageUrl ? data.imageUrl : undefined,
       imageKey: data.imageKey ? data.imageKey : undefined,
       calories: data.calories,
+      proteinGrams: data.proteinGrams,
       allergens: data.allergens,
       description: data.description || undefined,
       featuredInMenuPreview:

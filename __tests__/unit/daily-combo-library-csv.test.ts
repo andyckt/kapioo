@@ -9,6 +9,9 @@ describe("daily combo library csv helpers", () => {
     expect(csv).toContain(getCsvHeaders(DAILY_COMBO_LIBRARY_FIELDS).join(","))
     expect(csv).toContain("typeADishes")
     expect(csv).toContain("typeBDishes")
+    expect(csv).toContain("descriptionEn (optional)")
+    expect(csv).toContain("tags (optional)")
+    expect(csv).toContain("tagsEn (optional)")
   })
 
   it("splits semicolon-delimited array cells before comma fallback", () => {
@@ -37,6 +40,34 @@ describe("daily combo library csv helpers", () => {
     expect(row.data?.typeBDishes).toEqual(["鸡肉", "花菜", "米饭"])
     expect(row.data?.calories).toBe(650)
     expect(row.data?.name).toBe("套餐A")
+  })
+
+  it("coerces optional localized metadata from optional template headers", () => {
+    const row = coerceDailyImportRow(
+      {
+        internalName: "套餐B",
+        typeADishes: "鸡肉;花菜",
+        "typeADishesEn (optional)": "Chicken;Cauliflower",
+        typeBDishes: "鸡肉;花菜;米饭",
+        "typeBDishesEn (optional)": "Chicken;Cauliflower;Rice",
+        calories: "650",
+        tags: "高蛋白;鸡肉",
+        "tagsEn (optional)": "High protein;Chicken",
+        "allergensZh (optional)": "大豆;芝麻",
+        "allergensEn (optional)": "Soy;Sesame",
+        "proteinGrams (optional)": "32",
+        "descriptionZh (optional)": "清爽高蛋白组合。",
+        "descriptionEn (optional)": "A light high-protein combo.",
+      },
+      2
+    )
+
+    expect(row.status).toBe("valid")
+    expect(row.data?.typeADishesEn).toEqual(["Chicken", "Cauliflower"])
+    expect(row.data?.tagsEn).toEqual(["High protein", "Chicken"])
+    expect(row.data?.allergensEn).toEqual(["Soy", "Sesame"])
+    expect(row.data?.proteinGrams).toBe(32)
+    expect(row.data?.descriptionEn).toBe("A light high-protein combo.")
   })
 
   it("repairs common UTF-8 mojibake from CSV editors", () => {

@@ -81,6 +81,8 @@ export function parseImportWorkbook(buffer: Buffer, filename = "combos.csv") {
 }
 
 export function normalizeHeader(header: string, aliases: Record<string, string>) {
-  const compact = header.trim().replace(/\s+/g, "").toLocaleLowerCase("en-US")
-  return aliases[compact] ?? header.trim()
+  const trimmed = header.trim()
+  const withoutOptionalMarker = trimmed.replace(/\s*\(optional\)\s*$/i, "")
+  const compact = withoutOptionalMarker.replace(/\s+/g, "").toLocaleLowerCase("en-US")
+  return aliases[compact] ?? withoutOptionalMarker
 }

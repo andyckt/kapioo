@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react"
 
 import { MenuImageEditor } from "@/components/admin/menu-image-editor"
+import { DelimitedArrayField } from "@/components/admin/delimited-array-field"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import {
   DAILY_COMBO_LIBRARY_FIELDS,
@@ -16,6 +16,7 @@ import {
 import type { DailyComboLibraryItem } from "@/lib/combo-library/daily/types"
 import { getFieldDefinition } from "@/lib/combo-library/shared/fields"
 import { uploadDailyComboLibraryImage } from "@/lib/upload/daily-combo-library-image-client"
+import { DailyComboMetadataFields } from "./daily-combo-metadata-fields"
 
 type Props = {
   open: boolean
@@ -27,17 +28,15 @@ type Props = {
 const EMPTY_FORM: Partial<DailyComboLibraryItem> = {
   internalName: "",
   typeADishes: [],
+  typeADishesEn: [],
   typeBDishes: [],
+  typeBDishesEn: [],
   tags: [],
+  tagsEn: [],
+  allergensZh: [],
+  allergensEn: [],
   calories: 0,
-}
-
-function joinLines(values?: string[]) {
-  return (values ?? []).join("\n")
-}
-
-function splitLines(value: string) {
-  return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean)
+  proteinGrams: undefined,
 }
 
 function field(key: DailyComboLibraryFieldKey) {
@@ -55,8 +54,13 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
       ...EMPTY_FORM,
       ...(item ?? {}),
       typeADishes: item?.typeADishes ?? [],
+      typeADishesEn: item?.typeADishesEn ?? [],
       typeBDishes: item?.typeBDishes ?? [],
+      typeBDishesEn: item?.typeBDishesEn ?? [],
       tags: item?.tags ?? [],
+      tagsEn: item?.tagsEn ?? [],
+      allergensZh: item?.allergensZh ?? [],
+      allergensEn: item?.allergensEn ?? [],
     })
   }, [item, open])
 
@@ -111,18 +115,6 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
                 placeholder={field("internalName").placeholder}
               />
             </div>
-            <div className="space-y-2">
-              <Label>{field("calories").label}</Label>
-              <Input type="number" value={form.calories ?? 0} onChange={(event) => setForm((current) => ({ ...current, calories: Number(event.target.value) }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>{field("tags").label}</Label>
-              <Input
-                value={(form.tags ?? []).join("; ")}
-                onChange={(event) => setForm((current) => ({ ...current, tags: splitLines(event.target.value) }))}
-                placeholder={field("tags").placeholder}
-              />
-            </div>
           </div>
           <MenuImageEditor
             label="Daily Library Image"
@@ -132,17 +124,29 @@ export function DailyComboLibraryFormDialog({ open, onOpenChange, item, onSaved 
             onChange={(next) => setForm((current) => ({ ...current, imageUrl: next.imageUrl, imageKey: next.imageKey }))}
           />
         </div>
+        <DailyComboMetadataFields
+          value={form}
+          onChange={(updates) => setForm((current) => ({ ...current, ...updates }))}
+        />
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>{field("typeADishes").label}</Label>
               <Button type="button" size="sm" variant="outline" onClick={() => setForm((current) => ({ ...current, typeBDishes: current.typeADishes ?? [] }))}>Copy A to B</Button>
             </div>
-            <Textarea rows={6} value={joinLines(form.typeADishes)} placeholder={field("typeADishes").placeholder} onChange={(event) => setForm((current) => ({ ...current, typeADishes: splitLines(event.target.value) }))} />
+            <DelimitedArrayField multiline rows={6} value={form.typeADishes} placeholder={field("typeADishes").placeholder} onChange={(typeADishes) => setForm((current) => ({ ...current, typeADishes }))} />
           </div>
           <div className="space-y-2">
             <Label>{field("typeBDishes").label}</Label>
-            <Textarea rows={6} value={joinLines(form.typeBDishes)} placeholder={field("typeBDishes").placeholder} onChange={(event) => setForm((current) => ({ ...current, typeBDishes: splitLines(event.target.value) }))} />
+            <DelimitedArrayField multiline rows={6} value={form.typeBDishes} placeholder={field("typeBDishes").placeholder} onChange={(typeBDishes) => setForm((current) => ({ ...current, typeBDishes }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>{field("typeADishesEn").label}</Label>
+            <DelimitedArrayField multiline rows={5} value={form.typeADishesEn} placeholder={field("typeADishesEn").placeholder} onChange={(typeADishesEn) => setForm((current) => ({ ...current, typeADishesEn }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>{field("typeBDishesEn").label}</Label>
+            <DelimitedArrayField multiline rows={5} value={form.typeBDishesEn} placeholder={field("typeBDishesEn").placeholder} onChange={(typeBDishesEn) => setForm((current) => ({ ...current, typeBDishesEn }))} />
           </div>
         </div>
         <DialogFooter>

@@ -3,13 +3,21 @@ import type { DailyComboLibraryItem } from "@/lib/combo-library/daily/types"
 type DailyComboSnapshot = {
   name: string
   calories: number
+  proteinGrams?: number
   tags: string[]
+  tagsEn?: string[]
+  allergensZh?: string[]
+  allergensEn?: string[]
+  descriptionZh?: string
+  descriptionEn?: string
   typeA: {
     dishes: string[]
+    dishesEn?: string[]
     voucherType: "twoDish"
   }
   typeB: {
     dishes: string[]
+    dishesEn?: string[]
     voucherType: "threeDish"
   }
   imageUrl?: string
@@ -21,24 +29,63 @@ type DailyComboSnapshot = {
 type DailyMenuComboLike = {
   name: string
   calories?: number
+  proteinGrams?: number
   tags?: string[]
-  typeA?: { dishes?: string[] }
-  typeB?: { dishes?: string[] }
+  tagsEn?: string[]
+  allergensZh?: string[]
+  allergensEn?: string[]
+  descriptionZh?: string
+  descriptionEn?: string
+  typeA?: { dishes?: string[]; dishesEn?: string[] }
+  typeB?: { dishes?: string[]; dishesEn?: string[] }
   imageUrl?: string
   imageKey?: string
+}
+
+function resolveDishTranslations(
+  dishes: string[] | undefined,
+  existingTranslations: string[] | undefined,
+  dishTranslations?: Record<string, string>
+) {
+  if (!dishes?.length) {
+    return []
+  }
+
+  const resolved = dishes.map((dish, index) => {
+    const existingTranslation = existingTranslations?.[index]?.trim()
+    if (existingTranslation) return existingTranslation
+
+    return dishTranslations?.[dish]?.trim() ?? ""
+  })
+
+  const firstMissing = resolved.findIndex((translation) => !translation)
+  if (firstMissing === -1) {
+    return resolved
+  }
+
+  // Avoid saving shifted English names when only later dishes are translated.
+  return resolved.slice(0, firstMissing)
 }
 
 export function mapDailyLibraryComboToDailyMenuCombo(item: DailyComboLibraryItem): DailyComboSnapshot {
   return {
     name: "套餐 1",
     calories: item.calories,
+    ...(typeof item.proteinGrams === "number" ? { proteinGrams: item.proteinGrams } : {}),
     tags: item.tags ?? [],
+    ...(item.tagsEn?.length ? { tagsEn: item.tagsEn } : {}),
+    ...(item.allergensZh?.length ? { allergensZh: item.allergensZh } : {}),
+    ...(item.allergensEn?.length ? { allergensEn: item.allergensEn } : {}),
+    ...(item.descriptionZh ? { descriptionZh: item.descriptionZh } : {}),
+    ...(item.descriptionEn ? { descriptionEn: item.descriptionEn } : {}),
     typeA: {
       dishes: item.typeADishes ?? [],
+      ...(item.typeADishesEn?.length ? { dishesEn: item.typeADishesEn } : {}),
       voucherType: "twoDish",
     },
     typeB: {
       dishes: item.typeBDishes ?? [],
+      ...(item.typeBDishesEn?.length ? { dishesEn: item.typeBDishesEn } : {}),
       voucherType: "threeDish",
     },
     ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
@@ -49,15 +96,32 @@ export function mapDailyLibraryComboToDailyMenuCombo(item: DailyComboLibraryItem
 }
 
 export function mapDailyMenuComboToDailyLibraryDraft(
-  combo: DailyMenuComboLike
+  combo: DailyMenuComboLike,
+  dishTranslations?: Record<string, string>
 ): Partial<DailyComboLibraryItem> {
   return {
     name: combo.name,
     internalName: combo.name,
     typeADishes: combo.typeA?.dishes ?? [],
+    typeADishesEn: resolveDishTranslations(
+      combo.typeA?.dishes,
+      combo.typeA?.dishesEn,
+      dishTranslations
+    ),
     typeBDishes: combo.typeB?.dishes ?? [],
+    typeBDishesEn: resolveDishTranslations(
+      combo.typeB?.dishes,
+      combo.typeB?.dishesEn,
+      dishTranslations
+    ),
     calories: combo.calories ?? 0,
+    proteinGrams: combo.proteinGrams,
     tags: combo.tags ?? [],
+    tagsEn: combo.tagsEn ?? [],
+    allergensZh: combo.allergensZh ?? [],
+    allergensEn: combo.allergensEn ?? [],
+    descriptionZh: combo.descriptionZh,
+    descriptionEn: combo.descriptionEn,
     ...(combo.imageUrl ? { imageUrl: combo.imageUrl } : {}),
     ...(combo.imageKey ? { imageKey: combo.imageKey } : {}),
   }

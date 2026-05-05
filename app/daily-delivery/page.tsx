@@ -22,7 +22,14 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/lib/language-context'
 import { useSmartBack } from '@/hooks/use-smart-back'
-import { formatDailyCombo, type DayData } from '@/lib/daily-delivery'
+import {
+  formatDailyCombo,
+  getDailyComboAllergens,
+  getDailyComboDescription,
+  getDailyComboDishName,
+  getDailyComboTags,
+  type DayData,
+} from '@/lib/daily-delivery'
 import { getDailyDeliveryState, setDailyDeliveryState } from '@/lib/plan-flow-state'
 import { listDailyPlans } from '@/lib/plans/service'
 import {
@@ -45,6 +52,12 @@ import {
   MenuPreviewCarouselViewport,
   menuPreviewCarouselRowInsetClassName,
 } from "@/components/landing/menu-preview-carousel"
+import {
+  DailyComboMetadata,
+  DailyComboMealOptionDivider,
+  DailyComboThreeDishExtraDishes,
+  DailyComboTwoDishDishList,
+} from "@/features/daily-ordering/daily-combo-meal-lists"
 
 // Define types for voucher plans
 interface VoucherPlan {
@@ -1072,100 +1085,51 @@ export default function DailyDeliveryPage() {
                                       ) : null}
 
                                       <div className="flex flex-1 flex-col p-4 sm:p-5">
-                                      {/* Combo header - Minimalist Design */}
-                                      <div className="flex flex-wrap items-center justify-between mb-4">
-                                        <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">{translateComboName(combo.name)}</h3>
-                                        <div className="text-xs font-medium bg-[#F5EDE4] px-2 py-1 rounded-full text-[#C2884E]">
-                                          {combo.calories} KCAL
-                                        </div>
+                                      <div className="mb-4">
+                                        <h3 className="text-base sm:text-lg font-medium text-[#6B5F53] tracking-tight">
+                                          {translateComboName(combo.name)}
+                                        </h3>
+                                      </div>
+
+                                      <div className="mb-4">
+                                        <DailyComboMetadata
+                                          combo={combo}
+                                          language={language === "zh" ? "zh" : "en"}
+                                        />
                                       </div>
                                     
-                                      {/* Combo content */}
+                                      {/* Dish lists shared with dashboard `DailyComboGrid` */}
                                       <div className="space-y-4">
-                                        {/* 2-Dish Voucher Option */}
                                         <div className="mb-4">
-                                          <div className="flex items-center justify-between mb-2">
+                                          <div className="mb-2 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">{language === 'zh' ? '每餐2菜' : '2-Dish Meal'}</span>
+                                              <span className="rounded bg-[#C2884E]/10 px-2 py-0.5 text-sm font-semibold tracking-wider text-[#C2884E]">
+                                                {language === "zh" ? "每餐2菜" : "2-Dish Meal"}
+                                              </span>
                                             </div>
                                           </div>
-                                          
-                                          <Tabs defaultValue="twoDish" className="w-full">
-                                            <TabsList className="hidden">
-                                              <TabsTrigger value="twoDish">
-                                                {language === 'zh' ? '2菜套餐' : '2-Dish Meal'}
-                                              </TabsTrigger>
-                                              <TabsTrigger value="threeDish">
-                                                {language === 'zh' ? '3菜套餐' : '3-Dish Meal'}
-                                              </TabsTrigger>
-                                            </TabsList>
-                                            <TabsContent value="twoDish" className="mt-2 mb-0">
-                                              <div className="mt-3">
-                                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                  {combo.typeA.dishes.map((dish, i) => (
-                                                    <li key={i} className="flex items-center">
-                                                      <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{translateDishName(dish)}</span>
-                                                    </li>
-                                                  ))}
-                                                </ul>
-                                              </div>
-                                            </TabsContent>
-                                            <TabsContent value="threeDish" className="mt-2 mb-0">
-                                              <div className="mt-3">
-                                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                  {combo.typeB.dishes.map((dish, i) => (
-                                                    <li key={i} className="flex items-center">
-                                                      <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4] px-3 py-1.5 rounded-md w-full">{translateDishName(dish)}</span>
-                                                    </li>
-                                                  ))}
-                                                </ul>
-                                              </div>
-                                            </TabsContent>
-                                          </Tabs>
+                                          <DailyComboTwoDishDishList
+                                            combo={combo}
+                                            language={language === "zh" ? "zh" : "en"}
+                                            translateDishName={translateDishName}
+                                          />
                                         </div>
-                                        
-                                        {/* Divider */}
-                                        <div className="my-3">
-                                          <div className="w-full border-t border-dashed border-[#6B5F53]/20"></div>
-                                        </div>
-                                        
-                                        {/* 3-Dish Voucher Option */}
+
+                                        <DailyComboMealOptionDivider />
+
                                         <div>
-                                          <div className="flex items-center justify-between mb-2">
+                                          <div className="mb-2 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded bg-[#C2884E]/10 text-[#C2884E]">{language === 'zh' ? '每餐3菜' : '3-Dish Meal'}</span>
+                                              <span className="rounded bg-[#C2884E]/10 px-2 py-0.5 text-sm font-semibold tracking-wider text-[#C2884E]">
+                                                {language === "zh" ? "每餐3菜" : "3-Dish Meal"}
+                                              </span>
                                             </div>
                                           </div>
-                                          
-                                          {/* 3-Dish Voucher Dishes */}
-                                          <div className="mt-3">
-                                            <div className="text-xs font-medium mb-2 text-[#6B5F53]/80 italic">
-                                              {language === 'zh' ? '3菜套餐包含:' : '3-dish meal includes:'}
-                                            </div>
-                                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                              {combo.typeB.dishes
-                                                .map((dish, idx) => (
-                                                  <li key={idx} className="flex items-center">
-                                                    <span className="text-sm font-medium tracking-wide text-[#6B5F53] bg-[#F5EDE4]/80 px-3 py-1.5 rounded-md w-full border-l-2 border-[#C2884E]">{translateDishName(dish)}</span>
-                                                  </li>
-                                                ))
-                                              }
-                                            </ul>
-                                          </div>
-                                        </div>
-                                        
-                                        {/* Tags */}
-                                        <div className="flex flex-wrap gap-1 mt-3">
-                                          {combo.tags.map((tag, tagIndex) => (
-                                            <div
-                                              key={tagIndex}
-                                              className="transition-all duration-300"
-                                            >
-                                              <div className="px-2 py-1 rounded-full flex items-center bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-sm">
-                                                <span className="text-xs font-medium">{tag}</span>
-                                              </div>
-                                            </div>
-                                          ))}
+                                          <DailyComboThreeDishExtraDishes
+                                            combo={combo}
+                                            language={language === "zh" ? "zh" : "en"}
+                                            translateDishName={translateDishName}
+                                          />
                                         </div>
                                       </div>
                                       </div>
@@ -1278,9 +1242,17 @@ export default function DailyDeliveryPage() {
                           imageUrl={item.combo.imageUrl!}
                           imageAlt={`${translateComboName(item.combo.name)} combo`}
                           badge={`${getPreviewDayLabel(item.displayName)} · ${item.date}`}
-                          title={translateComboName(item.combo.name)}
-                          subtitle={item.combo.typeA.dishes.slice(0, 3).map(translateDishName).join(" · ")}
+                          subtitle={item.combo.typeB.dishes
+                            .map((dish, index) =>
+                              getDailyComboDishName(item.combo, "typeB", index, dish, previewLanguage, translateDishName)
+                            )
+                            .join(" · ")}
+                          subtitleClassName="leading-relaxed"
                           metaRight={`${item.combo.calories} KCAL`}
+                          description={getDailyComboDescription(item.combo, previewLanguage)}
+                          proteinGrams={item.combo.proteinGrams}
+                          tags={getDailyComboTags(item.combo, previewLanguage)}
+                          allergens={getDailyComboAllergens(item.combo, previewLanguage)}
                           onClick={() => openMenuForDay(item.dayId)}
                         />
                       ))}

@@ -38,8 +38,15 @@ function buildListFilter(query: ReturnType<typeof dailyComboLibraryListQuerySche
       { name: regex },
       { internalName: regex },
       { tags: regex },
+      { tagsEn: regex },
+      { allergensZh: regex },
+      { allergensEn: regex },
+      { descriptionZh: regex },
+      { descriptionEn: regex },
       { typeADishes: regex },
+      { typeADishesEn: regex },
       { typeBDishes: regex },
+      { typeBDishesEn: regex },
     ]
   }
 

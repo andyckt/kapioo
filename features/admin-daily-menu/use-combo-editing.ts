@@ -100,7 +100,13 @@ export function useComboEditing({
         body: JSON.stringify({
           name: combo.name,
           calories: combo.calories,
+          proteinGrams: combo.proteinGrams,
           tags: combo.tags,
+          tagsEn: combo.tagsEn,
+          allergensZh: combo.allergensZh,
+          allergensEn: combo.allergensEn,
+          descriptionZh: combo.descriptionZh,
+          descriptionEn: combo.descriptionEn,
           typeA: combo.typeA,
           typeB: combo.typeB,
           imageUrl: combo.imageUrl ?? "",
@@ -216,6 +222,9 @@ export function useComboEditing({
                   [type]: {
                     ...combo[type],
                     dishes: combo[type].dishes.filter((dish) => dish !== dishToRemove),
+                    dishesEn: combo[type].dishesEn?.filter(
+                      (_dish, index) => combo[type].dishes[index] !== dishToRemove
+                    ),
                   },
                 }
               : combo
@@ -567,9 +576,13 @@ export function useComboEditing({
     }
 
     const newTypeBDishes = [...combo.typeA.dishes]
+    const newTypeBDishesEn = [...(combo.typeA.dishesEn ?? [])]
     combo.typeB.dishes.forEach((dish) => {
       if (!newTypeBDishes.includes(dish)) {
         newTypeBDishes.push(dish)
+        const dishIndex = combo.typeB.dishes.indexOf(dish)
+        const dishEn = combo.typeB.dishesEn?.[dishIndex]
+        if (dishEn) newTypeBDishesEn.push(dishEn)
       }
     })
 
@@ -584,6 +597,7 @@ export function useComboEditing({
                 typeB: {
                   ...item.typeB,
                   dishes: newTypeBDishes,
+                  dishesEn: newTypeBDishesEn,
                 },
               }
             : item

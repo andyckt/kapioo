@@ -39,6 +39,7 @@ import {
   MenuPreviewCarouselViewport,
   menuPreviewCarouselRowInsetClassName,
 } from "@/components/landing/menu-preview-carousel"
+import { MealProteinAllergenRow } from "@/components/landing/meal-protein-allergen-row"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Define plan types
@@ -79,6 +80,7 @@ export default function WeeklyMealPage() {
     nameEn?: string;
     tags?: string[];
     calories?: number;
+    proteinGrams?: number;
     allergens?: string[];
     description?: string;
     /** When true from admin, included in homepage menu preview carousel (still needs photo). */
@@ -696,7 +698,7 @@ export default function WeeklyMealPage() {
                                               </p>
                                             ) : null}
 
-                                            {(typeof option.calories === "number" || option.tags?.length || option.allergens?.length) ? (
+                                            {(typeof option.calories === "number" || option.tags?.length || option.allergens?.length || typeof option.proteinGrams === "number") ? (
                                               <div className="mt-3 space-y-2">
                                                 {(typeof option.calories === "number" || (option.tags && option.tags.length > 0)) ? (
                                                   <div className="flex flex-wrap gap-1.5 sm:gap-2">
@@ -716,11 +718,13 @@ export default function WeeklyMealPage() {
                                                   </div>
                                                 ) : null}
 
-                                                {option.allergens && option.allergens.length > 0 ? (
-                                                  <div className="rounded-lg border border-[#E8D8C7] bg-[#FBF7F2]/70 px-2.5 py-1.5 text-[10px] leading-relaxed text-[#8A6A4D] sm:text-xs">
-                                                    <span className="font-medium text-[#6B5F53]">{language === 'zh' ? '过敏原' : 'Allergens'}: </span>
-                                                    {option.allergens.join(" / ")}
-                                                  </div>
+                                                {(typeof option.proteinGrams === "number" && Number.isFinite(option.proteinGrams)) || (option.allergens && option.allergens.length > 0) ? (
+                                                  <MealProteinAllergenRow
+                                                    language={language === "zh" ? "zh" : "en"}
+                                                    variant="panel"
+                                                    proteinGrams={option.proteinGrams}
+                                                    allergens={option.allergens ?? []}
+                                                  />
                                                 ) : null}
                                               </div>
                                             ) : null}
@@ -954,6 +958,7 @@ export default function WeeklyMealPage() {
                           title={translateOptionName(item.option)}
                           metaRight={typeof item.option.calories === "number" ? `${item.option.calories} KCAL` : null}
                           description={item.option.description}
+                          proteinGrams={item.option.proteinGrams}
                           tags={item.option.tags}
                           allergens={item.option.allergens}
                           onClick={() => openMenuDialogForDay(item.dayUniqueId)}

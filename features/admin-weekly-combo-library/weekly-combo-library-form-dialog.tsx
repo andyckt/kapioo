@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 
 import { MenuImageEditor } from "@/components/admin/menu-image-editor"
+import { DelimitedArrayField } from "@/components/admin/delimited-array-field"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -30,10 +31,6 @@ const EMPTY_FORM: Partial<WeeklyComboLibraryItem> = {
   nameEn: "",
   tags: [],
   allergens: [],
-}
-
-function splitLines(value: string) {
-  return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean)
 }
 
 function field(key: WeeklyComboLibraryFieldKey) {
@@ -128,17 +125,17 @@ export function WeeklyComboLibraryFormDialog({ open, onOpenChange, item, onSaved
             </div>
             <div className="space-y-2">
               <Label>{field("tags").label}</Label>
-              <Input
-                value={(form.tags ?? []).join("; ")}
-                onChange={(event) => setForm((current) => ({ ...current, tags: splitLines(event.target.value) }))}
+              <DelimitedArrayField
+                value={form.tags}
+                onChange={(tags) => setForm((current) => ({ ...current, tags }))}
                 placeholder={field("tags").placeholder}
               />
             </div>
             <div className="space-y-2">
               <Label>{field("allergens").label}</Label>
-              <Input
-                value={(form.allergens ?? []).join("; ")}
-                onChange={(event) => setForm((current) => ({ ...current, allergens: splitLines(event.target.value) }))}
+              <DelimitedArrayField
+                value={form.allergens}
+                onChange={(allergens) => setForm((current) => ({ ...current, allergens }))}
                 placeholder={field("allergens").placeholder}
               />
             </div>

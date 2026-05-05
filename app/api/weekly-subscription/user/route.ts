@@ -217,6 +217,9 @@ export async function GET() {
         nameEn: option.nameEn, // Include English name
         tags: Array.isArray(option.tags) ? option.tags : [],
         ...(typeof option.calories === 'number' ? { calories: option.calories } : {}),
+        ...(typeof option.proteinGrams === "number" && Number.isFinite(option.proteinGrams)
+          ? { proteinGrams: option.proteinGrams }
+          : {}),
         ...(Array.isArray(option.allergens) && option.allergens.length > 0
           ? { allergens: option.allergens }
           : {}),

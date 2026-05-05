@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Calendar, Info, Minus, Plus } from "lucide-react"
 
+import { MealProteinAllergenRow } from "@/components/landing/meal-protein-allergen-row"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -126,11 +127,14 @@ export function WeeklyDeliveryDaysGrid({
                         </div>
                       ) : null}
 
-                      {option.allergens?.length ? (
-                        <div className="rounded-lg border border-[#E8D8C7] bg-[#FBF7F2]/70 px-2.5 py-1.5 text-[10px] leading-relaxed text-[#8A6A4D]">
-                          <span className="font-medium text-[#6B5F53]">{language === "zh" ? "过敏原" : "Allergens"}: </span>
-                          {option.allergens.join(" / ")}
-                        </div>
+                      {(typeof option.proteinGrams === "number" && Number.isFinite(option.proteinGrams)) ||
+                      (option.allergens && option.allergens.length > 0) ? (
+                        <MealProteinAllergenRow
+                          language={language}
+                          variant="panel"
+                          proteinGrams={option.proteinGrams}
+                          allergens={option.allergens ?? []}
+                        />
                       ) : null}
                     </div>
 

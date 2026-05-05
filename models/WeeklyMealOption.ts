@@ -10,6 +10,7 @@ export interface IWeeklyMealOption extends Document {
   imageUrl?: string; // Optional public URL of the meal photo (S3)
   imageKey?: string; // Optional S3 key used for cleanup on replace/delete
   calories?: number;
+  proteinGrams?: number;
   allergens?: string[];
   description?: string;
   /** When true, combo is eligible for the weekly landing menu preview carousel (requires image). */
@@ -51,6 +52,10 @@ const WeeklyMealOptionSchema: Schema = new Schema(
       type: Number,
       required: false,
     },
+    proteinGrams: {
+      type: Number,
+      required: false,
+    },
     allergens: {
       type: [String],
       default: undefined,
@@ -85,7 +90,8 @@ const WeeklyMealOptionSchema: Schema = new Schema(
 const existingWeeklyMealOptionModel = mongoose.models.WeeklyMealOption;
 if (
   existingWeeklyMealOptionModel &&
-  !existingWeeklyMealOptionModel.schema.path('featuredInMenuPreview')
+  (!existingWeeklyMealOptionModel.schema.path("featuredInMenuPreview") ||
+    !existingWeeklyMealOptionModel.schema.path("proteinGrams"))
 ) {
   delete mongoose.models.WeeklyMealOption;
 }

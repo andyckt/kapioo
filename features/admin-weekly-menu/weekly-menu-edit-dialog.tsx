@@ -4,6 +4,7 @@ import type { KeyboardEvent } from "react"
 
 import { Trash2 } from "lucide-react"
 
+import { DelimitedArrayField } from "@/components/admin/delimited-array-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -154,20 +155,36 @@ export function WeeklyMenuEditDialog({
                 className="sm:col-span-3"
               />
             </div>
+            <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
+              <Label htmlFor="meal-protein" className="sm:text-right">
+                Protein (g)
+              </Label>
+              <Input
+                id="meal-protein"
+                type="number"
+                min={0}
+                value={editingMeal.proteinGrams ?? ""}
+                onChange={(event) =>
+                  onUpdateMeal({
+                    ...editingMeal,
+                    proteinGrams: event.target.value ? Number(event.target.value) : undefined,
+                  })
+                }
+                className="sm:col-span-3"
+                placeholder="Optional"
+              />
+            </div>
             <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-4 sm:gap-4">
               <Label htmlFor="meal-allergens" className="sm:pt-2 sm:text-right">
                 Allergens
               </Label>
-              <Input
+              <DelimitedArrayField
                 id="meal-allergens"
-                value={(editingMeal.allergens || []).join("; ")}
-                onChange={(event) =>
+                value={editingMeal.allergens || []}
+                onChange={(allergens) =>
                   onUpdateMeal({
                     ...editingMeal,
-                    allergens: event.target.value
-                      .split(";")
-                      .map((allergen) => allergen.trim())
-                      .filter(Boolean),
+                    allergens,
                   })
                 }
                 className="sm:col-span-3"

@@ -30,7 +30,9 @@ export function getCsvSampleRow<Key extends string>(
 export function getCanonicalCsvColumns<Key extends string>(
   fields: readonly ComboLibraryFieldDefinition<Key>[]
 ) {
-  return new Set(getCsvHeaders(fields))
+  return new Set(
+    getTemplateFields(fields).flatMap((field) => [field.key, field.csvHeader ?? field.key])
+  )
 }
 
 export function getArrayCsvColumns<Key extends string>(
@@ -39,7 +41,7 @@ export function getArrayCsvColumns<Key extends string>(
   return new Set(
     fields
       .filter((field) => field.isArray)
-      .map((field) => field.csvHeader ?? field.key)
+      .flatMap((field) => [field.key, field.csvHeader ?? field.key])
   )
 }
 
