@@ -3,7 +3,7 @@ import { requireAdminMfa } from "@/lib/auth/guards"
 import { normalizeComboLibraryPatch } from "@/lib/combo-library/shared/normalize"
 import { weeklyComboLibraryItemUpdateSchema } from "@/lib/contracts/weekly-combo-library"
 import connectToDatabase from "@/lib/db"
-import { deleteMenuImageFromS3 } from "@/lib/upload/menu-image"
+import { deleteWeeklyMenuImageFromS3IfUnused } from "@/lib/upload/menu-image-references"
 import WeeklyComboLibraryItem from "@/models/WeeklyComboLibraryItem"
 import WeeklyMealOption from "@/models/WeeklyMealOption"
 
@@ -88,9 +88,9 @@ export async function PATCH(
     )
 
     if (shouldRemoveImage) {
-      void deleteMenuImageFromS3(previousImageKey)
+      void deleteWeeklyMenuImageFromS3IfUnused(previousImageKey, { weeklyComboLibraryId })
     } else if (previousImageKey && nextImageKey && previousImageKey !== nextImageKey) {
-      void deleteMenuImageFromS3(previousImageKey)
+      void deleteWeeklyMenuImageFromS3IfUnused(previousImageKey, { weeklyComboLibraryId })
     }
 
     return successJson(item)
@@ -122,7 +122,7 @@ export async function DELETE(
     const item = await WeeklyComboLibraryItem.findOneAndDelete({ weeklyComboLibraryId })
     if (!item) return errorJson("Weekly combo library item not found", 404)
 
-    if (typeof item.imageKey === "string") void deleteMenuImageFromS3(item.imageKey)
+    if (typeof item.imageKey === "string") void deleteWeeklyMenuImageFromS3IfUnused(item.imageKey)
 
     return successJson({})
   } catch (error: unknown) {

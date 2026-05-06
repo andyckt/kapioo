@@ -2,7 +2,7 @@ import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteCont
 import { requireAdminMfa } from '@/lib/auth/guards';
 import { comboBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
-import { deleteMenuImageFromS3 } from '@/lib/upload/menu-image';
+import { deleteDailyMenuImageFromS3IfUnused } from '@/lib/upload/menu-image-references';
 import Combo from '@/models/Combo';
 
 export async function GET(
@@ -74,9 +74,9 @@ export async function PUT(
     );
 
     if (shouldRemoveImage) {
-      void deleteMenuImageFromS3(previousImageKey);
+      void deleteDailyMenuImageFromS3IfUnused(previousImageKey, { comboId });
     } else if (previousImageKey && nextImageKey && previousImageKey !== nextImageKey) {
-      void deleteMenuImageFromS3(previousImageKey);
+      void deleteDailyMenuImageFromS3IfUnused(previousImageKey, { comboId });
     }
     
     return successJson(combo);
@@ -105,7 +105,7 @@ export async function DELETE(
     }
 
     if (typeof combo.imageKey === 'string') {
-      void deleteMenuImageFromS3(combo.imageKey);
+      void deleteDailyMenuImageFromS3IfUnused(combo.imageKey);
     }
     
     return successJson({});

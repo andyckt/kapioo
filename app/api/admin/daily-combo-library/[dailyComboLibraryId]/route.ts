@@ -3,7 +3,7 @@ import { requireAdminMfa } from "@/lib/auth/guards"
 import { normalizeComboLibraryPatch } from "@/lib/combo-library/shared/normalize"
 import { dailyComboLibraryItemUpdateSchema } from "@/lib/contracts/daily-combo-library"
 import connectToDatabase from "@/lib/db"
-import { deleteMenuImageFromS3 } from "@/lib/upload/menu-image"
+import { deleteDailyMenuImageFromS3IfUnused } from "@/lib/upload/menu-image-references"
 import Combo from "@/models/Combo"
 import DailyComboLibraryItem from "@/models/DailyComboLibraryItem"
 
@@ -91,9 +91,9 @@ export async function PATCH(
     )
 
     if (shouldRemoveImage) {
-      void deleteMenuImageFromS3(previousImageKey)
+      void deleteDailyMenuImageFromS3IfUnused(previousImageKey, { dailyComboLibraryId })
     } else if (previousImageKey && nextImageKey && previousImageKey !== nextImageKey) {
-      void deleteMenuImageFromS3(previousImageKey)
+      void deleteDailyMenuImageFromS3IfUnused(previousImageKey, { dailyComboLibraryId })
     }
 
     return successJson(item)
@@ -125,7 +125,7 @@ export async function DELETE(
     const item = await DailyComboLibraryItem.findOneAndDelete({ dailyComboLibraryId })
     if (!item) return errorJson("Daily combo library item not found", 404)
 
-    if (typeof item.imageKey === "string") void deleteMenuImageFromS3(item.imageKey)
+    if (typeof item.imageKey === "string") void deleteDailyMenuImageFromS3IfUnused(item.imageKey)
 
     return successJson({})
   } catch (error: unknown) {

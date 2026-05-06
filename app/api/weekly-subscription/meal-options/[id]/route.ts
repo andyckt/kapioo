@@ -4,7 +4,7 @@ import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteCont
 import { updateWeeklyMealOptionBodySchema } from '@/lib/contracts/weekly-subscription';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
-import { deleteMenuImageFromS3 } from '@/lib/upload/menu-image';
+import { deleteWeeklyMenuImageFromS3IfUnused } from '@/lib/upload/menu-image-references';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 
@@ -128,9 +128,9 @@ export async function PUT(request: Request, { params }: RouteContext<{ id: strin
 
     // Best-effort cleanup of the old S3 object so we don't leak storage.
     if (shouldRemoveImage) {
-      void deleteMenuImageFromS3(previousImageKey);
+      void deleteWeeklyMenuImageFromS3IfUnused(previousImageKey, { mealOptionId: id });
     } else if (previousImageKey && nextImageKey && previousImageKey !== nextImageKey) {
-      void deleteMenuImageFromS3(previousImageKey);
+      void deleteWeeklyMenuImageFromS3IfUnused(previousImageKey, { mealOptionId: id });
     }
 
     return successJson(formatMealOption(updatedMealOption.toObject()));
@@ -172,7 +172,7 @@ export async function DELETE(_request: Request, { params }: RouteContext<{ id: s
 
     // Best-effort S3 cleanup. Failure here must never break the API response.
     if (imageKey) {
-      void deleteMenuImageFromS3(imageKey);
+      void deleteWeeklyMenuImageFromS3IfUnused(imageKey);
     }
 
     return NextResponse.json({ success: true, message: 'Meal option deleted successfully' });
