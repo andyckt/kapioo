@@ -23,6 +23,7 @@ import {
   WeeklyMenuNotificationDialogs,
   type WeeklyMenuNotificationProgress,
 } from "@/features/admin-weekly-menu/weekly-menu-notification-dialogs"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { 
   MealOption, 
   DeliveryDay, 
@@ -1186,7 +1187,7 @@ export function WeeklySubscriptionManagement() {
       {/* Header with buttons */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Weekly Meal Box Management</h2>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{PRODUCT_LINE_LABELS.weekly.en} Management</h2>
           <p className="text-sm text-muted-foreground mt-1">Manage Sunday and Tuesday deliveries across 3 weeks</p>
         </div>
         <div className="flex flex-wrap gap-2">

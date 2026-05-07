@@ -10,6 +10,7 @@ import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 import WeeklyOrder from "@/models/WeeklyOrder";
 import mongoose from "mongoose";
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names";
 
 // GET handler - get all activity for a specific user
 export async function GET(request: Request, context: RouteContext<{ id: string }>) {
@@ -100,7 +101,7 @@ export async function GET(request: Request, context: RouteContext<{ id: string }
           ...o.toObject(),
           activityType: "order",
           date: o.createdAt,
-          title: `Daily Delivery Order (${o.status})`,
+          title: `${PRODUCT_LINE_LABELS.daily.en} Order (${o.status})`,
           details: `Order ID: ${o.orderId}, Items: ${Array.isArray(o.items) ? o.items.length : 0}`,
         }))
       );
@@ -114,7 +115,7 @@ export async function GET(request: Request, context: RouteContext<{ id: string }
           ...wo.toObject(),
           activityType: "weekly-order",
           date: wo.createdAt,
-          title: `Weekly Subscription Order (${wo.status})`,
+          title: `${PRODUCT_LINE_LABELS.weekly.en} Order (${wo.status})`,
           details: `Order ID: ${wo.orderId}, Credits: ${wo.creditCost}`,
         }))
       );

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Loader2, Package } from "lucide-react"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 
 import { Button } from "@/components/ui/button"
 import { CustomerOrderStatusBadge } from "@/components/customer-order-status-badge"
@@ -558,10 +559,10 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
               <Package className="mx-auto h-12 w-12 text-[#C2884E]/35" />
             </div>
             <h3 className="text-lg font-medium text-[#6B5F53]">
-              {language === 'en' ? 'No daily delivery orders yet' : '暂无每日直送订单'}
+              {language === 'en' ? `No ${PRODUCT_LINE_LABELS.daily.en} orders yet` : `暂无${PRODUCT_LINE_LABELS.daily.zh}订单`}
             </h3>
             <p className="mt-1 text-sm text-[#6B5F53]/80">
-              {language === 'en' ? 'Your daily delivery orders will appear here' : '您的每日直送订单将显示在此处'}
+              {language === 'en' ? `Your ${PRODUCT_LINE_LABELS.daily.en} orders will appear here` : `您的${PRODUCT_LINE_LABELS.daily.zh}订单将显示在此处`}
             </p>
           </div>
         )}

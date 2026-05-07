@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import type React from "react";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Weekly Meal Box | Kapioo Toronto",
+  title: `${PRODUCT_LINE_LABELS.weekly.en} | Kapioo Toronto`,
   description:
-    "Explore Kapioo Weekly Meal Box plans with rotating menus, flexible meal credits, and reliable delivery across the GTA.",
+    `Explore Kapioo ${PRODUCT_LINE_LABELS.weekly.en} plans with rotating menus, flexible meal credits, and reliable delivery across the GTA.`,
   path: "/weekly-meal",
 });
 

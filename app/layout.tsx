@@ -9,6 +9,7 @@ import { MaintenanceProvider } from "@/lib/maintenance-context"
 import { MaintenanceNotification } from "@/components/maintenance-notification"
 import { LanguagePreferenceDialog } from "@/components/language-preference-dialog"
 import { buildPageMetadata } from "@/lib/seo/metadata"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { cookies } from "next/headers"
 import { Analytics } from "@vercel/analytics/next"
 
@@ -18,7 +19,7 @@ export const metadata = {
   ...buildPageMetadata({
     title: "Kapioo | Healthy Asian Comfort Meals in Toronto",
     description:
-      "Freshly cooked Asian comfort meals delivered across Toronto and the GTA. Choose Daily Delivery or Weekly Meal Box with clear logistics.",
+      `Freshly cooked Asian comfort meals delivered across Toronto and the GTA. Choose ${PRODUCT_LINE_LABELS.daily.en} or ${PRODUCT_LINE_LABELS.weekly.en} with clear logistics.`,
     path: "/",
   }),
   generator: 'v0.dev',

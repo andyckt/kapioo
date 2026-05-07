@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 
 type Language = 'zh' | 'en';
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
@@ -136,20 +137,20 @@ const translations: TranslationsType = {
     mealPlanOptionsTitle: "餐食订阅计划",
     selectAreaText: "选择您所在的区域，查看可用的餐食计划选项",
     servicesOverviewTitle: "服务概览",
-    weeklySubscriptionTitle: "周餐盒",
+    weeklySubscriptionTitle: PRODUCT_LINE_LABELS.weekly.zh,
     weeklySubscriptionDesc: "包周配送 一周配送2次 周日&周二 | 晚间送达",
-    dailyDeliveryTitle: "每日直送系列",
+    dailyDeliveryTitle: PRODUCT_LINE_LABELS.daily.zh,
     dailyDeliveryDesc: "每天新鲜制作，每天直送 | 午间送达",
     // Hero section
     heroTitle: "北美健康餐食订阅品牌 <br/><span style=\"white-space: nowrap;\">让你每天拥有「被好好对待」的时刻</span>",
-    heroDescription: "每日现做 每日直送<br/>健康｜高质｜舒服｜幸福",
+    heroDescription: `每日现做 ${PRODUCT_LINE_LABELS.daily.zh}<br/>健康｜高质｜舒服｜幸福`,
     getStartedBtn: "立即开始",
     howItWorksBtn: "如何运作",
     // Homepage additional translations
     healthyTags: "健康|高质|舒服|幸福",
     mainSlogan: "北美健康餐食订阅品牌",
     subSlogan: "让你每天拥有「被好好对待」的时刻",
-    tagline: "每日现做 每日直送",
+    tagline: `每日现做 ${PRODUCT_LINE_LABELS.daily.zh}`,
     mottoFirstLine: "一顿饭的时间 给生活松一口气",
     mottoSecondLine: "Kapioo，你每天的松弛美好时刻",
     // Food Gallery Section
@@ -349,8 +350,8 @@ const translations: TranslationsType = {
     overview: "概览",
     myOrders: "我的订单",
     selectMeals: "选择餐点",
-    dailyDelivery: "每日直送",
-    weeklySubscription: "周餐盒",
+    dailyDelivery: PRODUCT_LINE_LABELS.daily.zh,
+    weeklySubscription: PRODUCT_LINE_LABELS.weekly.zh,
     deliveryTracking: "配送追踪",
     credits: "餐券",
     viewPlans: "查看计划",
@@ -434,7 +435,7 @@ const translations: TranslationsType = {
     creditsUsageHistory: "您的充值和使用历史",
     // Orders tab
     orderHistory: "订单历史",
-    orderHistoryTypeToggleAria: "在周餐盒订单与每日直送订单之间切换",
+    orderHistoryTypeToggleAria: `在${PRODUCT_LINE_LABELS.weekly.zh} 订单与${PRODUCT_LINE_LABELS.daily.zh} 订单之间切换`,
     orderHistorySubfilterLabel: "订单类型",
     viewOrdersAndStatus: "查看您的餐点订单和配送状态",
     loadingOrders: "正在加载您的订单...",
@@ -509,11 +510,13 @@ const translations: TranslationsType = {
     mealPlanOptionsTitle: "Meal Plan Options",
     selectAreaText: "Select your area to see available meal plan options",
     servicesOverviewTitle: "Services Overview",
-    weeklySubscriptionTitle: "Weekly Meal Box",
+    weeklySubscriptionTitle: PRODUCT_LINE_LABELS.weekly.en,
     weeklySubscriptionDesc: "Weekly delivery service with 2 deliveries per week (Sunday & Tuesday) | Evening delivery",
-    dailyDeliveryTitle: "Daily Fresh Delivery",
+    dailyDeliveryTitle: PRODUCT_LINE_LABELS.daily.en,
     dailyDeliveryDesc: "Freshly made every day, delivered daily | Afternoon delivery",
     // Hero section
+    heroTitle:
+      'Asian Fusion Meals, Curated to Nourish Your Soul <br/><span style="white-space: nowrap;">Care in every bite</span>',
     heroDescription: "Freshly Made Everyday from 5am<br/>Healthy | Quality | Comfort | Happiness",
     getStartedBtn: "Get Started",
     howItWorksBtn: "How It Works",
@@ -721,8 +724,8 @@ const translations: TranslationsType = {
     overview: "Overview",
     myOrders: "My Orders",
     selectMeals: "Select Meals",
-    dailyDelivery: "Daily Delivery",
-    weeklySubscription: "Weekly Meal Box",
+    dailyDelivery: PRODUCT_LINE_LABELS.daily.en,
+    weeklySubscription: PRODUCT_LINE_LABELS.weekly.en,
     deliveryTracking: "Delivery Tracking",
     credits: "Credits",
     viewPlans: "View Plans",
@@ -806,7 +809,7 @@ const translations: TranslationsType = {
     creditsUsageHistory: "Your credits purchase and usage history",
     // Orders tab
     orderHistory: "Order History",
-    orderHistoryTypeToggleAria: "Switch between weekly meal box and daily delivery orders",
+    orderHistoryTypeToggleAria: `Switch between ${PRODUCT_LINE_LABELS.weekly.en} and ${PRODUCT_LINE_LABELS.daily.en} orders`,
     orderHistorySubfilterLabel: "Order type",
     viewOrdersAndStatus: "View your meal orders and delivery status",
     loadingOrders: "Loading your orders...",

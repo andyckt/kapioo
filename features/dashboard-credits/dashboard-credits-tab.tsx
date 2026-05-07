@@ -17,6 +17,7 @@ import { AvailableAreas } from "@/components/available-areas"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import type { DashboardUserData } from "@/lib/dashboard-user-profile"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 
 const CreditPurchasePlans = dynamic(
   () => import("@/components/credit-purchase-plans").then((mod) => ({ default: mod.CreditPurchasePlans })),
@@ -88,8 +89,8 @@ const WEEKLY_PLAN_FEATURES = [
   {
     key: "delivery-days",
     icon: Calendar,
-    titleZh: "周次MealBox",
-    titleEn: "Weekly MealBox",
+    titleZh: PRODUCT_LINE_LABELS.weekly.zh,
+    titleEn: PRODUCT_LINE_LABELS.weekly.en,
     descriptionZh: "每周配送2次 (周日 & 周二)，轻松覆盖整周",
     descriptionEn: "2 deliveries per week (Sun & Tue), covering the entire week",
   },
@@ -151,14 +152,14 @@ export function DashboardCreditsTab({
             <div className="inline-flex items-center mb-4">
               <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
                 <span className="text-sm font-medium text-[#C2884E]">
-                  {language === "zh" ? "周次餐盒订阅" : "Weekly Meal Subscription"}
+                  {language === "zh" ? `${PRODUCT_LINE_LABELS.weekly.zh} 订阅` : "Weekly Meal Subscription"}
                 </span>
               </div>
             </div>
 
             <h2 className="text-2xl md:text-4xl font-bold mb-4 text-[#6B5F53]">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                {language === "zh" ? "周次MealBox" : "Weekly MealBox"}
+                {language === "zh" ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en}
               </span>
               <span className="block mt-1">{language === "zh" ? "餐盒订阅" : "Meal Subscription"}</span>
             </h2>
@@ -216,7 +217,9 @@ export function DashboardCreditsTab({
                       {language === "zh" ? "了解更多" : "Learn More"}
                     </DialogTitle>
                     <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
-                      {language === "zh" ? "了解我们的周次餐盒订阅服务" : "Learn about our weekly meal subscription service"}
+                      {language === "zh"
+                        ? `了解我们的${PRODUCT_LINE_LABELS.weekly.zh} 订阅服务`
+                        : "Learn about our weekly meal subscription service"}
                     </DialogDescription>
                   </DialogHeader>
 

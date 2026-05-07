@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/language-context'
+import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { useToast } from '@/hooks/use-toast'
 import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
 
@@ -172,14 +173,14 @@ export function RegionCheckDialogRecharge({
           <div>
             <p className="text-sm text-amber-800 font-medium">
               {language === 'zh' 
-                ? <>您当前选择的区域 <span className="font-bold">{currentRegion || "未设置"}</span> 不在每日直送服务范围内</> 
-                : <>Your current selected area <span className="font-bold">{currentRegion || "Not set"}</span> is not in the daily delivery service area</>
+                ? <>您当前选择的区域 <span className="font-bold">{currentRegion || "未设置"}</span> 不在{PRODUCT_LINE_LABELS.daily.zh}服务范围内</> 
+                : <>Your current selected area <span className="font-bold">{currentRegion || "Not set"}</span> is not in the {PRODUCT_LINE_LABELS.daily.en} service area</>
               }
             </p>
             <p className="text-xs text-amber-700 mt-1">
               {language === 'zh'
-                ? '每日直送服务目前仅限于以下区域：Downtown Toronto、Midtown、North York、Markham、Richmond Hill'
-                : 'Daily delivery service is currently limited to: Downtown Toronto, Midtown, North York, Markham, Richmond Hill'
+                ? `${PRODUCT_LINE_LABELS.daily.zh}服务目前仅限于以下区域：Downtown Toronto、Midtown、North York、Markham、Richmond Hill`
+                : `${PRODUCT_LINE_LABELS.daily.en} service is currently limited to: Downtown Toronto, Midtown, North York, Markham, Richmond Hill`
               }
             </p>
           </div>
@@ -414,7 +415,7 @@ export function RegionCheckDialogRecharge({
           </DialogTitle>
           <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
             {step === 'region' 
-              ? (language === 'zh' ? '每日直送服务区域限制' : 'Daily delivery service area restrictions') 
+              ? (language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}服务区域限制` : `${PRODUCT_LINE_LABELS.daily.en} service area restrictions`) 
               : isValidRegion 
                 ? (language === 'zh' ? '请确认您的详细地址' : 'Please confirm your address details')
                 : (language === 'zh' ? '请填写您的详细地址' : 'Please fill in your address details')}

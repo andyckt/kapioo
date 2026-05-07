@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
 import type { DashboardUserData } from "@/lib/dashboard-user-profile"
 import { getWeeklyPlanBalanceRows } from "@/lib/plans/balances"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 
 type DashboardTabId =
   | "orders"
@@ -167,7 +168,9 @@ export function DashboardOverviewTab({
                   <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
                     <Ticket className="h-4 w-4 text-[#C2884E]" />
                   </div>
-                  {language === "en" ? "Daily Delivery Vouchers" : "每日直送系列"}
+                  {language === "en"
+                    ? `${PRODUCT_LINE_LABELS.daily.en} vouchers`
+                    : `${PRODUCT_LINE_LABELS.daily.zh}餐券`}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -224,7 +227,9 @@ export function DashboardOverviewTab({
                   <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
                     <Gem className="h-4 w-4 text-[#C2884E]" />
                   </div>
-                  {language === "en" ? "Weekly Delivery Vouchers" : "周次Meal Box订阅系列"}
+                  {language === "en"
+                    ? `${PRODUCT_LINE_LABELS.weekly.en} vouchers`
+                    : `${PRODUCT_LINE_LABELS.weekly.zh} 订阅餐券`}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -279,7 +284,9 @@ export function DashboardOverviewTab({
                   <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
                     <Ticket className="h-4 w-4 text-[#C2884E]" />
                   </div>
-                  {language === "en" ? "Daily Delivery Vouchers" : "每日直送系列"}
+                  {language === "en"
+                    ? `${PRODUCT_LINE_LABELS.daily.en} vouchers`
+                    : `${PRODUCT_LINE_LABELS.daily.zh}餐券`}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">

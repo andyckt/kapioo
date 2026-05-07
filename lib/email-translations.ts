@@ -5,6 +5,8 @@
  * All email functions should use these translations to support bilingual emails.
  */
 
+import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names';
+
 export type Language = 'zh' | 'en';
 
 /**
@@ -131,7 +133,7 @@ export const orderTranslations = {
     
     // Messages
     thankYouForOrder: '感谢您的订购！您的订单已成功提交。',
-    thankYouForOrderDaily: '感谢您的订购！您的每日直送订单已成功提交。',
+    thankYouForOrderDaily: `感谢您的订购！您的${PRODUCT_LINE_LABELS.daily.zh}订单已成功提交。`,
     statusChangedFrom: '订单状态已从',
     
     // Meal types
@@ -177,7 +179,7 @@ export const orderTranslations = {
     
     // Messages
     thankYouForOrder: 'Thank you for your order! Your order has been successfully submitted.',
-    thankYouForOrderDaily: 'Thank you for your order! Your daily delivery order has been successfully submitted.',
+    thankYouForOrderDaily: `Thank you for your order! Your ${PRODUCT_LINE_LABELS.daily.en} order has been successfully submitted.`,
     statusChangedFrom: 'Order status changed from',
     
     // Meal types
@@ -413,11 +415,11 @@ export const accountTranslations = {
 export const weeklyTranslations = {
   zh: {
     mealsPerWeek: (count: number) => `${count}餐一周`,
-    weeklyPlan: '周次套餐'
+    weeklyPlan: `${PRODUCT_LINE_LABELS.weekly.zh} 套餐`,
   },
   en: {
     mealsPerWeek: (count: number) => `${count} Meals/Week`,
-    weeklyPlan: 'Weekly Plan'
+    weeklyPlan: `${PRODUCT_LINE_LABELS.weekly.en} plan`,
   }
 };
 
@@ -429,23 +431,23 @@ export const menuUpdateTranslations = {
     subject: '[Kapioo] 菜单已更新 - 探索我们的新菜品！',
     title: '菜单已更新！',
     greeting: (name: string) => `亲爱的 ${name}，`,
-    mainMessage: '我们很高兴地通知您，Kapioo 每日直送菜单已更新！',
+    mainMessage: `我们很高兴地通知您，Kapioo ${PRODUCT_LINE_LABELS.daily.zh}菜单已更新！`,
     description: '我们精心准备了全新的美味菜品，期待为您带来更多惊喜。',
     ctaButton: '立即查看菜单',
     footerNote: '感谢您选择 Kapioo！',
     reminderTitle: '温馨提示',
-    reminderText: '您目前拥有每日直送餐券。立即使用，享受我们的新鲜美味！'
+    reminderText: `您目前拥有${PRODUCT_LINE_LABELS.daily.zh}餐券。立即使用，享受我们的新鲜美味！`
   },
   en: {
     subject: '[Kapioo] Menu Updated - Explore Our New Dishes!',
     title: 'Menu Updated!',
     greeting: (name: string) => `Dear ${name},`,
-    mainMessage: 'We are excited to announce that our Kapioo Daily Delivery menu has been updated!',
+    mainMessage: 'We are excited to announce that our Kapioo Daily Bento menu has been updated!',
     description: 'We have carefully prepared fresh new delicious dishes and look forward to bringing you more delightful surprises.',
     ctaButton: 'View Menu Now',
     footerNote: 'Thank you for choosing Kapioo!',
     reminderTitle: 'Friendly Reminder',
-    reminderText: 'You currently have daily delivery vouchers. Use them now to enjoy our fresh delicious meals!'
+    reminderText: `You currently have ${PRODUCT_LINE_LABELS.daily.en} vouchers. Use them now to enjoy our fresh delicious meals!`
   }
 };
 
@@ -457,7 +459,7 @@ export const weeklyMenuUpdateTranslations = {
     subject: '[Kapioo] 周次菜单已更新 - 探索我们的新菜品！',
     title: '周次菜单已更新！',
     greeting: (name: string) => `亲爱的 ${name}，`,
-    mainMessage: '我们很高兴地通知您，Kapioo 周次订餐菜单已更新！',
+    mainMessage: `我们很高兴地通知您，Kapioo ${PRODUCT_LINE_LABELS.weekly.zh} 订餐菜单已更新！`,
     description: '我们精心准备了全新的美味菜品，期待为您带来更多惊喜。',
     ctaButton: '立即查看菜单',
     footerNote: '感谢您选择 Kapioo！',
@@ -468,12 +470,12 @@ export const weeklyMenuUpdateTranslations = {
     subject: '[Kapioo] Weekly Menu Updated - Explore Our New Dishes!',
     title: 'Weekly Menu Updated!',
     greeting: (name: string) => `Dear ${name},`,
-    mainMessage: 'We are excited to announce that our Kapioo Weekly Subscription menu has been updated!',
+    mainMessage: `We are excited to announce that our Kapioo ${PRODUCT_LINE_LABELS.weekly.en} menu has been updated!`,
     description: 'We have carefully prepared fresh new delicious dishes and look forward to bringing you more delightful surprises.',
     ctaButton: 'View Menu Now',
     footerNote: 'Thank you for choosing Kapioo!',
     reminderTitle: 'Friendly Reminder',
-    reminderText: 'You currently have weekly subscription credits. Use them now to enjoy our fresh delicious meals!'
+    reminderText: `You currently have ${PRODUCT_LINE_LABELS.weekly.en} credits. Use them now to enjoy our fresh delicious meals!`
   }
 };
 

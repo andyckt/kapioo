@@ -79,6 +79,7 @@ Design so the effect runs only when it should. If you get this right, you won't 
 Before editing, answer: "Where is the source of truth, and which callers should reuse it?" If the answer is unclear, stop and create the shared source first.
 
 - **Plans**: Use `lib/plans/catalog.ts` and service helpers. No hardcoded plan IDs, prices, or counts elsewhere (see plan-catalog-update-playbook).
+- **Product line *names* (UI/email copy)** vs **plan IDs**: Customer-facing labels (“每日Bento”, “周次 Meal Box”, English equivalents) live in `lib/product-lines/names.ts`. Internal plan identifiers (`daily-*`, `weekly-*` from the catalog) stay in `lib/plans/` — do not duplicate or conflate them. Flow routes (e.g. `/starter`, location meal plans) are navigation/UX; they are not the source for display names or `planId`.
 - **Shared data**: User profile, dish translations, settings — fetch once, pass down. No redundant fetches for the same data.
 - **Contracts and formatting**: API request/response shapes must be typed and formatted in one shared place where practical; admin and public endpoints should not drift by manually retyping the same fields.
 - **Other**: Validation rules, error messages, constants — if the same logic appears in multiple places, centralize it in `lib/` or a shared module.

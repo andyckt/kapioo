@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import Image from "next/image"
 import { useLanguage } from "@/lib/language-context"
+import { productLineLabel } from "@/lib/product-lines/names"
 import { Button } from "@/components/ui/button"
 
 interface ServiceSelectionCardsProps {
@@ -21,7 +22,7 @@ export function ServiceSelectionCards({
   className = ""
 }: ServiceSelectionCardsProps) {
   const { language } = useLanguage()
-  
+  const lang = language === "zh" ? "zh" : "en"
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -49,7 +50,7 @@ export function ServiceSelectionCards({
             >
               <Image 
                 src="/dailystarter.jpg" 
-                alt={language === 'zh' ? '每日直送' : 'Daily Fresh Delivery'} 
+                alt={productLineLabel("daily", lang)} 
                 fill
                 className="object-cover transition-transform duration-[1.5s]"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -65,7 +66,7 @@ export function ServiceSelectionCards({
                 className="space-y-4"
               >
                 <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                  {language === 'zh' ? '每日直送' : 'Daily Fresh Delivery'}
+                  {productLineLabel("daily", lang)}
                 </h3>
                 <p className="text-white/90 text-sm sm:text-base max-w-md">
                   {language === 'zh' ? '每日新鲜现做，直送上门，满分新鲜度' : 'Freshly made daily, delivered to your door, maximum freshness'}
@@ -116,7 +117,7 @@ export function ServiceSelectionCards({
             >
               <Image 
                 src="/weeklyplan.png" 
-                alt={language === 'zh' ? '周次 MealBox' : 'Weekly MealBox'} 
+                alt={productLineLabel("weekly", lang)} 
                 fill
                 className="object-cover transition-transform duration-[1.5s]"
                 objectPosition="center bottom"
@@ -133,7 +134,7 @@ export function ServiceSelectionCards({
                 className="space-y-4"
               >
                 <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                  {language === 'zh' ? '周次 MealBox' : 'Weekly MealBox'}
+                  {productLineLabel("weekly", lang)}
                 </h3>
                 <p className="text-white/90 text-sm sm:text-base max-w-md">
                   {language === 'zh' ? '每周配送2次，一次配送多餐，轻松覆盖整周' : 'Delivered twice a week, multiple meals per delivery, easily covers the entire week'}

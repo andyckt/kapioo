@@ -27,39 +27,17 @@ import {
 import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from "@/lib/constants/areas";
 import { useLanguage } from "@/lib/language-context";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import {
+  productLineChooseSeriesSentenceEn,
+  productLineChooseSeriesSentenceZh,
+  productLineSeriesName,
+} from "@/lib/product-lines/names";
 
 const STEP_IMAGES = [
   "/foodjpg/Ordering%20Kapioo%20meals%20on%20website.jpeg",
   "/foodjpg/Kapioo%20Meals%20in%20fridge.jpeg",
   "/foodjpg/Kapioo%20Chef.jpg.jpeg",
 ] as const;
-
-const steps = [
-  {
-    title: "Choose your plan",
-    description:
-      "Pick the Daily Bento Series or the Weekly Meal Box Series—based on your schedule and delivery area.",
-    icon: CreditCard,
-    image: "/foodjpg/Ordering%20Kapioo%20meals%20on%20website.jpeg",
-    aspect: "3/4" as const,
-  },
-  {
-    title: "Pick your meals",
-    description:
-      "Choose from our never-repeat rotating menu—always fresh and exciting. We'll be here for you through every season of life, with meals you'll never get tired of.",
-    icon: UtensilsCrossed,
-    image: "/foodjpg/Kapioo%20Meals%20in%20fridge.jpeg",
-    aspect: "3/4" as const,
-  },
-  {
-    title: "We cook & deliver",
-    description:
-      "Freshly cooked meals are delivered to your door during the delivery window.",
-    icon: Truck,
-    image: "/foodjpg/Kapioo%20Chef.jpg.jpeg",
-    aspect: "3/4" as const,
-  },
-];
 
 const whyKapioo = [
   {
@@ -115,9 +93,7 @@ export function HowItWorksContent() {
   const steps = [
     {
       title: isZh ? "选择计划" : "Choose your plan",
-      description: isZh
-        ? "选择每日便当系列或周餐盒系列，根据你的日程和配送区域。"
-        : "Pick the Daily Bento Series or the Weekly Meal Box Series—based on your schedule and delivery area.",
+      description: isZh ? productLineChooseSeriesSentenceZh() : productLineChooseSeriesSentenceEn(),
       icon: CreditCard,
       image: STEP_IMAGES[0],
       aspect: "3/4" as const,
@@ -423,7 +399,7 @@ export function HowItWorksContent() {
                           <div className="mt-3 space-y-3">
                             <div>
                               <p className="text-sm font-medium text-[#3f352b]">
-                                {isZh ? "每日便当系列" : "Daily Bento Series"}
+                                {productLineSeriesName("daily", isZh ? "zh" : "en")}
                               </p>
                               <p className="text-sm text-[#6B5F53] mt-0.5">
                                 {isZh ? "11:00–13:00 · 周一至周五和周日（周六休息）" : "11am – 1pm · Monday – Friday & Sunday (Saturday off)"}
@@ -431,7 +407,7 @@ export function HowItWorksContent() {
                             </div>
                             <div>
                               <p className="text-sm font-medium text-[#3f352b]">
-                                {isZh ? "周餐盒系列" : "Weekly Meal Box Series"}
+                                {productLineSeriesName("weekly", isZh ? "zh" : "en")}
                               </p>
                               <p className="text-sm text-[#6B5F53] mt-0.5">
                                 {isZh ? "18:00–22:00 · 周二与周日" : "6pm – 10pm · Tuesday & Sunday"}
@@ -470,7 +446,9 @@ export function HowItWorksContent() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2.5 h-2.5 rounded-full bg-[#C2884E] flex-shrink-0" aria-hidden />
                         <h4 className="text-base font-semibold text-[#3f352b]">
-                          {isZh ? "每日便当系列 + 周餐盒系列" : "Daily Bento Series + Weekly Meal Box Series"}
+                          {isZh
+                            ? `${productLineSeriesName("daily", "zh")} + ${productLineSeriesName("weekly", "zh")}`
+                            : `${productLineSeriesName("daily", "en")} + ${productLineSeriesName("weekly", "en")}`}
                         </h4>
                       </div>
                       <ul className="space-y-2 mt-4" role="list">
@@ -491,7 +469,7 @@ export function HowItWorksContent() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2.5 h-2.5 rounded-full bg-[#A58D74] flex-shrink-0" aria-hidden />
                         <h4 className="text-base font-semibold text-[#3f352b]">
-                          {isZh ? "仅周餐盒系列" : "Weekly Meal Box Series (Only)"}
+                          {isZh ? `仅${productLineSeriesName("weekly", "zh")}` : `${productLineSeriesName("weekly", "en")} (Only)`}
                         </h4>
                       </div>
                       <ul className="space-y-2 mt-4" role="list">

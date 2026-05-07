@@ -6,6 +6,7 @@ import type { CheckoutAddressFormData } from "@/components/checkout-address-form
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { useToast } from "@/hooks/use-toast"
 
 export type DailyCheckoutFormData = {
@@ -157,8 +158,8 @@ export function useDailyCheckoutState({
         title: language === "zh" ? "无效区域" : "Invalid Area",
         description:
           language === "zh"
-            ? "请选择每日直送服务覆盖的区域"
-            : "Please select an area covered by daily delivery service",
+            ? `请选择${PRODUCT_LINE_LABELS.daily.zh}服务覆盖的区域`
+            : `Please select an area covered by ${PRODUCT_LINE_LABELS.daily.en} service`,
         variant: "destructive",
       })
       return

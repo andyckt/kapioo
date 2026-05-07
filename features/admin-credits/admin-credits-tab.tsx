@@ -37,6 +37,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import {
   Select,
   SelectContent,
@@ -259,7 +260,7 @@ export function AdminCreditsTab({
                       }}
                       className="w-full h-10 text-sm"
                     >
-                      Daily Delivery
+                      {PRODUCT_LINE_LABELS.daily.en}
                     </Button>
                     <Button
                       variant={serviceType === "weekly" ? "default" : "outline"}
@@ -269,7 +270,7 @@ export function AdminCreditsTab({
                       }}
                       className="w-full h-10 text-sm"
                     >
-                      Weekly Meal Box
+                      {PRODUCT_LINE_LABELS.weekly.en}
                     </Button>
                   </div>
                 </div>

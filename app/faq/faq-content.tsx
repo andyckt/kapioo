@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import { useLanguage } from "@/lib/language-context";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { PRODUCT_LINE_LABELS, productLineSeriesName } from "@/lib/product-lines/names";
 
 function getFaqs(isZh: boolean) {
   const contactAnswer = (
@@ -39,7 +40,7 @@ function getFaqs(isZh: boolean) {
     <div className="space-y-4 text-[#6B5F53]">
       <div>
         <p className="font-semibold text-[#3f352b] mb-1.5">
-          {isZh ? "周餐盒系列 — 灵活省心，一样新鲜" : "Weekly Meal Box — maximum flexibility, still fresh"}
+          {isZh ? `${PRODUCT_LINE_LABELS.weekly.zh} — 灵活省心，一样新鲜` : `${PRODUCT_LINE_LABELS.weekly.en} — maximum flexibility, still fresh`}
         </p>
         <p className="leading-relaxed">
           {isZh
@@ -49,7 +50,7 @@ function getFaqs(isZh: boolean) {
       </div>
       <div>
         <p className="font-semibold text-[#3f352b] mb-1.5">
-          {isZh ? "每日便当 — 指定日期，当日新鲜送达" : "Daily Delivery Bento — fresh on the days you pick"}
+          {isZh ? `${PRODUCT_LINE_LABELS.daily.zh} — 指定日期，当日新鲜送达` : `${PRODUCT_LINE_LABELS.daily.en} — fresh on the days you pick`}
         </p>
         <p className="leading-relaxed">
           {isZh
@@ -65,12 +66,12 @@ function getFaqs(isZh: boolean) {
           <li>
             <span className="text-[#C2884E] font-medium">
               {isZh ? "「我这周随时想吃就有」" : "\"I want meals ready anytime this week\""}
-            </span> → {isZh ? "周餐盒系列" : "Weekly Meal Box"}
+            </span> → {productLineSeriesName("weekly", isZh ? "zh" : "en")}
           </li>
           <li>
             <span className="text-[#C2884E] font-medium">
               {isZh ? "「我要指定某几天送新鲜」" : "\"I want fresh delivery on specific days\""}
-            </span> → {isZh ? "每日便当" : "Daily Delivery"}
+            </span> → {productLineSeriesName("daily", isZh ? "zh" : "en")}
           </li>
         </ul>
       </div>
@@ -85,7 +86,9 @@ function getFaqs(isZh: boolean) {
         : "We deliver across the GTA. Availability depends on the plan you choose and your delivery area.",
     },
     {
-      question: isZh ? "每日便当系列和周餐盒系列有什么区别？" : "What's the difference between Daily Bento Series and Weekly Meal Box Series?",
+      question: isZh
+        ? `${productLineSeriesName("daily", "zh")}和${productLineSeriesName("weekly", "zh")}有什么区别？`
+        : "What's the difference between Daily Bento Series and Weekly Meal Box Series?",
       answer: differenceAnswer,
     },
     {

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
 import { buildCanonicalBreakdown } from "@/lib/price-breakdown"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import {
   Dialog,
   DialogContent,
@@ -230,11 +231,11 @@ export function UnifiedRechargeHistory({
   const getDisplayType = (request: { requestType?: string }) =>
     request.requestType === "weekly"
       ? language === "zh"
-        ? "周餐盒充值"
-        : "Weekly meal box recharge"
+        ? `${PRODUCT_LINE_LABELS.weekly.zh} 充值`
+        : `${PRODUCT_LINE_LABELS.weekly.en} recharge`
       : language === "zh"
-        ? "每日直送充值"
-        : "Daily delivery recharge";
+        ? `${PRODUCT_LINE_LABELS.daily.zh} 充值`
+        : `${PRODUCT_LINE_LABELS.daily.en} recharge`;
 
   // Get voucher/plan details display (weekly uses mealPlanType + mealPlanQuantity; not planDescription locale)
   const getRequestDetails = (request: any) => {

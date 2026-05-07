@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import CustomerReviewsSection from "@/components/customer-reviews-section"
 import { EnglishReviewSection } from "@/components/english-review-section"
 import HomeKapiooKitchenSection from "@/components/home-kapioo-kitchen-section"
+import { productLineChooseSeriesSentenceEn, productLineChooseSeriesSentenceZh } from "@/lib/product-lines/names"
 
 const LocationMealPlans = dynamic(
   () => import("@/components/location-meal-plans").then((m) => ({ default: m.default })),
@@ -465,7 +466,7 @@ export default function Home() {
               {[
                 {
                   title: language === "zh" ? "选择计划" : "Choose your plan",
-                  description: language === "zh" ? "选择每日便当系列或周餐盒系列，根据你的日程和配送区域。" : "Pick the Daily Bento Series or the Weekly Meal Box Series—based on your schedule and delivery area.",
+                  description: language === "zh" ? productLineChooseSeriesSentenceZh() : productLineChooseSeriesSentenceEn(),
                   image: "/foodjpg/Ordering%20Kapioo%20meals%20on%20website.jpeg",
                   icon: CreditCard,
                   align: "left",

@@ -8,6 +8,7 @@ import { useRegionAddressUpdate } from '@/hooks/use-region-address-update'
 import { useUserPhoneSync } from '@/hooks/use-user-phone-sync'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
+import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
 import { listDailyPlans } from '@/lib/plans/service'
@@ -531,7 +532,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             <div className="inline-flex items-center mb-4">
               <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
                 <span className="text-sm font-medium text-[#C2884E]">
-                  {language === 'zh' ? '每日直送计划' : 'Daily Delivery Plan'}
+                  {language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}计划` : `${PRODUCT_LINE_LABELS.daily.en} plan`}
                 </span>
               </div>
             </div>
@@ -585,7 +586,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
               <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
                 <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
-                  {language === 'zh' ? '每日直送计划详情' : 'Daily Delivery Plan Details'}
+                  {language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}计划详情` : `${PRODUCT_LINE_LABELS.daily.en} plan details`}
                 </DialogTitle>
                 <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
                   {language === 'zh' ? '了解我们的每日新鲜配送服务' : 'Learn about our daily fresh delivery service'}

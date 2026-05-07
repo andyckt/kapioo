@@ -4,6 +4,8 @@ import type { ReactNode } from "react"
 
 import { Calendar, CreditCard, Gift, History, Settings, ShoppingCart, User } from "lucide-react"
 
+import { productLineLabel } from "@/lib/product-lines/names"
+
 export interface DashboardMenuItem {
   id: string
   label: string
@@ -27,7 +29,7 @@ export function getDashboardMenuItems(
     { id: "orders", label: labels.myOrders, icon: <History className="h-4 w-4" /> },
     {
       id: "weekly-subscription-group",
-      label: language === "zh" ? "周次Meal Box" : "Weekly Meal Box",
+      label: productLineLabel("weekly", language),
       icon: <Gift className="h-4 w-4" />,
       isHeading: true,
       children: [
@@ -45,7 +47,7 @@ export function getDashboardMenuItems(
     },
     {
       id: "daily-delivery-group",
-      label: language === "zh" ? "每日直送" : "Daily Delivery",
+      label: productLineLabel("daily", language),
       icon: <Calendar className="h-4 w-4" />,
       isHeading: true,
       children: [

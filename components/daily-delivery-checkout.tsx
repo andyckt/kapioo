@@ -30,6 +30,7 @@ import { submitDailyCheckout } from '@/features/daily-checkout/submit-daily-chec
 import { useDailyCheckoutState } from '@/features/daily-checkout/use-daily-checkout-state'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
+import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { CartItem, DayData, formatAddress } from '@/lib/daily-delivery'
@@ -357,8 +358,8 @@ export function DailyDeliveryCheckout({
                           <div className="mt-2 pt-2 border-t border-red-200">
                             <p className="text-xs text-red-600 font-medium">
                               {language === 'zh' 
-                                ? '⚠️ 此地址不在每日直送服务范围内。请点击"编辑"更新为有效区域。' 
-                                : '⚠️ This address is not in the daily delivery service area. Please click "Edit" to update to a valid area.'}
+                                ? `⚠️ 此地址不在${PRODUCT_LINE_LABELS.daily.zh}服务范围内。请点击"编辑"更新为有效区域。` 
+                                : `⚠️ This address is not in the ${PRODUCT_LINE_LABELS.daily.en} service area. Please click "Edit" to update to a valid area.`}
                             </p>
                           </div>
                         )}

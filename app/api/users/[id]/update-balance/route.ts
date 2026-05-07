@@ -17,6 +17,7 @@ import mongoose from 'mongoose';
 import { sendEmail } from '@/lib/services/email';
 import type { Language } from '@/lib/email-translations';
 import { getUserDisplayName, withUserDisplayName } from '@/lib/users/display';
+import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
@@ -34,11 +35,11 @@ function getBalanceFieldLabel(field: BalanceMutationField, language: Language): 
     credits: { en: 'Credits', zh: '积分' },
     twoDishVoucher: { en: '2-dish vouchers', zh: '2菜餐券' },
     threeDishVoucher: { en: '3-dish vouchers', zh: '3菜餐券' },
-    weeklySIXmeals: { en: '6-meal weekly meal boxes', zh: '6餐周餐盒' },
-    weeklyEIGHTmeals: { en: '8-meal weekly meal boxes', zh: '8餐周餐盒' },
-    weeklyTENmeals: { en: '10-meal weekly meal boxes', zh: '10餐周餐盒' },
-    weeklyTWELVEmeals: { en: '12-meal weekly meal boxes', zh: '12餐周餐盒' },
-    weeklySIXTEENmeals: { en: '16-meal weekly meal boxes', zh: '16餐周餐盒' },
+    weeklySIXmeals: { en: `6-meal ${PRODUCT_LINE_LABELS.weekly.en}`, zh: `6餐${PRODUCT_LINE_LABELS.weekly.zh}` },
+    weeklyEIGHTmeals: { en: `8-meal ${PRODUCT_LINE_LABELS.weekly.en}`, zh: `8餐${PRODUCT_LINE_LABELS.weekly.zh}` },
+    weeklyTENmeals: { en: `10-meal ${PRODUCT_LINE_LABELS.weekly.en}`, zh: `10餐${PRODUCT_LINE_LABELS.weekly.zh}` },
+    weeklyTWELVEmeals: { en: `12-meal ${PRODUCT_LINE_LABELS.weekly.en}`, zh: `12餐${PRODUCT_LINE_LABELS.weekly.zh}` },
+    weeklySIXTEENmeals: { en: `16-meal ${PRODUCT_LINE_LABELS.weekly.en}`, zh: `16餐${PRODUCT_LINE_LABELS.weekly.zh}` },
   };
 
   return labels[field][language];

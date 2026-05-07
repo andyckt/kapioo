@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
+
 import { DailyMenuCombosTab } from "./daily-menu-combos-tab"
 import { DailyMenuDatesTab } from "./daily-menu-dates-tab"
 import { DailyMenuDialogs } from "./daily-menu-dialogs"
@@ -58,7 +60,7 @@ export function DailyDeliveryManagement() {
     <div className="flex-1 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Daily Delivery Management</h2>
+          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">{PRODUCT_LINE_LABELS.daily.en} Management</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage delivery dates, menus, and combos
           </p>

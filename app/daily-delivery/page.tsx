@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/lib/language-context'
+import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { useSmartBack } from '@/hooks/use-smart-back'
 import {
   applyDailyMenuPreviewCuration,
@@ -626,7 +627,7 @@ export default function DailyDeliveryPage() {
                 <div className="inline-flex items-center mb-4">
                   <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
                     <span className="text-sm font-medium text-[#C2884E]">
-                      {language === 'zh' ? '每日直送计划' : 'Daily Delivery Plan'}
+                      {language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}计划` : `${PRODUCT_LINE_LABELS.daily.en} plan`}
                     </span>
                   </div>
                 </div>
@@ -658,7 +659,7 @@ export default function DailyDeliveryPage() {
                   <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
                       <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
-                        {language === 'zh' ? '每日直送计划详情' : 'Daily Delivery Plan Details'}
+                        {language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}计划详情` : `${PRODUCT_LINE_LABELS.daily.en} plan details`}
                       </DialogTitle>
                       <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
                         {language === 'zh' ? '了解我们的每日新鲜配送服务' : 'Learn about our daily fresh delivery service'}
@@ -1160,8 +1161,8 @@ export default function DailyDeliveryPage() {
                             </div>
                             <p className="text-sm text-[#6B5F53]">
                               {language === 'zh' 
-                                ? '菜单每周更新，以上为本周菜单。购买餐券后，您可以灵活选择每日直送的菜品和日期。' 
-                                : 'Menu is updated weekly. After purchasing vouchers, you can flexibly choose dishes and delivery dates.'}
+                                ? `菜单每周更新，以上为本周菜单。购买餐券后，您可以灵活选择${PRODUCT_LINE_LABELS.daily.zh}的菜品和日期。` 
+                                : `Menu is updated weekly. After purchasing vouchers, you can flexibly choose dishes and delivery dates for ${PRODUCT_LINE_LABELS.daily.en}.`}
                             </p>
                           </div>
                         </div>

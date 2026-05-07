@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { useSmartBack } from "@/hooks/use-smart-back"
 import { getWeeklyMealState, setWeeklyMealState } from "@/lib/plan-flow-state"
 import { getUserWeeklySubscription } from "@/lib/weekly-subscription"
@@ -271,7 +272,7 @@ export default function WeeklyMealPage() {
   // Define features for the hero section
   const features = [
     {
-      title: language === 'zh' ? "周次MealBox" : "Weekly MealBox",
+      title: language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en,
       description: language === 'zh' ? "每周配送2次，轻松覆盖整周" : "Two deliveries per week, covering the entire week",
       icon: <Calendar className="h-6 w-6" />
     },
@@ -390,14 +391,14 @@ export default function WeeklyMealPage() {
                 <div className="inline-flex items-center mb-4">
                   <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
                     <span className="text-sm font-medium text-[#C2884E]">
-                      {language === 'zh' ? '周次餐盒订阅' : 'Weekly Meal Subscription'}
+                      {language === 'zh' ? `${PRODUCT_LINE_LABELS.weekly.zh} 订阅` : 'Weekly Meal Subscription'}
                     </span>
                   </div>
                 </div>
                 
                 <h1 className="text-3xl md:text-5xl font-bold mb-6 text-[#6B5F53]">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    {language === 'zh' ? '周次MealBox' : 'Weekly MealBox'}
+                    {language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en}
                   </span>
                   <span className="block mt-2">
                     {language === 'zh' ? '餐盒订阅' : 'Meal Subscription'}
@@ -786,7 +787,9 @@ export default function WeeklyMealPage() {
                           {language === 'zh' ? '如何运作' : 'How It Works'}
                         </DialogTitle>
                         <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
-                          {language === 'zh' ? '了解我们的周次餐盒订阅服务' : 'Learn about our weekly meal subscription service'}
+                          {language === 'zh'
+                            ? `了解我们的${PRODUCT_LINE_LABELS.weekly.zh} 订阅服务`
+                            : "Learn about our weekly meal subscription service"}
                         </DialogDescription>
                       </DialogHeader>
                       

@@ -17,6 +17,7 @@ import type { AdminOrder } from "@/lib/types/orders"
 
 import { DailyOrderCards } from "./daily-order-cards"
 import { DailyOrderTable } from "./daily-order-table"
+import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 
 export function AdminDailyOrdersTab() {
   const { toast } = useToast()
@@ -94,7 +95,7 @@ export function AdminDailyOrdersTab() {
     <Card className="w-full">
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle>All Daily Delivery Orders</CardTitle>
+          <CardTitle>All {PRODUCT_LINE_LABELS.daily.en} Orders</CardTitle>
           <CardDescription>View and manage all daily delivery orders</CardDescription>
         </div>
         <Button
