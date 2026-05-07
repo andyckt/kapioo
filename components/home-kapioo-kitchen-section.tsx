@@ -12,7 +12,7 @@ const KITCHEN_PREP_DAWN_IMAGE = "/home-kitchen/kapioo-kitchen-prep-dawn.png"
 const KITCHEN_COOKING_STIRFRY_IMAGE = "/home-kitchen/kapioo-kitchen-cooking-stirfry.png"
 const KITCHEN_PLATING_PACKAGING_IMAGE = "/home-kitchen/kapioo-kitchen-plating-packaging.png"
 const KITCHEN_DELIVERY_IMAGE = "/home-kitchen/kapioo-kitchen-delivery.png"
-/** Public URL for the kitchen tour video (required in production deploys). Local dev can use the file in `public/` or set this in `.env.local`. */
+/** Prefer bundled file under `public/home-kitchen/` (keep under GitHub’s 100MB limit). Optional CDN override via `.env`. */
 const KITCHEN_TOUR_VIDEO_SRC =
   process.env.NEXT_PUBLIC_KITCHEN_TOUR_VIDEO_URL?.trim() || "/home-kitchen/kapioo-kitchen-tour.mp4"
 

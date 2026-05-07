@@ -17,7 +17,8 @@
     "update-transactions": "node scripts/update-transactions.js",
     "vercel-build": "next build",
     "migrate:weekly": "tsx scripts/migrate-weekly-subscription.ts",
-    "compress:images": "node scripts/compress-foodjpg.js"
+    "compress:images": "node scripts/compress-foodjpg.js",
+    "compress:kitchen-video": "bash scripts/compress-kitchen-tour-video.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",
