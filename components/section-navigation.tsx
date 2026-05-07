@@ -33,6 +33,13 @@ export default function SectionNavigation() {
       }
     },
     {
+      id: "kapioo-kitchen",
+      label: {
+        en: "Our Kitchen",
+        zh: "Kapioo 厨房"
+      }
+    },
+    {
       id: "reviews",
       label: {
         en: "Reviews",

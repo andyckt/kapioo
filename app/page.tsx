@@ -16,6 +16,7 @@ import { ScrollReveal } from "@/components/scroll-reveal"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import CustomerReviewsSection from "@/components/customer-reviews-section"
 import { EnglishReviewSection } from "@/components/english-review-section"
+import HomeKapiooKitchenSection from "@/components/home-kapioo-kitchen-section"
 
 const LocationMealPlans = dynamic(
   () => import("@/components/location-meal-plans").then((m) => ({ default: m.default })),
@@ -429,6 +430,8 @@ export default function Home() {
             </ScrollReveal>
           </div>
         </section>
+
+        <HomeKapiooKitchenSection />
 
         {/* How it works – 3 steps */}
         <section id="how-it-works-steps" className="w-full py-16 md:py-24 lg:py-28 bg-white relative overflow-hidden">
