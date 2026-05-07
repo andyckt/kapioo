@@ -50,6 +50,7 @@ export function youtubeEmbedSrc(videoId: string): string {
 
 export function vimeoEmbedSrc(videoId: string): string {
   const q = new URLSearchParams({
+    api: "1",
     autoplay: "1",
     muted: "1",
     loop: "1",
