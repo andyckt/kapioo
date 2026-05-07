@@ -26,5 +26,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# large media (host via CDN or set NEXT_PUBLIC_KITCHEN_TOUR_VIDEO_URL)
+public/home-kitchen/kapioo-kitchen-tour.mp4
+
 # test tooling (mongodb-memory-server binary cache)
 .cache/
