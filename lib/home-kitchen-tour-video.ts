@@ -49,14 +49,10 @@ export function youtubeEmbedSrc(videoId: string): string {
 }
 
 export function vimeoEmbedSrc(videoId: string): string {
+  /** Chromeless muted loop; no Vimeo “Unmute” overlay. Unmute via postMessage + our button (`api=1`). */
   const q = new URLSearchParams({
     api: "1",
-    autoplay: "1",
-    muted: "1",
-    loop: "1",
-    title: "0",
-    byline: "0",
-    portrait: "0",
+    background: "1",
     dnt: "1",
   })
   return `https://player.vimeo.com/video/${encodeURIComponent(videoId)}?${q.toString()}`
