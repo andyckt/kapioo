@@ -259,7 +259,7 @@ export default function HomeKapiooKitchenSection() {
       <div className="container relative z-10 px-4 md:px-6">
         {/* Video + intro — max-w-7xl matches steps so laptop doesn’t leave a dead band on the right */}
         <div className="mx-auto w-full max-w-7xl">
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)] lg:items-start lg:gap-x-14 lg:gap-y-10 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)] xl:gap-x-16">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)] lg:items-center lg:gap-x-14 lg:gap-y-10 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)] xl:gap-x-16">
             <ScrollReveal rootMargin="0px 0px -60px 0px" className="flex flex-col items-center lg:items-stretch">
               <div className="reveal-item relative w-full max-w-[280px] lg:mx-0 lg:max-w-none xl:max-w-[300px]">
                 <div className="relative mx-auto max-w-[280px] lg:mx-0 lg:max-w-[min(100%,280px)] xl:max-w-[min(100%,300px)]">
