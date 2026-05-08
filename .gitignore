@@ -26,5 +26,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# kitchen tour video is hosted (e.g. Vimeo); optional local file only — never commit
+public/home-kitchen/kapioo-kitchen-tour.mp4
+
 # test tooling (mongodb-memory-server binary cache)
 .cache/

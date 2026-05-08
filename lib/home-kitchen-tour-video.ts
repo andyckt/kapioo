@@ -1,5 +1,6 @@
 /**
- * Homepage kitchen tour media: bundled MP4, direct HTTPS MP4 URL, YouTube, or Vimeo.
+ * Homepage kitchen tour media: direct HTTPS MP4, YouTube, or Vimeo (`NEXT_PUBLIC_KITCHEN_TOUR_VIDEO_URL`).
+ * No MP4 is kept in the repo; optional local file at {@link FALLBACK_MP4_PATH} is gitignored.
  */
 
 export type KitchenTourResolved =
