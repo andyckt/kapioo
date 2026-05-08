@@ -353,21 +353,21 @@ export default function HomeKapiooKitchenSection() {
           </div>
         </div>
 
-        {/* Four steps: full width below—same reading edge as intro, tighter vertical rhythm */}
-        <div className="mx-auto mt-16 max-w-7xl space-y-10 md:mt-12 md:space-y-11 lg:mt-14 lg:space-y-12">
+        {/* Four steps — narrower column + smaller type so laptop has more margins */}
+        <div className="mx-auto mt-16 max-w-5xl space-y-12 md:mt-12 md:space-y-14 lg:mt-14 lg:space-y-16">
           {copy.process.map((step, idx) => {
             /* 01 & 03: text left · image right. 02 & 04: image left · text right. */
             const desktopImageOnRight = idx % 2 === 0
             return (
               <ScrollReveal key={step.stepLabel} rootMargin="0px 0px -48px 0px">
                 <article
-                  className={`reveal-item flex flex-col gap-6 md:flex-row md:items-center md:gap-9 lg:gap-10 ${
+                  className={`reveal-item flex flex-col gap-5 md:flex-row md:items-center md:gap-10 lg:gap-12 ${
                     desktopImageOnRight ? "md:flex-row-reverse" : ""
                   }`}
                 >
-                  <div className="relative w-full shrink-0 md:w-[42%] lg:w-[40%]">
+                  <div className="relative w-full shrink-0 md:w-[34%] lg:w-[32%]">
                     <div
-                      className="relative overflow-hidden rounded-2xl border border-[#C2884E]/12 shadow-md ring-1 ring-white/60"
+                      className="relative overflow-hidden rounded-xl border border-[#C2884E]/12 shadow-sm ring-1 ring-white/60 md:rounded-2xl"
                       style={{ aspectRatio: "4 / 3" }}
                     >
                       {idx === 0 ? (
@@ -380,7 +380,7 @@ export default function HomeKapiooKitchenSection() {
                           }
                           fill
                           className="object-cover object-center"
-                          sizes="(max-width: 768px) 100vw, 42vw"
+                          sizes="(max-width: 768px) 100vw, 32vw"
                         />
                       ) : idx === 1 ? (
                         <Image
@@ -392,7 +392,7 @@ export default function HomeKapiooKitchenSection() {
                           }
                           fill
                           className="object-cover object-center"
-                          sizes="(max-width: 768px) 100vw, 42vw"
+                          sizes="(max-width: 768px) 100vw, 32vw"
                         />
                       ) : idx === 2 ? (
                         <Image
@@ -404,7 +404,7 @@ export default function HomeKapiooKitchenSection() {
                           }
                           fill
                           className="object-cover object-center"
-                          sizes="(max-width: 768px) 100vw, 42vw"
+                          sizes="(max-width: 768px) 100vw, 32vw"
                         />
                       ) : (
                         <Image
@@ -416,15 +416,15 @@ export default function HomeKapiooKitchenSection() {
                           }
                           fill
                           className="object-cover object-center"
-                          sizes="(max-width: 768px) 100vw, 42vw"
+                          sizes="(max-width: 768px) 100vw, 32vw"
                         />
                       )}
                     </div>
                   </div>
-                  <div className="min-w-0 flex-1 space-y-2 md:space-y-3">
-                    <p className="text-sm font-semibold tracking-wide text-[#C2884E]/90">{step.stepLabel}</p>
-                    <h3 className="text-xl font-bold text-[#3f352b] md:text-2xl">{step.title}</h3>
-                    <p className="text-[15px] leading-relaxed text-[#6B5F53] md:text-base">{step.body}</p>
+                  <div className="min-w-0 flex-1 space-y-1.5 md:space-y-2.5">
+                    <p className="text-xs font-semibold tracking-wide text-[#C2884E]/90 md:text-sm">{step.stepLabel}</p>
+                    <h3 className="text-lg font-bold leading-snug text-[#3f352b] md:text-xl">{step.title}</h3>
+                    <p className="text-sm leading-relaxed text-[#6B5F53] md:text-[15px] md:leading-relaxed">{step.body}</p>
                   </div>
                 </article>
               </ScrollReveal>
