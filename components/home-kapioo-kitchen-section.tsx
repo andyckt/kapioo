@@ -356,12 +356,13 @@ export default function HomeKapiooKitchenSection() {
         {/* Four steps: full width below—same reading edge as intro, tighter vertical rhythm */}
         <div className="mx-auto mt-16 max-w-7xl space-y-10 md:mt-12 md:space-y-11 lg:mt-14 lg:space-y-12">
           {copy.process.map((step, idx) => {
-            const reversed = idx % 2 === 1
+            /* 01 & 03: text left · image right. 02 & 04: image left · text right. */
+            const desktopImageOnRight = idx % 2 === 0
             return (
               <ScrollReveal key={step.stepLabel} rootMargin="0px 0px -48px 0px">
                 <article
                   className={`reveal-item flex flex-col gap-6 md:flex-row md:items-center md:gap-9 lg:gap-10 ${
-                    reversed ? "md:flex-row-reverse" : ""
+                    desktopImageOnRight ? "md:flex-row-reverse" : ""
                   }`}
                 >
                   <div className="relative w-full shrink-0 md:w-[42%] lg:w-[40%]">
