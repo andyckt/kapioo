@@ -15,7 +15,8 @@ import {
   youtubeEmbedSrc,
 } from "@/lib/home-kitchen-tour-video"
 
-const KITCHEN_PREP_DAWN_IMAGE = "/home-kitchen/kapioo-kitchen-prep-dawn.png"
+/** Distinct filename so browsers / `/_next/image` don’t keep serving an older `prep-dawn` asset from cache. */
+const KITCHEN_PREP_CITY_BRIDGE_IMAGE = "/home-kitchen/kapioo-kitchen-prep-city-bridge.png"
 const KITCHEN_COOKING_STIRFRY_IMAGE = "/home-kitchen/kapioo-kitchen-cooking-stirfry.png"
 const KITCHEN_PLATING_PACKAGING_IMAGE = "/home-kitchen/kapioo-kitchen-plating-packaging.png"
 const KITCHEN_DELIVERY_IMAGE = "/home-kitchen/kapioo-kitchen-delivery.png"
@@ -193,19 +194,21 @@ export default function HomeKapiooKitchenSection() {
     sectionEyebrow: zh ? "走进 Kapioo 厨房" : "Inside the Kapioo Kitchen",
     headline: zh ? "你的一餐，从每天清晨 5 点开始。" : "Your meal starts at five every morning.",
     lead: zh
-      ? "每天清晨，当城市还在慢慢醒来，Kapioo 厨房已经开始备菜、烹饪、摆盘、封装、贴标和配送。我们把每一个步骤认真做好，只为了让你在忙碌的一天里，也能吃上一份热乎、干净、好吃、值得期待的饭。"
-      : "While the city is still waking up, Kapioo’s kitchen is already prepping, cooking, plating, sealing, labeling, and getting meals on the route. Every step matters—so during your busiest days you can still heat up something fresh, tidy, flavorful, and worth looking forward to.",
+      ? "每天清晨，当城市还在慢慢醒来，Kapioo 厨房已经开始忙碌起来，为你准备今天值得期待的一餐。"
+      : "Every morning, while the city is still slowly waking up, Kapioo’s kitchen is already busy—getting ready with a meal you can look forward to today.",
     videoPoster: zh ? "30 秒带你走进 Kapioo 厨房" : "30 seconds inside the Kapioo kitchen",
     process: [
       {
         stepLabel: zh ? "01｜清晨备菜" : "01 · Prep at dawn",
-        title: zh ? "新鲜食材，清晨开工" : "Fresh ingredients, early start",
+        title: zh
+          ? "你负责奔赴生活，我们负责让你好好吃饭。"
+          : "You throw yourself into life—we make sure you eat well.",
         body: zh
           ? "每天早上 5 点起，我们的团队开始处理当天食材：清洗、切配、腌制、分装，为当天的餐食做好准备。不是提前很多天做好的「库存餐」，而是为你当天的日程认真准备。"
           : "Starting at 5 a.m., our team washes, chops, seasons, and portions that day’s ingredients—ready for cooking. Not leftovers from days ago—in sync with today’s menus.",
         imageHint: zh
-          ? "Kapioo 厨房清晨备菜：团队处理新鲜食材。"
-          : "Kapioo kitchen at dawn: the team prepping fresh ingredients.",
+          ? "Kapioo 灶前快炒与城市清晨街景并置：灶火与金色晨光里的行人和列车。"
+          : "Kapioo wok up close set against a golden-hour city street—commuters and a train in soft morning light.",
       },
       {
         stepLabel: zh ? "02｜当天制作" : "02 · Cooked today",
@@ -248,7 +251,7 @@ export default function HomeKapiooKitchenSection() {
   return (
     <section
       id="kapioo-kitchen"
-      className="relative w-full scroll-mt-24 snap-start snap-always motion-reduce:snap-normal overflow-hidden bg-gradient-to-b from-[#FFF9F3] via-[#FBF7F2] to-[#F5EDE4] py-14 md:py-20 lg:py-24"
+      className="relative w-full scroll-mt-24 snap-start snap-always motion-reduce:snap-normal overflow-hidden bg-gradient-to-b from-[#FFF9F3] via-[#FBF7F2] to-[#F5EDE4] py-16 md:py-20 lg:py-24"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-20 top-32 h-72 w-72 rounded-full bg-[#C2884E]/10 blur-3xl" />
@@ -353,33 +356,33 @@ export default function HomeKapiooKitchenSection() {
           </div>
         </div>
 
-        {/* Four steps — narrower column + smaller type so laptop has more margins */}
-        <div className="mx-auto mt-16 max-w-5xl space-y-12 md:mt-12 md:space-y-14 lg:mt-14 lg:space-y-16">
+        {/* Four steps — mobile: inset + roomy vertical rhythm; md+: existing laptop layout */}
+        <div className="mx-auto mt-20 max-w-5xl space-y-14 px-5 sm:px-6 md:mt-12 md:space-y-14 md:px-0 lg:mt-14 lg:space-y-16">
           {copy.process.map((step, idx) => {
             /* 01 & 03: text left · image right. 02 & 04: image left · text right. */
             const desktopImageOnRight = idx % 2 === 0
             return (
               <ScrollReveal key={step.stepLabel} rootMargin="0px 0px -48px 0px">
                 <article
-                  className={`reveal-item flex flex-col gap-5 md:flex-row md:items-center md:gap-10 lg:gap-12 ${
+                  className={`reveal-item flex flex-col gap-9 md:flex-row md:items-center md:gap-10 lg:gap-12 ${
                     desktopImageOnRight ? "md:flex-row-reverse" : ""
                   }`}
                 >
                   <div className="relative w-full shrink-0 md:w-[34%] lg:w-[32%]">
                     <div
-                      className="relative overflow-hidden rounded-xl border border-[#C2884E]/12 shadow-sm ring-1 ring-white/60 md:rounded-2xl"
+                      className="relative overflow-hidden rounded-2xl border border-[#C2884E]/12 shadow-sm ring-1 ring-white/[0.72]"
                       style={{ aspectRatio: "4 / 3" }}
                     >
                       {idx === 0 ? (
                         <Image
-                          src={KITCHEN_PREP_DAWN_IMAGE}
+                          src={KITCHEN_PREP_CITY_BRIDGE_IMAGE}
                           alt={
                             zh
-                              ? "Kapioo 厨房团队清晨备菜，不锈钢操作台与新鲜食材"
-                              : "Kapioo kitchen team prepping fresh ingredients at stainless prep stations"
+                              ? "Kapioo 厨房灶前快炒与金色晨光中的城市街道、行人和列车并置"
+                              : "Kapioo wok stir-fry with steam beside a sunlit city street, pedestrians, and a train at golden hour"
                           }
                           fill
-                          className="object-cover object-center"
+                          className="object-cover object-[18%_center] md:object-[20%_center]"
                           sizes="(max-width: 768px) 100vw, 32vw"
                         />
                       ) : idx === 1 ? (
@@ -421,7 +424,7 @@ export default function HomeKapiooKitchenSection() {
                       )}
                     </div>
                   </div>
-                  <div className="min-w-0 flex-1 space-y-1.5 md:space-y-2.5">
+                  <div className="min-w-0 flex-1 space-y-2 md:space-y-2.5">
                     <p className="text-xs font-semibold tracking-wide text-[#C2884E]/90 md:text-sm">{step.stepLabel}</p>
                     <h3 className="text-lg font-bold leading-snug text-[#3f352b] md:text-xl">{step.title}</h3>
                     <p className="text-sm leading-relaxed text-[#6B5F53] md:text-[15px] md:leading-relaxed">{step.body}</p>
@@ -433,7 +436,7 @@ export default function HomeKapiooKitchenSection() {
         </div>
 
         {/* Closing + CTAs */}
-        <ScrollReveal className="mx-auto mt-12 max-w-4xl text-center md:mt-14">
+        <ScrollReveal className="mx-auto mt-16 max-w-4xl text-center md:mt-14">
           <div className="reveal-item relative rounded-2xl border border-[#C2884E]/15 bg-white/65 px-6 py-10 shadow-sm backdrop-blur-sm md:px-10">
             <div className="pointer-events-none absolute left-8 top-0 h-1 w-16 -translate-y-1/2 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]" />
             <blockquote className="text-lg font-medium leading-relaxed text-[#5c4f42] md:text-xl">
