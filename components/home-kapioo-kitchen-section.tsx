@@ -7,13 +7,7 @@ import { Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollReveal } from "@/components/scroll-reveal"
 import { useLanguage } from "@/lib/language-context"
-import {
-  postVimeoMethod,
-  postYouTubeCommand,
-  resolveKitchenTourVideo,
-  vimeoEmbedSrc,
-  youtubeEmbedSrc,
-} from "@/lib/home-kitchen-tour-video"
+import { postVimeoMethod, vimeoEmbedSrc } from "@/lib/home-kitchen-tour-video"
 
 /** Distinct filename so browsers / `/_next/image` don’t keep serving an older `prep-dawn` asset from cache. */
 const KITCHEN_PREP_CITY_BRIDGE_IMAGE = "/home-kitchen/kapioo-kitchen-prep-city-bridge.png"
@@ -21,13 +15,14 @@ const KITCHEN_COOKING_STIRFRY_IMAGE = "/home-kitchen/kapioo-kitchen-cooking-stir
 const KITCHEN_PLATING_PACKAGING_IMAGE = "/home-kitchen/kapioo-kitchen-plating-packaging.png"
 const KITCHEN_DELIVERY_IMAGE = "/home-kitchen/kapioo-kitchen-delivery.png"
 
-/** Set `NEXT_PUBLIC_KITCHEN_TOUR_VIDEO_URL` to a direct `.mp4` URL or a normal YouTube / Vimeo watch link. */
-const KITCHEN_TOUR_VIDEO = resolveKitchenTourVideo(process.env.NEXT_PUBLIC_KITCHEN_TOUR_VIDEO_URL)
+/** Vimeo id resolved on the server (`app/page.tsx`). */
+type HomeKapiooKitchenSectionProps = {
+  kitchenTourVimeoId: string
+}
 
-export default function HomeKapiooKitchenSection() {
+export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKapiooKitchenSectionProps) {
   const { language } = useLanguage()
 
-  const videoRef = useRef<HTMLVideoElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const videoFrameRef = useRef<HTMLDivElement>(null)
   const videoInViewRef = useRef(false)
@@ -35,93 +30,23 @@ export default function HomeKapiooKitchenSection() {
 
   const toggleVideoMute = useCallback(() => {
     const nextMuted = !videoMuted
-    if (KITCHEN_TOUR_VIDEO.kind === "youtube") {
-      const iframe = iframeRef.current
-      if (iframe) {
-        postYouTubeCommand(iframe, nextMuted ? "mute" : "unMute")
-      }
-      setVideoMuted(nextMuted)
-      return
+    const iframe = iframeRef.current
+    if (iframe) {
+      postVimeoMethod(iframe, "setVolume", nextMuted ? 0 : 1)
     }
-    if (KITCHEN_TOUR_VIDEO.kind === "vimeo") {
-      const iframe = iframeRef.current
-      if (iframe) {
-        postVimeoMethod(iframe, "setVolume", nextMuted ? 0 : 1)
-      }
-      setVideoMuted(nextMuted)
-      return
-    }
-    const video = videoRef.current
-    if (!video) return
-    video.muted = nextMuted
-    setVideoMuted(video.muted)
+    setVideoMuted(nextMuted)
   }, [videoMuted])
 
-  /** Ensures continuous playback while in view if native `loop` is ignored (some mobile browsers). */
-  const handleVideoEnded = useCallback(() => {
-    const video = videoRef.current
-    if (!video || !videoInViewRef.current || KITCHEN_TOUR_VIDEO.kind !== "mp4") return
-    video.currentTime = 0
-    void video.play().catch(() => {})
-  }, [])
-
   useEffect(() => {
-    if (KITCHEN_TOUR_VIDEO.kind !== "mp4") return
-    const video = videoRef.current
-    const frame = videoFrameRef.current
-    if (!video || !frame) return
-
-    video.loop = true
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry) return
-        videoInViewRef.current = entry.isIntersecting
-        if (entry.isIntersecting) {
-          void video.play().catch(() => {})
-        } else {
-          video.pause()
-        }
-      },
-      { threshold: 0.35, rootMargin: "0px" }
-    )
-    observer.observe(frame)
-    const onVisibility = () => {
-      if (document.hidden) {
-        video.pause()
-      } else if (videoInViewRef.current) {
-        void video.play().catch(() => {})
-      }
-    }
-    document.addEventListener("visibilitychange", onVisibility)
-    return () => {
-      observer.disconnect()
-      document.removeEventListener("visibilitychange", onVisibility)
-    }
-  }, [])
-
-  /** YouTube/Vimeo: play only while framed in view + tab visible (postMessage APIs). */
-  useEffect(() => {
-    const kind = KITCHEN_TOUR_VIDEO.kind
-    if (kind === "mp4") return
-
     const frame = videoFrameRef.current
     const iframe = iframeRef.current
     if (!frame || !iframe) return
 
     const play = () => {
-      if (kind === "youtube") {
-        postYouTubeCommand(iframe, "playVideo")
-      } else {
-        postVimeoMethod(iframe, "play")
-      }
+      postVimeoMethod(iframe, "play")
     }
     const pause = () => {
-      if (kind === "youtube") {
-        postYouTubeCommand(iframe, "pauseVideo")
-      } else {
-        postVimeoMethod(iframe, "pause")
-      }
+      postVimeoMethod(iframe, "pause")
     }
 
     const observer = new IntersectionObserver(
@@ -152,7 +77,7 @@ export default function HomeKapiooKitchenSection() {
       document.removeEventListener("visibilitychange", onVisibility)
       pause()
     }
-  }, [])
+  }, [kitchenTourVimeoId])
 
   /**
    * Vertical scroll snap so this block is harder to flick past. `mandatory` on small screens only
@@ -278,35 +203,14 @@ export default function HomeKapiooKitchenSection() {
                       className="relative overflow-hidden rounded-[14px] bg-[#14110e] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-black/20"
                       style={{ aspectRatio: "9 / 16" }}
                     >
-                      {KITCHEN_TOUR_VIDEO.kind === "mp4" ? (
-                        <video
-                          ref={videoRef}
-                          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-                          muted
-                          playsInline
-                          loop
-                          preload="metadata"
-                          disablePictureInPicture
-                          aria-label={copy.videoPoster}
-                          onVolumeChange={(e) => setVideoMuted(e.currentTarget.muted)}
-                          onEnded={handleVideoEnded}
-                        >
-                          <source src={KITCHEN_TOUR_VIDEO.src} type="video/mp4" />
-                        </video>
-                      ) : (
-                        <iframe
-                          ref={iframeRef}
-                          title={copy.videoPoster}
-                          src={
-                            KITCHEN_TOUR_VIDEO.kind === "youtube"
-                              ? youtubeEmbedSrc(KITCHEN_TOUR_VIDEO.videoId)
-                              : vimeoEmbedSrc(KITCHEN_TOUR_VIDEO.videoId)
-                          }
-                          className="absolute left-1/2 top-1/2 h-full w-auto max-w-none -translate-x-1/2 -translate-y-1/2 aspect-video border-0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                        />
-                      )}
+                      <iframe
+                        ref={iframeRef}
+                        title={copy.videoPoster}
+                        src={vimeoEmbedSrc(kitchenTourVimeoId)}
+                        className="absolute left-1/2 top-1/2 h-full w-auto max-w-none -translate-x-1/2 -translate-y-1/2 aspect-video border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
                       <div
                         className="pointer-events-none absolute inset-0 rounded-[14px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
                         aria-hidden
