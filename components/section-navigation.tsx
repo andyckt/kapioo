@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useLanguage } from "@/lib/language-context"
+import { SHOW_HOME_LOCATION_MEAL_PLANS_SECTION } from "@/lib/home-page-section-flags"
 
 interface SectionLink {
   id: string
@@ -16,28 +17,32 @@ export default function SectionNavigation() {
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const { language } = useLanguage()
   
-  // Define the sections to link to
+  // Define the sections to link to (meal-plans omitted when that block is hidden on home)
   const sections: SectionLink[] = [
+    ...(SHOW_HOME_LOCATION_MEAL_PLANS_SECTION
+      ? [
+          {
+            id: "meal-plans",
+            label: {
+              en: "Meal Plans",
+              zh: "餐食计划",
+            },
+          } satisfies SectionLink,
+        ]
+      : []),
     {
-      id: "meal-plans",
+      id: "kapioo-kitchen",
       label: {
-        en: "Meal Plans",
-        zh: "餐食计划"
-      }
+        en: "Our Kitchen",
+        zh: "Kapioo 厨房",
+      },
     },
     {
       id: "food-gallery",
       label: {
         en: "Food Gallery",
-        zh: "精选菜系"
-      }
-    },
-    {
-      id: "kapioo-kitchen",
-      label: {
-        en: "Our Kitchen",
-        zh: "Kapioo 厨房"
-      }
+        zh: "精选菜系",
+      },
     },
     {
       id: "reviews",

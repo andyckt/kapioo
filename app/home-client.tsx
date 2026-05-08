@@ -19,6 +19,7 @@ import CustomerReviewsSection from "@/components/customer-reviews-section"
 import { EnglishReviewSection } from "@/components/english-review-section"
 import HomeKapiooKitchenSection from "@/components/home-kapioo-kitchen-section"
 import { productLineChooseSeriesSentenceEn, productLineChooseSeriesSentenceZh } from "@/lib/product-lines/names"
+import { SHOW_HOME_LOCATION_MEAL_PLANS_SECTION } from "@/lib/home-page-section-flags"
 
 const LocationMealPlans = dynamic(
   () => import("@/components/location-meal-plans").then((m) => ({ default: m.default })),
@@ -272,11 +273,14 @@ export default function HomeClient({ kitchenTourVimeoId }: { kitchenTourVimeoId:
             </motion.div>
           </div>
         </section>
+
+        <HomeKapiooKitchenSection kitchenTourVimeoId={kitchenTourVimeoId} />
         
-        {/* Location-based Meal Plans Section */}
-        <div id="meal-plans">
-          <LocationMealPlans />
-        </div>
+        {SHOW_HOME_LOCATION_MEAL_PLANS_SECTION ? (
+          <div id="meal-plans">
+            <LocationMealPlans />
+          </div>
+        ) : null}
 
         {/* Food Gallery Section - Enhanced */}
         <section id="food-gallery" className="w-full py-8 md:py-16 lg:py-24 bg-gradient-to-b from-white to-[#FBF7F2] relative overflow-hidden">
@@ -432,8 +436,6 @@ export default function HomeClient({ kitchenTourVimeoId }: { kitchenTourVimeoId:
             </ScrollReveal>
           </div>
         </section>
-
-        <HomeKapiooKitchenSection kitchenTourVimeoId={kitchenTourVimeoId} />
 
         {/* How it works – 3 steps */}
         <section id="how-it-works-steps" className="w-full py-16 md:py-24 lg:py-28 bg-white relative overflow-hidden">

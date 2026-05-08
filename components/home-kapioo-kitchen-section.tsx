@@ -10,7 +10,7 @@ import { useLanguage } from "@/lib/language-context"
 import { postVimeoMethod, vimeoEmbedSrc } from "@/lib/home-kitchen-tour-video"
 
 /** Distinct filename so browsers / `/_next/image` don’t keep serving an older `prep-dawn` asset from cache. */
-const KITCHEN_PREP_CITY_BRIDGE_IMAGE = "/home-kitchen/kapioo-kitchen-prep-city-bridge.png"
+const KITCHEN_STEP_01_IMAGE = "/home-kitchen/kapioo-kitchen-step-01-morning-steam.png"
 const KITCHEN_COOKING_STIRFRY_IMAGE = "/home-kitchen/kapioo-kitchen-cooking-stirfry.png"
 const KITCHEN_PLATING_PACKAGING_IMAGE = "/home-kitchen/kapioo-kitchen-plating-packaging.png"
 const KITCHEN_DELIVERY_IMAGE = "/home-kitchen/kapioo-kitchen-delivery.png"
@@ -80,8 +80,7 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
   }, [kitchenTourVimeoId])
 
   /**
-   * Vertical scroll snap so this block is harder to flick past. `mandatory` on small screens only
-   * (stronger lock); `md` and up use `proximity` (lighter). Off when reduced motion is preferred.
+   * Vertical scroll snap on `<html>`: mandatory on small screens so snap points (e.g. kitchen section) hold.
    */
   useEffect(() => {
     const root = document.documentElement
@@ -132,8 +131,8 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
           ? "每天早上 5 点起，我们的团队开始处理当天食材：清洗、切配、腌制、分装，为当天的餐食做好准备。不是提前很多天做好的「库存餐」，而是为你当天的日程认真准备。"
           : "Starting at 5 a.m., our team washes, chops, seasons, and portions that day’s ingredients—ready for cooking. Not leftovers from days ago—in sync with today’s menus.",
         imageHint: zh
-          ? "Kapioo 灶前快炒与城市清晨街景并置：灶火与金色晨光里的行人和列车。"
-          : "Kapioo wok up close set against a golden-hour city street—commuters and a train in soft morning light.",
+          ? "Kapioo 商用厨房清晨：灶台大锅热汽升腾，厨师身着黑衣与棒球帽的背影。"
+          : "Kapioo kitchen at dawn—large stockpots releasing steam on the line, chef in black Kapioo shirt and cap seen from behind.",
       },
       {
         stepLabel: zh ? "02｜当天制作" : "02 · Cooked today",
@@ -176,7 +175,7 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
   return (
     <section
       id="kapioo-kitchen"
-      className="relative w-full scroll-mt-24 snap-start snap-always motion-reduce:snap-normal overflow-hidden bg-gradient-to-b from-[#FFF9F3] via-[#FBF7F2] to-[#F5EDE4] py-16 md:py-20 lg:py-24"
+      className="relative w-full scroll-mt-24 max-md:snap-start max-md:snap-always motion-reduce:snap-normal overflow-hidden bg-gradient-to-b from-[#FFF9F3] via-[#FBF7F2] to-[#F5EDE4] py-16 md:py-20 lg:py-24"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-20 top-32 h-72 w-72 rounded-full bg-[#C2884E]/10 blur-3xl" />
@@ -279,14 +278,14 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
                     >
                       {idx === 0 ? (
                         <Image
-                          src={KITCHEN_PREP_CITY_BRIDGE_IMAGE}
+                          src={KITCHEN_STEP_01_IMAGE}
                           alt={
                             zh
-                              ? "Kapioo 厨房灶前快炒与金色晨光中的城市街道、行人和列车并置"
-                              : "Kapioo wok stir-fry with steam beside a sunlit city street, pedestrians, and a train at golden hour"
+                              ? "Kapioo 商用厨房清晨备餐场景：灶台大锅热汽升腾，身着 Kapioo 黑衣与棒球帽的厨师背影"
+                              : "Kapioo commercial kitchen at dawn—steaming stockpots on the stove and a chef in Kapioo black shirt and cap, viewed from behind"
                           }
                           fill
-                          className="object-cover object-[18%_center] md:object-[20%_center]"
+                          className="object-cover object-center"
                           sizes="(max-width: 768px) 100vw, 32vw"
                         />
                       ) : idx === 1 ? (
