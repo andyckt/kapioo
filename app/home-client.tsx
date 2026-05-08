@@ -1,14 +1,23 @@
 "use client"
 
-import type { CSSProperties } from "react"
+import { Fragment, type CSSProperties } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import dynamic from "next/dynamic"
 import { useState } from "react"
-import { ArrowRight, CreditCard, Menu, Truck, UtensilsCrossed } from "lucide-react"
+import {
+  ArrowRight,
+  Bike,
+  CreditCard,
+  Heart,
+  Menu,
+  Soup,
+  Truck,
+  UtensilsCrossed,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HeroCarousel } from "@/components/hero-carousel"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion, type Variants } from "framer-motion"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { ScreenshotCarousel } from "@/components/screenshot-carousel"
@@ -26,10 +35,50 @@ const LocationMealPlans = dynamic(
   { loading: () => <div className="h-64 animate-pulse rounded-xl bg-[#FBF7F2]" /> }
 )
 
+/** Hero value row: icon + two lines; order matches `heroValue{n}Line{1|2}` in language-context. */
+const HOME_HERO_VALUE_ROWS = [
+  { Icon: Soup, line1Key: "heroValue1Line1", line2Key: "heroValue1Line2" },
+  { Icon: Bike, line1Key: "heroValue2Line1", line2Key: "heroValue2Line2" },
+  { Icon: Heart, line1Key: "heroValue3Line1", line2Key: "heroValue3Line2" },
+] as const
+
+const heroIntroContainer: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.06,
+    },
+  },
+}
+
+const heroIntroEase = [0.25, 0.46, 0.45, 0.94] as const
+
+const heroIntroFadeUp: Variants = {
+  hidden: { opacity: 0, y: 18 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.52, ease: heroIntroEase },
+  },
+}
+
+const heroIntroGoldBar: Variants = {
+  hidden: { opacity: 0, scaleX: 0 },
+  visible: {
+    opacity: 1,
+    scaleX: 1,
+    transition: { duration: 0.48, ease: heroIntroEase },
+  },
+}
+
 export default function HomeClient({ kitchenTourVimeoId }: { kitchenTourVimeoId: string }) {
+  const prefersReducedMotion = useReducedMotion()
+  const heroIntroReduced = prefersReducedMotion === true
+
   const { t, language, setLanguage } = useLanguage()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -196,11 +245,11 @@ export default function HomeClient({ kitchenTourVimeoId }: { kitchenTourVimeoId:
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.15 }}
-              className="flex flex-col justify-center space-y-4 md:space-y-6 order-2 lg:w-1/2 lg:pl-12"
+              className="order-2 flex min-w-0 flex-col justify-center space-y-4 md:space-y-6 lg:w-1/2 lg:pl-12"
             >
               {/* Redesigned card container with modern styling */}
               <motion.div 
-                className="relative z-10 bg-white/90 backdrop-blur-md p-5 sm:p-8 md:p-10 rounded-2xl border-0 shadow-xl ring-1 ring-[#C2884E]/10">
+                className="relative z-10 w-full min-w-0 overflow-visible bg-white/90 backdrop-blur-md p-6 sm:p-8 md:p-10 rounded-2xl border-0 shadow-xl ring-1 ring-[#C2884E]/10">
                 {/* Logo with gentle bounce - pure CSS for smooth GPU-accelerated animation */}
                 <div 
                   className="absolute -top-16 sm:-top-20 right-6 sm:right-10 animate-logo-float will-change-transform"
@@ -217,58 +266,93 @@ export default function HomeClient({ kitchenTourVimeoId }: { kitchenTourVimeoId:
                   </div>
                 </div>
                 
-                <div className="space-y-4 sm:space-y-6 md:space-y-8">
-                  {/* Main heading section with enhanced styling */}
-                  <div className="relative overflow-hidden">
-                    <motion.div
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ duration: 0.4, delay: 0.3 }}
-                      className="absolute -top-3 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#C2884E]/30 to-transparent origin-left"
-                    />
-                    
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-5 sm:mb-6 leading-tight">
-                      {t('mainSlogan')}
-                    </h1>
-                    
-                    <div className="w-20 sm:w-24 h-1.5 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mb-5 sm:mb-6"></div>
-                    
-                    <p className="text-lg sm:text-xl md:text-2xl text-[#6B5F53] font-medium leading-relaxed">
-                      {t('subSlogan')}
-                    </p>
-                  </div>
-                  
-                  {/* Enhanced tagline and tags section */}
-                  <div className="bg-[#FBF7F2] rounded-xl p-4 sm:p-6 border border-[#C2884E]/5">
-                    <div className="text-base sm:text-lg md:text-xl font-medium text-[#C2884E] mb-3 sm:mb-4">
-                      {t('tagline')}
-                    </div>
-                    
-                    {/* Enhanced tags layout - Single row on all screen sizes, fully visible without scrolling */}
-                    <div className="flex flex-nowrap gap-1 xs:gap-1.5 sm:gap-3 justify-between">
-                      {t('healthyTags').split('|').map((tag, index) => (
-                        <span
-                          key={index}
-                          className="animate-fade-in-up px-2 xs:px-2.5 sm:px-4 py-1.5 bg-white rounded-full text-[11px] xs:text-xs sm:text-base text-[#6B5F53] shadow-sm border border-[#C2884E]/10 flex items-center whitespace-nowrap flex-1 justify-center"
-                          style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                          <span className="w-1.5 h-1.5 xs:w-2 xs:h-2 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] mr-1 xs:mr-1.5 sm:mr-2 inline-block flex-shrink-0" />
-                          <span className="truncate">{tag}</span>
+                <motion.div
+                  className="space-y-4 pt-4 sm:space-y-6 sm:pt-5 md:space-y-8"
+                  variants={heroIntroContainer}
+                  initial={heroIntroReduced ? "visible" : "hidden"}
+                  animate="visible"
+                >
+                  {/* Main heading — fade up; avoids overflow clipping on descenders */}
+                  <motion.div variants={heroIntroFadeUp} className="relative pb-1">
+                    <div className="absolute -top-3 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#C2884E]/30 to-transparent origin-left pointer-events-none" />
+
+                    <h1 className="text-balance pb-1.5 pt-1 text-3xl font-bold leading-snug tracking-tight sm:text-4xl sm:leading-snug md:text-5xl md:leading-[1.12]">
+                      {language === "en" ? (
+                        <>
+                          <span className="text-[#3f352b]">Asian comfort meals for </span>
+                          <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
+                            everyday life.
+                          </span>
+                        </>
+                      ) : (
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
+                          {t("mainSlogan")}
                         </span>
+                      )}
+                    </h1>
+                  </motion.div>
+
+                  <motion.div
+                    variants={heroIntroGoldBar}
+                    className="mb-4 mt-1 h-1.5 w-20 origin-left bg-gradient-to-r from-[#C2884E] to-[#D1A46C] sm:mb-5 sm:mt-2 sm:w-24"
+                  />
+
+                  <motion.p
+                    variants={heroIntroFadeUp}
+                    className="text-sm font-medium leading-relaxed text-[#6B5F53] sm:text-base md:text-lg"
+                  >
+                    {t("subSlogan")}
+                  </motion.p>
+
+                  {/* Value props — divider row fades in with staggered intro */}
+                  <motion.div variants={heroIntroFadeUp} className="mt-5 w-full min-w-0 sm:mt-6">
+                    <div
+                      role="list"
+                      aria-label={t("heroValuePropsAria")}
+                      className="flex min-w-0 flex-nowrap items-center"
+                    >
+                      {HOME_HERO_VALUE_ROWS.map(({ Icon, line1Key, line2Key }, index) => (
+                        <Fragment key={line1Key}>
+                          {index > 0 ? (
+                            <div className="flex shrink-0 self-stretch items-center justify-center px-2 sm:px-3 md:px-4" aria-hidden>
+                              <span className="h-6 w-0.5 shrink-0 rounded-full bg-[#C2884E]/35 sm:h-8 sm:bg-[#C2884E]/38" />
+                            </div>
+                          ) : null}
+                          <div
+                            role="listitem"
+                            className="flex min-w-0 flex-1 basis-0 flex-col items-center gap-2 px-1 text-center sm:flex-row sm:items-center sm:gap-4 sm:px-1 sm:text-left"
+                          >
+                            <Icon
+                              className="size-[22px] shrink-0 text-[#BA844D] opacity-[0.95] sm:size-6 sm:text-[#B07845]"
+                              strokeWidth={1.85}
+                              aria-hidden
+                            />
+                            <div className="min-w-0 max-w-[11rem] sm:max-w-none">
+                              <p className="text-balance text-xs font-semibold leading-snug tracking-[-0.015em] text-[#382f29] sm:text-[13px]">
+                                {t(line1Key)}
+                              </p>
+                              <p className="mt-0.5 text-balance text-[11px] font-medium leading-snug text-[#6B5F53]/88 sm:mt-1 sm:text-xs">
+                                {t(line2Key)}
+                              </p>
+                            </div>
+                          </div>
+                        </Fragment>
                       ))}
                     </div>
-                  </div>
-                  
-                  {/* Button section with enhanced styling */}
-                  <div className="flex justify-end mt-4">
+                  </motion.div>
+
+                  <motion.div
+                    variants={heroIntroFadeUp}
+                    className="flex justify-end !mt-10 sm:!mt-12 md:!mt-14"
+                  >
                     <Button asChild size="lg" className="hover:scale-105 transition-transform bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white shadow-md px-6 py-6 rounded-xl">
                       <Link href="/starter" className="flex items-center">
                         <span className="text-base">{t('getStartedBtn')}</span>
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
-                  </div>
-                </div>
+                  </motion.div>
+                </motion.div>
               </motion.div>
             </motion.div>
           </div>

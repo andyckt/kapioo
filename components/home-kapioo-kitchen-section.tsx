@@ -116,7 +116,7 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
 
   const copy = {
     sectionEyebrow: zh ? "走进 Kapioo 厨房" : "Inside the Kapioo Kitchen",
-    headline: zh ? "你的一餐，从每天清晨 5 点开始。" : "Your meal starts at five every morning.",
+    headline: zh ? "你的一餐，从每天清晨 5 点开始。" : "Your meals start at 5AM every morning.",
     lead: zh
       ? "每天清晨，当城市还在慢慢醒来，Kapioo 厨房已经开始忙碌起来，为你准备今天值得期待的一餐。"
       : "Every morning, while the city is still slowly waking up, Kapioo’s kitchen is already busy—getting ready with a meal you can look forward to today.",
@@ -126,7 +126,7 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
         stepLabel: zh ? "01｜清晨备菜" : "01 · Prep at dawn",
         title: zh
           ? "你负责奔赴生活，我们负责让你好好吃饭。"
-          : "You throw yourself into life—we make sure you eat well.",
+          : "You take on the day. We take care of your meals.",
         body: zh
           ? "每天早上 5 点起，我们的团队开始处理当天食材：清洗、切配、腌制、分装，为当天的餐食做好准备。不是提前很多天做好的「库存餐」，而是为你当天的日程认真准备。"
           : "Starting at 5 a.m., our team washes, chops, seasons, and portions that day’s ingredients—ready for cooking. Not leftovers from days ago—in sync with today’s menus.",
@@ -136,7 +136,7 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
       },
       {
         stepLabel: zh ? "02｜当天制作" : "02 · Cooked today",
-        title: zh ? "当天现做，认真调味" : "Made today, thoughtfully seasoned",
+        title: zh ? "当天现做，好吃不将就" : "Freshly cooked daily, made to be enjoyed.",
         body: zh
           ? "我们希望 Kapioo 吃起来不像冰冷的「健身餐」，而是一份真正有味道、有温度、可以每天期待的饭。每一道菜都会经过烹饪、调味和出品检查，尽量做到稳定、好吃、不过度油腻。"
           : "We want Kapioo to taste like everyday comfort—not cold “diet food.” Each dish is cooked, seasoned, and checked before it heads out—balanced, craveable, and never needlessly greasy.",
@@ -145,8 +145,8 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
           : "Kapioo cooks stir-frying to order—with steam rising and mise en place at the station.",
       },
       {
-        stepLabel: zh ? "03｜安心包装" : "03 · Careful packing",
-        title: zh ? "认真摆盘，安心封装" : "Plated neatly, sealed with care",
+        stepLabel: zh ? "03｜安心包装" : "03 · Plated & Packed with Heart",
+        title: zh ? "认真摆盘，安心封装" : "Made to look as good as it tastes.",
         body: zh
           ? "我们相信，一份好饭不只是吃得安心，也应该在打开的那一刻，让你心情变好。"
           : "We believe a good meal should be more than reassuring—it should brighten your mood the moment you open the box.",
@@ -180,6 +180,11 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-20 top-32 h-72 w-72 rounded-full bg-[#C2884E]/10 blur-3xl" />
         <div className="absolute -right-16 bottom-40 h-80 w-80 rounded-full bg-[#D1A46C]/12 blur-3xl" />
+        {/* Very soft sunrise wash from the right (text column side), fades left toward the video */}
+        <div
+          aria-hidden
+          className="absolute inset-0 [background-image:linear-gradient(to_left,rgba(255,228,207,0.34)_0%,rgba(251,239,229,0.12)_42%,transparent_73%)]"
+        />
         <div className="absolute inset-0 opacity-[0.035] [background-size:28px_28px] [background-image:radial-gradient(#C2884E_1px,transparent_1px)]" />
       </div>
 

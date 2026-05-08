@@ -17,6 +17,10 @@ type TranslationKey =
   | 'copyright' | 'language' | 'chinese' | 'english'
   // Homepage additional translations
   | 'healthyTags' | 'mainSlogan' | 'subSlogan' | 'tagline' | 'mottoFirstLine' | 'mottoSecondLine'
+  | 'heroValuePropsAria'
+  | 'heroValue1Line1' | 'heroValue1Line2'
+  | 'heroValue2Line1' | 'heroValue2Line2'
+  | 'heroValue3Line1' | 'heroValue3Line2'
   | 'foodGalleryTag' | 'foodGalleryTitle' | 'foodGallerySubtitle'
   | 'chineseCuisineTitle' | 'chineseCuisineDesc'
   | 'westernCuisineTitle' | 'westernCuisineDesc'
@@ -151,6 +155,13 @@ const translations: TranslationsType = {
     mainSlogan: "北美健康餐食订阅品牌",
     subSlogan: "让你每天拥有「被好好对待」的时刻",
     tagline: `每日现做 ${PRODUCT_LINE_LABELS.daily.zh}`,
+    heroValuePropsAria: "首页要点",
+    heroValue1Line1: "每日现做",
+    heroValue1Line2: "清晨5点开伙",
+    heroValue2Line1: "配送覆盖",
+    heroValue2Line2: "多伦多及大多地区（GTA）",
+    heroValue3Line1: "告别无聊备餐",
+    heroValue3Line2: "实实在在的好饭",
     mottoFirstLine: "一顿饭的时间 给生活松一口气",
     mottoSecondLine: "Kapioo，你每天的松弛美好时刻",
     // Food Gallery Section
@@ -516,15 +527,22 @@ const translations: TranslationsType = {
     dailyDeliveryDesc: "Freshly made every day, delivered daily | Afternoon delivery",
     // Hero section
     heroTitle:
-      'Asian Fusion Meals, Curated to Nourish Your Soul <br/><span style="white-space: nowrap;">Care in every bite</span>',
-    heroDescription: "Freshly Made Everyday from 5am<br/>Healthy | Quality | Comfort | Happiness",
+      'Asian comfort meals for everyday life. <br/><span style="white-space: nowrap;">Freshly cooked from 5AM, packed with care</span>',
+    heroDescription: "Freshly cooked from 5AM<br/>Fresh | Balanced | Comforting | Ready-to-eat",
     getStartedBtn: "Get Started",
     howItWorksBtn: "How It Works",
     // Homepage additional translations
-    healthyTags: "Health|Quality|Comfort|Joy",
-    mainSlogan: "Asian Fusion Meals, Curated to Nourish Your Soul",
-    subSlogan: "Bringing care to your everyday moments",
+    healthyTags: "Fresh|Balanced|Comforting|Ready-to-eat",
+    mainSlogan: "Asian comfort meals for everyday life.",
+    subSlogan: "Every meal, a moment you look forward to.",
     tagline: "Freshly Made Everyday from 5am",
+    heroValuePropsAria: "What makes Kapioo different",
+    heroValue1Line1: "Freshly cooked daily",
+    heroValue1Line2: "from 5AM",
+    heroValue2Line1: "Delivered across",
+    heroValue2Line2: "Toronto & GTA",
+    heroValue3Line1: "No boring meal prep.",
+    heroValue3Line2: "Just real food.",
     mottoFirstLine: "Take a moment to relax with a good meal",
     mottoSecondLine: "Kapioo, your daily moment of comfort and joy",
     // Food Gallery Section
