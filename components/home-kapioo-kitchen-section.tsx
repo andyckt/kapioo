@@ -257,12 +257,12 @@ export default function HomeKapiooKitchenSection() {
       </div>
 
       <div className="container relative z-10 px-4 md:px-6">
-        {/* Video (left) · Title + lead (right) */}
-        <div className="mx-auto max-w-6xl">
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)] lg:items-start lg:gap-12 xl:gap-14">
+        {/* Video + intro — max-w-7xl matches steps so laptop doesn’t leave a dead band on the right */}
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)] lg:items-start lg:gap-x-14 lg:gap-y-10 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)] xl:gap-x-16">
             <ScrollReveal rootMargin="0px 0px -60px 0px" className="flex flex-col items-center lg:items-stretch">
-              <div className="reveal-item relative w-full max-w-[280px] lg:mx-0 lg:max-w-none">
-                <div className="relative mx-auto max-w-[280px] lg:mx-0 lg:max-w-[min(100%,280px)]">
+              <div className="reveal-item relative w-full max-w-[280px] lg:mx-0 lg:max-w-none xl:max-w-[300px]">
+                <div className="relative mx-auto max-w-[280px] lg:mx-0 lg:max-w-[min(100%,280px)] xl:max-w-[min(100%,300px)]">
                   <div
                     className="pointer-events-none absolute -inset-6 -z-10 rounded-[1.75rem] bg-gradient-to-br from-[#C2884E]/35 via-[#E8D5C4]/25 to-[#D1A46C]/30 blur-3xl"
                     aria-hidden
@@ -333,8 +333,8 @@ export default function HomeKapiooKitchenSection() {
               </div>
             </ScrollReveal>
 
-            <ScrollReveal rootMargin="0px 0px -40px 0px" className="min-w-0">
-              <div className="reveal-item text-center lg:text-left">
+            <ScrollReveal rootMargin="0px 0px -40px 0px" className="min-w-0 w-full">
+              <div className="reveal-item w-full text-center lg:text-left">
                 <div className="mb-4 inline-flex w-full flex-wrap items-center justify-center gap-2 lg:justify-start">
                   <span className="hidden h-px w-8 bg-gradient-to-r from-transparent to-[#C2884E]/40 sm:block" />
                   <span className="rounded-full bg-white/80 px-4 py-1 text-sm font-medium text-[#C2884E] shadow-sm ring-1 ring-[#C2884E]/10">
@@ -342,10 +342,10 @@ export default function HomeKapiooKitchenSection() {
                   </span>
                   <span className="hidden h-px w-8 bg-gradient-to-l from-transparent to-[#C2884E]/40 sm:block" />
                 </div>
-                <h2 className="text-3xl font-bold leading-tight text-[#3f352b] md:text-4xl xl:text-5xl">
+                <h2 className="text-balance text-3xl font-bold leading-tight text-[#3f352b] md:text-4xl xl:text-5xl">
                   {copy.headline}
                 </h2>
-                <p className="mt-5 text-base leading-relaxed text-[#6B5F53] md:text-lg">
+                <p className="mt-5 max-w-none text-base leading-relaxed text-[#6B5F53] md:text-lg">
                   {copy.lead}
                 </p>
               </div>
@@ -354,7 +354,7 @@ export default function HomeKapiooKitchenSection() {
         </div>
 
         {/* Four steps: full width below—same reading edge as intro, tighter vertical rhythm */}
-        <div className="mx-auto mt-16 max-w-5xl space-y-10 md:mt-12 md:space-y-11 lg:mt-14 lg:space-y-12">
+        <div className="mx-auto mt-16 max-w-7xl space-y-10 md:mt-12 md:space-y-11 lg:mt-14 lg:space-y-12">
           {copy.process.map((step, idx) => {
             const reversed = idx % 2 === 1
             return (
@@ -432,7 +432,7 @@ export default function HomeKapiooKitchenSection() {
         </div>
 
         {/* Closing + CTAs */}
-        <ScrollReveal className="mx-auto mt-12 max-w-3xl text-center md:mt-14">
+        <ScrollReveal className="mx-auto mt-12 max-w-4xl text-center md:mt-14">
           <div className="reveal-item relative rounded-2xl border border-[#C2884E]/15 bg-white/65 px-6 py-10 shadow-sm backdrop-blur-sm md:px-10">
             <div className="pointer-events-none absolute left-8 top-0 h-1 w-16 -translate-y-1/2 rounded-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]" />
             <blockquote className="text-lg font-medium leading-relaxed text-[#5c4f42] md:text-xl">
