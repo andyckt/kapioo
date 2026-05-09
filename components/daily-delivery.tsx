@@ -21,6 +21,10 @@ import {
   type DayData,
 } from '@/lib/daily-delivery'
 import { getDeliveryDayAvailability } from '@/lib/orders/delivery-day-availability'
+import {
+  pickDefaultAvailableDay,
+  resolveDailyMenuSelectedDayAfterFetch,
+} from '@/lib/daily-menu-selected-day'
 import { MenuUpdateBanner } from '@/components/menu-update-banner'
 import { DailyComboGrid } from '@/features/daily-ordering/daily-combo-grid'
 import { DailyDaySidebar } from '@/features/daily-ordering/daily-day-sidebar'
@@ -193,81 +197,6 @@ export default function DailyDelivery() {
     }
   };
 
-  const pickDefaultAvailableDay = (
-    formattedDays: Record<string, DayData>,
-    effectiveCutoffTime: CutoffTime
-  ): string => {
-    const dayIds = Object.keys(formattedDays)
-    if (dayIds.length === 0) return ''
-
-    const torontoNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
-    const currentHour = torontoNow.getHours()
-    const currentMinute = torontoNow.getMinutes()
-    const todayYMD = new Date(
-      torontoNow.getFullYear(),
-      torontoNow.getMonth(),
-      torontoNow.getDate()
-    )
-    const tomorrowYMD = new Date(
-      torontoNow.getFullYear(),
-      torontoNow.getMonth(),
-      torontoNow.getDate() + 1
-    )
-
-    const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-    const parseMealDate = (mealDate: string): Date | null => {
-      const parts = mealDate.split(' ')
-      if (parts.length !== 2) return null
-
-      const monthIndex = shortMonths.findIndex(
-        month => month.toLowerCase() === parts[0].toLowerCase()
-      )
-      const dayNum = parseInt(parts[1], 10)
-
-      if (monthIndex === -1 || Number.isNaN(dayNum)) return null
-
-      let year = torontoNow.getFullYear()
-      // Handle year boundary (e.g. Jan menu while current month is Dec).
-      if (monthIndex < torontoNow.getMonth() - 1) {
-        year += 1
-      }
-
-      return new Date(year, monthIndex, dayNum)
-    }
-
-    const availableDays = dayIds
-      .map((dayId) => {
-        const parsedDate = parseMealDate(formattedDays[dayId]?.date || '')
-        return { dayId, parsedDate }
-      })
-      .filter((entry): entry is { dayId: string; parsedDate: Date } => {
-        if (!entry.parsedDate) return false
-
-        // Same availability rules as ordering:
-        // 1) Past or today is unavailable
-        if (entry.parsedDate.getTime() <= todayYMD.getTime()) return false
-
-        // 2) Tomorrow becomes unavailable after daily cutoff time
-        if (
-          entry.parsedDate.getTime() === tomorrowYMD.getTime() &&
-          (
-            currentHour > effectiveCutoffTime.hour ||
-            (currentHour === effectiveCutoffTime.hour && currentMinute > effectiveCutoffTime.minute)
-          )
-        ) {
-          return false
-        }
-
-        return true
-      })
-      // Pick the nearest upcoming delivery date (earliest future date)
-      .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
-
-    return availableDays[0]?.dayId || dayIds[0]
-  }
-
   // Function to fetch menu data (extracted for reuse)
   const fetchMenuData = async (options?: {
     signal?: AbortSignal
@@ -307,7 +236,14 @@ export default function DailyDelivery() {
           if (options?.updateState !== false) {
             setDays(formattedDays);
             if (Object.keys(formattedDays).length > 0) {
-              setSelectedDay(pickDefaultAvailableDay(formattedDays, effectiveCutoffTime));
+              setSelectedDay((prev) =>
+                resolveDailyMenuSelectedDayAfterFetch(
+                  prev,
+                  formattedDays,
+                  effectiveCutoffTime,
+                  language
+                )
+              );
             }
           }
           
@@ -381,7 +317,14 @@ export default function DailyDelivery() {
           if (options?.updateState !== false) {
             setDays(formattedDays);
             if (Object.keys(formattedDays).length > 0) {
-              setSelectedDay(pickDefaultAvailableDay(formattedDays, effectiveCutoffTime));
+              setSelectedDay((prev) =>
+                resolveDailyMenuSelectedDayAfterFetch(
+                  prev,
+                  formattedDays,
+                  effectiveCutoffTime,
+                  language
+                )
+              );
             }
           }
           
@@ -483,7 +426,8 @@ export default function DailyDelivery() {
   useEffect(() => {
     const checkForUpdates = async () => {
       try {
-        const result = await fetchMenuData();
+        // Poll for date-key changes only — do not overwrite days/selectedDay (fixes 30s snap to first day).
+        const result = await fetchMenuData({ updateState: false });
         const dates = result?.currentDates;
         if (dates && lastFetchedDates && dates !== lastFetchedDates) {
           console.log('🔔 Daily menu update detected!');
