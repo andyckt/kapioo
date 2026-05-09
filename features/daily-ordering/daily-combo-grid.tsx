@@ -74,16 +74,9 @@ export function DailyComboGrid({
         </div>
       </div>
 
-      <div className="mb-6 border-l-2 border-[#C2884E] pl-3 text-left">
-        <h4 className="mb-1 text-xs font-bold text-[#C2884E]">
-          {language === "zh" ? "下单须知" : "Order Notice"}
-        </h4>
-        <p className="text-[10px] text-[#6B5F53]">
-          {language === "zh"
-            ? "每天至少选购两餐起送"
-            : "Minimum 2 meals per day required for delivery"}
-        </p>
-      </div>
+      <p className="mb-6 text-[9px] leading-snug text-[#6B5F53]/70">
+        {language === "zh" ? "* 图片仅供参考" : "* Images shown are for reference only"}
+      </p>
 
       {dayWarning ? (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2">

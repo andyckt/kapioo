@@ -1067,7 +1067,11 @@ export default function DailyDeliveryPage() {
                                     {weeklyMenu[selectedMenuDay].date}
                                   </p>
                                 </div>
-                                
+
+                                <p className="mb-5 text-center text-[9px] leading-snug text-[#6B5F53]/70 md:mb-6">
+                                  {language === "zh" ? "* 图片仅供参考" : "* Images shown are for reference only"}
+                                </p>
+
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                                   {weeklyMenu[selectedMenuDay].combos.map((combo) => (
                                   <div key={combo.id}>
