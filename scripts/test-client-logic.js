@@ -8,7 +8,7 @@ const sampleApiResponse = {
     monday: {
       _id: "67ef5777a1d4adfbac35cb1c",
       name: "1234",
-      image: "https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/meals/1744378227706-testimage.jpg",
+      image: "https://img.kapioo.com/meals/1744378227706-testimage.jpg",
       description: "蕃茄牛腩. 冬瓜粉丝炖丸子. 酸辣土豆丝 (微辣). 杂粮饭.",
       active: true,  // This should be true based on our database
       day: "monday"
@@ -16,7 +16,7 @@ const sampleApiResponse = {
     tuesday: {
       _id: "67ef5777a1d4adfbac35cb1d",
       name: "123424242",
-      image: "https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/meals/1743768740856-charlesdeluvio-wrfO9SWykdE-unsplash.jpg",
+      image: "https://img.kapioo.com/meals/1743768740856-charlesdeluvio-wrfO9SWykdE-unsplash.jpg",
       description: "蟹⻩豆腐煲. 干煸肉沫四季豆. 粉蒸 排⻣. 杂粮饭",
       active: true,  // This should be true based on our database
       day: "tuesday"
@@ -24,7 +24,7 @@ const sampleApiResponse = {
     wednesday: {
       _id: "67ef5777a1d4adfbac35cb1e",
       name: "43434141",
-      image: "https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/meals/1743768775846-eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
+      image: "https://img.kapioo.com/meals/1743768775846-eiliv-aceron-w0JzqJZYX_E-unsplash.jpg",
       description: "酸菜炖排⻣. 口水鸡(微辣). 清炒小白菜. 杂粮饭",
       active: false,
       day: "wednesday"

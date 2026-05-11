@@ -26,8 +26,18 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com',
         port: '',
-        pathname: '/src/**',
+        pathname: '/**',
       },
+      ...(process.env.AWS_CLOUDFRONT_DOMAIN
+        ? [
+            {
+              protocol: 'https',
+              hostname: process.env.AWS_CLOUDFRONT_DOMAIN,
+              port: '',
+              pathname: '/**',
+            },
+          ]
+        : []),
     ],
   },
   // Use more compatible configuration to increase body size limit
