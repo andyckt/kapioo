@@ -1,6 +1,7 @@
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
 import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
+import { rewriteS3UrlToCloudFront } from "@/lib/upload/menu-image";
 import { weeklySubscriptionDeliveryDayUpdateSchema } from "@/lib/contracts/weekly-subscription";
 import WeeklyDeliveryDay from "@/models/WeeklyDeliveryDay";
 import { format, addDays, addWeeks } from "date-fns";
@@ -45,7 +46,7 @@ function formatDeliveryDaysForAdmin(deliveryDays: WeeklyDeliveryDayRecord[]) {
       tags: option.tags,
       tagsEn: option.tagsEn,
       active: option.active,
-      imageUrl: option.imageUrl,
+      imageUrl: rewriteS3UrlToCloudFront(option.imageUrl as string),
       imageKey: option.imageKey,
       calories: option.calories,
       proteinGrams: option.proteinGrams,

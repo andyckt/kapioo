@@ -4,6 +4,7 @@ import { normalizeComboLibraryPatch } from "@/lib/combo-library/shared/normalize
 import { weeklyComboLibraryItemUpdateSchema } from "@/lib/contracts/weekly-combo-library"
 import connectToDatabase from "@/lib/db"
 import { deleteWeeklyMenuImageFromS3IfUnused } from "@/lib/upload/menu-image-references"
+import { rewriteS3UrlToCloudFront } from "@/lib/upload/menu-image";
 import WeeklyComboLibraryItem from "@/models/WeeklyComboLibraryItem"
 import WeeklyMealOption from "@/models/WeeklyMealOption"
 
@@ -22,7 +23,10 @@ export async function GET(
     const item = await WeeklyComboLibraryItem.findOne({ weeklyComboLibraryId }).select("-dishes").lean()
     if (!item) return errorJson("Weekly combo library item not found", 404)
 
-    return successJson(item)
+    return successJson({
+      ...item,
+      imageUrl: rewriteS3UrlToCloudFront((item as Record<string, unknown>).imageUrl as string),
+    })
   } catch (error: unknown) {
     return handleRouteError(
       error,

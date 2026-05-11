@@ -5,6 +5,7 @@ import { dailyComboLibraryItemUpdateSchema } from "@/lib/contracts/daily-combo-l
 import connectToDatabase from "@/lib/db"
 import { deleteDailyMenuImageFromS3IfUnused } from "@/lib/upload/menu-image-references"
 import Combo from "@/models/Combo"
+import { rewriteS3UrlToCloudFront } from "@/lib/upload/menu-image";
 import DailyComboLibraryItem from "@/models/DailyComboLibraryItem"
 
 export async function GET(
@@ -22,7 +23,10 @@ export async function GET(
     const item = await DailyComboLibraryItem.findOne({ dailyComboLibraryId }).lean()
     if (!item) return errorJson("Daily combo library item not found", 404)
 
-    return successJson(item)
+    return successJson({
+      ...item,
+      imageUrl: rewriteS3UrlToCloudFront((item as Record<string, unknown>).imageUrl as string),
+    })
   } catch (error: unknown) {
     return handleRouteError(
       error,

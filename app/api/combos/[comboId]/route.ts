@@ -3,6 +3,7 @@ import { requireAdminMfa } from '@/lib/auth/guards';
 import { comboBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
 import { deleteDailyMenuImageFromS3IfUnused } from '@/lib/upload/menu-image-references';
+import { rewriteS3UrlToCloudFront } from '@/lib/upload/menu-image';
 import Combo from '@/models/Combo';
 
 export async function GET(
@@ -18,7 +19,10 @@ export async function GET(
       return errorJson('Combo not found', 404);
     }
     
-    return successJson(combo);
+    return successJson({
+      ...combo.toObject(),
+      imageUrl: rewriteS3UrlToCloudFront(combo.imageUrl),
+    });
   } catch (error: unknown) {
     return handleRouteError(error, 'GET /api/combos/[comboId]');
   }

@@ -11,6 +11,7 @@ import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyOrder from '@/models/WeeklyOrder';
 import User from "@/models/User";
+import { rewriteS3UrlToCloudFront } from "@/lib/upload/menu-image";
 import { format, addDays, addWeeks } from 'date-fns';
 
 // Types for consecutive date validation
@@ -237,7 +238,7 @@ export async function GET() {
           : {}),
         ...(option.featuredInMenuPreview === true ? { featuredInMenuPreview: true } : {}),
         ...(typeof option.imageUrl === 'string' && option.imageUrl
-          ? { imageUrl: option.imageUrl }
+          ? { imageUrl: rewriteS3UrlToCloudFront(option.imageUrl) }
           : {}),
         ...(typeof option.imageKey === 'string' && option.imageKey
           ? { imageKey: option.imageKey }

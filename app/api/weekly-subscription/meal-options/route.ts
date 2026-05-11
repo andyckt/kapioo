@@ -2,12 +2,14 @@ import { errorJson, handleRouteError, parseJsonBody, successJson } from '@/lib/a
 import { createWeeklyMealOptionBodySchema } from '@/lib/contracts/weekly-subscription';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
+import { rewriteS3UrlToCloudFront } from '@/lib/upload/menu-image';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 
 function formatMealOption(option: Record<string, unknown>) {
   return {
     ...option,
+    imageUrl: rewriteS3UrlToCloudFront(option.imageUrl as string),
     dishes: undefined,
   };
 }

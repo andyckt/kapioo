@@ -123,6 +123,39 @@ export async function uploadMenuImageToS3(params: {
 }
 
 /**
+ * Rewrite a stored S3 URL to a CloudFront CDN URL at runtime.
+ *
+ * Existing MongoDB records still hold raw S3 URLs; this helper lets API
+ * responses serve CloudFront URLs without a database migration. If the URL
+ * is already a CloudFront URL, or if CloudFront is not configured, returns
+ * the URL unchanged.
+ */
+export function rewriteS3UrlToCloudFront(url: unknown): string | undefined {
+  if (typeof url !== "string" || !url) {
+    return undefined;
+  }
+
+  const domain = getCloudfrontDomain();
+  if (!domain) {
+    return url;
+  }
+
+  // Already a CloudFront URL — nothing to do
+  if (url.includes(domain)) {
+    return url;
+  }
+
+  // Extract S3 key from standard virtual-hosted style URLs:
+  // https://<bucket>.s3.<region>.amazonaws.com/<key>
+  const match = url.match(/^https?:\/\/[^/]+\.s3\.[^/]+\.amazonaws\.com\/(.+)$/);
+  if (match) {
+    return getPublicMediaUrl(match[1]);
+  }
+
+  return url;
+}
+
+/**
  * Best-effort delete of a menu image from S3.
  *
  * Never throws. Used during PUT (replace/remove) and DELETE flows so legacy

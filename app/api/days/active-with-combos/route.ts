@@ -1,5 +1,6 @@
 import { handleRouteError, successJson } from '@/lib/api';
 import connectToDatabase from '@/lib/db';
+import { rewriteS3UrlToCloudFront } from '@/lib/upload/menu-image';
 import Day from '@/models/Day';
 import Combo from '@/models/Combo';
 
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
         descriptionEn: combo.descriptionEn,
         typeA: combo.typeA,
         typeB: combo.typeB,
-        imageUrl: combo.imageUrl,
+        imageUrl: rewriteS3UrlToCloudFront(combo.imageUrl as string),
         imageKey: combo.imageKey,
         ...(combo.featuredInMenuPreview === true ? { featuredInMenuPreview: true } : {})
       });
