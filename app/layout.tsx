@@ -65,7 +65,7 @@ export default async function RootLayout({
     : "en"
 
   return (
-    <html lang="en" className="overflow-x-hidden">
+    <html lang="en">
       <body className={`${inter.className} overflow-x-hidden`}>
         <LanguageProvider initialLanguage={initialLanguage}>
           <MaintenanceProvider>

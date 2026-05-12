@@ -79,39 +79,6 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
     }
   }, [kitchenTourVimeoId])
 
-  /**
-   * Vertical scroll snap on `<html>`: mandatory on small screens so snap points (e.g. kitchen section) hold.
-   */
-  useEffect(() => {
-    const root = document.documentElement
-    const mqReduce = window.matchMedia("(prefers-reduced-motion: reduce)")
-    const mqMobile = window.matchMedia("(max-width: 767px)")
-
-    const clearSnap = () => {
-      root.classList.remove("snap-y", "snap-proximity", "snap-mandatory")
-    }
-
-    const sync = () => {
-      clearSnap()
-      if (mqReduce.matches) return
-      root.classList.add("snap-y")
-      if (mqMobile.matches) {
-        root.classList.add("snap-mandatory")
-      } else {
-        root.classList.add("snap-proximity")
-      }
-    }
-
-    sync()
-    mqReduce.addEventListener("change", sync)
-    mqMobile.addEventListener("change", sync)
-    return () => {
-      mqReduce.removeEventListener("change", sync)
-      mqMobile.removeEventListener("change", sync)
-      clearSnap()
-    }
-  }, [])
-
   const zh = language === "zh"
 
   const copy = {
@@ -175,7 +142,7 @@ export default function HomeKapiooKitchenSection({ kitchenTourVimeoId }: HomeKap
   return (
     <section
       id="kapioo-kitchen"
-      className="relative w-full scroll-mt-24 max-md:snap-start max-md:snap-always motion-reduce:snap-normal overflow-hidden bg-gradient-to-b from-[#FFF9F3] via-[#FBF7F2] to-[#F5EDE4] py-16 md:py-20 lg:py-24"
+      className="relative w-full scroll-mt-24 overflow-hidden bg-gradient-to-b from-[#FFF9F3] via-[#FBF7F2] to-[#F5EDE4] py-16 md:py-20 lg:py-24"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-20 top-32 h-72 w-72 rounded-full bg-[#C2884E]/10 blur-3xl" />
