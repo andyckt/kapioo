@@ -1,7 +1,7 @@
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 
-import { getS3Config } from "@/lib/env";
+import { getCloudfrontDomain, getS3Config } from "@/lib/env";
 import {
   getPaymentProofExtension,
   PAYMENT_PROOF_IMAGE_MIME_TYPES,
@@ -16,6 +16,22 @@ import {
  * key conventions, and S3 lifecycle behavior. Routes still own their auth gates
  * and HTTP shape; only the storage logic is shared here.
  */
+
+/**
+ * Build the public CDN URL for a stored media key.
+ * Uses CloudFront when AWS_CLOUDFRONT_DOMAIN is configured,
+ * otherwise falls back to the direct S3 URL.
+ */
+export function getPublicMediaUrl(key: string): string {
+  const domain = getCloudfrontDomain();
+  if (domain) {
+    const cleanDomain = domain.replace(/\/+$/, "");
+    const cleanKey = key.replace(/^\/+/, "");
+    return `https://${cleanDomain}/${cleanKey}`;
+  }
+  const { bucket, region } = getS3Config();
+  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+}
 
 export const MENU_IMAGE_ALLOWED_MIME_TYPES = PAYMENT_PROOF_IMAGE_MIME_TYPES;
 export const MENU_IMAGE_MAX_SIZE_BYTES = PAYMENT_PROOF_MAX_SIZE_BYTES;
@@ -101,9 +117,42 @@ export async function uploadMenuImageToS3(params: {
   );
 
   return {
-    url: `https://${bucket}.s3.${region}.amazonaws.com/${key}`,
+    url: getPublicMediaUrl(key),
     key,
   };
+}
+
+/**
+ * Rewrite a stored S3 URL to a CloudFront CDN URL at runtime.
+ *
+ * Existing MongoDB records still hold raw S3 URLs; this helper lets API
+ * responses serve CloudFront URLs without a database migration. If the URL
+ * is already a CloudFront URL, or if CloudFront is not configured, returns
+ * the URL unchanged.
+ */
+export function rewriteS3UrlToCloudFront(url: unknown): string | undefined {
+  if (typeof url !== "string" || !url) {
+    return undefined;
+  }
+
+  const domain = getCloudfrontDomain();
+  if (!domain) {
+    return url;
+  }
+
+  // Already a CloudFront URL — nothing to do
+  if (url.includes(domain)) {
+    return url;
+  }
+
+  // Extract S3 key from standard virtual-hosted style URLs:
+  // https://<bucket>.s3.<region>.amazonaws.com/<key>
+  const match = url.match(/^https?:\/\/[^/]+\.s3\.[^/]+\.amazonaws\.com\/(.+)$/);
+  if (match) {
+    return getPublicMediaUrl(match[1]);
+  }
+
+  return url;
 }
 
 /**

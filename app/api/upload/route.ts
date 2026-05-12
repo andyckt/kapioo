@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { errorJson } from "@/lib/api";
 import { requireUser } from "@/lib/auth/guards";
 import { getS3Config } from "@/lib/env";
+import { getPublicMediaUrl } from "@/lib/upload/menu-image";
 import {
   getPaymentProofExtension,
   PAYMENT_PROOF_DOCUMENT_MIME_TYPES,
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    const { bucket, region } = getS3Config();
+    const { bucket } = getS3Config();
     const s3Client = getS3Client();
 
     const formData = await request.formData();
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     await s3Client.send(new PutObjectCommand(uploadParams));
 
-    const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${fileName}`;
+    const fileUrl = getPublicMediaUrl(fileName);
 
     return NextResponse.json({
       success: true,

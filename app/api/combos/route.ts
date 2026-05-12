@@ -2,13 +2,17 @@ import { handleRouteError, parseJsonBody, successJson } from '@/lib/api';
 import { requireAdminMfa } from '@/lib/auth/guards';
 import { comboBodySchema } from '@/lib/contracts/content';
 import connectToDatabase from '@/lib/db';
+import { rewriteS3UrlToCloudFront } from '@/lib/upload/menu-image';
 import Combo from '@/models/Combo';
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
     const combos = await Combo.find({});
-    return successJson(combos);
+    return successJson(combos.map((combo) => ({
+      ...combo.toObject(),
+      imageUrl: rewriteS3UrlToCloudFront(combo.imageUrl),
+    })));
   } catch (error: unknown) {
     return handleRouteError(error, 'GET /api/combos');
   }

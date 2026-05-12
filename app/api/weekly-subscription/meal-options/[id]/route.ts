@@ -5,12 +5,14 @@ import { updateWeeklyMealOptionBodySchema } from '@/lib/contracts/weekly-subscri
 import { requireAdminMfa } from '@/lib/auth/guards';
 import connectToDatabase from '@/lib/db';
 import { deleteWeeklyMenuImageFromS3IfUnused } from '@/lib/upload/menu-image-references';
+import { rewriteS3UrlToCloudFront } from '@/lib/upload/menu-image';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 
 function formatMealOption(option: Record<string, unknown>) {
   return {
     ...option,
+    imageUrl: rewriteS3UrlToCloudFront(option.imageUrl as string),
     dishes: undefined,
   };
 }

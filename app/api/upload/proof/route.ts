@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { errorJson, successJson } from "@/lib/api";
 import { requireUser } from "@/lib/auth/guards";
 import { getS3Config } from "@/lib/env";
+import { getPublicMediaUrl } from "@/lib/upload/menu-image";
 
 function getS3Client() {
   const { accessKeyId, secretAccessKey, region } = getS3Config();
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
       return response;
     }
 
-    const { bucket, region } = getS3Config();
+    const { bucket } = getS3Config();
     const awsBucketName = bucket;
     const s3Client = getS3Client();
 
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
 
     await s3Client.send(command);
 
-    const fileUrl = `https://${awsBucketName}.s3.${region}.amazonaws.com/${fileName}`;
+    const fileUrl = getPublicMediaUrl(fileName);
 
     return successJson({
       url: fileUrl,

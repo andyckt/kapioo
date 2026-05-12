@@ -11,6 +11,7 @@ import {
   dailyComboLibraryListQuerySchema,
 } from "@/lib/contracts/daily-combo-library"
 import connectToDatabase from "@/lib/db"
+import { rewriteS3UrlToCloudFront } from "@/lib/upload/menu-image"
 import DailyComboLibraryItem from "@/models/DailyComboLibraryItem"
 
 function escapeRegex(input: string) {
@@ -123,7 +124,10 @@ export async function GET(request: Request) {
     ])
 
     return successJson({
-      items,
+      items: items.map((item) => ({
+        ...item,
+        imageUrl: rewriteS3UrlToCloudFront(item.imageUrl as string),
+      })),
       pagination: {
         page: parsed.data.page,
         limit: parsed.data.limit,

@@ -37,6 +37,7 @@ AWS_ACCESS_KEY_ID=your-aws-access-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret-key
 AWS_REGION=ap-southeast-2
 AWS_S3_BUCKET_NAME=meal-subscription-andy-photos
+AWS_CLOUDFRONT_DOMAIN=img.kapioo.com
 ```
 
 ### 4. Deploy Your Application

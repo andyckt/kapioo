@@ -20,7 +20,7 @@ describe("content contracts", () => {
     it("accepts a valid combo image URL and key", () => {
       const parsed = comboBodySchema.parse({
         ...baseCombo,
-        imageUrl: "https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/combo-images/monday/image.jpg",
+        imageUrl: "https://img.kapioo.com/combo-images/monday/image.jpg",
         imageKey: "combo-images/monday/image.jpg",
       })
 
@@ -117,7 +117,7 @@ describe("content contracts", () => {
     it("accepts a body with valid image fields", () => {
       const parsed = createWeeklyMealOptionBodySchema.parse({
         ...baseBody,
-        imageUrl: "https://meal-subscription-andy-photos.s3.ap-southeast-2.amazonaws.com/weekly-meal-images/x/y.jpg",
+        imageUrl: "https://img.kapioo.com/weekly-meal-images/x/y.jpg",
         imageKey: "weekly-meal-images/x/y.jpg",
         calories: 650,
         allergens: ["soy"],

@@ -36,3 +36,7 @@ export function getS3Config() {
     bucket: getRequiredEnv('AWS_S3_BUCKET', ['AWS_BUCKET_NAME', 'AWS_S3_BUCKET_NAME']),
   };
 }
+
+export function getCloudfrontDomain(): string | undefined {
+  return getEnv('AWS_CLOUDFRONT_DOMAIN');
+}
