@@ -7,7 +7,6 @@ import dynamic from "next/dynamic"
 import { useState } from "react"
 import {
   ArrowRight,
-  Bike,
   CreditCard,
   Heart,
   Menu,
@@ -38,7 +37,7 @@ const LocationMealPlans = dynamic(
 /** Hero value row: icon + two lines; order matches `heroValue{n}Line{1|2}` in language-context. */
 const HOME_HERO_VALUE_ROWS = [
   { Icon: Soup, line1Key: "heroValue1Line1", line2Key: "heroValue1Line2" },
-  { Icon: Bike, line1Key: "heroValue2Line1", line2Key: "heroValue2Line2" },
+  { Icon: Truck, line1Key: "heroValue2Line1", line2Key: "heroValue2Line2" },
   { Icon: Heart, line1Key: "heroValue3Line1", line2Key: "heroValue3Line2" },
 ] as const
 
