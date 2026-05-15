@@ -1,27 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { useLanguage } from "@/lib/language-context";
 import { useClientAuth } from "@/lib/client-auth";
 import { LeadLanguageChooserDialog } from "@/components/lead-language-chooser-dialog";
 
-export function LanguagePreferenceDialog() {
-  const pathname = usePathname();
+/**
+ * Entrance language prompt for `/social-media` (QR / bio links — cold leads).
+ * Global `LanguagePreferenceDialog` skips this path so leads always see a chooser here first.
+ */
+export function SocialMediaLeadLanguageGate() {
   const { setLanguage } = useLanguage();
   const { status: authStatus } = useClientAuth();
   const [open, setOpen] = useState(false);
   const hasOpenedRef = useRef(false);
 
   useEffect(() => {
-    if (pathname === "/social-media") return;
-
     if (authStatus !== "ready") return;
 
     try {
       const userStr = localStorage.getItem("user");
       if (userStr) {
-        const user = JSON.parse(userStr) as { languagePreference?: string };
+        const user = JSON.parse(userStr) as {
+          languagePreference?: string;
+        };
         if (user.languagePreference === "zh" || user.languagePreference === "en") {
           setLanguage(user.languagePreference);
           localStorage.setItem("languagePreferenceSet", "true");
@@ -52,11 +54,7 @@ export function LanguagePreferenceDialog() {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [authStatus, pathname, setLanguage]);
-
-  if (pathname === "/social-media") {
-    return null;
-  }
+  }, [authStatus, setLanguage]);
 
   return <LeadLanguageChooserDialog open={open} onOpenChange={setOpen} />;
 }

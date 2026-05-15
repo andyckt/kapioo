@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/lib/language-context';
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ alwaysShow = false }: { alwaysShow?: boolean }) {
   const { language, setLanguage, t } = useLanguage();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
@@ -23,8 +23,8 @@ export function LanguageSwitcher() {
     }
   }, []);
   
-  // Hide language switcher when user is logged in
-  if (isLoggedIn) {
+  // Hide language switcher when user is logged in (except on public pages that opt in)
+  if (!alwaysShow && isLoggedIn) {
     return null;
   }
   
