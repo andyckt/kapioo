@@ -6,15 +6,23 @@ import { useLanguage } from "@/lib/language-context";
 import { useClientAuth } from "@/lib/client-auth";
 import { LeadLanguageChooserDialog } from "@/components/lead-language-chooser-dialog";
 
+function isSocialMediaPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  return normalized === "/social-media";
+}
+
 export function LanguagePreferenceDialog() {
   const pathname = usePathname();
+  const skipForSocial = isSocialMediaPath(pathname);
+
   const { setLanguage } = useLanguage();
   const { status: authStatus } = useClientAuth();
   const [open, setOpen] = useState(false);
   const hasOpenedRef = useRef(false);
 
   useEffect(() => {
-    if (pathname === "/social-media") return;
+    if (skipForSocial) return;
 
     if (authStatus !== "ready") return;
 
@@ -52,9 +60,9 @@ export function LanguagePreferenceDialog() {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [authStatus, pathname, setLanguage]);
+  }, [authStatus, setLanguage, skipForSocial]);
 
-  if (pathname === "/social-media") {
+  if (skipForSocial) {
     return null;
   }
 
