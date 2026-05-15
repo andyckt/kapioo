@@ -29,9 +29,9 @@ function TypingAnimation({ text }: { text: string }) {
   }, [currentIndex, text]);
 
   return (
-    <div className="relative mx-auto mt-4 min-h-[3.25rem] w-full max-w-md px-1 text-center">
+    <div className="relative mx-auto mt-3 min-h-[2.85rem] w-full max-w-md px-1 text-center sm:mt-4 sm:min-h-[3.25rem]">
       <motion.span 
-        className="inline-block text-balance text-[#6B5F53] text-lg font-light leading-snug tracking-wide"
+        className="inline-block text-balance text-base font-light leading-snug tracking-wide text-[#6B5F53] sm:text-lg"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -106,7 +106,11 @@ export default function SocialMediaPage() {
   ]
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#fcfaf8] dark:bg-gray-950 px-4 relative overflow-hidden">
+    <div className="relative flex min-h-[100dvh] min-h-[100svh] w-full flex-col bg-[#fcfaf8] text-[#382f29] dark:bg-gray-950">
+      {/* Full-bleed background (avoids white gap when bouncing / overscroll on mobile) */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-[1] bg-[#fcfaf8] dark:bg-gray-950" />
+
+      <div className="relative flex min-h-[100dvh] min-h-[100svh] w-full flex-col items-center overflow-x-hidden px-4 pb-16 pt-[calc(env(safe-area-inset-top,0px)+5.75rem)] max-sm:pb-[max(env(safe-area-inset-bottom),3.5rem)] sm:justify-center sm:pt-[max(8rem,min(26vh,10rem))] md:pt-24">
       <SocialMediaLeadLanguageGate />
       <div className="absolute right-3 top-3 z-30 sm:right-5 sm:top-5">
         <div className="rounded-xl border border-[#E8DDD4]/90 bg-[#FFFCFA]/95 shadow-sm backdrop-blur-sm [&_button]:h-11 [&_button]:w-11 [&_button]:rounded-lg [&_svg]:text-[#6B5346]">
@@ -150,7 +154,7 @@ export default function SocialMediaPage() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="mb-8 mt-8 flex flex-col items-center"
+        className="mb-4 mt-0 flex flex-col items-center max-sm:pt-1 sm:mb-10 sm:mt-4 lg:mt-8"
       >
         <Link href="/" className="group flex items-center gap-3">
           <motion.div
@@ -168,21 +172,21 @@ export default function SocialMediaPage() {
             <Image 
               src="/未命名設計.png" 
               alt="Kapioo Logo" 
-              width={70} 
-              height={70}
-              className="drop-shadow-lg transition-all duration-300"
+              width={56} 
+              height={56}
+              className="h-14 w-14 drop-shadow-lg transition-all duration-300 sm:h-[70px] sm:w-[70px]"
               priority
             />
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#C2884E]/5 to-[#D1A46C]/10 opacity-0 group-hover:opacity-70 transition-opacity duration-500 animate-pulse"></div>
           </motion.div>
-          <span className="font-bold text-[#C2884E] text-2xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+          <span className="text-xl font-bold text-[#C2884E] transition-all duration-300 group-hover:tracking-wider sm:text-2xl">Kapioo</span>
         </Link>
         
         {/* Typing animation */}
         <TypingAnimation key={language} text={t('subSlogan')} />
       </motion.div>
 
-      <div className="z-10 mt-8 flex flex-col items-center justify-center gap-10 sm:flex-row sm:flex-nowrap sm:gap-12 md:gap-24 lg:gap-32">
+      <div className="z-10 mt-8 flex w-full max-w-sm flex-col items-center justify-center gap-5 max-sm:gap-[1.125rem] sm:mt-14 sm:max-w-none sm:flex-row sm:flex-nowrap sm:gap-12 md:gap-24 lg:gap-32">
         {socialLinks.map((platform) => {
           const delay =
             platform.id === 'instagram' ? 0.1 : platform.id === 'homepage' ? 0.22 : 0.34
@@ -219,10 +223,10 @@ export default function SocialMediaPage() {
                         damping: 22,
                       },
                     }}
-                    className="relative flex flex-col items-center gap-4 sm:flex-row sm:gap-6"
+                    className="relative flex flex-col items-center gap-2 sm:flex-row sm:gap-6"
                   >
-                    {/* Squircle with soft depth — still minimal, richer on hover */}
-                    <div className="relative isolate flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-[1.875rem] border border-[#CBB69A]/70 bg-gradient-to-br from-[#FFFCFA] via-[#FFFAF8] to-[#F9F4EF] shadow-[0_12px_32px_-18px_rgba(74,61,53,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] ring-1 ring-white/85 transition-[box-shadow,border-color,background-color] duration-300 ease-out group-hover:border-[#C9A068]/92 group-hover:shadow-[0_18px_42px_-20px_rgba(194,136,78,0.28),0_8px_20px_-14px_rgba(74,61,53,0.14),inset_0_1px_0_rgba(255,255,255,1)] sm:h-36 sm:w-36 md:h-48 md:w-48">
+                    {/* Squircle — smaller on narrow phones so three tiles fit */}
+                    <div className="relative isolate flex size-[6.375rem] shrink-0 items-center justify-center overflow-hidden rounded-[1.35rem] border border-[#CBB69A]/70 bg-gradient-to-br from-[#FFFCFA] via-[#FFFAF8] to-[#F9F4EF] shadow-[0_12px_32px_-18px_rgba(74,61,53,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] ring-1 ring-white/85 transition-[box-shadow,border-color,background-color] duration-300 ease-out group-hover:border-[#C9A068]/92 group-hover:shadow-[0_18px_42px_-20px_rgba(194,136,78,0.28),0_8px_20px_-14px_rgba(74,61,53,0.14),inset_0_1px_0_rgba(255,255,255,1)] sm:h-36 sm:w-36 sm:rounded-[1.875rem] md:h-44 md:w-44">
                       <span
                         className="pointer-events-none absolute inset-x-4 top-0 z-10 h-px bg-gradient-to-r from-transparent via-white/95 to-transparent opacity-95"
                         aria-hidden
@@ -232,15 +236,15 @@ export default function SocialMediaPage() {
                         aria-hidden
                       />
                       <Globe
-                        className="relative z-[1] size-[4rem] text-[#8E6B45] transition-[color,filter] duration-300 ease-out group-hover:text-[#B07845] sm:size-[5rem] md:size-[6rem]"
+                        className="relative z-[1] size-[2.625rem] text-[#8E6B45] transition-[color,filter] duration-300 ease-out group-hover:text-[#B07845] sm:size-[5rem] md:size-[5.75rem]"
                         strokeWidth={1.72}
                         aria-hidden
                       />
                     </div>
 
-                    <div className="flex max-w-[12.5rem] flex-col items-center gap-3 text-center sm:max-w-[15rem] sm:items-start sm:text-left">
+                    <div className="flex max-w-[11rem] flex-col items-center gap-2 text-center sm:max-w-[15rem] sm:items-start sm:gap-3 sm:text-left">
                       <span
-                        className={`text-[0.9375rem] font-semibold leading-snug text-[#382f29] antialiased md:text-lg md:leading-snug ${
+                        className={`text-sm font-semibold leading-snug text-[#382f29] antialiased sm:text-[0.9375rem] md:text-lg md:leading-snug ${
                           language === 'zh' ? 'tracking-[0.03em]' : 'tracking-[-0.02em]'
                         }`}
                         lang={language === 'zh' ? 'zh' : 'en'}
@@ -299,13 +303,13 @@ export default function SocialMediaPage() {
                   }}
                   className="relative"
                 >
-                  <div className="relative h-32 w-32 sm:h-36 sm:w-36 md:h-48 md:w-48">
+                  <div className="relative size-[6.375rem] sm:h-36 sm:w-36 md:h-44 md:w-44">
                     <Image
                       src={ext.logo}
                       alt={altSocial}
                       fill
                       className="object-contain transition-all duration-300 ease-in-out"
-                      sizes="(max-width: 640px) 128px, (max-width: 768px) 144px, 192px"
+                      sizes="(max-width: 639px) 96px, (max-width: 768px) 144px, 176px"
                       priority={ext.id === 'instagram'}
                     />
                   </div>
@@ -314,6 +318,7 @@ export default function SocialMediaPage() {
             </motion.div>
           )
         })}
+      </div>
       </div>
     </div>
   );
