@@ -37,6 +37,25 @@ AWS_CLOUDFRONT_DOMAIN=img.kapioo.com
 
 `AWS_CLOUDFRONT_DOMAIN` is optional. When set, all uploaded media URLs will use the CloudFront CDN domain (e.g., `https://img.kapioo.com/...`) instead of direct S3 URLs.
 
+### Route Optimizer POD Ingest
+```bash
+ROUTE_OPTIMIZER_INGEST_TOKEN=your_long_random_bearer_token
+ROUTE_OPTIMIZER_INGEST_SECRET=your_long_random_hmac_secret
+POD_IMAGE_HOST_ALLOWLIST=r2.kapioo.com,img.kapioo.com
+POD_NOTIFY_CUSTOMER=false
+```
+
+`ROUTE_OPTIMIZER_INGEST_TOKEN` and `ROUTE_OPTIMIZER_INGEST_SECRET` secure the POD webhook. `POD_IMAGE_HOST_ALLOWLIST` must include the Route Optimizer's R2/CDN image host. `POD_NOTIFY_CUSTOMER` is disabled by default; set it to `true` only if delivered-status emails should be sent after a POD is saved.
+
+For manual testing, create a payload JSON file and run:
+
+```bash
+ROUTE_OPTIMIZER_INGEST_TOKEN=xxx ROUTE_OPTIMIZER_INGEST_SECRET=yyy \
+node scripts/sign-pod-request.js ./payload.json http://localhost:3000
+```
+
+Run the printed `curl` command. The HMAC signs the exact file bytes, so keep `--data-binary @payload.json`.
+
 ### Authentication (NextAuth)
 ```bash
 NEXTAUTH_SECRET=your_nextauth_secret

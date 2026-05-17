@@ -1,4 +1,9 @@
 import mongoose, { Schema, Document } from 'mongoose';
+
+import {
+  ProofOfDeliverySchema,
+  type IProofOfDelivery,
+} from '@/lib/models/proof-of-delivery';
 import { IAddress } from './UserSubscription';
 
 export const WEEKLY_MEAL_PLAN_TYPES = ['legacy', '6aweek', '8aweek', '10aweek', '12aweek', '16aweek'] as const;
@@ -50,6 +55,7 @@ export interface IWeeklyOrder extends Document {
   confirmedAt?: Date;
   deliveredAt?: Date;
   refundedAt?: Date;    // Date when the order was refunded (if applicable)
+  proofOfDelivery?: IProofOfDelivery;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -239,7 +245,8 @@ const WeeklyOrderSchema: Schema = new Schema(
     },
     refundedAt: {
       type: Date,
-    }
+    },
+    proofOfDelivery: ProofOfDeliverySchema,
   },
   { 
     timestamps: true,
@@ -254,6 +261,7 @@ function shouldRefreshWeeklyOrderModel(model: mongoose.Model<IWeeklyOrder> | und
   const allocatedMealCountPath = schema?.path?.('allocatedMealCount');
   const confirmedAtPath = schema?.path?.('confirmedAt');
   const deliveredAtPath = schema?.path?.('deliveredAt');
+  const proofOfDeliveryPath = schema?.path?.('proofOfDelivery');
   const orderCustomerOverridePath = schema?.path?.('orderCustomerOverride');
   const orderCustomerOverrideLogsPath = schema?.path?.('orderCustomerOverrideLogs');
 
@@ -264,6 +272,7 @@ function shouldRefreshWeeklyOrderModel(model: mongoose.Model<IWeeklyOrder> | und
     !allocatedMealCountPath ||
     !confirmedAtPath ||
     !deliveredAtPath ||
+    !proofOfDeliveryPath ||
     !orderCustomerOverridePath ||
     !orderCustomerOverrideLogsPath ||
     !Array.isArray(mealPlanTypePath.enumValues) ||

@@ -5,6 +5,7 @@ import { applyBalanceMutations } from "@/lib/balances/mutations";
 import connectToDatabase from "@/lib/db";
 import mongoose from "mongoose";
 import { buildAdminOrderResponse, findAdminOrderUser } from "@/lib/orders/admin-order-response";
+import { withRewrittenProofOfDeliveryUrl } from "@/lib/orders/proof-of-delivery-response";
 import { buildWeeklyEntitlementSummary } from "@/lib/orders/weekly-entitlement-display";
 import {
   describeWeeklyRefundTarget,
@@ -89,18 +90,20 @@ export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) 
       }));
 
     const orderWithUserInfo = buildAdminOrderResponse(
-      {
-        ...order,
-        weeklyEntitlementSummary: buildWeeklyEntitlementSummary(order, entitlementGroup as never),
-        linkedWeeklyGroup: order.weeklyEntitlementGroupId
-          ? {
-              groupId: order.weeklyEntitlementGroupId,
-              parentRecordExists: Boolean(entitlementGroup),
-              linkedChildOrderCount: linkedChildOrders.length,
-              otherLinkedChildOrders,
-            }
-          : null,
-      },
+      withRewrittenProofOfDeliveryUrl(
+        {
+          ...order,
+          weeklyEntitlementSummary: buildWeeklyEntitlementSummary(order, entitlementGroup as never),
+          linkedWeeklyGroup: order.weeklyEntitlementGroupId
+            ? {
+                groupId: order.weeklyEntitlementGroupId,
+                parentRecordExists: Boolean(entitlementGroup),
+                linkedChildOrderCount: linkedChildOrders.length,
+                otherLinkedChildOrders,
+              }
+            : null,
+        }
+      ),
       user
     );
 

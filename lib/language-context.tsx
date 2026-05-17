@@ -97,6 +97,8 @@ type TranslationKey =
   | 'deliveryStatus' | 'deliveredStatus' | 'cancelledStatus' | 'refundedStatus'
   | 'orderCancelled' | 'creditsReturned' | 'refundedOn' | 'orderRefunded'
   | 'noOrdersYet' | 'orderHistoryAppearHere' | 'pageXofY' | 'orderDeliveryDates' | 'orderDeliveryTime'
+  | 'proofOfDeliveryTitle' | 'proofOfDeliveryEmpty' | 'viewProofPhoto'
+  | 'proofPhotoCapturedAt' | 'openInNewTab' | 'proofUnavailable'
   // Select Meals tab
   | 'weeklyMenu' | 'selectDaysDelivery' | 'loadingMeals' | 'selectedCount' | 'proceedToCheckout' | 'itemAddedToCart' | 'checkoutNotImplemented' | 'featureComingSoon' | 'cartEmpty' | 'addItemsToCart' | 'loading'
   | 'checkoutTitle' | 'confirmOrderDetails' | 'deliveryInfo' | 'editAddress' | 'addAddress'
@@ -475,6 +477,12 @@ const translations: TranslationsType = {
     pageXofY: "第 X 页，共 Y 页",
     orderDeliveryDates: "配送日期",
     orderDeliveryTime: "配送时间",
+    proofOfDeliveryTitle: "配送证明",
+    proofOfDeliveryEmpty: "暂时没有配送照片。",
+    viewProofPhoto: "查看配送照片",
+    proofPhotoCapturedAt: "拍摄时间",
+    openInNewTab: "在新标签页中打开",
+    proofUnavailable: "配送证明暂不可用",
     // Select Meals tab
     weeklyMenu: "Kapioo的每周菜单",
     selectDaysDelivery: "选择您想要配送餐点的日期",
@@ -856,6 +864,12 @@ const translations: TranslationsType = {
     pageXofY: "Page X of Y",
     orderDeliveryDates: "Delivery date(s)",
     orderDeliveryTime: "Delivery time",
+    proofOfDeliveryTitle: "Proof of delivery",
+    proofOfDeliveryEmpty: "No delivery photo is available yet.",
+    viewProofPhoto: "View delivery photo",
+    proofPhotoCapturedAt: "Captured at",
+    openInNewTab: "Open in new tab",
+    proofUnavailable: "Proof of delivery is unavailable",
     // Select Meals tab
     weeklyMenu: "Kapioo's Weekly Menu",
     selectDaysDelivery: "Select the days you want meals delivered",

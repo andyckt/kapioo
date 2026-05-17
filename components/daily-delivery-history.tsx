@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { OrderDeliveryMeta } from "@/components/order-delivery-meta"
+import { ProofOfDeliveryCard } from "@/components/orders/proof-of-delivery-card"
 import {
   dailyMealTypeShortLabel,
   dailyVoucherTypeCountLabel,
@@ -30,6 +31,7 @@ import {
   getStandardDeliveryWindow,
   uniqueDeliveryDatesFromOrderItems,
 } from "@/lib/user-order-delivery-display"
+import { SHOW_POD_IN_CUSTOMER_ORDER_DETAILS } from "@/lib/proof-of-delivery-flags"
 
 // Format address for display
 function formatAddress(address: any, language: string, area?: string) {
@@ -486,6 +488,13 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                                 />
                               </div>
                             </section>
+
+                            {SHOW_POD_IN_CUSTOMER_ORDER_DETAILS ? (
+                              <ProofOfDeliveryCard
+                                proofOfDelivery={selectedOrder.proofOfDelivery}
+                                className="border-[#C2884E]/12 bg-white/90 shadow-sm"
+                              />
+                            ) : null}
 
                             {selectedOrder.specialInstructions ? (
                               <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">

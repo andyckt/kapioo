@@ -10,6 +10,7 @@ import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
 import User from "@/models/User";
 import mongoose from "mongoose";
 import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-customer-info";
+import { withRewrittenProofOfDeliveryUrl } from "@/lib/orders/proof-of-delivery-response";
 
 export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) {
   try {
@@ -50,7 +51,7 @@ export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) 
     const weeklyEntitlementSummary = buildWeeklyEntitlementSummary(plainOrder as never, entitlementGroup as never);
 
     return successJson({
-      ...plainOrder,
+      ...withRewrittenProofOfDeliveryUrl(plainOrder),
       effectiveCustomerInfo,
       weeklyEntitlementSummary,
       phoneNumber: effectiveCustomerInfo.phoneNumber,

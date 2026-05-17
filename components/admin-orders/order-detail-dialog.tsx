@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ProofOfDeliveryCard } from "@/components/orders/proof-of-delivery-card"
 import { formatDateTime } from "@/lib/format"
 import { getAdminOrderItemDisplay } from "@/lib/orders/admin-order-item-display"
+import { SHOW_POD_IN_ADMIN_ORDER_DETAILS } from "@/lib/proof-of-delivery-flags"
 import type { AdminOrder, AdminOrderCustomerInfo, AdminOrderUpdateLog } from "@/lib/types/orders"
 
 import { formatAddress, getEffectiveCustomerInfo, getOrderUpdateLogs } from "./order-helpers"
@@ -228,6 +230,10 @@ export function OrderDetailDialog({
                 </CardContent>
               </Card>
             </div>
+
+            {SHOW_POD_IN_ADMIN_ORDER_DETAILS ? (
+              <ProofOfDeliveryCard proofOfDelivery={order.proofOfDelivery} />
+            ) : null}
 
             {extraContent}
 

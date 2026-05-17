@@ -1,0 +1,2 @@
+export const SHOW_POD_IN_CUSTOMER_ORDER_DETAILS = true;
+export const SHOW_POD_IN_ADMIN_ORDER_DETAILS = true;

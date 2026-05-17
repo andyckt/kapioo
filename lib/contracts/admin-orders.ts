@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { addressSchema, paginationStateSchema } from "@/lib/contracts/common";
+import { proofOfDeliverySchema } from "@/lib/contracts/proof-of-delivery";
 
 export const adminOrderAddressSchema = addressSchema.pick({
   unitNumber: true,
@@ -120,6 +121,7 @@ export const adminOrderSchema = z
     items: z.array(adminOrderItemSchema).optional(),
     effectiveCustomerInfo: adminOrderCustomerInfoSchema.optional(),
     orderCustomerOverrideLogs: z.array(adminOrderUpdateLogSchema).optional(),
+    proofOfDelivery: proofOfDeliverySchema.optional(),
     weeklyEntitlementSummary: weeklyEntitlementSummarySchema.optional(),
     weeklyEntitlementGroupId: z.string().optional(),
     linkedWeeklyGroup: linkedWeeklyGroupSchema.optional(),

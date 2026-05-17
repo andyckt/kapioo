@@ -5,6 +5,7 @@ import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
 import { enrichAdminOrderResponse } from "@/lib/orders/admin-order-response";
 import { deleteDailyOrder } from "@/lib/orders/daily-admin-mutations";
+import { withRewrittenProofOfDeliveryUrl } from "@/lib/orders/proof-of-delivery-response";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 
 export async function GET(request: Request, { params }: RouteContext<{ id: string }>) {
@@ -25,7 +26,7 @@ export async function GET(request: Request, { params }: RouteContext<{ id: strin
       return errorJson("Order not found", 404);
     }
 
-    return successJson(await enrichAdminOrderResponse(order));
+    return successJson(await enrichAdminOrderResponse(withRewrittenProofOfDeliveryUrl(order)));
   } catch (error: unknown) {
     return handleRouteError(error, `GET /api/admin/daily-delivery/orders/${id || "[id]"}`);
   }

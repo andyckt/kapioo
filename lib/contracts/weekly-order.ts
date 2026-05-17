@@ -5,6 +5,7 @@ import {
   dateRangeQuerySchema,
   paginationQuerySchema,
 } from "@/lib/contracts/common";
+import { proofOfDeliverySchema } from "@/lib/contracts/proof-of-delivery";
 
 export const weeklyMealPlanTypeSchema = z.enum([
   "legacy",
@@ -56,6 +57,7 @@ export const weeklyOrderResponseSchema = z.object({
   confirmedAt: z.string().optional(),
   deliveredAt: z.string().optional(),
   refundedAt: z.string().optional(),
+  proofOfDelivery: proofOfDeliverySchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

@@ -2,6 +2,7 @@ import { errorJson, handleRouteError, successJson, type RouteContext } from "@/l
 import { requireUser } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
 import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-customer-info";
+import { withRewrittenProofOfDeliveryUrl } from "@/lib/orders/proof-of-delivery-response";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
 
@@ -35,7 +36,7 @@ export async function GET(_request: Request, { params }: RouteContext<{ id: stri
     const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as never, user as never);
 
     return successJson({
-      ...plainOrder,
+      ...withRewrittenProofOfDeliveryUrl(plainOrder),
       effectiveCustomerInfo,
       phoneNumber: effectiveCustomerInfo.phoneNumber,
       area: effectiveCustomerInfo.area,
