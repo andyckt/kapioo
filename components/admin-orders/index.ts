@@ -1,3 +1,4 @@
+export { AdminProofOfDeliveryUpload } from "./admin-proof-of-delivery-upload"
 export { OrderActionsMenu, OrderDeleteDialog, OrderOverrideDialog } from "./order-actions"
 export { OrderDetailDialog } from "./order-detail-dialog"
 export { OrderFiltersBar } from "./order-filters"

@@ -39,6 +39,7 @@ export function useAdminOrders({ apiBase, initialFilters, debounceMs = 0 }: UseA
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isUploadingPod, setIsUploadingPod] = useState(false)
   const [isBatchUpdating, setIsBatchUpdating] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [pagination, setPagination] = useState<PaginationState>({
@@ -197,6 +198,51 @@ export function useAdminOrders({ apiBase, initialFilters, debounceMs = 0 }: UseA
       prev && getOrderRouteId(prev) === getOrderRouteId(updatedOrder) ? updatedOrder : prev
     )
   }, [])
+
+  const uploadProofOfDelivery = useCallback(
+    async (orderId: string, file: File, note?: string) => {
+      setIsUploadingPod(true)
+
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        if (note) {
+          formData.append("note", note)
+        }
+
+        const response = await fetch(
+          `/api/admin/orders/${encodeURIComponent(orderId)}/proof-of-delivery`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        )
+        const data = await response.json()
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to upload proof of delivery")
+        }
+
+        applyUpdatedOrder(data.data as AdminOrder)
+        toastRef.current({
+          title: "Proof uploaded",
+          description: "Order marked as delivered with proof of delivery.",
+        })
+      } catch (error) {
+        console.error("Error uploading proof of delivery:", error)
+        toastRef.current({
+          title: "Upload failed",
+          description:
+            error instanceof Error ? error.message : "Failed to upload proof of delivery",
+          variant: "destructive",
+        })
+        throw error
+      } finally {
+        setIsUploadingPod(false)
+      }
+    },
+    [applyUpdatedOrder]
+  )
 
   const updateOrderStatus = useCallback(
     async (orderId: string, status: string) => {
@@ -596,6 +642,7 @@ export function useAdminOrders({ apiBase, initialFilters, debounceMs = 0 }: UseA
     setIsDetailDialogOpen,
     isLoading,
     isUpdating,
+    isUploadingPod,
     isBatchUpdating,
     isExporting,
     pagination,
@@ -633,6 +680,7 @@ export function useAdminOrders({ apiBase, initialFilters, debounceMs = 0 }: UseA
     },
     fetchOrderDetails,
     updateOrderStatus,
+    uploadProofOfDelivery,
     toggleOrderSelection,
     toggleSelectAll,
     updateSelectedOrdersStatus,

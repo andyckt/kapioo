@@ -142,6 +142,7 @@ interface OrderDetailDialogProps {
   onOpenChange: (open: boolean) => void
   title?: string
   customerActions?: ReactNode
+  proofOfDeliverySlot?: ReactNode
   extraContent?: ReactNode
 }
 
@@ -151,6 +152,7 @@ export function OrderDetailDialog({
   onOpenChange,
   title = "Order Details",
   customerActions,
+  proofOfDeliverySlot,
   extraContent,
 }: OrderDetailDialogProps) {
   const customer = order ? getEffectiveCustomerInfo(order) : null
@@ -234,6 +236,8 @@ export function OrderDetailDialog({
             {SHOW_POD_IN_ADMIN_ORDER_DETAILS ? (
               <ProofOfDeliveryCard proofOfDelivery={order.proofOfDelivery} />
             ) : null}
+
+            {SHOW_POD_IN_ADMIN_ORDER_DETAILS ? proofOfDeliverySlot : null}
 
             {extraContent}
 

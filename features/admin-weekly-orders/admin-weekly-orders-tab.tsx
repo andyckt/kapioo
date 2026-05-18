@@ -4,6 +4,7 @@ import { useRef } from "react"
 import { Copy, Download, Loader2 } from "lucide-react"
 
 import {
+  AdminProofOfDeliveryUpload,
   OrderDeleteDialog,
   OrderDetailDialog,
   OrderFiltersBar,
@@ -312,6 +313,21 @@ export function AdminWeeklyOrdersTab() {
             >
               Edit order-only customer info
             </Button>
+          ) : null
+        }
+        proofOfDeliverySlot={
+          ordersState.selectedOrder ? (
+            <AdminProofOfDeliveryUpload
+              orderId={
+                (typeof ordersState.selectedOrder.orderId === "string" &&
+                  ordersState.selectedOrder.orderId) ||
+                ordersState.selectedOrder._id
+              }
+              status={ordersState.selectedOrder.status}
+              hasProof={Boolean(ordersState.selectedOrder.proofOfDelivery?.imageUrl)}
+              isUploading={ordersState.isUploadingPod}
+              onUpload={ordersState.uploadProofOfDelivery}
+            />
           ) : null
         }
         extraContent={selectedOrderExtra}

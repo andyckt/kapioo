@@ -99,6 +99,11 @@ type TranslationKey =
   | 'noOrdersYet' | 'orderHistoryAppearHere' | 'pageXofY' | 'orderDeliveryDates' | 'orderDeliveryTime'
   | 'proofOfDeliveryTitle' | 'proofOfDeliveryEmpty' | 'viewProofPhoto'
   | 'proofPhotoCapturedAt' | 'openInNewTab' | 'proofUnavailable'
+  | 'adminPodUploadTitle' | 'adminPodUploadHint' | 'adminPodUploadNoteLabel'
+  | 'adminPodUploadNotePlaceholder' | 'adminPodUploadSubmit' | 'adminPodUploadAlreadyExists'
+  | 'adminPodUploadTerminalStatus' | 'adminPodUploadInvalidFileTitle'
+  | 'adminPodUploadInvalidFileDescription' | 'adminPodUploadTooLargeTitle'
+  | 'adminPodUploadTooLargeDescription'
   // Select Meals tab
   | 'weeklyMenu' | 'selectDaysDelivery' | 'loadingMeals' | 'selectedCount' | 'proceedToCheckout' | 'itemAddedToCart' | 'checkoutNotImplemented' | 'featureComingSoon' | 'cartEmpty' | 'addItemsToCart' | 'loading'
   | 'checkoutTitle' | 'confirmOrderDetails' | 'deliveryInfo' | 'editAddress' | 'addAddress'
@@ -483,6 +488,17 @@ const translations: TranslationsType = {
     proofPhotoCapturedAt: "拍摄时间",
     openInNewTab: "在新标签页中打开",
     proofUnavailable: "配送证明暂不可用",
+    adminPodUploadTitle: "上传配送证明",
+    adminPodUploadHint: "用于非路线优化配送的订单。上传照片后，订单将标记为已送达。",
+    adminPodUploadNoteLabel: "备注（可选）",
+    adminPodUploadNotePlaceholder: "例如：由管理员手动送达",
+    adminPodUploadSubmit: "上传并标记为已送达",
+    adminPodUploadAlreadyExists: "此订单已有配送证明，无法重复上传。",
+    adminPodUploadTerminalStatus: "已取消或已退款的订单无法上传配送证明。",
+    adminPodUploadInvalidFileTitle: "图片格式无效",
+    adminPodUploadInvalidFileDescription: "请上传 JPG、PNG、WebP、HEIC、TIFF 或 BMP 图片。",
+    adminPodUploadTooLargeTitle: "图片过大",
+    adminPodUploadTooLargeDescription: "请上传小于 {maxMb}MB 的图片。",
     // Select Meals tab
     weeklyMenu: "Kapioo的每周菜单",
     selectDaysDelivery: "选择您想要配送餐点的日期",
@@ -870,6 +886,19 @@ const translations: TranslationsType = {
     proofPhotoCapturedAt: "Captured at",
     openInNewTab: "Open in new tab",
     proofUnavailable: "Proof of delivery is unavailable",
+    adminPodUploadTitle: "Upload proof of delivery",
+    adminPodUploadHint:
+      "For orders not delivered through Route Optimizer. Uploading a photo marks the order as delivered.",
+    adminPodUploadNoteLabel: "Note (optional)",
+    adminPodUploadNotePlaceholder: "e.g. Hand-delivered by admin",
+    adminPodUploadSubmit: "Upload and mark delivered",
+    adminPodUploadAlreadyExists: "This order already has proof of delivery and cannot be replaced.",
+    adminPodUploadTerminalStatus:
+      "Cancelled or refunded orders cannot receive proof of delivery uploads.",
+    adminPodUploadInvalidFileTitle: "Invalid image",
+    adminPodUploadInvalidFileDescription: "Please upload a JPG, PNG, WebP, HEIC, TIFF, or BMP image.",
+    adminPodUploadTooLargeTitle: "Image too large",
+    adminPodUploadTooLargeDescription: "Please upload an image under {maxMb}MB.",
     // Select Meals tab
     weeklyMenu: "Kapioo's Weekly Menu",
     selectDaysDelivery: "Select the days you want meals delivered",

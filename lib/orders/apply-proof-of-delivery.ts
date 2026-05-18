@@ -3,6 +3,7 @@ import type { Model } from "mongoose";
 import type {
   ApplyProofOfDeliveryResult,
   ProofOfDeliveryService,
+  ProofOfDeliverySkippedReason,
   RouteOptimizerProofOfDeliveryBody,
 } from "@/lib/contracts/proof-of-delivery";
 import connectToDatabase from "@/lib/db";
@@ -18,10 +19,31 @@ const TERMINAL_STATUSES = ["cancelled", "refunded"] as const;
 
 type SupportedOrder = IDailyDeliveryOrder | IWeeklyOrder;
 
+type AuditActor = {
+  user?: { _id?: unknown; email?: string };
+  role?: "user" | "admin";
+} | null;
+
 type ApplyProofOfDeliveryInput = {
   payload: RouteOptimizerProofOfDeliveryBody;
   request?: Request;
 };
+
+export type ApplySingleProofOfDeliveryResult =
+  | {
+      ok: true;
+      orderId: string;
+      service: ProofOfDeliveryService;
+      previousStatus: string;
+    }
+  | { ok: false; reason: "missing"; orderId: string }
+  | {
+      ok: false;
+      reason: ProofOfDeliverySkippedReason;
+      orderId: string;
+      service: ProofOfDeliveryService;
+      status?: string;
+    };
 
 function dedupeOrderIds(orderIds: string[]): string[] {
   return Array.from(
@@ -41,7 +63,9 @@ function isWritableStatus(status: string): boolean {
   return status === "delivered" || (ACTIVE_STATUSES as readonly string[]).includes(status);
 }
 
-function buildProofOfDelivery(payload: RouteOptimizerProofOfDeliveryBody): IProofOfDelivery {
+function buildProofOfDeliveryFromRouteOptimizer(
+  payload: RouteOptimizerProofOfDeliveryBody
+): IProofOfDelivery {
   return {
     imageUrl: payload.podImage.url,
     imageKey: payload.podImage.key,
@@ -93,50 +117,66 @@ async function applyToOrder<TOrder extends SupportedOrder>(params: {
   order: TOrder;
   proofOfDelivery: IProofOfDelivery;
   request?: Request;
-  result: ApplyProofOfDeliveryResult;
-}) {
-  const { model, service, order, proofOfDelivery, request, result } = params;
+  actor?: AuditActor;
+  result?: ApplyProofOfDeliveryResult;
+}): Promise<ApplySingleProofOfDeliveryResult> {
+  const { model, service, order, proofOfDelivery, request, actor, result } = params;
   const status = String(order.status);
+  const orderId = order.orderId;
 
   if (status === "delivered" && hasProofOfDelivery(order)) {
-    result.skipped.push({
-      orderId: order.orderId,
+    result?.skipped.push({
+      orderId,
       service,
       reason: "already-delivered-with-pod",
       status,
     });
     await logAuditEvent({
+      actor: actor ?? undefined,
       action: "pod.skipped",
       targetType: `${service}-order`,
-      targetId: order.orderId,
+      targetId: orderId,
       request,
       metadata: {
         reason: "already-delivered-with-pod",
-        stopId: proofOfDelivery.stopId,
+        source: proofOfDelivery.source,
       },
     });
-    return;
+    return {
+      ok: false,
+      reason: "already-delivered-with-pod",
+      orderId,
+      service,
+      status,
+    };
   }
 
   if (isTerminalStatus(status) || !isWritableStatus(status)) {
-    result.skipped.push({
-      orderId: order.orderId,
+    result?.skipped.push({
+      orderId,
       service,
       reason: "terminal-status",
       status,
     });
     await logAuditEvent({
+      actor: actor ?? undefined,
       action: "pod.skipped",
       targetType: `${service}-order`,
-      targetId: order.orderId,
+      targetId: orderId,
       request,
       metadata: {
         reason: "terminal-status",
         status,
-        stopId: proofOfDelivery.stopId,
+        source: proofOfDelivery.source,
       },
     });
-    return;
+    return {
+      ok: false,
+      reason: "terminal-status",
+      orderId,
+      service,
+      status,
+    };
   }
 
   const setPayload: Record<string, unknown> = {
@@ -161,38 +201,50 @@ async function applyToOrder<TOrder extends SupportedOrder>(params: {
   if (!updatedOrder) {
     const latestOrder = await model.findById(order._id);
     if (latestOrder && String(latestOrder.status) === "delivered" && hasProofOfDelivery(latestOrder)) {
-      result.skipped.push({
-        orderId: order.orderId,
+      result?.skipped.push({
+        orderId,
         service,
         reason: "already-delivered-with-pod",
         status: String(latestOrder.status),
       });
-      return;
+      return {
+        ok: false,
+        reason: "already-delivered-with-pod",
+        orderId,
+        service,
+        status: String(latestOrder.status),
+      };
     }
 
-    result.skipped.push({
-      orderId: order.orderId,
+    result?.skipped.push({
+      orderId,
       service,
       reason: "terminal-status",
       status: latestOrder ? String(latestOrder.status) : status,
     });
-    return;
+    return {
+      ok: false,
+      reason: "terminal-status",
+      orderId,
+      service,
+      status: latestOrder ? String(latestOrder.status) : status,
+    };
   }
 
-  result.updated.push({
-    orderId: order.orderId,
+  result?.updated.push({
+    orderId,
     service,
   });
 
   await logAuditEvent({
+    actor: actor ?? undefined,
     action: "pod.applied",
     targetType: `${service}-order`,
-    targetId: order.orderId,
+    targetId: orderId,
     request,
     metadata: {
       previousStatus: status,
-      stopId: proofOfDelivery.stopId,
-      driverId: proofOfDelivery.driverId,
+      source: proofOfDelivery.source,
       imageKey: proofOfDelivery.imageKey,
     },
   });
@@ -202,20 +254,62 @@ async function applyToOrder<TOrder extends SupportedOrder>(params: {
     service,
     previousStatus: status,
   });
+
+  return {
+    ok: true,
+    orderId,
+    service,
+    previousStatus: status,
+  };
 }
 
-async function findOrderById(orderId: string) {
-  const dailyOrder = await DailyDeliveryOrder.findOne({ orderId });
+export async function findOrderByOrderId(orderId: string) {
+  const normalized = orderId.trim();
+  const dailyOrder = await DailyDeliveryOrder.findOne({ orderId: normalized });
   if (dailyOrder) {
     return { service: "daily" as const, model: DailyDeliveryOrder, order: dailyOrder };
   }
 
-  const weeklyOrder = await WeeklyOrder.findOne({ orderId });
+  const weeklyOrder = await WeeklyOrder.findOne({ orderId: normalized });
   if (weeklyOrder) {
     return { service: "weekly" as const, model: WeeklyOrder, order: weeklyOrder };
   }
 
   return null;
+}
+
+/** Canonical single-order POD apply (Route Optimizer webhook + admin manual upload). */
+export async function applyProofOfDeliveryToOrder(params: {
+  orderId: string;
+  proofOfDelivery: IProofOfDelivery;
+  request?: Request;
+  actor?: AuditActor;
+}): Promise<ApplySingleProofOfDeliveryResult> {
+  await connectToDatabase();
+
+  const found = await findOrderByOrderId(params.orderId);
+  if (!found) {
+    await logAuditEvent({
+      actor: params.actor ?? undefined,
+      action: "pod.missing",
+      targetType: "order",
+      targetId: params.orderId.trim(),
+      request: params.request,
+      metadata: {
+        source: params.proofOfDelivery.source,
+      },
+    });
+    return { ok: false, reason: "missing", orderId: params.orderId.trim() };
+  }
+
+  return applyToOrder({
+    model: found.model as Model<SupportedOrder>,
+    service: found.service,
+    order: found.order,
+    proofOfDelivery: params.proofOfDelivery,
+    request: params.request,
+    actor: params.actor,
+  });
 }
 
 export async function applyProofOfDelivery({
@@ -225,7 +319,7 @@ export async function applyProofOfDelivery({
   await connectToDatabase();
 
   const orderIds = dedupeOrderIds(payload.orderIds);
-  const proofOfDelivery = buildProofOfDelivery(payload);
+  const proofOfDelivery = buildProofOfDeliveryFromRouteOptimizer(payload);
   const result: ApplyProofOfDeliveryResult = {
     updated: [],
     skipped: [],
@@ -234,7 +328,7 @@ export async function applyProofOfDelivery({
   };
 
   for (const orderId of orderIds) {
-    const found = await findOrderById(orderId);
+    const found = await findOrderByOrderId(orderId);
     if (!found) {
       result.missing.push({ orderId });
       await logAuditEvent({

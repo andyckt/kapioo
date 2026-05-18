@@ -22,7 +22,10 @@ vi.mock("@/lib/services/notifications", () => ({
 }));
 
 import { POST } from "@/app/api/integrations/route-optimizer/proof-of-delivery/route";
-import { applyProofOfDelivery } from "@/lib/orders/apply-proof-of-delivery";
+import {
+  applyProofOfDelivery,
+  applyProofOfDeliveryToOrder,
+} from "@/lib/orders/apply-proof-of-delivery";
 
 const capturedAt = "2026-05-17T22:31:00.000Z";
 
@@ -237,6 +240,41 @@ describe("proof of delivery ingestion", () => {
 
     const badSignatureResponse = await POST(signedRequest(payload, "wrong-secret"));
     expect(badSignatureResponse.status).toBe(401);
+  });
+
+  it("applies admin-manual POD to a single order and marks it delivered", async () => {
+    const user = await createTestUser();
+    await createDailyOrder(user._id, { status: "delivery" });
+
+    const result = await applyProofOfDeliveryToOrder({
+      orderId: "POD-D-1",
+      proofOfDelivery: {
+        imageUrl: "https://cdn.kapioo.com/proof-of-delivery/POD-D-1/photo.jpg",
+        imageKey: "proof-of-delivery/POD-D-1/photo.jpg",
+        capturedAt: new Date(capturedAt),
+        receivedAt: new Date(),
+        source: "admin-manual",
+        note: "Hand delivered",
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      orderId: "POD-D-1",
+      service: "daily",
+      previousStatus: "delivery",
+    });
+
+    const order = await DailyDeliveryOrder.findOne({ orderId: "POD-D-1" }).lean();
+    expect(order).toMatchObject({
+      status: "delivered",
+      proofOfDelivery: {
+        imageUrl: "https://cdn.kapioo.com/proof-of-delivery/POD-D-1/photo.jpg",
+        source: "admin-manual",
+        note: "Hand delivered",
+      },
+    });
+    expect(order?.deliveredAt?.toISOString()).toBe(capturedAt);
   });
 
   it("accepts a valid signed webhook and returns the Route Optimizer response shape", async () => {
