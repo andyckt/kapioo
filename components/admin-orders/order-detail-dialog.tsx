@@ -229,6 +229,30 @@ export function OrderDetailDialog({
                       {formatDateTime(order.deliveryDate)}
                     </p>
                   )}
+                  {order.deliveryDispatch?.eta && (
+                    <p>
+                      <span className="font-medium">Estimated arrival:</span>{" "}
+                      {formatDateTime(order.deliveryDispatch.eta)}
+                    </p>
+                  )}
+                  {order.deliveryDispatch?.dispatchedAt && (
+                    <p>
+                      <span className="font-medium">Delivery started at:</span>{" "}
+                      {formatDateTime(order.deliveryDispatch.dispatchedAt)}
+                    </p>
+                  )}
+                  {order.deliveryDispatch?.source === "route-optimizer" &&
+                    (order.deliveryDispatch.driverId || order.deliveryDispatch.stopId) && (
+                      <p className="text-xs text-muted-foreground">
+                        via Route Optimizer
+                        {order.deliveryDispatch.driverId
+                          ? ` · driver ${order.deliveryDispatch.driverId}`
+                          : ""}
+                        {order.deliveryDispatch.stopId
+                          ? ` · stop ${order.deliveryDispatch.stopId}`
+                          : ""}
+                      </p>
+                    )}
                 </CardContent>
               </Card>
             </div>

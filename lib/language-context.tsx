@@ -96,7 +96,8 @@ type TranslationKey =
   | 'orderConfirmed' | 'outForDelivery' | 'delivered' | 'pendingStatus' | 'confirmedStatus'
   | 'deliveryStatus' | 'deliveredStatus' | 'cancelledStatus' | 'refundedStatus'
   | 'orderCancelled' | 'creditsReturned' | 'refundedOn' | 'orderRefunded'
-  | 'noOrdersYet' | 'orderHistoryAppearHere' | 'pageXofY' | 'orderDeliveryDates' | 'orderDeliveryTime'
+  | 'noOrdersYet' | 'orderHistoryAppearHere' | 'pageXofY'   | 'orderDeliveryDates' | 'orderDeliveryTime'
+  | 'estimatedArrivalLabel'
   | 'proofOfDeliveryTitle' | 'proofOfDeliveryEmpty' | 'viewProofPhoto'
   | 'proofPhotoCapturedAt' | 'openInNewTab' | 'proofUnavailable'
   | 'adminPodUploadTitle' | 'adminPodUploadHint' | 'adminPodUploadNoteLabel'
@@ -482,6 +483,7 @@ const translations: TranslationsType = {
     pageXofY: "第 X 页，共 Y 页",
     orderDeliveryDates: "配送日期",
     orderDeliveryTime: "配送时间",
+    estimatedArrivalLabel: "预计送达时间",
     proofOfDeliveryTitle: "配送证明",
     proofOfDeliveryEmpty: "暂时没有配送照片。",
     viewProofPhoto: "查看配送照片",
@@ -880,6 +882,7 @@ const translations: TranslationsType = {
     pageXofY: "Page X of Y",
     orderDeliveryDates: "Delivery date(s)",
     orderDeliveryTime: "Delivery time",
+    estimatedArrivalLabel: "Estimated arrival",
     proofOfDeliveryTitle: "Proof of delivery",
     proofOfDeliveryEmpty: "No delivery photo is available yet.",
     viewProofPhoto: "View delivery photo",

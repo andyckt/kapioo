@@ -1,6 +1,10 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 import {
+  DeliveryDispatchSchema,
+  type IDeliveryDispatch,
+} from '@/lib/models/delivery-dispatch';
+import {
   ProofOfDeliverySchema,
   type IProofOfDelivery,
 } from '@/lib/models/proof-of-delivery';
@@ -68,6 +72,7 @@ export interface IDailyDeliveryOrder extends Document {
   deliveredAt?: Date;
   refundedAt?: Date;
   proofOfDelivery?: IProofOfDelivery;
+  deliveryDispatch?: IDeliveryDispatch;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -158,6 +163,7 @@ const DailyDeliveryOrderSchema = new Schema(
     deliveredAt: Date,
     refundedAt: Date,
     proofOfDelivery: ProofOfDeliverySchema,
+    deliveryDispatch: DeliveryDispatchSchema,
   },
   {
     timestamps: true,
@@ -176,7 +182,8 @@ function shouldRefreshDailyDeliveryOrderModel(
   return (
     !schema?.path?.('orderCustomerOverride') ||
     !schema.path?.('orderCustomerOverrideLogs') ||
-    !schema.path?.('proofOfDelivery')
+    !schema.path?.('proofOfDelivery') ||
+    !schema.path?.('deliveryDispatch')
   );
 }
 

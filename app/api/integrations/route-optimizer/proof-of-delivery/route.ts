@@ -1,30 +1,13 @@
-import crypto from "node:crypto";
-
 import { errorJson, handleRouteError, parseInput, successJson } from "@/lib/api";
 import { routeOptimizerProofOfDeliveryBodySchema } from "@/lib/contracts/proof-of-delivery";
 import { applyProofOfDelivery } from "@/lib/orders/apply-proof-of-delivery";
+import {
+  computeBodyHash,
+  isAuthorizedRouteOptimizerBearer,
+  verifyRouteOptimizerSignature,
+} from "@/lib/security/route-optimizer-webhook";
 
 export const runtime = "nodejs";
-
-function isAuthorizedBearer(request: Request, token: string) {
-  return request.headers.get("authorization") === `Bearer ${token}`;
-}
-
-function computeBodyHash(rawBody: string) {
-  return crypto.createHash("sha256").update(rawBody).digest("hex");
-}
-
-function verifySignature(rawBody: string, signature: string, secret: string) {
-  const expected = `sha256=${crypto.createHmac("sha256", secret).update(rawBody).digest("hex")}`;
-  const signatureBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expected);
-
-  if (signatureBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
-}
 
 function isAllowedPodHost(url: string) {
   const allowlist = (process.env.POD_IMAGE_HOST_ALLOWLIST || "")
@@ -57,7 +40,7 @@ export async function POST(request: Request) {
       return errorJson("POD ingest endpoint is not configured", 503);
     }
 
-    if (!isAuthorizedBearer(request, token)) {
+    if (!isAuthorizedRouteOptimizerBearer(request, token)) {
       return errorJson("Unauthorized", 401);
     }
 
@@ -65,7 +48,7 @@ export async function POST(request: Request) {
     bodyHash = computeBodyHash(rawBody);
     const signature = request.headers.get("x-ro-signature") || "";
 
-    if (!verifySignature(rawBody, signature, secret)) {
+    if (!verifyRouteOptimizerSignature(rawBody, signature, secret)) {
       console.warn(`[${requestId}] Invalid HMAC signature bodyHash=${bodyHash}`);
       return errorJson("Invalid signature", 401);
     }

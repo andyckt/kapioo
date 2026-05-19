@@ -5,6 +5,7 @@ import {
   dateRangeQuerySchema,
   paginationQuerySchema,
 } from "@/lib/contracts/common";
+import { deliveryDispatchSchema } from "@/lib/contracts/delivery-dispatch";
 import { proofOfDeliverySchema } from "@/lib/contracts/proof-of-delivery";
 
 export const dailyOrderStatusSchema = z.enum([
@@ -61,6 +62,7 @@ export const dailyOrderResponseSchema = z.object({
   deliveredAt: z.string().optional(),
   refundedAt: z.string().optional(),
   proofOfDelivery: proofOfDeliverySchema.optional(),
+  deliveryDispatch: deliveryDispatchSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

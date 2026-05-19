@@ -31,6 +31,7 @@ import {
   getStandardDeliveryWindow,
   uniqueDeliveryDatesFromOrderItems,
 } from "@/lib/user-order-delivery-display"
+import { formatCustomerEstimatedArrival } from "@/lib/orders/delivery-dispatch-display"
 import { SHOW_POD_IN_CUSTOMER_ORDER_DETAILS } from "@/lib/proof-of-delivery-flags"
 
 // Format address for display
@@ -388,6 +389,17 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                                   </div>
                                 </div>
                               )}
+
+                              {selectedOrder.status === "delivery" &&
+                                selectedOrder.deliveryDispatch?.eta && (
+                                  <div className="mt-3 rounded-lg border border-[#C9B8DC]/40 bg-[#F3EEF9]/60 px-3 py-2.5 text-sm text-[#5D4A78]">
+                                    <span className="font-medium">{t("estimatedArrivalLabel")}: </span>
+                                    {formatCustomerEstimatedArrival(
+                                      selectedOrder.deliveryDispatch.eta,
+                                      language
+                                    )}
+                                  </div>
+                                )}
 
                               {selectedOrder.status === 'cancelled' && (
                                 <div className="rounded-lg border border-red-200 bg-red-50/90 px-3 py-2.5 text-sm text-red-800">

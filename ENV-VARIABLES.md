@@ -56,6 +56,23 @@ node scripts/sign-pod-request.js ./payload.json http://localhost:3000
 
 Run the printed `curl` command. The HMAC signs the exact file bytes, so keep `--data-binary @payload.json`.
 
+### Route Optimizer delivery-started ingest
+
+Uses the same `ROUTE_OPTIMIZER_INGEST_TOKEN` and `ROUTE_OPTIMIZER_INGEST_SECRET` as the POD webhook.
+
+```bash
+POST /api/integrations/route-optimizer/delivery-started
+```
+
+When a driver taps "Start Delivery", Route Optimizer sends `orderIds`, `eta`, and `startedAt` (no `receivedAt` — Kapioo stamps that server-side). Eligible daily orders are set to `delivery` and store the ETA. Route Optimizer sends the customer ETA SMS; Kapioo does not send email for this event.
+
+For manual testing:
+
+```bash
+ROUTE_OPTIMIZER_INGEST_TOKEN=xxx ROUTE_OPTIMIZER_INGEST_SECRET=yyy \
+node scripts/sign-delivery-started-request.js ./delivery-started-payload.json http://localhost:3000
+```
+
 ### Authentication (NextAuth)
 ```bash
 NEXTAUTH_SECRET=your_nextauth_secret
