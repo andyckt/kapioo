@@ -77,6 +77,7 @@ export default async function RootLayout({
             </AppInitializer>
           </MaintenanceProvider>
         </LanguageProvider>
+        <Analytics />
       </body>
     </html>
   )
