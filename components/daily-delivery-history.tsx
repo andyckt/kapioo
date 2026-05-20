@@ -269,6 +269,11 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
           <div className="space-y-3">
             {orders.map((order) => {
               const { datesText, windowText } = dailyListDeliverySummaryLines(order.items, language);
+              const deliveryTimeLine =
+                order.status === "delivery" && order.deliveryDispatch?.eta
+                  ? formatCustomerEstimatedArrival(order.deliveryDispatch.eta, language) ??
+                    windowText
+                  : windowText;
               const twoN = order.voucherCost?.twoDish ?? 0;
               const threeN = order.voucherCost?.threeDish ?? 0;
               const voucherSummaryParts: string[] = [];
@@ -306,7 +311,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                       {language === "zh" ? "配送时间" : "Delivery time"}
                     </p>
                     <p className="mt-1 text-[15px] font-semibold leading-snug text-[#3D342C]">{datesText}</p>
-                    <p className="text-sm font-medium leading-snug text-[#6B5F53]">{windowText}</p>
+                    <p className="text-sm font-medium leading-snug text-[#6B5F53]">{deliveryTimeLine}</p>
                   </div>
 
                   <div className="space-y-1">
