@@ -1,5 +1,8 @@
 type Language = "zh" | "en";
 
+/** Single source of truth for customer/admin ETA window length. */
+export const DELIVERY_ETA_WINDOW_MINUTES = 30;
+
 function toDate(value: string | Date): Date | null {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -25,21 +28,39 @@ function formatTimeOnly(date: Date, language: Language): string {
   });
 }
 
-/** Customer-facing ETA line (no dispatched-at). */
+/**
+ * Core ETA display: a 30-minute arrival window from the received ETA (e.g. 10:00–10:30).
+ * Use this everywhere a single time or interval should be shown.
+ */
+export function formatEtaTimeInterval(eta: string | Date, language: Language): string | null {
+  const start = toDate(eta);
+  if (!start) {
+    return null;
+  }
+
+  const end = new Date(start.getTime() + DELIVERY_ETA_WINDOW_MINUTES * 60 * 1000);
+  return `${formatTimeOnly(start, language)}–${formatTimeOnly(end, language)}`;
+}
+
+/** Customer detail: optional “Today” / date prefix + ETA interval. */
 export function formatCustomerEstimatedArrival(
   eta: string | Date,
   language: Language
 ): string | null {
+  const interval = formatEtaTimeInterval(eta, language);
+  if (!interval) {
+    return null;
+  }
+
   const etaDate = toDate(eta);
   if (!etaDate) {
     return null;
   }
 
   const now = new Date();
-  const timeText = formatTimeOnly(etaDate, language);
 
   if (isSameCalendarDayInToronto(etaDate, now)) {
-    return language === "zh" ? `今天 ${timeText}` : `Today ${timeText}`;
+    return language === "zh" ? `今天 ${interval}` : `Today ${interval}`;
   }
 
   const locale = language === "zh" ? "zh-CN" : "en-US";
@@ -49,5 +70,10 @@ export function formatCustomerEstimatedArrival(
     timeZone: "America/Toronto",
   });
 
-  return language === "zh" ? `${dateText} ${timeText}` : `${dateText}, ${timeText}`;
+  return language === "zh" ? `${dateText} ${interval}` : `${dateText}, ${interval}`;
+}
+
+/** Admin order detail: same interval format, English. */
+export function formatAdminEstimatedArrival(eta: string | Date): string | null {
+  return formatEtaTimeInterval(eta, "en");
 }

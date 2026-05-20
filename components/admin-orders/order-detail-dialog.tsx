@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProofOfDeliveryCard } from "@/components/orders/proof-of-delivery-card"
 import { formatDateTime } from "@/lib/format"
+import { formatAdminEstimatedArrival } from "@/lib/orders/delivery-dispatch-display"
 import { getAdminOrderItemDisplay } from "@/lib/orders/admin-order-item-display"
 import { SHOW_POD_IN_ADMIN_ORDER_DETAILS } from "@/lib/proof-of-delivery-flags"
 import type { AdminOrder, AdminOrderCustomerInfo, AdminOrderUpdateLog } from "@/lib/types/orders"
@@ -232,7 +233,8 @@ export function OrderDetailDialog({
                   {order.deliveryDispatch?.eta && (
                     <p>
                       <span className="font-medium">Estimated arrival:</span>{" "}
-                      {formatDateTime(order.deliveryDispatch.eta)}
+                      {formatAdminEstimatedArrival(order.deliveryDispatch.eta) ??
+                        formatDateTime(order.deliveryDispatch.eta)}
                     </p>
                   )}
                   {order.deliveryDispatch?.dispatchedAt && (

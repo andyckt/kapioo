@@ -31,7 +31,10 @@ import {
   getStandardDeliveryWindow,
   uniqueDeliveryDatesFromOrderItems,
 } from "@/lib/user-order-delivery-display"
-import { formatCustomerEstimatedArrival } from "@/lib/orders/delivery-dispatch-display"
+import {
+  formatCustomerEstimatedArrival,
+  formatEtaTimeInterval,
+} from "@/lib/orders/delivery-dispatch-display"
 import { SHOW_POD_IN_CUSTOMER_ORDER_DETAILS } from "@/lib/proof-of-delivery-flags"
 
 // Format address for display
@@ -271,8 +274,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
               const { datesText, windowText } = dailyListDeliverySummaryLines(order.items, language);
               const deliveryTimeLine =
                 order.status === "delivery" && order.deliveryDispatch?.eta
-                  ? formatCustomerEstimatedArrival(order.deliveryDispatch.eta, language) ??
-                    windowText
+                  ? formatEtaTimeInterval(order.deliveryDispatch.eta, language) ?? windowText
                   : windowText;
               const twoN = order.voucherCost?.twoDish ?? 0;
               const threeN = order.voucherCost?.threeDish ?? 0;
