@@ -422,6 +422,14 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                               )}
                             </section>
 
+                            {SHOW_POD_IN_CUSTOMER_ORDER_DETAILS ? (
+                              <ProofOfDeliveryCard
+                                proofOfDelivery={selectedOrder.proofOfDelivery}
+                                className="border-[#C2884E]/12 bg-white/90 shadow-sm"
+                                showEmptyState={false}
+                              />
+                            ) : null}
+
                             <section>
                               <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[#4A3F36]">
                                 {language === 'zh' ? '已选餐点' : 'Selected meals'}
@@ -478,13 +486,6 @@ export function WeeklySubscriptionHistory({ userId }: WeeklySubscriptionHistoryP
                                 />
                               </div>
                             </section>
-
-                            {SHOW_POD_IN_CUSTOMER_ORDER_DETAILS ? (
-                              <ProofOfDeliveryCard
-                                proofOfDelivery={selectedOrder.proofOfDelivery}
-                                className="border-[#C2884E]/12 bg-white/90 shadow-sm"
-                              />
-                            ) : null}
 
                             {selectedOrder.specialInstructions ? (
                               <section className="rounded-xl border border-[#C2884E]/12 bg-white/90 p-4 shadow-sm">
