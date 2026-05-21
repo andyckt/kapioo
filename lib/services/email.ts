@@ -2666,3 +2666,25 @@ export const sendAdminWeeklyOrderSummaryEmail = async (
     html,
   });
 };
+
+export const sendReferralRewardEmail = async (
+  to: string,
+  params: {
+    name: string;
+    promoCode: string;
+    referredFriendName: string;
+    discountLabel: string;
+    discountNote: string;
+    language?: import('@/lib/email-translations').Language;
+    baseUrl?: string;
+  }
+) => {
+  const { buildReferralRewardEmail } = await import('@/lib/email/referral-reward-email');
+  const { subject, html } = buildReferralRewardEmail(params);
+
+  return sendEmail({
+    to,
+    subject,
+    html,
+  });
+};

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { paginationQuerySchema } from "@/lib/contracts/common";
+import { mongoIdSchema, paginationQuerySchema } from "@/lib/contracts/common";
 
 /** Query for GET /api/admin/update-combo-text */
 export const updateComboTextQuerySchema = z.object({
@@ -74,19 +74,71 @@ export type AdminNotifyNextWeekMenuPostBody = z.infer<
 >;
 
 /** Body for POST /api/admin/promo-codes (create) */
-export const adminCreatePromoCodeBodySchema = z.object({
-  code: z.string(),
-  discountType: z.enum(["percentage", "fixed"]),
-  discountValue: z.union([z.number(), z.string()]),
-  description: z.string().optional(),
-  active: z.boolean().optional(),
-  startsAt: z.string().optional(),
-  expiresAt: z.string().optional(),
-  maxUses: z.union([z.number(), z.string()]).optional(),
-  oneUsePerUser: z.boolean().optional(),
-  promoOnlyEmt: z.boolean().optional(),
-  appliesTo: z.string().optional(),
-});
+export const adminCreatePromoCodeBodySchema = z
+  .object({
+    code: z.string(),
+    discountType: z.enum(["percentage", "fixed"]),
+    discountValue: z.union([z.number(), z.string()]),
+    description: z.string().optional(),
+    active: z.boolean().optional(),
+    startsAt: z.string().optional(),
+    expiresAt: z.string().optional(),
+    maxUses: z.union([z.number(), z.string()]).optional(),
+    oneUsePerUser: z.boolean().optional(),
+    promoOnlyEmt: z.boolean().optional(),
+    appliesTo: z.string().optional(),
+    isReferralPromo: z.boolean().optional().default(false),
+    referrerUserId: z.string().optional(),
+    refereeUserId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.isReferralPromo) {
+      return;
+    }
+
+    const referrerUserId = data.referrerUserId?.trim();
+    const refereeUserId = data.refereeUserId?.trim();
+
+    if (!referrerUserId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Referrer account is required for referral promos",
+        path: ["referrerUserId"],
+      });
+    }
+
+    if (!refereeUserId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Referee account is required for referral promos",
+        path: ["refereeUserId"],
+      });
+    }
+
+    if (referrerUserId && !mongoIdSchema.safeParse(referrerUserId).success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid referrer user id",
+        path: ["referrerUserId"],
+      });
+    }
+
+    if (refereeUserId && !mongoIdSchema.safeParse(refereeUserId).success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid referee user id",
+        path: ["refereeUserId"],
+      });
+    }
+
+    if (referrerUserId && refereeUserId && referrerUserId === refereeUserId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Referrer and referee must be different users",
+        path: ["refereeUserId"],
+      });
+    }
+  });
 
 export type AdminCreatePromoCodeBody = z.infer<typeof adminCreatePromoCodeBodySchema>;
 

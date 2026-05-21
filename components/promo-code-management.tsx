@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { AdminUserPicker } from '@/components/admin/admin-user-picker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +11,16 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, RefreshCcw } from 'lucide-react'
+import type { User } from '@/lib/utils'
+
+interface PromoCodeReferralRow {
+  referrerUserId: string
+  refereeUserId: string
+  referrerEmail: string
+  referrerName: string
+  refereeName: string
+  rewardEmailSentAt?: string
+}
 
 interface PromoCodeRow {
   _id: string
@@ -24,6 +35,7 @@ interface PromoCodeRow {
   usageCountFromRedemptions?: number
   maxUses?: number
   expiresAt?: string
+  referral?: PromoCodeReferralRow
 }
 
 interface PromoAppliedRequest {
@@ -52,6 +64,9 @@ export function PromoCodeManagement() {
   const [appliesTo, setAppliesTo] = useState<'daily_topup' | 'weekly_topup' | 'all'>('all')
   const [promoOnlyEmt, setPromoOnlyEmt] = useState(true)
   const [oneUsePerUser, setOneUsePerUser] = useState(true)
+  const [isReferralPromo, setIsReferralPromo] = useState(false)
+  const [referrerUser, setReferrerUser] = useState<User | null>(null)
+  const [refereeUser, setRefereeUser] = useState<User | null>(null)
   const [expandedPromoId, setExpandedPromoId] = useState<string | null>(null)
   const [isLoadingAppliedRequests, setIsLoadingAppliedRequests] = useState(false)
   const [appliedRequestsByPromo, setAppliedRequestsByPromo] = useState<Record<string, PromoAppliedRequest[]>>({})
@@ -85,10 +100,41 @@ export function PromoCodeManagement() {
     return () => controller.abort()
   }, [])
 
+  const resetCreateForm = () => {
+    setCode('')
+    setDescription('')
+    setMaxUses('')
+    setExpiresAt('')
+    setDiscountValue(10)
+    setIsReferralPromo(false)
+    setReferrerUser(null)
+    setRefereeUser(null)
+  }
+
   const handleCreate = async () => {
     if (!code.trim()) {
       toast({ title: 'Code required', description: 'Please enter a promo code.', variant: 'destructive' })
       return
+    }
+
+    if (isReferralPromo) {
+      if (!referrerUser) {
+        toast({
+          title: 'Referrer required',
+          description: 'Select the referrer account for this referral promo.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!refereeUser) {
+        toast({
+          title: 'Referee required',
+          description: 'Select the referee account for this referral promo.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setIsSaving(true)
@@ -106,7 +152,14 @@ export function PromoCodeManagement() {
           appliesTo,
           promoOnlyEmt,
           oneUsePerUser,
-          active: true
+          active: true,
+          ...(isReferralPromo
+            ? {
+                isReferralPromo: true,
+                referrerUserId: referrerUser!._id,
+                refereeUserId: refereeUser!._id,
+              }
+            : {}),
         })
       })
 
@@ -115,12 +168,13 @@ export function PromoCodeManagement() {
         throw new Error(result.error || 'Failed to create promo code')
       }
 
-      toast({ title: 'Promo code created', description: `${result.data.code} is now available.` })
-      setCode('')
-      setDescription('')
-      setMaxUses('')
-      setExpiresAt('')
-      setDiscountValue(10)
+      toast({
+        title: 'Promo code created',
+        description: isReferralPromo
+          ? `${result.data.code} is ready and the referral reward email was sent.`
+          : `${result.data.code} is now available.`,
+      })
+      resetCreateForm()
       await fetchPromoCodes()
     } catch (error: any) {
       toast({
@@ -247,8 +301,48 @@ export function PromoCodeManagement() {
                 <Label htmlFor="promo-one-use">One use per phone</Label>
                 <Switch id="promo-one-use" checked={oneUsePerUser} onCheckedChange={setOneUsePerUser} />
               </div>
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <Label htmlFor="promo-referral">Referral Promo</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Email the referrer after the promo code is created.
+                  </p>
+                </div>
+                <Switch
+                  id="promo-referral"
+                  checked={isReferralPromo}
+                  onCheckedChange={(checked) => {
+                    setIsReferralPromo(checked)
+                    if (!checked) {
+                      setReferrerUser(null)
+                      setRefereeUser(null)
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
+
+          {isReferralPromo ? (
+            <div className="grid gap-4 md:grid-cols-2 rounded-md border p-4">
+              <AdminUserPicker
+                id="referrer-account"
+                label="Referrer Account"
+                value={referrerUser}
+                onChange={setReferrerUser}
+                disabled={isSaving}
+                placeholder="Search referrer..."
+              />
+              <AdminUserPicker
+                id="referee-account"
+                label="Referee Account"
+                value={refereeUser}
+                onChange={setRefereeUser}
+                disabled={isSaving}
+                placeholder="Search referee..."
+              />
+            </div>
+          ) : null}
 
           <Button onClick={handleCreate} disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -278,6 +372,7 @@ export function PromoCodeManagement() {
                     <Badge variant={promo.active ? 'default' : 'secondary'}>
                       {promo.active ? 'Active' : 'Inactive'}
                     </Badge>
+                    {promo.referral ? <Badge variant="outline">Referral</Badge> : null}
                     {promo.promoOnlyEmt ? <Badge variant="outline">EMT only</Badge> : null}
                   </div>
                   <div className="flex items-center gap-2">
@@ -292,6 +387,11 @@ export function PromoCodeManagement() {
                 <div className="mt-2 text-sm text-muted-foreground">
                   {promo.description || 'No description'}
                 </div>
+                {promo.referral ? (
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Referrer: {promo.referral.referrerName} → Referee: {promo.referral.refereeName}
+                  </div>
+                ) : null}
                 <div className="mt-2 text-sm">
                   {promo.discountType === 'percentage'
                     ? `${promo.discountValue}% off`

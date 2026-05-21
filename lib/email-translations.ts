@@ -505,6 +505,42 @@ export const nextWeekMenuUpdateTranslations = {
   }
 };
 
+export const referralRewardTranslations = {
+  zh: {
+    subject: '【Kapioo】感谢您推荐好友！🎉',
+    title: '感谢您推荐好友！',
+    greeting: (name: string) => `${name}，您好：`,
+    intro: (friendName: string, discountLabel: string) =>
+      `您的好友 ${friendName} 已成功加入 Kapioo 🎉 感谢您的推荐，这是您的 ${discountLabel} 优惠码，可用于下次充值。`,
+    promoCodeLabel: '您的优惠码',
+    promoCodeNote: (discountNote: string) => discountNote,
+    howToUseTitle: '使用方法',
+    step1: '登录 Kapioo 账户',
+    step2: '进入 个人中心 → 充值（每日或周次餐券/点数）',
+    step3: (discountLabel: string) => `在结账时输入优惠码，总计将减免 ${discountLabel.replace(/^立减\s?/, '')}`,
+    ctaButton: '前往个人中心',
+    closing: '感谢您把 Kapioo 推荐给朋友，我们非常感谢您的支持！',
+    signature: '— Kapioo 团队',
+  },
+  en: {
+    subject: '[Kapioo] Thank you for referring a friend! 🎉',
+    title: 'Thank you for referring a friend!',
+    greeting: (name: string) => `Hi ${name},`,
+    intro: (friendName: string, discountLabel: string) =>
+      `Your friend ${friendName} has successfully joined Kapioo 🎉 Thank you for the referral — here is your ${discountLabel} promo code for your next top-up.`,
+    promoCodeLabel: 'Your promo code',
+    promoCodeNote: (discountNote: string) => discountNote,
+    howToUseTitle: 'How to redeem',
+    step1: 'Log in to your Kapioo account',
+    step2: 'Go to Dashboard → Top up (daily or weekly credits/vouchers)',
+    step3: (discountLabel: string) =>
+      `Enter your code at checkout — ${discountLabel} will be deducted from your total`,
+    ctaButton: 'Go to Dashboard',
+    closing: 'Thank you for sharing Kapioo with friends — we really appreciate your support!',
+    signature: '— The Kapioo Team',
+  },
+};
+
 /**
  * Helper function to get translations for a specific language
  */
@@ -516,7 +552,8 @@ export function getTranslations(language: Language = 'zh') {
     weekly: weeklyTranslations[language],
     menuUpdate: menuUpdateTranslations[language],
     weeklyMenuUpdate: weeklyMenuUpdateTranslations[language],
-    nextWeekMenuUpdate: nextWeekMenuUpdateTranslations[language]
+    nextWeekMenuUpdate: nextWeekMenuUpdateTranslations[language],
+    referralReward: referralRewardTranslations[language],
   };
 }
 

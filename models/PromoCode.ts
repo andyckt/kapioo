@@ -1,5 +1,10 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+import {
+  IPromoCodeReferral,
+  PromoCodeReferralSchema,
+} from '@/lib/models/promo-code-referral';
+
 export type PromoDiscountType = 'percentage' | 'fixed';
 export type PromoAppliesTo = 'daily_topup' | 'weekly_topup' | 'all';
 
@@ -17,6 +22,7 @@ export interface IPromoCode extends Document {
   oneUsePerUser: boolean;
   promoOnlyEmt: boolean;
   appliesTo: PromoAppliesTo;
+  referral?: IPromoCodeReferral;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +88,10 @@ const PromoCodeSchema = new Schema<IPromoCode>(
       type: String,
       enum: ['daily_topup', 'weekly_topup', 'all'],
       default: 'all'
+    },
+    referral: {
+      type: PromoCodeReferralSchema,
+      required: false,
     }
   },
   {
