@@ -1,5 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import crypto from 'crypto';
+
+import {
+  PASSWORD_PBKDF2_ITERATIONS,
+  createPasswordSalt,
+  hashPassword,
+  verifyPassword,
+} from '@/lib/auth/password';
 
 // Define Address interface
 export interface IAddress {
@@ -236,17 +242,12 @@ const UserSchema: Schema = new Schema(
   }
 );
 
-// Method to hash password
+// Method to hash password (async PBKDF2 — avoids blocking the serverless event loop)
 UserSchema.methods.setPassword = async function(password: string) {
   try {
-    // Generate a random salt
-    this.salt = crypto.randomBytes(16).toString('hex');
-    this.passwordIterations = 310000;
-
-    // Hash the password with the salt
-    this.password = crypto
-      .pbkdf2Sync(password, this.salt, this.passwordIterations, 64, 'sha512')
-      .toString('hex');
+    this.salt = createPasswordSalt();
+    this.passwordIterations = PASSWORD_PBKDF2_ITERATIONS;
+    this.password = await hashPassword(password, this.salt, this.passwordIterations);
   } catch (error) {
     console.error('Error in setPassword method:', error);
     throw error;
@@ -256,11 +257,12 @@ UserSchema.methods.setPassword = async function(password: string) {
 // Method to verify password
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
-    const iterations = Number(this.passwordIterations || 1000);
-    const hash = crypto
-      .pbkdf2Sync(candidatePassword, this.salt, iterations, 64, 'sha512')
-      .toString('hex');
-    return this.password === hash;
+    return verifyPassword(
+      candidatePassword,
+      this.salt,
+      this.password,
+      this.passwordIterations
+    );
   } catch (error) {
     console.error('Error in comparePassword method:', error);
     throw error;

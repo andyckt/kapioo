@@ -5,17 +5,16 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Check, X, ArrowLeft, Loader2 } from "lucide-react"
-import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { mergeStoredUser } from "@/lib/client-user-cache"
+import { buildAuthSnapshotFromRegister } from "@/lib/client/signup-after-register"
 import { useClientAuth } from "@/lib/client-auth"
 
 export default function VerifyEmailPage() {
   const router = useRouter()
-  const { refreshAuthState } = useClientAuth()
+  const { applyAuthSnapshot } = useClientAuth()
   
   const [email, setEmail] = useState("")
   const [code, setCode] = useState("")
@@ -64,8 +63,7 @@ export default function VerifyEmailPage() {
         return
       }
       
-      // Now create the user account since verification is successful
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,42 +75,28 @@ export default function VerifyEmailPage() {
           credits: pendingUser.credits || 0,
           status: pendingUser.status || 'Active',
           languagePreference: pendingUser.languagePreference || 'zh',
-          isVerified: true // Mark as verified immediately
         }),
       })
       
       const data = await response.json()
+
+      if (response.status === 504 || response.status === 408) {
+        setVerificationState('error')
+        setErrorMessage('服务器响应超时，请稍等片刻后重试。')
+        return
+      }
       
-      if (data.success) {
-        const signInResult = await signIn("credentials", {
-          login: pendingUser.email,
-          password: pendingUser.password,
-          redirect: false,
-        })
+      if (data.success && data.data) {
+        const authSnapshot = buildAuthSnapshotFromRegister(data.data)
 
-        if (signInResult?.error) {
+        if (!authSnapshot) {
           setVerificationState('error')
           setErrorMessage("登录失败，请重试")
           return
         }
 
-        const authData = await refreshAuthState({ force: true })
-
-        if (!authData.authenticated || !authData.user?._id) {
-          setVerificationState('error')
-          setErrorMessage("登录失败，请重试")
-          return
-        }
-
+        applyAuthSnapshot(authSnapshot)
         setVerificationState('success')
-        
-        // Store canonical authenticated user state for the next onboarding step
-        mergeStoredUser(authData.user)
-        
-        // Store authentication state
-        localStorage.setItem('isAuthenticated', 'true')
-        
-        // Clear pending user data
         localStorage.removeItem('pendingUser')
       } else {
         setVerificationState('error')

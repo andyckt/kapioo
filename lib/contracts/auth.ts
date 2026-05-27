@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { createUserBodySchema } from "@/lib/contracts/user";
 import { nonEmptyString } from "@/lib/contracts/common";
 
 export const emailSchema = z.string().trim().email();
@@ -64,6 +65,11 @@ export const sendVerificationBodySchema = z.object({
 });
 
 export type SendVerificationBody = z.infer<typeof sendVerificationBodySchema>;
+
+/** Post–email-verification signup (server always marks account verified). */
+export const registerBodySchema = createUserBodySchema.omit({ isVerified: true });
+
+export type RegisterBody = z.infer<typeof registerBodySchema>;
 
 export const userIdBodySchema = z.object({
   userId: nonEmptyString,

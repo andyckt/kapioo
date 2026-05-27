@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
+import { AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth/constants";
+import { toAuthSessionUser } from "@/lib/auth/session-user";
 import connectToDatabase from "@/lib/db";
 import { AUTH_SECRET } from "@/lib/env";
 import { resolveUserRole } from "@/lib/auth/session";
@@ -17,7 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: AUTH_SECRET,
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60 * 8,
+    maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
   },
   pages: {
     signIn: "/login",
@@ -33,16 +35,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const logReason = (reason: string) => {
           console.warn("[auth][authorize] CredentialsSignin reason:", reason);
         };
-        // #region agent log
-        const dbg = (reason: string, hypothesisId: string, extra?: Record<string, unknown>) => {
-          fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'auth.ts:authorize',message:reason,data:{reason,hypothesisId,...extra},timestamp:Date.now(),hypothesisId})}).catch(()=>{});
-        };
-        // #endregion
 
         try {
           const parsed = credentialsSchema.safeParse(rawCredentials);
           if (!parsed.success) {
-            dbg('invalid_schema','B');
             logReason("invalid_schema");
             return null;
           }
@@ -58,7 +54,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             15 * 60 * 1000
           );
           if (!rateLimitResult.allowed) {
-            dbg('rate_limit_exceeded','E',{retryAfterMs:rateLimitResult.retryAfterMs});
             logReason("rate_limit_exceeded");
             console.warn("[auth][authorize] Rate limit details:", {
               retryAfterMs: rateLimitResult.retryAfterMs,
@@ -69,27 +64,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await connectToDatabase();
 
           const user = await User.findOne({
-            $or: [
-              { userID: login },
-              { email: login.toLowerCase() },
-            ],
+            $or: [{ userID: login }, { email: login.toLowerCase() }],
           });
 
           if (!user) {
-            dbg('user_not_found','B');
             logReason("user_not_found");
             return null;
           }
 
           if (user.status !== "Active") {
-            dbg('user_inactive','B');
             logReason("user_inactive");
             return null;
           }
 
           const isPasswordValid = await user.comparePassword(password);
           if (!isPasswordValid) {
-            dbg('invalid_password','B',{iterations:user.passwordIterations});
             logReason("invalid_password");
             return null;
           }
@@ -100,20 +89,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             await user.save();
           }
 
-          dbg('login_success','B',{userId:String(user._id)});
-          return {
-            id: String(user._id),
-            name: user.name,
-            email: user.email,
-            role,
-            sessionVersion: Number(user.sessionVersion || 1),
-            languagePreference: user.languagePreference || "zh",
-            isVerified: Boolean(user.isVerified),
-          } as any;
+          return toAuthSessionUser(user) as any;
         } catch (err) {
-          // #region agent log
-          fetch('http://127.0.0.1:7408/ingest/168f9695-c59e-49d7-a32e-0ca3a9e2f0a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f6fa'},body:JSON.stringify({sessionId:'a9f6fa',location:'auth.ts:authorize',message:'internal_error',data:{hypothesisId:'B',error:String(err)},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
           console.error("[auth][authorize] Unexpected error:", err);
           logReason("internal_error");
           return null;
@@ -147,4 +124,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
-

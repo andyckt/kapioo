@@ -25,6 +25,8 @@ export interface ClientAuthSnapshot {
 interface ClientAuthContextValue extends ClientAuthSnapshot {
   status: "loading" | "ready";
   refreshAuthState: (options?: { force?: boolean }) => Promise<ClientAuthSnapshot>;
+  /** Apply auth from signup/register without an extra /api/auth/me round-trip. */
+  applyAuthSnapshot: (snapshot: ClientAuthSnapshot) => void;
 }
 
 const EMPTY_AUTH_STATE: ClientAuthSnapshot = {
@@ -38,6 +40,7 @@ const ClientAuthContext = createContext<ClientAuthContextValue>({
   status: "loading",
   ...EMPTY_AUTH_STATE,
   refreshAuthState: async () => EMPTY_AUTH_STATE,
+  applyAuthSnapshot: () => {},
 });
 
 let inflightAuthRequest: Promise<ClientAuthSnapshot> | null = null;
@@ -109,6 +112,12 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const applyAuthSnapshot = useCallback((snapshot: ClientAuthSnapshot) => {
+    syncClientAuthCache(snapshot);
+    setAuthState(snapshot);
+    setStatus("ready");
+  }, []);
+
   useEffect(() => {
     void refreshAuthState({ force: true });
   }, [refreshAuthState]);
@@ -118,8 +127,9 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
       status,
       ...authState,
       refreshAuthState,
+      applyAuthSnapshot,
     }),
-    [authState, refreshAuthState, status]
+    [applyAuthSnapshot, authState, refreshAuthState, status]
   );
 
   return (

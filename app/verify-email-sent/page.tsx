@@ -11,12 +11,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { signIn } from "next-auth/react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
+import { buildAuthSnapshotFromRegister } from "@/lib/client/signup-after-register"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useClientAuth } from "@/lib/client-auth"
 
@@ -26,7 +26,7 @@ const serviceAreas = ALL_WEEKLY_AREAS
 export default function VerifyEmailSentPage() {
   const router = useRouter()
   const { language, t } = useLanguage()
-  const { refreshAuthState } = useClientAuth()
+  const { applyAuthSnapshot } = useClientAuth()
   const [userEmail, setUserEmail] = useState<string>("")
   const [userId, setUserId] = useState<string>("")
   const [verificationCode, setVerificationCode] = useState<string>("")
@@ -178,8 +178,8 @@ export default function VerifyEmailSentPage() {
         return
       }
       
-      // Now create the user account since verification is successful
-      const response = await fetch('/api/users', {
+      // Create account + session in one request (no duplicate password hash or extra auth/me)
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -191,20 +191,33 @@ export default function VerifyEmailSentPage() {
           credits: pendingUser.credits || 0,
           status: pendingUser.status || 'Active',
           languagePreference: pendingUser.languagePreference || 'zh',
-          isVerified: true // Mark as verified immediately
         }),
       })
       
       const data = await response.json()
-      
-      if (data.success) {
-        const signInResult = await signIn("credentials", {
-          login: pendingUser.email,
-          password: pendingUser.password,
-          redirect: false,
+
+      if (response.status === 504 || response.status === 408) {
+        setVerificationStatus("error")
+        setErrorMessage(
+          language === 'en'
+            ? 'The server took too long. Please wait a moment and try again.'
+            : '服务器响应超时，请稍等片刻后重试。'
+        )
+        toast({
+          title: t('verificationFailed'),
+          description:
+            language === 'en'
+              ? 'Request timed out. Please try again.'
+              : '请求超时，请重试。',
+          variant: "destructive",
         })
+        return
+      }
+      
+      if (data.success && data.data) {
+        const authSnapshot = buildAuthSnapshotFromRegister(data.data)
 
-        if (signInResult?.error) {
+        if (!authSnapshot) {
           setVerificationStatus("error")
           setErrorMessage(t('loginError'))
           toast({
@@ -215,26 +228,8 @@ export default function VerifyEmailSentPage() {
           return
         }
 
-        const authData = await refreshAuthState({ force: true })
-
-        if (!authData.authenticated || !authData.user?._id) {
-          setVerificationStatus("error")
-          setErrorMessage(t('loginError'))
-          toast({
-            title: t('verificationFailed'),
-            description: t('loginError'),
-            variant: "destructive",
-          })
-          return
-        }
-
+        applyAuthSnapshot(authSnapshot)
         setVerificationStatus("success")
-        
-        // Store canonical authenticated user state for the next onboarding step
-        mergeStoredUser(authData.user)
-        
-        // Store authentication state
-        localStorage.setItem('isAuthenticated', 'true')
         
         // Check if there was a meal plan selection before signup
         const selectedMealPlan = localStorage.getItem('selectedMealPlan')
