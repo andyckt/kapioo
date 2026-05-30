@@ -73,6 +73,23 @@ ROUTE_OPTIMIZER_INGEST_TOKEN=xxx ROUTE_OPTIMIZER_INGEST_SECRET=yyy \
 node scripts/sign-delivery-started-request.js ./delivery-started-payload.json http://localhost:3000
 ```
 
+### Route Optimizer outbound client (Kapioo Admin → Route Optimizer)
+
+Server-side only. Used by the Delivery Agent to preview or create optimized runs. **Do not** expose these values to client-side code.
+
+```bash
+ROUTE_OPTIMIZER_BASE_URL=https://route-optimizer.example.com
+ROUTE_OPTIMIZER_API_KEY=your_bearer_token
+```
+
+`ROUTE_OPTIMIZER_API_KEY` is sent as `Authorization: Bearer ...` on outbound requests to Route Optimizer integration endpoints such as:
+
+- `POST /api/integrations/runs/optimize-preview`
+- `POST /api/integrations/runs/create-and-optimize`
+- `POST /api/integrations/runs/batch-create-and-optimize`
+
+These are separate from the inbound Kapioo webhook secrets (`ROUTE_OPTIMIZER_INGEST_TOKEN`, `ROUTE_OPTIMIZER_INGEST_SECRET`). The client throws a configuration error if either outbound variable is missing when invoked.
+
 ### Authentication (NextAuth)
 ```bash
 NEXTAUTH_SECRET=your_nextauth_secret
