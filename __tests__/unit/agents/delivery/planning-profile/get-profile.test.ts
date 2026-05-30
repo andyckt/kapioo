@@ -48,6 +48,16 @@ describe("lib/agents/delivery/planning-profile/get-profile", () => {
     expect(handoffRules.receiverStartTimeSource).toBe("provider_meetup_eta");
   });
 
+  it("includes meet-up selection preferences on the default profile", () => {
+    const prefs = getDefaultDeliveryPlanningProfile().handoffRules.meetupSelectionPreferences;
+
+    expect(prefs.preferredHandoffZoneLabel).toBe("Central North York");
+    expect(prefs.preferredHandoffAreaLabels).toContain("North York");
+    expect(prefs.avoidHandoffAreaLabels).toContain("Markham");
+    expect(prefs.fallbackAllowed).toBe(true);
+    expect(prefs.centralNorthYorkFitWeight).toBeGreaterThan(0);
+  });
+
   it("includes fixed stop and end point repair actions", () => {
     const actions = getDefaultDeliveryPlanningProfile().allowedRepairActions;
 

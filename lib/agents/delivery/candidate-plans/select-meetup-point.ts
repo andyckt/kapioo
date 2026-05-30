@@ -1,7 +1,13 @@
 import { inferNorthYorkLean } from "@/lib/agents/delivery/candidate-plans/classify-stop-for-planning";
-import { DOWNTOWN_REFERENCE } from "@/lib/agents/delivery/candidate-plans/types";
+import {
+  scoreMeetupCandidate,
+  type MeetupCandidateScoringResult,
+  type MeetupSourceTier,
+  type MeetupStopCandidateWithTier,
+} from "@/lib/agents/delivery/candidate-plans/score-meetup-candidate";
 import type { DeliveryAgentCandidatePlanStop } from "@/lib/contracts/delivery-agent";
 import type { DeliveryAgentCandidateRun } from "@/lib/contracts/delivery-agent";
+import type { DeliveryAgentMeetupScoreBreakdownItem } from "@/lib/contracts/delivery-agent";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 
 export type MeetupVariant = "meetup_stop_1" | "meetup_stop_2_with_one_before";
@@ -15,6 +21,8 @@ export type MeetupStopCandidate = {
   runSlot: string;
 };
 
+export type MeetupSelectionConfidence = "high" | "medium" | "low";
+
 export type MeetupSelectionResult =
   | {
       handoffSkipped: false;
@@ -25,6 +33,12 @@ export type MeetupSelectionResult =
       sourceArea: string;
       stopBeforeMeetupOrderId?: string;
       syntheticHandoffStopUsed: true;
+      score: number;
+      scoreBreakdown: DeliveryAgentMeetupScoreBreakdownItem[];
+      reasoning: string;
+      warnings: string[];
+      selectionConfidence: MeetupSelectionConfidence;
+      sourceTier: MeetupSourceTier;
     }
   | {
       handoffSkipped: true;
@@ -44,8 +58,9 @@ function isNorthYorkStop(stop: Pick<DeliveryAgentCandidatePlanStop, "area" | "pl
 
 function toMeetupCandidate(
   stop: DeliveryAgentCandidatePlanStop,
-  runSlot: string
-): MeetupStopCandidate {
+  runSlot: string,
+  sourceTier: MeetupSourceTier
+): MeetupStopCandidateWithTier {
   return {
     orderId: stop.orderId,
     area: stop.area,
@@ -53,79 +68,164 @@ function toMeetupCandidate(
     lat: stop.lat,
     lng: stop.lng,
     runSlot,
+    sourceTier,
   };
 }
 
-function collectAllCandidateStops(runs: DeliveryAgentCandidateRun[]): MeetupStopCandidate[] {
-  const collected: MeetupStopCandidate[] = [];
+function collectAllCandidateStops(runs: DeliveryAgentCandidateRun[]): MeetupStopCandidateWithTier[] {
+  const collected: MeetupStopCandidateWithTier[] = [];
 
   for (const run of runs) {
     for (const stop of run.stops) {
-      collected.push(toMeetupCandidate(stop, run.runSlot));
+      collected.push(toMeetupCandidate(stop, run.runSlot, "flexible_north_york"));
     }
   }
 
   return collected;
 }
 
-function meetupBoundaryScore(stop: MeetupStopCandidate): number {
-  if (typeof stop.lat === "number" && typeof stop.lng === "number") {
-    const latDelta = stop.lat - DOWNTOWN_REFERENCE.lat;
-    const lngDelta = stop.lng - DOWNTOWN_REFERENCE.lng;
-    return Math.abs(latDelta) + Math.abs(lngDelta) * 0.5;
-  }
-
-  const lean = inferNorthYorkLean({
-    orderId: stop.orderId,
-    formattedAddress: stop.formattedAddress,
-    lat: stop.lat,
-    lng: stop.lng,
-  });
-
-  return lean === "dt" ? 0.5 : 1.5;
-}
-
-function pickBestMeetupFromPool(pool: MeetupStopCandidate[]): MeetupStopCandidate {
-  return [...pool].sort((a, b) => {
-    const scoreDelta = meetupBoundaryScore(a) - meetupBoundaryScore(b);
-    if (scoreDelta !== 0) {
-      return scoreDelta;
-    }
-
-    return a.orderId.localeCompare(b.orderId);
-  })[0];
-}
-
-function buildMeetupPool(
-  runs: DeliveryAgentCandidateRun[]
-): MeetupStopCandidate[] {
+function buildMeetupCandidatePool(runs: DeliveryAgentCandidateRun[]): MeetupStopCandidateWithTier[] {
   const runA = runs.find((run) => run.runSlot === "A");
   const allStops = collectAllCandidateStops(runs);
+  const seen = new Set<string>();
+  const pool: MeetupStopCandidateWithTier[] = [];
 
   const runANorthYork =
-    runA?.stops.filter(isNorthYorkStop).map((stop) => toMeetupCandidate(stop, "A")) ?? [];
+    runA?.stops.filter(isNorthYorkStop).map((stop) => toMeetupCandidate(stop, "A", "run_a_north_york")) ?? [];
 
-  if (runANorthYork.length > 0) {
-    return runANorthYork;
+  for (const stop of runANorthYork) {
+    pool.push(stop);
+    seen.add(stop.orderId);
   }
 
-  const flexibleNorthYork = allStops.filter(
-    (stop) => stop.area.trim().toLowerCase() === NORTH_YORK_AREA.toLowerCase()
-  );
+  for (const stop of allStops) {
+    if (seen.has(stop.orderId)) {
+      continue;
+    }
 
-  if (flexibleNorthYork.length > 0) {
-    return flexibleNorthYork;
+    if (stop.area.trim().toLowerCase() === NORTH_YORK_AREA.toLowerCase()) {
+      pool.push({ ...stop, sourceTier: "flexible_north_york" });
+      seen.add(stop.orderId);
+    }
   }
 
-  return allStops.filter((stop) =>
-    stop.area.trim().toLowerCase().includes(NORTH_YORK_AREA.toLowerCase())
-  );
+  if (pool.length === 0) {
+    for (const stop of allStops) {
+      if (stop.area.trim().toLowerCase().includes(NORTH_YORK_AREA.toLowerCase())) {
+        pool.push({ ...stop, sourceTier: "fallback" });
+      }
+    }
+  }
+
+  return pool;
+}
+
+type ScoredMeetupCandidate = MeetupStopCandidateWithTier & MeetupCandidateScoringResult;
+
+function compareScoredCandidates(left: ScoredMeetupCandidate, right: ScoredMeetupCandidate): number {
+  if (left.score !== right.score) {
+    return right.score - left.score;
+  }
+
+  const tierRank: Record<MeetupSourceTier, number> = {
+    run_a_north_york: 0,
+    flexible_north_york: 1,
+    fallback: 2,
+  };
+
+  const tierDelta = tierRank[left.sourceTier] - tierRank[right.sourceTier];
+  if (tierDelta !== 0) {
+    return tierDelta;
+  }
+
+  const leftDtDetour = left.scoreBreakdown.find((item) => item.key === "dtDetourPenalty")?.points ?? 0;
+  const rightDtDetour = right.scoreBreakdown.find((item) => item.key === "dtDetourPenalty")?.points ?? 0;
+  if (leftDtDetour !== rightDtDetour) {
+    return rightDtDetour - leftDtDetour;
+  }
+
+  return left.orderId.localeCompare(right.orderId);
+}
+
+function pickBestScoredMeetup(input: {
+  pool: MeetupStopCandidateWithTier[];
+  profile: DeliveryPlanningProfile;
+  runs: DeliveryAgentCandidateRun[];
+}): ScoredMeetupCandidate {
+  const scored = input.pool.map((candidate) => ({
+    ...candidate,
+    ...scoreMeetupCandidate({
+      candidate,
+      profile: input.profile,
+      runs: input.runs,
+    }),
+  }));
+
+  return [...scored].sort(compareScoredCandidates)[0];
+}
+
+function resolveSelectionConfidence(input: {
+  scoring: MeetupCandidateScoringResult;
+  sourceTier: MeetupSourceTier;
+}): MeetupSelectionConfidence {
+  if (
+    input.sourceTier === "fallback" ||
+    input.scoring.score < 45 ||
+    input.scoring.hasAvoidAreaPenalty
+  ) {
+    return "low";
+  }
+
+  if (input.scoring.usedLatLngFallback || input.scoring.score < 70) {
+    return "medium";
+  }
+
+  return "high";
+}
+
+function buildMeetupReasoning(input: {
+  candidate: MeetupStopCandidateWithTier;
+  scoring: MeetupCandidateScoringResult;
+  profile: DeliveryPlanningProfile;
+}): string {
+  const zoneLabel = input.profile.handoffRules.meetupSelectionPreferences.preferredHandoffZoneLabel;
+  const topDimensions = [...input.scoring.scoreBreakdown]
+    .filter((item) => item.points >= 70)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 2)
+    .map((item) => item.label.toLowerCase());
+
+  const balancePhrase =
+    topDimensions.length > 0
+      ? ` Strongest factors: ${topDimensions.join(", ")}.`
+      : "";
+
+  if (input.candidate.sourceTier === "fallback") {
+    return `Chosen as the best available ${zoneLabel.toLowerCase()} handoff point from fallback options.${balancePhrase}`;
+  }
+
+  return `Chosen as the best available ${zoneLabel.toLowerCase()} handoff point; balances DT and Marco better than farther west/north alternatives.${balancePhrase}`;
+}
+
+function buildSelectionWarnings(input: {
+  scoring: MeetupCandidateScoringResult;
+  sourceTier: MeetupSourceTier;
+  confidence: MeetupSelectionConfidence;
+}): string[] {
+  const warnings = [...input.scoring.warnings];
+
+  if (input.confidence === "low" && !warnings.some((warning) => warning.includes("fallback choice"))) {
+    warnings.push("Meet-up is a fallback choice and should be reviewed.");
+  }
+
+  return [...new Set(warnings)];
 }
 
 function findStopBeforeMeetup(
   runAStops: DeliveryAgentCandidatePlanStop[],
-  meetup: MeetupStopCandidate,
-  profile: DeliveryPlanningProfile
+  meetup: MeetupStopCandidateWithTier,
+  profile: DeliveryPlanningProfile,
+  runs: DeliveryAgentCandidateRun[]
 ): string | undefined {
   if (!profile.handoffRules.allowStopsBeforeMeetup || profile.handoffRules.maxStopsBeforeMeetup < 1) {
     return undefined;
@@ -133,7 +233,7 @@ function findStopBeforeMeetup(
 
   const candidates = runAStops
     .filter((stop) => stop.orderId !== meetup.orderId && isNorthYorkStop(stop))
-    .map((stop) => toMeetupCandidate(stop, "A"))
+    .map((stop) => toMeetupCandidate(stop, "A", "run_a_north_york"))
     .filter((stop) => {
       if (
         typeof stop.lat === "number" &&
@@ -153,7 +253,58 @@ function findStopBeforeMeetup(
     return undefined;
   }
 
-  return pickBestMeetupFromPool(candidates).orderId;
+  return pickBestScoredMeetup({ pool: candidates, profile, runs }).orderId;
+}
+
+function buildSuccessfulSelection(input: {
+  selected: ScoredMeetupCandidate;
+  profile: DeliveryPlanningProfile;
+  stopBeforeMeetupOrderId?: string;
+}): Extract<MeetupSelectionResult, { handoffSkipped: false }> {
+  const confidence = resolveSelectionConfidence({
+    scoring: input.selected,
+    sourceTier: input.selected.sourceTier,
+  });
+  const warnings = buildSelectionWarnings({
+    scoring: input.selected,
+    sourceTier: input.selected.sourceTier,
+    confidence,
+  });
+  const reasoning = buildMeetupReasoning({
+    candidate: input.selected,
+    scoring: input.selected,
+    profile: input.profile,
+  });
+
+  const base = {
+    meetupAddress: input.selected.formattedAddress,
+    sourceOrderId: input.selected.orderId,
+    sourceArea: input.selected.area,
+    syntheticHandoffStopUsed: true as const,
+    score: input.selected.score,
+    scoreBreakdown: input.selected.scoreBreakdown,
+    reasoning,
+    warnings,
+    selectionConfidence: confidence,
+    sourceTier: input.selected.sourceTier,
+  };
+
+  if (input.stopBeforeMeetupOrderId) {
+    return {
+      handoffSkipped: false,
+      ...base,
+      meetupFixedStopPosition: 2,
+      variant: "meetup_stop_2_with_one_before",
+      stopBeforeMeetupOrderId: input.stopBeforeMeetupOrderId,
+    };
+  }
+
+  return {
+    handoffSkipped: false,
+    ...base,
+    meetupFixedStopPosition: 1,
+    variant: "meetup_stop_1",
+  };
 }
 
 export function selectMeetupPoint(input: {
@@ -177,7 +328,7 @@ export function selectMeetupPoint(input: {
     };
   }
 
-  const pool = buildMeetupPool(input.runs);
+  const pool = buildMeetupCandidatePool(input.runs);
 
   if (pool.length === 0) {
     return {
@@ -187,29 +338,19 @@ export function selectMeetupPoint(input: {
     };
   }
 
-  const selected = pickBestMeetupFromPool(pool);
-  const stopBeforeMeetupOrderId = findStopBeforeMeetup(runA.stops, selected, input.profile);
+  const selected = pickBestScoredMeetup({
+    pool,
+    profile: input.profile,
+    runs: input.runs,
+  });
 
-  if (stopBeforeMeetupOrderId) {
-    return {
-      handoffSkipped: false,
-      meetupAddress: selected.formattedAddress,
-      meetupFixedStopPosition: 2,
-      variant: "meetup_stop_2_with_one_before",
-      sourceOrderId: selected.orderId,
-      sourceArea: selected.area,
-      stopBeforeMeetupOrderId,
-      syntheticHandoffStopUsed: true,
-    };
-  }
+  const stopBeforeMeetupOrderId = findStopBeforeMeetup(runA.stops, selected, input.profile, input.runs);
 
-  return {
-    handoffSkipped: false,
-    meetupAddress: selected.formattedAddress,
-    meetupFixedStopPosition: 1,
-    variant: "meetup_stop_1",
-    sourceOrderId: selected.orderId,
-    sourceArea: selected.area,
-    syntheticHandoffStopUsed: true,
-  };
+  return buildSuccessfulSelection({
+    selected,
+    profile: input.profile,
+    stopBeforeMeetupOrderId,
+  });
 }
+
+export { buildMeetupCandidatePool };

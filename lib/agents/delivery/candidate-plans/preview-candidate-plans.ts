@@ -1,3 +1,5 @@
+import { selectBestCandidatePlan } from "@/lib/agents/delivery/best-plan/select-best-candidate-plan";
+import type { CandidateAssignedRun } from "@/lib/agents/delivery/best-plan/types";
 import { compareCandidateDeadline } from "@/lib/agents/delivery/candidate-plans/compare-candidate-deadline";
 import { generateCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/generate-candidate-plans";
 import { previewCandidateHandoff } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
@@ -8,6 +10,7 @@ import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profi
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
   DeliveryAgentCandidatePlanPreview,
+  DeliveryAgentCandidatePlanPreviewCore,
   DeliveryAgentCandidatePreviewStatus,
   DeliveryAgentCandidateRepairSummary,
   DeliveryAgentCandidateRunPreview,
@@ -16,7 +19,7 @@ import type {
 import { RouteOptimizerConfigError } from "@/lib/integrations/route-optimizer/errors";
 
 const CANDIDATE_ROUTE_PREVIEW_NOTES =
-  "These previews include meet-up handoff and route-shape repair (fixed stop / end stop). Still preview-only—final plan selection and run creation will be added later.";
+  "These previews include handoff, route-shape repair, and a recommended plan ranking. This is a recommendation only—final run creation will be added later.";
 
 const EMPTY_REPAIR_SUMMARY: DeliveryAgentCandidateRepairSummary = {
   repairAttempted: false,
@@ -99,7 +102,7 @@ async function previewCandidatePlan(input: {
   kitchenAddress: string;
   profile: ReturnType<typeof getDeliveryPlanningProfile>;
   routingStopByOrderId: Map<string, RoutingStop>;
-}): Promise<DeliveryAgentCandidatePlanPreview> {
+}): Promise<DeliveryAgentCandidatePlanPreviewCore> {
   const handoffResult = await previewCandidateHandoff({
     deliveryDate: input.deliveryDate,
     candidate: input.candidate,
@@ -167,9 +170,25 @@ export async function previewCandidatePlansForAgent(
   });
   const routingStopByOrderId = buildRoutingStopMap(routing.stops);
 
-  const candidates: DeliveryAgentCandidatePlanPreview[] = [];
+  const candidates: DeliveryAgentCandidatePlanPreviewCore[] = [];
+  const assignmentByCandidateId = new Map<string, CandidateAssignedRun[]>();
 
   for (const candidate of generation.candidates) {
+    assignmentByCandidateId.set(
+      candidate.candidateId,
+      candidate.runs.map((run) => ({
+        runSlot: run.runSlot,
+        role: run.role,
+        stops: run.stops.map((stop) => ({
+          orderId: stop.orderId,
+          area: stop.area,
+          lat: stop.lat,
+          lng: stop.lng,
+          totalMealQuantity: stop.totalMealQuantity,
+        })),
+      }))
+    );
+
     try {
       const preview = await previewCandidatePlan({
         deliveryDate,
@@ -228,11 +247,21 @@ export async function previewCandidatePlansForAgent(
     }
   }
 
+  const selection = selectBestCandidatePlan({
+    profile,
+    candidates,
+    assignmentByCandidateId,
+  });
+
   return {
     deliveryDate: generation.deliveryDate,
     profileId: generation.profileId,
     profileVersion: generation.profileVersion,
-    candidates,
+    candidates: selection.rankedCandidates,
+    recommendedCandidateId: selection.recommendedCandidateId,
+    recommendedPlanSummary: selection.recommendedPlanSummary,
+    selectionNotes: selection.selectionNotes,
+    selectionWarnings: selection.selectionWarnings,
     notes: CANDIDATE_ROUTE_PREVIEW_NOTES,
   };
 }

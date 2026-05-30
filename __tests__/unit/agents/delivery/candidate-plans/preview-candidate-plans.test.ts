@@ -367,6 +367,15 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
       baseline?.handoffPlan.receiverStartLocation ?? baseline?.handoffPlan.skipReason
     ).toBeTruthy();
 
+    expect(result.recommendedCandidateId).toBeTruthy();
+    expect(result.recommendedPlanSummary?.candidateId).toBe(result.recommendedCandidateId);
+    expect(result.selectionNotes).toBeTruthy();
+    expect(result.candidates.every((candidate) => candidate.rank >= 1 && candidate.score >= 0)).toBe(true);
+    expect(baseline?.rank).toBeGreaterThanOrEqual(1);
+    expect(baseline?.score).toBeGreaterThan(0);
+    expect(baseline?.scoreBreakdown.length).toBeGreaterThan(0);
+    expect(result.notes).toContain("recommended plan ranking");
+
     const dtPayload = previewRouteOptimizerRunMock.mock.calls[0][0];
     const syntheticStop = dtPayload.customers.find(
       (customer: { is_synthetic?: boolean }) => customer.is_synthetic

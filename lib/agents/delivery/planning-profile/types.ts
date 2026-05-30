@@ -52,6 +52,25 @@ export type DeliveryPlanningLocationRules = {
   helperAreaLabels: string[];
 };
 
+export type DeliveryPlanningMeetupSelectionPreferences = {
+  preferredHandoffZoneLabel: string;
+  preferredHandoffAreaLabels: string[];
+  avoidHandoffAreaLabels: string[];
+  receiverDriverReferenceArea: string;
+  receiverDriverConvenienceWeight: number;
+  dtDetourPenaltyWeight: number;
+  centralNorthYorkFitWeight: number;
+  meetupEtaWeight: number;
+  routeFinishImpactWeight: number;
+  fallbackAllowed: boolean;
+  preferredHandoffCenterLat?: number;
+  preferredHandoffCenterLng?: number;
+  receiverReferenceLat?: number;
+  receiverReferenceLng?: number;
+  dtReferenceLat?: number;
+  dtReferenceLng?: number;
+};
+
 export type DeliveryPlanningHandoffRules = {
   enabled: boolean;
   providerRunSlot: DeliveryPlanningRunSlot;
@@ -64,6 +83,7 @@ export type DeliveryPlanningHandoffRules = {
   allowStopsBeforeMeetup: boolean;
   maxStopsBeforeMeetup: number;
   meetupShouldBeEarly: boolean;
+  meetupSelectionPreferences: DeliveryPlanningMeetupSelectionPreferences;
 };
 
 export type DeliveryPlanningRouteShapeRule = {

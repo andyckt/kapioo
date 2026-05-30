@@ -136,6 +136,51 @@ export function assertDeliveryPlanningProfileValid(profile: DeliveryPlanningProf
     if (profile.handoffRules.receiverStartTimeSource !== "provider_meetup_eta") {
       errors.push("handoffRules.receiverStartTimeSource");
     }
+
+    const meetupPrefs = profile.handoffRules.meetupSelectionPreferences;
+    if (!meetupPrefs || typeof meetupPrefs !== "object") {
+      errors.push("handoffRules.meetupSelectionPreferences");
+    } else {
+      if (!isNonEmptyString(meetupPrefs.preferredHandoffZoneLabel)) {
+        errors.push("handoffRules.meetupSelectionPreferences.preferredHandoffZoneLabel");
+      }
+
+      if (
+        !Array.isArray(meetupPrefs.preferredHandoffAreaLabels) ||
+        meetupPrefs.preferredHandoffAreaLabels.length === 0
+      ) {
+        errors.push("handoffRules.meetupSelectionPreferences.preferredHandoffAreaLabels");
+      }
+
+      if (
+        !Array.isArray(meetupPrefs.avoidHandoffAreaLabels) ||
+        meetupPrefs.avoidHandoffAreaLabels.length === 0
+      ) {
+        errors.push("handoffRules.meetupSelectionPreferences.avoidHandoffAreaLabels");
+      }
+
+      if (!isNonEmptyString(meetupPrefs.receiverDriverReferenceArea)) {
+        errors.push("handoffRules.meetupSelectionPreferences.receiverDriverReferenceArea");
+      }
+
+      const weightFields = [
+        "receiverDriverConvenienceWeight",
+        "dtDetourPenaltyWeight",
+        "centralNorthYorkFitWeight",
+        "meetupEtaWeight",
+        "routeFinishImpactWeight",
+      ] as const;
+
+      for (const field of weightFields) {
+        if (typeof meetupPrefs[field] !== "number" || meetupPrefs[field] < 0) {
+          errors.push(`handoffRules.meetupSelectionPreferences.${field}`);
+        }
+      }
+
+      if (typeof meetupPrefs.fallbackAllowed !== "boolean") {
+        errors.push("handoffRules.meetupSelectionPreferences.fallbackAllowed");
+      }
+    }
   }
 
   if (

@@ -312,6 +312,16 @@ export type DeliveryAgentCandidateRunPreview = {
   repairStatus?: DeliveryAgentCandidateRunRepairStatus;
 };
 
+export type DeliveryAgentMeetupScoreBreakdownItem = {
+  key: string;
+  label: string;
+  weight: number;
+  points: number;
+  reason: string;
+};
+
+export type DeliveryAgentMeetupSelectionConfidence = "high" | "medium" | "low";
+
 export type DeliveryAgentSelectedMeetup = {
   meetupAddress: string;
   meetupFixedStopPosition: 1 | 2;
@@ -320,6 +330,11 @@ export type DeliveryAgentSelectedMeetup = {
   sourceArea?: string;
   stopBeforeMeetupOrderId?: string;
   syntheticHandoffStopUsed: boolean;
+  score?: number;
+  scoreBreakdown?: DeliveryAgentMeetupScoreBreakdownItem[];
+  reasoning?: string;
+  warnings?: string[];
+  selectionConfidence?: DeliveryAgentMeetupSelectionConfidence;
 };
 
 export type DeliveryAgentCandidateHandoffPreviewPlan = {
@@ -355,7 +370,35 @@ export type DeliveryAgentCandidatePreviewSummary = {
   comparisonNotes: string;
 };
 
-export type DeliveryAgentCandidatePlanPreview = {
+export type DeliveryAgentCandidateScoreBreakdownItem = {
+  key: string;
+  label: string;
+  weight: number;
+  points: number;
+  reason: string;
+};
+
+export type DeliveryAgentCandidateRecommendationStatus =
+  | "recommended"
+  | "acceptable"
+  | "risky"
+  | "not_recommended";
+
+export type DeliveryAgentRecommendedPlanSummary = {
+  candidateId: string;
+  candidateName: string;
+  score: number;
+  recommendationStatus: DeliveryAgentCandidateRecommendationStatus;
+  formattedLatestFinishTime?: string;
+  allRunsFinishBeforeDeadline: boolean;
+  minutesBeforeOrAfterDeadline?: number;
+  selfUsed: boolean;
+  runFinishTimes: Record<string, string>;
+  routeRepairStatus: string;
+  decisionSummary: string;
+};
+
+export type DeliveryAgentCandidatePlanPreviewCore = {
   candidateId: string;
   name: string;
   strategyType: string;
@@ -369,10 +412,25 @@ export type DeliveryAgentCandidatePlanPreview = {
   assumptions: string[];
 };
 
+export type DeliveryAgentCandidatePlanPreview = DeliveryAgentCandidatePlanPreviewCore & {
+  score: number;
+  rank: number;
+  recommendationStatus: DeliveryAgentCandidateRecommendationStatus;
+  scoreBreakdown: DeliveryAgentCandidateScoreBreakdownItem[];
+  pros: string[];
+  cons: string[];
+  blockingIssues: string[];
+  decisionSummary: string;
+};
+
 export type DeliveryAgentPreviewCandidatePlansResponse = {
   deliveryDate: string;
   profileId: string;
   profileVersion: string;
   candidates: DeliveryAgentCandidatePlanPreview[];
+  recommendedCandidateId: string | null;
+  recommendedPlanSummary: DeliveryAgentRecommendedPlanSummary | null;
+  selectionNotes: string;
+  selectionWarnings: string[];
   notes: string;
 };

@@ -3,6 +3,7 @@ import {
   DEFAULT_PLANNING_PROFILE_ID,
   DEFAULT_PLANNING_PROFILE_VERSION,
 } from "@/lib/agents/delivery/planning-profile/types";
+import { DOWNTOWN_REFERENCE } from "@/lib/agents/delivery/candidate-plans/types";
 import { ORDER_DATA_TIMEZONE } from "@/lib/order-data/types";
 
 export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
@@ -68,6 +69,24 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
     allowStopsBeforeMeetup: true,
     maxStopsBeforeMeetup: 2,
     meetupShouldBeEarly: true,
+    meetupSelectionPreferences: {
+      preferredHandoffZoneLabel: "Central North York",
+      preferredHandoffAreaLabels: ["North York"],
+      avoidHandoffAreaLabels: ["Downtown Toronto", "Midtown", "Markham", "Richmond Hill"],
+      receiverDriverReferenceArea: "Markham / Richmond Hill direction",
+      receiverDriverConvenienceWeight: 85,
+      dtDetourPenaltyWeight: 90,
+      centralNorthYorkFitWeight: 95,
+      meetupEtaWeight: 40,
+      routeFinishImpactWeight: 50,
+      fallbackAllowed: true,
+      preferredHandoffCenterLat: 43.7615,
+      preferredHandoffCenterLng: -79.4111,
+      receiverReferenceLat: 43.856,
+      receiverReferenceLng: -79.337,
+      dtReferenceLat: DOWNTOWN_REFERENCE.lat,
+      dtReferenceLng: DOWNTOWN_REFERENCE.lng,
+    },
   },
   routeShapeRules: {
     rules: [

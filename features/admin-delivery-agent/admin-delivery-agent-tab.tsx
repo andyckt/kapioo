@@ -751,17 +751,148 @@ export function AdminDeliveryAgentTab() {
                     <p className="text-sm text-muted-foreground">{candidateRoutePreview.notes}</p>
                   )}
 
-                  {candidatePlans.candidates.map((candidate) => {
+                  {candidateRoutePreview?.recommendedPlanSummary && (
+                    <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-medium">Recommended Plan Summary</p>
+                          <p className="text-sm">
+                            {candidateRoutePreview.recommendedPlanSummary.candidateName}
+                            {candidateRoutePreview.recommendedPlanSummary.recommendationStatus ===
+                            "recommended" ? (
+                              <span className="ml-2 rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                                Recommended
+                              </span>
+                            ) : candidateRoutePreview.recommendedPlanSummary.recommendationStatus ===
+                              "risky" ? (
+                              <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                                Risky
+                              </span>
+                            ) : null}
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Score {candidateRoutePreview.recommendedPlanSummary.score}
+                        </p>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Latest finish</p>
+                          <p className="text-sm font-medium">
+                            {candidateRoutePreview.recommendedPlanSummary.formattedLatestFinishTime ||
+                              "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Deadline</p>
+                          <p className="text-sm font-medium">
+                            {candidateRoutePreview.recommendedPlanSummary.allRunsFinishBeforeDeadline
+                              ? "Before 1 PM"
+                              : candidateRoutePreview.recommendedPlanSummary
+                                    .minutesBeforeOrAfterDeadline !== undefined
+                                ? `Late by ${Math.abs(candidateRoutePreview.recommendedPlanSummary.minutesBeforeOrAfterDeadline)} min`
+                                : "Unknown"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Self used</p>
+                          <p className="text-sm font-medium">
+                            {candidateRoutePreview.recommendedPlanSummary.selfUsed ? "Yes" : "No"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Route repair</p>
+                          <p className="text-sm font-medium">
+                            {candidateRoutePreview.recommendedPlanSummary.routeRepairStatus}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-3 text-sm">
+                        {Object.entries(candidateRoutePreview.recommendedPlanSummary.runFinishTimes).map(
+                          ([runSlot, finishIso]) => (
+                            <div key={runSlot}>
+                              <span className="text-muted-foreground">Run {runSlot}: </span>
+                              {formatPreviewDateTime(finishIso)}
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      <p className="text-sm">{candidateRoutePreview.recommendedPlanSummary.decisionSummary}</p>
+                      <p className="text-sm text-muted-foreground">{candidateRoutePreview.selectionNotes}</p>
+                      {candidateRoutePreview.selectionWarnings.length > 0 && (
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-amber-800">
+                          {candidateRoutePreview.selectionWarnings.map((warning) => (
+                            <li key={warning}>{warning}</li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        This is a recommendation only. Final run creation will be added later.
+                      </p>
+                      <Button type="button" variant="outline" disabled className="w-fit">
+                        Donald approval and final run creation will be added next.
+                      </Button>
+                    </div>
+                  )}
+
+                  {[...(candidateRoutePreview?.candidates ?? candidatePlans.candidates.map((candidate) => ({ candidateId: candidate.candidateId, rank: Number.MAX_SAFE_INTEGER })))]
+                    .sort((left, right) => {
+                      const leftRank =
+                        candidateRoutePreview?.candidates.find((entry) => entry.candidateId === left.candidateId)
+                          ?.rank ?? Number.MAX_SAFE_INTEGER
+                      const rightRank =
+                        candidateRoutePreview?.candidates.find((entry) => entry.candidateId === right.candidateId)
+                          ?.rank ?? Number.MAX_SAFE_INTEGER
+                      return leftRank - rightRank
+                    })
+                    .map((rankedEntry) => candidatePlans.candidates.find((entry) => entry.candidateId === rankedEntry.candidateId))
+                    .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate))
+                    .map((candidate) => {
                     const routePreviewCandidate = candidateRoutePreview?.candidates.find(
                       (entry) => entry.candidateId === candidate.candidateId
                     )
+                    const isRecommended =
+                      candidateRoutePreview?.recommendedCandidateId === candidate.candidateId
 
                     return (
-                    <div key={candidate.candidateId} className="space-y-3 rounded-md border p-4">
+                    <div
+                      key={candidate.candidateId}
+                      className={`space-y-3 rounded-md border p-4 ${isRecommended ? "border-primary shadow-sm" : ""}`}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <p className="font-medium">{candidate.name}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{candidate.name}</p>
+                            {routePreviewCandidate && (
+                              <>
+                                <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
+                                  #{routePreviewCandidate.rank}
+                                </span>
+                                <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
+                                  Score {routePreviewCandidate.score}
+                                </span>
+                                {routePreviewCandidate.recommendationStatus === "recommended" && (
+                                  <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                                    Recommended
+                                  </span>
+                                )}
+                                {routePreviewCandidate.recommendationStatus === "risky" && (
+                                  <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                                    Risky
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">{candidate.strategyType}</p>
+                          {routePreviewCandidate?.decisionSummary && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {routePreviewCandidate.decisionSummary}
+                            </p>
+                          )}
                         </div>
                         <div className="text-right text-sm">
                           <p>{candidate.summary.runCount} run(s)</p>
@@ -880,46 +1011,105 @@ export function AdminDeliveryAgentTab() {
                                   : ""}
                               </p>
                             ) : (
-                              <div className="grid gap-3 sm:grid-cols-2">
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Meet-up location</p>
-                                  <p className="text-sm">
-                                    {routePreviewCandidate.handoffPlan.selectedMeetup
-                                      ?.meetupAddress || "—"}
-                                  </p>
+                              <div className="space-y-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Meet-up location</p>
+                                    <p className="text-sm">
+                                      {routePreviewCandidate.handoffPlan.selectedMeetup
+                                        ?.meetupAddress || "—"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      DT reaches meet-up at
+                                    </p>
+                                    <p className="text-sm">
+                                      {routePreviewCandidate.handoffPlan.formattedMeetupEta || "—"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Marco starts from meet-up at
+                                    </p>
+                                    <p className="text-sm">
+                                      {routePreviewCandidate.handoffPlan.receiverStartTime || "—"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Meet-up fixed as stop
+                                    </p>
+                                    <p className="text-sm">
+                                      #
+                                      {routePreviewCandidate.handoffPlan.selectedMeetup
+                                        ?.meetupFixedStopPosition ?? "—"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Synthetic handoff stop used
+                                    </p>
+                                    <p className="text-sm">Yes</p>
+                                  </div>
+                                  {routePreviewCandidate.handoffPlan.selectedMeetup
+                                    ?.selectionConfidence && (
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">
+                                        Selection confidence
+                                      </p>
+                                      <p className="text-sm capitalize">
+                                        {routePreviewCandidate.handoffPlan.selectedMeetup
+                                          .selectionConfidence}
+                                        {typeof routePreviewCandidate.handoffPlan.selectedMeetup
+                                          .score === "number"
+                                          ? ` (score ${routePreviewCandidate.handoffPlan.selectedMeetup.score})`
+                                          : ""}
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">
-                                    DT reaches meet-up at
-                                  </p>
-                                  <p className="text-sm">
-                                    {routePreviewCandidate.handoffPlan.formattedMeetupEta || "—"}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Marco starts from meet-up at
-                                  </p>
-                                  <p className="text-sm">
-                                    {routePreviewCandidate.handoffPlan.receiverStartTime || "—"}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Meet-up fixed as stop
-                                  </p>
-                                  <p className="text-sm">
-                                    #
-                                    {routePreviewCandidate.handoffPlan.selectedMeetup
-                                      ?.meetupFixedStopPosition ?? "—"}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Synthetic handoff stop used
-                                  </p>
-                                  <p className="text-sm">Yes</p>
-                                </div>
+                                {routePreviewCandidate.handoffPlan.selectedMeetup?.reasoning && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Meet-up reason</p>
+                                    <p className="text-sm">
+                                      {routePreviewCandidate.handoffPlan.selectedMeetup.reasoning}
+                                    </p>
+                                  </div>
+                                )}
+                                {(routePreviewCandidate.handoffPlan.selectedMeetup?.warnings
+                                  ?.length ?? 0) > 0 && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Meet-up warnings</p>
+                                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                                      {routePreviewCandidate.handoffPlan.selectedMeetup?.warnings?.map(
+                                        (warning) => (
+                                          <li key={warning}>{warning}</li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </div>
+                                )}
+                                {(routePreviewCandidate.handoffPlan.selectedMeetup?.scoreBreakdown
+                                  ?.length ?? 0) > 0 && (
+                                  <details className="text-sm">
+                                    <summary className="cursor-pointer font-medium">
+                                      Meet-up score breakdown
+                                    </summary>
+                                    <ul className="mt-2 space-y-2">
+                                      {routePreviewCandidate.handoffPlan.selectedMeetup?.scoreBreakdown?.map(
+                                        (item) => (
+                                          <li key={item.key} className="rounded border p-2">
+                                            <p className="font-medium">
+                                              {item.label}: {item.points} pts (weight {item.weight})
+                                            </p>
+                                            <p className="text-muted-foreground">{item.reason}</p>
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </details>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1014,6 +1204,55 @@ export function AdminDeliveryAgentTab() {
                               These are still previews only. Final plan selection and run creation
                               will be added later.
                             </p>
+                          </div>
+
+                          <div className="space-y-2 rounded-md border p-3">
+                            <p className="font-medium">Plan scoring</p>
+                            {routePreviewCandidate.pros.length > 0 && (
+                              <div>
+                                <p className="text-sm text-muted-foreground">Pros</p>
+                                <ul className="list-disc space-y-1 pl-5 text-sm">
+                                  {routePreviewCandidate.pros.map((pro) => (
+                                    <li key={pro}>{pro}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {routePreviewCandidate.cons.length > 0 && (
+                              <div>
+                                <p className="text-sm text-muted-foreground">Cons</p>
+                                <ul className="list-disc space-y-1 pl-5 text-sm">
+                                  {routePreviewCandidate.cons.map((con) => (
+                                    <li key={con}>{con}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {routePreviewCandidate.blockingIssues.length > 0 && (
+                              <div>
+                                <p className="text-sm text-destructive">Blocking issues</p>
+                                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                                  {routePreviewCandidate.blockingIssues.map((issue) => (
+                                    <li key={issue}>{issue}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {routePreviewCandidate.scoreBreakdown.length > 0 && (
+                              <details className="text-sm">
+                                <summary className="cursor-pointer font-medium">Score breakdown</summary>
+                                <ul className="mt-2 space-y-2">
+                                  {routePreviewCandidate.scoreBreakdown.map((item) => (
+                                    <li key={item.key} className="rounded border p-2">
+                                      <p className="font-medium">
+                                        {item.label}: {item.points} pts (weight {item.weight})
+                                      </p>
+                                      <p className="text-muted-foreground">{item.reason}</p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            )}
                           </div>
 
                           <div className="grid gap-3 sm:grid-cols-3">

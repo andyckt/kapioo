@@ -7,6 +7,7 @@ export type {
   DeliveryPlanningHandoffRules,
   DeliveryPlanningLearningSettings,
   DeliveryPlanningLocationRules,
+  DeliveryPlanningMeetupSelectionPreferences,
   DeliveryPlanningProfile,
   DeliveryPlanningRepairAction,
   DeliveryPlanningRouteShapeRule,

@@ -196,6 +196,10 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-handoff", () => 
     expect(marcoPayload.run.start_location).toBe("4000 Yonge St, North York M2N 5N8");
     expect(marcoPayload.run.start_time).toMatch(/^\d{2}:\d{2}$/);
     expect(result.handoffPlan.selectedMeetup?.syntheticHandoffStopUsed).toBe(true);
+    expect(result.handoffPlan.selectedMeetup?.score).toBeGreaterThan(0);
+    expect(result.handoffPlan.selectedMeetup?.reasoning).toBeTruthy();
+    expect(result.handoffPlan.selectedMeetup?.selectionConfidence).toBeTruthy();
+    expect(result.handoffPlan.selectedMeetup?.scoreBreakdown?.length).toBeGreaterThan(0);
     expect(result.handoffPlan.receiverStartLocation).toBe("4000 Yonge St, North York M2N 5N8");
     expect(result.runPreviews[0].syntheticMeetupIncluded).toBe(true);
     expect(result.runPreviews[1].previewStatus).toBe("previewed");

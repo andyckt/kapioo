@@ -173,6 +173,11 @@ function buildSelectedMeetup(
     sourceArea: selection.sourceArea,
     stopBeforeMeetupOrderId: selection.stopBeforeMeetupOrderId,
     syntheticHandoffStopUsed: true,
+    score: selection.score,
+    scoreBreakdown: selection.scoreBreakdown,
+    reasoning: selection.reasoning,
+    warnings: selection.warnings,
+    selectionConfidence: selection.selectionConfidence,
   };
 }
 
