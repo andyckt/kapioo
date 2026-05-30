@@ -6,6 +6,7 @@ import {
   RouteOptimizerAuthError,
   RouteOptimizerError,
   RouteOptimizerNetworkError,
+  RouteOptimizerRateLimitError,
   RouteOptimizerResponseError,
   RouteOptimizerValidationError,
 } from "@/lib/integrations/route-optimizer/errors";
@@ -59,6 +60,10 @@ function parseResponseBody(
     return JSON.parse(rawBody) as unknown;
   } catch (error) {
     const bodyPreview = truncateForDebug(rawBody);
+    if (status >= 400) {
+      return { message: bodyPreview };
+    }
+
     logRouteOptimizerDebug("JSON parse failed", {
       ...debug,
       bodyPreview,
@@ -76,6 +81,19 @@ function parseResponseBody(
   }
 }
 
+function readResponseMessage(body: unknown, status: number): string {
+  if (body && typeof body === "object") {
+    const record = body as Record<string, unknown>;
+    for (const key of ["message", "error", "code"]) {
+      if (typeof record[key] === "string" && record[key].trim()) {
+        return record[key];
+      }
+    }
+  }
+
+  return `Route Optimizer request failed with status ${status}`;
+}
+
 function throwForErrorStatus(
   path: string,
   status: number,
@@ -83,16 +101,18 @@ function throwForErrorStatus(
   rawBody: string,
   debug: RouteOptimizerResponseDebug
 ): never {
-  const message =
-    typeof body === "object" &&
-    body !== null &&
-    "message" in body &&
-    typeof (body as { message?: unknown }).message === "string"
-      ? (body as { message: string }).message
-      : `Route Optimizer request failed with status ${status}`;
+  const message = readResponseMessage(body, status);
 
   if (status === 401 || status === 403) {
     throw new RouteOptimizerAuthError(message, { status, path, body, rawBody });
+  }
+
+  if (status === 429) {
+    logRouteOptimizerDebug("Rate limited", {
+      ...debug,
+      bodyPreview: truncateForDebug(rawBody),
+    });
+    throw new RouteOptimizerRateLimitError(message, { status, path, body, rawBody });
   }
 
   if (status === 400 || status === 422) {

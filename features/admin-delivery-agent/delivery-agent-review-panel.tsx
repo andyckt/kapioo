@@ -253,13 +253,19 @@ export function DeliveryAgentReviewPanel({
     }
   };
 
+  const scrollToAlternativeCandidates = () => {
+    document
+      .getElementById("delivery-agent-alternative-candidates")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="space-y-4 rounded-md border border-primary/30 bg-primary/5 p-4">
       <div>
         <p className="font-medium">Donald review</p>
         <p className="text-sm text-muted-foreground">
-          Review the recommended plan or choose a different candidate. Final Route Optimizer run
-          creation will be added in the next milestone.
+          Review the recommended plan or choose a different candidate. Approved plans can proceed to
+          final Route Optimizer run creation below.
         </p>
       </div>
 
@@ -401,6 +407,60 @@ export function DeliveryAgentReviewPanel({
           Last saved: {savedReview.reviewStatus}
           {savedReview.reviewedAt ? ` at ${savedReview.reviewedAt}` : ""}
         </p>
+      )}
+
+      {savedReview?.reviewStatus === "approved" && (
+        <div className="space-y-2 rounded-md border border-green-200 bg-green-50 p-3">
+          <p className="text-sm font-medium text-green-900">Next step: Create Final Route Optimizer Run</p>
+          <p className="text-sm text-green-800">
+            This plan is approved. Use the section below to create internal Route Optimizer runs.
+            Driver sending will be added in a later milestone.
+          </p>
+        </div>
+      )}
+
+      {savedReview?.reviewStatus === "rejected" && (
+        <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+          <div>
+            <p className="text-sm font-medium text-destructive">Current recommended plan rejected</p>
+            <p className="text-sm text-muted-foreground">
+              This plan cannot be used to create a final Route Optimizer run. Review alternative
+              candidates below, edit your feedback, or wait for feedback-based regeneration in a
+              later milestone.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={scrollToAlternativeCandidates}>
+              Review Alternative Candidates
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setFeedbackOpen(true)}>
+              Edit Feedback
+            </Button>
+            <Button type="button" variant="outline" size="sm" disabled>
+              Regenerate Candidates Using Feedback (will be added in the next milestone)
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {savedReview?.reviewStatus === "edited" && (
+        <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <div>
+            <p className="text-sm font-medium text-amber-900">Donald requested revision</p>
+            <p className="text-sm text-amber-800">
+              The agent needs to generate revised candidates from your feedback in a later milestone.
+              Final Route Optimizer run creation is unavailable until a plan is approved.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setFeedbackOpen(true)}>
+              Edit Feedback
+            </Button>
+            <Button type="button" variant="outline" size="sm" disabled>
+              Regenerate Candidates Using Feedback (will be added in the next milestone)
+            </Button>
+          </div>
+        </div>
       )}
 
       {canCreateFinalRoute && (

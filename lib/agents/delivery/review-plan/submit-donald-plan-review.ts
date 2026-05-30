@@ -112,18 +112,18 @@ function resolveReviewMessage(input: {
   didDonaldOverrideRecommendation: boolean;
 }): string {
   if (input.reviewStatus === "approved" && input.didDonaldOverrideRecommendation) {
-    return "Approved your selected candidate (overrode system recommendation). Final run creation will be added in the next milestone.";
+    return "Approved your selected candidate (overrode system recommendation). Next step: create the Final Route Optimizer run.";
   }
 
   if (input.reviewStatus === "approved") {
-    return "Approved — final Route Optimizer run creation will be added in the next milestone.";
+    return "Approved. Next step: create the Final Route Optimizer run.";
   }
 
   if (input.reviewStatus === "rejected") {
-    return "Rejected feedback saved.";
+    return "Rejected feedback saved. This plan cannot be used to create a final Route Optimizer run. Review alternatives or wait for feedback-based regeneration in a later milestone.";
   }
 
-  return "Needs revision feedback saved.";
+  return "Needs revision feedback saved. The agent needs to generate revised candidates from this feedback in a later milestone.";
 }
 
 async function ensureRunLog(input: SubmitDonaldPlanReviewInput): Promise<IDeliveryAgentRun> {

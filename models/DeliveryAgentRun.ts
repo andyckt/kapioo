@@ -76,7 +76,7 @@ const InvalidOrderSnapshotSchema = new Schema(
     area: { type: String, trim: true },
     errors: { type: [RoutingIssueSnapshotSchema], default: [] },
   },
-  { _id: false }
+  { _id: false, suppressReservedKeysWarning: true }
 );
 
 const WarningSnapshotSchema = new Schema(

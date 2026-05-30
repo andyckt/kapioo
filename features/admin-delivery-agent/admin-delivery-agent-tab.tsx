@@ -921,6 +921,7 @@ export function AdminDeliveryAgentTab() {
                       </ul>
                     )}
 
+                  <div id="delivery-agent-alternative-candidates" className="space-y-3">
                   {(candidateRoutePreview?.candidates?.length
                     ? [...candidateRoutePreview.candidates].sort((left, right) => left.rank - right.rank)
                     : candidatePlans.candidates
@@ -1464,6 +1465,7 @@ export function AdminDeliveryAgentTab() {
                       </div>
                     )
                   })}
+                  </div>
                 </div>
               )}
             </CardContent>

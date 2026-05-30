@@ -35,7 +35,10 @@ vi.mock("@/lib/integrations/route-optimizer/client", () => ({
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { KitchenStartLocationConfigError } from "@/lib/agents/delivery/kitchen-start-location";
 import { previewCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/preview-candidate-plans";
-import { RouteOptimizerConfigError } from "@/lib/integrations/route-optimizer/errors";
+import {
+  RouteOptimizerConfigError,
+  RouteOptimizerRateLimitError,
+} from "@/lib/integrations/route-optimizer/errors";
 import { buildMixedAreaRoutingStops } from "./test-fixtures";
 
 function buildRouteOptimizerSuccess(overrides: Record<string, unknown> = {}) {
@@ -453,6 +456,32 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     expect(baseline.runs[0].previewStatus).toBe("previewed");
     expect(baseline.runs[1].previewStatus).toBe("failed");
     expect(baseline.errors.length).toBeGreaterThan(0);
+  });
+
+  it("stops previewing additional candidates after Route Optimizer rate limiting", async () => {
+    generateCandidatePlansForAgentMock.mockResolvedValue(buildGenerationResponse());
+    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getKapiooKitchenStartLocationMock.mockReturnValue(
+      "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
+    );
+    previewRouteOptimizerRunMock.mockRejectedValue(
+      new RouteOptimizerRateLimitError("RATE_LIMITED", {
+        status: 429,
+        path: "/api/integrations/runs/optimize-preview",
+        rawBody: JSON.stringify({ error: "RATE_LIMITED" }),
+      })
+    );
+
+    const result = await previewCandidatePlansForAgent("2026-06-09");
+
+    expect(previewRouteOptimizerRunMock).toHaveBeenCalledTimes(1);
+    expect(result.candidates.length).toBe(1);
+    expect(result.selectionWarnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("rate limited")])
+    );
+    expect(result.candidates[0].errors).toEqual(
+      expect.arrayContaining([expect.stringContaining("RATE_LIMITED")])
+    );
   });
 
   it("throws when kitchen start location is missing", async () => {

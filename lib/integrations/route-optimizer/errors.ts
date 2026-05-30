@@ -2,6 +2,7 @@ export type RouteOptimizerErrorCode =
   | "ROUTE_OPTIMIZER_CONFIG_ERROR"
   | "ROUTE_OPTIMIZER_AUTH_ERROR"
   | "ROUTE_OPTIMIZER_VALIDATION_ERROR"
+  | "ROUTE_OPTIMIZER_RATE_LIMITED"
   | "ROUTE_OPTIMIZER_RESPONSE_ERROR"
   | "ROUTE_OPTIMIZER_NETWORK_ERROR";
 
@@ -54,6 +55,13 @@ export class RouteOptimizerValidationError extends RouteOptimizerError {
   constructor(message: string, options: Omit<RouteOptimizerErrorOptions, "code"> = {}) {
     super(message, { ...options, code: "ROUTE_OPTIMIZER_VALIDATION_ERROR" });
     this.name = "RouteOptimizerValidationError";
+  }
+}
+
+export class RouteOptimizerRateLimitError extends RouteOptimizerError {
+  constructor(message: string, options: Omit<RouteOptimizerErrorOptions, "code"> = {}) {
+    super(message, { ...options, code: "ROUTE_OPTIMIZER_RATE_LIMITED" });
+    this.name = "RouteOptimizerRateLimitError";
   }
 }
 

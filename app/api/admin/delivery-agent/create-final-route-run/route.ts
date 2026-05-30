@@ -76,7 +76,14 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof FinalRouteOptimizerCreationError) {
-      return errorJson(error.message, 502);
+      return errorJson(error.message, 502, {
+        errorCode: error.code,
+        details: error.downstreamBodyPreview,
+        extra: {
+          downstreamEndpoint: error.downstreamPath,
+          downstreamStatusCode: error.downstreamStatus,
+        },
+      });
     }
 
     return handleRouteError(error, "POST /api/admin/delivery-agent/create-final-route-run");

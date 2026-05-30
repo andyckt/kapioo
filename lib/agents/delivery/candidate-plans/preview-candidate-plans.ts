@@ -22,6 +22,8 @@ import type { FullCandidateVariant } from "@/lib/agents/delivery/candidate-plans
 const CANDIDATE_ROUTE_PREVIEW_NOTES =
   "Each candidate is now a full route combination: split + meet-up + start timing + repair result. These previews include handoff, route-shape repair, and a recommended plan ranking. This is a recommendation only—final run creation will be added later.";
 
+const PREVIEW_CANDIDATE_THROTTLE_MS = process.env.NODE_ENV === "test" ? 0 : 150;
+
 const EMPTY_REPAIR_SUMMARY: DeliveryAgentCandidateRepairSummary = {
   repairAttempted: false,
   repairSucceeded: false,
@@ -40,6 +42,24 @@ function readErrorMessage(error: unknown): string {
   }
 
   return String(error);
+}
+
+function isRouteOptimizerRateLimitMessage(message: string | undefined): boolean {
+  return Boolean(message && /RATE_LIMITED|rate limit|429/i.test(message));
+}
+
+function candidateHitRateLimit(candidate: DeliveryAgentCandidatePlanPreviewCore): boolean {
+  return (
+    candidate.errors.some(isRouteOptimizerRateLimitMessage) ||
+    candidate.runs.some((run) => isRouteOptimizerRateLimitMessage(run.previewError))
+  );
+}
+
+async function throttleCandidatePreview(): Promise<void> {
+  if (PREVIEW_CANDIDATE_THROTTLE_MS <= 0) {
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, PREVIEW_CANDIDATE_THROTTLE_MS));
 }
 
 function buildFailedRunPreview(
@@ -193,11 +213,16 @@ export async function previewCandidatePlansForAgent(
 
   const candidates: DeliveryAgentCandidatePlanPreviewCore[] = [];
   const assignmentByCandidateId = new Map<string, CandidateAssignedRun[]>();
+  let stoppedDueToRateLimit = false;
+  let previewedVariantCount = 0;
 
   for (const variant of expansion.variants) {
     assignmentByCandidateId.set(variant.plan.candidateId, buildAssignmentForVariant(variant));
 
     try {
+      if (previewedVariantCount > 0) {
+        await throttleCandidatePreview();
+      }
       const preview = await previewCandidatePlan({
         deliveryDate,
         variant,
@@ -206,6 +231,11 @@ export async function previewCandidatePlansForAgent(
         routingStopByOrderId,
       });
       candidates.push(preview);
+      previewedVariantCount += 1;
+      if (candidateHitRateLimit(preview)) {
+        stoppedDueToRateLimit = true;
+        break;
+      }
     } catch (error) {
       if (error instanceof RouteOptimizerConfigError) {
         throw error;
@@ -253,6 +283,12 @@ export async function previewCandidatePlansForAgent(
         assumptions: variant.combination.variantAssumptions,
         combination: variant.combination,
       });
+      previewedVariantCount += 1;
+
+      if (isRouteOptimizerRateLimitMessage(readErrorMessage(error))) {
+        stoppedDueToRateLimit = true;
+        break;
+      }
     }
   }
 
@@ -263,6 +299,12 @@ export async function previewCandidatePlansForAgent(
   });
 
   const selectionWarnings = [...expansion.expansionWarnings, ...selection.selectionWarnings];
+
+  if (stoppedDueToRateLimit) {
+    selectionWarnings.push(
+      "Route Optimizer preview was rate limited. Returned partial candidate previews; wait before previewing or creating final runs again."
+    );
+  }
 
   if (candidates.length > 0 && selection.recommendedCandidateId === null && candidates.every((c) => c.status === "failed")) {
     selectionWarnings.push("No valid full candidate variants could be previewed.");

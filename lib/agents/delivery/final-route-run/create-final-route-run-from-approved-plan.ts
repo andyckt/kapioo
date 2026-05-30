@@ -1,5 +1,14 @@
 import { batchCreateAndOptimizeRouteOptimizerRuns } from "@/lib/integrations/route-optimizer/client";
-import type { RouteOptimizerRunResult } from "@/lib/integrations/route-optimizer/types";
+import {
+  RouteOptimizerError,
+  RouteOptimizerRateLimitError,
+} from "@/lib/integrations/route-optimizer/errors";
+import {
+  ROUTE_OPTIMIZER_PATHS,
+  type RouteOptimizerBatchCreateRequest,
+  type RouteOptimizerBatchResult,
+  type RouteOptimizerRunResult,
+} from "@/lib/integrations/route-optimizer/types";
 import { buildFinalRouteCreatePayloads } from "@/lib/agents/delivery/final-route-run/build-final-route-create-payloads";
 import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
@@ -27,9 +36,30 @@ export class FinalRouteRunStateError extends Error {
 }
 
 export class FinalRouteOptimizerCreationError extends Error {
-  constructor(message: string) {
+  code: string;
+  downstreamStatus?: number;
+  downstreamPath?: string;
+  downstreamBodyPreview?: string;
+
+  constructor(
+    message: string,
+    options: {
+      code?: string;
+      downstreamStatus?: number;
+      downstreamPath?: string;
+      downstreamBodyPreview?: string;
+      cause?: unknown;
+    } = {}
+  ) {
     super(message);
     this.name = "FinalRouteOptimizerCreationError";
+    this.code = options.code ?? "ROUTE_OPTIMIZER_CREATE_FAILED";
+    this.downstreamStatus = options.downstreamStatus;
+    this.downstreamPath = options.downstreamPath;
+    this.downstreamBodyPreview = options.downstreamBodyPreview;
+    if (options.cause !== undefined) {
+      (this as Error & { cause?: unknown }).cause = options.cause;
+    }
   }
 }
 
@@ -121,6 +151,98 @@ function normalizeOptimizedRoute(result: RouteOptimizerRunResult): unknown[] | u
   return undefined;
 }
 
+function truncateForLog(value: string | undefined, maxLength = 500): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength)}...` : trimmed;
+}
+
+function readRouteOptimizerErrorCode(error: unknown): string {
+  if (error instanceof RouteOptimizerRateLimitError || (error instanceof RouteOptimizerError && error.status === 429)) {
+    return "ROUTE_OPTIMIZER_RATE_LIMITED";
+  }
+
+  if (error instanceof RouteOptimizerError) {
+    return error.code === "ROUTE_OPTIMIZER_RESPONSE_ERROR"
+      ? "ROUTE_OPTIMIZER_CREATE_FAILED"
+      : error.code;
+  }
+
+  return error instanceof Error ? error.name : "ROUTE_OPTIMIZER_CREATE_FAILED";
+}
+
+function readRouteOptimizerErrorMessage(error: unknown): string {
+  if (error instanceof RouteOptimizerRateLimitError || (error instanceof RouteOptimizerError && error.status === 429)) {
+    return "Final Route Optimizer run could not be created because the Route Optimizer service returned RATE_LIMITED. Please wait and try again.";
+  }
+
+  if (error instanceof RouteOptimizerError) {
+    return `Final Route Optimizer run could not be created because the Route Optimizer service failed: ${error.message}`;
+  }
+
+  return error instanceof Error ? error.message : String(error);
+}
+
+function summarizePayload(payload: RouteOptimizerBatchCreateRequest) {
+  return payload.runs.map((run) => ({
+    externalId: run.external_id,
+    idempotencyKey: run.idempotency_key,
+    driverName: run.run.driver_name,
+    customerCount: run.customers.length,
+  }));
+}
+
+const FINAL_CREATE_RETRY_DELAYS_MS =
+  process.env.NODE_ENV === "test" ? [0, 0] : [750, 2_000];
+
+async function sleep(ms: number): Promise<void> {
+  if (ms <= 0) {
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function batchCreateFinalRoutesWithRetry(input: {
+  payload: RouteOptimizerBatchCreateRequest;
+  logContext: Record<string, unknown>;
+}): Promise<RouteOptimizerBatchResult> {
+  for (let attempt = 0; attempt <= FINAL_CREATE_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await batchCreateAndOptimizeRouteOptimizerRuns(input.payload);
+    } catch (error) {
+      const canRetry =
+        error instanceof RouteOptimizerRateLimitError ||
+        (error instanceof RouteOptimizerError && error.status === 429);
+      const isLastAttempt = attempt >= FINAL_CREATE_RETRY_DELAYS_MS.length;
+
+      console.error("[Delivery Agent] Final Route Optimizer create failed", {
+        ...input.logContext,
+        attempt: attempt + 1,
+        willRetry: canRetry && !isLastAttempt,
+        downstreamEndpoint:
+          error instanceof RouteOptimizerError
+            ? error.path ?? ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize
+            : ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
+        downstreamStatusCode: error instanceof RouteOptimizerError ? error.status : undefined,
+        downstreamResponseBodyPreview:
+          error instanceof RouteOptimizerError ? truncateForLog(error.rawBody) : undefined,
+        errorCode: readRouteOptimizerErrorCode(error),
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+
+      if (!canRetry || isLastAttempt) {
+        throw error;
+      }
+
+      await sleep(FINAL_CREATE_RETRY_DELAYS_MS[attempt] ?? 0);
+    }
+  }
+
+  throw new FinalRouteOptimizerCreationError("Route Optimizer create retry loop exited unexpectedly.");
+}
+
 function buildRouteRuns(input: {
   results: RouteOptimizerRunResult[];
   createdRuns: DeliveryAgentCandidatePlanPreview["runs"];
@@ -180,8 +302,9 @@ function buildFailureMetadata(input: {
   selectedCandidateId: string;
   createdBy: string;
   error: unknown;
+  payload?: RouteOptimizerBatchCreateRequest;
 }): DeliveryAgentFinalRouteOptimizerMetadata {
-  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const message = readRouteOptimizerErrorMessage(input.error);
   return {
     finalRouteOptimizerStatus: "failed",
     finalRouteOptimizerCreatedBy: input.createdBy,
@@ -193,10 +316,18 @@ function buildFailureMetadata(input: {
       input.run.learningArtifacts?.didDonaldOverrideRecommendation ??
       false,
     creationError: {
-      code: input.error instanceof Error ? input.error.name : "FINAL_ROUTE_CREATE_FAILED",
+      code: readRouteOptimizerErrorCode(input.error),
       message,
       details: {
         candidateId: input.candidate.candidateId,
+        downstreamEndpoint:
+          input.error instanceof RouteOptimizerError
+            ? input.error.path ?? ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize
+            : ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
+        downstreamStatusCode: input.error instanceof RouteOptimizerError ? input.error.status : undefined,
+        downstreamResponseBodyPreview:
+          input.error instanceof RouteOptimizerError ? truncateForLog(input.error.rawBody) : undefined,
+        routeOptimizerRequests: input.payload ? summarizePayload(input.payload) : undefined,
       },
     },
   };
@@ -220,6 +351,13 @@ export async function createFinalRouteRunFromApprovedPlan(
     existingMetadata?.finalRouteOptimizerStatus === "created" &&
     (run.routeOptimizerRuns?.length ?? 0) > 0
   ) {
+    console.info("[Delivery Agent] Final Route Optimizer metadata already exists", {
+      deliveryDate: run.deliveryDate,
+      profileId: run.profileId,
+      selectedCandidateId,
+      finalAcceptedPlanCandidateId: candidate.candidateId,
+      existingFinalRouteMetadataFound: true,
+    });
     return {
       deliveryAgentRunId: run.id,
       idempotentReplay: true,
@@ -237,6 +375,8 @@ export async function createFinalRouteRunFromApprovedPlan(
     run.learningArtifacts?.didDonaldOverrideRecommendation ??
     false;
 
+  let payload: RouteOptimizerBatchCreateRequest | undefined;
+
   try {
     const routing = await getDeliveryOrdersForRouting({
       deliveryDate: run.deliveryDate,
@@ -245,7 +385,7 @@ export async function createFinalRouteRunFromApprovedPlan(
     const routingStopByOrderId = new Map(routing.stops.map((stop) => [stop.orderId, stop]));
     const kitchenAddress = getKapiooKitchenStartLocation();
     const profile = getDeliveryPlanningProfile(run.profileId);
-    const payload = buildFinalRouteCreatePayloads({
+    payload = buildFinalRouteCreatePayloads({
       candidate,
       context: {
         deliveryDate: run.deliveryDate,
@@ -263,7 +403,28 @@ export async function createFinalRouteRunFromApprovedPlan(
       (candidateRun) => candidateRun.previewStatus === "previewed" && candidateRun.stopCount > 0
     );
 
-    const response = await batchCreateAndOptimizeRouteOptimizerRuns(payload);
+    const payloadSummary = summarizePayload(payload);
+    console.info("[Delivery Agent] Creating final Route Optimizer runs", {
+      deliveryDate: run.deliveryDate,
+      profileId: run.profileId,
+      selectedCandidateId,
+      finalAcceptedPlanCandidateId: candidate.candidateId,
+      downstreamEndpoint: ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
+      routeOptimizerRequests: payloadSummary,
+      existingFinalRouteMetadataFound: false,
+    });
+
+    const response = await batchCreateFinalRoutesWithRetry({
+      payload,
+      logContext: {
+        deliveryDate: run.deliveryDate,
+        profileId: run.profileId,
+        selectedCandidateId,
+        finalAcceptedPlanCandidateId: candidate.candidateId,
+        routeOptimizerRequests: payloadSummary,
+        existingFinalRouteMetadataFound: false,
+      },
+    });
     const results = response.results ?? [];
     if (results.length !== payload.runs.length) {
       throw new FinalRouteOptimizerCreationError(
@@ -333,10 +494,35 @@ export async function createFinalRouteRunFromApprovedPlan(
       selectedCandidateId,
       createdBy: input.createdBy,
       error,
+      payload,
     });
     await saveFinalRouteOptimizerFailure(run.id, {
       finalRouteOptimizerMetadata: metadata,
     });
-    throw new FinalRouteOptimizerCreationError(metadata.creationError?.message ?? "Final route creation failed.");
+    throw new FinalRouteOptimizerCreationError(
+      metadata.creationError?.message ?? "Final route creation failed.",
+      {
+        code: metadata.creationError?.code,
+        downstreamStatus:
+          metadata.creationError?.details &&
+          typeof metadata.creationError.details === "object" &&
+          "downstreamStatusCode" in metadata.creationError.details
+            ? (metadata.creationError.details.downstreamStatusCode as number | undefined)
+            : undefined,
+        downstreamPath:
+          metadata.creationError?.details &&
+          typeof metadata.creationError.details === "object" &&
+          "downstreamEndpoint" in metadata.creationError.details
+            ? (metadata.creationError.details.downstreamEndpoint as string | undefined)
+            : undefined,
+        downstreamBodyPreview:
+          metadata.creationError?.details &&
+          typeof metadata.creationError.details === "object" &&
+          "downstreamResponseBodyPreview" in metadata.creationError.details
+            ? (metadata.creationError.details.downstreamResponseBodyPreview as string | undefined)
+            : undefined,
+        cause: error,
+      }
+    );
   }
 }

@@ -192,6 +192,7 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
 
     expect(result.reviewStatus).toBe("approved");
     expect(result.didDonaldOverrideRecommendation).toBe(false);
+    expect(result.message).toContain("Next step: create the Final Route Optimizer run");
     expect(runLogMocks.recordDonaldReviewMock).toHaveBeenCalledWith(
       "run-123",
       expect.objectContaining({ reviewStatus: "approved" })
@@ -230,7 +231,7 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
   it("saves rejection feedback tags and text", async () => {
     setupExistingRun();
 
-    await submitDonaldPlanReview({
+    const result = await submitDonaldPlanReview({
       deliveryDate: "2026-06-09",
       profileId: "daily-v1-current-dt-marco-self",
       profileVersion: "daily-v1.0",
@@ -244,6 +245,8 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
       reviewedBy: "donald@kapioo.com",
     });
 
+    expect(result.reviewStatus).toBe("rejected");
+    expect(result.message).toContain("cannot be used to create a final Route Optimizer run");
     expect(runLogMocks.recordDonaldReviewMock).toHaveBeenCalledWith(
       "run-123",
       expect.objectContaining({
@@ -282,6 +285,7 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
     });
 
     expect(result.reviewStatus).toBe("edited");
+    expect(result.message).toContain("generate revised candidates");
     expect(runLogMocks.attachLearningArtifactsMock).toHaveBeenCalledWith(
       "run-123",
       expect.objectContaining({
@@ -309,6 +313,7 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
     });
 
     expect(result.didDonaldOverrideRecommendation).toBe(true);
+    expect(result.message).toContain("Next step: create the Final Route Optimizer run");
     expect(runLogMocks.attachPlanningArtifactsMock).toHaveBeenCalledWith(
       "run-123",
       expect.objectContaining({

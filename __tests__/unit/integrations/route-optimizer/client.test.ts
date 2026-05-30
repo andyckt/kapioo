@@ -8,6 +8,7 @@ import {
   RouteOptimizerAuthError,
   RouteOptimizerConfigError,
   RouteOptimizerNetworkError,
+  RouteOptimizerRateLimitError,
   RouteOptimizerResponseError,
   RouteOptimizerValidationError,
 } from "@/lib/integrations/route-optimizer/errors";
@@ -157,6 +158,28 @@ describe("lib/integrations/route-optimizer/client", () => {
     await expect(previewRouteOptimizerRun(samplePayload)).rejects.toBeInstanceOf(
       RouteOptimizerAuthError
     );
+  });
+
+  it("throws RouteOptimizerRateLimitError on plain-text 429 RATE_LIMITED", async () => {
+    fetchMock.mockResolvedValue(
+      new Response("RATE_LIMITED", {
+        status: 429,
+        headers: { "Content-Type": "text/plain" },
+      })
+    );
+
+    try {
+      await batchCreateAndOptimizeRouteOptimizerRuns({ runs: [samplePayload] });
+      throw new Error("Expected Route Optimizer rate limit error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(RouteOptimizerRateLimitError);
+      expect(error).toMatchObject({
+        name: "RouteOptimizerRateLimitError",
+        message: "RATE_LIMITED",
+        status: 429,
+        path: ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
+      });
+    }
   });
 
   it("throws RouteOptimizerResponseError on invalid JSON", async () => {

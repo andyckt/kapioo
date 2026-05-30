@@ -39,6 +39,10 @@ import {
   createFinalRouteRunFromApprovedPlan,
   FinalRouteRunStateError,
 } from "@/lib/agents/delivery/final-route-run/create-final-route-run-from-approved-plan";
+import {
+  RouteOptimizerRateLimitError,
+  RouteOptimizerResponseError,
+} from "@/lib/integrations/route-optimizer/errors";
 import type { IDeliveryAgentRun } from "@/models/DeliveryAgentRun";
 
 const finalAcceptedPlan = {
@@ -278,6 +282,67 @@ describe("createFinalRouteRunFromApprovedPlan", () => {
 
     expect(result.idempotentReplay).toBe(true);
     expect(mocks.batchCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("retries downstream 429 with the same final create payload", async () => {
+    setupSuccess();
+    mocks.batchCreateMock.mockRejectedValueOnce(
+      new RouteOptimizerRateLimitError("RATE_LIMITED", {
+        status: 429,
+        path: "/api/integrations/runs/batch-create-and-optimize",
+        rawBody: JSON.stringify({ error: "RATE_LIMITED" }),
+      })
+    );
+
+    const result = await createFinalRouteRunFromApprovedPlan({
+      deliveryDate: "2026-06-09",
+      profileId: "daily-profile",
+      createdBy: "donald@kapioo.com",
+    });
+
+    expect(result.finalRouteOptimizerMetadata.finalRouteOptimizerStatus).toBe("created");
+    expect(mocks.batchCreateMock).toHaveBeenCalledTimes(2);
+    expect(mocks.batchCreateMock.mock.calls[0][0]).toEqual(mocks.batchCreateMock.mock.calls[1][0]);
+    expect(mocks.saveFailureMock).not.toHaveBeenCalled();
+  });
+
+  it("saves clear downstream 502 failure metadata", async () => {
+    setupSuccess();
+    mocks.batchCreateMock.mockRejectedValueOnce(
+      new RouteOptimizerResponseError("Upstream unavailable", {
+        status: 502,
+        path: "/api/integrations/runs/batch-create-and-optimize",
+        rawBody: JSON.stringify({ error: "UPSTREAM_UNAVAILABLE" }),
+      })
+    );
+    mocks.saveFailureMock.mockResolvedValue(buildRun());
+
+    await expect(
+      createFinalRouteRunFromApprovedPlan({
+        deliveryDate: "2026-06-09",
+        profileId: "daily-profile",
+        createdBy: "donald@kapioo.com",
+      })
+    ).rejects.toThrow(/Route Optimizer service failed/);
+
+    expect(mocks.batchCreateMock).toHaveBeenCalledTimes(1);
+    expect(mocks.saveFailureMock).toHaveBeenCalledWith(
+      "run-123",
+      expect.objectContaining({
+        finalRouteOptimizerMetadata: expect.objectContaining({
+          finalRouteOptimizerStatus: "failed",
+          creationError: expect.objectContaining({
+            code: "ROUTE_OPTIMIZER_CREATE_FAILED",
+            message: expect.stringContaining("Route Optimizer service failed"),
+            details: expect.objectContaining({
+              downstreamEndpoint: "/api/integrations/runs/batch-create-and-optimize",
+              downstreamStatusCode: 502,
+              downstreamResponseBodyPreview: expect.stringContaining("UPSTREAM_UNAVAILABLE"),
+            }),
+          }),
+        }),
+      })
+    );
   });
 
   it("saves failure metadata and allows retry later", async () => {
