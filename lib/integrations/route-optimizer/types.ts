@@ -53,9 +53,23 @@ export type RouteOptimizerBatchCreateRequest = {
 };
 
 export type RouteOptimizerOptimizedStop = {
+  customer_index?: number;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_address?: string;
   name?: string;
   address?: string;
+  eta?: string;
+  arrival_time?: string;
   order_ids?: string[];
+  sequence?: number;
+  [key: string]: unknown;
+};
+
+export type RouteOptimizerOptimizedRoute = {
+  total_duration_minutes?: number;
+  total_distance_km?: number;
+  stops?: RouteOptimizerOptimizedStop[];
   [key: string]: unknown;
 };
 
@@ -72,7 +86,7 @@ export type RouteOptimizerRunResult = {
   total_duration_minutes?: number;
   total_distance_km?: number;
   estimated_finish_time?: string;
-  optimized_route?: RouteOptimizerOptimizedStop[];
+  optimized_route?: RouteOptimizerOptimizedRoute | RouteOptimizerOptimizedStop[] | null;
   geocode_failures?: unknown[];
   validation_errors?: unknown[];
   warnings?: unknown[];

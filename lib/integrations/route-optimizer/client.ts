@@ -18,7 +18,39 @@ import {
   type RouteOptimizerRunResult,
 } from "@/lib/integrations/route-optimizer/types";
 
-function parseResponseBody(rawBody: string, path: string, status: number): unknown {
+type RouteOptimizerResponseDebug = {
+  url: string;
+  status: number;
+  contentType: string | null;
+};
+
+function truncateForDebug(value: string, maxLength = 300): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, maxLength)}…`;
+}
+
+function logRouteOptimizerDebug(
+  context: string,
+  debug: RouteOptimizerResponseDebug & { bodyPreview?: string }
+): void {
+  console.error(`[Route Optimizer] ${context}`, {
+    url: debug.url,
+    status: debug.status,
+    contentType: debug.contentType ?? "(none)",
+    ...(debug.bodyPreview !== undefined ? { bodyPreview: debug.bodyPreview } : {}),
+  });
+}
+
+function parseResponseBody(
+  rawBody: string,
+  path: string,
+  status: number,
+  debug: RouteOptimizerResponseDebug
+): unknown {
   if (!rawBody.trim()) {
     return null;
   }
@@ -26,16 +58,31 @@ function parseResponseBody(rawBody: string, path: string, status: number): unkno
   try {
     return JSON.parse(rawBody) as unknown;
   } catch (error) {
-    throw new RouteOptimizerResponseError("Route Optimizer returned invalid JSON", {
-      path,
-      status,
-      rawBody,
-      cause: error,
+    const bodyPreview = truncateForDebug(rawBody);
+    logRouteOptimizerDebug("JSON parse failed", {
+      ...debug,
+      bodyPreview,
     });
+
+    throw new RouteOptimizerResponseError(
+      `Route Optimizer returned invalid JSON (status ${status}, content-type: ${debug.contentType ?? "(none)"}, body preview: ${bodyPreview})`,
+      {
+        path,
+        status,
+        rawBody,
+        cause: error,
+      }
+    );
   }
 }
 
-function throwForErrorStatus(path: string, status: number, body: unknown, rawBody: string): never {
+function throwForErrorStatus(
+  path: string,
+  status: number,
+  body: unknown,
+  rawBody: string,
+  debug: RouteOptimizerResponseDebug
+): never {
   const message =
     typeof body === "object" &&
     body !== null &&
@@ -52,7 +99,15 @@ function throwForErrorStatus(path: string, status: number, body: unknown, rawBod
     throw new RouteOptimizerValidationError(message, { status, path, body, rawBody });
   }
 
-  throw new RouteOptimizerResponseError(message, { status, path, body, rawBody });
+  logRouteOptimizerDebug("Unexpected response status", {
+    ...debug,
+    bodyPreview: truncateForDebug(rawBody),
+  });
+
+  throw new RouteOptimizerResponseError(
+    `${message} (status ${status}, content-type: ${debug.contentType ?? "(none)"}, body preview: ${truncateForDebug(rawBody)})`,
+    { status, path, body, rawBody }
+  );
 }
 
 async function routeOptimizerPost<TResponse>(
@@ -74,10 +129,15 @@ async function routeOptimizerPost<TResponse>(
     });
 
     const rawBody = await response.text();
-    const body = parseResponseBody(rawBody, path, response.status);
+    const debug: RouteOptimizerResponseDebug = {
+      url,
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+    };
+    const body = parseResponseBody(rawBody, path, response.status, debug);
 
     if (!response.ok) {
-      throwForErrorStatus(path, response.status, body, rawBody);
+      throwForErrorStatus(path, response.status, body, rawBody, debug);
     }
 
     return body as TResponse;
@@ -88,6 +148,8 @@ async function routeOptimizerPost<TResponse>(
 
     const message =
       error instanceof Error ? error.message : "Route Optimizer network request failed";
+
+    console.error("[Route Optimizer] Network request failed", { url, message });
 
     throw new RouteOptimizerNetworkError(message, {
       path,

@@ -80,6 +80,14 @@ const AdminWeeklyOrdersTab = dynamic(
   { loading: () => <AdminTabSkeleton /> }
 )
 
+const AdminDeliveryAgentTab = dynamic(
+  () =>
+    import("@/features/admin-delivery-agent").then((m) => ({
+      default: m.AdminDeliveryAgentTab,
+    })),
+  { loading: () => <AdminTabSkeleton /> }
+)
+
 const AdminDailyMenuTab = dynamic(
   () =>
     import("@/features/admin-daily-menu").then((m) => ({
@@ -291,6 +299,12 @@ export function AdminDashboardTabContent(p: AdminDashboardTabContentProps) {
       {p.activeTab === "view-all-orders" && (
         <AdminTabPanel panelKey="view-all-orders">
           <AdminDailyOrdersTab />
+        </AdminTabPanel>
+      )}
+
+      {p.activeTab === "delivery-agent" && (
+        <AdminTabPanel panelKey="delivery-agent">
+          <AdminDeliveryAgentTab />
         </AdminTabPanel>
       )}
 

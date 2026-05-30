@@ -11,6 +11,7 @@ import {
   Library,
   Mail,
   Package,
+  Route,
   Settings,
   ShoppingCart,
   Star,
@@ -65,6 +66,7 @@ export const adminSidebarMenuItems: AdminSidebarMenuItem[] = [
     isHeading: true,
     children: [
       { id: "view-all-orders", label: "View Daily Delivery Orders", icon: <Eye className="h-4 w-4" /> },
+      { id: "delivery-agent", label: "Delivery Agent", icon: <Route className="h-4 w-4" /> },
       { id: "view-weekly-orders", label: "View Weekly Orders", icon: <CalendarIcon className="h-4 w-4" /> },
     ],
   },

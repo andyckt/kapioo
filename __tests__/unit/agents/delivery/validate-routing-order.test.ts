@@ -54,6 +54,22 @@ describe("lib/agents/delivery/validate-routing-order", () => {
     expect(result.errors.map((issue) => issue.code)).toContain("ROUTING_NON_DAILY_DELIVERY_AREA");
   });
 
+  it("does not warn when unit number or buzz code is missing", () => {
+    const result = validateRoutingOrder(
+      createRoutingTestOrder({
+        deliveryAddress: {
+          ...createRoutingTestOrder().deliveryAddress,
+          unitNumber: "",
+          buzzCode: "",
+        },
+      })
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.map((issue) => issue.code)).not.toContain("ROUTING_MISSING_UNIT");
+    expect(result.warnings.map((issue) => issue.code)).not.toContain("ROUTING_MISSING_BUZZ_CODE");
+  });
+
   it("warns on admin override and address review", () => {
     const result = validateRoutingOrder(
       createRoutingTestOrder({

@@ -90,6 +90,14 @@ ROUTE_OPTIMIZER_API_KEY=your_bearer_token
 
 These are separate from the inbound Kapioo webhook secrets (`ROUTE_OPTIMIZER_INGEST_TOKEN`, `ROUTE_OPTIMIZER_INGEST_SECRET`). The client throws a configuration error if either outbound variable is missing when invoked.
 
+Kitchen start location for Delivery Agent route previews:
+
+```bash
+KAPIOO_KITCHEN_START_LOCATION=123 Kitchen Rd, Toronto, ON M5V 2B2, Canada
+```
+
+Full street address used as the Route Optimizer run `start_location` for simple preview tests. Server-side only; required when an admin runs **Run Simple Route Preview**.
+
 ### Authentication (NextAuth)
 ```bash
 NEXTAUTH_SECRET=your_nextauth_secret

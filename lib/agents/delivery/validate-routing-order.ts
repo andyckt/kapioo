@@ -87,18 +87,6 @@ export function validateRoutingOrder(order: DailyOrderBase): {
     );
   }
 
-  if (!order.deliveryAddress.unitNumber.trim()) {
-    warnings.push(
-      issue("ROUTING_MISSING_UNIT", "Unit number is missing", "deliveryAddress.unitNumber")
-    );
-  }
-
-  if (!order.deliveryAddress.buzzCode.trim()) {
-    warnings.push(
-      issue("ROUTING_MISSING_BUZZ_CODE", "Buzz code is missing", "deliveryAddress.buzzCode")
-    );
-  }
-
   if (order.customer.hasAdminOverride) {
     warnings.push(
       issue(

@@ -160,6 +160,8 @@ describe("lib/integrations/route-optimizer/client", () => {
   });
 
   it("throws RouteOptimizerResponseError on invalid JSON", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
     fetchMock.mockResolvedValue(
       new Response("not-json", {
         status: 200,
@@ -167,9 +169,22 @@ describe("lib/integrations/route-optimizer/client", () => {
       })
     );
 
-    await expect(previewRouteOptimizerRun(samplePayload)).rejects.toBeInstanceOf(
-      RouteOptimizerResponseError
+    await expect(previewRouteOptimizerRun(samplePayload)).rejects.toMatchObject({
+      name: "RouteOptimizerResponseError",
+      message: expect.stringContaining("invalid JSON"),
+    });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[Route Optimizer] JSON parse failed",
+      expect.objectContaining({
+        url: "https://ro.example.com/api/integrations/runs/optimize-preview",
+        status: 200,
+        contentType: "application/json",
+        bodyPreview: "not-json",
+      })
     );
+
+    consoleErrorSpy.mockRestore();
   });
 
   it("throws RouteOptimizerNetworkError when fetch fails", async () => {
