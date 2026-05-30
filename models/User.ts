@@ -113,9 +113,8 @@ const UserSchema: Schema = new Schema(
       required: true
     },
     passwordIterations: {
-      type: Number
-      // No default: legacy users (e.g. seed-atlas) hashed with 1000; comparePassword
-      // uses (this.passwordIterations || 1000). New users get 310000 from setPassword.
+      type: Number,
+      // Legacy users (seed data) may omit this; verifyPassword falls back to 1k then 310k.
     },
     joined: { 
       type: Date, 
@@ -247,7 +246,10 @@ UserSchema.methods.setPassword = async function(password: string) {
   try {
     this.salt = createPasswordSalt();
     this.passwordIterations = PASSWORD_PBKDF2_ITERATIONS;
-    this.password = await hashPassword(password, this.salt, this.passwordIterations);
+    this.password = await hashPassword(password, this.salt, PASSWORD_PBKDF2_ITERATIONS);
+    this.markModified('password');
+    this.markModified('salt');
+    this.markModified('passwordIterations');
   } catch (error) {
     console.error('Error in setPassword method:', error);
     throw error;

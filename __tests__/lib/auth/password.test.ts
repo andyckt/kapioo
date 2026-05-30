@@ -27,4 +27,13 @@ describe("lib/auth/password", () => {
 
     await expect(verifyPassword(password, salt, hash, null)).resolves.toBe(true);
   });
+
+  it("verifies modern hashes when passwordIterations was not persisted", async () => {
+    const salt = createPasswordSalt();
+    const password = "SignupPassword123!";
+    const hash = await hashPassword(password, salt, PASSWORD_PBKDF2_ITERATIONS);
+
+    await expect(verifyPassword(password, salt, hash, null)).resolves.toBe(true);
+    await expect(verifyPassword(password, salt, hash, undefined)).resolves.toBe(true);
+  });
 });
