@@ -124,7 +124,10 @@ describe("lib/integrations/route-optimizer/client", () => {
       })
     );
 
-    const result = await batchCreateAndOptimizeRouteOptimizerRuns({ runs: [samplePayload] });
+    const result = await batchCreateAndOptimizeRouteOptimizerRuns({
+      planning_session_id: "planning-session-123",
+      runs: [samplePayload],
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://ro.example.com/api/integrations/runs/batch-create-and-optimize",
@@ -169,7 +172,10 @@ describe("lib/integrations/route-optimizer/client", () => {
     );
 
     try {
-      await batchCreateAndOptimizeRouteOptimizerRuns({ runs: [samplePayload] });
+      await batchCreateAndOptimizeRouteOptimizerRuns({
+        planning_session_id: "planning-session-123",
+        runs: [samplePayload],
+      });
       throw new Error("Expected Route Optimizer rate limit error");
     } catch (error) {
       expect(error).toBeInstanceOf(RouteOptimizerRateLimitError);

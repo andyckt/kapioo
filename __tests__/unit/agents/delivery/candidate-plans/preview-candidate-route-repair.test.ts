@@ -119,7 +119,7 @@ function buildDtRouteWithMeetupLate() {
           order_ids: ["DD-90000004"],
         },
         {
-          customer_name: "Today's Meet up point",
+          customer_name: "Meet-up / Handoff Point",
           customer_address: "4000 Yonge St, North York M2N 5N8",
           duration_from_previous: 10,
           service_time_minutes: 5,
@@ -143,7 +143,7 @@ function buildRepairedDtRoute() {
     optimized_route: {
       stops: [
         {
-          customer_name: "Today's Meet up point",
+          customer_name: "Meet-up / Handoff Point",
           customer_address: "4000 Yonge St, North York M2N 5N8",
           duration_from_previous: 10,
           service_time_minutes: 5,
@@ -189,7 +189,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
           optimizedStops: [
             { sequence: 1, name: "Alice Customer", orderIds: ["DD-90000001"] },
             { sequence: 2, name: "Dan Customer", orderIds: ["DD-90000004"] },
-            { sequence: 3, name: "Today's Meet up point", orderIds: [] },
+            { sequence: 3, name: "Meet-up / Handoff Point", orderIds: [] },
           ],
           routeOptimizerWarnings: [],
           routeOptimizerValidationErrors: [],
@@ -292,7 +292,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
           optimizedStopCount: 2,
           optimizedStops: [
             { sequence: 1, name: "Alice Customer", orderIds: ["DD-90000001"] },
-            { sequence: 2, name: "Today's Meet up point", orderIds: [] },
+            { sequence: 2, name: "Meet-up / Handoff Point", orderIds: [] },
           ],
           routeOptimizerWarnings: [],
           routeOptimizerValidationErrors: [],
@@ -362,7 +362,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
           stopCount: 2,
           optimizedStopCount: 2,
           optimizedStops: [
-            { sequence: 1, name: "Today's Meet up point", orderIds: [] },
+            { sequence: 1, name: "Meet-up / Handoff Point", orderIds: [] },
             { sequence: 2, name: "Alice Customer", orderIds: ["DD-90000001"] },
           ],
           routeOptimizerWarnings: [],

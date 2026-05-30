@@ -49,6 +49,7 @@ export type RouteOptimizerPreviewRequest = RouteOptimizerIntegrationRequest;
 export type RouteOptimizerCreateRequest = RouteOptimizerIntegrationRequest;
 
 export type RouteOptimizerBatchCreateRequest = {
+  planning_session_id: string;
   runs: RouteOptimizerIntegrationRequest[];
 };
 
@@ -93,8 +94,26 @@ export type RouteOptimizerRunResult = {
   [key: string]: unknown;
 };
 
+export type RouteOptimizerBatchRunError = {
+  field?: string;
+  message?: string;
+  code?: string;
+  error?: string;
+  external_id?: string;
+  idempotency_key?: string;
+  driver_name?: string;
+  [key: string]: unknown;
+};
+
 export type RouteOptimizerBatchResult = {
   status?: string;
+  planning_session_id?: string;
+  total_requested?: number;
+  total_succeeded?: number;
+  total_failed?: number;
+  runs?: RouteOptimizerRunResult[];
   results?: RouteOptimizerRunResult[];
+  errors?: RouteOptimizerBatchRunError[];
+  failed_runs?: RouteOptimizerBatchRunError[];
   [key: string]: unknown;
 };

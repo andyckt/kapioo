@@ -52,7 +52,7 @@ function buildRouteOptimizerSuccess(overrides: Record<string, unknown> = {}) {
       total_distance_km: 14,
       stops: [
         {
-          customer_name: "Today's Meet up point",
+          customer_name: "Meet-up / Handoff Point",
           customer_address: "4000 Yonge St, North York M2N 5N8",
           duration_from_previous: 10,
           service_time_minutes: 5,

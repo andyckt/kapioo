@@ -179,7 +179,7 @@ describe("lib/agents/delivery/candidate-plans/detect-route-shape-issues", () => 
           { sequence: 2, name: "Bob", orderIds: ["DD-90000002"] },
           {
             sequence: 3,
-            name: "Today's Meet up point",
+            name: "Meet-up / Handoff Point",
             orderIds: [],
           },
         ], { syntheticMeetupIncluded: true, meetupSequence: 3 }),
@@ -253,7 +253,7 @@ describe("lib/agents/delivery/candidate-plans/detect-route-shape-issues", () => 
         buildRunPreview("A", [
           {
             sequence: 1,
-            name: "Today's Meet up point",
+            name: "Meet-up / Handoff Point",
             orderIds: [],
           },
           { sequence: 2, name: "Alice", orderIds: ["DD-90000001"] },

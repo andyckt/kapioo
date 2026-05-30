@@ -2,6 +2,7 @@ import { batchCreateAndOptimizeRouteOptimizerRuns } from "@/lib/integrations/rou
 import {
   RouteOptimizerError,
   RouteOptimizerRateLimitError,
+  RouteOptimizerValidationError,
 } from "@/lib/integrations/route-optimizer/errors";
 import {
   ROUTE_OPTIMIZER_PATHS,
@@ -10,6 +11,12 @@ import {
   type RouteOptimizerRunResult,
 } from "@/lib/integrations/route-optimizer/types";
 import { buildFinalRouteCreatePayloads } from "@/lib/agents/delivery/final-route-run/build-final-route-create-payloads";
+import {
+  FinalRouteCreatePayloadError,
+  FinalRouteOptimizerCreationError,
+  FinalRouteRunStateError,
+} from "@/lib/agents/delivery/final-route-run/errors";
+import { resolveFinalRoutePlanningSessionId } from "@/lib/agents/delivery/final-route-run/resolve-final-route-planning-session-id";
 import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
@@ -18,50 +25,30 @@ import {
   findDeliveryAgentRunByDuplicateKey,
   findDeliveryAgentRunById,
   saveFinalRouteOptimizerFailure,
+  saveFinalRouteOptimizerPartialResult,
   saveFinalRouteOptimizerResult,
 } from "@/lib/agents/delivery/run-log";
 import type {
   DeliveryAgentFinalRouteOptimizerMetadata,
+  DeliveryAgentFinalRouteRunFailure,
   DeliveryAgentFinalRouteSummary,
   DeliveryAgentRouteOptimizerRun,
 } from "@/lib/agents/delivery/run-log-types";
 import type { DeliveryAgentCandidatePlanPreview } from "@/lib/contracts/delivery-agent";
 import type { IDeliveryAgentRun } from "@/models/DeliveryAgentRun";
+import {
+  resolveFinalRouteRequestOutcomes,
+  summarizeBatchCreateResponse,
+  zipPayloadWithCandidateRuns,
+  type FinalRouteRequestOutcome,
+} from "@/lib/agents/delivery/final-route-run/parse-batch-create-response";
+import { summarizeFinalRouteRunPayload } from "@/lib/agents/delivery/final-route-run/summarize-final-route-payload";
+import {
+  buildFailedRouteSummaryFromPayloadValidation,
+  FinalRoutePayloadValidationError,
+} from "@/lib/agents/delivery/final-route-run/validate-final-route-run-payload";
 
-export class FinalRouteRunStateError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "FinalRouteRunStateError";
-  }
-}
-
-export class FinalRouteOptimizerCreationError extends Error {
-  code: string;
-  downstreamStatus?: number;
-  downstreamPath?: string;
-  downstreamBodyPreview?: string;
-
-  constructor(
-    message: string,
-    options: {
-      code?: string;
-      downstreamStatus?: number;
-      downstreamPath?: string;
-      downstreamBodyPreview?: string;
-      cause?: unknown;
-    } = {}
-  ) {
-    super(message);
-    this.name = "FinalRouteOptimizerCreationError";
-    this.code = options.code ?? "ROUTE_OPTIMIZER_CREATE_FAILED";
-    this.downstreamStatus = options.downstreamStatus;
-    this.downstreamPath = options.downstreamPath;
-    this.downstreamBodyPreview = options.downstreamBodyPreview;
-    if (options.cause !== undefined) {
-      (this as Error & { cause?: unknown }).cause = options.cause;
-    }
-  }
-}
+export { FinalRouteOptimizerCreationError, FinalRouteRunStateError } from "@/lib/agents/delivery/final-route-run/errors";
 
 export type CreateFinalRouteRunInput = {
   deliveryDate: string;
@@ -164,6 +151,10 @@ function readRouteOptimizerErrorCode(error: unknown): string {
     return "ROUTE_OPTIMIZER_RATE_LIMITED";
   }
 
+  if (error instanceof RouteOptimizerValidationError) {
+    return "ROUTE_OPTIMIZER_VALIDATION_ERROR";
+  }
+
   if (error instanceof RouteOptimizerError) {
     return error.code === "ROUTE_OPTIMIZER_RESPONSE_ERROR"
       ? "ROUTE_OPTIMIZER_CREATE_FAILED"
@@ -173,9 +164,22 @@ function readRouteOptimizerErrorCode(error: unknown): string {
   return error instanceof Error ? error.name : "ROUTE_OPTIMIZER_CREATE_FAILED";
 }
 
+function readValidationErrorMessage(error: RouteOptimizerValidationError): string {
+  const rawBody = error.rawBody ?? "";
+  if (/planning_session_id/i.test(rawBody) || /planning_session_id/i.test(error.message)) {
+    return "Final Route Optimizer run could not be created because planning_session_id is missing or invalid.";
+  }
+
+  return `Final Route Optimizer run could not be created because the Route Optimizer service rejected the request: ${error.message}`;
+}
+
 function readRouteOptimizerErrorMessage(error: unknown): string {
   if (error instanceof RouteOptimizerRateLimitError || (error instanceof RouteOptimizerError && error.status === 429)) {
     return "Final Route Optimizer run could not be created because the Route Optimizer service returned RATE_LIMITED. Please wait and try again.";
+  }
+
+  if (error instanceof RouteOptimizerValidationError) {
+    return readValidationErrorMessage(error);
   }
 
   if (error instanceof RouteOptimizerError) {
@@ -186,12 +190,10 @@ function readRouteOptimizerErrorMessage(error: unknown): string {
 }
 
 function summarizePayload(payload: RouteOptimizerBatchCreateRequest) {
-  return payload.runs.map((run) => ({
-    externalId: run.external_id,
-    idempotencyKey: run.idempotency_key,
-    driverName: run.run.driver_name,
-    customerCount: run.customers.length,
-  }));
+  return {
+    planningSessionId: payload.planning_session_id,
+    runs: payload.runs.map((run) => summarizeFinalRouteRunPayload(run)),
+  };
 }
 
 const FINAL_CREATE_RETRY_DELAYS_MS =
@@ -243,36 +245,228 @@ async function batchCreateFinalRoutesWithRetry(input: {
   throw new FinalRouteOptimizerCreationError("Route Optimizer create retry loop exited unexpectedly.");
 }
 
-function buildRouteRuns(input: {
-  results: RouteOptimizerRunResult[];
-  createdRuns: DeliveryAgentCandidatePlanPreview["runs"];
-  idempotencyKeysByRunSlot: Map<string, string>;
-  externalIdsByRunSlot: Map<string, string>;
-}): DeliveryAgentRouteOptimizerRun[] {
-  return input.results.map((result, index) => {
-    const candidateRun = input.createdRuns[index];
-    if (!candidateRun) {
-      throw new FinalRouteOptimizerCreationError("Route Optimizer returned an unexpected run.");
-    }
-    const runId = result.run_id;
-    if (!runId) {
-      throw new FinalRouteOptimizerCreationError("Route Optimizer did not return a run id.");
-    }
+function buildRouteRunFromOutcome(outcome: FinalRouteRequestOutcome): DeliveryAgentRouteOptimizerRun {
+  const result = outcome.result;
+  if (!result?.run_id) {
+    throw new FinalRouteOptimizerCreationError("Route Optimizer did not return a run id.");
+  }
 
-    return {
-      runId,
-      driverName: candidateRun.driverName,
-      externalId: result.external_id ?? input.externalIdsByRunSlot.get(candidateRun.runSlot) ?? "",
-      idempotencyKey:
-        result.idempotency_key ?? input.idempotencyKeysByRunSlot.get(candidateRun.runSlot) ?? "",
-      detailsLink: result.details_link,
-      driverLink: result.driver_link,
-      estimatedFinishTime: result.estimated_finish_time,
-      totalDurationMinutes: result.total_duration_minutes,
-      optimizedRoute: normalizeOptimizedRoute(result),
-      repairActionCount: candidateRun.repairActionsApplied?.length ?? 0,
-    };
+  return {
+    runId: result.run_id,
+    driverName: outcome.driverName,
+    externalId: outcome.externalId || result.external_id || "",
+    idempotencyKey: outcome.idempotencyKey || result.idempotency_key || "",
+    detailsLink: result.details_link,
+    driverLink: result.driver_link,
+    estimatedFinishTime: result.estimated_finish_time,
+    totalDurationMinutes: result.total_duration_minutes,
+    optimizedRoute: normalizeOptimizedRoute(result),
+    repairActionCount: outcome.candidateRun.repairActionsApplied?.length ?? 0,
+  };
+}
+
+function buildRouteSummaryFromOutcome(outcome: FinalRouteRequestOutcome): DeliveryAgentFinalRouteSummary {
+  const result = outcome.result;
+  if (!result) {
+    throw new FinalRouteOptimizerCreationError("Route Optimizer returned an unexpected run.");
+  }
+
+  return buildRouteSummary({
+    runSlot: outcome.runSlot,
+    driverName: outcome.driverName,
+    stopCount: outcome.stopCount,
+    result,
   });
+}
+
+function buildExternalIdForRun(input: {
+  deliveryDate: string;
+  deliveryAgentRunId: string;
+  selectedCandidateId: string;
+  runSlot: string;
+}): string {
+  return [
+    "kapioo-final-run",
+    input.deliveryDate,
+    input.deliveryAgentRunId,
+    input.selectedCandidateId,
+    input.runSlot,
+  ].join(":");
+}
+
+function buildIdempotencyKeyForRun(input: {
+  deliveryDate: string;
+  profileId: string;
+  selectedCandidateId: string;
+  runSlot: string;
+}): string {
+  return [
+    "daily-delivery-agent",
+    input.deliveryDate,
+    input.profileId,
+    "final",
+    input.selectedCandidateId,
+    input.runSlot,
+  ].join(":");
+}
+
+async function handlePayloadValidationError(input: {
+  run: IDeliveryAgentRun;
+  candidate: DeliveryAgentCandidatePlanPreview;
+  selectedCandidateId: string;
+  createdBy: string;
+  planningSessionId: string;
+  planningSessionSource: string;
+  systemRecommendedCandidateId: string;
+  didDonaldOverrideRecommendation: boolean;
+  error: FinalRoutePayloadValidationError;
+}): Promise<never> {
+  const failedRun =
+    input.candidate.runs.find((run) => run.runSlot === input.error.issue.runSlot) ??
+    input.candidate.runs.find((run) => run.driverName === input.error.issue.driverName);
+  const runSlot = failedRun?.runSlot ?? input.error.issue.runSlot ?? "unknown";
+  const stopCount = failedRun?.optimizedStopCount || failedRun?.stopCount || 0;
+  const failedRouteSummary = buildFailedRouteSummaryFromPayloadValidation({
+    issue: input.error.issue,
+    runSlot,
+    stopCount,
+    externalId: buildExternalIdForRun({
+      deliveryDate: input.run.deliveryDate,
+      deliveryAgentRunId: input.run.id,
+      selectedCandidateId: input.selectedCandidateId,
+      runSlot,
+    }),
+    idempotencyKey: buildIdempotencyKeyForRun({
+      deliveryDate: input.run.deliveryDate,
+      profileId: input.run.profileId,
+      selectedCandidateId: input.selectedCandidateId,
+      runSlot,
+    }),
+  });
+  failedRouteSummary.errorMessage = input.error.message;
+
+  const existingRuns = input.run.routeOptimizerRuns ?? [];
+  const existingSummaries = input.run.finalRouteOptimizerMetadata?.routeSummaries ?? [];
+  const requestedRunCount = input.candidate.runs.filter(
+    (candidateRun) => candidateRun.previewStatus === "previewed" && candidateRun.stopCount > 0
+  ).length;
+  const hasPartialSuccess = existingRuns.length > 0;
+
+  if (hasPartialSuccess) {
+    const partialMetadata: DeliveryAgentFinalRouteOptimizerMetadata = {
+      ...(input.run.finalRouteOptimizerMetadata ?? {
+        systemRecommendedCandidateId: input.systemRecommendedCandidateId,
+        selectedCandidateId: input.selectedCandidateId,
+        didDonaldOverrideRecommendation: input.didDonaldOverrideRecommendation,
+      }),
+      finalRouteOptimizerStatus: "partial_created",
+      finalRouteOptimizerCreatedBy: input.createdBy,
+      systemRecommendedCandidateId: input.systemRecommendedCandidateId,
+      selectedCandidateId: input.selectedCandidateId,
+      didDonaldOverrideRecommendation: input.didDonaldOverrideRecommendation,
+      planningSessionId: input.planningSessionId,
+      planningSessionSource: input.planningSessionSource,
+      requestedRunCount,
+      succeededRunCount: existingRuns.length,
+      failedRunCount: 1,
+      finalRouteOptimizerRunIds: existingRuns.map((routeRun) => routeRun.runId),
+      routeSummaries: existingSummaries,
+      failedRouteSummaries: [failedRouteSummary],
+      creationError: {
+        code: "ROUTE_OPTIMIZER_PAYLOAD_VALIDATION",
+        message: input.error.message,
+        details: input.error.issue,
+      },
+    };
+
+    await saveFinalRouteOptimizerPartialResult(input.run.id, {
+      routeOptimizerPlanningSessionId: input.planningSessionId,
+      routeOptimizerRuns: existingRuns,
+      finalRouteOptimizerMetadata: partialMetadata,
+    });
+
+    throwPartialCreationError({
+      metadata: partialMetadata,
+      routeSummaries: existingSummaries,
+    });
+  }
+
+  throw new FinalRouteOptimizerCreationError(input.error.message, {
+    code: "ROUTE_OPTIMIZER_PAYLOAD_VALIDATION",
+  });
+}
+
+function buildFailedRouteSummary(outcome: FinalRouteRequestOutcome): DeliveryAgentFinalRouteRunFailure {
+  return {
+    runSlot: outcome.runSlot,
+    driverName: outcome.driverName,
+    stopCount: outcome.stopCount,
+    externalId: outcome.externalId,
+    idempotencyKey: outcome.idempotencyKey,
+    errorMessage: outcome.errorMessage,
+    errorCode: outcome.errorCode,
+  };
+}
+
+function readExistingSuccessfulExternalIds(run: IDeliveryAgentRun): Set<string> {
+  const externalIds = new Set<string>();
+
+  for (const routeRun of run.routeOptimizerRuns ?? []) {
+    if (routeRun.externalId.trim()) {
+      externalIds.add(routeRun.externalId.trim());
+    }
+  }
+
+  for (const summary of run.finalRouteOptimizerMetadata?.routeSummaries ?? []) {
+    if (summary.routeName?.trim()) {
+      externalIds.add(summary.routeName.trim());
+    }
+  }
+
+  return externalIds;
+}
+
+function filterPayloadForMissingRuns(
+  payload: RouteOptimizerBatchCreateRequest,
+  existingExternalIds: Set<string>
+): RouteOptimizerBatchCreateRequest {
+  const runs = payload.runs.filter((request) => {
+    const externalId = request.external_id?.trim();
+    return !externalId || !existingExternalIds.has(externalId);
+  });
+
+  return {
+    planning_session_id: payload.planning_session_id,
+    runs,
+  };
+}
+
+function mergeRouteRuns(
+  existingRuns: DeliveryAgentRouteOptimizerRun[],
+  newRuns: DeliveryAgentRouteOptimizerRun[]
+): DeliveryAgentRouteOptimizerRun[] {
+  const merged = new Map<string, DeliveryAgentRouteOptimizerRun>();
+  for (const routeRun of existingRuns) {
+    merged.set(routeRun.externalId, routeRun);
+  }
+  for (const routeRun of newRuns) {
+    merged.set(routeRun.externalId, routeRun);
+  }
+  return [...merged.values()];
+}
+
+function mergeRouteSummaries(
+  existingSummaries: DeliveryAgentFinalRouteSummary[],
+  newSummaries: DeliveryAgentFinalRouteSummary[]
+): DeliveryAgentFinalRouteSummary[] {
+  const merged = new Map<string, DeliveryAgentFinalRouteSummary>();
+  for (const summary of existingSummaries) {
+    merged.set(summary.runSlot, summary);
+  }
+  for (const summary of newSummaries) {
+    merged.set(summary.runSlot, summary);
+  }
+  return [...merged.values()];
 }
 
 function buildCreatedMetadata(input: {
@@ -283,17 +477,59 @@ function buildCreatedMetadata(input: {
   systemRecommendedCandidateId: string;
   selectedCandidateId: string;
   didDonaldOverrideRecommendation: boolean;
+  planningSessionId: string;
+  planningSessionSource: string;
+  requestedRunCount: number;
+  succeededRunCount: number;
+  failedRunCount: number;
+  failedRouteSummaries?: DeliveryAgentFinalRouteRunFailure[];
+  status?: DeliveryAgentFinalRouteOptimizerMetadata["finalRouteOptimizerStatus"];
 }): DeliveryAgentFinalRouteOptimizerMetadata {
   return {
-    finalRouteOptimizerStatus: "created",
+    finalRouteOptimizerStatus: input.status ?? "created",
     finalRouteOptimizerCreatedAt: input.createdAt.toISOString(),
     finalRouteOptimizerCreatedBy: input.createdBy,
     systemRecommendedCandidateId: input.systemRecommendedCandidateId,
     selectedCandidateId: input.selectedCandidateId,
     didDonaldOverrideRecommendation: input.didDonaldOverrideRecommendation,
+    planningSessionId: input.planningSessionId,
+    planningSessionSource: input.planningSessionSource,
+    requestedRunCount: input.requestedRunCount,
+    succeededRunCount: input.succeededRunCount,
+    failedRunCount: input.failedRunCount,
     finalRouteOptimizerRunIds: input.runIds,
     routeSummaries: input.routeSummaries,
+    failedRouteSummaries: input.failedRouteSummaries,
   };
+}
+
+function buildPartialCreationErrorMessage(input: {
+  createdSummaries: DeliveryAgentFinalRouteSummary[];
+  failedSummaries: DeliveryAgentFinalRouteRunFailure[];
+}): string {
+  const createdNames = input.createdSummaries.map((summary) => summary.driverName).join(", ");
+  const failedNames = input.failedSummaries
+    .map((summary) => `${summary.driverName}${summary.errorMessage ? ` (${summary.errorMessage})` : ""}`)
+    .join("; ");
+
+  return `Partial final Route Optimizer run creation: created ${createdNames || "none"}; missing or failed ${failedNames || "unknown runs"}. Retry missing final route runs.`;
+}
+
+function throwPartialCreationError(input: {
+  metadata: DeliveryAgentFinalRouteOptimizerMetadata;
+  routeSummaries: DeliveryAgentFinalRouteSummary[];
+  responsePreview?: string;
+}): never {
+  throw new FinalRouteOptimizerCreationError(
+    input.metadata.creationError?.message ??
+      "Partial final Route Optimizer run creation. Retry missing final route runs.",
+    {
+      code: "ROUTE_OPTIMIZER_PARTIAL_CREATED",
+      finalRouteOptimizerMetadata: input.metadata,
+      routeSummaries: input.routeSummaries,
+      downstreamBodyPreview: input.responsePreview,
+    }
+  );
 }
 
 function buildFailureMetadata(input: {
@@ -303,6 +539,8 @@ function buildFailureMetadata(input: {
   createdBy: string;
   error: unknown;
   payload?: RouteOptimizerBatchCreateRequest;
+  planningSessionId: string;
+  planningSessionSource: string;
 }): DeliveryAgentFinalRouteOptimizerMetadata {
   const message = readRouteOptimizerErrorMessage(input.error);
   return {
@@ -315,11 +553,15 @@ function buildFailureMetadata(input: {
       input.run.planningArtifacts?.didDonaldOverrideRecommendation ??
       input.run.learningArtifacts?.didDonaldOverrideRecommendation ??
       false,
+    planningSessionId: input.planningSessionId,
+    planningSessionSource: input.planningSessionSource,
     creationError: {
       code: readRouteOptimizerErrorCode(input.error),
       message,
       details: {
         candidateId: input.candidate.candidateId,
+        planningSessionId: input.planningSessionId,
+        planningSessionSource: input.planningSessionSource,
         downstreamEndpoint:
           input.error instanceof RouteOptimizerError
             ? input.error.path ?? ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize
@@ -367,7 +609,9 @@ export async function createFinalRouteRunFromApprovedPlan(
     };
   }
 
-  const planningSessionId = run.routeOptimizerPlanningSessionId || `final:${run.id}`;
+  const resolvedPlanningSession = resolveFinalRoutePlanningSessionId(run);
+  const planningSessionId = resolvedPlanningSession.planningSessionId;
+  const planningSessionSource = resolvedPlanningSession.source;
   const systemRecommendedCandidateId =
     run.planningArtifacts?.systemRecommendedCandidateId ?? selectedCandidateId;
   const didDonaldOverrideRecommendation =
@@ -399,95 +643,256 @@ export async function createFinalRouteRunFromApprovedPlan(
       },
     });
 
-    const createdRuns = candidate.runs.filter(
-      (candidateRun) => candidateRun.previewStatus === "previewed" && candidateRun.stopCount > 0
-    );
+    const requestRuns = zipPayloadWithCandidateRuns({
+      payload,
+      candidateRuns: candidate.runs,
+    });
+    const requestedRunCount = requestRuns.length;
+    const existingExternalIds = readExistingSuccessfulExternalIds(run);
+    const payloadToSend = filterPayloadForMissingRuns(payload, existingExternalIds);
 
-    const payloadSummary = summarizePayload(payload);
+    if (payloadToSend.runs.length === 0 && existingExternalIds.size >= requestedRunCount) {
+      const completedMetadata: DeliveryAgentFinalRouteOptimizerMetadata =
+        existingMetadata?.finalRouteOptimizerStatus === "partial_created"
+          ? {
+              ...existingMetadata,
+              finalRouteOptimizerStatus: "created",
+              failedRouteSummaries: [],
+              failedRunCount: 0,
+              succeededRunCount: requestedRunCount,
+              creationError: undefined,
+            }
+          : (existingMetadata as DeliveryAgentFinalRouteOptimizerMetadata);
+
+      if (completedMetadata) {
+        if (existingMetadata?.finalRouteOptimizerStatus === "partial_created") {
+          await saveFinalRouteOptimizerResult(run.id, {
+            routeOptimizerPlanningSessionId: planningSessionId,
+            routeOptimizerRuns: run.routeOptimizerRuns ?? [],
+            finalRouteOptimizerMetadata: completedMetadata,
+          });
+        }
+
+        return {
+          deliveryAgentRunId: run.id,
+          idempotentReplay: true,
+          finalRouteOptimizerMetadata: completedMetadata,
+          routeSummaries: completedMetadata.routeSummaries ?? [],
+          message: "Final Route Optimizer Run Created.",
+        };
+      }
+    }
+
+    const payloadSummary = summarizePayload(payloadToSend);
     console.info("[Delivery Agent] Creating final Route Optimizer runs", {
       deliveryDate: run.deliveryDate,
       profileId: run.profileId,
       selectedCandidateId,
       finalAcceptedPlanCandidateId: candidate.candidateId,
+      planningSessionId,
+      planningSessionSource,
+      requestedRunCount,
+      requestedExternalIds: requestRuns.map((requestRun) => requestRun.externalId),
+      existingSuccessfulExternalIds: [...existingExternalIds],
+      retryingMissingRunsOnly: payloadToSend.runs.length !== payload.runs.length,
       downstreamEndpoint: ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
       routeOptimizerRequests: payloadSummary,
-      existingFinalRouteMetadataFound: false,
+      existingFinalRouteMetadataFound: Boolean(existingMetadata),
     });
 
     const response = await batchCreateFinalRoutesWithRetry({
-      payload,
+      payload: payloadToSend,
       logContext: {
         deliveryDate: run.deliveryDate,
         profileId: run.profileId,
         selectedCandidateId,
         finalAcceptedPlanCandidateId: candidate.candidateId,
+        planningSessionId,
+        planningSessionSource,
+        requestedRunCount,
         routeOptimizerRequests: payloadSummary,
-        existingFinalRouteMetadataFound: false,
+        existingSuccessfulExternalIds: [...existingExternalIds],
+        existingFinalRouteMetadataFound: Boolean(existingMetadata),
       },
     });
-    const results = response.results ?? [];
-    if (results.length !== payload.runs.length) {
-      throw new FinalRouteOptimizerCreationError(
-        "Route Optimizer did not return one result for each final route run."
-      );
-    }
 
-    const idempotencyByRunSlot = new Map(
-      payload.runs.map((request, index) => [
-        createdRuns[index]?.runSlot ?? request.run.driver_name,
-        request.idempotency_key ?? "",
-      ])
-    );
-    const externalIdByRunSlot = new Map(
-      payload.runs.map((request, index) => [
-        createdRuns[index]?.runSlot ?? request.run.driver_name,
-        request.external_id ?? "",
-      ])
+    const responseSummary = summarizeBatchCreateResponse(response);
+    const attemptedRequestRuns = zipPayloadWithCandidateRuns({
+      payload: payloadToSend,
+      candidateRuns: candidate.runs,
+    });
+    const outcomes = resolveFinalRouteRequestOutcomes({
+      requestRuns: attemptedRequestRuns,
+      response,
+    });
+
+    console.info("[Delivery Agent] Final Route Optimizer batch response", {
+      ...responseSummary,
+      attemptedExternalIds: attemptedRequestRuns.map((requestRun) => requestRun.externalId),
+      failedExternalIds: outcomes
+        .filter((outcome) => outcome.status !== "created")
+        .map((outcome) => ({
+          externalId: outcome.externalId,
+          driverName: outcome.driverName,
+          status: outcome.status,
+          errorCode: outcome.errorCode,
+          errorMessage: outcome.errorMessage,
+        })),
+      downstreamErrorsPreview: truncateForLog(JSON.stringify(responseSummary.errors ?? [])),
+    });
+
+    const newSuccessfulOutcomes = outcomes.filter((outcome) => outcome.status === "created");
+    const newFailedOutcomes = outcomes.filter((outcome) => outcome.status !== "created");
+    const newRouteRuns = newSuccessfulOutcomes.map(buildRouteRunFromOutcome);
+    const newRouteSummaries = newSuccessfulOutcomes.map(buildRouteSummaryFromOutcome);
+
+    const mergedRouteRuns = mergeRouteRuns(run.routeOptimizerRuns ?? [], newRouteRuns);
+    const mergedRouteSummaries = mergeRouteSummaries(
+      run.finalRouteOptimizerMetadata?.routeSummaries ?? [],
+      newRouteSummaries
     );
 
-    const routeRuns = buildRouteRuns({
-      results,
-      createdRuns,
-      idempotencyKeysByRunSlot: idempotencyByRunSlot,
-      externalIdsByRunSlot: externalIdByRunSlot,
-    });
-    const routeSummaries = results.map((result, index) => {
-      const candidateRun = createdRuns[index];
-      if (!candidateRun) {
-        throw new FinalRouteOptimizerCreationError("Route Optimizer returned an unexpected run.");
-      }
-      return buildRouteSummary({
-        runSlot: candidateRun.runSlot,
-        driverName: candidateRun.driverName,
-        stopCount: candidateRun.optimizedStopCount || candidateRun.stopCount,
-        result,
-      });
-    });
+    const successfulExternalIds = new Set(mergedRouteRuns.map((routeRun) => routeRun.externalId));
+    const failedRouteSummaries = requestRuns
+      .filter((requestRun) => !successfulExternalIds.has(requestRun.externalId))
+      .map((requestRun) => {
+        const failedOutcome = newFailedOutcomes.find(
+          (outcome) => outcome.externalId === requestRun.externalId
+        );
+        return (
+          failedOutcome ??
+          ({
+            ...requestRun,
+            status: "missing",
+            errorMessage: "Route Optimizer did not return a result for this run.",
+            errorCode: "ROUTE_OPTIMIZER_RUN_MISSING",
+          } as FinalRouteRequestOutcome)
+        );
+      })
+      .map(buildFailedRouteSummary);
+
+    const succeededRunCount = mergedRouteRuns.length;
+    const failedRunCount = failedRouteSummaries.length;
     const createdAt = new Date();
+    const allRunsCreated = succeededRunCount >= requestedRunCount && failedRunCount === 0;
+
     const metadata = buildCreatedMetadata({
       createdAt,
       createdBy: input.createdBy,
-      runIds: routeRuns.map((routeRun) => routeRun.runId),
-      routeSummaries,
+      runIds: mergedRouteRuns.map((routeRun) => routeRun.runId),
+      routeSummaries: mergedRouteSummaries,
       systemRecommendedCandidateId,
       selectedCandidateId,
       didDonaldOverrideRecommendation,
+      planningSessionId,
+      planningSessionSource,
+      requestedRunCount,
+      succeededRunCount,
+      failedRunCount,
+      failedRouteSummaries: allRunsCreated ? [] : failedRouteSummaries,
+      status: allRunsCreated ? "created" : "partial_created",
     });
 
-    const updated = await saveFinalRouteOptimizerResult(run.id, {
-      routeOptimizerPlanningSessionId: planningSessionId,
-      routeOptimizerRuns: routeRuns,
-      finalRouteOptimizerMetadata: metadata,
-    });
+    if (allRunsCreated) {
+      const updated = await saveFinalRouteOptimizerResult(run.id, {
+        routeOptimizerPlanningSessionId: planningSessionId,
+        routeOptimizerRuns: mergedRouteRuns,
+        finalRouteOptimizerMetadata: metadata,
+      });
 
-    return {
-      deliveryAgentRunId: updated.id,
-      idempotentReplay: false,
-      finalRouteOptimizerMetadata: metadata,
-      routeSummaries,
-      message: "Final Route Optimizer Run Created.",
+      return {
+        deliveryAgentRunId: updated.id,
+        idempotentReplay: false,
+        finalRouteOptimizerMetadata: metadata,
+        routeSummaries: mergedRouteSummaries,
+        message: "Final Route Optimizer Run Created.",
+      };
+    }
+
+    if (succeededRunCount === 0) {
+      const failureMetadata: DeliveryAgentFinalRouteOptimizerMetadata = {
+        ...metadata,
+        finalRouteOptimizerStatus: "failed",
+        creationError: {
+          code: "ROUTE_OPTIMIZER_CREATE_FAILED",
+          message: buildPartialCreationErrorMessage({
+            createdSummaries: [],
+            failedSummaries: failedRouteSummaries,
+          }),
+          details: {
+            ...responseSummary,
+            failedExternalIds: failedRouteSummaries.map((summary) => summary.externalId),
+          },
+        },
+      };
+
+      await saveFinalRouteOptimizerFailure(run.id, {
+        routeOptimizerPlanningSessionId: planningSessionId,
+        finalRouteOptimizerMetadata: failureMetadata,
+      });
+
+      throw new FinalRouteOptimizerCreationError(failureMetadata.creationError.message, {
+        code: "ROUTE_OPTIMIZER_CREATE_FAILED",
+        finalRouteOptimizerMetadata: failureMetadata,
+      });
+    }
+
+    const partialMetadata: DeliveryAgentFinalRouteOptimizerMetadata = {
+      ...metadata,
+      creationError: {
+        code: "ROUTE_OPTIMIZER_PARTIAL_CREATED",
+        message: buildPartialCreationErrorMessage({
+          createdSummaries: mergedRouteSummaries,
+          failedSummaries: failedRouteSummaries,
+        }),
+        details: {
+          ...responseSummary,
+          failedExternalIds: failedRouteSummaries.map((summary) => summary.externalId),
+          successfulExternalIds: mergedRouteRuns.map((routeRun) => routeRun.externalId),
+        },
+      },
     };
+
+    await saveFinalRouteOptimizerPartialResult(run.id, {
+      routeOptimizerPlanningSessionId: planningSessionId,
+      routeOptimizerRuns: mergedRouteRuns,
+      finalRouteOptimizerMetadata: partialMetadata,
+    });
+
+    throwPartialCreationError({
+      metadata: partialMetadata,
+      routeSummaries: mergedRouteSummaries,
+      responsePreview: truncateForLog(JSON.stringify(responseSummary)),
+    });
   } catch (error) {
+    if (
+      error instanceof FinalRouteOptimizerCreationError &&
+      (error.code === "ROUTE_OPTIMIZER_PARTIAL_CREATED" ||
+        error.code === "ROUTE_OPTIMIZER_CREATE_FAILED")
+    ) {
+      throw error;
+    }
+
+    if (error instanceof FinalRoutePayloadValidationError) {
+      await handlePayloadValidationError({
+        run,
+        candidate,
+        selectedCandidateId,
+        createdBy: input.createdBy,
+        planningSessionId,
+        planningSessionSource,
+        systemRecommendedCandidateId,
+        didDonaldOverrideRecommendation,
+        error,
+      });
+    }
+
+    if (error instanceof FinalRouteCreatePayloadError) {
+      throw new FinalRouteOptimizerCreationError(error.message, {
+        code: "ROUTE_OPTIMIZER_VALIDATION_ERROR",
+      });
+    }
+
     const metadata = buildFailureMetadata({
       run,
       candidate,
@@ -495,8 +900,11 @@ export async function createFinalRouteRunFromApprovedPlan(
       createdBy: input.createdBy,
       error,
       payload,
+      planningSessionId,
+      planningSessionSource,
     });
     await saveFinalRouteOptimizerFailure(run.id, {
+      routeOptimizerPlanningSessionId: planningSessionId,
       finalRouteOptimizerMetadata: metadata,
     });
     throw new FinalRouteOptimizerCreationError(

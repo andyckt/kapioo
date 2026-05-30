@@ -6,6 +6,7 @@ import {
   type CustomerConstraintsMap,
 } from "@/lib/agents/delivery/candidate-plans/build-candidate-run-preview-payload";
 import { buildSyntheticMeetupStop } from "@/lib/agents/delivery/candidate-plans/build-synthetic-meetup-stop";
+import { resolveOperationalMeetupContactPhone } from "@/lib/agents/delivery/final-route-run/resolve-meetup-contact-phone";
 import { extractMeetupEtaFromPreview } from "@/lib/agents/delivery/candidate-plans/extract-meetup-eta";
 import { selectMeetupPoint, type MeetupSelectionResult } from "@/lib/agents/delivery/candidate-plans/select-meetup-point";
 import { findBackupRun, findPrimaryReceiverRun, findProviderRun } from "@/lib/agents/delivery/candidate-plans/find-run-by-slot";
@@ -252,6 +253,9 @@ export async function previewHandoffRunChain(input: {
   let syntheticMeetupStop = buildSyntheticMeetupStop({
     profile: input.profile,
     selection: input.selection,
+    deliveryDate: input.deliveryDate,
+    runSlot: input.runA.runSlot,
+    contactPhone: resolveOperationalMeetupContactPhone({ profile: input.profile }),
   });
 
   if (input.overrides?.syntheticMeetupFixedPosition !== undefined) {

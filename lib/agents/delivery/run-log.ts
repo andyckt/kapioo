@@ -18,6 +18,7 @@ import {
   type DeliveryAgentRunReviewPatch,
   type RecordDonaldReviewInput,
   type SaveFinalRouteOptimizerFailureInput,
+  type SaveFinalRouteOptimizerPartialResultInput,
   type SaveFinalRouteOptimizerResultInput,
 } from "@/lib/agents/delivery/run-log-types";
 
@@ -188,16 +189,37 @@ export async function saveFinalRouteOptimizerResult(
   });
 }
 
+export async function saveFinalRouteOptimizerPartialResult(
+  id: string | mongoose.Types.ObjectId,
+  input: SaveFinalRouteOptimizerPartialResultInput
+): Promise<IDeliveryAgentRun> {
+  await connectToDatabase();
+
+  return updateRunById(id, {
+    $set: {
+      routeOptimizerPlanningSessionId: input.routeOptimizerPlanningSessionId.trim(),
+      routeOptimizerRuns: input.routeOptimizerRuns,
+      finalRouteOptimizerMetadata: input.finalRouteOptimizerMetadata,
+    },
+  });
+}
+
 export async function saveFinalRouteOptimizerFailure(
   id: string | mongoose.Types.ObjectId,
   input: SaveFinalRouteOptimizerFailureInput
 ): Promise<IDeliveryAgentRun> {
   await connectToDatabase();
 
+  const update: Record<string, unknown> = {
+    finalRouteOptimizerMetadata: input.finalRouteOptimizerMetadata,
+  };
+
+  if (input.routeOptimizerPlanningSessionId?.trim()) {
+    update.routeOptimizerPlanningSessionId = input.routeOptimizerPlanningSessionId.trim();
+  }
+
   return updateRunById(id, {
-    $set: {
-      finalRouteOptimizerMetadata: input.finalRouteOptimizerMetadata,
-    },
+    $set: update,
   });
 }
 

@@ -104,6 +104,8 @@ export function DeliveryAgentReviewPanel({
   const hasFeedback = feedbackText.trim().length > 0 || feedbackTags.length > 0;
   const finalRouteMetadata = savedReview?.finalRouteOptimizerMetadata;
   const finalRouteCreated = finalRouteMetadata?.finalRouteOptimizerStatus === "created";
+  const finalRoutePartial =
+    finalRouteMetadata?.finalRouteOptimizerStatus === "partial_created";
   const canCreateFinalRoute = savedReview?.reviewStatus === "approved";
 
   const submitReview = async (mode: ReviewSubmitMode) => {
@@ -226,7 +228,30 @@ export function DeliveryAgentReviewPanel({
         success?: boolean;
         data?: DeliveryAgentCreateFinalRouteRunResponse;
         error?: string;
+        errorCode?: string;
+        finalRouteOptimizerMetadata?: DeliveryAgentCreateFinalRouteRunResponse["finalRouteOptimizerMetadata"];
+        routeSummaries?: DeliveryAgentCreateFinalRouteRunResponse["routeSummaries"];
       };
+
+      if (
+        !response.ok &&
+        payload.errorCode === "ROUTE_OPTIMIZER_PARTIAL_CREATED" &&
+        payload.finalRouteOptimizerMetadata
+      ) {
+        setFinalRouteMessage(payload.error ?? payload.finalRouteOptimizerMetadata.creationError?.message);
+        onReviewSaved({
+          ...savedReview,
+          finalRouteOptimizerMetadata: payload.finalRouteOptimizerMetadata,
+        });
+        toast({
+          title: "Partial final route creation",
+          description:
+            payload.error ??
+            "Some final Route Optimizer runs were created. Retry missing final route runs.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (!response.ok || !payload.success || !payload.data) {
         throw new Error(payload.error || "Failed to create final Route Optimizer run");
@@ -477,6 +502,14 @@ export function DeliveryAgentReviewPanel({
             <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
               Final Route Optimizer Run Created.
             </p>
+          ) : finalRoutePartial ? (
+            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <p className="font-medium">Partial final Route Optimizer run creation</p>
+              <p>
+                {finalRouteMetadata?.creationError?.message ??
+                  "Some final Route Optimizer runs were created. Retry missing final route runs."}
+              </p>
+            </div>
           ) : finalRouteMetadata?.finalRouteOptimizerStatus === "failed" ? (
             <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {finalRouteMetadata.creationError?.message ??
@@ -485,30 +518,61 @@ export function DeliveryAgentReviewPanel({
           ) : null}
 
           {(finalRouteMetadata?.routeSummaries?.length ?? 0) > 0 && (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {finalRouteMetadata?.routeSummaries?.map((summary) => (
-                <div key={summary.runSlot} className="rounded border p-3 text-sm">
-                  <p className="font-medium">
-                    Run {summary.runSlot} — {summary.driverName}
-                  </p>
-                  <p className="text-muted-foreground">{summary.stopCount} stop(s)</p>
-                  {summary.estimatedFinishTime && (
-                    <p className="text-muted-foreground">
-                      Finish: {summary.estimatedFinishTime}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Created runs</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {finalRouteMetadata?.routeSummaries?.map((summary) => (
+                  <div key={summary.runSlot} className="rounded border border-green-200 bg-green-50/50 p-3 text-sm">
+                    <p className="font-medium">
+                      {summary.driverName}
                     </p>
-                  )}
-                  {summary.detailsLink && (
-                    <a
-                      href={summary.detailsLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline"
-                    >
-                      Open Route Optimizer details
-                    </a>
-                  )}
-                </div>
-              ))}
+                    <p className="text-muted-foreground">{summary.stopCount} stop(s)</p>
+                    {summary.estimatedFinishTime && (
+                      <p className="text-muted-foreground">
+                        Finish: {summary.estimatedFinishTime}
+                      </p>
+                    )}
+                    {summary.detailsLink && (
+                      <a
+                        href={summary.detailsLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline"
+                      >
+                        Open Route Optimizer details
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(finalRouteMetadata?.failedRouteSummaries?.length ?? 0) > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Failed or missing runs</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {finalRouteMetadata?.failedRouteSummaries?.map((summary) => (
+                  <div key={summary.runSlot} className="rounded border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                    <p className="font-medium">{summary.driverName}</p>
+                    <p className="text-muted-foreground">{summary.stopCount} stop(s)</p>
+                    {summary.errorMessage && (
+                      <p className="text-destructive">{summary.errorMessage}</p>
+                    )}
+                    {summary.field && (
+                      <p className="text-muted-foreground">
+                        Missing field: {summary.field}
+                        {summary.customerIndex !== undefined
+                          ? ` (customer ${summary.customerIndex + 1})`
+                          : ""}
+                      </p>
+                    )}
+                    {summary.orderId && (
+                      <p className="text-muted-foreground">Order: {summary.orderId}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -522,9 +586,11 @@ export function DeliveryAgentReviewPanel({
               className="w-fit"
             >
               {finalRouteLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {finalRouteMetadata?.finalRouteOptimizerStatus === "failed"
-                ? "Retry Final Route Optimizer Run"
-                : "Create Final Route Optimizer Run"}
+              {finalRoutePartial
+                ? "Retry Missing Final Route Runs"
+                : finalRouteMetadata?.finalRouteOptimizerStatus === "failed"
+                  ? "Retry Final Route Optimizer Run"
+                  : "Create Final Route Optimizer Run"}
             </Button>
           )}
         </div>

@@ -62,7 +62,7 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
     providerRunSlot: "A",
     receiverRunSlots: ["B"],
     futureMeetupMode: "synthetic_handoff_stop",
-    syntheticMeetupStopName: "Today's Meet up point",
+    syntheticMeetupStopName: "Meet-up / Handoff Point",
     syntheticStopType: "handoff",
     serviceTimeMinutes: 5,
     receiverStartTimeSource: "provider_meetup_eta",

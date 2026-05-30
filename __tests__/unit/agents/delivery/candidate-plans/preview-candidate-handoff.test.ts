@@ -119,7 +119,7 @@ function buildDtRouteWithMeetup() {
           order_ids: ["DD-90000001"],
         },
         {
-          customer_name: "Today's Meet up point",
+          customer_name: "Meet-up / Handoff Point",
           customer_address: "4000 Yonge St, North York M2N 5N8",
           duration_from_previous: 10,
           service_time_minutes: 5,
@@ -147,6 +147,11 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-handoff", () => 
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
+    process.env.MEETUP_CONTACT_PHONE = "416-555-0500";
+  });
+
+  afterEach(() => {
+    delete process.env.MEETUP_CONTACT_PHONE;
   });
 
   it("adds synthetic meet-up stop to DT payload and uses meet-up ETA for Marco start", async () => {
@@ -187,12 +192,16 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-handoff", () => 
     );
 
     expect(syntheticStop).toMatchObject({
-      name: "Today's Meet up point",
+      name: "Meet-up / Handoff Point",
+      phone: "416-555-0500",
       is_synthetic: true,
       stop_type: "handoff",
       service_time_minutes: 5,
       fixed_stop_position: 1,
+      order_ids: ["kapioo-handoff-meetup:2026-06-09:A"],
+      notes: "Operational handoff point only. Not a customer delivery.",
     });
+    expect(syntheticStop.name).not.toContain("Customer");
     expect(marcoPayload.run.start_location).toBe("4000 Yonge St, North York M2N 5N8");
     expect(marcoPayload.run.start_time).toMatch(/^\d{2}:\d{2}$/);
     expect(result.handoffPlan.selectedMeetup?.syntheticHandoffStopUsed).toBe(true);

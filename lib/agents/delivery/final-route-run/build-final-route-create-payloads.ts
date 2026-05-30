@@ -1,7 +1,13 @@
 import { applyCustomerConstraints } from "@/lib/agents/delivery/candidate-plans/apply-customer-constraints";
+import type { CustomerConstraintsMap } from "@/lib/agents/delivery/candidate-plans/apply-customer-constraints";
 import { buildSyntheticMeetupStop } from "@/lib/agents/delivery/candidate-plans/build-synthetic-meetup-stop";
+import { isSyntheticMeetupOrderId } from "@/lib/agents/delivery/candidate-plans/synthetic-meetup-stop";
 import { rebuildMeetupSelectionFromSelectedMeetup } from "@/lib/agents/delivery/candidate-plans/rank-meetup-options";
 import { buildConstraintsFromRepairActions } from "@/lib/agents/delivery/final-route-run/build-constraints-from-repair-actions";
+import { buildFinalRouteEndpointConstraints } from "@/lib/agents/delivery/final-route-run/apply-final-route-endpoint-constraints";
+import { FinalRouteCreatePayloadError } from "@/lib/agents/delivery/final-route-run/errors";
+import { resolveOperationalMeetupContactPhone } from "@/lib/agents/delivery/final-route-run/resolve-meetup-contact-phone";
+import { validateFinalRouteRunPayload } from "@/lib/agents/delivery/final-route-run/validate-final-route-run-payload";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
@@ -25,26 +31,33 @@ export type FinalRouteCreatePayloadContext = {
   routingStopByOrderId: Map<string, RoutingStop>;
 };
 
-export class FinalRouteCreatePayloadError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "FinalRouteCreatePayloadError";
-  }
-}
+export { FinalRouteCreatePayloadError } from "@/lib/agents/delivery/final-route-run/errors";
 
 function collectRunOrderIds(run: DeliveryAgentCandidateRunPreview): string[] {
   const seen = new Set<string>();
   for (const stop of run.optimizedStops) {
     for (const orderId of stop.orderIds ?? []) {
-      if (orderId.trim()) {
-        seen.add(orderId);
+      const trimmed = orderId.trim();
+      if (trimmed && !isSyntheticMeetupOrderId(trimmed)) {
+        seen.add(trimmed);
       }
     }
   }
   return [...seen];
 }
 
+function mergeConstraintMaps(...maps: CustomerConstraintsMap[]): CustomerConstraintsMap {
+  const merged: CustomerConstraintsMap = new Map();
+  for (const map of maps) {
+    for (const [orderId, constraint] of map.entries()) {
+      merged.set(orderId, { ...merged.get(orderId), ...constraint });
+    }
+  }
+  return merged;
+}
+
 function buildCustomers(input: {
+  candidate: DeliveryAgentCandidatePlanPreview;
   run: DeliveryAgentCandidateRunPreview;
   orderIds: string[];
   routingStopByOrderId: Map<string, RoutingStop>;
@@ -57,12 +70,30 @@ function buildCustomers(input: {
         `Missing routing stop for order ${orderId} in run ${input.run.runSlot}.`
       );
     }
-    return routingStop.routeOptimizer;
+    if (!routingStop.routeOptimizer.address?.trim()) {
+      throw new FinalRouteCreatePayloadError(
+        `Missing customer address for order ${orderId} in run ${input.run.driverName}.`
+      );
+    }
+    return {
+      ...routingStop.routeOptimizer,
+      phone: routingStop.routeOptimizer.phone?.trim() || routingStop.customerPhone.trim(),
+      name: routingStop.routeOptimizer.name?.trim() || routingStop.customerName.trim(),
+      address: routingStop.routeOptimizer.address?.trim() || routingStop.formattedAddress.trim(),
+    };
   });
 
   const constrained = applyCustomerConstraints(
     customers,
-    buildConstraintsFromRepairActions(input.run.repairActionsApplied)
+    mergeConstraintMaps(
+      buildConstraintsFromRepairActions(input.run.repairActionsApplied),
+      buildFinalRouteEndpointConstraints({
+        candidate: input.candidate,
+        run: input.run,
+        orderIds: input.orderIds,
+        routingStopByOrderId: input.routingStopByOrderId,
+      })
+    )
   );
 
   if (input.syntheticMeetupStop) {
@@ -114,21 +145,30 @@ function buildRunPayload(input: {
   const isProviderRun = input.run.runSlot === providerRunSlot;
   const isReceiverRun = input.run.runSlot === receiverRunSlot;
 
+  const stopBeforeMeetupOrderId =
+    handoffPlan.selectedMeetup?.stopBeforeMeetupOrderId &&
+    orderIds.includes(handoffPlan.selectedMeetup.stopBeforeMeetupOrderId)
+      ? handoffPlan.selectedMeetup.stopBeforeMeetupOrderId
+      : undefined;
+
   const syntheticMeetupStop =
     handoffActive && isProviderRun && handoffPlan.selectedMeetup
       ? buildSyntheticMeetupStop({
           profile: input.context.profile,
           selection: rebuildMeetupSelectionFromSelectedMeetup(handoffPlan.selectedMeetup),
+          deliveryDate: input.context.deliveryDate,
+          runSlot: input.run.runSlot,
+          contactPhone: resolveOperationalMeetupContactPhone({
+            profile: input.context.profile,
+          }),
         })
       : undefined;
 
   const orderedOrderIds =
-    syntheticMeetupStop && handoffPlan.selectedMeetup?.stopBeforeMeetupOrderId
+    syntheticMeetupStop && stopBeforeMeetupOrderId
       ? [
-          handoffPlan.selectedMeetup.stopBeforeMeetupOrderId,
-          ...orderIds.filter(
-            (orderId) => orderId !== handoffPlan.selectedMeetup?.stopBeforeMeetupOrderId
-          ),
+          stopBeforeMeetupOrderId,
+          ...orderIds.filter((orderId) => orderId !== stopBeforeMeetupOrderId),
         ]
       : orderIds;
 
@@ -141,7 +181,7 @@ function buildRunPayload(input: {
       ? handoffPlan.receiverStartTime
       : input.context.profile.timeRules.normalKitchenStartTime;
 
-  return {
+  const request = {
     planning_session_id: input.context.planningSessionId,
     idempotency_key: buildIdempotencyKey({
       ...input.context,
@@ -160,12 +200,20 @@ function buildRunPayload(input: {
       travel_mode: "driving",
     },
     customers: buildCustomers({
+      candidate: input.candidate,
       run: input.run,
       orderIds: orderedOrderIds,
       routingStopByOrderId: input.context.routingStopByOrderId,
       syntheticMeetupStop,
     }),
   };
+
+  validateFinalRouteRunPayload({
+    request,
+    runSlot: input.run.runSlot,
+  });
+
+  return request;
 }
 
 export function buildFinalRouteCreatePayloads(input: {
@@ -188,5 +236,18 @@ export function buildFinalRouteCreatePayloads(input: {
     );
   }
 
-  return { runs };
+  const planningSessionId = input.context.planningSessionId.trim();
+  if (!planningSessionId) {
+    throw new FinalRouteCreatePayloadError(
+      "Cannot create final Route Optimizer run because planning_session_id is missing."
+    );
+  }
+
+  return {
+    planning_session_id: planningSessionId,
+    runs: runs.map((run) => ({
+      ...run,
+      planning_session_id: planningSessionId,
+    })),
+  };
 }

@@ -13,7 +13,13 @@ export { expandFullCandidateVariants } from "@/lib/agents/delivery/candidate-pla
 export { rankMeetupOptions } from "@/lib/agents/delivery/candidate-plans/rank-meetup-options";
 export { selectMeetupPoint } from "@/lib/agents/delivery/candidate-plans/select-meetup-point";
 export { scoreMeetupCandidate } from "@/lib/agents/delivery/candidate-plans/score-meetup-candidate";
-export { buildSyntheticMeetupStop } from "@/lib/agents/delivery/candidate-plans/build-synthetic-meetup-stop";
+export {
+  SYNTHETIC_MEETUP_NOTES,
+  SYNTHETIC_MEETUP_STOP_NAME,
+  buildSyntheticMeetupOrderId,
+  buildSyntheticMeetupStop,
+  isSyntheticMeetupOrderId,
+} from "@/lib/agents/delivery/candidate-plans/synthetic-meetup-stop";
 export { extractMeetupEtaFromPreview } from "@/lib/agents/delivery/candidate-plans/extract-meetup-eta";
 export { toPlanningStop, toPlanningStops } from "@/lib/agents/delivery/candidate-plans/classify-stop-for-planning";
 export { splitNorthYorkStops, buildStopAssignment } from "@/lib/agents/delivery/candidate-plans/split-north-york";

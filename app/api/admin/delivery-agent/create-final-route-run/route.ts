@@ -76,7 +76,20 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof FinalRouteOptimizerCreationError) {
-      return errorJson(error.message, 502, {
+      if (error.code === "ROUTE_OPTIMIZER_PARTIAL_CREATED") {
+        return errorJson(error.message, 502, {
+          errorCode: error.code,
+          details: error.downstreamBodyPreview,
+          extra: {
+            finalRouteOptimizerMetadata: error.finalRouteOptimizerMetadata,
+            routeSummaries: error.routeSummaries,
+            idempotentReplay: false,
+          },
+        });
+      }
+
+      const status = error.code === "ROUTE_OPTIMIZER_VALIDATION_ERROR" ? 422 : 502;
+      return errorJson(error.message, status, {
         errorCode: error.code,
         details: error.downstreamBodyPreview,
         extra: {

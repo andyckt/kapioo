@@ -173,15 +173,36 @@ export type DeliveryAgentFinalRouteSummary = {
   driverLink?: string;
 };
 
+export type DeliveryAgentFinalRouteRunFailure = {
+  runSlot: string;
+  driverName: string;
+  stopCount: number;
+  externalId?: string;
+  idempotencyKey?: string;
+  orderId?: string;
+  customerName?: string;
+  address?: string;
+  customerIndex?: number;
+  field?: string;
+  errorMessage?: string;
+  errorCode?: string;
+};
+
 export type DeliveryAgentFinalRouteOptimizerMetadata = {
-  finalRouteOptimizerStatus: "pending" | "created" | "failed";
+  finalRouteOptimizerStatus: "pending" | "created" | "partial_created" | "failed";
   finalRouteOptimizerCreatedAt?: string;
   finalRouteOptimizerCreatedBy?: string;
   systemRecommendedCandidateId: string;
   selectedCandidateId: string;
   didDonaldOverrideRecommendation: boolean;
+  planningSessionId?: string;
+  planningSessionSource?: string;
+  requestedRunCount?: number;
+  succeededRunCount?: number;
+  failedRunCount?: number;
   finalRouteOptimizerRunIds?: string[];
   routeSummaries?: DeliveryAgentFinalRouteSummary[];
+  failedRouteSummaries?: DeliveryAgentFinalRouteRunFailure[];
   creationError?: {
     code: string;
     message: string;
@@ -245,7 +266,14 @@ export type SaveFinalRouteOptimizerResultInput = {
   finalRouteOptimizerMetadata: DeliveryAgentFinalRouteOptimizerMetadata;
 };
 
+export type SaveFinalRouteOptimizerPartialResultInput = {
+  routeOptimizerPlanningSessionId: string;
+  routeOptimizerRuns: DeliveryAgentRouteOptimizerRun[];
+  finalRouteOptimizerMetadata: DeliveryAgentFinalRouteOptimizerMetadata;
+};
+
 export type SaveFinalRouteOptimizerFailureInput = {
+  routeOptimizerPlanningSessionId?: string;
   finalRouteOptimizerMetadata: DeliveryAgentFinalRouteOptimizerMetadata;
 };
 
