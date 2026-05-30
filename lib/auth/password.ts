@@ -6,6 +6,8 @@ import {
   PASSWORD_PBKDF2_ITERATIONS,
 } from "@/lib/auth/constants";
 
+export { LEGACY_PASSWORD_PBKDF2_ITERATIONS, PASSWORD_PBKDF2_ITERATIONS };
+
 const pbkdf2Async = promisify(crypto.pbkdf2);
 
 export function createPasswordSalt(): string {
@@ -27,7 +29,28 @@ export async function verifyPassword(
   storedHash: string,
   iterations?: number | null
 ): Promise<boolean> {
-  const effectiveIterations = Number(iterations || LEGACY_PASSWORD_PBKDF2_ITERATIONS);
-  const hash = await hashPassword(candidatePassword, salt, effectiveIterations);
-  return storedHash === hash;
+  const storedIterations =
+    iterations === undefined || iterations === null ? null : Number(iterations);
+
+  if (storedIterations && Number.isFinite(storedIterations)) {
+    const hash = await hashPassword(candidatePassword, salt, storedIterations);
+    return storedHash === hash;
+  }
+
+  // Missing passwordIterations (signup bug): hash was 310k but compare used 1k.
+  const modernHash = await hashPassword(
+    candidatePassword,
+    salt,
+    PASSWORD_PBKDF2_ITERATIONS
+  );
+  if (storedHash === modernHash) {
+    return true;
+  }
+
+  const legacyHash = await hashPassword(
+    candidatePassword,
+    salt,
+    LEGACY_PASSWORD_PBKDF2_ITERATIONS
+  );
+  return storedHash === legacyHash;
 }
