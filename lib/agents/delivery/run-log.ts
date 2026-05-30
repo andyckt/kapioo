@@ -15,7 +15,10 @@ import {
   type DeliveryAgentRouteOptimizerRun,
   type DeliveryAgentRunFailureInput,
   type DeliveryAgentRunReadyForReviewSummary,
+  type DeliveryAgentRunReviewPatch,
   type RecordDonaldReviewInput,
+  type SaveFinalRouteOptimizerFailureInput,
+  type SaveFinalRouteOptimizerResultInput,
 } from "@/lib/agents/delivery/run-log-types";
 
 const DUPLICATE_KEY_PREFIX = "daily-delivery-agent";
@@ -75,6 +78,13 @@ export async function findDeliveryAgentRunByDuplicateKey(
 ): Promise<IDeliveryAgentRun | null> {
   await connectToDatabase();
   return DeliveryAgentRun.findOne({ duplicatePreventionKey: key.trim() });
+}
+
+export async function findDeliveryAgentRunById(
+  id: string | mongoose.Types.ObjectId
+): Promise<IDeliveryAgentRun | null> {
+  await connectToDatabase();
+  return DeliveryAgentRun.findById(id);
 }
 
 function resolveRunId(id: string | mongoose.Types.ObjectId): string {
@@ -162,6 +172,35 @@ export async function attachRouteOptimizerRuns(
   return updateRunById(id, update);
 }
 
+export async function saveFinalRouteOptimizerResult(
+  id: string | mongoose.Types.ObjectId,
+  input: SaveFinalRouteOptimizerResultInput
+): Promise<IDeliveryAgentRun> {
+  await connectToDatabase();
+
+  return updateRunById(id, {
+    $set: {
+      status: "created",
+      routeOptimizerPlanningSessionId: input.routeOptimizerPlanningSessionId.trim(),
+      routeOptimizerRuns: input.routeOptimizerRuns,
+      finalRouteOptimizerMetadata: input.finalRouteOptimizerMetadata,
+    },
+  });
+}
+
+export async function saveFinalRouteOptimizerFailure(
+  id: string | mongoose.Types.ObjectId,
+  input: SaveFinalRouteOptimizerFailureInput
+): Promise<IDeliveryAgentRun> {
+  await connectToDatabase();
+
+  return updateRunById(id, {
+    $set: {
+      finalRouteOptimizerMetadata: input.finalRouteOptimizerMetadata,
+    },
+  });
+}
+
 export async function recordDonaldReview(
   id: string | mongoose.Types.ObjectId,
   review: RecordDonaldReviewInput
@@ -205,4 +244,38 @@ export async function attachLearningArtifacts(
 ): Promise<IDeliveryAgentRun> {
   await connectToDatabase();
   return updateRunById(id, { $set: { learningArtifacts: artifacts } });
+}
+
+export async function updateDeliveryAgentRunForReview(
+  id: string | mongoose.Types.ObjectId,
+  patch: DeliveryAgentRunReviewPatch
+): Promise<IDeliveryAgentRun> {
+  await connectToDatabase();
+
+  const update: Record<string, unknown> = {};
+  if (patch.profileVersion !== undefined) {
+    update.profileVersion = patch.profileVersion.trim();
+  }
+  if (patch.planningSessionId !== undefined) {
+    update.planningSessionId = patch.planningSessionId.trim();
+  }
+  if (patch.selectedPlanSummary !== undefined) {
+    update.selectedPlanSummary = patch.selectedPlanSummary;
+  }
+  if (patch.candidateCount !== undefined) {
+    update.candidateCount = patch.candidateCount;
+  }
+  if (patch.previewCount !== undefined) {
+    update.previewCount = patch.previewCount;
+  }
+
+  if (Object.keys(update).length === 0) {
+    const existing = await DeliveryAgentRun.findById(id);
+    if (!existing) {
+      throw new DeliveryAgentRunNotFoundError(resolveRunId(id));
+    }
+    return existing;
+  }
+
+  return updateRunById(id, { $set: update });
 }

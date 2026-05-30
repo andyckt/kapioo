@@ -19,11 +19,16 @@ import { useToast } from "@/hooks/use-toast"
 import { formatDateTime } from "@/lib/format"
 import type {
   DeliveryAgentGenerateCandidatePlansResponse,
+  DeliveryAgentGetReviewPlanResponse,
   DeliveryAgentPlanningProfileSummary,
   DeliveryAgentPreviewCandidatePlansResponse,
   DeliveryAgentPreviewResponse,
   DeliveryAgentSimpleRoutePreviewResponse,
 } from "@/lib/contracts/delivery-agent"
+import {
+  DeliveryAgentReviewPanel,
+  DeliveryAgentSelectCandidateButton,
+} from "@/features/admin-delivery-agent/delivery-agent-review-panel"
 
 function SummaryCard({
   label,
@@ -96,6 +101,10 @@ export function AdminDeliveryAgentTab() {
     useState<DeliveryAgentGenerateCandidatePlansResponse | null>(null)
   const [candidateRoutePreview, setCandidateRoutePreview] =
     useState<DeliveryAgentPreviewCandidatePlansResponse | null>(null)
+  const [savedReview, setSavedReview] =
+    useState<DeliveryAgentGetReviewPlanResponse["review"]>(null)
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>("")
+  const reviewAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     profileAbortRef.current?.abort()
@@ -167,6 +176,8 @@ export function AdminDeliveryAgentTab() {
     setRoutePreview(null)
     setCandidatePlans(null)
     setCandidateRoutePreview(null)
+    setSavedReview(null)
+    setSelectedCandidateId("")
     setLoading(true)
 
     void (async () => {
@@ -272,9 +283,12 @@ export function AdminDeliveryAgentTab() {
 
     candidatePlansAbortRef.current?.abort()
     candidateRoutePreviewAbortRef.current?.abort()
+    reviewAbortRef.current?.abort()
     const controller = new AbortController()
     candidatePlansAbortRef.current = controller
     setCandidateRoutePreview(null)
+    setSavedReview(null)
+    setSelectedCandidateId("")
     setCandidatePlansLoading(true)
 
     void (async () => {
@@ -321,6 +335,48 @@ export function AdminDeliveryAgentTab() {
     })()
   }
 
+  const loadSavedReview = (input: {
+    deliveryDate: string
+    profileId: string
+    recommendedCandidateId: string | null
+  }) => {
+    reviewAbortRef.current?.abort()
+    const controller = new AbortController()
+    reviewAbortRef.current = controller
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/admin/delivery-agent/review-plan?deliveryDate=${encodeURIComponent(input.deliveryDate)}&profileId=${encodeURIComponent(input.profileId)}`,
+          { signal: controller.signal }
+        )
+
+        const payload = (await response.json()) as {
+          success?: boolean
+          data?: DeliveryAgentGetReviewPlanResponse
+          error?: string
+        }
+
+        if (controller.signal.aborted) {
+          return
+        }
+
+        if (!response.ok || !payload.success) {
+          return
+        }
+
+        setSavedReview(payload.data?.review ?? null)
+        setSelectedCandidateId(
+          payload.data?.review?.selectedCandidateId ?? input.recommendedCandidateId ?? ""
+        )
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return
+        }
+      }
+    })()
+  }
+
   const handlePreviewCandidateRoutes = () => {
     const trimmedDate = deliveryDate.trim()
     if (!trimmedDate || !candidatePlans) {
@@ -356,6 +412,12 @@ export function AdminDeliveryAgentTab() {
         }
 
         setCandidateRoutePreview(payload.data)
+        setSelectedCandidateId(payload.data.recommendedCandidateId ?? "")
+        loadSavedReview({
+          deliveryDate: payload.data.deliveryDate,
+          profileId: payload.data.profileId,
+          recommendedCandidateId: payload.data.recommendedCandidateId,
+        })
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return
@@ -469,6 +531,8 @@ export function AdminDeliveryAgentTab() {
                   setRoutePreview(null)
                   setCandidatePlans(null)
                   setCandidateRoutePreview(null)
+                  setSavedReview(null)
+                  setSelectedCandidateId("")
                 }}
               />
             </div>
@@ -832,10 +896,20 @@ export function AdminDeliveryAgentTab() {
                       <p className="text-xs text-muted-foreground">
                         This is a recommendation only. Final run creation will be added later.
                       </p>
-                      <Button type="button" variant="outline" disabled className="w-fit">
-                        Donald approval and final run creation will be added next.
-                      </Button>
                     </div>
+                  )}
+
+                  {candidateRoutePreview?.recommendedCandidateId && (
+                    <DeliveryAgentReviewPanel
+                      candidateRoutePreview={candidateRoutePreview}
+                      orderPreview={preview}
+                      savedReview={savedReview}
+                      selectedCandidateId={
+                        selectedCandidateId || candidateRoutePreview.recommendedCandidateId
+                      }
+                      onSelectedCandidateIdChange={setSelectedCandidateId}
+                      onReviewSaved={setSavedReview}
+                    />
                   )}
 
                   {candidateRoutePreview?.expansionWarnings &&
@@ -866,11 +940,9 @@ export function AdminDeliveryAgentTab() {
                       candidateRoutePreview?.recommendedCandidateId ===
                       (routePreviewCandidate?.candidateId ?? candidate.candidateId)
 
-                    return (
-                    <div
-                      key={routePreviewCandidate?.candidateId ?? candidate.candidateId}
-                      className={`space-y-3 rounded-md border p-4 ${isRecommended ? "border-primary shadow-sm" : ""}`}
-                    >
+                    const cardKey = routePreviewCandidate?.candidateId ?? candidate.candidateId
+                    const cardBody = (
+                      <>
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -1346,7 +1418,50 @@ export function AdminDeliveryAgentTab() {
                           )}
                         </div>
                       )}
-                    </div>
+                      </>
+                    )
+
+                    if (!isRecommended && routePreviewCandidate) {
+                      return (
+                        <details
+                          key={cardKey}
+                          className="rounded-md border border-muted/60 bg-muted/10 p-4"
+                        >
+                          <summary className="cursor-pointer list-none space-y-2 marker:content-none">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-medium">{displayName}</p>
+                                <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
+                                  #{routePreviewCandidate.rank}
+                                </span>
+                                <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
+                                  Score {routePreviewCandidate.score}
+                                </span>
+                                <span className="text-xs text-muted-foreground">Alternative candidate</span>
+                              </div>
+                              <DeliveryAgentSelectCandidateButton
+                                candidateId={routePreviewCandidate.candidateId}
+                                candidateName={displayName}
+                                selectedCandidateId={
+                                  selectedCandidateId || candidateRoutePreview?.recommendedCandidateId || ""
+                                }
+                                recommendedCandidateId={candidateRoutePreview?.recommendedCandidateId ?? null}
+                                onSelect={setSelectedCandidateId}
+                              />
+                            </div>
+                          </summary>
+                          <div className="mt-4 space-y-3">{cardBody}</div>
+                        </details>
+                      )
+                    }
+
+                    return (
+                      <div
+                        key={cardKey}
+                        className={`space-y-3 rounded-md border p-4 ${isRecommended ? "border-primary shadow-sm" : ""}`}
+                      >
+                        {cardBody}
+                      </div>
                     )
                   })}
                 </div>

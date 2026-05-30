@@ -450,3 +450,160 @@ export type DeliveryAgentPreviewCandidatePlansResponse = {
   expansionWarnings?: string[];
   notes: string;
 };
+
+const deliveryAgentReviewFeedbackTagSchema = z.enum([
+  "meetup_too_far_for_receiver",
+  "meetup_too_far_for_provider",
+  "meetup_too_late",
+  "wrong_order_split",
+  "provider_route_shape_wrong",
+  "receiver_route_shape_wrong",
+  "wrong_endpoint",
+  "not_enough_deadline_buffer",
+  "self_used_too_much",
+  "self_should_be_used",
+  "too_many_stops_for_receiver",
+  "too_many_stops_for_provider",
+  "route_too_risky",
+  "preferred_another_candidate",
+  "other",
+]);
+
+export const deliveryAgentOrderSnapshotSchema = z.object({
+  orderCount: z.number().int().min(0),
+  validStopCount: z.number().int().min(0),
+  invalidStopCount: z.number().int().min(0),
+  warningCount: z.number().int().min(0),
+  orderIds: z.array(z.string()),
+  invalidOrders: z
+    .array(
+      z.object({
+        orderId: z.string(),
+        mongoId: z.string().optional(),
+        area: z.string().optional(),
+        errors: z.array(
+          z.object({
+            code: z.string(),
+            message: z.string(),
+            field: z.string().optional(),
+          })
+        ),
+      })
+    )
+    .optional(),
+  warnings: z
+    .array(
+      z.object({
+        orderId: z.string(),
+        warnings: z.array(
+          z.object({
+            code: z.string(),
+            message: z.string(),
+            field: z.string().optional(),
+          })
+        ),
+      })
+    )
+    .optional(),
+});
+
+export const deliveryAgentReviewPlanBodySchema = z.object({
+  deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+  profileId: z.string().trim().min(1),
+  profileVersion: z.string().trim().min(1),
+  planningSessionId: z.string().trim().min(1).optional(),
+  reviewStatus: z.enum(["approved", "edited", "rejected"]),
+  feedbackText: z.string().max(4000).optional(),
+  feedbackTags: z.array(deliveryAgentReviewFeedbackTagSchema).optional(),
+  recommendedCandidateId: z.string().trim().min(1),
+  selectedCandidateId: z.string().trim().min(1),
+  didDonaldOverrideRecommendation: z.boolean().optional(),
+  recommendedPlanSummary: z.record(z.string(), z.unknown()).optional(),
+  selectedPlanSummary: z.record(z.string(), z.unknown()).optional(),
+  candidatePreviewSnapshot: z.record(z.string(), z.unknown()).optional(),
+  orderSnapshot: deliveryAgentOrderSnapshotSchema.optional(),
+});
+
+export const deliveryAgentReviewPlanQuerySchema = z.object({
+  deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+  profileId: z.string().trim().min(1),
+});
+
+export type DeliveryAgentReviewPlanBody = z.infer<typeof deliveryAgentReviewPlanBodySchema>;
+export type DeliveryAgentReviewPlanQuery = z.infer<typeof deliveryAgentReviewPlanQuerySchema>;
+
+export type DeliveryAgentReviewPlanResponse = {
+  deliveryAgentRunId: string;
+  reviewStatus: "approved" | "edited" | "rejected";
+  reviewedAt: string;
+  recommendedCandidateId: string;
+  selectedCandidateId: string;
+  didDonaldOverrideRecommendation: boolean;
+  message: string;
+};
+
+export type DeliveryAgentGetReviewPlanResponse = {
+  review: {
+    deliveryAgentRunId: string;
+    deliveryDate: string;
+    profileId: string;
+    profileVersion?: string;
+    planningSessionId?: string;
+    reviewStatus?: "pending" | "approved" | "edited" | "rejected";
+    reviewedAt?: string;
+    reviewedBy?: string;
+    donaldFeedbackText?: string;
+    donaldFeedbackTags?: string[];
+    recommendedCandidateId?: string;
+    selectedCandidateId?: string;
+    didDonaldOverrideRecommendation?: boolean;
+    selectedPlanSummary?: Record<string, unknown>;
+    finalRouteOptimizerMetadata?: DeliveryAgentFinalRouteOptimizerMetadata;
+  } | null;
+};
+
+export const deliveryAgentCreateFinalRouteRunBodySchema = z.object({
+  deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+  profileId: z.string().trim().min(1),
+  deliveryAgentRunId: z.string().trim().min(1).optional(),
+});
+
+export type DeliveryAgentCreateFinalRouteRunBody = z.infer<
+  typeof deliveryAgentCreateFinalRouteRunBodySchema
+>;
+
+export type DeliveryAgentFinalRouteSummary = {
+  runSlot: string;
+  driverName: string;
+  routeName?: string;
+  stopCount: number;
+  estimatedFinishTime?: string;
+  totalDurationMinutes?: number;
+  totalDistanceKm?: number;
+  detailsLink?: string;
+  driverLink?: string;
+};
+
+export type DeliveryAgentFinalRouteOptimizerMetadata = {
+  finalRouteOptimizerStatus: "pending" | "created" | "failed";
+  finalRouteOptimizerCreatedAt?: string;
+  finalRouteOptimizerCreatedBy?: string;
+  systemRecommendedCandidateId: string;
+  selectedCandidateId: string;
+  didDonaldOverrideRecommendation: boolean;
+  finalRouteOptimizerRunIds?: string[];
+  routeSummaries?: DeliveryAgentFinalRouteSummary[];
+  creationError?: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+};
+
+export type DeliveryAgentCreateFinalRouteRunResponse = {
+  deliveryAgentRunId: string;
+  idempotentReplay: boolean;
+  finalRouteOptimizerMetadata: DeliveryAgentFinalRouteOptimizerMetadata;
+  routeSummaries: DeliveryAgentFinalRouteSummary[];
+  message: string;
+};

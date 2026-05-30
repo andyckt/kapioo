@@ -1,6 +1,7 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
 import type {
+  DeliveryAgentFinalRouteOptimizerMetadata,
   DeliveryAgentLearningArtifacts,
   DeliveryAgentLocationArtifacts,
   DeliveryAgentPlanningArtifacts,
@@ -48,6 +49,7 @@ export interface IDeliveryAgentRun extends Omit<Document, "errors"> {
   learningArtifacts?: DeliveryAgentLearningArtifacts;
   routeOptimizerPlanningSessionId?: string;
   routeOptimizerRuns?: DeliveryAgentRouteOptimizerRun[];
+  finalRouteOptimizerMetadata?: DeliveryAgentFinalRouteOptimizerMetadata;
   errors?: DeliveryAgentRunError[];
   notes?: string;
   /** Log schema version — not planning profile version (see profileVersion). */
@@ -248,6 +250,9 @@ const DeliveryAgentRunSchema = new Schema<IDeliveryAgentRun>(
     routeOptimizerRuns: {
       type: [RouteOptimizerRunSchema],
       default: [],
+    },
+    finalRouteOptimizerMetadata: {
+      type: Schema.Types.Mixed,
     },
     errors: {
       type: [RunErrorSchema],

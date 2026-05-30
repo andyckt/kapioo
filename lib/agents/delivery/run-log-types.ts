@@ -87,11 +87,16 @@ export type DeliveryAgentPlanningArtifacts = {
   artifactVersion: typeof PLANNING_ARTIFACTS_VERSION;
   candidatePlansTested?: DeliveryAgentPlanCandidateSummary[];
   selectedPlanSummary?: Record<string, unknown>;
+  systemRecommendedCandidateId?: string;
+  donaldSelectedCandidateId?: string;
+  didDonaldOverrideRecommendation?: boolean;
+  systemRecommendation?: Record<string, unknown>;
   scoreBreakdown?: Record<string, unknown>;
   agentReasoningSummary?: string;
   constraintApplicationLog?: DeliveryAgentConstraintApplication[];
   routeShapeIssuesDetected?: DeliveryAgentRouteShapeIssue[];
   finalAcceptedPlan?: Record<string, unknown>;
+  candidatePreviewSnapshot?: Record<string, unknown>;
 };
 
 export type DeliveryAgentLocationArtifacts = {
@@ -107,6 +112,11 @@ export type DeliveryAgentLocationArtifacts = {
 
 export type DeliveryAgentLearningArtifacts = {
   artifactVersion: typeof LEARNING_ARTIFACTS_VERSION;
+  donaldFeedbackText?: string;
+  donaldFeedbackTags?: string[];
+  systemRecommendedCandidateId?: string;
+  donaldSelectedCandidateId?: string;
+  didDonaldOverrideRecommendation?: boolean;
   historicalComparison?: Record<string, unknown>;
   improvementSuggestions?: Record<string, unknown>[];
   approvedRuleChanges?: Record<string, unknown>[];
@@ -114,6 +124,7 @@ export type DeliveryAgentLearningArtifacts = {
   retryHistory?: Record<string, unknown>[];
   rejectionHistory?: Record<string, unknown>[];
   manualEdits?: Record<string, unknown>[];
+  overrideHistory?: Record<string, unknown>[];
 };
 
 export type DeliveryAgentRunInvalidOrder = {
@@ -148,6 +159,34 @@ export type DeliveryAgentRouteOptimizerRun = {
   startLocation?: DeliveryAgentRouteLocation;
   endLocation?: DeliveryAgentRouteLocation;
   repairActionCount?: number;
+};
+
+export type DeliveryAgentFinalRouteSummary = {
+  runSlot: string;
+  driverName: string;
+  routeName?: string;
+  stopCount: number;
+  estimatedFinishTime?: string;
+  totalDurationMinutes?: number;
+  totalDistanceKm?: number;
+  detailsLink?: string;
+  driverLink?: string;
+};
+
+export type DeliveryAgentFinalRouteOptimizerMetadata = {
+  finalRouteOptimizerStatus: "pending" | "created" | "failed";
+  finalRouteOptimizerCreatedAt?: string;
+  finalRouteOptimizerCreatedBy?: string;
+  systemRecommendedCandidateId: string;
+  selectedCandidateId: string;
+  didDonaldOverrideRecommendation: boolean;
+  finalRouteOptimizerRunIds?: string[];
+  routeSummaries?: DeliveryAgentFinalRouteSummary[];
+  creationError?: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
 };
 
 export type CreateDeliveryAgentRunLogInput = {
@@ -199,6 +238,24 @@ export type RecordDonaldReviewInput = {
 export type AttachPlanningArtifactsInput = DeliveryAgentPlanningArtifacts;
 export type AttachLocationArtifactsInput = DeliveryAgentLocationArtifacts;
 export type AttachLearningArtifactsInput = DeliveryAgentLearningArtifacts;
+
+export type SaveFinalRouteOptimizerResultInput = {
+  routeOptimizerPlanningSessionId: string;
+  routeOptimizerRuns: DeliveryAgentRouteOptimizerRun[];
+  finalRouteOptimizerMetadata: DeliveryAgentFinalRouteOptimizerMetadata;
+};
+
+export type SaveFinalRouteOptimizerFailureInput = {
+  finalRouteOptimizerMetadata: DeliveryAgentFinalRouteOptimizerMetadata;
+};
+
+export type DeliveryAgentRunReviewPatch = {
+  profileVersion?: string;
+  planningSessionId?: string;
+  selectedPlanSummary?: Record<string, unknown>;
+  candidateCount?: number;
+  previewCount?: number;
+};
 
 /** Default log schema version stored in DB field `version`. */
 export const DEFAULT_DELIVERY_AGENT_RUN_VERSION = "m4-v1" as const;
