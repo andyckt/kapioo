@@ -234,6 +234,53 @@ export type DeliveryAgentGenerateCandidatePlansResponse = {
   notes: string;
 };
 
+export type DeliveryAgentRouteShapeIssueType =
+  | "meetup_too_late"
+  | "downtown_before_meetup"
+  | "north_york_after_downtown"
+  | "dt_wrong_endpoint"
+  | "marco_wrong_endpoint";
+
+export type DeliveryAgentRouteShapeIssuePreview = {
+  issueType: DeliveryAgentRouteShapeIssueType;
+  runSlot: string;
+  driverName: string;
+  severity: "info" | "warning" | "blocking";
+  message: string;
+  evidence: Record<string, unknown>;
+};
+
+export type DeliveryAgentRepairActionType =
+  | "apply_fixed_stop_position"
+  | "apply_end_point";
+
+export type DeliveryAgentRepairActionApplied = {
+  actionType: DeliveryAgentRepairActionType;
+  runSlot: string;
+  targetStopName?: string;
+  targetStopAddress?: string;
+  targetOrderIds?: string[];
+  fixedStopPosition?: number;
+  reason: string;
+  before?: string;
+  after?: string;
+};
+
+export type DeliveryAgentCandidateRunRepairStatus =
+  | "not_needed"
+  | "repaired"
+  | "repair_failed";
+
+export type DeliveryAgentCandidateRepairSummary = {
+  repairAttempted: boolean;
+  repairSucceeded: boolean;
+  issuesDetected: DeliveryAgentRouteShapeIssuePreview[];
+  repairActionsApplied: DeliveryAgentRepairActionApplied[];
+  beforeSummary?: DeliveryAgentCandidatePreviewSummary;
+  afterSummary?: DeliveryAgentCandidatePreviewSummary;
+  warnings: string[];
+};
+
 export type DeliveryAgentCandidateRunPreviewStatus =
   | "previewed"
   | "failed"
@@ -259,6 +306,10 @@ export type DeliveryAgentCandidateRunPreview = {
   meetupSequence?: number;
   meetupEta?: string;
   formattedMeetupEta?: string;
+  routeShapeIssues?: DeliveryAgentRouteShapeIssuePreview[];
+  repairActionsApplied?: DeliveryAgentRepairActionApplied[];
+  wasRepreviewedAfterRepair?: boolean;
+  repairStatus?: DeliveryAgentCandidateRunRepairStatus;
 };
 
 export type DeliveryAgentSelectedMeetup = {
@@ -312,6 +363,7 @@ export type DeliveryAgentCandidatePlanPreview = {
   runs: DeliveryAgentCandidateRunPreview[];
   summary: DeliveryAgentCandidatePreviewSummary;
   handoffPlan: DeliveryAgentCandidateHandoffPreviewPlan;
+  candidateRepairSummary: DeliveryAgentCandidateRepairSummary;
   warnings: string[];
   errors: string[];
   assumptions: string[];

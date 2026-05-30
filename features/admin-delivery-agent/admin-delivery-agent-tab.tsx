@@ -924,6 +924,98 @@ export function AdminDeliveryAgentTab() {
                             )}
                           </div>
 
+                          <div className="space-y-2 rounded-md border p-3">
+                            <p className="font-medium">Route repair</p>
+                            {routePreviewCandidate.candidateRepairSummary.repairAttempted ? (
+                              <>
+                                {routePreviewCandidate.candidateRepairSummary.repairAttempted &&
+                                  !routePreviewCandidate.candidateRepairSummary.repairSucceeded && (
+                                  <p className="text-sm text-destructive">
+                                    Repair re-preview failed — showing original preview.
+                                  </p>
+                                )}
+                                {routePreviewCandidate.candidateRepairSummary.issuesDetected
+                                  .length > 0 ? (
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Issues detected</p>
+                                    <ul className="list-disc space-y-1 pl-5 text-sm">
+                                      {routePreviewCandidate.candidateRepairSummary.issuesDetected.map(
+                                        (issue) => (
+                                          <li key={`${issue.issueType}-${issue.runSlot}`}>
+                                            Run {issue.runSlot}: {issue.message}
+                                            <span className="text-muted-foreground">
+                                              {" "}
+                                              ({issue.severity})
+                                            </span>
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">
+                                    No route shape issues detected.
+                                  </p>
+                                )}
+                                {routePreviewCandidate.candidateRepairSummary.repairActionsApplied
+                                  .length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Repairs applied</p>
+                                    <ul className="list-disc space-y-1 pl-5 text-sm">
+                                      {routePreviewCandidate.candidateRepairSummary.repairActionsApplied.map(
+                                        (action, index) => (
+                                          <li key={`${action.actionType}-${action.runSlot}-${index}`}>
+                                            Run {action.runSlot}: {action.reason}
+                                            {action.fixedStopPosition !== undefined
+                                              ? ` (fixed stop #${action.fixedStopPosition})`
+                                              : ""}
+                                            {action.targetStopName
+                                              ? ` — ${action.targetStopName}`
+                                              : ""}
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </div>
+                                )}
+                                {routePreviewCandidate.candidateRepairSummary.beforeSummary
+                                  ?.formattedLatestEstimatedFinishTime &&
+                                  routePreviewCandidate.candidateRepairSummary.afterSummary
+                                    ?.formattedLatestEstimatedFinishTime &&
+                                  routePreviewCandidate.candidateRepairSummary.beforeSummary
+                                    .formattedLatestEstimatedFinishTime !==
+                                    routePreviewCandidate.candidateRepairSummary.afterSummary
+                                      .formattedLatestEstimatedFinishTime && (
+                                    <p className="text-sm text-muted-foreground">
+                                      Latest finish:{" "}
+                                      {
+                                        routePreviewCandidate.candidateRepairSummary.beforeSummary
+                                          .formattedLatestEstimatedFinishTime
+                                      }{" "}
+                                      →{" "}
+                                      {
+                                        routePreviewCandidate.candidateRepairSummary.afterSummary
+                                          .formattedLatestEstimatedFinishTime
+                                      }
+                                    </p>
+                                  )}
+                                {routePreviewCandidate.candidateRepairSummary.repairSucceeded && (
+                                  <p className="text-sm text-green-700">
+                                    Re-previewed successfully after repair.
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                No route shape repair needed.
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              These are still previews only. Final plan selection and run creation
+                              will be added later.
+                            </p>
+                          </div>
+
                           <div className="grid gap-3 sm:grid-cols-3">
                             {routePreviewCandidate.runs.map((run) => (
                               <div
@@ -933,7 +1025,10 @@ export function AdminDeliveryAgentTab() {
                                 <p className="font-medium">
                                   Run {run.runSlot} — {run.driverName}
                                 </p>
-                                <p className="text-xs text-muted-foreground">{run.previewStatus}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {run.previewStatus}
+                                  {run.repairStatus ? ` · repair: ${run.repairStatus}` : ""}
+                                </p>
                                 <p className="mt-2 text-sm">
                                   Finish:{" "}
                                   {run.formattedEstimatedFinishTime ||

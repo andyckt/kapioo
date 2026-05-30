@@ -3,10 +3,11 @@ import {
   buildDtHandoffPreviewPayload,
   buildMarcoHandoffPreviewPayload,
   getCandidateRunPreviewAssumptions,
+  type CustomerConstraintsMap,
 } from "@/lib/agents/delivery/candidate-plans/build-candidate-run-preview-payload";
 import { buildSyntheticMeetupStop } from "@/lib/agents/delivery/candidate-plans/build-synthetic-meetup-stop";
 import { extractMeetupEtaFromPreview } from "@/lib/agents/delivery/candidate-plans/extract-meetup-eta";
-import { selectMeetupPoint } from "@/lib/agents/delivery/candidate-plans/select-meetup-point";
+import { selectMeetupPoint, type MeetupSelectionResult } from "@/lib/agents/delivery/candidate-plans/select-meetup-point";
 import { mapRouteOptimizerPreviewResult } from "@/lib/agents/delivery/map-route-optimizer-preview-result";
 import { formatTorontoLocalTimeForRouteOptimizer } from "@/lib/agents/delivery/route-preview-time";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
@@ -28,6 +29,14 @@ export type CandidateHandoffPreviewResult = {
   handoffPlan: DeliveryAgentCandidateHandoffPreviewPlan;
   assumptions: string[];
 };
+
+export type HandoffRunChainOverrides = {
+  dtCustomerConstraints?: CustomerConstraintsMap;
+  marcoCustomerConstraints?: CustomerConstraintsMap;
+  syntheticMeetupFixedPosition?: 1 | 2;
+};
+
+export type ActiveMeetupSelection = Extract<MeetupSelectionResult, { handoffSkipped: false }>;
 
 function readErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -119,6 +128,7 @@ async function previewKitchenRun(input: {
   kitchenAddress: string;
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
+  customerConstraints?: CustomerConstraintsMap;
 }): Promise<DeliveryAgentCandidateRunPreview> {
   if (input.run.stopCount === 0) {
     return buildSkippedRunPreview(input.run);
@@ -133,6 +143,7 @@ async function previewKitchenRun(input: {
       kitchenAddress: input.kitchenAddress,
       profile: input.profile,
       routingStopByOrderId: input.routingStopByOrderId,
+      customerConstraints: input.customerConstraints,
     });
     const routeResult = await previewRouteOptimizerRun(payload);
 
@@ -176,6 +187,218 @@ function buildSkippedHandoffPlan(input: {
     handoffSkipped: true,
     skipReason: input.skipReason,
   };
+}
+
+export async function previewMarcoHandoffRunOnly(input: {
+  deliveryDate: string;
+  candidate: DeliveryAgentCandidatePlan;
+  runB: DeliveryAgentCandidateRun;
+  profile: DeliveryPlanningProfile;
+  routingStopByOrderId: Map<string, RoutingStop>;
+  meetupAddress: string;
+  meetupStartTime: string;
+  customerConstraints?: CustomerConstraintsMap;
+}): Promise<DeliveryAgentCandidateRunPreview> {
+  try {
+    const marcoPayload = buildMarcoHandoffPreviewPayload({
+      deliveryDate: input.deliveryDate,
+      candidateId: input.candidate.candidateId,
+      run: input.runB,
+      profile: input.profile,
+      routingStopByOrderId: input.routingStopByOrderId,
+      meetupAddress: input.meetupAddress,
+      meetupStartTime: input.meetupStartTime,
+      customerConstraints: input.customerConstraints,
+    });
+    const marcoRouteResult = await previewRouteOptimizerRun(marcoPayload);
+
+    return buildRunPreviewFromResult({
+      run: input.runB,
+      deliveryDate: input.deliveryDate,
+      startTime: input.meetupStartTime,
+      routeResult: marcoRouteResult,
+    });
+  } catch (error) {
+    if (error instanceof RouteOptimizerConfigError) {
+      throw error;
+    }
+
+    return buildFailedRunPreview(input.runB, readErrorMessage(error));
+  }
+}
+
+export async function previewHandoffRunChain(input: {
+  deliveryDate: string;
+  candidate: DeliveryAgentCandidatePlan;
+  runA: DeliveryAgentCandidateRun;
+  runB: DeliveryAgentCandidateRun;
+  runC?: DeliveryAgentCandidateRun;
+  kitchenAddress: string;
+  profile: DeliveryPlanningProfile;
+  routingStopByOrderId: Map<string, RoutingStop>;
+  selection: ActiveMeetupSelection;
+  overrides?: HandoffRunChainOverrides;
+  assumptions?: string[];
+}): Promise<CandidateHandoffPreviewResult> {
+  const runPreviews: DeliveryAgentCandidateRunPreview[] = [];
+  const assumptions = [...(input.assumptions ?? input.candidate.assumptions)];
+
+  let syntheticMeetupStop = buildSyntheticMeetupStop({
+    profile: input.profile,
+    selection: input.selection,
+  });
+
+  if (input.overrides?.syntheticMeetupFixedPosition !== undefined) {
+    syntheticMeetupStop = {
+      ...syntheticMeetupStop,
+      fixed_stop_position: input.overrides.syntheticMeetupFixedPosition,
+    };
+  }
+
+  const dtStartTime = input.profile.timeRules.normalKitchenStartTime;
+  let dtPreview: DeliveryAgentCandidateRunPreview | undefined;
+
+  try {
+    const dtPayload = buildDtHandoffPreviewPayload({
+      deliveryDate: input.deliveryDate,
+      candidateId: input.candidate.candidateId,
+      run: input.runA,
+      kitchenAddress: input.kitchenAddress,
+      profile: input.profile,
+      routingStopByOrderId: input.routingStopByOrderId,
+      syntheticMeetupStop,
+      stopBeforeMeetupOrderId: input.selection.stopBeforeMeetupOrderId,
+      customerConstraints: input.overrides?.dtCustomerConstraints,
+    });
+    const dtRouteResult = await previewRouteOptimizerRun(dtPayload);
+    const meetupExtraction = extractMeetupEtaFromPreview({
+      optimizedStops: mapRouteOptimizerPreviewResult(dtRouteResult, {
+        deliveryDate: input.deliveryDate,
+        startTime: dtStartTime,
+      }).optimizedStops,
+      routeResult: dtRouteResult,
+      meetupName: input.profile.handoffRules.syntheticMeetupStopName,
+      expectedSequence:
+        input.overrides?.syntheticMeetupFixedPosition ?? input.selection.meetupFixedStopPosition,
+    });
+
+    dtPreview = buildRunPreviewFromResult({
+      run: input.runA,
+      deliveryDate: input.deliveryDate,
+      startTime: dtStartTime,
+      routeResult: dtRouteResult,
+      meetupFields: {
+        syntheticMeetupIncluded: true,
+        meetupSequence: meetupExtraction.meetupSequence ?? input.selection.meetupFixedStopPosition,
+        meetupEta: meetupExtraction.meetupEta,
+        formattedMeetupEta: meetupExtraction.meetupEta
+          ? formatDateTime(meetupExtraction.meetupEta)
+          : undefined,
+      },
+    });
+
+    runPreviews.push(dtPreview);
+
+    if (!meetupExtraction.meetupEta) {
+      runPreviews.push(
+        buildFailedRunPreview(
+          input.runB,
+          "DT preview did not return a meet-up ETA for the synthetic handoff stop."
+        )
+      );
+    } else {
+      const receiverStartTime = formatTorontoLocalTimeForRouteOptimizer(meetupExtraction.meetupEta);
+
+      const marcoPreview = await previewMarcoHandoffRunOnly({
+        deliveryDate: input.deliveryDate,
+        candidate: input.candidate,
+        runB: input.runB,
+        profile: input.profile,
+        routingStopByOrderId: input.routingStopByOrderId,
+        meetupAddress: input.selection.meetupAddress,
+        meetupStartTime: receiverStartTime,
+        customerConstraints: input.overrides?.marcoCustomerConstraints,
+      });
+
+      runPreviews.push(marcoPreview);
+
+      if (input.runC) {
+        runPreviews.push(
+          await previewKitchenRun({
+            deliveryDate: input.deliveryDate,
+            candidate: input.candidate,
+            run: input.runC,
+            kitchenAddress: input.kitchenAddress,
+            profile: input.profile,
+            routingStopByOrderId: input.routingStopByOrderId,
+          })
+        );
+      }
+
+      if (marcoPreview.previewStatus === "previewed") {
+        return {
+          runPreviews,
+          handoffPlan: {
+            providerRunSlot: input.profile.handoffRules.providerRunSlot,
+            receiverRunSlot: input.profile.handoffRules.receiverRunSlots[0] ?? "B",
+            selectedMeetup: buildSelectedMeetup(input.selection),
+            meetupEta: meetupExtraction.meetupEta,
+            formattedMeetupEta: formatDateTime(meetupExtraction.meetupEta),
+            receiverStartLocation: input.selection.meetupAddress,
+            receiverStartTime,
+          },
+          assumptions: [...new Set(assumptions.filter(Boolean))],
+        };
+      }
+    }
+  } catch (error) {
+    if (error instanceof RouteOptimizerConfigError) {
+      throw error;
+    }
+
+    runPreviews.push(buildFailedRunPreview(input.runA, readErrorMessage(error)));
+    runPreviews.push(
+      buildFailedRunPreview(input.runB, "Marco preview skipped because DT handoff preview failed.")
+    );
+  }
+
+  if (input.runC) {
+    runPreviews.push(
+      await previewKitchenRun({
+        deliveryDate: input.deliveryDate,
+        candidate: input.candidate,
+        run: input.runC,
+        kitchenAddress: input.kitchenAddress,
+        profile: input.profile,
+        routingStopByOrderId: input.routingStopByOrderId,
+      })
+    );
+  }
+
+  return {
+    runPreviews,
+    handoffPlan: {
+      providerRunSlot: input.profile.handoffRules.providerRunSlot,
+      receiverRunSlot: input.profile.handoffRules.receiverRunSlots[0] ?? "B",
+      selectedMeetup: buildSelectedMeetup(input.selection),
+      meetupEta: dtPreview?.meetupEta,
+      formattedMeetupEta: dtPreview?.formattedMeetupEta,
+      receiverStartLocation: input.selection.meetupAddress,
+    },
+    assumptions: [...new Set(assumptions.filter(Boolean))],
+  };
+}
+
+export async function previewKitchenRunWithConstraints(input: {
+  deliveryDate: string;
+  candidate: DeliveryAgentCandidatePlan;
+  run: DeliveryAgentCandidateRun;
+  kitchenAddress: string;
+  profile: DeliveryPlanningProfile;
+  routingStopByOrderId: Map<string, RoutingStop>;
+  customerConstraints?: CustomerConstraintsMap;
+}): Promise<DeliveryAgentCandidateRunPreview> {
+  return previewKitchenRun(input);
 }
 
 export async function previewCandidateHandoff(input: {
@@ -256,151 +479,16 @@ export async function previewCandidateHandoff(input: {
     };
   }
 
-  const syntheticMeetupStop = buildSyntheticMeetupStop({
+  return previewHandoffRunChain({
+    deliveryDate: input.deliveryDate,
+    candidate: input.candidate,
+    runA,
+    runB,
+    runC,
+    kitchenAddress: input.kitchenAddress,
     profile: input.profile,
+    routingStopByOrderId: input.routingStopByOrderId,
     selection,
+    assumptions,
   });
-  const dtStartTime = input.profile.timeRules.normalKitchenStartTime;
-  let dtPreview: DeliveryAgentCandidateRunPreview | undefined;
-
-  try {
-    const dtPayload = buildDtHandoffPreviewPayload({
-      deliveryDate: input.deliveryDate,
-      candidateId: input.candidate.candidateId,
-      run: runA,
-      kitchenAddress: input.kitchenAddress,
-      profile: input.profile,
-      routingStopByOrderId: input.routingStopByOrderId,
-      syntheticMeetupStop,
-      stopBeforeMeetupOrderId: selection.stopBeforeMeetupOrderId,
-    });
-    const dtRouteResult = await previewRouteOptimizerRun(dtPayload);
-    const meetupExtraction = extractMeetupEtaFromPreview({
-      optimizedStops: mapRouteOptimizerPreviewResult(dtRouteResult, {
-        deliveryDate: input.deliveryDate,
-        startTime: dtStartTime,
-      }).optimizedStops,
-      routeResult: dtRouteResult,
-      meetupName: input.profile.handoffRules.syntheticMeetupStopName,
-      expectedSequence: selection.meetupFixedStopPosition,
-    });
-
-    dtPreview = buildRunPreviewFromResult({
-      run: runA,
-      deliveryDate: input.deliveryDate,
-      startTime: dtStartTime,
-      routeResult: dtRouteResult,
-      meetupFields: {
-        syntheticMeetupIncluded: true,
-        meetupSequence: meetupExtraction.meetupSequence ?? selection.meetupFixedStopPosition,
-        meetupEta: meetupExtraction.meetupEta,
-        formattedMeetupEta: meetupExtraction.meetupEta
-          ? formatDateTime(meetupExtraction.meetupEta)
-          : undefined,
-      },
-    });
-
-    runPreviews.push(dtPreview);
-
-    if (!meetupExtraction.meetupEta) {
-      runPreviews.push(
-        buildFailedRunPreview(
-          runB,
-          "DT preview did not return a meet-up ETA for the synthetic handoff stop."
-        )
-      );
-    } else {
-      const receiverStartTime = formatTorontoLocalTimeForRouteOptimizer(meetupExtraction.meetupEta);
-
-      try {
-        const marcoPayload = buildMarcoHandoffPreviewPayload({
-          deliveryDate: input.deliveryDate,
-          candidateId: input.candidate.candidateId,
-          run: runB,
-          profile: input.profile,
-          routingStopByOrderId: input.routingStopByOrderId,
-          meetupAddress: selection.meetupAddress,
-          meetupStartTime: receiverStartTime,
-        });
-        const marcoRouteResult = await previewRouteOptimizerRun(marcoPayload);
-
-        runPreviews.push(
-          buildRunPreviewFromResult({
-            run: runB,
-            deliveryDate: input.deliveryDate,
-            startTime: receiverStartTime,
-            routeResult: marcoRouteResult,
-          })
-        );
-
-        if (runC) {
-          runPreviews.push(
-            await previewKitchenRun({
-              deliveryDate: input.deliveryDate,
-              candidate: input.candidate,
-              run: runC,
-              kitchenAddress: input.kitchenAddress,
-              profile: input.profile,
-              routingStopByOrderId: input.routingStopByOrderId,
-            })
-          );
-        }
-
-        return {
-          runPreviews,
-          handoffPlan: {
-            providerRunSlot: input.profile.handoffRules.providerRunSlot,
-            receiverRunSlot: input.profile.handoffRules.receiverRunSlots[0] ?? "B",
-            selectedMeetup: buildSelectedMeetup(selection),
-            meetupEta: meetupExtraction.meetupEta,
-            formattedMeetupEta: formatDateTime(meetupExtraction.meetupEta),
-            receiverStartLocation: selection.meetupAddress,
-            receiverStartTime,
-          },
-          assumptions: [...new Set(assumptions.filter(Boolean))],
-        };
-      } catch (error) {
-        if (error instanceof RouteOptimizerConfigError) {
-          throw error;
-        }
-
-        runPreviews.push(buildFailedRunPreview(runB, readErrorMessage(error)));
-      }
-    }
-  } catch (error) {
-    if (error instanceof RouteOptimizerConfigError) {
-      throw error;
-    }
-
-    runPreviews.push(buildFailedRunPreview(runA, readErrorMessage(error)));
-    runPreviews.push(
-      buildFailedRunPreview(runB, "Marco preview skipped because DT handoff preview failed.")
-    );
-  }
-
-  if (runC) {
-    runPreviews.push(
-      await previewKitchenRun({
-        deliveryDate: input.deliveryDate,
-        candidate: input.candidate,
-        run: runC,
-        kitchenAddress: input.kitchenAddress,
-        profile: input.profile,
-        routingStopByOrderId: input.routingStopByOrderId,
-      })
-    );
-  }
-
-  return {
-    runPreviews,
-    handoffPlan: {
-      providerRunSlot: input.profile.handoffRules.providerRunSlot,
-      receiverRunSlot: input.profile.handoffRules.receiverRunSlots[0] ?? "B",
-      selectedMeetup: buildSelectedMeetup(selection),
-      meetupEta: dtPreview?.meetupEta,
-      formattedMeetupEta: dtPreview?.formattedMeetupEta,
-      receiverStartLocation: selection.meetupAddress,
-    },
-    assumptions: [...new Set(assumptions.filter(Boolean))],
-  };
 }

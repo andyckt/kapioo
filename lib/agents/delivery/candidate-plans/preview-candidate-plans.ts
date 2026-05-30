@@ -1,6 +1,7 @@
 import { compareCandidateDeadline } from "@/lib/agents/delivery/candidate-plans/compare-candidate-deadline";
 import { generateCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/generate-candidate-plans";
 import { previewCandidateHandoff } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
+import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
 import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
@@ -8,13 +9,22 @@ import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
   DeliveryAgentCandidatePlanPreview,
   DeliveryAgentCandidatePreviewStatus,
+  DeliveryAgentCandidateRepairSummary,
   DeliveryAgentCandidateRunPreview,
   DeliveryAgentPreviewCandidatePlansResponse,
 } from "@/lib/contracts/delivery-agent";
 import { RouteOptimizerConfigError } from "@/lib/integrations/route-optimizer/errors";
 
 const CANDIDATE_ROUTE_PREVIEW_NOTES =
-  "These previews now include a synthetic meet-up stop and receiver start time. End stop and full route-shape repair will be added later.";
+  "These previews include meet-up handoff and route-shape repair (fixed stop / end stop). Still preview-only—final plan selection and run creation will be added later.";
+
+const EMPTY_REPAIR_SUMMARY: DeliveryAgentCandidateRepairSummary = {
+  repairAttempted: false,
+  repairSucceeded: false,
+  issuesDetected: [],
+  repairActionsApplied: [],
+  warnings: [],
+};
 
 function buildRoutingStopMap(stops: RoutingStop[]): Map<string, RoutingStop> {
   return new Map(stops.map((stop) => [stop.orderId, stop]));
@@ -98,31 +108,48 @@ async function previewCandidatePlan(input: {
     routingStopByOrderId: input.routingStopByOrderId,
   });
 
+  const planSummary = {
+    runCount: input.candidate.summary.runCount,
+    totalStops: input.candidate.summary.totalStops,
+    selfUsed: input.candidate.summary.selfUsed,
+    selfStopCount: input.candidate.summary.selfStopCount,
+  };
+
+  const repairResult = await repairCandidateRoutePreview({
+    deliveryDate: input.deliveryDate,
+    candidate: input.candidate,
+    kitchenAddress: input.kitchenAddress,
+    profile: input.profile,
+    routingStopByOrderId: input.routingStopByOrderId,
+    handoffResult,
+    planSummary,
+  });
+
   const summary = compareCandidateDeadline({
     deliveryDate: input.deliveryDate,
     profile: input.profile,
-    runPreviews: handoffResult.runPreviews,
-    planSummary: {
-      runCount: input.candidate.summary.runCount,
-      totalStops: input.candidate.summary.totalStops,
-      selfUsed: input.candidate.summary.selfUsed,
-      selfStopCount: input.candidate.summary.selfStopCount,
-    },
+    runPreviews: repairResult.runPreviews,
+    planSummary,
   });
 
-  const warnings = [...input.candidate.warnings, ...summary.blockingIssues];
+  const warnings = [
+    ...input.candidate.warnings,
+    ...summary.blockingIssues,
+    ...repairResult.candidateRepairSummary.warnings,
+  ];
 
   return {
     candidateId: input.candidate.candidateId,
     name: input.candidate.name,
     strategyType: input.candidate.strategyType,
-    status: resolveCandidatePreviewStatus(handoffResult.runPreviews),
-    runs: handoffResult.runPreviews,
+    status: resolveCandidatePreviewStatus(repairResult.runPreviews),
+    runs: repairResult.runPreviews,
     summary,
-    handoffPlan: handoffResult.handoffPlan,
+    handoffPlan: repairResult.handoffPlan,
+    candidateRepairSummary: repairResult.candidateRepairSummary,
     warnings,
-    errors: collectCandidatePreviewErrors(handoffResult.runPreviews),
-    assumptions: handoffResult.assumptions,
+    errors: collectCandidatePreviewErrors(repairResult.runPreviews),
+    assumptions: repairResult.assumptions,
   };
 }
 
@@ -193,6 +220,7 @@ export async function previewCandidatePlansForAgent(
           handoffSkipped: true,
           skipReason: readErrorMessage(error),
         },
+        candidateRepairSummary: EMPTY_REPAIR_SUMMARY,
         warnings: [...candidate.warnings, ...summary.blockingIssues],
         errors: [readErrorMessage(error)],
         assumptions: candidate.assumptions,

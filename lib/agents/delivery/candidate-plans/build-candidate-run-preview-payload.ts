@@ -1,6 +1,12 @@
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type { RouteOptimizerCustomerInput, RouteOptimizerPreviewRequest } from "@/lib/integrations/route-optimizer/types";
+import {
+  applyCustomerConstraints,
+  type CustomerConstraintsMap,
+} from "@/lib/agents/delivery/candidate-plans/apply-customer-constraints";
+
+export type { CustomerConstraintsMap };
 
 export type CandidateRunPreviewInput = {
   runSlot: string;
@@ -84,6 +90,7 @@ export function buildCandidateRunPreviewPayload(input: {
   handoffStartLocation?: string;
   syntheticMeetupStop?: RouteOptimizerCustomerInput;
   dtCustomerOrderIds?: string[];
+  customerConstraints?: CustomerConstraintsMap;
 }): RouteOptimizerPreviewRequest {
   const startTime = resolveCandidateRunStartTime(input.run, input.profile, input.handoffStartTime);
   const startLocation =
@@ -91,11 +98,13 @@ export function buildCandidateRunPreviewPayload(input: {
       ? input.handoffStartLocation
       : input.kitchenAddress;
 
-  const customers = mapRunCustomers(
+  let customers = mapRunCustomers(
     input.run,
     input.routingStopByOrderId,
     input.dtCustomerOrderIds
   );
+
+  customers = applyCustomerConstraints(customers, input.customerConstraints);
 
   if (input.syntheticMeetupStop) {
     customers.push(input.syntheticMeetupStop);
@@ -124,6 +133,7 @@ export function buildDtHandoffPreviewPayload(input: {
   routingStopByOrderId: Map<string, RoutingStop>;
   syntheticMeetupStop: RouteOptimizerCustomerInput;
   stopBeforeMeetupOrderId?: string;
+  customerConstraints?: CustomerConstraintsMap;
 }): RouteOptimizerPreviewRequest {
   const dtOrderIds = input.stopBeforeMeetupOrderId
     ? [
@@ -143,6 +153,7 @@ export function buildDtHandoffPreviewPayload(input: {
     routingStopByOrderId: input.routingStopByOrderId,
     syntheticMeetupStop: input.syntheticMeetupStop,
     dtCustomerOrderIds: dtOrderIds,
+    customerConstraints: input.customerConstraints,
   });
 }
 
@@ -154,6 +165,7 @@ export function buildMarcoHandoffPreviewPayload(input: {
   routingStopByOrderId: Map<string, RoutingStop>;
   meetupAddress: string;
   meetupStartTime: string;
+  customerConstraints?: CustomerConstraintsMap;
 }): RouteOptimizerPreviewRequest {
   return buildCandidateRunPreviewPayload({
     deliveryDate: input.deliveryDate,
@@ -164,5 +176,6 @@ export function buildMarcoHandoffPreviewPayload(input: {
     routingStopByOrderId: input.routingStopByOrderId,
     handoffStartLocation: input.meetupAddress,
     handoffStartTime: input.meetupStartTime,
+    customerConstraints: input.customerConstraints,
   });
 }

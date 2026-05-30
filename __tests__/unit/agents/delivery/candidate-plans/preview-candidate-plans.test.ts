@@ -49,21 +49,22 @@ function buildRouteOptimizerSuccess(overrides: Record<string, unknown> = {}) {
       total_distance_km: 14,
       stops: [
         {
-          customer_name: "Alice Customer",
-          customer_address: "123 Main St",
-          duration_from_previous: 12,
-          service_time_minutes: 5,
-          order_ids: ["DD-90000001"],
-        },
-        {
           customer_name: "Today's Meet up point",
           customer_address: "4000 Yonge St, North York M2N 5N8",
           duration_from_previous: 10,
           service_time_minutes: 5,
           is_synthetic: true,
           stop_type: "handoff",
-          sequence: 2,
+          sequence: 1,
           order_ids: [],
+        },
+        {
+          customer_name: "Alice Customer",
+          customer_address: "123 Main St",
+          duration_from_previous: 12,
+          service_time_minutes: 5,
+          order_ids: ["DD-90000001"],
+          sequence: 2,
         },
       ],
     },
@@ -320,7 +321,31 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
-    previewRouteOptimizerRunMock.mockResolvedValue(buildRouteOptimizerSuccess());
+    previewRouteOptimizerRunMock.mockImplementation((payload: { run: { driver_name: string } }) => {
+      if (payload.run.driver_name === "Marco") {
+        return Promise.resolve({
+          status: "preview",
+          total_duration_minutes: 45,
+          total_distance_km: 8,
+          optimized_route: {
+            stops: [
+              {
+                customer_name: "Carol Customer",
+                customer_address: "789 Markham Rd",
+                duration_from_previous: 10,
+                service_time_minutes: 5,
+                order_ids: ["DD-90000003"],
+              },
+            ],
+          },
+          warnings: [],
+          validation_errors: [],
+          geocode_failures: [],
+        });
+      }
+
+      return Promise.resolve(buildRouteOptimizerSuccess());
+    });
 
     const result = await previewCandidatePlansForAgent("2026-06-09");
     const baseline = result.candidates.find(
@@ -337,6 +362,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     );
     expect(baseline?.summary.allRunsFinishBeforeDeadline).toBeDefined();
     expect(baseline?.handoffPlan.selectedMeetup?.syntheticHandoffStopUsed).toBe(true);
+    expect(baseline?.candidateRepairSummary.repairAttempted).toBe(false);
     expect(
       baseline?.handoffPlan.receiverStartLocation ?? baseline?.handoffPlan.skipReason
     ).toBeTruthy();
@@ -358,7 +384,31 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
-    previewRouteOptimizerRunMock.mockResolvedValue(buildRouteOptimizerSuccess());
+    previewRouteOptimizerRunMock.mockImplementation((payload: { run: { driver_name: string } }) => {
+      if (payload.run.driver_name === "Marco") {
+        return Promise.resolve({
+          status: "preview",
+          total_duration_minutes: 45,
+          total_distance_km: 8,
+          optimized_route: {
+            stops: [
+              {
+                customer_name: "Carol Customer",
+                customer_address: "789 Markham Rd",
+                duration_from_previous: 10,
+                service_time_minutes: 5,
+                order_ids: ["DD-90000003"],
+              },
+            ],
+          },
+          warnings: [],
+          validation_errors: [],
+          geocode_failures: [],
+        });
+      }
+
+      return Promise.resolve(buildRouteOptimizerSuccess());
+    });
 
     const result = await previewCandidatePlansForAgent("2026-06-09");
     const selfCandidate = result.candidates.find(
