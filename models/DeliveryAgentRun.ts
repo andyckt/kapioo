@@ -1,6 +1,10 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
 import type {
+  DeliveryAgentLearningArtifacts,
+  DeliveryAgentLocationArtifacts,
+  DeliveryAgentPlanningArtifacts,
+  DeliveryAgentReviewStatus,
   DeliveryAgentRouteOptimizerRun,
   DeliveryAgentRunError,
   DeliveryAgentRunInvalidOrder,
@@ -18,6 +22,7 @@ export interface IDeliveryAgentRun extends Omit<Document, "errors"> {
   triggerSource: DeliveryAgentTriggerSource;
   startedAt?: Date;
   completedAt?: Date;
+  /** Agent/RO pipeline lifecycle — not Donald's human review (see reviewStatus). */
   status: DeliveryAgentRunStatus;
   orderCount: number;
   validStopCount: number;
@@ -30,10 +35,22 @@ export interface IDeliveryAgentRun extends Omit<Document, "errors"> {
   profileSnapshot?: Record<string, unknown>;
   candidateCount?: number;
   previewCount?: number;
+  /** Planning profile version — not log schema version (see version). */
+  profileVersion?: string;
+  /** Donald's review outcome — separate from agent status. */
+  reviewStatus?: DeliveryAgentReviewStatus;
+  reviewedAt?: Date;
+  reviewedBy?: string;
+  donaldFeedbackText?: string;
+  donaldFeedbackTags?: string[];
+  planningArtifacts?: DeliveryAgentPlanningArtifacts;
+  locationArtifacts?: DeliveryAgentLocationArtifacts;
+  learningArtifacts?: DeliveryAgentLearningArtifacts;
   routeOptimizerPlanningSessionId?: string;
   routeOptimizerRuns?: DeliveryAgentRouteOptimizerRun[];
   errors?: DeliveryAgentRunError[];
   notes?: string;
+  /** Log schema version — not planning profile version (see profileVersion). */
   version?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -68,6 +85,15 @@ const WarningSnapshotSchema = new Schema(
   { _id: false }
 );
 
+const RouteLocationSchema = new Schema(
+  {
+    address: { type: String, trim: true },
+    lat: { type: Number },
+    lng: { type: Number },
+  },
+  { _id: false }
+);
+
 const RouteOptimizerRunSchema = new Schema(
   {
     runId: { type: String, required: true, trim: true },
@@ -78,6 +104,10 @@ const RouteOptimizerRunSchema = new Schema(
     driverLink: { type: String, trim: true },
     estimatedFinishTime: { type: String, trim: true },
     totalDurationMinutes: { type: Number },
+    optimizedRoute: { type: [Schema.Types.Mixed], default: undefined },
+    startLocation: { type: RouteLocationSchema },
+    endLocation: { type: RouteLocationSchema },
+    repairActionCount: { type: Number },
   },
   { _id: false }
 );
@@ -179,6 +209,38 @@ const DeliveryAgentRunSchema = new Schema<IDeliveryAgentRun>(
     previewCount: {
       type: Number,
     },
+    profileVersion: {
+      type: String,
+      trim: true,
+    },
+    reviewStatus: {
+      type: String,
+      enum: ["pending", "approved", "edited", "rejected"],
+    },
+    reviewedAt: {
+      type: Date,
+    },
+    reviewedBy: {
+      type: String,
+      trim: true,
+    },
+    donaldFeedbackText: {
+      type: String,
+      trim: true,
+    },
+    donaldFeedbackTags: {
+      type: [String],
+      default: undefined,
+    },
+    planningArtifacts: {
+      type: Schema.Types.Mixed,
+    },
+    locationArtifacts: {
+      type: Schema.Types.Mixed,
+    },
+    learningArtifacts: {
+      type: Schema.Types.Mixed,
+    },
     routeOptimizerPlanningSessionId: {
       type: String,
       trim: true,
@@ -211,6 +273,8 @@ DeliveryAgentRunSchema.index({ deliveryDate: 1 });
 DeliveryAgentRunSchema.index({ planningSessionId: 1 });
 DeliveryAgentRunSchema.index({ status: 1 });
 DeliveryAgentRunSchema.index({ createdAt: 1 });
+DeliveryAgentRunSchema.index({ deliveryDate: 1, profileVersion: 1 });
+DeliveryAgentRunSchema.index({ reviewStatus: 1, deliveryDate: 1 });
 
 const DeliveryAgentRun: IDeliveryAgentRunModel =
   (mongoose.models.DeliveryAgentRun as IDeliveryAgentRunModel | undefined) ||

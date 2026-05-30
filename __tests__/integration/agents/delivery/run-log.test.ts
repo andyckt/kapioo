@@ -8,15 +8,24 @@ vi.mock("@/lib/db", () => ({
   default: connectToDatabaseMock,
 }));
 
-import type { CreateDeliveryAgentRunLogInput } from "@/lib/agents/delivery/run-log-types";
+import {
+  LEARNING_ARTIFACTS_VERSION,
+  LOCATION_ARTIFACTS_VERSION,
+  PLANNING_ARTIFACTS_VERSION,
+  type CreateDeliveryAgentRunLogInput,
+} from "@/lib/agents/delivery/run-log-types";
 import type { RoutingIssueCode } from "@/lib/agents/delivery/types";
 import {
+  attachLearningArtifacts,
+  attachLocationArtifacts,
+  attachPlanningArtifacts,
   attachRouteOptimizerRuns,
   buildDeliveryAgentDuplicateKey,
   createDeliveryAgentRunLog,
   findDeliveryAgentRunByDuplicateKey,
   markDeliveryAgentRunFailed,
   markDeliveryAgentRunReadyForReview,
+  recordDonaldReview,
 } from "@/lib/agents/delivery/run-log";
 import DeliveryAgentRun from "@/models/DeliveryAgentRun";
 
@@ -185,5 +194,112 @@ describe("lib/agents/delivery/run-log", () => {
     expect(persisted?.invalidOrders?.[0]?.errors[0]?.code).toBe("ROUTING_MISSING_PHONE");
     expect(persisted?.warnings).toHaveLength(1);
     expect(persisted?.warnings?.[0]?.warnings[0]?.code).toBe("ROUTING_MISSING_UNIT");
+  });
+
+  it("persists optional profileVersion on create", async () => {
+    const run = await createDeliveryAgentRunLog({
+      ...baseCreateInput,
+      profileVersion: "daily-v1.2",
+    });
+
+    expect(run.profileVersion).toBe("daily-v1.2");
+    expect(run.version).toBe("m4-v1");
+  });
+
+  it("records Donald review with feedback tags", async () => {
+    const created = await createDeliveryAgentRunLog(baseCreateInput);
+
+    const reviewed = await recordDonaldReview(created.id, {
+      reviewStatus: "approved",
+      reviewedBy: "donald@kapioo.com",
+      donaldFeedbackText: "Looks good for DT/UT split",
+      donaldFeedbackTags: ["split-dt-ut", "finish-before-1pm"],
+    });
+
+    expect(reviewed.reviewStatus).toBe("approved");
+    expect(reviewed.reviewedBy).toBe("donald@kapioo.com");
+    expect(reviewed.reviewedAt).toBeInstanceOf(Date);
+    expect(reviewed.donaldFeedbackText).toBe("Looks good for DT/UT split");
+    expect(reviewed.donaldFeedbackTags).toEqual(["split-dt-ut", "finish-before-1pm"]);
+    expect(reviewed.status).toBe("draft");
+  });
+
+  it("persists planning, location, and learning artifact buckets", async () => {
+    const created = await createDeliveryAgentRunLog(baseCreateInput);
+
+    await attachPlanningArtifacts(created.id, {
+      artifactVersion: PLANNING_ARTIFACTS_VERSION,
+      candidatePlansTested: [{ candidateId: "plan-a", score: 0.91 }],
+      agentReasoningSummary: "Split North York into DT run",
+    });
+
+    const withLocation = await attachLocationArtifacts(created.id, {
+      artifactVersion: LOCATION_ARTIFACTS_VERSION,
+      stopSnapshots: [
+        {
+          lat: 43.7615,
+          lng: -79.4111,
+          normalizedAddress: "123 Main St, North York",
+          area: "North York",
+          clusterId: "ny-cluster-1",
+        },
+      ],
+      handoffEvents: [
+        {
+          type: "meet-up",
+          location: { lat: 43.7, lng: -79.4 },
+          fromRunId: "ro-run-dt",
+          toRunId: "ro-run-ut",
+        },
+      ],
+      startLocation: { address: "Kitchen", lat: 43.65, lng: -79.38 },
+    });
+
+    const withLearning = await attachLearningArtifacts(created.id, {
+      artifactVersion: LEARNING_ARTIFACTS_VERSION,
+      actualOutcome: {
+        finishTime: "12:45",
+        finishBefore1Pm: true,
+      },
+      manualEdits: [{ type: "move-stop", details: { fromRunId: "ro-run-dt" } }],
+    });
+
+    expect(withLocation.planningArtifacts).toMatchObject({
+      artifactVersion: PLANNING_ARTIFACTS_VERSION,
+      agentReasoningSummary: "Split North York into DT run",
+    });
+    expect(withLocation.locationArtifacts?.stopSnapshots?.[0]?.clusterId).toBe("ny-cluster-1");
+    expect(withLearning.learningArtifacts).toMatchObject({
+      artifactVersion: LEARNING_ARTIFACTS_VERSION,
+      actualOutcome: { finishBefore1Pm: true },
+    });
+  });
+
+  it("persists extended Route Optimizer run location fields", async () => {
+    const created = await createDeliveryAgentRunLog(baseCreateInput);
+
+    const updated = await attachRouteOptimizerRuns(created.id, [
+      {
+        runId: "ro-run-2",
+        driverName: "UT Driver",
+        externalId: "ext-2",
+        idempotencyKey: "idem-2",
+        repairActionCount: 2,
+        startLocation: { address: "Kitchen", lat: 43.65, lng: -79.38 },
+        endLocation: { address: "UT depot", lat: 43.78, lng: -79.42 },
+        optimizedRoute: [
+          { lat: 43.7615, lng: -79.4111, address: "123 Main St" },
+          { lat: 43.77, lng: -79.42, address: "456 Side St" },
+        ],
+      },
+    ]);
+
+    expect(updated.routeOptimizerRuns?.[0]).toMatchObject({
+      runId: "ro-run-2",
+      repairActionCount: 2,
+      startLocation: { lat: 43.65, lng: -79.38 },
+      endLocation: { lat: 43.78, lng: -79.42 },
+    });
+    expect(updated.routeOptimizerRuns?.[0]?.optimizedRoute).toHaveLength(2);
   });
 });
