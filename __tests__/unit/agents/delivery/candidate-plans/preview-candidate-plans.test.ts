@@ -349,17 +349,18 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
 
     const result = await previewCandidatePlansForAgent("2026-06-09");
     const baseline = result.candidates.find(
-      (candidate) => candidate.strategyType === "baseline_two_run"
+      (candidate) =>
+        candidate.combination?.splitStrategyType === "baseline_two_run" ||
+        candidate.strategyType === "baseline_two_run"
     );
 
     expect(baseline?.status).toBe("previewed");
     expect(baseline?.runs).toHaveLength(2);
     expect(baseline?.runs.every((run) => run.previewStatus === "previewed")).toBe(true);
-    expect(previewRouteOptimizerRunMock).toHaveBeenCalledTimes(5);
+    expect(previewRouteOptimizerRunMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(previewRouteOptimizerRunMock.mock.calls[0][0].run.driver_name).toBe("DT");
-    expect(previewRouteOptimizerRunMock.mock.calls[0][0].external_id).toContain(
-      "baseline_two_run:2026-06-09:A"
-    );
+    expect(previewRouteOptimizerRunMock.mock.calls[0][0].external_id).toContain(":A");
+    expect(baseline?.combination?.baseSplitCandidateId).toContain("baseline_two_run:2026-06-09");
     expect(baseline?.summary.allRunsFinishBeforeDeadline).toBeDefined();
     expect(baseline?.handoffPlan.selectedMeetup?.syntheticHandoffStopUsed).toBe(true);
     expect(baseline?.candidateRepairSummary.repairAttempted).toBe(false);
@@ -374,7 +375,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     expect(baseline?.rank).toBeGreaterThanOrEqual(1);
     expect(baseline?.score).toBeGreaterThan(0);
     expect(baseline?.scoreBreakdown.length).toBeGreaterThan(0);
-    expect(result.notes).toContain("recommended plan ranking");
+    expect(result.notes).toContain("full route combination");
 
     const dtPayload = previewRouteOptimizerRunMock.mock.calls[0][0];
     const syntheticStop = dtPayload.customers.find(
@@ -421,7 +422,9 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
 
     const result = await previewCandidatePlansForAgent("2026-06-09");
     const selfCandidate = result.candidates.find(
-      (candidate) => candidate.strategyType === "self_fallback_light"
+      (candidate) =>
+        candidate.combination?.splitStrategyType === "self_fallback_light" ||
+        candidate.strategyType === "self_fallback_light"
     );
 
     expect(selfCandidate?.summary.selfUsed).toBe(true);

@@ -4,6 +4,7 @@ export {
 } from "@/lib/agents/delivery/planning-profile/types";
 export type {
   DeliveryPlanningDriverConfig,
+  DeliveryPlanningCandidateExpansionRules,
   DeliveryPlanningHandoffRules,
   DeliveryPlanningLearningSettings,
   DeliveryPlanningLocationRules,

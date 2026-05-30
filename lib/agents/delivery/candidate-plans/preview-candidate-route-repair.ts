@@ -8,7 +8,8 @@ import {
   previewMarcoHandoffRunOnly,
   type ActiveMeetupSelection,
 } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
-import { selectMeetupPoint } from "@/lib/agents/delivery/candidate-plans/select-meetup-point";
+import { findPrimaryReceiverRun, findProviderRun } from "@/lib/agents/delivery/candidate-plans/find-run-by-slot";
+import { rebuildMeetupSelectionFromSelectedMeetup } from "@/lib/agents/delivery/candidate-plans/rank-meetup-options";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
@@ -69,20 +70,22 @@ async function repreviewSkippedHandoffRuns(input: {
   originalPreviews: DeliveryAgentCandidateRunPreview[];
   repairPlan: ReturnType<typeof planRouteShapeRepairs>;
 }): Promise<CandidateHandoffPreviewResult> {
+  const providerRunSlot = input.profile.handoffRules.providerRunSlot;
+  const receiverRunSlot = input.profile.handoffRules.receiverRunSlots[0] ?? "B";
   const runPreviews: DeliveryAgentCandidateRunPreview[] = [];
 
   for (const run of input.candidate.runs) {
     const original = input.originalPreviews.find((preview) => preview.runSlot === run.runSlot);
     const constraints =
-      run.runSlot === "A"
+      run.runSlot === providerRunSlot
         ? input.repairPlan.dtCustomerConstraints
-        : run.runSlot === "B"
+        : run.runSlot === receiverRunSlot
           ? input.repairPlan.marcoCustomerConstraints
           : undefined;
 
     const needsRepreview =
-      (run.runSlot === "A" && input.repairPlan.requiresDtRepreview) ||
-      (run.runSlot === "B" && input.repairPlan.requiresMarcoRepreview);
+      (run.runSlot === providerRunSlot && input.repairPlan.requiresDtRepreview) ||
+      (run.runSlot === receiverRunSlot && input.repairPlan.requiresMarcoRepreview);
 
     if (!needsRepreview || !constraints || constraints.size === 0) {
       if (original) {
@@ -221,28 +224,31 @@ export async function repairCandidateRoutePreview(input: {
         repairPlan,
       });
     } else if (repairPlan.requiresDtRepreview) {
-      const runA = input.candidate.runs.find((run) => run.runSlot === "A");
-      const runB = input.candidate.runs.find((run) => run.runSlot === "B");
-      const runC = input.candidate.runs.find((run) => run.runSlot === "C");
-      const selection = selectMeetupPoint({
-        runs: input.candidate.runs,
-        profile: input.profile,
-      });
+      const providerRun = findProviderRun(input.candidate.runs, input.profile);
+      const receiverRun = findPrimaryReceiverRun(input.candidate.runs, input.profile);
+      const backupRun = input.candidate.runs.find((run) => run.role === "self");
+      const selectedMeetup = input.handoffResult.handoffPlan.selectedMeetup;
 
-      if (selection.handoffSkipped || !runA || !runB) {
-        throw new Error("Cannot re-preview handoff repair without active meet-up selection.");
+      if (!selectedMeetup) {
+        throw new Error("Cannot re-preview handoff repair without locked meet-up selection.");
+      }
+
+      const selection = rebuildMeetupSelectionFromSelectedMeetup(selectedMeetup);
+
+      if (!providerRun || !receiverRun) {
+        throw new Error("Cannot re-preview handoff repair without active provider and receiver runs.");
       }
 
       repairedResult = await previewHandoffRunChain({
         deliveryDate: input.deliveryDate,
         candidate: input.candidate,
-        runA,
-        runB,
-        runC,
+        runA: providerRun,
+        runB: receiverRun,
+        runC: backupRun,
         kitchenAddress: input.kitchenAddress,
         profile: input.profile,
         routingStopByOrderId: input.routingStopByOrderId,
-        selection: selection as ActiveMeetupSelection,
+        selection,
         overrides: {
           dtCustomerConstraints: repairPlan.dtCustomerConstraints,
           marcoCustomerConstraints: repairPlan.marcoCustomerConstraints,
@@ -251,18 +257,17 @@ export async function repairCandidateRoutePreview(input: {
         assumptions: input.handoffResult.assumptions,
       });
     } else if (repairPlan.requiresMarcoRepreview) {
-      const runB = input.candidate.runs.find((run) => run.runSlot === "B");
-      const dtPreview = input.handoffResult.runPreviews.find((run) => run.runSlot === "A");
+      const receiverRun = findPrimaryReceiverRun(input.candidate.runs, input.profile);
       const handoffPlan = input.handoffResult.handoffPlan;
 
-      if (!runB || !handoffPlan.receiverStartTime || !handoffPlan.receiverStartLocation) {
-        throw new Error("Cannot re-preview Marco repair without handoff start details.");
+      if (!receiverRun || !handoffPlan.receiverStartTime || !handoffPlan.receiverStartLocation) {
+        throw new Error("Cannot re-preview receiver repair without handoff start details.");
       }
 
-      const marcoPreview = await previewMarcoHandoffRunOnly({
+      const receiverPreview = await previewMarcoHandoffRunOnly({
         deliveryDate: input.deliveryDate,
         candidate: input.candidate,
-        runB,
+        runB: receiverRun,
         profile: input.profile,
         routingStopByOrderId: input.routingStopByOrderId,
         meetupAddress: handoffPlan.receiverStartLocation,
@@ -272,25 +277,24 @@ export async function repairCandidateRoutePreview(input: {
 
       repairedResult = {
         runPreviews: input.handoffResult.runPreviews.map((run) =>
-          run.runSlot === "B" ? marcoPreview : run
+          run.runSlot === receiverRun.runSlot ? receiverPreview : run
         ),
         handoffPlan: input.handoffResult.handoffPlan,
         assumptions: input.handoffResult.assumptions,
       };
-
-      if (dtPreview) {
-        void dtPreview;
-      }
     } else {
       repairedResult = input.handoffResult;
     }
 
+    const providerRunSlot = input.profile.handoffRules.providerRunSlot;
+    const receiverRunSlot = input.profile.handoffRules.receiverRunSlots[0] ?? "B";
+
     const repreviewFailed = repairedResult.runPreviews.some((run) => {
-      if (repairPlan.requiresDtRepreview && run.runSlot === "A") {
+      if (repairPlan.requiresDtRepreview && run.runSlot === providerRunSlot) {
         return run.previewStatus === "failed";
       }
 
-      if (repairPlan.requiresMarcoRepreview && run.runSlot === "B") {
+      if (repairPlan.requiresMarcoRepreview && run.runSlot === receiverRunSlot) {
         return run.previewStatus === "failed";
       }
 

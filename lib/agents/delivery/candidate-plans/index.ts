@@ -9,6 +9,8 @@ export { previewCandidateHandoff, previewHandoffRunChain } from "@/lib/agents/de
 export { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
 export { detectRouteShapeIssues } from "@/lib/agents/delivery/candidate-plans/detect-route-shape-issues";
 export { planRouteShapeRepairs } from "@/lib/agents/delivery/candidate-plans/plan-route-shape-repairs";
+export { expandFullCandidateVariants } from "@/lib/agents/delivery/candidate-plans/expand-full-candidate-variants";
+export { rankMeetupOptions } from "@/lib/agents/delivery/candidate-plans/rank-meetup-options";
 export { selectMeetupPoint } from "@/lib/agents/delivery/candidate-plans/select-meetup-point";
 export { scoreMeetupCandidate } from "@/lib/agents/delivery/candidate-plans/score-meetup-candidate";
 export { buildSyntheticMeetupStop } from "@/lib/agents/delivery/candidate-plans/build-synthetic-meetup-stop";

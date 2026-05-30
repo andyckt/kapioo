@@ -8,6 +8,7 @@ import {
 import { buildSyntheticMeetupStop } from "@/lib/agents/delivery/candidate-plans/build-synthetic-meetup-stop";
 import { extractMeetupEtaFromPreview } from "@/lib/agents/delivery/candidate-plans/extract-meetup-eta";
 import { selectMeetupPoint, type MeetupSelectionResult } from "@/lib/agents/delivery/candidate-plans/select-meetup-point";
+import { findBackupRun, findPrimaryReceiverRun, findProviderRun } from "@/lib/agents/delivery/candidate-plans/find-run-by-slot";
 import { mapRouteOptimizerPreviewResult } from "@/lib/agents/delivery/map-route-optimizer-preview-result";
 import { formatTorontoLocalTimeForRouteOptimizer } from "@/lib/agents/delivery/route-preview-time";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
@@ -412,33 +413,40 @@ export async function previewCandidateHandoff(input: {
   kitchenAddress: string;
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
+  meetupSelection?: ActiveMeetupSelection;
 }): Promise<CandidateHandoffPreviewResult> {
-  const runA = input.candidate.runs.find((run) => run.runSlot === "A");
-  const runB = input.candidate.runs.find((run) => run.runSlot === "B");
-  const runC = input.candidate.runs.find((run) => run.runSlot === "C");
+  const providerRun = findProviderRun(input.candidate.runs, input.profile);
+  const receiverRun = findPrimaryReceiverRun(input.candidate.runs, input.profile);
+  const backupRun = findBackupRun(input.candidate.runs);
   const runPreviews: DeliveryAgentCandidateRunPreview[] = [];
   const assumptions = [...input.candidate.assumptions];
 
-  const selection = selectMeetupPoint({
-    runs: input.candidate.runs,
-    profile: input.profile,
-  });
+  const selection: MeetupSelectionResult =
+    input.meetupSelection ??
+    selectMeetupPoint({
+      runs: input.candidate.runs,
+      profile: input.profile,
+    });
 
-  if (selection.handoffSkipped || !runA || !runB) {
+  if (selection.handoffSkipped || !providerRun || !receiverRun) {
     if (selection.handoffSkipped) {
       const skippedAssumptions = getCandidateRunPreviewAssumptions(
-        { runSlot: "B", driverName: runB?.driverName ?? "Marco", stops: runB?.stops ?? [] },
+        {
+          runSlot: receiverRun?.runSlot ?? input.profile.handoffRules.receiverRunSlots[0] ?? "B",
+          driverName: receiverRun?.driverName ?? "Receiver",
+          stops: receiverRun?.stops ?? [],
+        },
         { handoffSkippedReason: selection.skipReason }
       );
       assumptions.push(...skippedAssumptions);
     }
 
-    if (runA) {
+    if (providerRun) {
       runPreviews.push(
         await previewKitchenRun({
           deliveryDate: input.deliveryDate,
           candidate: input.candidate,
-          run: runA,
+          run: providerRun,
           kitchenAddress: input.kitchenAddress,
           profile: input.profile,
           routingStopByOrderId: input.routingStopByOrderId,
@@ -446,12 +454,12 @@ export async function previewCandidateHandoff(input: {
       );
     }
 
-    if (runB) {
+    if (receiverRun) {
       runPreviews.push(
         await previewKitchenRun({
           deliveryDate: input.deliveryDate,
           candidate: input.candidate,
-          run: runB,
+          run: receiverRun,
           kitchenAddress: input.kitchenAddress,
           profile: input.profile,
           routingStopByOrderId: input.routingStopByOrderId,
@@ -459,12 +467,12 @@ export async function previewCandidateHandoff(input: {
       );
     }
 
-    if (runC) {
+    if (backupRun) {
       runPreviews.push(
         await previewKitchenRun({
           deliveryDate: input.deliveryDate,
           candidate: input.candidate,
-          run: runC,
+          run: backupRun,
           kitchenAddress: input.kitchenAddress,
           profile: input.profile,
           routingStopByOrderId: input.routingStopByOrderId,
@@ -478,7 +486,7 @@ export async function previewCandidateHandoff(input: {
         profile: input.profile,
         skipReason: selection.handoffSkipped
           ? selection.skipReason
-          : "Handoff preview requires both DT and Marco runs.",
+          : "Handoff preview requires both provider and receiver runs.",
       }),
       assumptions: [...new Set(assumptions.filter(Boolean))],
     };
@@ -487,9 +495,9 @@ export async function previewCandidateHandoff(input: {
   return previewHandoffRunChain({
     deliveryDate: input.deliveryDate,
     candidate: input.candidate,
-    runA,
-    runB,
-    runC,
+    runA: providerRun,
+    runB: receiverRun,
+    runC: backupRun,
     kitchenAddress: input.kitchenAddress,
     profile: input.profile,
     routingStopByOrderId: input.routingStopByOrderId,

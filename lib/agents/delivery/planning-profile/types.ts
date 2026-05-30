@@ -138,6 +138,15 @@ export type DeliveryPlanningLearningSettings = {
   backtestRequiredBeforeActive: boolean;
 };
 
+export type DeliveryPlanningCandidateExpansionRules = {
+  maxSplitCandidatesToExpand: number;
+  maxMeetupOptionsPerSplit: number;
+  allowedMeetupFixedPositions: Array<1 | 2>;
+  maxFullCandidateVariants: number;
+  allowEarlyStartVariant: boolean;
+  allowEndpointVariants: boolean;
+};
+
 export type DeliveryPlanningProfile = {
   profileId: string;
   profileVersion: string;
@@ -149,6 +158,7 @@ export type DeliveryPlanningProfile = {
   drivers: DeliveryPlanningDriverConfig[];
   locationRules: DeliveryPlanningLocationRules;
   handoffRules: DeliveryPlanningHandoffRules;
+  candidateExpansionRules: DeliveryPlanningCandidateExpansionRules;
   routeShapeRules: DeliveryPlanningRouteShapeRules;
   allowedRepairActions: DeliveryPlanningRepairAction[];
   selfFallbackRules: DeliveryPlanningSelfFallbackRules;

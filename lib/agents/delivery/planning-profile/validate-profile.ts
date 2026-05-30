@@ -183,6 +183,39 @@ export function assertDeliveryPlanningProfileValid(profile: DeliveryPlanningProf
     }
   }
 
+  const expansion = profile.candidateExpansionRules;
+  if (!expansion || typeof expansion !== "object") {
+    errors.push("candidateExpansionRules");
+  } else {
+    const positiveIntFields = [
+      "maxSplitCandidatesToExpand",
+      "maxMeetupOptionsPerSplit",
+      "maxFullCandidateVariants",
+    ] as const;
+
+    for (const field of positiveIntFields) {
+      if (typeof expansion[field] !== "number" || expansion[field] <= 0) {
+        errors.push(`candidateExpansionRules.${field}`);
+      }
+    }
+
+    if (
+      !Array.isArray(expansion.allowedMeetupFixedPositions) ||
+      expansion.allowedMeetupFixedPositions.length === 0 ||
+      expansion.allowedMeetupFixedPositions.some((position) => position !== 1 && position !== 2)
+    ) {
+      errors.push("candidateExpansionRules.allowedMeetupFixedPositions");
+    }
+
+    if (typeof expansion.allowEarlyStartVariant !== "boolean") {
+      errors.push("candidateExpansionRules.allowEarlyStartVariant");
+    }
+
+    if (typeof expansion.allowEndpointVariants !== "boolean") {
+      errors.push("candidateExpansionRules.allowEndpointVariants");
+    }
+  }
+
   if (
     !Array.isArray(profile.routeShapeRules.rules) ||
     profile.routeShapeRules.rules.length === 0

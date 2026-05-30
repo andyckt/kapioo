@@ -88,6 +88,14 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
       dtReferenceLng: DOWNTOWN_REFERENCE.lng,
     },
   },
+  candidateExpansionRules: {
+    maxSplitCandidatesToExpand: 5,
+    maxMeetupOptionsPerSplit: 3,
+    allowedMeetupFixedPositions: [1, 2],
+    maxFullCandidateVariants: 15,
+    allowEarlyStartVariant: false,
+    allowEndpointVariants: false,
+  },
   routeShapeRules: {
     rules: [
       {

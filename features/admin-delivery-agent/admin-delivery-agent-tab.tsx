@@ -838,34 +838,43 @@ export function AdminDeliveryAgentTab() {
                     </div>
                   )}
 
-                  {[...(candidateRoutePreview?.candidates ?? candidatePlans.candidates.map((candidate) => ({ candidateId: candidate.candidateId, rank: Number.MAX_SAFE_INTEGER })))]
-                    .sort((left, right) => {
-                      const leftRank =
-                        candidateRoutePreview?.candidates.find((entry) => entry.candidateId === left.candidateId)
-                          ?.rank ?? Number.MAX_SAFE_INTEGER
-                      const rightRank =
-                        candidateRoutePreview?.candidates.find((entry) => entry.candidateId === right.candidateId)
-                          ?.rank ?? Number.MAX_SAFE_INTEGER
-                      return leftRank - rightRank
-                    })
-                    .map((rankedEntry) => candidatePlans.candidates.find((entry) => entry.candidateId === rankedEntry.candidateId))
-                    .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate))
-                    .map((candidate) => {
-                    const routePreviewCandidate = candidateRoutePreview?.candidates.find(
-                      (entry) => entry.candidateId === candidate.candidateId
-                    )
+                  {candidateRoutePreview?.expansionWarnings &&
+                    candidateRoutePreview.expansionWarnings.length > 0 && (
+                      <ul className="list-disc space-y-1 pl-5 text-sm text-amber-800">
+                        {candidateRoutePreview.expansionWarnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                    )}
+
+                  {(candidateRoutePreview?.candidates?.length
+                    ? [...candidateRoutePreview.candidates].sort((left, right) => left.rank - right.rank)
+                    : candidatePlans.candidates
+                  ).map((entry) => {
+                    const routePreviewCandidate = candidateRoutePreview?.candidates?.length
+                      ? (entry as (typeof candidateRoutePreview.candidates)[number])
+                      : undefined
+                    const baseSplit = routePreviewCandidate?.combination
+                      ? candidatePlans.candidates.find(
+                          (split) =>
+                            split.candidateId === routePreviewCandidate.combination?.baseSplitCandidateId
+                        )
+                      : (entry as (typeof candidatePlans.candidates)[number])
+                    const candidate = baseSplit ?? (entry as (typeof candidatePlans.candidates)[number])
+                    const displayName = routePreviewCandidate?.name ?? candidate.name
                     const isRecommended =
-                      candidateRoutePreview?.recommendedCandidateId === candidate.candidateId
+                      candidateRoutePreview?.recommendedCandidateId ===
+                      (routePreviewCandidate?.candidateId ?? candidate.candidateId)
 
                     return (
                     <div
-                      key={candidate.candidateId}
+                      key={routePreviewCandidate?.candidateId ?? candidate.candidateId}
                       className={`space-y-3 rounded-md border p-4 ${isRecommended ? "border-primary shadow-sm" : ""}`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium">{candidate.name}</p>
+                            <p className="font-medium">{displayName}</p>
                             {routePreviewCandidate && (
                               <>
                                 <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
@@ -887,7 +896,17 @@ export function AdminDeliveryAgentTab() {
                               </>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground">{candidate.strategyType}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {routePreviewCandidate?.combination?.splitStrategyType ?? candidate.strategyType}
+                          </p>
+                          {routePreviewCandidate?.combination && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Base split: {candidate.name}
+                              {routePreviewCandidate.combination.meetupVariantId !== "no-handoff"
+                                ? ` · meet-up stop #${routePreviewCandidate.combination.meetupFixedStopPosition}`
+                                : " · no handoff"}
+                            </p>
+                          )}
                           {routePreviewCandidate?.decisionSummary && (
                             <p className="mt-1 text-sm text-muted-foreground">
                               {routePreviewCandidate.decisionSummary}
@@ -1022,7 +1041,7 @@ export function AdminDeliveryAgentTab() {
                                   </div>
                                   <div>
                                     <p className="text-sm text-muted-foreground">
-                                      DT reaches meet-up at
+                                      Provider reaches meet-up at
                                     </p>
                                     <p className="text-sm">
                                       {routePreviewCandidate.handoffPlan.formattedMeetupEta || "—"}
@@ -1030,7 +1049,7 @@ export function AdminDeliveryAgentTab() {
                                   </div>
                                   <div>
                                     <p className="text-sm text-muted-foreground">
-                                      Marco starts from meet-up at
+                                      Receiver starts from meet-up at
                                     </p>
                                     <p className="text-sm">
                                       {routePreviewCandidate.handoffPlan.receiverStartTime || "—"}
@@ -1258,7 +1277,7 @@ export function AdminDeliveryAgentTab() {
                           <div className="grid gap-3 sm:grid-cols-3">
                             {routePreviewCandidate.runs.map((run) => (
                               <div
-                                key={`${candidate.candidateId}-preview-${run.runSlot}`}
+                                key={`${routePreviewCandidate?.candidateId ?? candidate.candidateId}-preview-${run.runSlot}`}
                                 className="rounded border p-3"
                               >
                                 <p className="font-medium">

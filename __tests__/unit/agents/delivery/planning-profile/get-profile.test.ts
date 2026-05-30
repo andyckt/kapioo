@@ -65,6 +65,17 @@ describe("lib/agents/delivery/planning-profile/get-profile", () => {
     expect(actions).toContain("apply_end_point");
   });
 
+  it("includes candidate expansion rules on the default profile", () => {
+    const rules = getDefaultDeliveryPlanningProfile().candidateExpansionRules;
+
+    expect(rules.maxSplitCandidatesToExpand).toBe(5);
+    expect(rules.maxMeetupOptionsPerSplit).toBe(3);
+    expect(rules.allowedMeetupFixedPositions).toEqual([1, 2]);
+    expect(rules.maxFullCandidateVariants).toBe(15);
+    expect(rules.allowEarlyStartVariant).toBe(false);
+    expect(rules.allowEndpointVariants).toBe(false);
+  });
+
   it("aliases daily-default routing profile id to the default planning profile", () => {
     const aliased = getDeliveryPlanningProfile(DEFAULT_ROUTING_PROFILE_ID);
     const direct = getDefaultDeliveryPlanningProfile();

@@ -1,6 +1,7 @@
 import { selectBestCandidatePlan } from "@/lib/agents/delivery/best-plan/select-best-candidate-plan";
 import type { CandidateAssignedRun } from "@/lib/agents/delivery/best-plan/types";
 import { compareCandidateDeadline } from "@/lib/agents/delivery/candidate-plans/compare-candidate-deadline";
+import { expandFullCandidateVariants } from "@/lib/agents/delivery/candidate-plans/expand-full-candidate-variants";
 import { generateCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/generate-candidate-plans";
 import { previewCandidateHandoff } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
 import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
@@ -9,7 +10,6 @@ import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-sta
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
-  DeliveryAgentCandidatePlanPreview,
   DeliveryAgentCandidatePlanPreviewCore,
   DeliveryAgentCandidatePreviewStatus,
   DeliveryAgentCandidateRepairSummary,
@@ -17,9 +17,10 @@ import type {
   DeliveryAgentPreviewCandidatePlansResponse,
 } from "@/lib/contracts/delivery-agent";
 import { RouteOptimizerConfigError } from "@/lib/integrations/route-optimizer/errors";
+import type { FullCandidateVariant } from "@/lib/agents/delivery/candidate-plans/expand-full-candidate-variants";
 
 const CANDIDATE_ROUTE_PREVIEW_NOTES =
-  "These previews include handoff, route-shape repair, and a recommended plan ranking. This is a recommendation only—final run creation will be added later.";
+  "Each candidate is now a full route combination: split + meet-up + start timing + repair result. These previews include handoff, route-shape repair, and a recommended plan ranking. This is a recommendation only—final run creation will be added later.";
 
 const EMPTY_REPAIR_SUMMARY: DeliveryAgentCandidateRepairSummary = {
   repairAttempted: false,
@@ -94,33 +95,46 @@ function collectCandidatePreviewErrors(
     .map((run) => `Run ${run.runSlot}: ${run.previewError}`);
 }
 
+function buildAssignmentForVariant(variant: FullCandidateVariant): CandidateAssignedRun[] {
+  return variant.plan.runs.map((run) => ({
+    runSlot: run.runSlot,
+    role: run.role,
+    stops: run.stops.map((stop) => ({
+      orderId: stop.orderId,
+      area: stop.area,
+      lat: stop.lat,
+      lng: stop.lng,
+      totalMealQuantity: stop.totalMealQuantity,
+    })),
+  }));
+}
+
 async function previewCandidatePlan(input: {
   deliveryDate: string;
-  candidate: Awaited<
-    ReturnType<typeof generateCandidatePlansForAgent>
-  >["candidates"][number];
+  variant: FullCandidateVariant;
   kitchenAddress: string;
   profile: ReturnType<typeof getDeliveryPlanningProfile>;
   routingStopByOrderId: Map<string, RoutingStop>;
 }): Promise<DeliveryAgentCandidatePlanPreviewCore> {
   const handoffResult = await previewCandidateHandoff({
     deliveryDate: input.deliveryDate,
-    candidate: input.candidate,
+    candidate: input.variant.plan,
     kitchenAddress: input.kitchenAddress,
     profile: input.profile,
     routingStopByOrderId: input.routingStopByOrderId,
+    meetupSelection: input.variant.meetupSelection,
   });
 
   const planSummary = {
-    runCount: input.candidate.summary.runCount,
-    totalStops: input.candidate.summary.totalStops,
-    selfUsed: input.candidate.summary.selfUsed,
-    selfStopCount: input.candidate.summary.selfStopCount,
+    runCount: input.variant.plan.summary.runCount,
+    totalStops: input.variant.plan.summary.totalStops,
+    selfUsed: input.variant.plan.summary.selfUsed,
+    selfStopCount: input.variant.plan.summary.selfStopCount,
   };
 
   const repairResult = await repairCandidateRoutePreview({
     deliveryDate: input.deliveryDate,
-    candidate: input.candidate,
+    candidate: input.variant.plan,
     kitchenAddress: input.kitchenAddress,
     profile: input.profile,
     routingStopByOrderId: input.routingStopByOrderId,
@@ -136,15 +150,16 @@ async function previewCandidatePlan(input: {
   });
 
   const warnings = [
-    ...input.candidate.warnings,
+    ...input.variant.plan.warnings,
+    ...input.variant.combination.variantWarnings,
     ...summary.blockingIssues,
     ...repairResult.candidateRepairSummary.warnings,
   ];
 
   return {
-    candidateId: input.candidate.candidateId,
-    name: input.candidate.name,
-    strategyType: input.candidate.strategyType,
+    candidateId: input.variant.plan.candidateId,
+    name: input.variant.plan.name,
+    strategyType: input.variant.plan.strategyType,
     status: resolveCandidatePreviewStatus(repairResult.runPreviews),
     runs: repairResult.runPreviews,
     summary,
@@ -152,7 +167,8 @@ async function previewCandidatePlan(input: {
     candidateRepairSummary: repairResult.candidateRepairSummary,
     warnings,
     errors: collectCandidatePreviewErrors(repairResult.runPreviews),
-    assumptions: repairResult.assumptions,
+    assumptions: [...new Set([...repairResult.assumptions, ...input.variant.combination.variantAssumptions])],
+    combination: input.variant.combination,
   };
 }
 
@@ -170,29 +186,21 @@ export async function previewCandidatePlansForAgent(
   });
   const routingStopByOrderId = buildRoutingStopMap(routing.stops);
 
+  const expansion = expandFullCandidateVariants({
+    splits: generation.candidates,
+    profile,
+  });
+
   const candidates: DeliveryAgentCandidatePlanPreviewCore[] = [];
   const assignmentByCandidateId = new Map<string, CandidateAssignedRun[]>();
 
-  for (const candidate of generation.candidates) {
-    assignmentByCandidateId.set(
-      candidate.candidateId,
-      candidate.runs.map((run) => ({
-        runSlot: run.runSlot,
-        role: run.role,
-        stops: run.stops.map((stop) => ({
-          orderId: stop.orderId,
-          area: stop.area,
-          lat: stop.lat,
-          lng: stop.lng,
-          totalMealQuantity: stop.totalMealQuantity,
-        })),
-      }))
-    );
+  for (const variant of expansion.variants) {
+    assignmentByCandidateId.set(variant.plan.candidateId, buildAssignmentForVariant(variant));
 
     try {
       const preview = await previewCandidatePlan({
         deliveryDate,
-        candidate,
+        variant,
         kitchenAddress,
         profile,
         routingStopByOrderId,
@@ -203,7 +211,7 @@ export async function previewCandidatePlansForAgent(
         throw error;
       }
 
-      const failedRuns = candidate.runs.map((run) =>
+      const failedRuns = variant.plan.runs.map((run) =>
         buildFailedRunPreview(
           run.runSlot,
           run.driverName,
@@ -218,17 +226,17 @@ export async function previewCandidatePlansForAgent(
         profile,
         runPreviews: failedRuns,
         planSummary: {
-          runCount: candidate.summary.runCount,
-          totalStops: candidate.summary.totalStops,
-          selfUsed: candidate.summary.selfUsed,
-          selfStopCount: candidate.summary.selfStopCount,
+          runCount: variant.plan.summary.runCount,
+          totalStops: variant.plan.summary.totalStops,
+          selfUsed: variant.plan.summary.selfUsed,
+          selfStopCount: variant.plan.summary.selfStopCount,
         },
       });
 
       candidates.push({
-        candidateId: candidate.candidateId,
-        name: candidate.name,
-        strategyType: candidate.strategyType,
+        candidateId: variant.plan.candidateId,
+        name: variant.plan.name,
+        strategyType: variant.plan.strategyType,
         status: "failed",
         runs: failedRuns,
         summary,
@@ -240,9 +248,10 @@ export async function previewCandidatePlansForAgent(
           skipReason: readErrorMessage(error),
         },
         candidateRepairSummary: EMPTY_REPAIR_SUMMARY,
-        warnings: [...candidate.warnings, ...summary.blockingIssues],
+        warnings: [...variant.plan.warnings, ...summary.blockingIssues],
         errors: [readErrorMessage(error)],
-        assumptions: candidate.assumptions,
+        assumptions: variant.combination.variantAssumptions,
+        combination: variant.combination,
       });
     }
   }
@@ -253,6 +262,12 @@ export async function previewCandidatePlansForAgent(
     assignmentByCandidateId,
   });
 
+  const selectionWarnings = [...expansion.expansionWarnings, ...selection.selectionWarnings];
+
+  if (candidates.length > 0 && selection.recommendedCandidateId === null && candidates.every((c) => c.status === "failed")) {
+    selectionWarnings.push("No valid full candidate variants could be previewed.");
+  }
+
   return {
     deliveryDate: generation.deliveryDate,
     profileId: generation.profileId,
@@ -261,7 +276,8 @@ export async function previewCandidatePlansForAgent(
     recommendedCandidateId: selection.recommendedCandidateId,
     recommendedPlanSummary: selection.recommendedPlanSummary,
     selectionNotes: selection.selectionNotes,
-    selectionWarnings: selection.selectionWarnings,
+    selectionWarnings,
+    expansionWarnings: expansion.expansionWarnings,
     notes: CANDIDATE_ROUTE_PREVIEW_NOTES,
   };
 }

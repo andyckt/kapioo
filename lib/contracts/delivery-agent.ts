@@ -398,6 +398,20 @@ export type DeliveryAgentRecommendedPlanSummary = {
   decisionSummary: string;
 };
 
+export type DeliveryAgentCandidateCombinationMeta = {
+  baseSplitCandidateId: string;
+  fullCandidateId: string;
+  combinationLabel: string;
+  splitStrategyType: string;
+  meetupVariantId: string;
+  meetupFixedStopPosition: 1 | 2;
+  plannedStartStrategy: string;
+  selfUsageStrategy: "none" | "self_fallback";
+  constraintStrategy: string;
+  variantAssumptions: string[];
+  variantWarnings: string[];
+};
+
 export type DeliveryAgentCandidatePlanPreviewCore = {
   candidateId: string;
   name: string;
@@ -410,6 +424,7 @@ export type DeliveryAgentCandidatePlanPreviewCore = {
   warnings: string[];
   errors: string[];
   assumptions: string[];
+  combination?: DeliveryAgentCandidateCombinationMeta;
 };
 
 export type DeliveryAgentCandidatePlanPreview = DeliveryAgentCandidatePlanPreviewCore & {
@@ -432,5 +447,6 @@ export type DeliveryAgentPreviewCandidatePlansResponse = {
   recommendedPlanSummary: DeliveryAgentRecommendedPlanSummary | null;
   selectionNotes: string;
   selectionWarnings: string[];
+  expansionWarnings?: string[];
   notes: string;
 };
