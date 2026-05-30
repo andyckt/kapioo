@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { AlertCircle, Loader2, MapPin } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,9 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { formatDateTime } from "@/lib/format"
 import type {
+  DeliveryAgentGenerateCandidatePlansResponse,
+  DeliveryAgentPlanningProfileSummary,
+  DeliveryAgentPreviewCandidatePlansResponse,
   DeliveryAgentPreviewResponse,
   DeliveryAgentSimpleRoutePreviewResponse,
 } from "@/lib/contracts/delivery-agent"
@@ -72,14 +75,77 @@ export function AdminDeliveryAgentTab() {
   toastRef.current = toast
   const previewAbortRef = useRef<AbortController | null>(null)
   const routePreviewAbortRef = useRef<AbortController | null>(null)
+  const candidatePlansAbortRef = useRef<AbortController | null>(null)
+  const candidateRoutePreviewAbortRef = useRef<AbortController | null>(null)
+  const profileAbortRef = useRef<AbortController | null>(null)
 
   const [deliveryDate, setDeliveryDate] = useState("")
   const [loading, setLoading] = useState(false)
   const [routePreviewLoading, setRoutePreviewLoading] = useState(false)
+  const [candidatePlansLoading, setCandidatePlansLoading] = useState(false)
+  const [candidateRoutePreviewLoading, setCandidateRoutePreviewLoading] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [planningProfile, setPlanningProfile] = useState<DeliveryAgentPlanningProfileSummary | null>(
+    null
+  )
   const [preview, setPreview] = useState<DeliveryAgentPreviewResponse | null>(null)
   const [routePreview, setRoutePreview] = useState<DeliveryAgentSimpleRoutePreviewResponse | null>(
     null
   )
+  const [candidatePlans, setCandidatePlans] =
+    useState<DeliveryAgentGenerateCandidatePlansResponse | null>(null)
+  const [candidateRoutePreview, setCandidateRoutePreview] =
+    useState<DeliveryAgentPreviewCandidatePlansResponse | null>(null)
+
+  useEffect(() => {
+    profileAbortRef.current?.abort()
+    const controller = new AbortController()
+    profileAbortRef.current = controller
+    setProfileLoading(true)
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/admin/delivery-agent/planning-profile", {
+          signal: controller.signal,
+        })
+
+        const payload = (await response.json()) as {
+          success?: boolean
+          data?: DeliveryAgentPlanningProfileSummary
+          error?: string
+        }
+
+        if (controller.signal.aborted) {
+          return
+        }
+
+        if (!response.ok || !payload.success || !payload.data) {
+          throw new Error(payload.error || "Failed to load planning profile")
+        }
+
+        setPlanningProfile(payload.data)
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return
+        }
+
+        setPlanningProfile(null)
+        toastRef.current({
+          title: "Planning profile unavailable",
+          description: error instanceof Error ? error.message : "Could not load planning profile",
+          variant: "destructive",
+        })
+      } finally {
+        if (!controller.signal.aborted) {
+          setProfileLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      controller.abort()
+    }
+  }, [])
 
   const handlePreview = () => {
     const trimmedDate = deliveryDate.trim()
@@ -94,9 +160,13 @@ export function AdminDeliveryAgentTab() {
 
     previewAbortRef.current?.abort()
     routePreviewAbortRef.current?.abort()
+    candidatePlansAbortRef.current?.abort()
+    candidateRoutePreviewAbortRef.current?.abort()
     const controller = new AbortController()
     previewAbortRef.current = controller
     setRoutePreview(null)
+    setCandidatePlans(null)
+    setCandidateRoutePreview(null)
     setLoading(true)
 
     void (async () => {
@@ -194,12 +264,190 @@ export function AdminDeliveryAgentTab() {
     })()
   }
 
+  const handleGenerateCandidatePlans = () => {
+    const trimmedDate = deliveryDate.trim()
+    if (!trimmedDate || !preview?.canContinueToPlanning) {
+      return
+    }
+
+    candidatePlansAbortRef.current?.abort()
+    candidateRoutePreviewAbortRef.current?.abort()
+    const controller = new AbortController()
+    candidatePlansAbortRef.current = controller
+    setCandidateRoutePreview(null)
+    setCandidatePlansLoading(true)
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/admin/delivery-agent/generate-candidate-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deliveryDate: trimmedDate }),
+          signal: controller.signal,
+        })
+
+        const payload = (await response.json()) as {
+          success?: boolean
+          data?: DeliveryAgentGenerateCandidatePlansResponse
+          error?: string
+        }
+
+        if (controller.signal.aborted) {
+          return
+        }
+
+        if (!response.ok || !payload.success || !payload.data) {
+          throw new Error(payload.error || "Failed to generate candidate plans")
+        }
+
+        setCandidatePlans(payload.data)
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return
+        }
+
+        setCandidatePlans(null)
+        toastRef.current({
+          title: "Candidate plan generation failed",
+          description:
+            error instanceof Error ? error.message : "Could not generate candidate plans",
+          variant: "destructive",
+        })
+      } finally {
+        if (!controller.signal.aborted) {
+          setCandidatePlansLoading(false)
+        }
+      }
+    })()
+  }
+
+  const handlePreviewCandidateRoutes = () => {
+    const trimmedDate = deliveryDate.trim()
+    if (!trimmedDate || !candidatePlans) {
+      return
+    }
+
+    candidateRoutePreviewAbortRef.current?.abort()
+    const controller = new AbortController()
+    candidateRoutePreviewAbortRef.current = controller
+    setCandidateRoutePreviewLoading(true)
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/admin/delivery-agent/preview-candidate-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deliveryDate: trimmedDate }),
+          signal: controller.signal,
+        })
+
+        const payload = (await response.json()) as {
+          success?: boolean
+          data?: DeliveryAgentPreviewCandidatePlansResponse
+          error?: string
+        }
+
+        if (controller.signal.aborted) {
+          return
+        }
+
+        if (!response.ok || !payload.success || !payload.data) {
+          throw new Error(payload.error || "Failed to preview candidate routes")
+        }
+
+        setCandidateRoutePreview(payload.data)
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return
+        }
+
+        setCandidateRoutePreview(null)
+        toastRef.current({
+          title: "Candidate route preview failed",
+          description:
+            error instanceof Error ? error.message : "Could not preview candidate routes",
+          variant: "destructive",
+        })
+      } finally {
+        if (!controller.signal.aborted) {
+          setCandidateRoutePreviewLoading(false)
+        }
+      }
+    })()
+  }
+
   const areaEntries = preview
     ? Object.entries(preview.confirmed.byArea).sort(([a], [b]) => a.localeCompare(b))
     : []
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Planning profile</CardTitle>
+          <CardDescription>
+            Read-only active profile used for future route planning assumptions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {profileLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading planning profile...
+            </div>
+          ) : planningProfile ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Profile</p>
+                  <p className="font-medium">{planningProfile.name}</p>
+                  <p className="text-xs text-muted-foreground">{planningProfile.profileId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Version</p>
+                  <p className="font-medium">{planningProfile.profileVersion}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Normal start</p>
+                  <p className="font-medium">{planningProfile.normalStartTime}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Hard deadline</p>
+                  <p className="font-medium">{planningProfile.hardDeliveryDeadline}</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">{planningProfile.description}</p>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Run slot</TableHead>
+                    <TableHead>Driver</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Starts from</TableHead>
+                    <TableHead>Backup only</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {planningProfile.drivers.map((driver) => (
+                    <TableRow key={driver.runSlot}>
+                      <TableCell>{driver.runSlot}</TableCell>
+                      <TableCell>{driver.defaultDriverName}</TableCell>
+                      <TableCell>{driver.role}</TableCell>
+                      <TableCell>{driver.startsFrom}</TableCell>
+                      <TableCell>{driver.isBackupOnly ? "Yes" : "No"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Planning profile is not available.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Delivery Agent</CardTitle>
@@ -219,6 +467,8 @@ export function AdminDeliveryAgentTab() {
                   setDeliveryDate(event.target.value)
                   setPreview(null)
                   setRoutePreview(null)
+                  setCandidatePlans(null)
+                  setCandidateRoutePreview(null)
                 }}
               />
             </div>
@@ -435,6 +685,318 @@ export function AdminDeliveryAgentTab() {
                     ))}
                   </TableBody>
                 </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Candidate plans</CardTitle>
+              <CardDescription>
+                Generate draft DT / Marco / Self split candidates from confirmed valid stops.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!preview.canContinueToPlanning ? (
+                <>
+                  <SectionBanner>
+                    Candidate plan generation is blocked until all planning issues are resolved.
+                  </SectionBanner>
+                  <div className="flex justify-end">
+                    <Button disabled>Generate Candidate Plans</Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    {preview.confirmed.validStops} valid stop(s) will be split into draft
+                    candidates.
+                  </p>
+                  <div className="flex justify-end">
+                    <Button onClick={handleGenerateCandidatePlans} disabled={candidatePlansLoading}>
+                      {candidatePlansLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating candidates...
+                        </>
+                      ) : (
+                        "Generate Candidate Plans"
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {candidatePlans && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{candidatePlans.notes}</p>
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handlePreviewCandidateRoutes}
+                      disabled={candidateRoutePreviewLoading}
+                    >
+                      {candidateRoutePreviewLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Previewing routes...
+                        </>
+                      ) : (
+                        "Preview Candidate Routes"
+                      )}
+                    </Button>
+                  </div>
+
+                  {candidateRoutePreview && (
+                    <p className="text-sm text-muted-foreground">{candidateRoutePreview.notes}</p>
+                  )}
+
+                  {candidatePlans.candidates.map((candidate) => {
+                    const routePreviewCandidate = candidateRoutePreview?.candidates.find(
+                      (entry) => entry.candidateId === candidate.candidateId
+                    )
+
+                    return (
+                    <div key={candidate.candidateId} className="space-y-3 rounded-md border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-medium">{candidate.name}</p>
+                          <p className="text-xs text-muted-foreground">{candidate.strategyType}</p>
+                        </div>
+                        <div className="text-right text-sm">
+                          <p>{candidate.summary.runCount} run(s)</p>
+                          <p>{candidate.summary.totalStops} stop(s)</p>
+                          <p>Self used: {candidate.summary.selfUsed ? "Yes" : "No"}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground">{candidate.description}</p>
+
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {candidate.runs.map((run) => (
+                          <div key={`${candidate.candidateId}-${run.runSlot}`} className="rounded border p-3">
+                            <p className="font-medium">
+                              Run {run.runSlot} — {run.driverName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {run.stopCount} stop(s), {run.totalMealQuantity} meal(s)
+                            </p>
+                            {Object.keys(run.areaBreakdown).length > 0 && (
+                              <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                                {Object.entries(run.areaBreakdown)
+                                  .sort(([a], [b]) => a.localeCompare(b))
+                                  .map(([area, count]) => (
+                                    <li key={area}>
+                                      {area}: {count}
+                                    </li>
+                                  ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {candidate.assumptions.length > 0 && (
+                        <div className="space-y-1 text-sm">
+                          <p className="font-medium">Assumptions</p>
+                          <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                            {candidate.assumptions.map((assumption) => (
+                              <li key={assumption}>{assumption}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {candidate.warnings.length > 0 && (
+                        <div className="space-y-1 text-sm">
+                          <p className="font-medium text-amber-700">Warnings</p>
+                          <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                            {candidate.warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {routePreviewCandidate && (
+                        <div className="space-y-3 rounded-md border border-dashed p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="font-medium">Route preview</p>
+                            <p className="text-xs uppercase text-muted-foreground">
+                              {routePreviewCandidate.status}
+                            </p>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Latest finish</p>
+                              <p className="font-medium">
+                                {routePreviewCandidate.summary.formattedLatestEstimatedFinishTime ||
+                                  "—"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Deadline status</p>
+                              <p
+                                className={
+                                  routePreviewCandidate.summary.allRunsFinishBeforeDeadline
+                                    ? "font-medium text-green-700"
+                                    : "font-medium text-destructive"
+                                }
+                              >
+                                {routePreviewCandidate.summary.allRunsFinishBeforeDeadline
+                                  ? "All runs finish before 1 PM"
+                                  : routePreviewCandidate.summary.minutesBeforeOrAfterDeadline !==
+                                      undefined
+                                    ? `Late by ${Math.abs(routePreviewCandidate.summary.minutesBeforeOrAfterDeadline)} minutes`
+                                    : "Deadline status unavailable"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Total duration</p>
+                              <p className="font-medium">
+                                {routePreviewCandidate.summary.totalDurationMinutes ?? "—"} min
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Total distance</p>
+                              <p className="font-medium">
+                                {routePreviewCandidate.summary.totalDistanceKm ?? "—"} km
+                              </p>
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-muted-foreground">
+                            {routePreviewCandidate.summary.comparisonNotes}
+                          </p>
+
+                          <div className="space-y-2 rounded-md border p-3">
+                            <p className="font-medium">Meet-up / handoff</p>
+                            {routePreviewCandidate.handoffPlan.handoffSkipped ? (
+                              <p className="text-sm text-muted-foreground">
+                                Synthetic handoff stop used: No
+                                {routePreviewCandidate.handoffPlan.skipReason
+                                  ? ` — ${routePreviewCandidate.handoffPlan.skipReason}`
+                                  : ""}
+                              </p>
+                            ) : (
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Meet-up location</p>
+                                  <p className="text-sm">
+                                    {routePreviewCandidate.handoffPlan.selectedMeetup
+                                      ?.meetupAddress || "—"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">
+                                    DT reaches meet-up at
+                                  </p>
+                                  <p className="text-sm">
+                                    {routePreviewCandidate.handoffPlan.formattedMeetupEta || "—"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Marco starts from meet-up at
+                                  </p>
+                                  <p className="text-sm">
+                                    {routePreviewCandidate.handoffPlan.receiverStartTime || "—"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Meet-up fixed as stop
+                                  </p>
+                                  <p className="text-sm">
+                                    #
+                                    {routePreviewCandidate.handoffPlan.selectedMeetup
+                                      ?.meetupFixedStopPosition ?? "—"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Synthetic handoff stop used
+                                  </p>
+                                  <p className="text-sm">Yes</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            {routePreviewCandidate.runs.map((run) => (
+                              <div
+                                key={`${candidate.candidateId}-preview-${run.runSlot}`}
+                                className="rounded border p-3"
+                              >
+                                <p className="font-medium">
+                                  Run {run.runSlot} — {run.driverName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{run.previewStatus}</p>
+                                <p className="mt-2 text-sm">
+                                  Finish:{" "}
+                                  {run.formattedEstimatedFinishTime ||
+                                    formatPreviewDateTime(run.estimatedFinishTime)}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {run.totalDurationMinutes ?? "—"} min,{" "}
+                                  {run.totalDistanceKm ?? "—"} km, {run.optimizedStopCount}{" "}
+                                  optimized stop(s)
+                                </p>
+                                {run.syntheticMeetupIncluded && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Synthetic meet-up at stop #{run.meetupSequence ?? "—"}
+                                    {run.formattedMeetupEta
+                                      ? ` (${run.formattedMeetupEta})`
+                                      : ""}
+                                  </p>
+                                )}
+                                {run.previewError && (
+                                  <p className="mt-1 text-xs text-destructive">{run.previewError}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {routePreviewCandidate.assumptions.length > 0 && (
+                            <div className="space-y-1 text-sm">
+                              <p className="font-medium">Route assumptions</p>
+                              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                                {routePreviewCandidate.assumptions.map((assumption) => (
+                                  <li key={assumption}>{assumption}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {routePreviewCandidate.errors.length > 0 && (
+                            <div className="space-y-1 text-sm">
+                              <p className="font-medium text-destructive">Route errors</p>
+                              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                                {routePreviewCandidate.errors.map((entry) => (
+                                  <li key={entry}>{entry}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {routePreviewCandidate.warnings.length > 0 && (
+                            <div className="space-y-1 text-sm">
+                              <p className="font-medium text-amber-700">Route warnings</p>
+                              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                                {routePreviewCandidate.warnings.map((warning) => (
+                                  <li key={warning}>{warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    )
+                  })}
+                </div>
               )}
             </CardContent>
           </Card>

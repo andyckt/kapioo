@@ -2,6 +2,7 @@ import { formatDateTime } from "@/lib/format";
 import {
   computeTorontoEstimatedFinishIso,
   computeTorontoStopArrivalIsos,
+  formatTorontoLocalTimeForRouteOptimizer,
   parseTorontoLocalDateTime,
 } from "@/lib/agents/delivery/route-preview-time";
 
@@ -34,5 +35,15 @@ describe("lib/agents/delivery/route-preview-time", () => {
 
     expect(formatDateTime(arrivals[0]!)).toBe("May 31, 2026, 10:04 AM");
     expect(formatDateTime(arrivals[1]!)).toBe("May 31, 2026, 10:21 AM");
+  });
+
+  it("formats Toronto local HH:MM for Route Optimizer start_time", () => {
+    const finishIso = computeTorontoEstimatedFinishIso({
+      deliveryDate: "2026-05-31",
+      startTime: "10:00",
+      totalDurationMinutes: 30,
+    });
+
+    expect(formatTorontoLocalTimeForRouteOptimizer(finishIso)).toBe("10:30");
   });
 });

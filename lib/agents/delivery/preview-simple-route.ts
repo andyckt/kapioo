@@ -1,8 +1,9 @@
-import { buildSimpleRoutePreviewPayload, SIMPLE_ROUTE_PREVIEW_START_TIME } from "@/lib/agents/delivery/build-simple-route-preview-payload";
+import { buildSimpleRoutePreviewPayload } from "@/lib/agents/delivery/build-simple-route-preview-payload";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
 import { mapRouteOptimizerPreviewResult } from "@/lib/agents/delivery/map-route-optimizer-preview-result";
+import { getDefaultDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile";
 import { previewDeliveryOrdersForAgent } from "@/lib/agents/delivery/preview-delivery-orders";
 import type { DeliveryAgentSimpleRoutePreviewResponse } from "@/lib/contracts/delivery-agent";
 import { previewRouteOptimizerRun } from "@/lib/integrations/route-optimizer/client";
@@ -13,6 +14,9 @@ const SIMPLE_ROUTE_PREVIEW_NOTES =
 export async function previewSimpleRouteForAgent(
   deliveryDate: string
 ): Promise<DeliveryAgentSimpleRoutePreviewResponse> {
+  const planningProfile = getDefaultDeliveryPlanningProfile();
+  const startTime = planningProfile.timeRules.normalKitchenStartTime;
+
   const orderPreview = await previewDeliveryOrdersForAgent(deliveryDate);
 
   if (!orderPreview.canContinueToPlanning) {
@@ -35,6 +39,7 @@ export async function previewSimpleRouteForAgent(
     deliveryDate,
     stops: routing.stops,
     kitchenAddress,
+    startTime,
   });
 
   const routeResult = await previewRouteOptimizerRun(payload);
@@ -43,7 +48,7 @@ export async function previewSimpleRouteForAgent(
     deliveryDate: orderPreview.deliveryDate,
     routePreview: mapRouteOptimizerPreviewResult(routeResult, {
       deliveryDate,
-      startTime: SIMPLE_ROUTE_PREVIEW_START_TIME,
+      startTime,
     }),
     sourceSummary: {
       validStops: orderPreview.confirmed.validStops,

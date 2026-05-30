@@ -83,4 +83,23 @@ export function computeTorontoStopArrivalIsos(input: {
   return arrivals;
 }
 
+export function formatTorontoLocalTimeForRouteOptimizer(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid ISO datetime for Route Optimizer start_time: ${iso}`);
+  }
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: ORDER_DATA_TIMEZONE,
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(date);
+
+  const hour = readDateTimePart(parts, "hour");
+  const minute = readDateTimePart(parts, "minute");
+
+  return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+}
+
 export { DEFAULT_ROUTE_PREVIEW_SERVICE_TIME_MINUTES };
