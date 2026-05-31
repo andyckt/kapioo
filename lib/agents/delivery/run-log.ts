@@ -12,6 +12,7 @@ import {
   type AttachPlanningArtifactsInput,
   type AttachRouteOptimizerRunsOptions,
   type CreateDeliveryAgentRunLogInput,
+  type DeliveryAgentFinalRouteCreationHistoryEntry,
   type DeliveryAgentRouteOptimizerRun,
   type DeliveryAgentRunFailureInput,
   type DeliveryAgentRunReadyForReviewSummary,
@@ -130,13 +131,20 @@ export async function markDeliveryAgentRunFailed(
 
 export async function markDeliveryAgentRunReadyForReview(
   id: string | mongoose.Types.ObjectId,
-  summary: DeliveryAgentRunReadyForReviewSummary
+  summary: DeliveryAgentRunReadyForReviewSummary,
+  options?: { preservePipelineStatus?: boolean }
 ): Promise<IDeliveryAgentRun> {
   await connectToDatabase();
 
+  const existing = await DeliveryAgentRun.findById(id);
+  const statusUpdate =
+    options?.preservePipelineStatus && existing?.status === "created"
+      ? {}
+      : { status: "ready_for_review" as const };
+
   return updateRunById(id, {
     $set: {
-      status: "ready_for_review",
+      ...statusUpdate,
       ...(summary.selectedPlanSummary !== undefined
         ? { selectedPlanSummary: summary.selectedPlanSummary }
         : {}),
@@ -185,6 +193,7 @@ export async function saveFinalRouteOptimizerResult(
       routeOptimizerPlanningSessionId: input.routeOptimizerPlanningSessionId.trim(),
       routeOptimizerRuns: input.routeOptimizerRuns,
       finalRouteOptimizerMetadata: input.finalRouteOptimizerMetadata,
+      finalRouteRunsMarkedMissingAt: undefined,
     },
   });
 }
@@ -300,4 +309,25 @@ export async function updateDeliveryAgentRunForReview(
   }
 
   return updateRunById(id, { $set: update });
+}
+
+export async function appendFinalRouteCreationHistory(
+  id: string | mongoose.Types.ObjectId,
+  entry: DeliveryAgentFinalRouteCreationHistoryEntry
+): Promise<IDeliveryAgentRun> {
+  await connectToDatabase();
+  const existing = await DeliveryAgentRun.findById(id);
+  if (!existing) {
+    throw new DeliveryAgentRunNotFoundError(resolveRunId(id));
+  }
+
+  const learning = existing.learningArtifacts ?? { artifactVersion: "learning-artifacts-v1" as const };
+  return updateRunById(id, {
+    $set: {
+      learningArtifacts: {
+        ...learning,
+        finalRouteCreationHistory: [...(learning.finalRouteCreationHistory ?? []), entry],
+      },
+    },
+  });
 }

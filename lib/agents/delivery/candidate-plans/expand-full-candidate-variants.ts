@@ -4,10 +4,13 @@ import type { ActiveMeetupSelection } from "@/lib/agents/delivery/candidate-plan
 import {
   buildMeetupCandidatePool,
   buildMeetupSelectionForPosition,
+  buildSuccessfulMeetupSelection,
   meetupOptionDedupeKey,
   meetupVariantDedupeKey,
   rankMeetupOptions,
 } from "@/lib/agents/delivery/candidate-plans/rank-meetup-options";
+import { resolvePinnedMeetupScoreBoost } from "@/lib/agents/delivery/feedback/apply-planning-hints";
+import type { PlanningHints } from "@/lib/agents/delivery/feedback/planning-hints";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type {
   DeliveryAgentCandidateCombinationMeta,
@@ -74,6 +77,7 @@ function buildNoHandoffVariant(input: {
 export function expandFullCandidateVariants(input: {
   splits: DeliveryAgentCandidatePlan[];
   profile: DeliveryPlanningProfile;
+  planningHints?: PlanningHints;
 }): FullCandidateExpansionResult {
   const rules = input.profile.candidateExpansionRules;
   const expansionWarnings: string[] = [];
@@ -117,7 +121,16 @@ export function expandFullCandidateVariants(input: {
       limit: rules.maxMeetupOptionsPerSplit,
     });
 
-    for (const scoredMeetup of rankedMeetups) {
+    const prioritizedMeetups =
+      input.planningHints?.pinnedMeetupOrderId
+        ? [...rankedMeetups].sort((left, right) => {
+            const leftBoost = resolvePinnedMeetupScoreBoost(left.orderId, input.planningHints);
+            const rightBoost = resolvePinnedMeetupScoreBoost(right.orderId, input.planningHints);
+            return rightBoost + right.score - (leftBoost + left.score);
+          })
+        : rankedMeetups;
+
+    for (const scoredMeetup of prioritizedMeetups) {
       const meetupKey = meetupOptionDedupeKey(scoredMeetup);
       const meetupShortLabel = shortenMeetupLabel({
         area: scoredMeetup.area,
@@ -126,14 +139,36 @@ export function expandFullCandidateVariants(input: {
       });
 
       for (const fixedPosition of rules.allowedMeetupFixedPositions) {
-        const selection = buildMeetupSelectionForPosition({
-          scoredMeetup,
-          profile: input.profile,
-          runs: baseSplit.runs,
-          fixedPosition,
-        });
+        const providerRun = findProviderRun(baseSplit.runs, input.profile);
+        const hintedStopBeforeMeetup =
+          fixedPosition === 2 && providerRun && input.planningHints?.beforeMeetupOrderIds.length
+            ? input.planningHints.beforeMeetupOrderIds.find((orderId) =>
+                providerRun.stops.some((stop) => stop.orderId === orderId)
+              )
+            : undefined;
+
+        const selection = hintedStopBeforeMeetup
+          ? buildSuccessfulMeetupSelection({
+              selected: scoredMeetup,
+              profile: input.profile,
+              stopBeforeMeetupOrderId: hintedStopBeforeMeetup,
+            })
+          : buildMeetupSelectionForPosition({
+              scoredMeetup,
+              profile: input.profile,
+              runs: baseSplit.runs,
+              fixedPosition,
+            });
 
         if (!selection) {
+          continue;
+        }
+
+        if (fixedPosition === 1 && selection.meetupFixedStopPosition !== 1) {
+          continue;
+        }
+
+        if (fixedPosition === 2 && selection.meetupFixedStopPosition !== 2) {
           continue;
         }
 
@@ -158,7 +193,8 @@ export function expandFullCandidateVariants(input: {
         });
 
         drafts.push({
-          preScore: scoredMeetup.score,
+          preScore:
+            scoredMeetup.score + resolvePinnedMeetupScoreBoost(scoredMeetup.orderId, input.planningHints),
           dedupeKey,
           meetupSelection: selection,
           plan: {

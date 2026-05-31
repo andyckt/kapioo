@@ -1,6 +1,9 @@
 import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
 import { getDonaldPlanReview, submitDonaldPlanReview } from "@/lib/agents/delivery/review-plan";
-import { DeliveryAgentReviewValidationError } from "@/lib/agents/delivery/review-plan/submit-donald-plan-review";
+import {
+  DeliveryAgentReviewLockedError,
+  DeliveryAgentReviewValidationError,
+} from "@/lib/agents/delivery/review-plan/submit-donald-plan-review";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import {
   deliveryAgentReviewPlanBodySchema,
@@ -75,6 +78,10 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     if (error instanceof DeliveryAgentReviewValidationError) {
       return errorJson(error.message, 400);
+    }
+
+    if (error instanceof DeliveryAgentReviewLockedError) {
+      return errorJson(error.message, 409);
     }
 
     return handleRouteError(error, "POST /api/admin/delivery-agent/review-plan");

@@ -50,6 +50,9 @@ export interface IDeliveryAgentRun extends Omit<Document, "errors"> {
   routeOptimizerPlanningSessionId?: string;
   routeOptimizerRuns?: DeliveryAgentRouteOptimizerRun[];
   finalRouteOptimizerMetadata?: DeliveryAgentFinalRouteOptimizerMetadata;
+  finalRouteGeneration?: number;
+  finalRouteRunsMarkedMissingAt?: string;
+  reviewReopenedAt?: string;
   errors?: DeliveryAgentRunError[];
   notes?: string;
   /** Log schema version — not planning profile version (see profileVersion). */
@@ -217,7 +220,7 @@ const DeliveryAgentRunSchema = new Schema<IDeliveryAgentRun>(
     },
     reviewStatus: {
       type: String,
-      enum: ["pending", "approved", "edited", "rejected"],
+      enum: ["pending", "approved", "improvement_requested", "edited", "rejected"],
     },
     reviewedAt: {
       type: Date,
@@ -253,6 +256,17 @@ const DeliveryAgentRunSchema = new Schema<IDeliveryAgentRun>(
     },
     finalRouteOptimizerMetadata: {
       type: Schema.Types.Mixed,
+    },
+    finalRouteGeneration: {
+      type: Number,
+      default: 1,
+    },
+    finalRouteRunsMarkedMissingAt: {
+      type: String,
+      trim: true,
+    },
+    reviewReopenedAt: {
+      type: Date,
     },
     errors: {
       type: [RunErrorSchema],

@@ -7,7 +7,7 @@ import { AdminTabSkeleton } from "@/features/admin-shell"
 export const LazyAdminUsersTab = dynamic(
   () =>
     import("@/features/admin-users/admin-users-tab").then((m) => ({ default: m.AdminUsersTab })),
-  { loading: () => <AdminTabSkeleton /> }
+  { loading: () => <AdminTabSkeleton />, ssr: false }
 )
 
 export const LazyAdminCreditsTab = dynamic(

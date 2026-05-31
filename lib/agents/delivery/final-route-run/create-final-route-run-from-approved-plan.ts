@@ -21,6 +21,7 @@ import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
 import {
+  appendFinalRouteCreationHistory,
   buildDeliveryAgentDuplicateKey,
   findDeliveryAgentRunByDuplicateKey,
   findDeliveryAgentRunById,
@@ -640,6 +641,7 @@ export async function createFinalRouteRunFromApprovedPlan(
         kitchenAddress,
         profile,
         routingStopByOrderId,
+        finalRouteGeneration: run.finalRouteGeneration ?? 1,
       },
     });
 
@@ -798,6 +800,16 @@ export async function createFinalRouteRunFromApprovedPlan(
         routeOptimizerPlanningSessionId: planningSessionId,
         routeOptimizerRuns: mergedRouteRuns,
         finalRouteOptimizerMetadata: metadata,
+      });
+
+      await appendFinalRouteCreationHistory(updated.id, {
+        createdAt: createdAt.toISOString(),
+        createdBy: input.createdBy,
+        generation: run.finalRouteGeneration ?? 1,
+        finalRouteOptimizerStatus: "created",
+        finalRouteOptimizerRunIds: mergedRouteRuns.map((routeRun) => routeRun.runId),
+        routeSummaries: mergedRouteSummaries,
+        failedRouteSummaries: [],
       });
 
       return {

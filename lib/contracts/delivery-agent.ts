@@ -512,7 +512,7 @@ export const deliveryAgentReviewPlanBodySchema = z.object({
   profileId: z.string().trim().min(1),
   profileVersion: z.string().trim().min(1),
   planningSessionId: z.string().trim().min(1).optional(),
-  reviewStatus: z.enum(["approved", "edited", "rejected"]),
+  reviewStatus: z.enum(["approved", "improvement_requested", "edited", "rejected"]),
   feedbackText: z.string().max(4000).optional(),
   feedbackTags: z.array(deliveryAgentReviewFeedbackTagSchema).optional(),
   recommendedCandidateId: z.string().trim().min(1),
@@ -534,13 +534,22 @@ export type DeliveryAgentReviewPlanQuery = z.infer<typeof deliveryAgentReviewPla
 
 export type DeliveryAgentReviewPlanResponse = {
   deliveryAgentRunId: string;
-  reviewStatus: "approved" | "edited" | "rejected";
+  reviewStatus: "approved" | "improvement_requested" | "edited" | "rejected";
   reviewedAt: string;
   recommendedCandidateId: string;
   selectedCandidateId: string;
   didDonaldOverrideRecommendation: boolean;
   message: string;
+  operationalState?: DeliveryAgentOperationalReviewState;
 };
+
+export type DeliveryAgentOperationalReviewState =
+  | "pending_review"
+  | "improvement_requested"
+  | "approved"
+  | "final_route_created"
+  | "final_route_partial_created"
+  | "final_route_missing_or_deleted";
 
 export type DeliveryAgentGetReviewPlanResponse = {
   review: {
@@ -549,7 +558,13 @@ export type DeliveryAgentGetReviewPlanResponse = {
     profileId: string;
     profileVersion?: string;
     planningSessionId?: string;
-    reviewStatus?: "pending" | "approved" | "edited" | "rejected";
+    reviewStatus?:
+      | "pending"
+      | "approved"
+      | "improvement_requested"
+      | "edited"
+      | "rejected";
+    operationalState?: DeliveryAgentOperationalReviewState;
     reviewedAt?: string;
     reviewedBy?: string;
     donaldFeedbackText?: string;
@@ -559,8 +574,70 @@ export type DeliveryAgentGetReviewPlanResponse = {
     didDonaldOverrideRecommendation?: boolean;
     selectedPlanSummary?: Record<string, unknown>;
     finalRouteOptimizerMetadata?: DeliveryAgentFinalRouteOptimizerMetadata;
+    finalRouteGeneration?: number;
+    finalRouteRunsMarkedMissingAt?: string;
+    reviewReopenedAt?: string;
+    activeCandidateGenerationNumber?: number;
+    submittedFeedbackSummary?: {
+      feedbackText?: string;
+      feedbackTags?: string[];
+      reviewedAt: string;
+    };
   } | null;
 };
+
+export const deliveryAgentGenerateImprovedCandidatePlansBodySchema = z.object({
+  deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+  profileId: z.string().trim().min(1),
+  deliveryAgentRunId: z.string().trim().min(1).optional(),
+});
+
+export type DeliveryAgentGenerateImprovedCandidatePlansBody = z.infer<
+  typeof deliveryAgentGenerateImprovedCandidatePlansBodySchema
+>;
+
+export type DeliveryAgentGenerateImprovedCandidatePlansResponse = {
+  preview: DeliveryAgentPreviewCandidatePlansResponse;
+  generationNumber: number;
+  applicationStatus: "applied" | "partial" | "not_applied";
+  applicationNotes: string[];
+  feedbackInterpretation: {
+    preferredMeetupAddress?: string;
+    preferredMeetupOrderId?: string;
+    preferredDriverAssignments: Array<{
+      orderId?: string;
+      customerName?: string;
+      preferredRunSlot: string;
+      timing?: "before_meetup" | "any";
+    }>;
+    penalties: string[];
+    unmatchedCustomerNames: string[];
+    warnings: string[];
+    sourceFeedbackReviewedAt: string;
+  };
+  warnings: string[];
+};
+
+export const deliveryAgentReopenReviewBodySchema = z.object({
+  deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+  profileId: z.string().trim().min(1),
+  deliveryAgentRunId: z.string().trim().min(1).optional(),
+  confirmed: z.literal(true),
+});
+
+export const deliveryAgentResetFinalRouteRunsBodySchema = z.object({
+  deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+  profileId: z.string().trim().min(1),
+  deliveryAgentRunId: z.string().trim().min(1).optional(),
+  confirmed: z.literal(true),
+  reason: z.string().max(1000).optional(),
+  markMissing: z.boolean().optional(),
+});
+
+export type DeliveryAgentReopenReviewBody = z.infer<typeof deliveryAgentReopenReviewBodySchema>;
+export type DeliveryAgentResetFinalRouteRunsBody = z.infer<
+  typeof deliveryAgentResetFinalRouteRunsBodySchema
+>;
 
 export const deliveryAgentCreateFinalRouteRunBodySchema = z.object({
   deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),

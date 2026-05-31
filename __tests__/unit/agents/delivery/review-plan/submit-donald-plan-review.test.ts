@@ -27,6 +27,7 @@ vi.mock("@/lib/agents/delivery/run-log", () => ({
 import { PLANNING_ARTIFACTS_VERSION } from "@/lib/agents/delivery/run-log-types";
 import type { DeliveryAgentPreviewCandidatePlansResponse } from "@/lib/contracts/delivery-agent";
 import {
+  DeliveryAgentReviewLockedError,
   DeliveryAgentReviewValidationError,
   submitDonaldPlanReview,
 } from "@/lib/agents/delivery/review-plan/submit-donald-plan-review";
@@ -245,12 +246,12 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
       reviewedBy: "donald@kapioo.com",
     });
 
-    expect(result.reviewStatus).toBe("rejected");
-    expect(result.message).toContain("cannot be used to create a final Route Optimizer run");
+    expect(result.reviewStatus).toBe("improvement_requested");
+    expect(result.message).toContain("generate improved candidate plans");
     expect(runLogMocks.recordDonaldReviewMock).toHaveBeenCalledWith(
       "run-123",
       expect.objectContaining({
-        reviewStatus: "rejected",
+        reviewStatus: "improvement_requested",
         donaldFeedbackText: "Meet-up too late for receiver",
         donaldFeedbackTags: ["meetup_too_late"],
       })
@@ -258,6 +259,11 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
     expect(runLogMocks.attachLearningArtifactsMock).toHaveBeenCalledWith(
       "run-123",
       expect.objectContaining({
+        improvementRequestHistory: expect.arrayContaining([
+          expect.objectContaining({
+            feedbackTags: ["meetup_too_late"],
+          }),
+        ]),
         rejectionHistory: expect.arrayContaining([
           expect.objectContaining({
             feedbackTags: ["meetup_too_late"],
@@ -267,7 +273,7 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
     );
   });
 
-  it("saves needs revision as edited status", async () => {
+  it("normalizes legacy edited status to improvement_requested", async () => {
     setupExistingRun();
 
     const result = await submitDonaldPlanReview({
@@ -284,16 +290,39 @@ describe("lib/agents/delivery/review-plan/submit-donald-plan-review", () => {
       reviewedBy: "donald@kapioo.com",
     });
 
-    expect(result.reviewStatus).toBe("edited");
-    expect(result.message).toContain("generate revised candidates");
+    expect(result.reviewStatus).toBe("improvement_requested");
+    expect(result.message).toContain("generate improved candidate plans");
     expect(runLogMocks.attachLearningArtifactsMock).toHaveBeenCalledWith(
       "run-123",
       expect.objectContaining({
+        improvementRequestHistory: expect.arrayContaining([
+          expect.objectContaining({ feedbackTags: ["provider_route_shape_wrong"] }),
+        ]),
         manualEdits: expect.arrayContaining([
           expect.objectContaining({ type: "needs_revision" }),
         ]),
       })
     );
+  });
+
+  it("blocks improvement feedback after approval", async () => {
+    setupExistingRun({ reviewStatus: "approved" });
+
+    await expect(
+      submitDonaldPlanReview({
+        deliveryDate: "2026-06-09",
+        profileId: "daily-v1-current-dt-marco-self",
+        profileVersion: "daily-v1.0",
+        reviewStatus: "improvement_requested",
+        feedbackText: "Too late",
+        feedbackTags: ["meetup_too_late"],
+        recommendedCandidateId: "baseline:2026-06-09:meetup-a:pos1",
+        selectedCandidateId: "baseline:2026-06-09:meetup-a:pos1",
+        candidatePreviewSnapshot: previewSnapshot,
+        orderSnapshot,
+        reviewedBy: "donald@kapioo.com",
+      })
+    ).rejects.toBeInstanceOf(DeliveryAgentReviewLockedError);
   });
 
   it("records override when Donald selects another candidate", async () => {

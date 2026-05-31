@@ -430,4 +430,31 @@ describe("buildFinalRouteCreatePayloads", () => {
     ).toEqual(["DD-1"]);
     expect(dtCustomers.filter((customer) => customer.is_synthetic)).toHaveLength(1);
   });
+
+  it("appends generation suffix when finalRouteGeneration is greater than 1", () => {
+    const payload = buildFinalRouteCreatePayloads({
+      candidate: approvedCandidate,
+      context: {
+        deliveryDate: "2026-06-09",
+        deliveryAgentRunId: "run-123",
+        profileId: "daily-profile",
+        selectedCandidateId: "candidate:selected",
+        planningSessionId: "final:run-123",
+        kitchenAddress: "Kitchen",
+        profile: getDefaultDeliveryPlanningProfile(),
+        routingStopByOrderId: new Map([
+          ["DD-1", routingStop("DD-1", "1 Provider St")],
+          ["DD-2", routingStop("DD-2", "2 Receiver St")],
+        ]),
+        finalRouteGeneration: 2,
+      },
+    });
+
+    expect(payload.runs[0]?.external_id).toBe(
+      "kapioo-final-run:2026-06-09:run-123:candidate:selected:A:v2"
+    );
+    expect(payload.runs[0]?.idempotency_key).toBe(
+      "daily-delivery-agent:2026-06-09:daily-profile:final:candidate:selected:A:v2"
+    );
+  });
 });

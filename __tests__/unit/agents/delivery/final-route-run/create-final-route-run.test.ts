@@ -34,6 +34,7 @@ vi.mock("@/lib/agents/delivery/run-log", () => ({
   saveFinalRouteOptimizerFailure: mocks.saveFailureMock,
   saveFinalRouteOptimizerPartialResult: mocks.savePartialMock,
   saveFinalRouteOptimizerResult: mocks.saveResultMock,
+  appendFinalRouteCreationHistory: vi.fn().mockResolvedValue({ id: "run-123" }),
 }));
 
 import { DEFAULT_DELIVERY_PLANNING_PROFILE } from "@/lib/agents/delivery/planning-profile/default-profile";

@@ -13,8 +13,17 @@ import type {
   DeliveryAgentRecommendedPlanSummary,
 } from "@/lib/contracts/delivery-agent";
 
+import type {
+  DeliveryAgentReviewHistoryEntry,
+  DeliveryAgentReviewStatus,
+} from "@/lib/agents/delivery/run-log-types";
+import {
+  isImprovementRequestedStatus,
+  normalizeReviewStatusForWrite,
+} from "@/lib/agents/delivery/review-plan/review-status-helpers";
+
 export type BuildReviewArtifactsInput = {
-  reviewStatus: "approved" | "edited" | "rejected";
+  reviewStatus: Exclude<DeliveryAgentReviewStatus, "pending">;
   recommendedCandidateId: string;
   selectedCandidateId: string;
   didDonaldOverrideRecommendation: boolean;
@@ -198,7 +207,8 @@ export function buildReviewArtifacts(input: BuildReviewArtifactsInput): {
 
   const locationArtifacts = buildLocationArtifacts(selectedCandidate);
 
-  const historyEntry = {
+  const normalizedStatus = normalizeReviewStatusForWrite(input.reviewStatus);
+  const historyEntry: DeliveryAgentReviewHistoryEntry = {
     reviewedAt: input.reviewedAt.toISOString(),
     reviewedBy: input.reviewedBy,
     feedbackText: input.feedbackText?.trim() || undefined,
@@ -207,7 +217,7 @@ export function buildReviewArtifacts(input: BuildReviewArtifactsInput): {
     selectedCandidateId: input.selectedCandidateId,
     didDonaldOverrideRecommendation: input.didDonaldOverrideRecommendation,
     planningSessionId: input.planningSessionId,
-    reviewStatus: input.reviewStatus,
+    reviewStatus: normalizedStatus,
   };
 
   const existingLearning = input.existingLearningArtifacts;
@@ -224,20 +234,34 @@ export function buildReviewArtifacts(input: BuildReviewArtifactsInput): {
     rejectionHistory: [...(existingLearning?.rejectionHistory ?? [])],
     manualEdits: [...(existingLearning?.manualEdits ?? [])],
     overrideHistory: [...(existingLearning?.overrideHistory ?? [])],
+    approvalHistory: [...(existingLearning?.approvalHistory ?? [])],
+    improvementRequestHistory: [...(existingLearning?.improvementRequestHistory ?? [])],
+    reopenReviewHistory: [...(existingLearning?.reopenReviewHistory ?? [])],
+    finalRouteCreationHistory: [...(existingLearning?.finalRouteCreationHistory ?? [])],
+    finalRouteResetHistory: [...(existingLearning?.finalRouteResetHistory ?? [])],
   };
 
-  if (input.reviewStatus === "rejected") {
-    learningArtifacts.rejectionHistory?.push(historyEntry);
-  } else if (input.reviewStatus === "edited") {
-    learningArtifacts.manualEdits?.push({
+  if (isImprovementRequestedStatus(input.reviewStatus)) {
+    learningArtifacts.improvementRequestHistory?.push(historyEntry);
+    if (input.reviewStatus === "rejected") {
+      learningArtifacts.rejectionHistory?.push(historyEntry);
+    } else if (input.reviewStatus === "edited") {
+      learningArtifacts.manualEdits?.push({
+        ...historyEntry,
+        type: input.didDonaldOverrideRecommendation ? "override_selection" : "needs_revision",
+      });
+    }
+  } else if (input.reviewStatus === "approved") {
+    learningArtifacts.approvalHistory?.push({
       ...historyEntry,
-      type: input.didDonaldOverrideRecommendation ? "override_selection" : "needs_revision",
+      finalAcceptedPlanSnapshot: planningArtifacts.finalAcceptedPlan,
     });
-  } else if (input.reviewStatus === "approved" && input.didDonaldOverrideRecommendation) {
-    learningArtifacts.overrideHistory?.push({
-      ...historyEntry,
-      type: "recommendation_override",
-    });
+    if (input.didDonaldOverrideRecommendation) {
+      learningArtifacts.overrideHistory?.push({
+        ...historyEntry,
+        type: "recommendation_override",
+      });
+    }
   }
 
   return {

@@ -4,7 +4,10 @@ import { compareCandidateDeadline } from "@/lib/agents/delivery/candidate-plans/
 import { expandFullCandidateVariants } from "@/lib/agents/delivery/candidate-plans/expand-full-candidate-variants";
 import { generateCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/generate-candidate-plans";
 import { previewCandidateHandoff } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
+import type { HandoffRunChainOverrides } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
 import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
+import { buildHandoffOverridesFromHints } from "@/lib/agents/delivery/feedback/apply-planning-hints";
+import type { PlanningHints } from "@/lib/agents/delivery/feedback/planning-hints";
 import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
@@ -15,6 +18,7 @@ import type {
   DeliveryAgentCandidateRepairSummary,
   DeliveryAgentCandidateRunPreview,
   DeliveryAgentPreviewCandidatePlansResponse,
+  DeliveryAgentCandidatePlan,
 } from "@/lib/contracts/delivery-agent";
 import { RouteOptimizerConfigError } from "@/lib/integrations/route-optimizer/errors";
 import type { FullCandidateVariant } from "@/lib/agents/delivery/candidate-plans/expand-full-candidate-variants";
@@ -135,6 +139,7 @@ async function previewCandidatePlan(input: {
   kitchenAddress: string;
   profile: ReturnType<typeof getDeliveryPlanningProfile>;
   routingStopByOrderId: Map<string, RoutingStop>;
+  handoffOverrides?: HandoffRunChainOverrides;
 }): Promise<DeliveryAgentCandidatePlanPreviewCore> {
   const handoffResult = await previewCandidateHandoff({
     deliveryDate: input.deliveryDate,
@@ -143,6 +148,7 @@ async function previewCandidatePlan(input: {
     profile: input.profile,
     routingStopByOrderId: input.routingStopByOrderId,
     meetupSelection: input.variant.meetupSelection,
+    handoffOverrides: input.handoffOverrides,
   });
 
   const planSummary = {
@@ -192,16 +198,27 @@ async function previewCandidatePlan(input: {
   };
 }
 
-export async function previewCandidatePlansForAgent(
-  deliveryDate: string,
-  profileId?: string
-): Promise<DeliveryAgentPreviewCandidatePlansResponse> {
-  const profile = getDeliveryPlanningProfile(profileId);
+export async function previewCandidatePlansPipeline(input: {
+  deliveryDate: string;
+  profileId?: string;
+  profileVersion?: string;
+  baseCandidates?: DeliveryAgentCandidatePlan[];
+  planningHints?: PlanningHints;
+}): Promise<DeliveryAgentPreviewCandidatePlansResponse> {
+  const profile = getDeliveryPlanningProfile(input.profileId);
   const kitchenAddress = getKapiooKitchenStartLocation();
-  const generation = await generateCandidatePlansForAgent(deliveryDate, profileId);
+  const generation = input.baseCandidates
+    ? {
+        deliveryDate: input.deliveryDate,
+        profileId: profile.profileId,
+        profileVersion: input.profileVersion ?? profile.version,
+        candidates: input.baseCandidates,
+        notes: "",
+      }
+    : await generateCandidatePlansForAgent(input.deliveryDate, input.profileId);
 
   const routing = await getDeliveryOrdersForRouting({
-    deliveryDate,
+    deliveryDate: input.deliveryDate,
     statuses: ["confirmed"],
   });
   const routingStopByOrderId = buildRoutingStopMap(routing.stops);
@@ -209,7 +226,12 @@ export async function previewCandidatePlansForAgent(
   const expansion = expandFullCandidateVariants({
     splits: generation.candidates,
     profile,
+    planningHints: input.planningHints,
   });
+
+  const handoffOverrides = input.planningHints
+    ? buildHandoffOverridesFromHints(input.planningHints)
+    : undefined;
 
   const candidates: DeliveryAgentCandidatePlanPreviewCore[] = [];
   const assignmentByCandidateId = new Map<string, CandidateAssignedRun[]>();
@@ -224,11 +246,15 @@ export async function previewCandidatePlansForAgent(
         await throttleCandidatePreview();
       }
       const preview = await previewCandidatePlan({
-        deliveryDate,
+        deliveryDate: input.deliveryDate,
         variant,
         kitchenAddress,
         profile,
         routingStopByOrderId,
+        handoffOverrides:
+          handoffOverrides && Object.keys(handoffOverrides).length > 0
+            ? handoffOverrides
+            : undefined,
       });
       candidates.push(preview);
       previewedVariantCount += 1;
@@ -252,7 +278,7 @@ export async function previewCandidatePlansForAgent(
       );
 
       const summary = compareCandidateDeadline({
-        deliveryDate,
+        deliveryDate: input.deliveryDate,
         profile,
         runPreviews: failedRuns,
         planSummary: {
@@ -322,6 +348,13 @@ export async function previewCandidatePlansForAgent(
     expansionWarnings: expansion.expansionWarnings,
     notes: CANDIDATE_ROUTE_PREVIEW_NOTES,
   };
+}
+
+export async function previewCandidatePlansForAgent(
+  deliveryDate: string,
+  profileId?: string
+): Promise<DeliveryAgentPreviewCandidatePlansResponse> {
+  return previewCandidatePlansPipeline({ deliveryDate, profileId });
 }
 
 export { compareCandidateDeadline };

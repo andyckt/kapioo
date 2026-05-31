@@ -5,6 +5,11 @@ import type { IDeliveryAgentRun } from "@/models/DeliveryAgentRun";
 import { isValidReviewFeedbackTag } from "@/lib/agents/delivery/review-feedback-tags";
 import { buildReviewArtifacts } from "@/lib/agents/delivery/review-plan/build-review-artifacts";
 import {
+  isImprovementRequestedStatus,
+  normalizeReviewStatusForWrite,
+} from "@/lib/agents/delivery/review-plan/review-status-helpers";
+import { resolveDeliveryAgentOperationalState } from "@/lib/agents/delivery/review-plan/resolve-operational-review-state";
+import {
   attachLearningArtifacts,
   attachLocationArtifacts,
   attachPlanningArtifacts,
@@ -28,6 +33,13 @@ export class DeliveryAgentReviewValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "DeliveryAgentReviewValidationError";
+  }
+}
+
+export class DeliveryAgentReviewLockedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DeliveryAgentReviewLockedError";
   }
 }
 
@@ -75,6 +87,7 @@ export type SubmitDonaldPlanReviewResult = {
   selectedCandidateId: string;
   didDonaldOverrideRecommendation: boolean;
   message: string;
+  operationalState: ReturnType<typeof resolveDeliveryAgentOperationalState>;
 };
 
 function hasFeedback(input: SubmitDonaldPlanReviewInput): boolean {
@@ -82,13 +95,19 @@ function hasFeedback(input: SubmitDonaldPlanReviewInput): boolean {
 }
 
 function validateReviewInput(input: SubmitDonaldPlanReviewInput): void {
-  if (!["approved", "edited", "rejected"].includes(input.reviewStatus)) {
+  const allowed: DeliveryAgentReviewStatus[] = [
+    "approved",
+    "improvement_requested",
+    "edited",
+    "rejected",
+  ];
+  if (!allowed.includes(input.reviewStatus)) {
     throw new DeliveryAgentReviewValidationError("Invalid reviewStatus.");
   }
 
-  if ((input.reviewStatus === "rejected" || input.reviewStatus === "edited") && !hasFeedback(input)) {
+  if (isImprovementRequestedStatus(input.reviewStatus) && !hasFeedback(input)) {
     throw new DeliveryAgentReviewValidationError(
-      "Feedback text or at least one feedback tag is required for reject or needs revision."
+      "Feedback text or at least one feedback tag is required for request improvement."
     );
   }
 
@@ -119,11 +138,7 @@ function resolveReviewMessage(input: {
     return "Approved. Next step: create the Final Route Optimizer run.";
   }
 
-  if (input.reviewStatus === "rejected") {
-    return "Rejected feedback saved. This plan cannot be used to create a final Route Optimizer run. Review alternatives or wait for feedback-based regeneration in a later milestone.";
-  }
-
-  return "Needs revision feedback saved. The agent needs to generate revised candidates from this feedback in a later milestone.";
+  return "Feedback saved. Next step: generate improved candidate plans.";
 }
 
 async function ensureRunLog(input: SubmitDonaldPlanReviewInput): Promise<IDeliveryAgentRun> {
@@ -172,6 +187,16 @@ export async function submitDonaldPlanReview(
 
   const reviewedAt = new Date();
   const run = await ensureRunLog(input);
+  const normalizedReviewStatus = normalizeReviewStatusForWrite(input.reviewStatus);
+
+  if (
+    run.reviewStatus === "approved" &&
+    isImprovementRequestedStatus(input.reviewStatus)
+  ) {
+    throw new DeliveryAgentReviewLockedError(
+      "This plan is already approved. Use Reopen Review if you need to request improvement."
+    );
+  }
 
   await updateDeliveryAgentRunForReview(run.id, {
     profileVersion: input.profileVersion,
@@ -202,26 +227,46 @@ export async function submitDonaldPlanReview(
   await attachLearningArtifacts(run.id, artifacts.learningArtifacts);
 
   const reviewed = await recordDonaldReview(run.id, {
-    reviewStatus: input.reviewStatus,
+    reviewStatus: normalizedReviewStatus,
     reviewedBy: input.reviewedBy,
     reviewedAt,
-    donaldFeedbackText: input.feedbackText,
-    donaldFeedbackTags: input.feedbackTags,
+    donaldFeedbackText: isImprovementRequestedStatus(input.reviewStatus)
+      ? input.feedbackText
+      : undefined,
+    donaldFeedbackTags: isImprovementRequestedStatus(input.reviewStatus)
+      ? input.feedbackTags
+      : [],
   });
 
-  await markDeliveryAgentRunReadyForReview(run.id, {
-    selectedPlanSummary: artifacts.planningArtifacts.selectedPlanSummary,
-    candidateCount: input.candidatePreviewSnapshot?.candidates.length,
-    previewCount: input.candidatePreviewSnapshot?.candidates.length,
+  const preservePipelineStatus = run.status === "created";
+  if (!preservePipelineStatus || input.reviewStatus === "approved") {
+    await markDeliveryAgentRunReadyForReview(
+      run.id,
+      {
+        selectedPlanSummary: artifacts.planningArtifacts.selectedPlanSummary,
+        candidateCount: input.candidatePreviewSnapshot?.candidates.length,
+        previewCount: input.candidatePreviewSnapshot?.candidates.length,
+      },
+      { preservePipelineStatus }
+    );
+  }
+
+  const operationalState = resolveDeliveryAgentOperationalState({
+    reviewStatus: normalizedReviewStatus,
+    reviewReopenedAt: reviewed.reviewReopenedAt,
+    finalRouteOptimizerMetadata: reviewed.finalRouteOptimizerMetadata,
+    finalRouteRunsMarkedMissingAt: reviewed.finalRouteRunsMarkedMissingAt,
+    routeOptimizerRunCount: reviewed.routeOptimizerRuns?.length ?? 0,
   });
 
   return {
     deliveryAgentRunId: reviewed.id,
-    reviewStatus: input.reviewStatus,
+    reviewStatus: normalizedReviewStatus,
     reviewedAt: (reviewed.reviewedAt ?? reviewedAt).toISOString(),
     recommendedCandidateId: input.recommendedCandidateId,
     selectedCandidateId: input.selectedCandidateId,
     didDonaldOverrideRecommendation,
     message: resolveReviewMessage({ reviewStatus: input.reviewStatus, didDonaldOverrideRecommendation }),
+    operationalState,
   };
 }

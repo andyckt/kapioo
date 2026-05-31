@@ -418,6 +418,7 @@ export async function previewCandidateHandoff(input: {
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
   meetupSelection?: ActiveMeetupSelection;
+  handoffOverrides?: HandoffRunChainOverrides;
 }): Promise<CandidateHandoffPreviewResult> {
   const providerRun = findProviderRun(input.candidate.runs, input.profile);
   const receiverRun = findPrimaryReceiverRun(input.candidate.runs, input.profile);
@@ -507,5 +508,6 @@ export async function previewCandidateHandoff(input: {
     routingStopByOrderId: input.routingStopByOrderId,
     selection,
     assumptions,
+    overrides: input.handoffOverrides,
   });
 }

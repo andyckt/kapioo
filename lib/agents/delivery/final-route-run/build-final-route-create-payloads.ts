@@ -29,7 +29,13 @@ export type FinalRouteCreatePayloadContext = {
   kitchenAddress: string;
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
+  finalRouteGeneration?: number;
 };
+
+export function buildFinalRouteGenerationSuffix(generation: number | undefined): string {
+  const value = generation ?? 1;
+  return value > 1 ? `:v${value}` : "";
+}
 
 export { FinalRouteCreatePayloadError } from "@/lib/agents/delivery/final-route-run/errors";
 
@@ -104,16 +110,18 @@ function buildCustomers(input: {
 }
 
 function buildExternalId(input: FinalRouteCreatePayloadContext & { runSlot: string }): string {
+  const suffix = buildFinalRouteGenerationSuffix(input.finalRouteGeneration);
   return [
     "kapioo-final-run",
     input.deliveryDate,
     input.deliveryAgentRunId,
     input.selectedCandidateId,
     input.runSlot,
-  ].join(":");
+  ].join(":") + suffix;
 }
 
 function buildIdempotencyKey(input: FinalRouteCreatePayloadContext & { runSlot: string }): string {
+  const suffix = buildFinalRouteGenerationSuffix(input.finalRouteGeneration);
   return [
     "daily-delivery-agent",
     input.deliveryDate,
@@ -121,7 +129,7 @@ function buildIdempotencyKey(input: FinalRouteCreatePayloadContext & { runSlot: 
     "final",
     input.selectedCandidateId,
     input.runSlot,
-  ].join(":");
+  ].join(":") + suffix;
 }
 
 function buildRunPayload(input: {

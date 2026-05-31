@@ -10,7 +10,105 @@ export type DeliveryAgentRunStatus =
   | "cancelled";
 
 /** Donald's review outcome — separate from agent `status`. */
-export type DeliveryAgentReviewStatus = "pending" | "approved" | "edited" | "rejected";
+export type DeliveryAgentReviewStatus =
+  | "pending"
+  | "approved"
+  | "improvement_requested"
+  | "edited"
+  | "rejected";
+
+/** UI-facing operational state derived from review + final route metadata. */
+export type DeliveryAgentOperationalReviewState =
+  | "pending_review"
+  | "improvement_requested"
+  | "approved"
+  | "final_route_created"
+  | "final_route_partial_created"
+  | "final_route_missing_or_deleted";
+
+export type DeliveryAgentReviewHistoryEntry = {
+  reviewedAt: string;
+  reviewedBy: string;
+  reviewStatus: DeliveryAgentReviewStatus;
+  feedbackText?: string;
+  feedbackTags?: string[];
+  recommendedCandidateId?: string;
+  selectedCandidateId?: string;
+  didDonaldOverrideRecommendation?: boolean;
+  planningSessionId?: string;
+  supersededAt?: string;
+  finalAcceptedPlanSnapshot?: Record<string, unknown>;
+};
+
+export type DeliveryAgentReopenReviewHistoryEntry = {
+  reopenedAt: string;
+  reopenedBy: string;
+  previousReviewStatus: DeliveryAgentReviewStatus;
+  hadFinalRouteRuns: boolean;
+  finalRouteOptimizerStatus?: DeliveryAgentFinalRouteOptimizerMetadata["finalRouteOptimizerStatus"];
+};
+
+export type DeliveryAgentFinalRouteResetHistoryEntry = {
+  resetAt: string;
+  resetBy: string;
+  reason?: string;
+  markMissing?: boolean;
+  previousGeneration: number;
+  nextGeneration: number;
+  previousMetadata?: DeliveryAgentFinalRouteOptimizerMetadata;
+  previousRouteOptimizerRuns?: DeliveryAgentRouteOptimizerRun[];
+};
+
+export type DeliveryAgentFinalRouteCreationHistoryEntry = {
+  createdAt: string;
+  createdBy?: string;
+  generation: number;
+  finalRouteOptimizerStatus: DeliveryAgentFinalRouteOptimizerMetadata["finalRouteOptimizerStatus"];
+  finalRouteOptimizerRunIds?: string[];
+  routeSummaries?: DeliveryAgentFinalRouteSummary[];
+  failedRouteSummaries?: DeliveryAgentFinalRouteRunFailure[];
+};
+
+export type DeliveryAgentFeedbackDriverAssignment = {
+  orderId?: string;
+  customerName?: string;
+  preferredRunSlot: string;
+  timing?: "before_meetup" | "any";
+};
+
+export type DeliveryAgentFeedbackInterpretation = {
+  preferredMeetupAddress?: string;
+  preferredMeetupOrderId?: string;
+  preferredDriverAssignments: DeliveryAgentFeedbackDriverAssignment[];
+  penalties: string[];
+  unmatchedCustomerNames: string[];
+  warnings: string[];
+  sourceFeedbackReviewedAt: string;
+};
+
+export type DeliveryAgentCandidateGenerationRecord = {
+  generationNumber: number;
+  generatedAt: string;
+  generatedBy: string;
+  sourceFeedbackReviewedAt?: string;
+  feedbackInterpretation?: DeliveryAgentFeedbackInterpretation;
+  applicationStatus: "applied" | "partial" | "not_applied";
+  applicationNotes: string[];
+  candidatePreviewSnapshot: Record<string, unknown>;
+  recommendedCandidateId: string;
+  recommendedPlanSummary?: Record<string, unknown>;
+  supersededAt?: string;
+  previousRecommendedCandidateId?: string;
+};
+
+export type DeliveryAgentRegenerationHistoryEntry = {
+  regeneratedAt: string;
+  regeneratedBy: string;
+  sourceFeedbackReviewedAt: string;
+  generationNumber: number;
+  applicationStatus: DeliveryAgentCandidateGenerationRecord["applicationStatus"];
+  applicationNotes: string[];
+};
 
 export type DeliveryAgentTriggerSource = "manual" | "cron" | "test";
 
@@ -97,6 +195,8 @@ export type DeliveryAgentPlanningArtifacts = {
   routeShapeIssuesDetected?: DeliveryAgentRouteShapeIssue[];
   finalAcceptedPlan?: Record<string, unknown>;
   candidatePreviewSnapshot?: Record<string, unknown>;
+  candidateGenerations?: DeliveryAgentCandidateGenerationRecord[];
+  activeCandidateGenerationNumber?: number;
 };
 
 export type DeliveryAgentLocationArtifacts = {
@@ -125,6 +225,12 @@ export type DeliveryAgentLearningArtifacts = {
   rejectionHistory?: Record<string, unknown>[];
   manualEdits?: Record<string, unknown>[];
   overrideHistory?: Record<string, unknown>[];
+  approvalHistory?: DeliveryAgentReviewHistoryEntry[];
+  improvementRequestHistory?: DeliveryAgentReviewHistoryEntry[];
+  reopenReviewHistory?: DeliveryAgentReopenReviewHistoryEntry[];
+  finalRouteCreationHistory?: DeliveryAgentFinalRouteCreationHistoryEntry[];
+  finalRouteResetHistory?: DeliveryAgentFinalRouteResetHistoryEntry[];
+  regenerationHistory?: DeliveryAgentRegenerationHistoryEntry[];
 };
 
 export type DeliveryAgentRunInvalidOrder = {
@@ -275,6 +381,24 @@ export type SaveFinalRouteOptimizerPartialResultInput = {
 export type SaveFinalRouteOptimizerFailureInput = {
   routeOptimizerPlanningSessionId?: string;
   finalRouteOptimizerMetadata: DeliveryAgentFinalRouteOptimizerMetadata;
+};
+
+export type ReopenDonaldPlanReviewInput = {
+  deliveryDate: string;
+  profileId: string;
+  deliveryAgentRunId?: string;
+  confirmed: boolean;
+  reopenedBy: string;
+};
+
+export type ResetFinalRouteRunsInput = {
+  deliveryDate: string;
+  profileId: string;
+  deliveryAgentRunId?: string;
+  confirmed: boolean;
+  reason?: string;
+  markMissing?: boolean;
+  resetBy: string;
 };
 
 export type DeliveryAgentRunReviewPatch = {
