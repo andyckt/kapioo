@@ -1,6 +1,16 @@
 import { toPlanningStop } from "@/lib/agents/delivery/candidate-plans/classify-stop-for-planning";
 import type { PlanningRunLean } from "@/lib/agents/delivery/candidate-plans/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
+import {
+  applyFeedbackPenalties,
+  buildOperationalExplanation,
+  capSelfDeadlineBufferPoints,
+  extractMeetupBalanceNote,
+  scoreMeetupOperationalBalance,
+  scoreOnTheWayBeforeMeetup,
+  scorePreferTwoDriverPlans,
+} from "@/lib/agents/delivery/best-plan/operational";
+import { DEFAULT_DELIVERY_PLANNING_PROFILE } from "@/lib/agents/delivery/planning-profile/default-profile";
 import type {
   DeliveryAgentCandidatePlanPreviewCore,
   DeliveryAgentCandidateScoreBreakdownItem,
@@ -69,19 +79,33 @@ function scoreDeadlineBuffer(input: CandidateScoringInput): DeliveryAgentCandida
   const weight = input.scoringWeights.deadlineBuffer;
   const { summary } = input.candidate;
   const bufferTarget = input.preferredDeadlineBufferMinutes;
+  const policy =
+    input.operationalScoringRules?.selfFallbackPolicy ??
+    DEFAULT_DELIVERY_PLANNING_PROFILE.operationalScoringRules.selfFallbackPolicy;
 
   if (!summary.latestEstimatedFinishTime || !summary.allRunsFinishBeforeDeadline) {
     return buildBreakdownItem("deadlineBuffer", weight, 0, "No usable deadline buffer — finish is late or unknown.");
   }
 
   const minutesBefore = summary.minutesBeforeOrAfterDeadline ?? 0;
-  const points = clamp((minutesBefore / bufferTarget) * 100, 0, 100);
+  const points = capSelfDeadlineBufferPoints({
+    selfUsed: summary.selfUsed,
+    minutesBefore,
+    bufferTarget,
+    capAtPreferred: policy.capSelfDeadlineBufferAtPreferred,
+    bestSafeTwoDriverExists: input.bestSafeTwoDriverExists ?? false,
+  });
+
+  const cappedNote =
+    summary.selfUsed && policy.capSelfDeadlineBufferAtPreferred && input.bestSafeTwoDriverExists
+      ? " (Self buffer capped — safe 2-driver plan exists.)"
+      : "";
 
   return buildBreakdownItem(
     "deadlineBuffer",
     weight,
     points,
-    `${minutesBefore} minute(s) before deadline (target buffer: ${bufferTarget} min).`
+    `${minutesBefore} minute(s) before deadline (target buffer: ${bufferTarget} min).${cappedNote}`
   );
 }
 
@@ -89,15 +113,35 @@ function scoreRouteShapeCorrectness(input: CandidateScoringInput): DeliveryAgent
   const weight = input.scoringWeights.routeShapeCorrectness;
   const issues = input.candidate.candidateRepairSummary.issuesDetected;
   let points = 100;
+  let warningCount = 0;
 
   for (const issue of issues) {
     if (issue.severity === "blocking") {
       points -= 40;
     } else if (issue.severity === "warning") {
-      points -= 20;
+      const isPingPong =
+        issue.issueType === "north_york_after_downtown" ||
+        issue.issueType === "downtown_before_meetup";
+      points -= isPingPong ? 30 : 20;
+      if (isPingPong) {
+        warningCount += 1;
+      }
     } else {
       points -= 5;
     }
+  }
+
+  if (warningCount >= 2) {
+    points -= 10;
+  }
+
+  const hasReceiverEndpointIssue = issues.some((issue) => issue.issueType === "marco_wrong_endpoint");
+  const hasProviderPingPong = issues.some(
+    (issue) =>
+      issue.issueType === "north_york_after_downtown" || issue.issueType === "downtown_before_meetup"
+  );
+  if (hasReceiverEndpointIssue && hasProviderPingPong) {
+    points -= 10;
   }
 
   const repairFailed = input.candidate.runs.some((run) => run.repairStatus === "repair_failed");
@@ -374,6 +418,24 @@ const SCORERS: Record<
   balanceDriverDuration: scoreBalanceDriverDuration,
   areaLabelMatch: scoreAreaLabelMatch,
   mealQuantityBalance: scoreMealQuantityBalance,
+  preferTwoDriverPlans: (input) =>
+    scorePreferTwoDriverPlans(
+      input,
+      input.operationalScoringRules?.selfFallbackPolicy ??
+        DEFAULT_DELIVERY_PLANNING_PROFILE.operationalScoringRules.selfFallbackPolicy
+    ),
+  meetupOperationalBalance: (input) =>
+    scoreMeetupOperationalBalance(
+      input,
+      input.meetupSelectionPreferences ??
+        DEFAULT_DELIVERY_PLANNING_PROFILE.handoffRules.meetupSelectionPreferences
+    ),
+  onTheWayBeforeMeetup: (input) =>
+    scoreOnTheWayBeforeMeetup(
+      input,
+      input.meetupSelectionPreferences ??
+        DEFAULT_DELIVERY_PLANNING_PROFILE.handoffRules.meetupSelectionPreferences
+    ),
 };
 
 function computeWeightedScore(breakdown: DeliveryAgentCandidateScoreBreakdownItem[]): number {
@@ -459,6 +521,13 @@ function buildProsCons(input: {
 }
 
 export function scoreCandidatePlan(input: CandidateScoringInput): CandidateScoringResult {
+  const policy =
+    input.operationalScoringRules?.selfFallbackPolicy ??
+    DEFAULT_DELIVERY_PLANNING_PROFILE.operationalScoringRules.selfFallbackPolicy;
+  const meetupPrefs =
+    input.meetupSelectionPreferences ??
+    DEFAULT_DELIVERY_PLANNING_PROFILE.handoffRules.meetupSelectionPreferences;
+
   const breakdown: DeliveryAgentCandidateScoreBreakdownItem[] = [];
 
   for (const key of Object.keys(input.scoringWeights) as ScoringWeightKey[]) {
@@ -467,7 +536,24 @@ export function scoreCandidatePlan(input: CandidateScoringInput): CandidateScori
       continue;
     }
 
-    breakdown.push(SCORERS[key](input));
+    if (key === "preferTwoDriverPlans") {
+      breakdown.push(scorePreferTwoDriverPlans(input, policy));
+      continue;
+    }
+
+    if (key === "meetupOperationalBalance") {
+      breakdown.push(scoreMeetupOperationalBalance(input, meetupPrefs));
+      continue;
+    }
+
+    if (key === "onTheWayBeforeMeetup") {
+      breakdown.push(scoreOnTheWayBeforeMeetup(input, meetupPrefs));
+      continue;
+    }
+
+    if (SCORERS[key]) {
+      breakdown.push(SCORERS[key](input));
+    }
   }
 
   let score = computeWeightedScore(breakdown);
@@ -491,6 +577,21 @@ export function scoreCandidatePlan(input: CandidateScoringInput): CandidateScori
 
   if (missingFinishTime) {
     score = Math.min(score, 15);
+  }
+
+  const feedbackAdjustment = applyFeedbackPenalties({
+    scoringInput: input,
+    penalties: input.feedbackPenalties ?? [],
+    preferredOrderRunOverrides: input.preferredOrderRunOverrides,
+    meetupPrefs,
+  });
+  score = Math.max(0, Math.round((score + feedbackAdjustment.scoreDelta) * 10) / 10);
+
+  const operationalNotesFromFeedback = feedbackAdjustment.notes;
+  const meetupBalanceNote = extractMeetupBalanceNote(breakdown);
+  const onTheWayItem = breakdown.find((item) => item.key === "onTheWayBeforeMeetup");
+  if (onTheWayItem && onTheWayItem.points >= 85 && onTheWayItem.reason.includes("on-the-way")) {
+    operationalNotesFromFeedback.push(onTheWayItem.reason);
   }
 
   const blockingIssues = [
@@ -521,13 +622,18 @@ export function scoreCandidatePlan(input: CandidateScoringInput): CandidateScori
     eligibleForRecommended,
   });
 
-  const decisionSummary = eligibleForRecommended
-    ? `Strong operational fit with score ${score}; meets deadline and preview checks.`
-    : input.candidate.summary.allRunsFinishBeforeDeadline
-      ? `Score ${score}; meets deadline but has operational warnings blocking recommendation.`
-      : missingFinishTime
-        ? `Score ${score}; missing finish time — not recommendable.`
-        : `Score ${score}; does not meet all recommendation criteria.`;
+  const selfRecommendationReason = input.candidate.summary.selfUsed
+    ? ("not_applicable" as const)
+    : ("not_applicable" as const);
+
+  const explanation = buildOperationalExplanation({
+    candidate: input.candidate,
+    score,
+    eligibleForRecommended,
+    selfRecommendationReason,
+    operationalNotes: operationalNotesFromFeedback,
+    meetupBalanceNote,
+  });
 
   return {
     score,
@@ -535,7 +641,10 @@ export function scoreCandidatePlan(input: CandidateScoringInput): CandidateScori
     pros,
     cons,
     blockingIssues: [...new Set(blockingIssues)],
-    decisionSummary,
+    decisionSummary: explanation.decisionSummary,
+    operationalNotes: explanation.operationalNotes,
+    selfRecommendationReason,
+    meetupBalanceNote,
     eligibleForRecommended,
     hasBlockingRouteShapeIssues,
     hasRepairFailure,

@@ -1,4 +1,5 @@
 import type { DeliveryPlanningScoringWeights } from "@/lib/agents/delivery/planning-profile/types";
+import type { SelfRecommendationReason } from "@/lib/agents/delivery/best-plan/operational/apply-comparative-self-policy";
 import type {
   DeliveryAgentCandidatePlanPreviewCore,
   DeliveryAgentCandidateScoreBreakdownItem,
@@ -19,6 +20,9 @@ export const SCORING_DIMENSION_LABELS: Record<ScoringWeightKey, string> = {
   balanceDriverDuration: "Balance driver duration",
   areaLabelMatch: "Area label match",
   mealQuantityBalance: "Meal quantity balance",
+  preferTwoDriverPlans: "Prefer 2-driver plans",
+  meetupOperationalBalance: "Meet-up operational balance",
+  onTheWayBeforeMeetup: "On-the-way stops before meet-up",
 };
 
 export type CandidateAssignedRunStop = {
@@ -42,6 +46,11 @@ export type CandidateScoringInput = {
   preferredDeadlineBufferMinutes: number;
   scoringWeights: DeliveryPlanningScoringWeights;
   coordinateCoverage?: import("@/lib/agents/delivery/geocode/types").DeliveryAgentCoordinateCoverageSummary;
+  operationalScoringRules?: import("@/lib/agents/delivery/planning-profile/types").DeliveryPlanningOperationalScoringRules;
+  meetupSelectionPreferences?: import("@/lib/agents/delivery/planning-profile/types").DeliveryPlanningMeetupSelectionPreferences;
+  feedbackPenalties?: string[];
+  preferredOrderRunOverrides?: Map<string, string>;
+  bestSafeTwoDriverExists?: boolean;
 };
 
 export type CandidateScoringResult = {
@@ -51,6 +60,9 @@ export type CandidateScoringResult = {
   cons: string[];
   blockingIssues: string[];
   decisionSummary: string;
+  operationalNotes: string[];
+  selfRecommendationReason: SelfRecommendationReason;
+  meetupBalanceNote?: string;
   eligibleForRecommended: boolean;
   hasBlockingRouteShapeIssues: boolean;
   hasRepairFailure: boolean;
@@ -69,6 +81,9 @@ export type RankedCandidatePlanPreview = DeliveryAgentCandidatePlanPreviewCore &
     | "cons"
     | "blockingIssues"
     | "decisionSummary"
+    | "operationalNotes"
+    | "selfRecommendationReason"
+    | "meetupBalanceNote"
   >;
 
 export type BestCandidateSelectionResult = {

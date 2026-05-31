@@ -79,6 +79,7 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
       centralNorthYorkFitWeight: 95,
       meetupEtaWeight: 40,
       routeFinishImpactWeight: 50,
+      kitchenProximityPenaltyWeight: 70,
       fallbackAllowed: true,
       preferredHandoffCenterLat: 43.7615,
       preferredHandoffCenterLng: -79.4111,
@@ -86,6 +87,10 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
       receiverReferenceLng: -79.337,
       dtReferenceLat: DOWNTOWN_REFERENCE.lat,
       dtReferenceLng: DOWNTOWN_REFERENCE.lng,
+      // Kitchen start is typically downtown/M5V — used to penalize meet-ups too close when Marco serves uptown.
+      kitchenReferenceLat: 43.642,
+      kitchenReferenceLng: -79.395,
+      maxKitchenProximityDegrees: 0.06,
     },
   },
   candidateExpansionRules: {
@@ -148,6 +153,17 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
       "Too little buffer before 1:00 PM deadline.",
     ],
   },
+  operationalScoringRules: {
+    selfFallbackPolicy: {
+      // Aligns with preferredDeadlineBufferMinutes — 2-driver must finish with at least this buffer.
+      minTwoDriverBufferMinutes: 10,
+      // Self must save ≥15 min on latest finish vs best safe 2-driver, not just score slightly higher.
+      minMinutesSavedToJustifySelf: 15,
+      selfScorePenaltyWhenTwoDriverSafe: 25,
+      capSelfDeadlineBufferAtPreferred: true,
+      minTwoDriverBalanceRatio: 0.6,
+    },
+  },
   scoringWeights: {
     finishBeforeDeadline: 95,
     deadlineBuffer: 90,
@@ -160,6 +176,9 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
     balanceDriverDuration: 50,
     areaLabelMatch: 40,
     mealQuantityBalance: 15,
+    preferTwoDriverPlans: 60,
+    meetupOperationalBalance: 65,
+    onTheWayBeforeMeetup: 55,
   },
   learningSettings: {
     locationFirstLearning: true,

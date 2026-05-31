@@ -1,4 +1,5 @@
 import { inferNorthYorkLean } from "@/lib/agents/delivery/candidate-plans/classify-stop-for-planning";
+import { candidateRunsHaveUptownReceiverBurden } from "@/lib/agents/delivery/best-plan/operational/detect-uptown-receiver-burden";
 import { DOWNTOWN_REFERENCE } from "@/lib/agents/delivery/candidate-plans/types";
 import type { DeliveryAgentCandidateRun } from "@/lib/contracts/delivery-agent";
 import type {
@@ -79,9 +80,65 @@ function hasLatLng(candidate: MeetupStopCandidateWithTier): boolean {
   return typeof candidate.lat === "number" && typeof candidate.lng === "number";
 }
 
+function scoreKitchenProximityPenalty(
+  candidate: MeetupStopCandidateWithTier,
+  prefs: DeliveryPlanningMeetupSelectionPreferences,
+  runs: DeliveryAgentCandidateRun[]
+): DeliveryAgentMeetupScoreBreakdownItem {
+  const weight = prefs.kitchenProximityPenaltyWeight;
+
+  if (!candidateRunsHaveUptownReceiverBurden(runs)) {
+    return buildBreakdownItem(
+      "kitchenProximityPenalty",
+      "Kitchen proximity (uptown receiver)",
+      weight,
+      80,
+      "No Markham/Richmond Hill receiver burden — kitchen proximity is neutral."
+    );
+  }
+
+  const kitchen = {
+    lat: readCoordinate(prefs.kitchenReferenceLat, 43.642),
+    lng: readCoordinate(prefs.kitchenReferenceLng, -79.395),
+  };
+  const maxKitchen = prefs.maxKitchenProximityDegrees ?? 0.06;
+
+  if (hasLatLng(candidate)) {
+    const distance = manhattanDistance(
+      { lat: candidate.lat!, lng: candidate.lng! },
+      kitchen
+    );
+    const points =
+      distance <= maxKitchen
+        ? 15
+        : distance <= maxKitchen * 1.5
+          ? 45
+          : clamp(100 - (distance / 0.12) * 100, 50, 100);
+
+    return buildBreakdownItem(
+      "kitchenProximityPenalty",
+      "Kitchen proximity (uptown receiver)",
+      weight,
+      points,
+      distance <= maxKitchen
+        ? "Meet-up is too close to kitchen — Marco may as well come to kitchen."
+        : "Meet-up is far enough from kitchen for Markham/Richmond Hill handoff."
+    );
+  }
+
+  return buildBreakdownItem(
+    "kitchenProximityPenalty",
+    "Kitchen proximity (uptown receiver)",
+    weight,
+    50,
+    "Lat/lng unavailable; kitchen proximity uses address fallback."
+  );
+}
+
 function scoreCentralNorthYorkFit(
   candidate: MeetupStopCandidateWithTier,
-  prefs: DeliveryPlanningMeetupSelectionPreferences
+  prefs: DeliveryPlanningMeetupSelectionPreferences,
+  runs: DeliveryAgentCandidateRun[]
 ): DeliveryAgentMeetupScoreBreakdownItem {
   const weight = prefs.centralNorthYorkFitWeight;
   const center = {
@@ -95,12 +152,17 @@ function scoreCentralNorthYorkFit(
       center
     );
     const points = distanceToPoints(distance);
+    let adjustedPoints = points;
+
+    if (candidateRunsHaveUptownReceiverBurden(runs) && points >= 70) {
+      adjustedPoints = clamp(points + 10, 0, 100);
+    }
 
     return buildBreakdownItem(
       "centralNorthYorkFit",
       "Central North York fit",
       weight,
-      points,
+      adjustedPoints,
       `${Math.round(distance * 1000) / 1000} deg from ${prefs.preferredHandoffZoneLabel}.`
     );
   }
@@ -356,9 +418,10 @@ export function scoreMeetupCandidate(input: {
   const usedLatLngFallback = !hasLatLng(input.candidate);
 
   const breakdown: DeliveryAgentMeetupScoreBreakdownItem[] = [
-    scoreCentralNorthYorkFit(input.candidate, prefs),
+    scoreCentralNorthYorkFit(input.candidate, prefs, input.runs),
     scoreReceiverConvenience(input.candidate, prefs),
     scoreDtDetourPenalty(input.candidate, prefs),
+    scoreKitchenProximityPenalty(input.candidate, prefs, input.runs),
     scorePreferredAreaFit(input.candidate, prefs),
     scoreRunASourceBonus(input.candidate),
     scoreMeetupEta(prefs),

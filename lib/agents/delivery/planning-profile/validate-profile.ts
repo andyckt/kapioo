@@ -169,6 +169,7 @@ export function assertDeliveryPlanningProfileValid(profile: DeliveryPlanningProf
         "centralNorthYorkFitWeight",
         "meetupEtaWeight",
         "routeFinishImpactWeight",
+        "kitchenProximityPenaltyWeight",
       ] as const;
 
       for (const field of weightFields) {

@@ -536,6 +536,32 @@ export function DeliveryAgentReviewPanel({
     DELIVERY_AGENT_REVIEW_FEEDBACK_TAGS.find((tag) => tag.id === tagId)?.label ?? tagId;
 
   const meetupAddress = activeRecommendation.handoffPlan?.selectedMeetup?.meetupAddress;
+  const operationalNotes =
+    activeRecommendation.operationalNotes ??
+    planSummary?.operationalNotes ??
+    [];
+  const selfReasonNote = (() => {
+    const reason =
+      activeRecommendation.selfRecommendationReason ?? planSummary?.selfRecommendationReason;
+    if (!activeRecommendation.summary.selfUsed) {
+      return reason === "not_necessary" || !reason || reason === "not_applicable"
+        ? "Self not used — 2-driver plan preferred when operationally safe."
+        : undefined;
+    }
+    if (reason === "required_for_deadline") {
+      return "Self recommended because 2-driver plans are late or lack safe buffer.";
+    }
+    if (reason === "meaningful_deadline_improvement") {
+      return "Self recommended because it meaningfully improves deadline safety.";
+    }
+    if (reason === "not_necessary") {
+      return "Self is used but may not be necessary — review alternatives.";
+    }
+    return undefined;
+  })();
+  const meetupBalanceNote =
+    activeRecommendation.meetupBalanceNote ?? planSummary?.meetupBalanceNote;
+  const bufferMinutes = planSummary?.minutesBeforeOrAfterDeadline;
   const heroWarnings = [
     ...activeRecommendation.warnings.slice(0, 5),
     ...candidateRoutePreview.selectionWarnings.slice(0, 3),
@@ -649,8 +675,24 @@ export function DeliveryAgentReviewPanel({
             <p className="text-sm font-medium">
               {activeRecommendation.summary.selfUsed ? "Yes" : "No"}
             </p>
+            {selfReasonNote && (
+              <p className="text-xs text-muted-foreground mt-0.5">{selfReasonNote}</p>
+            )}
           </div>
         </div>
+
+        {planSummary?.allRunsFinishBeforeDeadline &&
+          bufferMinutes !== undefined &&
+          bufferMinutes >= 0 && (
+            <p className="text-sm">
+              <span className="text-muted-foreground">Buffer before 1 PM: </span>
+              {bufferMinutes} min
+            </p>
+          )}
+
+        {meetupBalanceNote && (
+          <p className="text-sm text-muted-foreground">{meetupBalanceNote}</p>
+        )}
 
         {planSummary?.runFinishTimes && (
           <div className="grid gap-2 sm:grid-cols-3 text-sm">
@@ -680,6 +722,20 @@ export function DeliveryAgentReviewPanel({
         <div className="space-y-1">
           <p className="text-sm font-medium">Why this plan</p>
           <p className="text-sm">{activeRecommendation.decisionSummary}</p>
+          {operationalNotes.length > 1 && (
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {operationalNotes.slice(1, 4).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          )}
+          {activeRecommendation.cons.length > 0 && (
+            <ul className="list-disc space-y-1 pl-5 text-sm text-amber-900/90">
+              {activeRecommendation.cons.slice(0, 3).map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          )}
           {candidateRoutePreview.selectionNotes && (
             <p className="text-sm text-muted-foreground">{candidateRoutePreview.selectionNotes}</p>
           )}

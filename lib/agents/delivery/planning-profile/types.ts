@@ -62,6 +62,7 @@ export type DeliveryPlanningMeetupSelectionPreferences = {
   centralNorthYorkFitWeight: number;
   meetupEtaWeight: number;
   routeFinishImpactWeight: number;
+  kitchenProximityPenaltyWeight: number;
   fallbackAllowed: boolean;
   preferredHandoffCenterLat?: number;
   preferredHandoffCenterLng?: number;
@@ -69,6 +70,31 @@ export type DeliveryPlanningMeetupSelectionPreferences = {
   receiverReferenceLng?: number;
   dtReferenceLat?: number;
   dtReferenceLng?: number;
+  /** Kapioo kitchen reference for meet-up proximity scoring (south/west of central NY). */
+  kitchenReferenceLat?: number;
+  kitchenReferenceLng?: number;
+  /** Manhattan-distance threshold (degrees) below which meet-up is "too close to kitchen". */
+  maxKitchenProximityDegrees?: number;
+};
+
+/**
+ * Comparative Self fallback policy — when a safe 2-driver plan exists, Self must justify itself.
+ */
+export type DeliveryPlanningSelfFallbackPolicy = {
+  /** Minimum minutes before 1 PM for a 2-driver plan to count as operationally safe. */
+  minTwoDriverBufferMinutes: number;
+  /** Self must save at least this many minutes on latest finish vs best safe 2-driver. */
+  minMinutesSavedToJustifySelf: number;
+  /** Score penalty applied to Self when a safe 2-driver alternative exists but Self saves less. */
+  selfScorePenaltyWhenTwoDriverSafe: number;
+  /** When true, do not reward Self for finishing far earlier than the preferred buffer target. */
+  capSelfDeadlineBufferAtPreferred: boolean;
+  /** Minimum driver duration balance ratio for a 2-driver plan to count as safe. */
+  minTwoDriverBalanceRatio: number;
+};
+
+export type DeliveryPlanningOperationalScoringRules = {
+  selfFallbackPolicy: DeliveryPlanningSelfFallbackPolicy;
 };
 
 export type DeliveryPlanningHandoffRules = {
@@ -124,6 +150,9 @@ export type DeliveryPlanningScoringWeights = {
   balanceDriverDuration: number;
   areaLabelMatch: number;
   mealQuantityBalance: number;
+  preferTwoDriverPlans: number;
+  meetupOperationalBalance: number;
+  onTheWayBeforeMeetup: number;
 };
 
 export type DeliveryPlanningRuleChangeMode = "draft_then_test_then_active";
@@ -162,6 +191,7 @@ export type DeliveryPlanningProfile = {
   routeShapeRules: DeliveryPlanningRouteShapeRules;
   allowedRepairActions: DeliveryPlanningRepairAction[];
   selfFallbackRules: DeliveryPlanningSelfFallbackRules;
+  operationalScoringRules: DeliveryPlanningOperationalScoringRules;
   scoringWeights: DeliveryPlanningScoringWeights;
   learningSettings: DeliveryPlanningLearningSettings;
 };

@@ -1,9 +1,16 @@
 import { scoreCandidatePlan } from "@/lib/agents/delivery/best-plan/score-candidate-plan";
+import {
+  buildOperationalExplanation,
+  evaluateComparativeSelfPolicy,
+  findBestSafeTwoDriverCandidate,
+} from "@/lib/agents/delivery/best-plan/operational";
 import type {
   BestCandidateSelectionResult,
   CandidateAssignedRun,
+  CandidateScoringResult,
   RankedCandidatePlanPreview,
 } from "@/lib/agents/delivery/best-plan/types";
+import type { SelfRecommendationReason } from "@/lib/agents/delivery/best-plan/operational/apply-comparative-self-policy";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type {
   DeliveryAgentCandidatePlanPreviewCore,
@@ -40,10 +47,15 @@ function resolveRouteRepairStatus(candidate: DeliveryAgentCandidatePlanPreviewCo
 
 function compareCandidates(
   left: RankedCandidatePlanPreview,
-  right: RankedCandidatePlanPreview
+  right: RankedCandidatePlanPreview,
+  safeTwoDriverExists: boolean
 ): number {
   if (Math.abs(left.score - right.score) > TIE_BREAK_SCORE_DELTA) {
     return right.score - left.score;
+  }
+
+  if (safeTwoDriverExists && left.summary.selfUsed !== right.summary.selfUsed) {
+    return left.summary.selfUsed ? 1 : -1;
   }
 
   const leftBuffer = left.summary.minutesBeforeOrAfterDeadline ?? Number.NEGATIVE_INFINITY;
@@ -129,6 +141,55 @@ function buildRecommendedPlanSummary(
     runFinishTimes: candidate.summary.runFinishTimes,
     routeRepairStatus: resolveRouteRepairStatus(candidate),
     decisionSummary: candidate.decisionSummary,
+    operationalNotes: candidate.operationalNotes,
+    selfRecommendationReason: candidate.selfRecommendationReason,
+    meetupBalanceNote: candidate.meetupBalanceNote,
+  };
+}
+
+type ScoredEntry = {
+  candidate: DeliveryAgentCandidatePlanPreviewCore;
+  scoring: CandidateScoringResult;
+  selfRecommendationReason: SelfRecommendationReason;
+};
+
+function applySelfPolicyToScoring(
+  entry: ScoredEntry,
+  policyResult: ReturnType<typeof evaluateComparativeSelfPolicy>,
+  baseScoring: CandidateScoringResult
+): ScoredEntry {
+  let score = Math.max(0, Math.round((baseScoring.score + policyResult.scoreDelta) * 10) / 10);
+  let eligibleForRecommended = baseScoring.eligibleForRecommended;
+
+  if (policyResult.eligibleForRecommendedOverride === false) {
+    eligibleForRecommended = false;
+  }
+
+  const operationalNotes = [...baseScoring.operationalNotes];
+  if (policyResult.operationalNote) {
+    operationalNotes.unshift(policyResult.operationalNote);
+  }
+
+  const explanation = buildOperationalExplanation({
+    candidate: entry.candidate,
+    score,
+    eligibleForRecommended,
+    selfRecommendationReason: policyResult.selfRecommendationReason,
+    operationalNotes,
+    meetupBalanceNote: baseScoring.meetupBalanceNote,
+  });
+
+  return {
+    candidate: entry.candidate,
+    selfRecommendationReason: policyResult.selfRecommendationReason,
+    scoring: {
+      ...baseScoring,
+      score,
+      eligibleForRecommended,
+      decisionSummary: explanation.decisionSummary,
+      operationalNotes: explanation.operationalNotes,
+      selfRecommendationReason: policyResult.selfRecommendationReason,
+    },
   };
 }
 
@@ -137,6 +198,8 @@ export function selectBestCandidatePlan(input: {
   candidates: DeliveryAgentCandidatePlanPreviewCore[];
   assignmentByCandidateId?: Map<string, CandidateAssignedRun[]>;
   coordinateCoverage?: import("@/lib/agents/delivery/geocode/types").DeliveryAgentCoordinateCoverageSummary;
+  feedbackPenalties?: string[];
+  preferredOrderRunOverrides?: Map<string, string>;
 }): BestCandidateSelectionResult {
   const selectionWarnings: string[] = [];
 
@@ -150,7 +213,14 @@ export function selectBestCandidatePlan(input: {
     };
   }
 
-  const scored = input.candidates.map((candidate) => {
+  const policy = input.profile.operationalScoringRules.selfFallbackPolicy;
+  const bestSafeTwoDriver = findBestSafeTwoDriverCandidate({
+    candidates: input.candidates,
+    policy,
+  });
+  const safeTwoDriverExists = bestSafeTwoDriver !== null;
+
+  const scored: ScoredEntry[] = input.candidates.map((candidate) => {
     const assignedRuns = input.assignmentByCandidateId?.get(candidate.candidateId);
     const scoring = scoreCandidatePlan({
       candidate,
@@ -158,12 +228,24 @@ export function selectBestCandidatePlan(input: {
       preferredDeadlineBufferMinutes: input.profile.timeRules.preferredDeadlineBufferMinutes,
       scoringWeights: input.profile.scoringWeights,
       coordinateCoverage: input.coordinateCoverage,
+      operationalScoringRules: input.profile.operationalScoringRules,
+      meetupSelectionPreferences: input.profile.handoffRules.meetupSelectionPreferences,
+      feedbackPenalties: input.feedbackPenalties,
+      preferredOrderRunOverrides: input.preferredOrderRunOverrides,
+      bestSafeTwoDriverExists: safeTwoDriverExists,
     });
 
-    return {
+    const policyResult = evaluateComparativeSelfPolicy({
       candidate,
-      scoring,
-    };
+      bestSafeTwoDriver,
+      policy,
+    });
+
+    return applySelfPolicyToScoring(
+      { candidate, scoring, selfRecommendationReason: policyResult.selfRecommendationReason },
+      policyResult,
+      scoring
+    );
   });
 
   const rankedCandidates: RankedCandidatePlanPreview[] = [...scored]
@@ -179,6 +261,9 @@ export function selectBestCandidatePlan(input: {
           cons: left.scoring.cons,
           blockingIssues: left.scoring.blockingIssues,
           decisionSummary: left.scoring.decisionSummary,
+          operationalNotes: left.scoring.operationalNotes,
+          selfRecommendationReason: left.selfRecommendationReason,
+          meetupBalanceNote: left.scoring.meetupBalanceNote,
         },
         {
           ...right.candidate,
@@ -190,7 +275,11 @@ export function selectBestCandidatePlan(input: {
           cons: right.scoring.cons,
           blockingIssues: right.scoring.blockingIssues,
           decisionSummary: right.scoring.decisionSummary,
-        }
+          operationalNotes: right.scoring.operationalNotes,
+          selfRecommendationReason: right.selfRecommendationReason,
+          meetupBalanceNote: right.scoring.meetupBalanceNote,
+        },
+        safeTwoDriverExists
       )
     )
     .map((entry, index) => ({
@@ -203,6 +292,9 @@ export function selectBestCandidatePlan(input: {
       cons: entry.scoring.cons,
       blockingIssues: entry.scoring.blockingIssues,
       decisionSummary: entry.scoring.decisionSummary,
+      operationalNotes: entry.scoring.operationalNotes,
+      selfRecommendationReason: entry.selfRecommendationReason,
+      meetupBalanceNote: entry.scoring.meetupBalanceNote,
     }));
 
   const anyCandidateMeetsDeadline = rankedCandidates.some(

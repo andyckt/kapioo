@@ -414,6 +414,9 @@ export type DeliveryAgentRecommendedPlanSummary = {
   runFinishTimes: Record<string, string>;
   routeRepairStatus: string;
   decisionSummary: string;
+  operationalNotes?: string[];
+  selfRecommendationReason?: string;
+  meetupBalanceNote?: string;
 };
 
 export type DeliveryAgentCandidateCombinationMeta = {
@@ -454,6 +457,9 @@ export type DeliveryAgentCandidatePlanPreview = DeliveryAgentCandidatePlanPrevie
   cons: string[];
   blockingIssues: string[];
   decisionSummary: string;
+  operationalNotes?: string[];
+  selfRecommendationReason?: string;
+  meetupBalanceNote?: string;
 };
 
 export type DeliveryAgentPreviewCandidatePlansResponse = {

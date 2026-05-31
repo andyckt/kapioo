@@ -328,6 +328,8 @@ export async function previewCandidatePlansPipeline(input: {
     candidates,
     assignmentByCandidateId,
     coordinateCoverage,
+    feedbackPenalties: input.planningHints?.interpretation.penalties,
+    preferredOrderRunOverrides: input.planningHints?.orderRunOverrides,
   });
 
   const selectionWarnings = [
