@@ -1,6 +1,6 @@
 import type { WeeklyOrderItemForKitchen, KitchenWeeklyCombo } from "./types";
 
-const WEEKLY_DISH_SEPARATOR = " + ";
+const WEEKLY_DISH_SEPARATOR = /\s*\+\s*/;
 
 export function splitWeeklyComboDishes(optionName: string): string[] {
   const trimmed = optionName.trim();
