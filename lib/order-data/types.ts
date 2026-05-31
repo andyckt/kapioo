@@ -78,6 +78,8 @@ export type DailyOrderBaseAddress = {
   country: string;
   buzzCode: string;
   formatted: string;
+  lat?: number;
+  lng?: number;
 };
 
 export type DailyOrderBaseCustomer = {

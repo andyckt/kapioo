@@ -2,6 +2,7 @@ export const ROUTE_OPTIMIZER_PATHS = {
   optimizePreview: "/api/integrations/runs/optimize-preview",
   createAndOptimize: "/api/integrations/runs/create-and-optimize",
   batchCreateAndOptimize: "/api/integrations/runs/batch-create-and-optimize",
+  geocodeAddresses: "/api/integrations/geocode-addresses",
 } as const;
 
 export type RouteOptimizerLocation = {
@@ -116,4 +117,39 @@ export type RouteOptimizerBatchResult = {
   errors?: RouteOptimizerBatchRunError[];
   failed_runs?: RouteOptimizerBatchRunError[];
   [key: string]: unknown;
+};
+
+export type RouteOptimizerGeocodeAddressInput = {
+  client_ref: string;
+  address: string;
+  area?: string;
+  country?: string;
+};
+
+export type RouteOptimizerGeocodeAddressesRequest = {
+  created_by_integration?: string;
+  idempotency_key?: string;
+  addresses: RouteOptimizerGeocodeAddressInput[];
+};
+
+export type RouteOptimizerGeocodeResultItem = {
+  client_ref: string;
+  address: string;
+  lat?: number;
+  lng?: number;
+  geocode_status?: string;
+  confidence?: string;
+  location_type?: string;
+  error?: string;
+};
+
+export type RouteOptimizerGeocodeAddressesResponse = {
+  status?: string;
+  total_requested?: number;
+  total_succeeded?: number;
+  total_failed?: number;
+  results: RouteOptimizerGeocodeResultItem[];
+  rate_limit?: {
+    retry_after_seconds?: number | null;
+  };
 };

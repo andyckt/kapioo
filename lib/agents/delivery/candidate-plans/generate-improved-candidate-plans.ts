@@ -149,6 +149,7 @@ export async function generateImprovedCandidatePlansForAgent(input: {
     profileVersion: generation.profileVersion,
     baseCandidates: overrideResult.plans,
     planningHints,
+    deliveryAgentRunId: run.id,
   });
 
   const meetupPinned = detectMeetupPinnedInPreview(

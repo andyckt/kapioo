@@ -22,7 +22,7 @@ import {
   MIN_STOPS_FOR_SELF_FALLBACK_CANDIDATE,
 } from "@/lib/agents/delivery/candidate-plans/types";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
-import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
+import { getEnrichedDeliveryOrdersForRouting } from "@/lib/agents/delivery/geocode";
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import { previewDeliveryOrdersForAgent } from "@/lib/agents/delivery/preview-delivery-orders";
@@ -219,18 +219,18 @@ export async function generateCandidatePlansForAgent(
     throw new DeliveryAgentPlanningBlockedError(orderPreview.blockingReasons);
   }
 
-  const routing = await getDeliveryOrdersForRouting({
+  const enriched = await getEnrichedDeliveryOrdersForRouting({
     deliveryDate,
     statuses: ["confirmed"],
   });
 
-  if (routing.stops.length === 0) {
+  if (enriched.routing.stops.length === 0) {
     throw new DeliveryAgentPlanningBlockedError([
       "No confirmed valid stops for this delivery date.",
     ]);
   }
 
-  const planningStops = toPlanningStops(routing.stops);
+  const planningStops = toPlanningStops(enriched.routing.stops);
   const candidates = buildAllStrategies(planningStops, profile, deliveryDate);
 
   return {
@@ -239,6 +239,8 @@ export async function generateCandidatePlansForAgent(
     profileVersion: profile.profileVersion,
     candidates,
     notes: CANDIDATE_PLAN_NOTES,
+    coordinateCoverage: enriched.coordinateCoverage,
+    geocodeEnrichment: enriched.geocodeEnrichment,
   };
 }
 

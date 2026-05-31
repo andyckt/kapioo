@@ -1,6 +1,6 @@
 import { buildSimpleRoutePreviewPayload } from "@/lib/agents/delivery/build-simple-route-preview-payload";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
-import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
+import { getEnrichedDeliveryOrdersForRouting } from "@/lib/agents/delivery/geocode";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
 import { mapRouteOptimizerPreviewResult } from "@/lib/agents/delivery/map-route-optimizer-preview-result";
 import { getDefaultDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile";
@@ -23,12 +23,12 @@ export async function previewSimpleRouteForAgent(
     throw new DeliveryAgentPlanningBlockedError(orderPreview.blockingReasons);
   }
 
-  const routing = await getDeliveryOrdersForRouting({
+  const enriched = await getEnrichedDeliveryOrdersForRouting({
     deliveryDate,
     statuses: ["confirmed"],
   });
 
-  if (routing.stops.length === 0) {
+  if (enriched.routing.stops.length === 0) {
     throw new DeliveryAgentPlanningBlockedError([
       "No confirmed valid stops for this delivery date.",
     ]);
@@ -37,7 +37,7 @@ export async function previewSimpleRouteForAgent(
   const kitchenAddress = getKapiooKitchenStartLocation();
   const payload = buildSimpleRoutePreviewPayload({
     deliveryDate,
-    stops: routing.stops,
+    stops: enriched.routing.stops,
     kitchenAddress,
     startTime,
   });
@@ -58,5 +58,6 @@ export async function previewSimpleRouteForAgent(
       byArea: orderPreview.confirmed.byArea,
     },
     notes: SIMPLE_ROUTE_PREVIEW_NOTES,
+    coordinateCoverage: enriched.coordinateCoverage,
   };
 }

@@ -366,6 +366,14 @@ export type AttachPlanningArtifactsInput = DeliveryAgentPlanningArtifacts;
 export type AttachLocationArtifactsInput = DeliveryAgentLocationArtifacts;
 export type AttachLearningArtifactsInput = DeliveryAgentLearningArtifacts;
 
+export type {
+  DeliveryAgentCoordinateCoverageSummary,
+  DeliveryAgentGeocodeEnrichment,
+  DeliveryAgentStopCoordinateRecord,
+} from "@/lib/agents/delivery/geocode/types";
+
+export type AttachGeocodeEnrichmentInput = import("@/lib/agents/delivery/geocode/types").DeliveryAgentGeocodeEnrichment;
+
 export type SaveFinalRouteOptimizerResultInput = {
   routeOptimizerPlanningSessionId: string;
   routeOptimizerRuns: DeliveryAgentRouteOptimizerRun[];

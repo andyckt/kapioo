@@ -2,6 +2,7 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 
 import type {
   DeliveryAgentFinalRouteOptimizerMetadata,
+  DeliveryAgentGeocodeEnrichment,
   DeliveryAgentLearningArtifacts,
   DeliveryAgentLocationArtifacts,
   DeliveryAgentPlanningArtifacts,
@@ -46,6 +47,7 @@ export interface IDeliveryAgentRun extends Omit<Document, "errors"> {
   donaldFeedbackTags?: string[];
   planningArtifacts?: DeliveryAgentPlanningArtifacts;
   locationArtifacts?: DeliveryAgentLocationArtifacts;
+  geocodeEnrichment?: DeliveryAgentGeocodeEnrichment;
   learningArtifacts?: DeliveryAgentLearningArtifacts;
   routeOptimizerPlanningSessionId?: string;
   routeOptimizerRuns?: DeliveryAgentRouteOptimizerRun[];
@@ -241,6 +243,9 @@ const DeliveryAgentRunSchema = new Schema<IDeliveryAgentRun>(
       type: Schema.Types.Mixed,
     },
     locationArtifacts: {
+      type: Schema.Types.Mixed,
+    },
+    geocodeEnrichment: {
       type: Schema.Types.Mixed,
     },
     learningArtifacts: {

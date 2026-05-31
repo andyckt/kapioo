@@ -501,12 +501,19 @@ export function scoreCandidatePlan(input: CandidateScoringInput): CandidateScori
       .map((issue) => issue.message),
   ];
 
+  if (input.coordinateCoverage?.recommendationConfidence === "low") {
+    blockingIssues.push(
+      `Coordinate coverage is low (${input.coordinateCoverage.stopsWithCoordinates}/${input.coordinateCoverage.totalValidStops} stops geocoded).`
+    );
+  }
+
   const eligibleForRecommended =
     input.candidate.status === "previewed" &&
     !missingFinishTime &&
     !hasRunValidationIssues &&
     !hasBlockingRouteShapeIssues &&
-    input.candidate.summary.allRunsFinishBeforeDeadline;
+    input.candidate.summary.allRunsFinishBeforeDeadline &&
+    input.coordinateCoverage?.recommendationConfidence !== "low";
 
   const { pros, cons } = buildProsCons({
     candidate: input.candidate,

@@ -39,15 +39,9 @@ function readOptionalCoordinate(value: unknown): number | undefined {
 }
 
 function readOptionalCoordinatesFromStop(stop: RoutingStop): { lat?: number; lng?: number } {
-  const raw = stop as RoutingStop & {
-    lat?: number;
-    lng?: number;
-    deliveryAddress?: { lat?: number; lng?: number };
-  };
-
   return {
-    lat: readOptionalCoordinate(raw.lat ?? raw.deliveryAddress?.lat),
-    lng: readOptionalCoordinate(raw.lng ?? raw.deliveryAddress?.lng),
+    lat: readOptionalCoordinate(stop.lat),
+    lng: readOptionalCoordinate(stop.lng),
   };
 }
 

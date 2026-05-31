@@ -136,6 +136,7 @@ export function selectBestCandidatePlan(input: {
   profile: DeliveryPlanningProfile;
   candidates: DeliveryAgentCandidatePlanPreviewCore[];
   assignmentByCandidateId?: Map<string, CandidateAssignedRun[]>;
+  coordinateCoverage?: import("@/lib/agents/delivery/geocode/types").DeliveryAgentCoordinateCoverageSummary;
 }): BestCandidateSelectionResult {
   const selectionWarnings: string[] = [];
 
@@ -156,6 +157,7 @@ export function selectBestCandidatePlan(input: {
       assignedRuns,
       preferredDeadlineBufferMinutes: input.profile.timeRules.preferredDeadlineBufferMinutes,
       scoringWeights: input.profile.scoringWeights,
+      coordinateCoverage: input.coordinateCoverage,
     });
 
     return {

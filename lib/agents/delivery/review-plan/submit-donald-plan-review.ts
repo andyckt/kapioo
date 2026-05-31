@@ -10,6 +10,7 @@ import {
 } from "@/lib/agents/delivery/review-plan/review-status-helpers";
 import { resolveDeliveryAgentOperationalState } from "@/lib/agents/delivery/review-plan/resolve-operational-review-state";
 import {
+  attachGeocodeEnrichment,
   attachLearningArtifacts,
   attachLocationArtifacts,
   attachPlanningArtifacts,
@@ -224,6 +225,9 @@ export async function submitDonaldPlanReview(
 
   await attachPlanningArtifacts(run.id, artifacts.planningArtifacts);
   await attachLocationArtifacts(run.id, artifacts.locationArtifacts);
+  if (input.candidatePreviewSnapshot?.geocodeEnrichment) {
+    await attachGeocodeEnrichment(run.id, input.candidatePreviewSnapshot.geocodeEnrichment);
+  }
   await attachLearningArtifacts(run.id, artifacts.learningArtifacts);
 
   const reviewed = await recordDonaldReview(run.id, {

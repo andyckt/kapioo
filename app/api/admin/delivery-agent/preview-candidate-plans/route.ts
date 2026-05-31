@@ -8,6 +8,7 @@ import {
   RouteOptimizerAuthError,
   RouteOptimizerConfigError,
   RouteOptimizerNetworkError,
+  RouteOptimizerRateLimitError,
   RouteOptimizerResponseError,
   RouteOptimizerValidationError,
 } from "@/lib/integrations/route-optimizer/errors";
@@ -70,6 +71,14 @@ export async function POST(request: Request) {
       return errorJson("Could not reach Route Optimizer.", 502, {
         details: error.message,
       });
+    }
+
+    if (error instanceof RouteOptimizerRateLimitError) {
+      return errorJson(
+        "Route Optimizer geocoder is rate limited. Wait before retrying coordinate enrichment.",
+        429,
+        { details: error.message }
+      );
     }
 
     if (error instanceof RouteOptimizerResponseError) {

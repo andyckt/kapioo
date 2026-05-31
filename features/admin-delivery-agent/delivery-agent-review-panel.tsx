@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -141,8 +141,8 @@ export function DeliveryAgentReviewPanel({
   const generationNumber = savedReview?.activeCandidateGenerationNumber ?? 1;
   const isImproved = isImprovedGeneration(generationNumber);
 
-  const [feedbackText, setFeedbackText] = useState(savedReview?.donaldFeedbackText ?? "");
-  const [feedbackTags, setFeedbackTags] = useState<string[]>(savedReview?.donaldFeedbackTags ?? []);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMode, setSubmitMode] = useState<ReviewSubmitMode | null>(null);
@@ -161,6 +161,16 @@ export function DeliveryAgentReviewPanel({
     operationalState,
     feedbackFormOpen: feedbackOpen,
   });
+
+  useEffect(() => {
+    if (operationalState !== "pending_review") {
+      return;
+    }
+
+    setFeedbackText("");
+    setFeedbackTags([]);
+    setFeedbackOpen(false);
+  }, [generationNumber, operationalState]);
 
   if (!activeRecommendationCandidateId || !activeRecommendation) {
     return null;
@@ -501,6 +511,9 @@ export function DeliveryAgentReviewPanel({
       }
 
       onImprovedCandidatesGenerated?.(payload.data);
+      setFeedbackText("");
+      setFeedbackTags([]);
+      setFeedbackOpen(false);
       setSavedMessage("Improved recommendation ready for review.");
       toast({
         title: "Improved candidates generated",
@@ -602,6 +615,25 @@ export function DeliveryAgentReviewPanel({
           </p>
         </div>
 
+        {candidateRoutePreview.coordinateCoverage && (
+          <div className="rounded-md border border-muted bg-muted/20 px-3 py-2 text-sm">
+            <p className="font-medium">
+              Recommendation confidence:{" "}
+              {candidateRoutePreview.coordinateCoverage.recommendationConfidence
+                .charAt(0)
+                .toUpperCase()}
+              {candidateRoutePreview.coordinateCoverage.recommendationConfidence.slice(1)}
+            </p>
+            <p className="text-muted-foreground">
+              {candidateRoutePreview.coordinateCoverage.stopsWithCoordinates}/
+              {candidateRoutePreview.coordinateCoverage.totalValidStops} stops have coordinates
+              {candidateRoutePreview.coordinateCoverage.stopsFallback > 0
+                ? ` · ${candidateRoutePreview.coordinateCoverage.stopsFallback} used fallback`
+                : ""}
+            </p>
+          </div>
+        )}
+
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-sm text-muted-foreground">Latest finish</p>
@@ -695,7 +727,11 @@ export function DeliveryAgentReviewPanel({
               type="button"
               variant="outline"
               disabled={submitLoading}
-              onClick={() => setFeedbackOpen(true)}
+              onClick={() => {
+                setFeedbackText("");
+                setFeedbackTags([]);
+                setFeedbackOpen(true);
+              }}
             >
               Request Improvement
             </Button>

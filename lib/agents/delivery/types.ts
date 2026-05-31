@@ -36,12 +36,21 @@ export type RoutingStopAddress = {
   buzzCode: string;
 };
 
+import type {
+  CoordinateConfidence,
+  CoordinateSource,
+  CoordinateStatus,
+} from "@/lib/agents/delivery/geocode/types";
+
 export type RouteOptimizerStopPayload = {
   name: string;
   phone: string;
   address: string;
   notes: string;
   order_ids: string[];
+  lat?: number;
+  lng?: number;
+  geocode_status?: string;
 };
 
 export type RoutingStop = {
@@ -62,6 +71,11 @@ export type RoutingStop = {
   items: DailyOrderBaseItem[];
   status: DailyOrderStatus;
   hasAdminOverride: boolean;
+  lat?: number;
+  lng?: number;
+  coordinateSource?: CoordinateSource;
+  coordinateStatus?: CoordinateStatus;
+  coordinateConfidence?: CoordinateConfidence;
   routeOptimizer: RouteOptimizerStopPayload;
 };
 

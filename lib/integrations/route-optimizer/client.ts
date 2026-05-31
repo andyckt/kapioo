@@ -15,6 +15,8 @@ import {
   type RouteOptimizerBatchCreateRequest,
   type RouteOptimizerBatchResult,
   type RouteOptimizerCreateRequest,
+  type RouteOptimizerGeocodeAddressesRequest,
+  type RouteOptimizerGeocodeAddressesResponse,
   type RouteOptimizerPreviewRequest,
   type RouteOptimizerRunResult,
 } from "@/lib/integrations/route-optimizer/types";
@@ -201,6 +203,15 @@ export async function batchCreateAndOptimizeRouteOptimizerRuns(
 ): Promise<RouteOptimizerBatchResult> {
   return routeOptimizerPost<RouteOptimizerBatchResult>(
     ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
+    payload
+  );
+}
+
+export async function geocodeAddressesBatch(
+  payload: RouteOptimizerGeocodeAddressesRequest
+): Promise<RouteOptimizerGeocodeAddressesResponse> {
+  return routeOptimizerPost<RouteOptimizerGeocodeAddressesResponse>(
+    ROUTE_OPTIMIZER_PATHS.geocodeAddresses,
     payload
   );
 }

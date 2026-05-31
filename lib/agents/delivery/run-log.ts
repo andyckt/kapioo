@@ -7,6 +7,7 @@ import DeliveryAgentRun, { type IDeliveryAgentRun } from "@/models/DeliveryAgent
 
 import {
   DEFAULT_DELIVERY_AGENT_RUN_VERSION,
+  type AttachGeocodeEnrichmentInput,
   type AttachLearningArtifactsInput,
   type AttachLocationArtifactsInput,
   type AttachPlanningArtifactsInput,
@@ -267,6 +268,14 @@ export async function attachLocationArtifacts(
 ): Promise<IDeliveryAgentRun> {
   await connectToDatabase();
   return updateRunById(id, { $set: { locationArtifacts: artifacts } });
+}
+
+export async function attachGeocodeEnrichment(
+  id: string | mongoose.Types.ObjectId,
+  enrichment: AttachGeocodeEnrichmentInput
+): Promise<IDeliveryAgentRun> {
+  await connectToDatabase();
+  return updateRunById(id, { $set: { geocodeEnrichment: enrichment } });
 }
 
 export async function attachLearningArtifacts(

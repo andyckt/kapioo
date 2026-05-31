@@ -1,17 +1,17 @@
 const {
   previewDeliveryOrdersForAgentMock,
-  getDeliveryOrdersForRoutingMock,
+  getEnrichedDeliveryOrdersForRoutingMock,
 } = vi.hoisted(() => ({
   previewDeliveryOrdersForAgentMock: vi.fn(),
-  getDeliveryOrdersForRoutingMock: vi.fn(),
+  getEnrichedDeliveryOrdersForRoutingMock: vi.fn(),
 }));
 
 vi.mock("@/lib/agents/delivery/preview-delivery-orders", () => ({
   previewDeliveryOrdersForAgent: previewDeliveryOrdersForAgentMock,
 }));
 
-vi.mock("@/lib/agents/delivery/get-delivery-orders-for-routing", () => ({
-  getDeliveryOrdersForRouting: getDeliveryOrdersForRoutingMock,
+vi.mock("@/lib/agents/delivery/geocode/get-enriched-delivery-orders-for-routing", () => ({
+  getEnrichedDeliveryOrdersForRouting: getEnrichedDeliveryOrdersForRoutingMock,
 }));
 
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
@@ -87,12 +87,41 @@ function buildRoutingResult(stops = buildMixedAreaRoutingStops()) {
   };
 }
 
+function buildEnrichedRoutingResult(stops = buildMixedAreaRoutingStops()) {
+  const routing = buildRoutingResult(stops);
+  return {
+    routing,
+    coordinateCoverage: {
+      totalValidStops: stops.length,
+      stopsWithCoordinates: stops.length,
+      stopsFallback: 0,
+      stopsGeocodeFailed: 0,
+      coveragePercent: stops.length === 0 ? 0 : 100,
+      recommendationConfidence: "high" as const,
+    },
+    geocodeEnrichment: {
+      artifactVersion: "1" as const,
+      enrichedAt: "2026-06-08T12:00:00.000Z",
+      provider: "route_optimizer" as const,
+      stopCoordinates: [],
+      coordinateCoverage: {
+        totalValidStops: stops.length,
+        stopsWithCoordinates: stops.length,
+        stopsFallback: 0,
+        stopsGeocodeFailed: 0,
+        coveragePercent: stops.length === 0 ? 0 : 100,
+        recommendationConfidence: "high" as const,
+      },
+    },
+  };
+}
+
 describe("lib/agents/delivery/candidate-plans/generate-candidate-plans", () => {
   const profile = getDefaultDeliveryPlanningProfile();
 
   beforeEach(() => {
     previewDeliveryOrdersForAgentMock.mockReset();
-    getDeliveryOrdersForRoutingMock.mockReset();
+    getEnrichedDeliveryOrdersForRoutingMock.mockReset();
   });
 
   it("blocks when planning gates fail and does not fetch routing stops", async () => {
@@ -108,12 +137,12 @@ describe("lib/agents/delivery/candidate-plans/generate-candidate-plans", () => {
       DeliveryAgentPlanningBlockedError
     );
 
-    expect(getDeliveryOrdersForRoutingMock).not.toHaveBeenCalled();
+    expect(getEnrichedDeliveryOrdersForRoutingMock).not.toHaveBeenCalled();
   });
 
   it("blocks when there are zero valid stops", async () => {
     previewDeliveryOrdersForAgentMock.mockResolvedValue(buildOrderPreview());
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult([]));
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult([]));
 
     await expect(generateCandidatePlansForAgent("2026-06-09")).rejects.toBeInstanceOf(
       DeliveryAgentPlanningBlockedError
@@ -122,7 +151,7 @@ describe("lib/agents/delivery/candidate-plans/generate-candidate-plans", () => {
 
   it("generates baseline candidate with two runs and no Self usage", async () => {
     previewDeliveryOrdersForAgentMock.mockResolvedValue(buildOrderPreview());
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
 
     const result = await generateCandidatePlansForAgent("2026-06-09");
     const baseline = result.candidates.find(
@@ -214,7 +243,7 @@ describe("lib/agents/delivery/candidate-plans/generate-candidate-plans", () => {
 
   it("includes fallback assumption when lat/lng are missing", async () => {
     previewDeliveryOrdersForAgentMock.mockResolvedValue(buildOrderPreview());
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
 
     const result = await generateCandidatePlansForAgent("2026-06-09");
 

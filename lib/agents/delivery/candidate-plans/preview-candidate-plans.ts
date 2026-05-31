@@ -8,7 +8,7 @@ import type { HandoffRunChainOverrides } from "@/lib/agents/delivery/candidate-p
 import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
 import { buildHandoffOverridesFromHints } from "@/lib/agents/delivery/feedback/apply-planning-hints";
 import type { PlanningHints } from "@/lib/agents/delivery/feedback/planning-hints";
-import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
+import { getEnrichedDeliveryOrdersForRouting } from "@/lib/agents/delivery/geocode";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
@@ -204,6 +204,7 @@ export async function previewCandidatePlansPipeline(input: {
   profileVersion?: string;
   baseCandidates?: DeliveryAgentCandidatePlan[];
   planningHints?: PlanningHints;
+  deliveryAgentRunId?: string;
 }): Promise<DeliveryAgentPreviewCandidatePlansResponse> {
   const profile = getDeliveryPlanningProfile(input.profileId);
   const kitchenAddress = getKapiooKitchenStartLocation();
@@ -217,11 +218,14 @@ export async function previewCandidatePlansPipeline(input: {
       }
     : await generateCandidatePlansForAgent(input.deliveryDate, input.profileId);
 
-  const routing = await getDeliveryOrdersForRouting({
+  const enriched = await getEnrichedDeliveryOrdersForRouting({
     deliveryDate: input.deliveryDate,
     statuses: ["confirmed"],
+    deliveryAgentRunId: input.deliveryAgentRunId,
   });
-  const routingStopByOrderId = buildRoutingStopMap(routing.stops);
+  const routingStopByOrderId = buildRoutingStopMap(enriched.routing.stops);
+  const coordinateCoverage = enriched.coordinateCoverage;
+  const geocodeEnrichment = enriched.geocodeEnrichment;
 
   const expansion = expandFullCandidateVariants({
     splits: generation.candidates,
@@ -322,9 +326,22 @@ export async function previewCandidatePlansPipeline(input: {
     profile,
     candidates,
     assignmentByCandidateId,
+    coordinateCoverage,
   });
 
   const selectionWarnings = [...expansion.expansionWarnings, ...selection.selectionWarnings];
+
+  if (coordinateCoverage.stopsFallback > 0) {
+    selectionWarnings.push(
+      `${coordinateCoverage.stopsWithCoordinates}/${coordinateCoverage.totalValidStops} stops have coordinates; ${coordinateCoverage.stopsFallback} used area fallback.`
+    );
+  }
+
+  if (coordinateCoverage.recommendationConfidence === "low") {
+    selectionWarnings.push(
+      "Recommendation confidence is low due to missing or failed geocodes. Review coordinate coverage before approving."
+    );
+  }
 
   if (stoppedDueToRateLimit) {
     selectionWarnings.push(
@@ -347,6 +364,8 @@ export async function previewCandidatePlansPipeline(input: {
     selectionWarnings,
     expansionWarnings: expansion.expansionWarnings,
     notes: CANDIDATE_ROUTE_PREVIEW_NOTES,
+    coordinateCoverage,
+    geocodeEnrichment,
   };
 }
 

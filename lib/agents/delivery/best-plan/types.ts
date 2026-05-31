@@ -41,6 +41,7 @@ export type CandidateScoringInput = {
   routingStopByOrderId?: Map<string, { area: string; orderId: string; lat?: number; lng?: number; totalMealQuantity: number }>;
   preferredDeadlineBufferMinutes: number;
   scoringWeights: DeliveryPlanningScoringWeights;
+  coordinateCoverage?: import("@/lib/agents/delivery/geocode/types").DeliveryAgentCoordinateCoverageSummary;
 };
 
 export type CandidateScoringResult = {

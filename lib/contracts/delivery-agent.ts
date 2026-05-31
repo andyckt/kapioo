@@ -1,4 +1,15 @@
 import { z } from "zod";
+import type {
+  DeliveryAgentCoordinateCoverageSummary,
+  DeliveryAgentGeocodeEnrichment,
+  RecommendationConfidence,
+} from "@/lib/agents/delivery/geocode/types";
+
+export type {
+  DeliveryAgentCoordinateCoverageSummary,
+  DeliveryAgentGeocodeEnrichment,
+  RecommendationConfidence,
+};
 
 const DATE_YYYY_MM_DD = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -132,6 +143,7 @@ export type DeliveryAgentSimpleRoutePreviewResponse = {
   routePreview: DeliveryAgentSimpleRoutePreviewResult;
   sourceSummary: DeliveryAgentSimpleRoutePreviewSourceSummary;
   notes: string;
+  coordinateCoverage?: DeliveryAgentCoordinateCoverageSummary;
 };
 
 export type DeliveryAgentPlanningProfileDriverSummary = {
@@ -232,6 +244,8 @@ export type DeliveryAgentGenerateCandidatePlansResponse = {
   profileVersion: string;
   candidates: DeliveryAgentCandidatePlan[];
   notes: string;
+  coordinateCoverage: DeliveryAgentCoordinateCoverageSummary;
+  geocodeEnrichment?: DeliveryAgentGeocodeEnrichment;
 };
 
 export type DeliveryAgentRouteShapeIssueType =
@@ -449,6 +463,8 @@ export type DeliveryAgentPreviewCandidatePlansResponse = {
   selectionWarnings: string[];
   expansionWarnings?: string[];
   notes: string;
+  coordinateCoverage: DeliveryAgentCoordinateCoverageSummary;
+  geocodeEnrichment?: DeliveryAgentGeocodeEnrichment;
 };
 
 const deliveryAgentReviewFeedbackTagSchema = z.enum([

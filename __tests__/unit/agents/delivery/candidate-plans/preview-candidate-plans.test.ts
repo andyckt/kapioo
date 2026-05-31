@@ -1,11 +1,11 @@
 const {
   generateCandidatePlansForAgentMock,
-  getDeliveryOrdersForRoutingMock,
+  getEnrichedDeliveryOrdersForRoutingMock,
   getKapiooKitchenStartLocationMock,
   previewRouteOptimizerRunMock,
 } = vi.hoisted(() => ({
   generateCandidatePlansForAgentMock: vi.fn(),
-  getDeliveryOrdersForRoutingMock: vi.fn(),
+  getEnrichedDeliveryOrdersForRoutingMock: vi.fn(),
   getKapiooKitchenStartLocationMock: vi.fn(),
   previewRouteOptimizerRunMock: vi.fn(),
 }));
@@ -14,8 +14,8 @@ vi.mock("@/lib/agents/delivery/candidate-plans/generate-candidate-plans", () => 
   generateCandidatePlansForAgent: generateCandidatePlansForAgentMock,
 }));
 
-vi.mock("@/lib/agents/delivery/get-delivery-orders-for-routing", () => ({
-  getDeliveryOrdersForRouting: getDeliveryOrdersForRoutingMock,
+vi.mock("@/lib/agents/delivery/geocode/get-enriched-delivery-orders-for-routing", () => ({
+  getEnrichedDeliveryOrdersForRouting: getEnrichedDeliveryOrdersForRoutingMock,
 }));
 
 vi.mock("@/lib/agents/delivery/kitchen-start-location", () => ({
@@ -298,10 +298,33 @@ function buildRoutingResult() {
   };
 }
 
+function buildEnrichedRoutingResult() {
+  const routing = buildRoutingResult();
+  const coverage = {
+    totalValidStops: routing.stops.length,
+    stopsWithCoordinates: routing.stops.length,
+    stopsFallback: 0,
+    stopsGeocodeFailed: 0,
+    coveragePercent: 100,
+    recommendationConfidence: "high" as const,
+  };
+  return {
+    routing,
+    coordinateCoverage: coverage,
+    geocodeEnrichment: {
+      artifactVersion: "1" as const,
+      enrichedAt: "2026-06-08T12:00:00.000Z",
+      provider: "route_optimizer" as const,
+      stopCoordinates: [],
+      coordinateCoverage: coverage,
+    },
+  };
+}
+
 describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
   beforeEach(() => {
     generateCandidatePlansForAgentMock.mockReset();
-    getDeliveryOrdersForRoutingMock.mockReset();
+    getEnrichedDeliveryOrdersForRoutingMock.mockReset();
     getKapiooKitchenStartLocationMock.mockReset();
     previewRouteOptimizerRunMock.mockReset();
   });
@@ -320,7 +343,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
 
   it("previews baseline candidate with one Route Optimizer call per non-empty run", async () => {
     generateCandidatePlansForAgentMock.mockResolvedValue(buildGenerationResponse());
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
@@ -393,7 +416,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
 
   it("includes Self run preview for self fallback candidate", async () => {
     generateCandidatePlansForAgentMock.mockResolvedValue(buildGenerationResponse());
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
@@ -441,7 +464,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
       ...buildGenerationResponse(),
       candidates: [buildGenerationResponse().candidates[0]],
     });
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
@@ -460,7 +483,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
 
   it("stops previewing additional candidates after Route Optimizer rate limiting", async () => {
     generateCandidatePlansForAgentMock.mockResolvedValue(buildGenerationResponse());
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
@@ -501,7 +524,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
       ...buildGenerationResponse(),
       candidates: [buildGenerationResponse().candidates[0]],
     });
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );
@@ -519,7 +542,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
       ...buildGenerationResponse(),
       candidates: [buildGenerationResponse().candidates[0]],
     });
-    getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
     getKapiooKitchenStartLocationMock.mockReturnValue(
       "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
     );

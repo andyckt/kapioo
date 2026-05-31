@@ -75,7 +75,16 @@ function mapRunCustomers(
       );
     }
 
-    return routingStop.routeOptimizer;
+    return {
+      ...routingStop.routeOptimizer,
+      ...(typeof routingStop.lat === "number" && typeof routingStop.lng === "number"
+        ? {
+            lat: routingStop.lat,
+            lng: routingStop.lng,
+            geocode_status: routingStop.routeOptimizer.geocode_status ?? "OK",
+          }
+        : {}),
+    };
   });
 }
 

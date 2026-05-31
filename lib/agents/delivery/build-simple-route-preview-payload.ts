@@ -26,6 +26,15 @@ export function buildSimpleRoutePreviewPayload(input: {
       start_time: startTime,
       travel_mode: "driving",
     },
-    customers: input.stops.map((stop) => stop.routeOptimizer),
+    customers: input.stops.map((stop) => ({
+      ...stop.routeOptimizer,
+      ...(typeof stop.lat === "number" && typeof stop.lng === "number"
+        ? {
+            lat: stop.lat,
+            lng: stop.lng,
+            geocode_status: stop.routeOptimizer.geocode_status ?? "OK",
+          }
+        : {}),
+    })),
   };
 }

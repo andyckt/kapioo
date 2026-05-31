@@ -25,6 +25,7 @@ import type {
   DeliveryAgentPreviewCandidatePlansResponse,
   DeliveryAgentPreviewResponse,
   DeliveryAgentSimpleRoutePreviewResponse,
+  DeliveryAgentCoordinateCoverageSummary,
 } from "@/lib/contracts/delivery-agent"
 import { DeliveryAgentReviewPanel } from "@/features/admin-delivery-agent/delivery-agent-review-panel"
 
@@ -70,6 +71,30 @@ function formatPreviewDateTime(value?: string): string {
   }
 
   return formatDateTime(value)
+}
+
+function CoordinateCoverageBanner({ coverage }: { coverage: DeliveryAgentCoordinateCoverageSummary }) {
+  const confidenceLabel =
+    coverage.recommendationConfidence.charAt(0).toUpperCase() +
+    coverage.recommendationConfidence.slice(1)
+
+  const toneClass =
+    coverage.recommendationConfidence === "high"
+      ? "border-green-200 bg-green-50 text-green-900"
+      : coverage.recommendationConfidence === "medium"
+        ? "border-amber-200 bg-amber-50 text-amber-900"
+        : "border-destructive/30 bg-destructive/10 text-destructive"
+
+  return (
+    <div className={`rounded-md border px-4 py-3 text-sm ${toneClass}`}>
+      <p className="font-medium">Recommendation confidence: {confidenceLabel}</p>
+      <p>
+        {coverage.stopsWithCoordinates}/{coverage.totalValidStops} stops have coordinates
+        {coverage.stopsFallback > 0 ? ` · ${coverage.stopsFallback} used area fallback` : ""}
+        {coverage.stopsGeocodeFailed > 0 ? ` · ${coverage.stopsGeocodeFailed} geocode failed` : ""}
+      </p>
+    </div>
+  )
 }
 
 export function AdminDeliveryAgentTab() {
@@ -808,6 +833,10 @@ export function AdminDeliveryAgentTab() {
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">{candidatePlans.notes}</p>
 
+                  {candidatePlans.coordinateCoverage && (
+                    <CoordinateCoverageBanner coverage={candidatePlans.coordinateCoverage} />
+                  )}
+
                   <div className="flex justify-end">
                     <Button
                       onClick={handlePreviewCandidateRoutes}
@@ -826,6 +855,10 @@ export function AdminDeliveryAgentTab() {
 
                   {candidateRoutePreview && (
                     <p className="text-sm text-muted-foreground">{candidateRoutePreview.notes}</p>
+                  )}
+
+                  {candidateRoutePreview?.coordinateCoverage && (
+                    <CoordinateCoverageBanner coverage={candidateRoutePreview.coordinateCoverage} />
                   )}
 
                   {candidateRoutePreview?.recommendedCandidateId && (
