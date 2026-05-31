@@ -40,3 +40,7 @@ export function getS3Config() {
 export function getCloudfrontDomain(): string | undefined {
   return getEnv('AWS_CLOUDFRONT_DOMAIN');
 }
+
+export function getKitchenApiKey(): string | undefined {
+  return getEnv('KITCHEN_API_KEY');
+}
