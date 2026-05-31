@@ -34,6 +34,7 @@ import type {
   DeliveryAgentPreviewResponse,
   DeliveryAgentReviewPlanResponse,
 } from "@/lib/contracts/delivery-agent";
+import { CoordinateCoverageBanner } from "@/features/admin-delivery-agent/coordinate-coverage-banner";
 import { formatDateTime } from "@/lib/format";
 
 type ReviewSubmitMode = "approve" | "request_improvement";
@@ -616,22 +617,7 @@ export function DeliveryAgentReviewPanel({
         </div>
 
         {candidateRoutePreview.coordinateCoverage && (
-          <div className="rounded-md border border-muted bg-muted/20 px-3 py-2 text-sm">
-            <p className="font-medium">
-              Recommendation confidence:{" "}
-              {candidateRoutePreview.coordinateCoverage.recommendationConfidence
-                .charAt(0)
-                .toUpperCase()}
-              {candidateRoutePreview.coordinateCoverage.recommendationConfidence.slice(1)}
-            </p>
-            <p className="text-muted-foreground">
-              {candidateRoutePreview.coordinateCoverage.stopsWithCoordinates}/
-              {candidateRoutePreview.coordinateCoverage.totalValidStops} stops have coordinates
-              {candidateRoutePreview.coordinateCoverage.stopsFallback > 0
-                ? ` · ${candidateRoutePreview.coordinateCoverage.stopsFallback} used fallback`
-                : ""}
-            </p>
-          </div>
+          <CoordinateCoverageBanner coverage={candidateRoutePreview.coordinateCoverage} />
         )}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

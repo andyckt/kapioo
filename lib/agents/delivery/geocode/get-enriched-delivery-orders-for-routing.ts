@@ -22,6 +22,7 @@ export async function getEnrichedDeliveryOrdersForRouting(
   const enrichment = await enrichRoutingStops({
     deliveryDate: routing.deliveryDate,
     stops: routing.stops,
+    profileId: routing.profileId,
   });
 
   if (input.deliveryAgentRunId?.trim()) {

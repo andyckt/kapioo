@@ -175,6 +175,9 @@ describe("enrichRoutingStops", () => {
     const { RouteOptimizerResponseError } = await import(
       "@/lib/integrations/route-optimizer/errors"
     );
+    const { GEOCODE_ENDPOINT_UNAVAILABLE_MESSAGE } = await import(
+      "@/lib/agents/delivery/geocode/geocode-enrichment-alerts"
+    );
 
     geocodeAddressesBatchMock.mockRejectedValue(
       new RouteOptimizerResponseError("Geocode endpoint not found", { status: 404 })
@@ -186,7 +189,36 @@ describe("enrichRoutingStops", () => {
     });
 
     expect(result.stops[0]?.coordinateSource).toBe("fallback_unavailable");
-    expect(result.geocodeEnrichment.coordinateCoverage.stopsGeocodeFailed).toBe(1);
+    expect(result.geocodeEnrichment.coordinateCoverage.alerts?.[0]?.message).toBe(
+      GEOCODE_ENDPOINT_UNAVAILABLE_MESSAGE
+    );
+    expect(result.geocodeEnrichment.coordinateCoverage.recommendationConfidence).toBe("low");
     expect(writeGeocodeCacheEntryMock).not.toHaveBeenCalled();
+    expect(result.geocodeEnrichment.runStats?.roGeocodeRequested).toBe(1);
+  });
+
+  it("records partial geocode failures per stop", async () => {
+    geocodeAddressesBatchMock.mockResolvedValue({
+      status: "completed",
+      total_requested: 1,
+      total_failed: 1,
+      total_succeeded: 0,
+      results: [
+        {
+          client_ref: "DD-90000001",
+          address: "Unit 5, 123 Main St, North York M2N 1A1, Canada",
+          geocode_status: "ZERO_RESULTS",
+          error: "Address could not be geocoded",
+        },
+      ],
+    });
+
+    const result = await enrichRoutingStops({
+      deliveryDate: "2026-06-09",
+      stops: [buildStop()],
+    });
+
+    expect(result.geocodeEnrichment.coordinateCoverage.alerts?.[0]?.code).toBe("partial_failure");
+    expect(result.geocodeEnrichment.coordinateCoverage.failedStopOrderIds).toContain("DD-90000001");
   });
 });

@@ -1,9 +1,18 @@
 import { geocodeAddressesBatch } from "@/lib/integrations/route-optimizer/client";
-import { RouteOptimizerRateLimitError, RouteOptimizerResponseError } from "@/lib/integrations/route-optimizer/errors";
+import { buildRouteOptimizerUrl, getRouteOptimizerConfig } from "@/lib/integrations/route-optimizer/config";
+import {
+  RouteOptimizerRateLimitError,
+  RouteOptimizerResponseError,
+} from "@/lib/integrations/route-optimizer/errors";
+import { ROUTE_OPTIMIZER_PATHS } from "@/lib/integrations/route-optimizer/types";
 import type { RouteOptimizerGeocodeResultItem } from "@/lib/integrations/route-optimizer/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 
 import { buildCoordinateCoverageSummary } from "@/lib/agents/delivery/geocode/build-coordinate-coverage-summary";
+import {
+  buildGeocodeBatchFailureAlert,
+  buildPartialGeocodeFailureAlert,
+} from "@/lib/agents/delivery/geocode/geocode-enrichment-alerts";
 import { readGeocodeCacheBatch, writeGeocodeCacheEntry } from "@/lib/agents/delivery/geocode/geocode-cache";
 import {
   buildGeocodeIdempotencyKey,
@@ -15,6 +24,8 @@ import type {
   CoordinateStatus,
   DeliveryAgentGeocodeEnrichment,
   DeliveryAgentStopCoordinateRecord,
+  GeocodeEnrichmentAlert,
+  GeocodeEnrichmentRunStats,
 } from "@/lib/agents/delivery/geocode/types";
 
 function readFiniteCoordinate(value: unknown): number | undefined {
@@ -226,8 +237,23 @@ export type EnrichRoutingStopsResult = {
 export async function enrichRoutingStops(input: {
   deliveryDate: string;
   stops: RoutingStop[];
+  profileId?: string;
 }): Promise<EnrichRoutingStopsResult> {
   const nowIso = new Date().toISOString();
+  const alerts: GeocodeEnrichmentAlert[] = [];
+  let cacheHits = 0;
+  let roGeocodeRequested = 0;
+  let roGeocodeSucceeded = 0;
+  let roGeocodeFailed = 0;
+  let endpointUrl: string | undefined;
+
+  try {
+    const { baseUrl } = getRouteOptimizerConfig();
+    endpointUrl = buildRouteOptimizerUrl(baseUrl, ROUTE_OPTIMIZER_PATHS.geocodeAddresses);
+  } catch {
+    endpointUrl = undefined;
+  }
+
   const addressKeys = input.stops.map((stop) => ({
     stop,
     normalizedAddressKey: buildNormalizedAddressKey(stop),
@@ -273,6 +299,7 @@ export async function enrichRoutingStops(input: {
 
     const cached = cacheByKey.get(normalizedAddressKey);
     if (cached && cached.status !== "failed") {
+      cacheHits += 1;
       const enriched = applyCoordinatesToStop(stop, {
         lat: cached.lat,
         lng: cached.lng,
@@ -318,6 +345,8 @@ export async function enrichRoutingStops(input: {
   }
 
   if (pendingGeocode.length > 0) {
+    roGeocodeRequested = pendingGeocode.length;
+
     try {
       const response = await geocodeAddressesBatch({
         created_by_integration: "kapioo-admin",
@@ -337,35 +366,91 @@ export async function enrichRoutingStops(input: {
         (response.results ?? []).map((result) => [result.client_ref, result])
       );
 
+      const batchFailedOrderIds: string[] = [];
+
       for (const entry of pendingGeocode) {
+        const result = resultByOrderId.get(entry.stop.orderId);
+        const lat = readFiniteCoordinate(result?.lat);
+        const lng = readFiniteCoordinate(result?.lng);
+        const status =
+          lat !== undefined && lng !== undefined
+            ? mapGeocodeStatusToCoordinateStatus(result?.geocode_status)
+            : "failed";
+
+        if (lat !== undefined && lng !== undefined && status !== "failed") {
+          roGeocodeSucceeded += 1;
+        } else {
+          roGeocodeFailed += 1;
+          batchFailedOrderIds.push(entry.stop.orderId);
+        }
+
         await applySuccessfulGeocodeResult(
           enrichedStops,
           stopCoordinates,
           entry,
-          resultByOrderId.get(entry.stop.orderId)
+          result
         );
+      }
+
+      const partialAlert = buildPartialGeocodeFailureAlert(batchFailedOrderIds);
+      if (partialAlert) {
+        alerts.push(partialAlert);
       }
     } catch (error) {
       if (error instanceof RouteOptimizerRateLimitError) {
         throw error;
       }
 
+      const batchAlert = buildGeocodeBatchFailureAlert(error);
+      alerts.push(batchAlert);
+
       const geocodeStatus =
-        error instanceof RouteOptimizerResponseError && error.status === 404
+        batchAlert.code === "endpoint_unavailable"
           ? "GEOCODE_ENDPOINT_UNAVAILABLE"
-          : "GEOCODE_BATCH_FAILED";
+          : batchAlert.code === "auth_failed"
+            ? "GEOCODE_AUTH_FAILED"
+            : "GEOCODE_BATCH_FAILED";
+
+      roGeocodeFailed = pendingGeocode.length;
 
       for (const entry of pendingGeocode) {
         await applyGeocodeFallbackForPendingStop(enrichedStops, stopCoordinates, entry, geocodeStatus, {
           writeCache: false,
         });
       }
+
+      console.error("[Delivery Agent Geocode] batch request failed", {
+        deliveryDate: input.deliveryDate,
+        profileId: input.profileId,
+        endpointPath: ROUTE_OPTIMIZER_PATHS.geocodeAddresses,
+        endpointUrl,
+        errorCode: batchAlert.code,
+        httpStatus: error instanceof RouteOptimizerResponseError ? error.status : undefined,
+      });
     }
   }
+
+  const runStats: GeocodeEnrichmentRunStats = {
+    totalStops: input.stops.length,
+    cacheHits,
+    roGeocodeRequested,
+    roGeocodeSucceeded,
+    roGeocodeFailed,
+    endpointPath: ROUTE_OPTIMIZER_PATHS.geocodeAddresses,
+    ...(endpointUrl ? { endpointUrl } : {}),
+  };
+
+  console.info("[Delivery Agent Geocode] enrichment complete", {
+    deliveryDate: input.deliveryDate,
+    profileId: input.profileId,
+    ...runStats,
+    alertCodes: alerts.map((alert) => alert.code),
+  });
 
   const coordinateCoverage = buildCoordinateCoverageSummary({
     stops: input.stops,
     stopCoordinates,
+    alerts: alerts.length > 0 ? alerts : undefined,
   });
 
   return {
@@ -376,6 +461,7 @@ export async function enrichRoutingStops(input: {
       provider: "route_optimizer",
       stopCoordinates,
       coordinateCoverage,
+      runStats,
     },
   };
 }

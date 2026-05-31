@@ -2,12 +2,16 @@ import { z } from "zod";
 import type {
   DeliveryAgentCoordinateCoverageSummary,
   DeliveryAgentGeocodeEnrichment,
+  GeocodeEnrichmentAlert,
+  GeocodeEnrichmentRunStats,
   RecommendationConfidence,
 } from "@/lib/agents/delivery/geocode/types";
 
 export type {
   DeliveryAgentCoordinateCoverageSummary,
   DeliveryAgentGeocodeEnrichment,
+  GeocodeEnrichmentAlert,
+  GeocodeEnrichmentRunStats,
   RecommendationConfidence,
 };
 

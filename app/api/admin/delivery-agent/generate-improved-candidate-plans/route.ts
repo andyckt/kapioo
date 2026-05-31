@@ -6,11 +6,11 @@ import {
 } from "@/lib/agents/delivery/candidate-plans/generate-improved-candidate-plans";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { KitchenStartLocationConfigError } from "@/lib/agents/delivery/kitchen-start-location";
+import { mapGeocodeEnrichmentRouteError } from "@/lib/agents/delivery/geocode/map-geocode-enrichment-route-error";
 import { DeliveryAgentReviewLockedError } from "@/lib/agents/delivery/review-plan/submit-donald-plan-review";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { deliveryAgentGenerateImprovedCandidatePlansBodySchema } from "@/lib/contracts/delivery-agent";
 import {
-  RouteOptimizerAuthError,
   RouteOptimizerConfigError,
   RouteOptimizerNetworkError,
   RouteOptimizerResponseError,
@@ -79,10 +79,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (error instanceof RouteOptimizerAuthError) {
-      return errorJson("Route Optimizer authentication failed.", 502, {
-        details: error.message,
-      });
+    const geocodeError = mapGeocodeEnrichmentRouteError(error);
+    if (geocodeError) {
+      return geocodeError;
     }
 
     if (

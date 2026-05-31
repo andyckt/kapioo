@@ -7,6 +7,7 @@ import { previewCandidateHandoff } from "@/lib/agents/delivery/candidate-plans/p
 import type { HandoffRunChainOverrides } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
 import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
 import { buildHandoffOverridesFromHints } from "@/lib/agents/delivery/feedback/apply-planning-hints";
+import { collectCoordinateCoverageWarnings } from "@/lib/agents/delivery/geocode/geocode-enrichment-alerts";
 import type { PlanningHints } from "@/lib/agents/delivery/feedback/planning-hints";
 import { getEnrichedDeliveryOrdersForRouting } from "@/lib/agents/delivery/geocode";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
@@ -329,19 +330,15 @@ export async function previewCandidatePlansPipeline(input: {
     coordinateCoverage,
   });
 
-  const selectionWarnings = [...expansion.expansionWarnings, ...selection.selectionWarnings];
-
-  if (coordinateCoverage.stopsFallback > 0) {
-    selectionWarnings.push(
-      `${coordinateCoverage.stopsWithCoordinates}/${coordinateCoverage.totalValidStops} stops have coordinates; ${coordinateCoverage.stopsFallback} used area fallback.`
-    );
-  }
-
-  if (coordinateCoverage.recommendationConfidence === "low") {
-    selectionWarnings.push(
-      "Recommendation confidence is low due to missing or failed geocodes. Review coordinate coverage before approving."
-    );
-  }
+  const selectionWarnings = [
+    ...expansion.expansionWarnings,
+    ...selection.selectionWarnings,
+    ...collectCoordinateCoverageWarnings({
+      alerts: coordinateCoverage.alerts,
+      stopsFallback: coordinateCoverage.stopsFallback,
+      recommendationConfidence: coordinateCoverage.recommendationConfidence,
+    }),
+  ];
 
   if (stoppedDueToRateLimit) {
     selectionWarnings.push(

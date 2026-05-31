@@ -4,8 +4,10 @@ import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
   DeliveryAgentCoordinateCoverageSummary,
   DeliveryAgentStopCoordinateRecord,
+  GeocodeEnrichmentAlert,
   RecommendationConfidence,
 } from "@/lib/agents/delivery/geocode/types";
+import { buildCoordinateSourceBreakdown } from "@/lib/agents/delivery/geocode/build-coordinate-source-breakdown";
 
 function isFlexibleStop(stop: Pick<RoutingStop, "area">): boolean {
   const area = stop.area.trim().toLowerCase();
@@ -54,6 +56,8 @@ export function buildCoordinateCoverageSummary(input: {
   stops: RoutingStop[];
   stopCoordinates: DeliveryAgentStopCoordinateRecord[];
   rateLimited?: boolean;
+  alerts?: GeocodeEnrichmentAlert[];
+  failedStopOrderIds?: string[];
 }): DeliveryAgentCoordinateCoverageSummary {
   const totalValidStops = input.stops.length;
   const recordByOrderId = new Map(input.stopCoordinates.map((record) => [record.orderId, record]));
@@ -103,6 +107,13 @@ export function buildCoordinateCoverageSummary(input: {
       ? 0
       : Math.round((stopsWithCoordinates / totalValidStops) * 100);
 
+  const failedFromRecords = input.stopCoordinates
+    .filter((record) => record.source === "fallback_unavailable" || record.status === "failed")
+    .map((record) => record.orderId);
+  const failedStopOrderIds = [
+    ...new Set([...(input.failedStopOrderIds ?? []), ...failedFromRecords]),
+  ];
+
   return {
     totalValidStops,
     stopsWithCoordinates,
@@ -117,6 +128,9 @@ export function buildCoordinateCoverageSummary(input: {
       flexibleStopMissingCoords,
       rateLimited: input.rateLimited,
     }),
+    sourceBreakdown: buildCoordinateSourceBreakdown(input.stopCoordinates),
+    ...(input.alerts && input.alerts.length > 0 ? { alerts: input.alerts } : {}),
+    ...(failedStopOrderIds.length > 0 ? { failedStopOrderIds } : {}),
     ...(input.rateLimited ? { rateLimited: true } : {}),
   };
 }

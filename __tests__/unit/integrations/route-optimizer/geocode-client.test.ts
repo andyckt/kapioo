@@ -72,4 +72,66 @@ describe("lib/integrations/route-optimizer/geocode client", () => {
       })
     ).rejects.toBeInstanceOf(RouteOptimizerRateLimitError);
   });
+
+  it("throws RouteOptimizerAuthError on 401", async () => {
+    const { RouteOptimizerAuthError } = await import("@/lib/integrations/route-optimizer/errors");
+
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: { get: () => "application/json" },
+      text: async () => JSON.stringify({ message: "Unauthorized" }),
+    });
+
+    await expect(
+      geocodeAddressesBatch({
+        addresses: [{ client_ref: "DD-1", address: "123 Main St" }],
+      })
+    ).rejects.toBeInstanceOf(RouteOptimizerAuthError);
+  });
+
+  it("throws RouteOptimizerResponseError on 404", async () => {
+    const { RouteOptimizerResponseError } = await import(
+      "@/lib/integrations/route-optimizer/errors"
+    );
+
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 404,
+      headers: { get: () => "text/html" },
+      text: async () => "<html>not found</html>",
+    });
+
+    await expect(
+      geocodeAddressesBatch({
+        addresses: [{ client_ref: "DD-1", address: "123 Main St" }],
+      })
+    ).rejects.toBeInstanceOf(RouteOptimizerResponseError);
+  });
+
+  it("sends Bearer auth header", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => "application/json" },
+      text: async () =>
+        JSON.stringify({
+          status: "completed",
+          results: [{ client_ref: "DD-1", lat: 43.7, lng: -79.4, geocode_status: "OK" }],
+        }),
+    });
+
+    await geocodeAddressesBatch({
+      addresses: [{ client_ref: "DD-1", address: "123 Main St" }],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer test-key",
+        }),
+      })
+    );
+  });
 });

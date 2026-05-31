@@ -1,9 +1,9 @@
 import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
 import { generateCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
+import { mapGeocodeEnrichmentRouteError } from "@/lib/agents/delivery/geocode/map-geocode-enrichment-route-error";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { deliveryAgentGenerateCandidatePlansBodySchema } from "@/lib/contracts/delivery-agent";
-import { RouteOptimizerRateLimitError } from "@/lib/integrations/route-optimizer/errors";
 import { OrderDataError } from "@/lib/order-data/errors";
 
 export async function POST(request: Request) {
@@ -31,12 +31,9 @@ export async function POST(request: Request) {
       });
     }
 
-    if (error instanceof RouteOptimizerRateLimitError) {
-      return errorJson(
-        "Route Optimizer geocoder is rate limited. Wait before retrying coordinate enrichment.",
-        429,
-        { details: error.message }
-      );
+    const geocodeError = mapGeocodeEnrichmentRouteError(error);
+    if (geocodeError) {
+      return geocodeError;
     }
 
     if (error instanceof OrderDataError) {

@@ -28,6 +28,7 @@ import type {
   DeliveryAgentCoordinateCoverageSummary,
 } from "@/lib/contracts/delivery-agent"
 import { DeliveryAgentReviewPanel } from "@/features/admin-delivery-agent/delivery-agent-review-panel"
+import { CoordinateCoverageBanner } from "@/features/admin-delivery-agent/coordinate-coverage-banner"
 
 function SummaryCard({
   label,
@@ -71,30 +72,6 @@ function formatPreviewDateTime(value?: string): string {
   }
 
   return formatDateTime(value)
-}
-
-function CoordinateCoverageBanner({ coverage }: { coverage: DeliveryAgentCoordinateCoverageSummary }) {
-  const confidenceLabel =
-    coverage.recommendationConfidence.charAt(0).toUpperCase() +
-    coverage.recommendationConfidence.slice(1)
-
-  const toneClass =
-    coverage.recommendationConfidence === "high"
-      ? "border-green-200 bg-green-50 text-green-900"
-      : coverage.recommendationConfidence === "medium"
-        ? "border-amber-200 bg-amber-50 text-amber-900"
-        : "border-destructive/30 bg-destructive/10 text-destructive"
-
-  return (
-    <div className={`rounded-md border px-4 py-3 text-sm ${toneClass}`}>
-      <p className="font-medium">Recommendation confidence: {confidenceLabel}</p>
-      <p>
-        {coverage.stopsWithCoordinates}/{coverage.totalValidStops} stops have coordinates
-        {coverage.stopsFallback > 0 ? ` · ${coverage.stopsFallback} used area fallback` : ""}
-        {coverage.stopsGeocodeFailed > 0 ? ` · ${coverage.stopsGeocodeFailed} geocode failed` : ""}
-      </p>
-    </div>
-  )
 }
 
 export function AdminDeliveryAgentTab() {

@@ -1,11 +1,11 @@
 import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
+import { mapGeocodeEnrichmentRouteError } from "@/lib/agents/delivery/geocode/map-geocode-enrichment-route-error";
 import { KitchenStartLocationConfigError } from "@/lib/agents/delivery/kitchen-start-location";
 import { previewSimpleRouteForAgent } from "@/lib/agents/delivery/preview-simple-route";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { deliveryAgentSimpleRoutePreviewBodySchema } from "@/lib/contracts/delivery-agent";
 import {
-  RouteOptimizerAuthError,
   RouteOptimizerConfigError,
   RouteOptimizerNetworkError,
   RouteOptimizerResponseError,
@@ -51,10 +51,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (error instanceof RouteOptimizerAuthError) {
-      return errorJson("Route Optimizer authentication failed.", 502, {
-        details: error.message,
-      });
+    const geocodeError = mapGeocodeEnrichmentRouteError(error);
+    if (geocodeError) {
+      return geocodeError;
     }
 
     if (error instanceof RouteOptimizerValidationError) {
