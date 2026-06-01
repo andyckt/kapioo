@@ -1,4 +1,13 @@
 export {
+  assignFeasibilityTier,
+  anyOnTimeCandidateExists,
+  compareFeasibilityThenScore,
+  type FeasibilityCompareCandidate,
+  type FeasibilityLabel,
+  type FeasibilityTier,
+  type FeasibilityTierResult,
+} from "@/lib/agents/delivery/best-plan/operational/resolve-feasibility-tier";
+export {
   capSelfDeadlineBufferPoints,
   computeMinutesSavedBySelf,
   evaluateComparativeSelfPolicy,

@@ -400,6 +400,7 @@ export type DeliveryAgentCandidateRecommendationStatus =
   | "recommended"
   | "acceptable"
   | "risky"
+  | "infeasible"
   | "not_recommended";
 
 export type DeliveryAgentRecommendedPlanSummary = {
@@ -407,6 +408,8 @@ export type DeliveryAgentRecommendedPlanSummary = {
   candidateName: string;
   score: number;
   recommendationStatus: DeliveryAgentCandidateRecommendationStatus;
+  feasibilityTier?: 1 | 2 | 3 | 4;
+  feasibilityLabel?: string;
   formattedLatestFinishTime?: string;
   allRunsFinishBeforeDeadline: boolean;
   minutesBeforeOrAfterDeadline?: number;
@@ -452,6 +455,8 @@ export type DeliveryAgentCandidatePlanPreview = DeliveryAgentCandidatePlanPrevie
   score: number;
   rank: number;
   recommendationStatus: DeliveryAgentCandidateRecommendationStatus;
+  feasibilityTier?: 1 | 2 | 3 | 4;
+  feasibilityLabel?: string;
   scoreBreakdown: DeliveryAgentCandidateScoreBreakdownItem[];
   pros: string[];
   cons: string[];

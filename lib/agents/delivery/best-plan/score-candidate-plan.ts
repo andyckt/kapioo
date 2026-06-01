@@ -587,6 +587,19 @@ export function scoreCandidatePlan(input: CandidateScoringInput): CandidateScori
   });
   score = Math.max(0, Math.round((score + feedbackAdjustment.scoreDelta) * 10) / 10);
 
+  const minutesLate = Math.abs(input.candidate.summary.minutesBeforeOrAfterDeadline ?? 0);
+  const isLate = !input.candidate.summary.allRunsFinishBeforeDeadline;
+  const infeasibleLateMinutes =
+    input.operationalScoringRules?.deadlineFeasibilityRules.infeasibleLateMinutes ??
+    DEFAULT_DELIVERY_PLANNING_PROFILE.operationalScoringRules.deadlineFeasibilityRules
+      .infeasibleLateMinutes;
+
+  if (isLate && minutesLate >= infeasibleLateMinutes) {
+    score = Math.min(score, 25);
+  } else if (isLate && minutesLate >= 6 && input.poolContext?.anyOnTimeExists) {
+    score = Math.min(score, 49);
+  }
+
   const operationalNotesFromFeedback = feedbackAdjustment.notes;
   const meetupBalanceNote = extractMeetupBalanceNote(breakdown);
   const onTheWayItem = breakdown.find((item) => item.key === "onTheWayBeforeMeetup");

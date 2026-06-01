@@ -1,9 +1,14 @@
 import { scoreCandidatePlan } from "@/lib/agents/delivery/best-plan/score-candidate-plan";
 import {
+  assignFeasibilityTier,
+  anyOnTimeCandidateExists,
   buildOperationalExplanation,
+  compareFeasibilityThenScore,
   evaluateComparativeSelfPolicy,
   findBestSafeTwoDriverCandidate,
+  isSafeTwoDriverCandidate,
 } from "@/lib/agents/delivery/best-plan/operational";
+import type { FeasibilityTierResult } from "@/lib/agents/delivery/best-plan/operational/resolve-feasibility-tier";
 import type {
   BestCandidateSelectionResult,
   CandidateAssignedRun,
@@ -17,17 +22,6 @@ import type {
   DeliveryAgentCandidateRecommendationStatus,
   DeliveryAgentRecommendedPlanSummary,
 } from "@/lib/contracts/delivery-agent";
-
-const TIE_BREAK_SCORE_DELTA = 2;
-
-function readFinishTimeMs(value?: string): number | null {
-  if (!value?.trim()) {
-    return null;
-  }
-
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
 
 function resolveRouteRepairStatus(candidate: DeliveryAgentCandidatePlanPreviewCore): string {
   if (candidate.candidateRepairSummary.repairSucceeded) {
@@ -45,77 +39,35 @@ function resolveRouteRepairStatus(candidate: DeliveryAgentCandidatePlanPreviewCo
   return "not_needed";
 }
 
-function compareCandidates(
-  left: RankedCandidatePlanPreview,
-  right: RankedCandidatePlanPreview,
-  safeTwoDriverExists: boolean
-): number {
-  if (Math.abs(left.score - right.score) > TIE_BREAK_SCORE_DELTA) {
-    return right.score - left.score;
-  }
-
-  if (safeTwoDriverExists && left.summary.selfUsed !== right.summary.selfUsed) {
-    return left.summary.selfUsed ? 1 : -1;
-  }
-
-  const leftBuffer = left.summary.minutesBeforeOrAfterDeadline ?? Number.NEGATIVE_INFINITY;
-  const rightBuffer = right.summary.minutesBeforeOrAfterDeadline ?? Number.NEGATIVE_INFINITY;
-  if (leftBuffer !== rightBuffer) {
-    return rightBuffer - leftBuffer;
-  }
-
-  if (left.summary.selfUsed !== right.summary.selfUsed) {
-    return left.summary.selfUsed ? 1 : -1;
-  }
-
-  const leftWarnings = left.warnings.length + left.blockingIssues.length;
-  const rightWarnings = right.warnings.length + right.blockingIssues.length;
-  if (leftWarnings !== rightWarnings) {
-    return leftWarnings - rightWarnings;
-  }
-
-  const leftRepairFailures = left.runs.filter((run) => run.repairStatus === "repair_failed").length;
-  const rightRepairFailures = right.runs.filter((run) => run.repairStatus === "repair_failed").length;
-  if (leftRepairFailures !== rightRepairFailures) {
-    return leftRepairFailures - rightRepairFailures;
-  }
-
-  const leftFinish = readFinishTimeMs(left.summary.latestEstimatedFinishTime);
-  const rightFinish = readFinishTimeMs(right.summary.latestEstimatedFinishTime);
-  if (leftFinish !== null && rightFinish !== null && leftFinish !== rightFinish) {
-    return leftFinish - rightFinish;
-  }
-
-  if (left.summary.runCount !== right.summary.runCount) {
-    return left.summary.runCount - right.summary.runCount;
-  }
-
-  return left.strategyType.localeCompare(right.strategyType);
-}
-
 function resolveRecommendationStatus(input: {
   candidate: RankedCandidatePlanPreview;
   isTopRanked: boolean;
-  anyCandidateMeetsDeadline: boolean;
+  anyOnTimeExists: boolean;
   eligibleForRecommended: boolean;
+  feasibilityTier: 1 | 2 | 3 | 4;
 }): DeliveryAgentCandidateRecommendationStatus {
   if (input.candidate.status === "failed" || !input.candidate.summary.latestEstimatedFinishTime) {
     return "not_recommended";
   }
 
-  if (input.eligibleForRecommended && input.isTopRanked && input.anyCandidateMeetsDeadline) {
+  if (
+    input.eligibleForRecommended &&
+    input.isTopRanked &&
+    input.anyOnTimeExists &&
+    input.feasibilityTier <= 2
+  ) {
     return "recommended";
   }
 
-  if (
-    input.isTopRanked &&
-    !input.anyCandidateMeetsDeadline &&
-    input.candidate.status === "previewed"
-  ) {
+  if (input.isTopRanked && !input.anyOnTimeExists && input.candidate.status === "previewed") {
+    if (input.feasibilityTier === 4) {
+      return "infeasible";
+    }
+
     return "risky";
   }
 
-  if (input.candidate.status === "previewed" && input.candidate.score >= 70) {
+  if (input.candidate.status === "previewed" && input.candidate.score >= 70 && input.feasibilityTier <= 2) {
     return "acceptable";
   }
 
@@ -134,6 +86,8 @@ function buildRecommendedPlanSummary(
     candidateName: candidate.name,
     score: candidate.score,
     recommendationStatus: candidate.recommendationStatus,
+    feasibilityTier: candidate.feasibilityTier,
+    feasibilityLabel: candidate.feasibilityLabel,
     formattedLatestFinishTime: candidate.summary.formattedLatestEstimatedFinishTime,
     allRunsFinishBeforeDeadline: candidate.summary.allRunsFinishBeforeDeadline,
     minutesBeforeOrAfterDeadline: candidate.summary.minutesBeforeOrAfterDeadline,
@@ -151,17 +105,26 @@ type ScoredEntry = {
   candidate: DeliveryAgentCandidatePlanPreviewCore;
   scoring: CandidateScoringResult;
   selfRecommendationReason: SelfRecommendationReason;
+  feasibility: FeasibilityTierResult;
 };
 
 function applySelfPolicyToScoring(
   entry: ScoredEntry,
   policyResult: ReturnType<typeof evaluateComparativeSelfPolicy>,
-  baseScoring: CandidateScoringResult
+  baseScoring: CandidateScoringResult,
+  context: {
+    anyOnTimeExists: boolean;
+    isSafeTwoDriver: boolean;
+  }
 ): ScoredEntry {
   let score = Math.max(0, Math.round((baseScoring.score + policyResult.scoreDelta) * 10) / 10);
   let eligibleForRecommended = baseScoring.eligibleForRecommended;
 
   if (policyResult.eligibleForRecommendedOverride === false) {
+    eligibleForRecommended = false;
+  }
+
+  if (context.anyOnTimeExists && entry.feasibility.feasibilityTier >= 3) {
     eligibleForRecommended = false;
   }
 
@@ -177,11 +140,15 @@ function applySelfPolicyToScoring(
     selfRecommendationReason: policyResult.selfRecommendationReason,
     operationalNotes,
     meetupBalanceNote: baseScoring.meetupBalanceNote,
+    anyOnTimeExists: context.anyOnTimeExists,
+    feasibilityLabel: entry.feasibility.feasibilityLabel,
+    isSafeTwoDriver: context.isSafeTwoDriver,
   });
 
   return {
     candidate: entry.candidate,
     selfRecommendationReason: policyResult.selfRecommendationReason,
+    feasibility: entry.feasibility,
     scoring: {
       ...baseScoring,
       score,
@@ -190,6 +157,25 @@ function applySelfPolicyToScoring(
       operationalNotes: explanation.operationalNotes,
       selfRecommendationReason: policyResult.selfRecommendationReason,
     },
+  };
+}
+
+function toRankedPreview(entry: ScoredEntry, rank: number): RankedCandidatePlanPreview {
+  return {
+    ...entry.candidate,
+    score: entry.scoring.score,
+    rank,
+    recommendationStatus: "acceptable",
+    feasibilityTier: entry.feasibility.feasibilityTier,
+    feasibilityLabel: entry.feasibility.feasibilityLabel,
+    scoreBreakdown: entry.scoring.scoreBreakdown,
+    pros: entry.scoring.pros,
+    cons: entry.scoring.cons,
+    blockingIssues: entry.scoring.blockingIssues,
+    decisionSummary: entry.scoring.decisionSummary,
+    operationalNotes: entry.scoring.operationalNotes,
+    selfRecommendationReason: entry.selfRecommendationReason,
+    meetupBalanceNote: entry.scoring.meetupBalanceNote,
   };
 }
 
@@ -214,14 +200,21 @@ export function selectBestCandidatePlan(input: {
   }
 
   const policy = input.profile.operationalScoringRules.selfFallbackPolicy;
+  const feasibilityRules = input.profile.operationalScoringRules.deadlineFeasibilityRules;
   const bestSafeTwoDriver = findBestSafeTwoDriverCandidate({
     candidates: input.candidates,
     policy,
   });
-  const safeTwoDriverExists = bestSafeTwoDriver !== null;
+  const safeTwoDriverExistsInPool = bestSafeTwoDriver !== null;
 
-  const scored: ScoredEntry[] = input.candidates.map((candidate) => {
+  const feasibilityByCandidate = input.candidates.map((candidate) =>
+    assignFeasibilityTier({ candidate, rules: feasibilityRules, policy })
+  );
+  const anyOnTimeExists = anyOnTimeCandidateExists(feasibilityByCandidate);
+
+  const scored: ScoredEntry[] = input.candidates.map((candidate, index) => {
     const assignedRuns = input.assignmentByCandidateId?.get(candidate.candidateId);
+    const feasibility = feasibilityByCandidate[index];
     const scoring = scoreCandidatePlan({
       candidate,
       assignedRuns,
@@ -232,7 +225,8 @@ export function selectBestCandidatePlan(input: {
       meetupSelectionPreferences: input.profile.handoffRules.meetupSelectionPreferences,
       feedbackPenalties: input.feedbackPenalties,
       preferredOrderRunOverrides: input.preferredOrderRunOverrides,
-      bestSafeTwoDriverExists: safeTwoDriverExists,
+      bestSafeTwoDriverExists: safeTwoDriverExistsInPool,
+      poolContext: { anyOnTimeExists },
     });
 
     const policyResult = evaluateComparativeSelfPolicy({
@@ -242,64 +236,41 @@ export function selectBestCandidatePlan(input: {
     });
 
     return applySelfPolicyToScoring(
-      { candidate, scoring, selfRecommendationReason: policyResult.selfRecommendationReason },
+      { candidate, scoring, selfRecommendationReason: policyResult.selfRecommendationReason, feasibility },
       policyResult,
-      scoring
+      scoring,
+      {
+        anyOnTimeExists,
+        isSafeTwoDriver: isSafeTwoDriverCandidate(candidate, policy),
+      }
     );
   });
 
   const rankedCandidates: RankedCandidatePlanPreview[] = [...scored]
     .sort((left, right) =>
-      compareCandidates(
+      compareFeasibilityThenScore(
         {
-          ...left.candidate,
           score: left.scoring.score,
-          rank: 0,
-          recommendationStatus: "acceptable",
-          scoreBreakdown: left.scoring.scoreBreakdown,
-          pros: left.scoring.pros,
-          cons: left.scoring.cons,
+          feasibilityTier: left.feasibility.feasibilityTier,
+          summary: left.candidate.summary,
+          warnings: left.candidate.warnings,
           blockingIssues: left.scoring.blockingIssues,
-          decisionSummary: left.scoring.decisionSummary,
-          operationalNotes: left.scoring.operationalNotes,
-          selfRecommendationReason: left.selfRecommendationReason,
-          meetupBalanceNote: left.scoring.meetupBalanceNote,
+          runs: left.candidate.runs,
+          strategyType: left.candidate.strategyType,
         },
         {
-          ...right.candidate,
           score: right.scoring.score,
-          rank: 0,
-          recommendationStatus: "acceptable",
-          scoreBreakdown: right.scoring.scoreBreakdown,
-          pros: right.scoring.pros,
-          cons: right.scoring.cons,
+          feasibilityTier: right.feasibility.feasibilityTier,
+          summary: right.candidate.summary,
+          warnings: right.candidate.warnings,
           blockingIssues: right.scoring.blockingIssues,
-          decisionSummary: right.scoring.decisionSummary,
-          operationalNotes: right.scoring.operationalNotes,
-          selfRecommendationReason: right.selfRecommendationReason,
-          meetupBalanceNote: right.scoring.meetupBalanceNote,
+          runs: right.candidate.runs,
+          strategyType: right.candidate.strategyType,
         },
-        safeTwoDriverExists
+        { safeTwoDriverExistsInPool }
       )
     )
-    .map((entry, index) => ({
-      ...entry.candidate,
-      score: entry.scoring.score,
-      rank: index + 1,
-      recommendationStatus: "acceptable" as DeliveryAgentCandidateRecommendationStatus,
-      scoreBreakdown: entry.scoring.scoreBreakdown,
-      pros: entry.scoring.pros,
-      cons: entry.scoring.cons,
-      blockingIssues: entry.scoring.blockingIssues,
-      decisionSummary: entry.scoring.decisionSummary,
-      operationalNotes: entry.scoring.operationalNotes,
-      selfRecommendationReason: entry.selfRecommendationReason,
-      meetupBalanceNote: entry.scoring.meetupBalanceNote,
-    }));
-
-  const anyCandidateMeetsDeadline = rankedCandidates.some(
-    (candidate) => candidate.summary.allRunsFinishBeforeDeadline
-  );
+    .map((entry, index) => toRankedPreview(entry, index + 1));
 
   const withStatus = rankedCandidates.map((candidate, index) => {
     const scoring = scored.find((entry) => entry.candidate.candidateId === candidate.candidateId)?.scoring;
@@ -309,8 +280,9 @@ export function selectBestCandidatePlan(input: {
       recommendationStatus: resolveRecommendationStatus({
         candidate,
         isTopRanked: index === 0,
-        anyCandidateMeetsDeadline,
+        anyOnTimeExists,
         eligibleForRecommended: scoring?.eligibleForRecommended ?? false,
+        feasibilityTier: candidate.feasibilityTier ?? 4,
       }),
     };
   });
@@ -332,14 +304,23 @@ export function selectBestCandidatePlan(input: {
   let recommendedPlanSummary: DeliveryAgentRecommendedPlanSummary | null =
     buildRecommendedPlanSummary(top);
 
-  if (!anyCandidateMeetsDeadline && top) {
+  if (!anyOnTimeExists && top) {
     const minutesLate = Math.abs(top.summary.minutesBeforeOrAfterDeadline ?? 0);
     selectionWarnings.push(
       `No candidate finishes before 1 PM. Best available option is ${top.name}, but it is late by ${minutesLate} minute(s).`
     );
+
+    if (top.feasibilityTier === 4) {
+      selectionWarnings.push(
+        "Best available plan is far past the 1 PM deadline — extra driver or manual help is required."
+      );
+    }
   }
 
-  if (top.recommendationStatus === "not_recommended") {
+  if (
+    top.recommendationStatus === "not_recommended" ||
+    top.recommendationStatus === "infeasible"
+  ) {
     recommendedCandidateId = null;
     recommendedPlanSummary = null;
     selectionWarnings.push("Top-ranked candidate is not operationally recommendable.");
@@ -350,9 +331,11 @@ export function selectBestCandidatePlan(input: {
       ? `${top.name} is the recommended plan (score ${top.score}).`
       : top.recommendationStatus === "risky"
         ? `${top.name} is the best available plan but marked risky (score ${top.score}).`
-        : recommendedCandidateId
-          ? `${top.name} ranked first with score ${top.score}.`
-          : "No candidate met recommendation criteria.";
+        : top.recommendationStatus === "infeasible"
+          ? `${top.name} is the least-bad option but infeasible before 1 PM (score ${top.score}).`
+          : recommendedCandidateId
+            ? `${top.name} ranked first with score ${top.score}.`
+            : "No candidate met recommendation criteria.";
 
   return {
     rankedCandidates: withStatus,

@@ -163,6 +163,10 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
       capSelfDeadlineBufferAtPreferred: true,
       minTwoDriverBalanceRatio: 0.6,
     },
+    deadlineFeasibilityRules: {
+      slightlyLateMaxMinutes: 5,
+      infeasibleLateMinutes: 30,
+    },
   },
   scoringWeights: {
     finishBeforeDeadline: 95,

@@ -71,6 +71,36 @@ describe("lib/agents/delivery/best-plan/select-best-candidate-plan", () => {
 
   it("marks top candidate risky with warning when all candidates are late", () => {
     const result = select([
+      buildCandidatePreview({
+        candidateId: "late-a:2026-06-09",
+        name: "Late A",
+        summary: {
+          allRunsFinishBeforeDeadline: false,
+          minutesBeforeOrAfterDeadline: -20,
+          latestEstimatedFinishTime: "2026-06-09T17:20:00.000Z",
+        },
+      }),
+      buildCandidatePreview({
+        candidateId: "late-b:2026-06-09",
+        name: "Late B",
+        summary: {
+          allRunsFinishBeforeDeadline: false,
+          minutesBeforeOrAfterDeadline: -45,
+          latestEstimatedFinishTime: "2026-06-09T17:45:00.000Z",
+        },
+      }),
+    ]);
+
+    expect(result.recommendedCandidateId).toBe("late-a:2026-06-09");
+    expect(result.rankedCandidates[0].recommendationStatus).toBe("risky");
+    expect(result.rankedCandidates[1].recommendationStatus).toBe("not_recommended");
+    expect(result.selectionWarnings.some((warning) => warning.includes("No candidate finishes before 1 PM"))).toBe(
+      true
+    );
+  });
+
+  it("clears recommendation when best all-late option is infeasible (30+ min late)", () => {
+    const result = select([
       buildLateCandidatePreview("late-a:2026-06-09", "Late A"),
       buildCandidatePreview({
         candidateId: "late-b:2026-06-09",
@@ -83,8 +113,8 @@ describe("lib/agents/delivery/best-plan/select-best-candidate-plan", () => {
       }),
     ]);
 
-    expect(result.recommendedCandidateId).toBeTruthy();
-    expect(result.rankedCandidates[0].recommendationStatus).toBe("risky");
+    expect(result.recommendedCandidateId).toBeNull();
+    expect(result.rankedCandidates[0].recommendationStatus).toBe("infeasible");
     expect(result.selectionWarnings.some((warning) => warning.includes("No candidate finishes before 1 PM"))).toBe(
       true
     );

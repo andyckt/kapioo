@@ -134,14 +134,19 @@ export function evaluateComparativeSelfPolicy(input: {
     return { scoreDelta: 0, selfRecommendationReason: "not_applicable" };
   }
 
-  if (!input.bestSafeTwoDriver) {
-    const onTime = input.candidate.summary.allRunsFinishBeforeDeadline;
+  if (!input.candidate.summary.allRunsFinishBeforeDeadline) {
     return {
       scoreDelta: 0,
-      selfRecommendationReason: onTime ? "meaningful_deadline_improvement" : "required_for_deadline",
-      operationalNote: onTime
-        ? "Self recommended because no safe 2-driver plan meets operational criteria."
-        : "Self recommended because 2-driver plans do not finish before 1 PM.",
+      selfRecommendationReason: "required_for_deadline",
+      operationalNote: "Self recommended because 2-driver plans do not finish before 1 PM.",
+    };
+  }
+
+  if (!input.bestSafeTwoDriver) {
+    return {
+      scoreDelta: 0,
+      selfRecommendationReason: "meaningful_deadline_improvement",
+      operationalNote: "Self recommended because no safe 2-driver plan meets operational criteria.",
     };
   }
 

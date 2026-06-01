@@ -543,7 +543,11 @@ export function DeliveryAgentReviewPanel({
   const selfReasonNote = (() => {
     const reason =
       activeRecommendation.selfRecommendationReason ?? planSummary?.selfRecommendationReason;
+    const onTime = planSummary?.allRunsFinishBeforeDeadline ?? false;
     if (!activeRecommendation.summary.selfUsed) {
+      if (!onTime) {
+        return undefined;
+      }
       return reason === "not_necessary" || !reason || reason === "not_applicable"
         ? "Self not used — 2-driver plan preferred when operationally safe."
         : undefined;
@@ -559,6 +563,10 @@ export function DeliveryAgentReviewPanel({
     }
     return undefined;
   })();
+  const allPlansLate = planSummary?.allRunsFinishBeforeDeadline === false;
+  const infeasiblePlan =
+    activeRecommendation.recommendationStatus === "infeasible" ||
+    planSummary?.feasibilityLabel === "infeasible_late";
   const meetupBalanceNote =
     activeRecommendation.meetupBalanceNote ?? planSummary?.meetupBalanceNote;
   const bufferMinutes = planSummary?.minutesBeforeOrAfterDeadline;
@@ -635,6 +643,11 @@ export function DeliveryAgentReviewPanel({
                   Risky
                 </span>
               )}
+              {activeRecommendation.recommendationStatus === "infeasible" && (
+                <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-900">
+                  Infeasible
+                </span>
+              )}
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -644,6 +657,20 @@ export function DeliveryAgentReviewPanel({
 
         {candidateRoutePreview.coordinateCoverage && (
           <CoordinateCoverageBanner coverage={candidateRoutePreview.coordinateCoverage} />
+        )}
+
+        {(allPlansLate || infeasiblePlan) && (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+            <p className="font-medium">
+              {infeasiblePlan
+                ? "No feasible plan before 1 PM"
+                : "No candidate finishes before 1 PM"}
+            </p>
+            <p className="mt-1">
+              Extra driver or manual help is required. This recommendation is the least-bad
+              available option — review carefully before approving.
+            </p>
+          </div>
         )}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

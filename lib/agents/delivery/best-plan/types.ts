@@ -51,6 +51,9 @@ export type CandidateScoringInput = {
   feedbackPenalties?: string[];
   preferredOrderRunOverrides?: Map<string, string>;
   bestSafeTwoDriverExists?: boolean;
+  poolContext?: {
+    anyOnTimeExists: boolean;
+  };
 };
 
 export type CandidateScoringResult = {
@@ -76,6 +79,8 @@ export type RankedCandidatePlanPreview = DeliveryAgentCandidatePlanPreviewCore &
     | "score"
     | "rank"
     | "recommendationStatus"
+    | "feasibilityTier"
+    | "feasibilityLabel"
     | "scoreBreakdown"
     | "pros"
     | "cons"

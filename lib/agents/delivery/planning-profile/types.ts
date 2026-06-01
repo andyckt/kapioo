@@ -93,8 +93,16 @@ export type DeliveryPlanningSelfFallbackPolicy = {
   minTwoDriverBalanceRatio: number;
 };
 
+export type DeliveryPlanningDeadlineFeasibilityRules = {
+  /** Max lateness (minutes) still treated as slightly-late tier when no on-time plan exists. */
+  slightlyLateMaxMinutes: number;
+  /** Lateness at or above this threshold → infeasible tier. */
+  infeasibleLateMinutes: number;
+};
+
 export type DeliveryPlanningOperationalScoringRules = {
   selfFallbackPolicy: DeliveryPlanningSelfFallbackPolicy;
+  deadlineFeasibilityRules: DeliveryPlanningDeadlineFeasibilityRules;
 };
 
 export type DeliveryPlanningHandoffRules = {
