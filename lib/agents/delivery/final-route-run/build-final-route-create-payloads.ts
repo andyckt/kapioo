@@ -6,6 +6,10 @@ import { rebuildMeetupSelectionFromSelectedMeetup } from "@/lib/agents/delivery/
 import { buildConstraintsFromRepairActions } from "@/lib/agents/delivery/final-route-run/build-constraints-from-repair-actions";
 import { buildFinalRouteEndpointConstraints } from "@/lib/agents/delivery/final-route-run/apply-final-route-endpoint-constraints";
 import { FinalRouteCreatePayloadError } from "@/lib/agents/delivery/final-route-run/errors";
+import {
+  buildFinalRouteExternalId,
+  buildFinalRouteIdempotencyKey,
+} from "@/lib/agents/delivery/final-route-run/final-route-run-identity";
 import { resolveOperationalMeetupContactPhone } from "@/lib/agents/delivery/final-route-run/resolve-meetup-contact-phone";
 import { validateFinalRouteRunPayload } from "@/lib/agents/delivery/final-route-run/validate-final-route-run-payload";
 import type { FinalCreateMeetupCoordinates } from "@/lib/agents/delivery/final-route-run/build-enriched-routing-stop-lookup";
@@ -36,10 +40,7 @@ export type FinalRouteCreatePayloadContext = {
   coordinateAudit?: FinalCreateCoordinateParitySummary;
 };
 
-export function buildFinalRouteGenerationSuffix(generation: number | undefined): string {
-  const value = generation ?? 1;
-  return value > 1 ? `:v${value}` : "";
-}
+export { buildFinalRouteGenerationSuffix } from "@/lib/agents/delivery/final-route-run/final-route-run-identity";
 
 export { FinalRouteCreatePayloadError } from "@/lib/agents/delivery/final-route-run/errors";
 
@@ -121,26 +122,23 @@ function buildCustomers(input: {
 }
 
 function buildExternalId(input: FinalRouteCreatePayloadContext & { runSlot: string }): string {
-  const suffix = buildFinalRouteGenerationSuffix(input.finalRouteGeneration);
-  return [
-    "kapioo-final-run",
-    input.deliveryDate,
-    input.deliveryAgentRunId,
-    input.selectedCandidateId,
-    input.runSlot,
-  ].join(":") + suffix;
+  return buildFinalRouteExternalId({
+    deliveryDate: input.deliveryDate,
+    deliveryAgentRunId: input.deliveryAgentRunId,
+    selectedCandidateId: input.selectedCandidateId,
+    runSlot: input.runSlot,
+    finalRouteGeneration: input.finalRouteGeneration,
+  });
 }
 
 function buildIdempotencyKey(input: FinalRouteCreatePayloadContext & { runSlot: string }): string {
-  const suffix = buildFinalRouteGenerationSuffix(input.finalRouteGeneration);
-  return [
-    "daily-delivery-agent",
-    input.deliveryDate,
-    input.profileId,
-    "final",
-    input.selectedCandidateId,
-    input.runSlot,
-  ].join(":") + suffix;
+  return buildFinalRouteIdempotencyKey({
+    deliveryDate: input.deliveryDate,
+    profileId: input.profileId,
+    selectedCandidateId: input.selectedCandidateId,
+    runSlot: input.runSlot,
+    finalRouteGeneration: input.finalRouteGeneration,
+  });
 }
 
 function buildRunPayload(input: {

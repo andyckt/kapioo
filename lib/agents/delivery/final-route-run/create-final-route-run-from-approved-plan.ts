@@ -13,6 +13,10 @@ import {
 import { buildFinalRouteCreatePayloads } from "@/lib/agents/delivery/final-route-run/build-final-route-create-payloads";
 import { buildEnrichedRoutingStopLookup } from "@/lib/agents/delivery/final-route-run/build-enriched-routing-stop-lookup";
 import {
+  buildFinalRouteExternalId,
+  buildFinalRouteIdempotencyKey,
+} from "@/lib/agents/delivery/final-route-run/final-route-run-identity";
+import {
   FinalRouteCreatePayloadError,
   FinalRouteOptimizerCreationError,
   FinalRouteRunStateError,
@@ -281,37 +285,6 @@ function buildRouteSummaryFromOutcome(outcome: FinalRouteRequestOutcome): Delive
   });
 }
 
-function buildExternalIdForRun(input: {
-  deliveryDate: string;
-  deliveryAgentRunId: string;
-  selectedCandidateId: string;
-  runSlot: string;
-}): string {
-  return [
-    "kapioo-final-run",
-    input.deliveryDate,
-    input.deliveryAgentRunId,
-    input.selectedCandidateId,
-    input.runSlot,
-  ].join(":");
-}
-
-function buildIdempotencyKeyForRun(input: {
-  deliveryDate: string;
-  profileId: string;
-  selectedCandidateId: string;
-  runSlot: string;
-}): string {
-  return [
-    "daily-delivery-agent",
-    input.deliveryDate,
-    input.profileId,
-    "final",
-    input.selectedCandidateId,
-    input.runSlot,
-  ].join(":");
-}
-
 async function handlePayloadValidationError(input: {
   run: IDeliveryAgentRun;
   candidate: DeliveryAgentCandidatePlanPreview;
@@ -332,17 +305,19 @@ async function handlePayloadValidationError(input: {
     issue: input.error.issue,
     runSlot,
     stopCount,
-    externalId: buildExternalIdForRun({
+    externalId: buildFinalRouteExternalId({
       deliveryDate: input.run.deliveryDate,
       deliveryAgentRunId: input.run.id,
       selectedCandidateId: input.selectedCandidateId,
       runSlot,
+      finalRouteGeneration: input.run.finalRouteGeneration ?? 1,
     }),
-    idempotencyKey: buildIdempotencyKeyForRun({
+    idempotencyKey: buildFinalRouteIdempotencyKey({
       deliveryDate: input.run.deliveryDate,
       profileId: input.run.profileId,
       selectedCandidateId: input.selectedCandidateId,
       runSlot,
+      finalRouteGeneration: input.run.finalRouteGeneration ?? 1,
     }),
   });
   failedRouteSummary.errorMessage = input.error.message;

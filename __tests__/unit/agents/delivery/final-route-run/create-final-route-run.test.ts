@@ -905,4 +905,73 @@ describe("createFinalRouteRunFromApprovedPlan", () => {
     expect(mocks.batchCreateMock).not.toHaveBeenCalled();
     expect(mocks.savePartialMock).toHaveBeenCalled();
   });
+
+  it("uses generation suffix in payload validation failed summaries after reset", async () => {
+    const partialRun = buildRun({
+      finalRouteGeneration: 2,
+      planningArtifacts: {
+        artifactVersion: "planning-artifacts-v1",
+        systemRecommendedCandidateId: "candidate:selected",
+        donaldSelectedCandidateId: "candidate:selected",
+        didDonaldOverrideRecommendation: false,
+        finalAcceptedPlan: {
+          ...twoRunFinalAcceptedPlan,
+          handoffPlan: {
+            providerRunSlot: "A",
+            receiverRunSlot: "B",
+            selectedMeetup: {
+              meetupAddress: "4000 Yonge St",
+              meetupFixedStopPosition: 2,
+              variant: "meetup_stop_1",
+              syntheticHandoffStopUsed: true,
+            },
+            receiverStartLocation: "4000 Yonge St",
+            receiverStartTime: "11:05",
+          },
+        },
+      },
+      routeOptimizerRuns: [
+        {
+          runId: "ro-run-marco",
+          driverName: "Marco",
+          externalId: "kapioo-final-run:2026-06-09:run-123:candidate:selected:B:v2",
+          idempotencyKey: "idem-marco",
+        },
+      ],
+      finalRouteOptimizerMetadata: {
+        finalRouteOptimizerStatus: "partial_created",
+        systemRecommendedCandidateId: "candidate:selected",
+        selectedCandidateId: "candidate:selected",
+        didDonaldOverrideRecommendation: false,
+        planningSessionId: "planning-123",
+        planningSessionSource: "delivery_agent_planning_session",
+        requestedRunCount: 2,
+        succeededRunCount: 1,
+        failedRunCount: 1,
+        routeSummaries: [{ runSlot: "B", driverName: "Marco", stopCount: 11 }],
+      },
+    });
+
+    setupTwoRunSuccess(partialRun);
+
+    await expect(
+      createFinalRouteRunFromApprovedPlan({
+        deliveryDate: "2026-06-09",
+        profileId: "daily-profile",
+        createdBy: "donald@kapioo.com",
+      })
+    ).rejects.toMatchObject({
+      code: "ROUTE_OPTIMIZER_PARTIAL_CREATED",
+      finalRouteOptimizerMetadata: expect.objectContaining({
+        failedRouteSummaries: expect.arrayContaining([
+          expect.objectContaining({
+            driverName: "DT",
+            externalId: "kapioo-final-run:2026-06-09:run-123:candidate:selected:A:v2",
+            idempotencyKey:
+              "daily-delivery-agent:2026-06-09:daily-profile:final:candidate:selected:A:v2",
+          }),
+        ]),
+      }),
+    });
+  });
 });
