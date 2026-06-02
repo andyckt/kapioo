@@ -23,6 +23,10 @@ export function buildSyntheticMeetupStop(input: {
   deliveryDate: string;
   runSlot: string;
   contactPhone?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
 }): RouteOptimizerCustomerInput {
   const { handoffRules } = input.profile;
   const syntheticOrderId = buildSyntheticMeetupOrderId({
@@ -40,5 +44,12 @@ export function buildSyntheticMeetupStop(input: {
     stop_type: handoffRules.syntheticStopType,
     service_time_minutes: handoffRules.serviceTimeMinutes,
     fixed_stop_position: input.selection.meetupFixedStopPosition,
+    ...(input.coordinates
+      ? {
+          lat: input.coordinates.lat,
+          lng: input.coordinates.lng,
+          geocode_status: "OK" as const,
+        }
+      : {}),
   };
 }

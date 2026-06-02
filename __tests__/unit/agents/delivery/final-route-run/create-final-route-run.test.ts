@@ -1,6 +1,7 @@
 const mocks = vi.hoisted(() => ({
   batchCreateMock: vi.fn(),
   getDeliveryOrdersForRoutingMock: vi.fn(),
+  buildEnrichedRoutingStopLookupMock: vi.fn(),
   getKitchenMock: vi.fn(),
   getProfileMock: vi.fn(),
   findByDuplicateKeyMock: vi.fn(),
@@ -16,6 +17,10 @@ vi.mock("@/lib/integrations/route-optimizer/client", () => ({
 
 vi.mock("@/lib/agents/delivery/get-delivery-orders-for-routing", () => ({
   getDeliveryOrdersForRouting: mocks.getDeliveryOrdersForRoutingMock,
+}));
+
+vi.mock("@/lib/agents/delivery/final-route-run/build-enriched-routing-stop-lookup", () => ({
+  buildEnrichedRoutingStopLookup: mocks.buildEnrichedRoutingStopLookupMock,
 }));
 
 vi.mock("@/lib/agents/delivery/kitchen-start-location", () => ({
@@ -171,23 +176,54 @@ function buildRun(overrides: Partial<IDeliveryAgentRun> = {}): IDeliveryAgentRun
   } as unknown as IDeliveryAgentRun;
 }
 
+function mockEnrichedLookupFromStops(stops: Array<{ orderId: string; routeOptimizer: Record<string, unknown> }>) {
+  mocks.buildEnrichedRoutingStopLookupMock.mockResolvedValue({
+    routingStopByOrderId: new Map(
+      stops.map((stop) => [
+        stop.orderId,
+        {
+          ...stop,
+          lat: 43.7615,
+          lng: -79.4111,
+          routeOptimizer: {
+            ...stop.routeOptimizer,
+            lat: 43.7615,
+            lng: -79.4111,
+            geocode_status: "OK",
+          },
+        },
+      ])
+    ),
+    coordinateAudit: {
+      totalRealCustomerStops: stops.length,
+      fromGeocodeEnrichment: stops.length,
+      fromPreviewSnapshotEnrichment: 0,
+      fromCacheFallback: 0,
+      addressOnlyFallback: 0,
+      missingCoordinateOrderIds: [],
+      syntheticStopCount: 0,
+      coordinateParity: "full" as const,
+    },
+  });
+}
+
 function setupSuccess(run: IDeliveryAgentRun = buildRun()) {
   mocks.findByDuplicateKeyMock.mockResolvedValue(run);
   mocks.getKitchenMock.mockReturnValue("Kitchen");
   mocks.getProfileMock.mockReturnValue(DEFAULT_DELIVERY_PLANNING_PROFILE);
-  mocks.getDeliveryOrdersForRoutingMock.mockResolvedValue({
-    stops: [
-      {
-        orderId: "DD-1",
-        routeOptimizer: {
-          name: "DD-1",
-          phone: "416-555-0100",
-          address: "1 Provider St",
-          order_ids: ["DD-1"],
-        },
+  const stops = [
+    {
+      orderId: "DD-1",
+      routeOptimizer: {
+        name: "DD-1",
+        phone: "416-555-0100",
+        address: "1 Provider St",
+        order_ids: ["DD-1"],
       },
-    ],
-  });
+    },
+  ];
+  mocks.getDeliveryOrdersForRoutingMock.mockResolvedValue({ stops });
+  mockEnrichedLookupFromStops(stops);
   mocks.batchCreateMock.mockResolvedValue({
     status: "completed",
     results: [
@@ -248,6 +284,26 @@ function setupTwoRunSuccess(run: IDeliveryAgentRun = buildRun({ planningArtifact
       },
     ],
   });
+  mockEnrichedLookupFromStops([
+    {
+      orderId: "DD-1",
+      routeOptimizer: {
+        name: "DD-1",
+        phone: "416-555-0100",
+        address: "1 DT St",
+        order_ids: ["DD-1"],
+      },
+    },
+    {
+      orderId: "DD-2",
+      routeOptimizer: {
+        name: "DD-2",
+        phone: "416-555-0101",
+        address: "2 Marco St",
+        order_ids: ["DD-2"],
+      },
+    },
+  ]);
   mocks.batchCreateMock.mockResolvedValue({
     status: "completed",
     total_requested: 2,
@@ -332,6 +388,16 @@ describe("createFinalRouteRunFromApprovedPlan", () => {
       "delivery_agent_planning_session"
     );
     expect(result.finalRouteOptimizerMetadata.didDonaldOverrideRecommendation).toBe(false);
+    expect(result.finalRouteOptimizerMetadata.coordinateParitySummary).toEqual({
+      totalRealCustomerStops: 1,
+      fromGeocodeEnrichment: 1,
+      fromPreviewSnapshotEnrichment: 0,
+      fromCacheFallback: 0,
+      addressOnlyFallback: 0,
+      missingCoordinateOrderIds: [],
+      syntheticStopCount: 0,
+      coordinateParity: "full",
+    });
     expect(mocks.batchCreateMock).toHaveBeenCalledTimes(1);
     expect(mocks.batchCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -340,6 +406,12 @@ describe("createFinalRouteRunFromApprovedPlan", () => {
           expect.objectContaining({
             planning_session_id: "planning-123",
             external_id: expect.stringContaining("kapioo-final-run"),
+            customers: expect.arrayContaining([
+              expect.objectContaining({
+                lat: 43.7615,
+                lng: -79.4111,
+              }),
+            ]),
           }),
         ]),
       })

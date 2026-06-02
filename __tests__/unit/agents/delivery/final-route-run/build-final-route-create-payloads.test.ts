@@ -431,6 +431,80 @@ describe("buildFinalRouteCreatePayloads", () => {
     expect(dtCustomers.filter((customer) => customer.is_synthetic)).toHaveLength(1);
   });
 
+  it("includes lat/lng on customer payloads when routing stops are enriched", () => {
+    const enrichedStop = {
+      ...routingStop("DD-1", "1 Provider St"),
+      lat: 43.7615,
+      lng: -79.4111,
+      routeOptimizer: {
+        ...routingStop("DD-1", "1 Provider St").routeOptimizer,
+        lat: 43.7615,
+        lng: -79.4111,
+        geocode_status: "OK",
+      },
+    };
+
+    const payload = buildFinalRouteCreatePayloads({
+      candidate: {
+        ...approvedCandidate,
+        handoffPlan: {
+          ...approvedCandidate.handoffPlan,
+          handoffSkipped: true,
+          selectedMeetup: null,
+        },
+        runs: [approvedCandidate.runs[0]!],
+      } as DeliveryAgentCandidatePlanPreview,
+      context: {
+        deliveryDate: "2026-06-09",
+        deliveryAgentRunId: "run-123",
+        profileId: "daily-profile",
+        selectedCandidateId: "candidate:selected",
+        planningSessionId: "final:run-123",
+        kitchenAddress: "Kitchen",
+        profile: getDefaultDeliveryPlanningProfile(),
+        routingStopByOrderId: new Map([["DD-1", enrichedStop]]),
+      },
+    });
+
+    const customer = payload.runs[0]?.customers.find((entry) => !entry.is_synthetic);
+    expect(customer).toMatchObject({
+      lat: 43.7615,
+      lng: -79.4111,
+      geocode_status: "OK",
+    });
+  });
+
+  it("includes meet-up coordinates on synthetic stop when provided", () => {
+    const payload = buildFinalRouteCreatePayloads({
+      candidate: approvedCandidate,
+      context: {
+        deliveryDate: "2026-06-09",
+        deliveryAgentRunId: "run-123",
+        profileId: "daily-profile",
+        selectedCandidateId: "candidate:selected",
+        planningSessionId: "final:run-123",
+        kitchenAddress: "Kitchen",
+        profile: getDefaultDeliveryPlanningProfile(),
+        routingStopByOrderId: new Map([
+          ["DD-1", routingStop("DD-1", "1 Provider St")],
+          ["DD-2", routingStop("DD-2", "2 Receiver St")],
+        ]),
+        meetupCoordinates: {
+          lat: 43.78,
+          lng: -79.43,
+        },
+      },
+    });
+
+    const syntheticStop = payload.runs[0]?.customers.find((customer) => customer.is_synthetic);
+    expect(syntheticStop).toMatchObject({
+      name: "Meet-up / Handoff Point",
+      lat: 43.78,
+      lng: -79.43,
+      geocode_status: "OK",
+    });
+  });
+
   it("appends generation suffix when finalRouteGeneration is greater than 1", () => {
     const payload = buildFinalRouteCreatePayloads({
       candidate: approvedCandidate,

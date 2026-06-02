@@ -294,6 +294,17 @@ export type DeliveryAgentFinalRouteRunFailure = {
   errorCode?: string;
 };
 
+export type FinalCreateCoordinateParitySummary = {
+  totalRealCustomerStops: number;
+  fromGeocodeEnrichment: number;
+  fromPreviewSnapshotEnrichment: number;
+  fromCacheFallback: number;
+  addressOnlyFallback: number;
+  missingCoordinateOrderIds: string[];
+  syntheticStopCount: number;
+  coordinateParity: "full" | "partial" | "low";
+};
+
 export type DeliveryAgentFinalRouteOptimizerMetadata = {
   finalRouteOptimizerStatus: "pending" | "created" | "partial_created" | "failed";
   finalRouteOptimizerCreatedAt?: string;
@@ -309,6 +320,7 @@ export type DeliveryAgentFinalRouteOptimizerMetadata = {
   finalRouteOptimizerRunIds?: string[];
   routeSummaries?: DeliveryAgentFinalRouteSummary[];
   failedRouteSummaries?: DeliveryAgentFinalRouteRunFailure[];
+  coordinateParitySummary?: FinalCreateCoordinateParitySummary;
   creationError?: {
     code: string;
     message: string;

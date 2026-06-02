@@ -11,6 +11,7 @@ import {
   type RouteOptimizerRunResult,
 } from "@/lib/integrations/route-optimizer/types";
 import { buildFinalRouteCreatePayloads } from "@/lib/agents/delivery/final-route-run/build-final-route-create-payloads";
+import { buildEnrichedRoutingStopLookup } from "@/lib/agents/delivery/final-route-run/build-enriched-routing-stop-lookup";
 import {
   FinalRouteCreatePayloadError,
   FinalRouteOptimizerCreationError,
@@ -485,6 +486,7 @@ function buildCreatedMetadata(input: {
   failedRunCount: number;
   failedRouteSummaries?: DeliveryAgentFinalRouteRunFailure[];
   status?: DeliveryAgentFinalRouteOptimizerMetadata["finalRouteOptimizerStatus"];
+  coordinateParitySummary?: DeliveryAgentFinalRouteOptimizerMetadata["coordinateParitySummary"];
 }): DeliveryAgentFinalRouteOptimizerMetadata {
   return {
     finalRouteOptimizerStatus: input.status ?? "created",
@@ -501,6 +503,7 @@ function buildCreatedMetadata(input: {
     finalRouteOptimizerRunIds: input.runIds,
     routeSummaries: input.routeSummaries,
     failedRouteSummaries: input.failedRouteSummaries,
+    coordinateParitySummary: input.coordinateParitySummary,
   };
 }
 
@@ -627,7 +630,12 @@ export async function createFinalRouteRunFromApprovedPlan(
       deliveryDate: run.deliveryDate,
       statuses: ["confirmed"],
     });
-    const routingStopByOrderId = new Map(routing.stops.map((stop) => [stop.orderId, stop]));
+    const { routingStopByOrderId, coordinateAudit, meetupCoordinates } =
+      await buildEnrichedRoutingStopLookup({
+        run,
+        finalAcceptedPlan: candidate,
+        baseStops: routing.stops,
+      });
     const kitchenAddress = getKapiooKitchenStartLocation();
     const profile = getDeliveryPlanningProfile(run.profileId);
     payload = buildFinalRouteCreatePayloads({
@@ -642,6 +650,8 @@ export async function createFinalRouteRunFromApprovedPlan(
         profile,
         routingStopByOrderId,
         finalRouteGeneration: run.finalRouteGeneration ?? 1,
+        meetupCoordinates,
+        coordinateAudit,
       },
     });
 
@@ -700,6 +710,7 @@ export async function createFinalRouteRunFromApprovedPlan(
       downstreamEndpoint: ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
       routeOptimizerRequests: payloadSummary,
       existingFinalRouteMetadataFound: Boolean(existingMetadata),
+      coordinateParitySummary: coordinateAudit,
     });
 
     const response = await batchCreateFinalRoutesWithRetry({
@@ -793,6 +804,7 @@ export async function createFinalRouteRunFromApprovedPlan(
       failedRunCount,
       failedRouteSummaries: allRunsCreated ? [] : failedRouteSummaries,
       status: allRunsCreated ? "created" : "partial_created",
+      coordinateParitySummary: coordinateAudit,
     });
 
     if (allRunsCreated) {

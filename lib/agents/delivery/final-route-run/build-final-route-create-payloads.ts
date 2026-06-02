@@ -8,6 +8,8 @@ import { buildFinalRouteEndpointConstraints } from "@/lib/agents/delivery/final-
 import { FinalRouteCreatePayloadError } from "@/lib/agents/delivery/final-route-run/errors";
 import { resolveOperationalMeetupContactPhone } from "@/lib/agents/delivery/final-route-run/resolve-meetup-contact-phone";
 import { validateFinalRouteRunPayload } from "@/lib/agents/delivery/final-route-run/validate-final-route-run-payload";
+import type { FinalCreateMeetupCoordinates } from "@/lib/agents/delivery/final-route-run/build-enriched-routing-stop-lookup";
+import type { FinalCreateCoordinateParitySummary } from "@/lib/agents/delivery/run-log-types";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
@@ -30,6 +32,8 @@ export type FinalRouteCreatePayloadContext = {
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
   finalRouteGeneration?: number;
+  meetupCoordinates?: FinalCreateMeetupCoordinates;
+  coordinateAudit?: FinalCreateCoordinateParitySummary;
 };
 
 export function buildFinalRouteGenerationSuffix(generation: number | undefined): string {
@@ -86,6 +90,13 @@ function buildCustomers(input: {
       phone: routingStop.routeOptimizer.phone?.trim() || routingStop.customerPhone.trim(),
       name: routingStop.routeOptimizer.name?.trim() || routingStop.customerName.trim(),
       address: routingStop.routeOptimizer.address?.trim() || routingStop.formattedAddress.trim(),
+      ...(typeof routingStop.lat === "number" && typeof routingStop.lng === "number"
+        ? {
+            lat: routingStop.lat,
+            lng: routingStop.lng,
+            geocode_status: routingStop.routeOptimizer.geocode_status ?? "OK",
+          }
+        : {}),
     };
   });
 
@@ -169,6 +180,14 @@ function buildRunPayload(input: {
           contactPhone: resolveOperationalMeetupContactPhone({
             profile: input.context.profile,
           }),
+          coordinates:
+            input.context.meetupCoordinates?.lat !== undefined &&
+            input.context.meetupCoordinates?.lng !== undefined
+              ? {
+                  lat: input.context.meetupCoordinates.lat,
+                  lng: input.context.meetupCoordinates.lng,
+                }
+              : undefined,
         })
       : undefined;
 

@@ -28,50 +28,11 @@ import type {
   GeocodeEnrichmentRunStats,
 } from "@/lib/agents/delivery/geocode/types";
 
-function readFiniteCoordinate(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function stopHasOrderDataCoordinates(stop: RoutingStop): boolean {
-  return readFiniteCoordinate(stop.lat) !== undefined && readFiniteCoordinate(stop.lng) !== undefined;
-}
-
-function applyCoordinatesToStop(
-  stop: RoutingStop,
-  input: {
-    lat?: number;
-    lng?: number;
-    source: CoordinateSource;
-    status: CoordinateStatus;
-    confidence?: CoordinateConfidence;
-    geocodeStatus?: string;
-  }
-): RoutingStop {
-  const lat = readFiniteCoordinate(input.lat);
-  const lng = readFiniteCoordinate(input.lng);
-  const hasCoords = lat !== undefined && lng !== undefined;
-
-  const enriched: RoutingStop = {
-    ...stop,
-    lat: hasCoords ? lat : undefined,
-    lng: hasCoords ? lng : undefined,
-    coordinateSource: input.source,
-    coordinateStatus: input.status,
-    coordinateConfidence: input.confidence,
-    routeOptimizer: {
-      ...stop.routeOptimizer,
-      ...(hasCoords
-        ? {
-            lat,
-            lng,
-            geocode_status: input.geocodeStatus ?? "OK",
-          }
-        : {}),
-    },
-  };
-
-  return enriched;
-}
+import {
+  overlayCoordinatesOnRoutingStop,
+  readFiniteCoordinate,
+  routingStopHasCoordinates,
+} from "@/lib/agents/delivery/geocode/overlay-coordinates-on-routing-stop";
 
 function mapGeocodeStatusToCoordinateStatus(geocodeStatus?: string): CoordinateStatus {
   const normalized = geocodeStatus?.trim().toUpperCase();
@@ -150,7 +111,7 @@ async function applyGeocodeFallbackForPendingStop(
     });
   }
 
-  const enriched = applyCoordinatesToStop(stop, {
+  const enriched = overlayCoordinatesOnRoutingStop(stop, {
     source: "fallback_unavailable",
     status: "failed",
     confidence: "low",
@@ -199,7 +160,7 @@ async function applySuccessfulGeocodeResult(
       geocodeStatus: result?.geocode_status,
     });
 
-    const enriched = applyCoordinatesToStop(stop, {
+    const enriched = overlayCoordinatesOnRoutingStop(stop, {
       lat,
       lng,
       source: "route_optimizer_geocode",
@@ -271,11 +232,11 @@ export async function enrichRoutingStops(input: {
   for (const { stop, normalizedAddressKey } of addressKeys) {
     if (
       stop.coordinateSource === "order_data" ||
-      (stopHasOrderDataCoordinates(stop) && !stop.coordinateSource)
+      (routingStopHasCoordinates(stop) && !stop.coordinateSource)
     ) {
       const lat = readFiniteCoordinate(stop.lat);
       const lng = readFiniteCoordinate(stop.lng);
-      const enriched = applyCoordinatesToStop(stop, {
+      const enriched = overlayCoordinatesOnRoutingStop(stop, {
         lat,
         lng,
         source: "order_data",
@@ -300,7 +261,7 @@ export async function enrichRoutingStops(input: {
     const cached = cacheByKey.get(normalizedAddressKey);
     if (cached && cached.status !== "failed") {
       cacheHits += 1;
-      const enriched = applyCoordinatesToStop(stop, {
+      const enriched = overlayCoordinatesOnRoutingStop(stop, {
         lat: cached.lat,
         lng: cached.lng,
         source: "delivery_agent_cache",
@@ -323,7 +284,7 @@ export async function enrichRoutingStops(input: {
     }
 
     if (cached?.status === "failed") {
-      const enriched = applyCoordinatesToStop(stop, {
+      const enriched = overlayCoordinatesOnRoutingStop(stop, {
         source: "fallback_unavailable",
         status: "failed",
         confidence: "low",
