@@ -571,8 +571,10 @@ export function DeliveryAgentReviewPanel({
     activeRecommendation.meetupBalanceNote ?? planSummary?.meetupBalanceNote;
   const bufferMinutes = planSummary?.minutesBeforeOrAfterDeadline;
   const heroWarnings = [
-    ...activeRecommendation.warnings.slice(0, 5),
-    ...candidateRoutePreview.selectionWarnings.slice(0, 3),
+    ...new Set([
+      ...activeRecommendation.warnings.slice(0, 5),
+      ...candidateRoutePreview.selectionWarnings.slice(0, 3),
+    ]),
   ];
 
   return (
@@ -599,15 +601,15 @@ export function DeliveryAgentReviewPanel({
               </p>
               {improvedGenerationNotice.applicationNotes.length > 0 && (
                 <ul className="list-disc space-y-1 pl-5">
-                  {improvedGenerationNotice.applicationNotes.map((note) => (
-                    <li key={note}>{note}</li>
+                  {improvedGenerationNotice.applicationNotes.map((note, index) => (
+                    <li key={`${index}-${note}`}>{note}</li>
                   ))}
                 </ul>
               )}
               {improvedGenerationNotice.warnings.length > 0 && (
                 <ul className="list-disc space-y-1 pl-5 text-amber-900">
-                  {improvedGenerationNotice.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
+                  {improvedGenerationNotice.warnings.map((warning, index) => (
+                    <li key={`${index}-${warning}`}>{warning}</li>
                   ))}
                 </ul>
               )}
@@ -751,15 +753,15 @@ export function DeliveryAgentReviewPanel({
           <p className="text-sm">{activeRecommendation.decisionSummary}</p>
           {operationalNotes.length > 1 && (
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              {operationalNotes.slice(1, 4).map((note) => (
-                <li key={note}>{note}</li>
+              {operationalNotes.slice(1, 4).map((note, index) => (
+                <li key={`${index}-${note}`}>{note}</li>
               ))}
             </ul>
           )}
           {activeRecommendation.cons.length > 0 && (
             <ul className="list-disc space-y-1 pl-5 text-sm text-amber-900/90">
-              {activeRecommendation.cons.slice(0, 3).map((item) => (
-                <li key={item}>{item}</li>
+              {activeRecommendation.cons.slice(0, 3).map((item, index) => (
+                <li key={`${index}-${item}`}>{item}</li>
               ))}
             </ul>
           )}
@@ -770,8 +772,8 @@ export function DeliveryAgentReviewPanel({
 
         {heroWarnings.length > 0 && (
           <ul className="list-disc space-y-1 pl-5 text-sm text-amber-800">
-            {heroWarnings.map((warning) => (
-              <li key={warning}>{warning}</li>
+            {heroWarnings.map((warning, index) => (
+              <li key={`${index}-${warning}`}>{warning}</li>
             ))}
           </ul>
         )}

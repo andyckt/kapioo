@@ -177,10 +177,12 @@ async function previewCandidatePlan(input: {
   });
 
   const warnings = [
-    ...input.variant.plan.warnings,
-    ...input.variant.combination.variantWarnings,
-    ...summary.blockingIssues,
-    ...repairResult.candidateRepairSummary.warnings,
+    ...new Set([
+      ...input.variant.plan.warnings,
+      ...input.variant.combination.variantWarnings,
+      ...summary.blockingIssues,
+      ...repairResult.candidateRepairSummary.warnings,
+    ]),
   ];
 
   return {
