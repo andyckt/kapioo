@@ -10,6 +10,7 @@ import { getHistoricalOrdersForLearning } from "@/lib/agents/delivery/learning/h
 import { HISTORICAL_LEARNING_ORDER_STATUSES } from "@/lib/agents/delivery/learning/historical-cases/historical-learning-statuses";
 import { OrderDataError } from "@/lib/order-data/errors";
 import { createRoutingTestOrder } from "@/__tests__/unit/agents/delivery/test-fixtures";
+import { readHistoricalOrdersForLearningSource } from "@/__tests__/unit/agents/delivery/learning/historical-cases/read-module-source";
 
 describe("getHistoricalOrdersForLearning", () => {
   beforeEach(() => {
@@ -127,21 +128,15 @@ describe("getHistoricalOrdersForLearning", () => {
     expect(getDailyOrdersBaseMock).not.toHaveBeenCalled();
   });
 
-  it("does not import Route Optimizer client", async () => {
-    const module = await import(
-      "@/lib/agents/delivery/learning/historical-cases/get-historical-orders-for-learning?raw"
-    );
-    const source = String(module.default);
+  it("does not import Route Optimizer client", () => {
+    const source = readHistoricalOrdersForLearningSource();
 
     expect(source).not.toContain("fetchRouteOptimizerRunsByDate");
     expect(source).not.toContain("route-optimizer");
   });
 
-  it("does not import geocode or DeliveryAgentLearningCase model", async () => {
-    const module = await import(
-      "@/lib/agents/delivery/learning/historical-cases/get-historical-orders-for-learning?raw"
-    );
-    const source = String(module.default);
+  it("does not import geocode or DeliveryAgentLearningCase model", () => {
+    const source = readHistoricalOrdersForLearningSource();
 
     expect(source).not.toContain("enrichRoutingStops");
     expect(source).not.toContain("DeliveryAgentLearningCase");
