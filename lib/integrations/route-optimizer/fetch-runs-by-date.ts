@@ -1,3 +1,9 @@
+/**
+ * Read-only GET client for Route Optimizer historical runs by delivery date.
+ *
+ * RO `run_date` is the Kapioo business delivery date.
+ * `eta_basis` on runs/stops indicates post_start vs planned ETAs for learning.
+ */
 import {
   buildRouteOptimizerUrl,
   getRouteOptimizerConfig,
@@ -10,21 +16,21 @@ import {
   RouteOptimizerResponseError,
   RouteOptimizerValidationError,
 } from "@/lib/integrations/route-optimizer/errors";
-import {
-  ROUTE_OPTIMIZER_PATHS,
-  type RouteOptimizerBatchCreateRequest,
-  type RouteOptimizerBatchResult,
-  type RouteOptimizerCreateRequest,
-  type RouteOptimizerGeocodeAddressesRequest,
-  type RouteOptimizerGeocodeAddressesResponse,
-  type RouteOptimizerPreviewRequest,
-  type RouteOptimizerRunResult,
-} from "@/lib/integrations/route-optimizer/types";
+import { parseRouteOptimizerRunsByDateResponse } from "@/lib/integrations/route-optimizer/parse-runs-by-date-response";
+import type { RouteOptimizerRunsByDateResponse } from "@/lib/integrations/route-optimizer/runs-by-date-types";
+import { ROUTE_OPTIMIZER_PATHS } from "@/lib/integrations/route-optimizer/types";
+
+const DATE_YYYY_MM_DD = /^\d{4}-\d{2}-\d{2}$/;
 
 type RouteOptimizerResponseDebug = {
   url: string;
   status: number;
   contentType: string | null;
+};
+
+type FetchRouteOptimizerRunsByDateOptions = {
+  includeDrafts?: boolean;
+  requireRoute?: boolean;
 };
 
 function truncateForDebug(value: string, maxLength = 300): string {
@@ -132,22 +138,52 @@ function throwForErrorStatus(
   );
 }
 
-async function routeOptimizerPost<TResponse>(
-  path: string,
-  payload: unknown
-): Promise<TResponse> {
+function assertValidDeliveryDate(date: string): string {
+  const trimmed = date.trim();
+  if (!DATE_YYYY_MM_DD.test(trimmed)) {
+    throw new RouteOptimizerValidationError("date must be YYYY-MM-DD", {
+      path: ROUTE_OPTIMIZER_PATHS.runsByDate,
+    });
+  }
+
+  return trimmed;
+}
+
+function buildRunsByDateUrl(
+  baseUrl: string,
+  date: string,
+  options?: FetchRouteOptimizerRunsByDateOptions
+): string {
+  const url = new URL(buildRouteOptimizerUrl(baseUrl, ROUTE_OPTIMIZER_PATHS.runsByDate));
+  url.searchParams.set("date", date);
+
+  if (options?.includeDrafts === true) {
+    url.searchParams.set("include_drafts", "true");
+  }
+
+  if (options?.requireRoute === false) {
+    url.searchParams.set("require_route", "false");
+  }
+
+  return url.toString();
+}
+
+export async function fetchRouteOptimizerRunsByDate(
+  date: string,
+  options?: FetchRouteOptimizerRunsByDateOptions
+): Promise<RouteOptimizerRunsByDateResponse> {
+  const normalizedDate = assertValidDeliveryDate(date);
   const { baseUrl, apiKey } = getRouteOptimizerConfig();
-  const url = buildRouteOptimizerUrl(baseUrl, path);
+  const path = ROUTE_OPTIMIZER_PATHS.runsByDate;
+  const url = buildRunsByDateUrl(baseUrl, normalizedDate, options);
 
   try {
     const response = await fetch(url, {
-      method: "POST",
+      method: "GET",
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(payload),
     });
 
     const rawBody = await response.text();
@@ -162,7 +198,7 @@ async function routeOptimizerPost<TResponse>(
       throwForErrorStatus(path, response.status, body, rawBody, debug);
     }
 
-    return body as TResponse;
+    return parseRouteOptimizerRunsByDateResponse(body);
   } catch (error) {
     if (error instanceof RouteOptimizerError) {
       throw error;
@@ -179,41 +215,3 @@ async function routeOptimizerPost<TResponse>(
     });
   }
 }
-
-export async function previewRouteOptimizerRun(
-  payload: RouteOptimizerPreviewRequest
-): Promise<RouteOptimizerRunResult> {
-  return routeOptimizerPost<RouteOptimizerRunResult>(
-    ROUTE_OPTIMIZER_PATHS.optimizePreview,
-    payload
-  );
-}
-
-export async function createAndOptimizeRouteOptimizerRun(
-  payload: RouteOptimizerCreateRequest
-): Promise<RouteOptimizerRunResult> {
-  return routeOptimizerPost<RouteOptimizerRunResult>(
-    ROUTE_OPTIMIZER_PATHS.createAndOptimize,
-    payload
-  );
-}
-
-export async function batchCreateAndOptimizeRouteOptimizerRuns(
-  payload: RouteOptimizerBatchCreateRequest
-): Promise<RouteOptimizerBatchResult> {
-  return routeOptimizerPost<RouteOptimizerBatchResult>(
-    ROUTE_OPTIMIZER_PATHS.batchCreateAndOptimize,
-    payload
-  );
-}
-
-export async function geocodeAddressesBatch(
-  payload: RouteOptimizerGeocodeAddressesRequest
-): Promise<RouteOptimizerGeocodeAddressesResponse> {
-  return routeOptimizerPost<RouteOptimizerGeocodeAddressesResponse>(
-    ROUTE_OPTIMIZER_PATHS.geocodeAddresses,
-    payload
-  );
-}
-
-export { fetchRouteOptimizerRunsByDate } from "@/lib/integrations/route-optimizer/fetch-runs-by-date";

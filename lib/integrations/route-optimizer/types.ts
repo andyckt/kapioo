@@ -3,6 +3,7 @@ export const ROUTE_OPTIMIZER_PATHS = {
   createAndOptimize: "/api/integrations/runs/create-and-optimize",
   batchCreateAndOptimize: "/api/integrations/runs/batch-create-and-optimize",
   geocodeAddresses: "/api/integrations/geocode-addresses",
+  runsByDate: "/api/integrations/runs/by-date",
 } as const;
 
 export type RouteOptimizerLocation = {
