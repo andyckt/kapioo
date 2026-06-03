@@ -10,3 +10,10 @@ export type {
   DeliveryAgentHistoricalOrderStopMatchingResult,
   FlattenedRouteOptimizerCustomerStop,
 } from "@/lib/agents/delivery/learning/matching/types";
+export { isFiniteCoordinate, hasFiniteLatLng } from "@/lib/agents/delivery/learning/coordinates/is-finite-coordinate";
+export { resolveLearningCoordinateForMatchedStop } from "@/lib/agents/delivery/learning/coordinates/resolve-learning-coordinate-for-match";
+export { buildLearningCoordinateSnapshots } from "@/lib/agents/delivery/learning/coordinates/build-learning-coordinate-snapshots";
+export { buildLearningCoordinateCoverage } from "@/lib/agents/delivery/learning/coordinates/build-learning-coordinate-coverage";
+export { computeDeliveryGeoFeatures } from "@/lib/agents/delivery/learning/geo-features/compute-delivery-geo-features";
+export { haversineDistanceKm } from "@/lib/agents/delivery/learning/geo-features/distance";
+export type { GeoPoint } from "@/lib/agents/delivery/learning/geo-features/types";
