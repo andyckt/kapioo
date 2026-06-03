@@ -17,3 +17,7 @@ export { buildLearningCoordinateCoverage } from "@/lib/agents/delivery/learning/
 export { computeDeliveryGeoFeatures } from "@/lib/agents/delivery/learning/geo-features/compute-delivery-geo-features";
 export { haversineDistanceKm } from "@/lib/agents/delivery/learning/geo-features/distance";
 export type { GeoPoint } from "@/lib/agents/delivery/learning/geo-features/types";
+export { extractDeliveryAgentLearningStopControlFeatures } from "@/lib/agents/delivery/learning/stop-controls/extract-stop-control-features";
+export { extractDeliveryAgentLearningRouteShapeFeatures } from "@/lib/agents/delivery/learning/route-shape/extract-route-shape-features";
+export { extractDeliveryAgentLearningOutcomeFeatures } from "@/lib/agents/delivery/learning/outcome/extract-outcome-features";
+export { extractDeliveryAgentLearningResourceProfileFeatures } from "@/lib/agents/delivery/learning/resource-profile/extract-resource-profile-features";

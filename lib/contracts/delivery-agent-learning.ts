@@ -187,6 +187,29 @@ export const DELIVERY_AGENT_LEARNING_ETA_BASIS_QUALITY = [
 export type DeliveryAgentLearningEtaBasisQuality =
   (typeof DELIVERY_AGENT_LEARNING_ETA_BASIS_QUALITY)[number];
 
+export const DELIVERY_AGENT_LEARNING_LATENESS_ATTRIBUTIONS = [
+  "on_time",
+  "route_problem",
+  "driver_start_delay",
+  "handoff_delay",
+  "mixed",
+  "unknown",
+] as const;
+
+export type DeliveryAgentLearningLatenessAttribution =
+  (typeof DELIVERY_AGENT_LEARNING_LATENESS_ATTRIBUTIONS)[number];
+
+export const deliveryAgentLearningLatenessAttributionSchema = z.enum(
+  DELIVERY_AGENT_LEARNING_LATENESS_ATTRIBUTIONS
+);
+
+export type DeliveryAgentLearningRunStartDelay = {
+  roRunId: string;
+  plannedStartTime?: string | null;
+  actualStartTime?: string | null;
+  startDelayMinutes?: number | null;
+};
+
 export type DeliveryAgentLearningOrderSnapshot = {
   orderId: string;
   customerName?: string | null;
@@ -351,6 +374,15 @@ export type DeliveryAgentLearningOutcomeFeatures = {
   etaBasisQuality: DeliveryAgentLearningEtaBasisQuality;
   actualStartTimes: string[];
   runCompletedAtTimes: string[];
+  plannedStartTimes?: string[];
+  startDelayMinutesByRun?: DeliveryAgentLearningRunStartDelay[];
+  providerStartDelayMinutes?: number | null;
+  normalizedFinishTimeIfStartedOnTime?: string | null;
+  normalizedDeadlineBufferMinutes?: number | null;
+  routeWouldHaveMetDeadlineIfStartedOnTime?: boolean | null;
+  latenessAttribution?: DeliveryAgentLearningLatenessAttribution | null;
+  handoffDelayLikely?: boolean | null;
+  receiverLikelyDelayedByProvider?: boolean | null;
   perStopEtaErrorsMinutes: Array<{
     roRunId: string;
     sequence: number;
@@ -498,6 +530,15 @@ export function createEmptyDeliveryAgentLearningOutcomeFeatures(): DeliveryAgent
     etaBasisQuality: "unknown",
     actualStartTimes: [],
     runCompletedAtTimes: [],
+    plannedStartTimes: [],
+    startDelayMinutesByRun: [],
+    providerStartDelayMinutes: null,
+    normalizedFinishTimeIfStartedOnTime: null,
+    normalizedDeadlineBufferMinutes: null,
+    routeWouldHaveMetDeadlineIfStartedOnTime: null,
+    latenessAttribution: "unknown",
+    handoffDelayLikely: null,
+    receiverLikelyDelayedByProvider: null,
     perStopEtaErrorsMinutes: [],
     warnings: [],
   };

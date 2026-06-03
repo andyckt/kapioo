@@ -4,6 +4,7 @@ import {
   DELIVERY_AGENT_LEARNING_CASE_SCHEMA_VERSION,
   DELIVERY_AGENT_LEARNING_COORDINATE_SOURCES,
   DELIVERY_AGENT_LEARNING_LABELS,
+  DELIVERY_AGENT_LEARNING_LATENESS_ATTRIBUTIONS,
   DELIVERY_AGENT_PROFILE_COMPATIBILITY_VALUES,
   deliveryAgentLearningLabelSchema,
   ROUTE_OPTIMIZER_HISTORICAL_ETA_BASIS_VALUES,
@@ -74,6 +75,19 @@ describe("lib/contracts/delivery-agent-learning", () => {
   it("validates learning labels with zod schema", () => {
     expect(deliveryAgentLearningLabelSchema.parse("positive")).toBe("positive");
     expect(() => deliveryAgentLearningLabelSchema.parse("invalid")).toThrow();
+  });
+
+  it("includes lateness attribution values", () => {
+    expect(DELIVERY_AGENT_LEARNING_LATENESS_ATTRIBUTIONS).toEqual(
+      expect.arrayContaining([
+        "on_time",
+        "route_problem",
+        "driver_start_delay",
+        "handoff_delay",
+        "mixed",
+        "unknown",
+      ])
+    );
   });
 
   it("creates an empty learning case contract with defaults", () => {
