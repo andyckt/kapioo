@@ -318,12 +318,17 @@ export function selectBestCandidatePlan(input: {
   }
 
   if (
+    top.status !== "previewed" ||
     top.recommendationStatus === "not_recommended" ||
     top.recommendationStatus === "infeasible"
   ) {
     recommendedCandidateId = null;
     recommendedPlanSummary = null;
-    selectionWarnings.push("Top-ranked candidate is not operationally recommendable.");
+    selectionWarnings.push(
+      top.status !== "previewed"
+        ? "Top-ranked candidate was not fully previewed, so it is shown for review only and not recommended."
+        : "Top-ranked candidate is not operationally recommendable."
+    );
   }
 
   const selectionNotes =

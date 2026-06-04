@@ -10,6 +10,7 @@ import {
 } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
 import { findPrimaryReceiverRun, findProviderRun } from "@/lib/agents/delivery/candidate-plans/find-run-by-slot";
 import { rebuildMeetupSelectionFromSelectedMeetup } from "@/lib/agents/delivery/candidate-plans/rank-meetup-options";
+import type { DeliveryAgentPreviewBudget } from "@/lib/agents/delivery/candidate-plans/preview-budget";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 import type {
@@ -69,6 +70,7 @@ async function repreviewSkippedHandoffRuns(input: {
   routingStopByOrderId: Map<string, RoutingStop>;
   originalPreviews: DeliveryAgentCandidateRunPreview[];
   repairPlan: ReturnType<typeof planRouteShapeRepairs>;
+  budget: DeliveryAgentPreviewBudget;
 }): Promise<CandidateHandoffPreviewResult> {
   const providerRunSlot = input.profile.handoffRules.providerRunSlot;
   const receiverRunSlot = input.profile.handoffRules.receiverRunSlots[0] ?? "B";
@@ -119,6 +121,8 @@ async function repreviewSkippedHandoffRuns(input: {
         profile: input.profile,
         routingStopByOrderId: input.routingStopByOrderId,
         customerConstraints: constraints,
+        budget: input.budget,
+        budgetPhase: "repair",
       })
     );
   }
@@ -143,6 +147,7 @@ export async function repairCandidateRoutePreview(input: {
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
   handoffResult: CandidateHandoffPreviewResult;
+  budget: DeliveryAgentPreviewBudget;
   planSummary: {
     runCount: number;
     totalStops: number;
@@ -222,6 +227,7 @@ export async function repairCandidateRoutePreview(input: {
         routingStopByOrderId: input.routingStopByOrderId,
         originalPreviews: input.handoffResult.runPreviews,
         repairPlan,
+        budget: input.budget,
       });
     } else if (repairPlan.requiresDtRepreview) {
       const providerRun = findProviderRun(input.candidate.runs, input.profile);
@@ -255,6 +261,8 @@ export async function repairCandidateRoutePreview(input: {
           syntheticMeetupFixedPosition: repairPlan.syntheticMeetupFixedPosition,
         },
         assumptions: input.handoffResult.assumptions,
+        budget: input.budget,
+        budgetPhase: "repair",
       });
     } else if (repairPlan.requiresMarcoRepreview) {
       const receiverRun = findPrimaryReceiverRun(input.candidate.runs, input.profile);
@@ -273,6 +281,8 @@ export async function repairCandidateRoutePreview(input: {
         meetupAddress: handoffPlan.receiverStartLocation,
         meetupStartTime: handoffPlan.receiverStartTime,
         customerConstraints: repairPlan.marcoCustomerConstraints,
+        budget: input.budget,
+        budgetPhase: "repair",
       });
 
       repairedResult = {

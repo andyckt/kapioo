@@ -66,6 +66,51 @@ function SectionBanner({ children }: { children: ReactNode }) {
   )
 }
 
+function CandidatePreviewBudgetBanner({
+  guardrail,
+}: {
+  guardrail?: DeliveryAgentPreviewCandidatePlansResponse["costGuardrail"]
+}) {
+  if (!guardrail) {
+    return (
+      <SectionBanner>
+        Route previews are cost-budgeted: Admin will pick up to 4 strong finalist plans first,
+        then stop after 12 Route Optimizer preview calls.
+      </SectionBanner>
+    )
+  }
+
+  const exhausted = guardrail.status === "budget_exhausted"
+  const rateLimited = guardrail.status === "rate_limited"
+
+  return (
+    <div
+      className={`rounded-md border px-4 py-3 text-sm ${
+        exhausted || rateLimited
+          ? "border-amber-200 bg-amber-50 text-amber-900"
+          : "border-green-200 bg-green-50 text-green-900"
+      }`}
+    >
+      <p className="font-medium">
+        Route preview budget: {guardrail.optimizePreviewCallsUsed}/
+        {guardrail.maxOptimizePreviewCalls} paid preview calls used
+      </p>
+      <p className="mt-1">
+        Attempted {guardrail.fullCandidateVariantsPreviewed}/
+        {guardrail.fullCandidateVariantsSelected} finalist plan(s). Correlation ID:{" "}
+        {guardrail.correlationId}
+      </p>
+      {guardrail.warnings.length > 0 && (
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          {guardrail.warnings.slice(0, 3).map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function formatPreviewDateTime(value?: string): string {
   if (!value?.trim()) {
     return "—"
@@ -814,6 +859,8 @@ export function AdminDeliveryAgentTab() {
                     <CoordinateCoverageBanner coverage={candidatePlans.coordinateCoverage} />
                   )}
 
+                  {!candidateRoutePreview && <CandidatePreviewBudgetBanner />}
+
                   <div className="flex justify-end">
                     <Button
                       onClick={handlePreviewCandidateRoutes}
@@ -832,6 +879,10 @@ export function AdminDeliveryAgentTab() {
 
                   {candidateRoutePreview && (
                     <p className="text-sm text-muted-foreground">{candidateRoutePreview.notes}</p>
+                  )}
+
+                  {candidateRoutePreview?.costGuardrail && (
+                    <CandidatePreviewBudgetBanner guardrail={candidateRoutePreview.costGuardrail} />
                   )}
 
                   {candidateRoutePreview?.coordinateCoverage && (

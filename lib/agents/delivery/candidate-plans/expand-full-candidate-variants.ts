@@ -21,6 +21,7 @@ export type FullCandidateVariant = {
   plan: DeliveryAgentCandidatePlan;
   combination: DeliveryAgentCandidateCombinationMeta;
   meetupSelection?: ActiveMeetupSelection;
+  previewPriorityScore: number;
 };
 
 export type FullCandidateExpansionResult = {
@@ -242,6 +243,7 @@ export function expandFullCandidateVariants(input: {
       plan: draft.plan,
       combination: draft.combination,
       meetupSelection: draft.meetupSelection,
+      previewPriorityScore: draft.preScore,
     })),
     expansionWarnings,
   };

@@ -1,4 +1,10 @@
 import { buildSimpleRoutePreviewPayload } from "@/lib/agents/delivery/build-simple-route-preview-payload";
+import {
+  addBudgetMetadataToPreviewPayload,
+  createDeliveryAgentPreviewBudget,
+  previewBudgetExhaustedError,
+  type DeliveryAgentPreviewBudgetConfig,
+} from "@/lib/agents/delivery/candidate-plans/preview-budget";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { getEnrichedDeliveryOrdersForRouting } from "@/lib/agents/delivery/geocode";
 import { getKapiooKitchenStartLocation } from "@/lib/agents/delivery/kitchen-start-location";
@@ -7,13 +13,25 @@ import { getDefaultDeliveryPlanningProfile } from "@/lib/agents/delivery/plannin
 import { previewDeliveryOrdersForAgent } from "@/lib/agents/delivery/preview-delivery-orders";
 import type { DeliveryAgentSimpleRoutePreviewResponse } from "@/lib/contracts/delivery-agent";
 import { previewRouteOptimizerRun } from "@/lib/integrations/route-optimizer/client";
+import { randomUUID } from "crypto";
 
 const SIMPLE_ROUTE_PREVIEW_NOTES =
   "This is a simple one-run test preview. Smart DT/UT/Self planning will be added later.";
 
 export async function previewSimpleRouteForAgent(
-  deliveryDate: string
+  deliveryDate: string,
+  options?: {
+    correlationId?: string;
+    budgetConfig?: Partial<DeliveryAgentPreviewBudgetConfig>;
+  }
 ): Promise<DeliveryAgentSimpleRoutePreviewResponse> {
+  const budget = createDeliveryAgentPreviewBudget({
+    action: "simple_route_preview",
+    correlationId:
+      options?.correlationId ?? `delivery-agent:simple_route_preview:${deliveryDate}:${randomUUID()}`,
+    config: options?.budgetConfig,
+  });
+  budget.recordVariantSelection({ considered: 1, selected: 1, skipped: 0 });
   const planningProfile = getDefaultDeliveryPlanningProfile();
   const startTime = planningProfile.timeRules.normalKitchenStartTime;
 
@@ -42,7 +60,21 @@ export async function previewSimpleRouteForAgent(
     startTime,
   });
 
-  const routeResult = await previewRouteOptimizerRun(payload);
+  const consume = budget.consume({
+    candidateId: `simple-route:${deliveryDate}`,
+    runSlot: "simple",
+    phase: "initial",
+    label: `simple route preview ${deliveryDate}`,
+  });
+
+  if (!consume.allowed) {
+    throw previewBudgetExhaustedError(consume.message);
+  }
+
+  const routeResult = await previewRouteOptimizerRun(
+    addBudgetMetadataToPreviewPayload({ payload, budget, consume })
+  );
+  budget.recordVariantPreviewed();
 
   return {
     deliveryDate: orderPreview.deliveryDate,
@@ -59,5 +91,6 @@ export async function previewSimpleRouteForAgent(
     },
     notes: SIMPLE_ROUTE_PREVIEW_NOTES,
     coordinateCoverage: enriched.coordinateCoverage,
+    costGuardrail: budget.summary(),
   };
 }

@@ -14,6 +14,12 @@ import { mapRouteOptimizerPreviewResult } from "@/lib/agents/delivery/map-route-
 import { formatTorontoLocalTimeForRouteOptimizer } from "@/lib/agents/delivery/route-preview-time";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
+import {
+  addBudgetMetadataToPreviewPayload,
+  previewBudgetExhaustedError,
+  type DeliveryAgentPreviewBudget,
+  type DeliveryAgentPreviewBudgetPhase,
+} from "@/lib/agents/delivery/candidate-plans/preview-budget";
 import type {
   DeliveryAgentCandidateHandoffPreviewPlan,
   DeliveryAgentCandidatePlan,
@@ -24,7 +30,10 @@ import type {
 import { formatDateTime } from "@/lib/format";
 import { previewRouteOptimizerRun } from "@/lib/integrations/route-optimizer/client";
 import { RouteOptimizerConfigError } from "@/lib/integrations/route-optimizer/errors";
-import type { RouteOptimizerRunResult } from "@/lib/integrations/route-optimizer/types";
+import type {
+  RouteOptimizerPreviewRequest,
+  RouteOptimizerRunResult,
+} from "@/lib/integrations/route-optimizer/types";
 
 export type CandidateHandoffPreviewResult = {
   runPreviews: DeliveryAgentCandidateRunPreview[];
@@ -46,6 +55,34 @@ function readErrorMessage(error: unknown): string {
   }
 
   return String(error);
+}
+
+async function previewRouteOptimizerRunWithBudget(input: {
+  payload: RouteOptimizerPreviewRequest;
+  budget: DeliveryAgentPreviewBudget;
+  candidateId: string;
+  runSlot: string;
+  phase: DeliveryAgentPreviewBudgetPhase;
+  label: string;
+}): Promise<RouteOptimizerRunResult> {
+  const consume = input.budget.consume({
+    candidateId: input.candidateId,
+    runSlot: input.runSlot,
+    phase: input.phase,
+    label: input.label,
+  });
+
+  if (!consume.allowed) {
+    throw previewBudgetExhaustedError(consume.message);
+  }
+
+  return previewRouteOptimizerRun(
+    addBudgetMetadataToPreviewPayload({
+      payload: input.payload,
+      budget: input.budget,
+      consume,
+    })
+  );
 }
 
 function buildSkippedRunPreview(run: DeliveryAgentCandidateRun): DeliveryAgentCandidateRunPreview {
@@ -131,6 +168,8 @@ async function previewKitchenRun(input: {
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
   customerConstraints?: CustomerConstraintsMap;
+  budget: DeliveryAgentPreviewBudget;
+  budgetPhase?: DeliveryAgentPreviewBudgetPhase;
 }): Promise<DeliveryAgentCandidateRunPreview> {
   if (input.run.stopCount === 0) {
     return buildSkippedRunPreview(input.run);
@@ -147,7 +186,14 @@ async function previewKitchenRun(input: {
       routingStopByOrderId: input.routingStopByOrderId,
       customerConstraints: input.customerConstraints,
     });
-    const routeResult = await previewRouteOptimizerRun(payload);
+    const routeResult = await previewRouteOptimizerRunWithBudget({
+      payload,
+      budget: input.budget,
+      candidateId: input.candidate.candidateId,
+      runSlot: input.run.runSlot,
+      phase: input.budgetPhase ?? "initial",
+      label: `candidate ${input.candidate.candidateId} run ${input.run.runSlot}`,
+    });
 
     return buildRunPreviewFromResult({
       run: input.run,
@@ -205,6 +251,8 @@ export async function previewMarcoHandoffRunOnly(input: {
   meetupAddress: string;
   meetupStartTime: string;
   customerConstraints?: CustomerConstraintsMap;
+  budget: DeliveryAgentPreviewBudget;
+  budgetPhase?: DeliveryAgentPreviewBudgetPhase;
 }): Promise<DeliveryAgentCandidateRunPreview> {
   try {
     const marcoPayload = buildMarcoHandoffPreviewPayload({
@@ -217,7 +265,14 @@ export async function previewMarcoHandoffRunOnly(input: {
       meetupStartTime: input.meetupStartTime,
       customerConstraints: input.customerConstraints,
     });
-    const marcoRouteResult = await previewRouteOptimizerRun(marcoPayload);
+    const marcoRouteResult = await previewRouteOptimizerRunWithBudget({
+      payload: marcoPayload,
+      budget: input.budget,
+      candidateId: input.candidate.candidateId,
+      runSlot: input.runB.runSlot,
+      phase: input.budgetPhase ?? "initial",
+      label: `candidate ${input.candidate.candidateId} receiver handoff run ${input.runB.runSlot}`,
+    });
 
     return buildRunPreviewFromResult({
       run: input.runB,
@@ -246,6 +301,8 @@ export async function previewHandoffRunChain(input: {
   selection: ActiveMeetupSelection;
   overrides?: HandoffRunChainOverrides;
   assumptions?: string[];
+  budget: DeliveryAgentPreviewBudget;
+  budgetPhase?: DeliveryAgentPreviewBudgetPhase;
 }): Promise<CandidateHandoffPreviewResult> {
   const runPreviews: DeliveryAgentCandidateRunPreview[] = [];
   const assumptions = [...(input.assumptions ?? input.candidate.assumptions)];
@@ -280,7 +337,15 @@ export async function previewHandoffRunChain(input: {
       stopBeforeMeetupOrderId: input.selection.stopBeforeMeetupOrderId,
       customerConstraints: input.overrides?.dtCustomerConstraints,
     });
-    const dtRouteResult = await previewRouteOptimizerRun(dtPayload);
+    const budgetPhase = input.budgetPhase ?? "initial";
+    const dtRouteResult = await previewRouteOptimizerRunWithBudget({
+      payload: dtPayload,
+      budget: input.budget,
+      candidateId: input.candidate.candidateId,
+      runSlot: input.runA.runSlot,
+      phase: budgetPhase,
+      label: `candidate ${input.candidate.candidateId} provider handoff run ${input.runA.runSlot}`,
+    });
     const meetupExtraction = extractMeetupEtaFromPreview({
       optimizedStops: mapRouteOptimizerPreviewResult(dtRouteResult, {
         deliveryDate: input.deliveryDate,
@@ -328,6 +393,8 @@ export async function previewHandoffRunChain(input: {
         meetupAddress: input.selection.meetupAddress,
         meetupStartTime: receiverStartTime,
         customerConstraints: input.overrides?.marcoCustomerConstraints,
+        budget: input.budget,
+        budgetPhase,
       });
 
       runPreviews.push(marcoPreview);
@@ -341,6 +408,8 @@ export async function previewHandoffRunChain(input: {
             kitchenAddress: input.kitchenAddress,
             profile: input.profile,
             routingStopByOrderId: input.routingStopByOrderId,
+            budget: input.budget,
+            budgetPhase,
           })
         );
       }
@@ -381,6 +450,8 @@ export async function previewHandoffRunChain(input: {
         kitchenAddress: input.kitchenAddress,
         profile: input.profile,
         routingStopByOrderId: input.routingStopByOrderId,
+        budget: input.budget,
+        budgetPhase: input.budgetPhase ?? "initial",
       })
     );
   }
@@ -407,6 +478,8 @@ export async function previewKitchenRunWithConstraints(input: {
   profile: DeliveryPlanningProfile;
   routingStopByOrderId: Map<string, RoutingStop>;
   customerConstraints?: CustomerConstraintsMap;
+  budget: DeliveryAgentPreviewBudget;
+  budgetPhase?: DeliveryAgentPreviewBudgetPhase;
 }): Promise<DeliveryAgentCandidateRunPreview> {
   return previewKitchenRun(input);
 }
@@ -419,6 +492,7 @@ export async function previewCandidateHandoff(input: {
   routingStopByOrderId: Map<string, RoutingStop>;
   meetupSelection?: ActiveMeetupSelection;
   handoffOverrides?: HandoffRunChainOverrides;
+  budget: DeliveryAgentPreviewBudget;
 }): Promise<CandidateHandoffPreviewResult> {
   const providerRun = findProviderRun(input.candidate.runs, input.profile);
   const receiverRun = findPrimaryReceiverRun(input.candidate.runs, input.profile);
@@ -455,6 +529,7 @@ export async function previewCandidateHandoff(input: {
           kitchenAddress: input.kitchenAddress,
           profile: input.profile,
           routingStopByOrderId: input.routingStopByOrderId,
+          budget: input.budget,
         })
       );
     }
@@ -468,6 +543,7 @@ export async function previewCandidateHandoff(input: {
           kitchenAddress: input.kitchenAddress,
           profile: input.profile,
           routingStopByOrderId: input.routingStopByOrderId,
+          budget: input.budget,
         })
       );
     }
@@ -481,6 +557,7 @@ export async function previewCandidateHandoff(input: {
           kitchenAddress: input.kitchenAddress,
           profile: input.profile,
           routingStopByOrderId: input.routingStopByOrderId,
+          budget: input.budget,
         })
       );
     }
@@ -509,5 +586,6 @@ export async function previewCandidateHandoff(input: {
     selection,
     assumptions,
     overrides: input.handoffOverrides,
+    budget: input.budget,
   });
 }

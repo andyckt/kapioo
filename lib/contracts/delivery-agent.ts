@@ -6,6 +6,7 @@ import type {
   GeocodeEnrichmentRunStats,
   RecommendationConfidence,
 } from "@/lib/agents/delivery/geocode/types";
+import type { DeliveryAgentPreviewBudgetSummary } from "@/lib/agents/delivery/candidate-plans/preview-budget";
 
 export type {
   DeliveryAgentCoordinateCoverageSummary,
@@ -148,6 +149,7 @@ export type DeliveryAgentSimpleRoutePreviewResponse = {
   sourceSummary: DeliveryAgentSimpleRoutePreviewSourceSummary;
   notes: string;
   coordinateCoverage?: DeliveryAgentCoordinateCoverageSummary;
+  costGuardrail?: DeliveryAgentPreviewBudgetSummary;
 };
 
 export type DeliveryAgentPlanningProfileDriverSummary = {
@@ -480,6 +482,7 @@ export type DeliveryAgentPreviewCandidatePlansResponse = {
   notes: string;
   coordinateCoverage: DeliveryAgentCoordinateCoverageSummary;
   geocodeEnrichment?: DeliveryAgentGeocodeEnrichment;
+  costGuardrail?: DeliveryAgentPreviewBudgetSummary;
 };
 
 const deliveryAgentReviewFeedbackTagSchema = z.enum([

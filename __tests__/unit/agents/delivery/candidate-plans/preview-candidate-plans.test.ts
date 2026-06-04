@@ -34,11 +34,16 @@ vi.mock("@/lib/integrations/route-optimizer/client", () => ({
 
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { KitchenStartLocationConfigError } from "@/lib/agents/delivery/kitchen-start-location";
-import { previewCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/preview-candidate-plans";
+import {
+  previewCandidatePlansForAgent,
+  previewCandidatePlansPipeline,
+  selectPreviewFinalists,
+} from "@/lib/agents/delivery/candidate-plans/preview-candidate-plans";
 import {
   RouteOptimizerConfigError,
   RouteOptimizerRateLimitError,
 } from "@/lib/integrations/route-optimizer/errors";
+import type { DeliveryAgentCandidatePlan } from "@/lib/contracts/delivery-agent";
 import { buildMixedAreaRoutingStops } from "./test-fixtures";
 
 function buildRouteOptimizerSuccess(overrides: Record<string, unknown> = {}) {
@@ -457,6 +462,137 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     expect(selfCandidate?.runs.some((run) => run.runSlot === "C" && run.previewStatus === "previewed")).toBe(
       true
     );
+  });
+
+  it("selects diverse finalists instead of blindly previewing the first variants", async () => {
+    const basePlan = buildGenerationResponse().candidates[0] as unknown as DeliveryAgentCandidatePlan;
+    const selfPlan = buildGenerationResponse().candidates[1] as unknown as DeliveryAgentCandidatePlan;
+    const result = selectPreviewFinalists({
+      maxFullCandidateVariants: 2,
+      variants: [
+        {
+          plan: { ...basePlan, candidateId: "baseline-top" },
+          previewPriorityScore: 100,
+          combination: {
+            baseSplitCandidateId: "baseline",
+            fullCandidateId: "baseline-top",
+            combinationLabel: "Baseline top",
+            splitStrategyType: "baseline_two_run",
+            meetupVariantId: "meetup-1",
+            meetupFixedStopPosition: 1,
+            plannedStartStrategy: "normal",
+            selfUsageStrategy: "none",
+            constraintStrategy: "repair_on_demand",
+            variantAssumptions: [],
+            variantWarnings: [],
+          },
+        },
+        {
+          plan: { ...basePlan, candidateId: "baseline-second" },
+          previewPriorityScore: 90,
+          combination: {
+            baseSplitCandidateId: "baseline",
+            fullCandidateId: "baseline-second",
+            combinationLabel: "Baseline second",
+            splitStrategyType: "baseline_two_run",
+            meetupVariantId: "meetup-2",
+            meetupFixedStopPosition: 2,
+            plannedStartStrategy: "normal",
+            selfUsageStrategy: "none",
+            constraintStrategy: "repair_on_demand",
+            variantAssumptions: [],
+            variantWarnings: [],
+          },
+        },
+        {
+          plan: { ...selfPlan, candidateId: "self-backup" },
+          previewPriorityScore: 50,
+          combination: {
+            baseSplitCandidateId: "self",
+            fullCandidateId: "self-backup",
+            combinationLabel: "Self backup",
+            splitStrategyType: "self_fallback_light",
+            meetupVariantId: "meetup-3",
+            meetupFixedStopPosition: 1,
+            plannedStartStrategy: "normal",
+            selfUsageStrategy: "self_fallback",
+            constraintStrategy: "repair_on_demand",
+            variantAssumptions: [],
+            variantWarnings: [],
+          },
+        },
+      ],
+    });
+
+    expect(result.finalists.map((variant) => variant.plan.candidateId)).toEqual([
+      "baseline-top",
+      "self-backup",
+    ]);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("Quality-preserving budget selected")])
+    );
+  });
+
+  it("stops paid preview calls at the configured budget and returns partial warnings", async () => {
+    generateCandidatePlansForAgentMock.mockResolvedValue(buildGenerationResponse());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
+    getKapiooKitchenStartLocationMock.mockReturnValue(
+      "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
+    );
+    previewRouteOptimizerRunMock.mockResolvedValue(buildRouteOptimizerSuccess());
+
+    const result = await previewCandidatePlansPipeline({
+      deliveryDate: "2026-06-09",
+      previewBudget: {
+        action: "candidate_preview",
+        correlationId: "cost-1a-budget-stop",
+        config: {
+          maxFullCandidateVariants: 3,
+          maxOptimizePreviewCalls: 2,
+          maxRepairPreviewCalls: 0,
+        },
+      },
+    });
+
+    expect(previewRouteOptimizerRunMock).toHaveBeenCalledTimes(2);
+    expect(result.costGuardrail).toMatchObject({
+      correlationId: "cost-1a-budget-stop",
+      status: "budget_exhausted",
+      optimizePreviewCallsUsed: 2,
+    });
+    expect(result.selectionWarnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("budget exhausted")])
+    );
+    expect(previewRouteOptimizerRunMock.mock.calls[0][0]).toMatchObject({
+      planning_session_id: "cost-1a-budget-stop",
+      idempotency_key: expect.stringContaining("cost-1a-budget-stop"),
+    });
+  });
+
+  it("does not recommend a plan when no candidate can be fully previewed within budget", async () => {
+    generateCandidatePlansForAgentMock.mockResolvedValue(buildGenerationResponse());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
+    getKapiooKitchenStartLocationMock.mockReturnValue(
+      "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
+    );
+
+    const result = await previewCandidatePlansPipeline({
+      deliveryDate: "2026-06-09",
+      previewBudget: {
+        action: "candidate_preview",
+        correlationId: "cost-1a-zero-budget",
+        config: {
+          maxFullCandidateVariants: 1,
+          maxOptimizePreviewCalls: 0,
+          maxRepairPreviewCalls: 0,
+        },
+      },
+    });
+
+    expect(previewRouteOptimizerRunMock).not.toHaveBeenCalled();
+    expect(result.recommendedCandidateId).toBeNull();
+    expect(result.recommendedPlanSummary).toBeNull();
+    expect(result.costGuardrail?.status).toBe("budget_exhausted");
   });
 
   it("marks candidate partial_failed when one run preview fails", async () => {

@@ -1,4 +1,8 @@
 import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
+import {
+  DeliveryAgentPreviewActionInFlightError,
+  withDeliveryAgentPreviewActionLock,
+} from "@/lib/agents/delivery/candidate-plans/preview-action-lock";
 import { generateImprovedCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/generate-improved-candidate-plans";
 import {
   DeliveryAgentRegenerationBlockedError,
@@ -35,15 +39,25 @@ export async function POST(request: Request) {
 
     const generatedBy = actor.user.email?.trim() || actor.user.id?.toString() || "admin";
 
-    const result = await generateImprovedCandidatePlansForAgent({
-      deliveryDate: data.deliveryDate,
-      profileId: data.profileId,
-      deliveryAgentRunId: data.deliveryAgentRunId,
-      generatedBy,
-    });
+    const result = await withDeliveryAgentPreviewActionLock(
+      `improved-candidate-preview:${data.deliveryDate}:${data.profileId}`,
+      () =>
+        generateImprovedCandidatePlansForAgent({
+          deliveryDate: data.deliveryDate,
+          profileId: data.profileId,
+          deliveryAgentRunId: data.deliveryAgentRunId,
+          generatedBy,
+        })
+    );
 
     return successJson(result);
   } catch (error: unknown) {
+    if (error instanceof DeliveryAgentPreviewActionInFlightError) {
+      return errorJson("Improved candidate generation is already running", 409, {
+        details: error.message,
+      });
+    }
+
     if (error instanceof DeliveryAgentReviewLockedError) {
       return errorJson(error.message, 409, { details: error.message });
     }

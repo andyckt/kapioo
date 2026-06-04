@@ -119,6 +119,10 @@ describe("generateImprovedCandidatePlansForAgent", () => {
     expect(result.preview.recommendedCandidateId).toBe(previewResponse.recommendedCandidateId);
     expect(mocks.previewCandidatePlansPipelineMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        previewBudget: expect.objectContaining({
+          action: "improved_candidate_preview",
+          correlationId: expect.stringContaining("delivery-agent:improved_candidate_preview:2026-06-09"),
+        }),
         planningHints: expect.objectContaining({
           interpretation: expect.objectContaining({
             penalties: expect.arrayContaining(["provider_meetup_too_far"]),

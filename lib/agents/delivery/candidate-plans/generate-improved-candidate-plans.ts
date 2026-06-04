@@ -1,4 +1,5 @@
 import { previewCandidatePlansPipeline } from "@/lib/agents/delivery/candidate-plans/preview-candidate-plans";
+import { randomUUID } from "crypto";
 import { generateCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/generate-candidate-plans";
 import { saveCandidateGeneration } from "@/lib/agents/delivery/candidate-plans/save-candidate-generation";
 import {
@@ -150,6 +151,10 @@ export async function generateImprovedCandidatePlansForAgent(input: {
     baseCandidates: overrideResult.plans,
     planningHints,
     deliveryAgentRunId: run.id,
+    previewBudget: {
+      action: "improved_candidate_preview",
+      correlationId: `delivery-agent:improved_candidate_preview:${input.deliveryDate}:${randomUUID()}`,
+    },
   });
 
   const meetupPinned = detectMeetupPinnedInPreview(
@@ -189,7 +194,9 @@ export async function generateImprovedCandidatePlansForAgent(input: {
       applicationNotes: application.applicationNotes,
       candidatePreviewSnapshot: preview as unknown as Record<string, unknown>,
       recommendedCandidateId: preview.recommendedCandidateId ?? "",
-      recommendedPlanSummary: preview.recommendedPlanSummary,
+      recommendedPlanSummary: preview.recommendedPlanSummary
+        ? (preview.recommendedPlanSummary as unknown as Record<string, unknown>)
+        : undefined,
       previousRecommendedCandidateId,
     },
   });

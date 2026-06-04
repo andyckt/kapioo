@@ -1,5 +1,10 @@
 import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
 import { previewCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans";
+import {
+  DeliveryAgentPreviewActionInFlightError,
+  withDeliveryAgentPreviewActionLock,
+} from "@/lib/agents/delivery/candidate-plans/preview-action-lock";
+import { randomUUID } from "crypto";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { mapGeocodeEnrichmentRouteError } from "@/lib/agents/delivery/geocode/map-geocode-enrichment-route-error";
 import { KitchenStartLocationConfigError } from "@/lib/agents/delivery/kitchen-start-location";
@@ -28,9 +33,21 @@ export async function POST(request: Request) {
       return error;
     }
 
-    const result = await previewCandidatePlansForAgent(data.deliveryDate);
+    const result = await withDeliveryAgentPreviewActionLock(
+      `candidate-preview:${data.deliveryDate}`,
+      () =>
+        previewCandidatePlansForAgent(data.deliveryDate, undefined, {
+          correlationId: `delivery-agent:candidate_preview:${data.deliveryDate}:${randomUUID()}`,
+        })
+    );
     return successJson(result);
   } catch (error: unknown) {
+    if (error instanceof DeliveryAgentPreviewActionInFlightError) {
+      return errorJson("Candidate route preview is already running", 409, {
+        details: error.message,
+      });
+    }
+
     if (error instanceof DeliveryAgentPlanningBlockedError) {
       return errorJson("Candidate route preview is blocked", 409, {
         details: error.blockingReasons.join(" "),

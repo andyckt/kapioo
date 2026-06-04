@@ -237,6 +237,8 @@ describe("lib/agents/delivery/preview-simple-route", () => {
     expect(previewRouteOptimizerRunMock).toHaveBeenCalledWith({
       created_by_integration: "kapioo-admin",
       external_id: "kapioo-simple-preview:2026-06-09",
+      planning_session_id: expect.any(String),
+      idempotency_key: expect.any(String),
       run: {
         run_date: "2026-06-09",
         driver_name: "Simple Preview",

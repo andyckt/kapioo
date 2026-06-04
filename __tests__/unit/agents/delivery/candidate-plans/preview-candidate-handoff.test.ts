@@ -12,6 +12,7 @@ vi.mock("@/lib/agents/delivery/kitchen-start-location", () => ({
 }));
 
 import { getDefaultDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile";
+import { createDeliveryAgentPreviewBudget } from "@/lib/agents/delivery/candidate-plans/preview-budget";
 import { previewCandidateHandoff } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
 import type { DeliveryAgentCandidatePlan } from "@/lib/contracts/delivery-agent";
 import { buildMixedAreaRoutingStops } from "./test-fixtures";
@@ -154,6 +155,18 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-handoff", () => 
     delete process.env.MEETUP_CONTACT_PHONE;
   });
 
+  function buildTestBudget(correlationId: string) {
+    return createDeliveryAgentPreviewBudget({
+      action: "candidate_preview",
+      correlationId,
+      config: {
+        maxFullCandidateVariants: 2,
+        maxOptimizePreviewCalls: 6,
+        maxRepairPreviewCalls: 0,
+      },
+    });
+  }
+
   it("adds synthetic meet-up stop to DT payload and uses meet-up ETA for Marco start", async () => {
     previewRouteOptimizerRunMock
       .mockResolvedValueOnce(buildDtRouteWithMeetup())
@@ -183,6 +196,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-handoff", () => 
       kitchenAddress: "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada",
       profile,
       routingStopByOrderId,
+      budget: buildTestBudget("handoff-test-success"),
     });
 
     const dtPayload = previewRouteOptimizerRunMock.mock.calls[0][0];
@@ -239,6 +253,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-handoff", () => 
       kitchenAddress: "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada",
       profile,
       routingStopByOrderId,
+      budget: buildTestBudget("handoff-test-missing-eta"),
     });
 
     expect(result.runPreviews[0].previewStatus).toBe("previewed");

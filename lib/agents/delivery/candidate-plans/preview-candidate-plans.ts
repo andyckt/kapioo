@@ -1,10 +1,16 @@
 import { selectBestCandidatePlan } from "@/lib/agents/delivery/best-plan/select-best-candidate-plan";
 import type { CandidateAssignedRun } from "@/lib/agents/delivery/best-plan/types";
+import { randomUUID } from "crypto";
 import { compareCandidateDeadline } from "@/lib/agents/delivery/candidate-plans/compare-candidate-deadline";
 import { expandFullCandidateVariants } from "@/lib/agents/delivery/candidate-plans/expand-full-candidate-variants";
 import { generateCandidatePlansForAgent } from "@/lib/agents/delivery/candidate-plans/generate-candidate-plans";
 import { previewCandidateHandoff } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
 import type { HandoffRunChainOverrides } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
+import {
+  createDeliveryAgentPreviewBudget,
+  type DeliveryAgentPreviewBudgetAction,
+  type DeliveryAgentPreviewBudgetConfig,
+} from "@/lib/agents/delivery/candidate-plans/preview-budget";
 import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
 import { buildHandoffOverridesFromHints } from "@/lib/agents/delivery/feedback/apply-planning-hints";
 import { collectCoordinateCoverageWarnings } from "@/lib/agents/delivery/geocode/geocode-enrichment-alerts";
@@ -134,6 +140,81 @@ function buildAssignmentForVariant(variant: FullCandidateVariant): CandidateAssi
   }));
 }
 
+function buildPreviewCorrelationId(input: {
+  action: DeliveryAgentPreviewBudgetAction;
+  deliveryDate: string;
+}): string {
+  return `delivery-agent:${input.action}:${input.deliveryDate}:${randomUUID()}`;
+}
+
+export function selectPreviewFinalists(input: {
+  variants: FullCandidateVariant[];
+  maxFullCandidateVariants: number;
+}): { finalists: FullCandidateVariant[]; warnings: string[] } {
+  const max = Math.max(0, input.maxFullCandidateVariants);
+  const warnings: string[] = [];
+
+  if (max === 0 || input.variants.length === 0) {
+    return {
+      finalists: [],
+      warnings:
+        input.variants.length > 0
+          ? ["Preview budget is zero; no paid candidate previews were run."]
+          : [],
+    };
+  }
+
+  if (input.variants.length <= max) {
+    return { finalists: input.variants, warnings };
+  }
+
+  const byPriority = [...input.variants].sort(
+    (left, right) => right.previewPriorityScore - left.previewPriorityScore
+  );
+  const selected: FullCandidateVariant[] = [];
+  const selectedIds = new Set<string>();
+
+  const addVariant = (variant: FullCandidateVariant | undefined) => {
+    if (!variant || selected.length >= max || selectedIds.has(variant.plan.candidateId)) {
+      return;
+    }
+    selected.push(variant);
+    selectedIds.add(variant.plan.candidateId);
+  };
+
+  addVariant(byPriority[0]);
+
+  for (const variant of byPriority) {
+    const alreadyHasBaseSplit = selected.some(
+      (entry) =>
+        entry.combination.baseSplitCandidateId === variant.combination.baseSplitCandidateId
+    );
+    if (!alreadyHasBaseSplit) {
+      addVariant(variant);
+    }
+  }
+
+  if (!selected.some((variant) => variant.combination.selfUsageStrategy === "self_fallback")) {
+    addVariant(
+      byPriority.find((variant) => variant.combination.selfUsageStrategy === "self_fallback")
+    );
+  }
+
+  if (!selected.some((variant) => variant.combination.meetupFixedStopPosition === 2)) {
+    addVariant(byPriority.find((variant) => variant.combination.meetupFixedStopPosition === 2));
+  }
+
+  for (const variant of byPriority) {
+    addVariant(variant);
+  }
+
+  warnings.push(
+    `Quality-preserving budget selected ${selected.length} finalist candidate(s) from ${input.variants.length} local variant(s), prioritizing high-scored meet-up options, different base splits, and self-fallback coverage.`
+  );
+
+  return { finalists: selected, warnings };
+}
+
 async function previewCandidatePlan(input: {
   deliveryDate: string;
   variant: FullCandidateVariant;
@@ -141,6 +222,7 @@ async function previewCandidatePlan(input: {
   profile: ReturnType<typeof getDeliveryPlanningProfile>;
   routingStopByOrderId: Map<string, RoutingStop>;
   handoffOverrides?: HandoffRunChainOverrides;
+  budget: ReturnType<typeof createDeliveryAgentPreviewBudget>;
 }): Promise<DeliveryAgentCandidatePlanPreviewCore> {
   const handoffResult = await previewCandidateHandoff({
     deliveryDate: input.deliveryDate,
@@ -150,6 +232,7 @@ async function previewCandidatePlan(input: {
     routingStopByOrderId: input.routingStopByOrderId,
     meetupSelection: input.variant.meetupSelection,
     handoffOverrides: input.handoffOverrides,
+    budget: input.budget,
   });
 
   const planSummary = {
@@ -166,6 +249,7 @@ async function previewCandidatePlan(input: {
     profile: input.profile,
     routingStopByOrderId: input.routingStopByOrderId,
     handoffResult,
+    budget: input.budget,
     planSummary,
   });
 
@@ -208,14 +292,28 @@ export async function previewCandidatePlansPipeline(input: {
   baseCandidates?: DeliveryAgentCandidatePlan[];
   planningHints?: PlanningHints;
   deliveryAgentRunId?: string;
+  previewBudget?: {
+    action?: DeliveryAgentPreviewBudgetAction;
+    correlationId?: string;
+    config?: Partial<DeliveryAgentPreviewBudgetConfig>;
+  };
 }): Promise<DeliveryAgentPreviewCandidatePlansResponse> {
+  const budgetAction = input.previewBudget?.action ?? "candidate_preview";
+  const budget = createDeliveryAgentPreviewBudget({
+    action: budgetAction,
+    correlationId:
+      input.previewBudget?.correlationId ??
+      buildPreviewCorrelationId({ action: budgetAction, deliveryDate: input.deliveryDate }),
+    config: input.previewBudget?.config,
+  });
+
   const profile = getDeliveryPlanningProfile(input.profileId);
   const kitchenAddress = getKapiooKitchenStartLocation();
   const generation = input.baseCandidates
     ? {
         deliveryDate: input.deliveryDate,
         profileId: profile.profileId,
-        profileVersion: input.profileVersion ?? profile.version,
+        profileVersion: input.profileVersion ?? profile.profileVersion,
         candidates: input.baseCandidates,
         notes: "",
       }
@@ -235,6 +333,15 @@ export async function previewCandidatePlansPipeline(input: {
     profile,
     planningHints: input.planningHints,
   });
+  const finalistSelection = selectPreviewFinalists({
+    variants: expansion.variants,
+    maxFullCandidateVariants: budget.config.maxFullCandidateVariants,
+  });
+  budget.recordVariantSelection({
+    considered: expansion.variants.length,
+    selected: finalistSelection.finalists.length,
+    skipped: Math.max(expansion.variants.length - finalistSelection.finalists.length, 0),
+  });
 
   const handoffOverrides = input.planningHints
     ? buildHandoffOverridesFromHints(input.planningHints)
@@ -245,7 +352,7 @@ export async function previewCandidatePlansPipeline(input: {
   let stoppedDueToRateLimit = false;
   let previewedVariantCount = 0;
 
-  for (const variant of expansion.variants) {
+  for (const variant of finalistSelection.finalists) {
     assignmentByCandidateId.set(variant.plan.candidateId, buildAssignmentForVariant(variant));
 
     try {
@@ -262,11 +369,17 @@ export async function previewCandidatePlansPipeline(input: {
           handoffOverrides && Object.keys(handoffOverrides).length > 0
             ? handoffOverrides
             : undefined,
+        budget,
       });
       candidates.push(preview);
       previewedVariantCount += 1;
+      budget.recordVariantPreviewed();
       if (candidateHitRateLimit(preview)) {
         stoppedDueToRateLimit = true;
+        budget.markRateLimited();
+        break;
+      }
+      if (budget.status === "budget_exhausted") {
         break;
       }
     } catch (error) {
@@ -317,9 +430,14 @@ export async function previewCandidatePlansPipeline(input: {
         combination: variant.combination,
       });
       previewedVariantCount += 1;
+      budget.recordVariantPreviewed();
 
       if (isRouteOptimizerRateLimitMessage(readErrorMessage(error))) {
         stoppedDueToRateLimit = true;
+        budget.markRateLimited();
+        break;
+      }
+      if (budget.status === "budget_exhausted") {
         break;
       }
     }
@@ -335,7 +453,9 @@ export async function previewCandidatePlansPipeline(input: {
   });
 
   const selectionWarnings = [
+    ...finalistSelection.warnings,
     ...expansion.expansionWarnings,
+    ...budget.summary().warnings,
     ...selection.selectionWarnings,
     ...collectCoordinateCoverageWarnings({
       alerts: coordinateCoverage.alerts,
@@ -354,6 +474,8 @@ export async function previewCandidatePlansPipeline(input: {
     selectionWarnings.push("No valid full candidate variants could be previewed.");
   }
 
+  const costGuardrail = budget.summary();
+
   return {
     deliveryDate: generation.deliveryDate,
     profileId: generation.profileId,
@@ -367,14 +489,27 @@ export async function previewCandidatePlansPipeline(input: {
     notes: CANDIDATE_ROUTE_PREVIEW_NOTES,
     coordinateCoverage,
     geocodeEnrichment,
+    costGuardrail,
   };
 }
 
 export async function previewCandidatePlansForAgent(
   deliveryDate: string,
-  profileId?: string
+  profileId?: string,
+  options?: {
+    correlationId?: string;
+    budgetConfig?: Partial<DeliveryAgentPreviewBudgetConfig>;
+  }
 ): Promise<DeliveryAgentPreviewCandidatePlansResponse> {
-  return previewCandidatePlansPipeline({ deliveryDate, profileId });
+  return previewCandidatePlansPipeline({
+    deliveryDate,
+    profileId,
+    previewBudget: {
+      action: "candidate_preview",
+      correlationId: options?.correlationId,
+      config: options?.budgetConfig,
+    },
+  });
 }
 
 export { compareCandidateDeadline };

@@ -343,7 +343,9 @@ export function DeliveryAgentReviewPanel({
         payload.errorCode === "ROUTE_OPTIMIZER_PARTIAL_CREATED" &&
         payload.finalRouteOptimizerMetadata
       ) {
-        setFinalRouteMessage(payload.error ?? payload.finalRouteOptimizerMetadata.creationError?.message);
+        setFinalRouteMessage(
+          payload.error ?? payload.finalRouteOptimizerMetadata.creationError?.message ?? null
+        );
         onReviewSaved({
           ...savedReview,
           operationalState: "final_route_partial_created",
@@ -659,6 +661,18 @@ export function DeliveryAgentReviewPanel({
 
         {candidateRoutePreview.coordinateCoverage && (
           <CoordinateCoverageBanner coverage={candidateRoutePreview.coordinateCoverage} />
+        )}
+
+        {candidateRoutePreview.costGuardrail && (
+          <div className="rounded-md border border-muted/60 bg-muted/10 p-3 text-sm">
+            <p className="font-medium">Preview cost guardrail</p>
+            <p className="mt-1 text-muted-foreground">
+              Used {candidateRoutePreview.costGuardrail.optimizePreviewCallsUsed}/
+              {candidateRoutePreview.costGuardrail.maxOptimizePreviewCalls} paid preview calls for{" "}
+              {candidateRoutePreview.costGuardrail.fullCandidateVariantsPreviewed} attempted
+              finalist plan(s). Correlation ID: {candidateRoutePreview.costGuardrail.correlationId}
+            </p>
+          </div>
         )}
 
         {(allPlansLate || infeasiblePlan) && (

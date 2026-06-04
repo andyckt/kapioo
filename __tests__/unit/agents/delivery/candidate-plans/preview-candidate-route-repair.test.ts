@@ -8,6 +8,7 @@ vi.mock("@/lib/integrations/route-optimizer/client", () => ({
 
 import { getDefaultDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile";
 import type { CandidateHandoffPreviewResult } from "@/lib/agents/delivery/candidate-plans/preview-candidate-handoff";
+import { createDeliveryAgentPreviewBudget } from "@/lib/agents/delivery/candidate-plans/preview-budget";
 import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
 import type { DeliveryAgentCandidatePlan } from "@/lib/contracts/delivery-agent";
 import { buildMixedAreaRoutingStops } from "./test-fixtures";
@@ -177,6 +178,18 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
     previewRouteOptimizerRunMock.mockReset();
   });
 
+  function buildTestBudget(correlationId: string) {
+    return createDeliveryAgentPreviewBudget({
+      action: "candidate_preview",
+      correlationId,
+      config: {
+        maxFullCandidateVariants: 1,
+        maxOptimizePreviewCalls: 10,
+        maxRepairPreviewCalls: 4,
+      },
+    });
+  }
+
   it("re-previews DT and Marco when downtown-before-meetup issue is detected", async () => {
     const handoffResult: CandidateHandoffPreviewResult = {
       runPreviews: [
@@ -257,6 +270,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
       profile,
       routingStopByOrderId,
       handoffResult,
+      budget: buildTestBudget("repair-test-success"),
       planSummary: {
         runCount: 2,
         totalStops: 3,
@@ -339,6 +353,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
       profile,
       routingStopByOrderId,
       handoffResult,
+      budget: buildTestBudget("repair-test-failure"),
       planSummary: {
         runCount: 2,
         totalStops: 3,
@@ -350,6 +365,94 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
     expect(result.candidateRepairSummary.repairSucceeded).toBe(false);
     expect(result.runPreviews[0].repairStatus).toBe("repair_failed");
     expect(result.runPreviews[0].meetupSequence).toBe(2);
+  });
+
+  it("respects repair preview budget and does not call Route Optimizer when repair budget is zero", async () => {
+    const handoffResult: CandidateHandoffPreviewResult = {
+      runPreviews: [
+        {
+          runSlot: "A",
+          driverName: "DT",
+          role: "downtown",
+          stopCount: 2,
+          optimizedStopCount: 3,
+          optimizedStops: [
+            { sequence: 1, name: "Alice Customer", orderIds: ["DD-90000001"] },
+            { sequence: 2, name: "Dan Customer", orderIds: ["DD-90000004"] },
+            { sequence: 3, name: "Meet-up / Handoff Point", orderIds: [] },
+          ],
+          routeOptimizerWarnings: [],
+          routeOptimizerValidationErrors: [],
+          geocodeFailures: [],
+          previewStatus: "previewed",
+          syntheticMeetupIncluded: true,
+          meetupSequence: 3,
+          meetupEta: "2026-06-09T15:00:00.000Z",
+        },
+        {
+          runSlot: "B",
+          driverName: "Marco",
+          role: "uptown",
+          stopCount: 1,
+          optimizedStopCount: 1,
+          optimizedStops: [{ sequence: 1, name: "Carol Customer", orderIds: ["DD-90000003"] }],
+          routeOptimizerWarnings: [],
+          routeOptimizerValidationErrors: [],
+          geocodeFailures: [],
+          previewStatus: "previewed",
+          estimatedFinishTime: "2026-06-09T16:00:00.000Z",
+        },
+      ],
+      handoffPlan: {
+        providerRunSlot: "A",
+        receiverRunSlot: "B",
+        selectedMeetup: {
+          meetupAddress: "4000 Yonge St, North York M2N 5N8",
+          meetupFixedStopPosition: 1,
+          variant: "meetup_stop_1",
+          syntheticHandoffStopUsed: true,
+        },
+        meetupEta: "2026-06-09T15:00:00.000Z",
+        receiverStartLocation: "4000 Yonge St, North York M2N 5N8",
+        receiverStartTime: "11:00",
+      },
+      assumptions: [],
+    };
+    const budget = createDeliveryAgentPreviewBudget({
+      action: "candidate_preview",
+      correlationId: "cost-1a-repair-budget",
+      config: {
+        maxFullCandidateVariants: 1,
+        maxOptimizePreviewCalls: 10,
+        maxRepairPreviewCalls: 0,
+      },
+    });
+
+    const result = await repairCandidateRoutePreview({
+      deliveryDate: "2026-06-09",
+      candidate: buildCandidate(),
+      kitchenAddress: "123 Kitchen Rd",
+      profile,
+      routingStopByOrderId,
+      handoffResult,
+      budget,
+      planSummary: {
+        runCount: 2,
+        totalStops: 3,
+        selfUsed: false,
+        selfStopCount: 0,
+      },
+    });
+
+    expect(previewRouteOptimizerRunMock).not.toHaveBeenCalled();
+    expect(result.candidateRepairSummary.repairSucceeded).toBe(false);
+    expect(result.candidateRepairSummary.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("Repair preview budget exhausted")])
+    );
+    expect(budget.summary()).toMatchObject({
+      status: "budget_exhausted",
+      repairPreviewCallsUsed: 0,
+    });
   });
 
   it("does not call Route Optimizer when no issues are detected", async () => {
@@ -405,6 +508,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-route-repair", (
       profile,
       routingStopByOrderId,
       handoffResult,
+      budget: buildTestBudget("repair-test-not-needed"),
       planSummary: {
         runCount: 2,
         totalStops: 3,
