@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kapioo Delivery AI Agent - Plain English Design</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --paper: #ffffff;
+      --text: #1d2939;
+      --muted: #667085;
+      --line: #d9e0ea;
+      --blue: #1f5f8b;
+      --green: #1f7a4d;
+      --orange: #9a5b00;
+      --red: #b42318;
+      --soft-blue: #eaf4ff;
+      --soft-green: #eaf7ef;
+      --soft-orange: #fff3d8;
+      --soft-red: #feeceb;
+      --soft-gray: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.62;
+    }
+
+    .page {
+      width: min(1060px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 24px 0 56px;
+    }
+
+    header, section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 26px rgba(29, 41, 57, 0.05);
+    }
+
+    h1 {
+      margin: 8px 0 10px;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 25px;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 12px; }
+
+    ul, ol {
+      margin: 8px 0 0;
+      padding-left: 22px;
+    }
+
+    li { margin: 6px 0; }
+
+    .muted { color: var(--muted); }
+
+    .label {
+      display: inline-block;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .nav a {
+      color: var(--blue);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 11px;
+      background: #fff;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .half { grid-column: span 6; }
+    .third { grid-column: span 4; }
+    .full { grid-column: span 12; }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: var(--soft-gray);
+    }
+
+    .blue { background: var(--soft-blue); border-color: #b9d8f5; }
+    .green { background: var(--soft-green); border-color: #b9dfc9; }
+    .orange { background: var(--soft-orange); border-color: #f0d08b; }
+    .red { background: var(--soft-red); border-color: #f3b8b3; }
+
+    .important {
+      border-left: 5px solid var(--blue);
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: var(--soft-blue);
+      margin-top: 12px;
+    }
+
+    .warning {
+      border-left-color: var(--orange);
+      background: var(--soft-orange);
+    }
+
+    .danger {
+      border-left-color: var(--red);
+      background: var(--soft-red);
+    }
+
+    .good {
+      border-left-color: var(--green);
+      background: var(--soft-green);
+    }
+
+    .pill {
+      display: inline-block;
+      margin: 2px 4px 2px 0;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #eef2f7;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .pill.green { color: var(--green); background: var(--soft-green); border: 0; }
+    .pill.orange { color: var(--orange); background: var(--soft-orange); border: 0; }
+    .pill.red { color: var(--red); background: var(--soft-red); border: 0; }
+    .pill.blue { color: var(--blue); background: var(--soft-blue); border: 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    th, td {
+      padding: 11px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef3f8;
+      font-size: 14px;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+      background: #fff;
+      min-height: 120px;
+    }
+
+    .step strong {
+      display: block;
+      color: var(--blue);
+      margin-bottom: 4px;
+    }
+
+    code {
+      background: #eef2f7;
+      border: 1px solid #d8dee8;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+    }
+
+    @media (max-width: 850px) {
+      header, section { padding: 18px; }
+      .half, .third { grid-column: span 12; }
+      .flow { grid-template-columns: 1fr; }
+      table { font-size: 14px; }
+      th, td { padding: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <span class="label">Plain English version for Donald</span>
+      <h1>Kapioo Delivery AI Agent Design, Explained Simply</h1>
+      <p class="muted">This document explains the Delivery AI Agent in business words. It is for understanding the design before coding continues. It does not replace the technical document; it is the easier-to-read version.</p>
+      <div>
+        <span class="pill blue">Goal: strong plans</span>
+        <span class="pill green">Goal: controlled cost</span>
+        <span class="pill orange">Risk: Google API spike</span>
+        <span class="pill red">Avoid: cheap but dumb agent</span>
+      </div>
+      <nav class="nav">
+        <a href="#simple-answer">Simple Answer</a>
+        <a href="#problem">The Problem</a>
+        <a href="#new-method">New Method</a>
+        <a href="#daily-flow">Daily Flow</a>
+        <a href="#quality">Plan Quality</a>
+        <a href="#cost">Cost Choices</a>
+        <a href="#addresses">Addresses</a>
+        <a href="#drivers">Drivers</a>
+        <a href="#llm">LLM</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#decisions">Decisions</a>
+      </nav>
+    </header>
+
+    <section id="simple-answer">
+      <h2>1. The Simple Answer</h2>
+      <div class="important good">
+        <p><strong>The Delivery AI Agent should not save money by becoming weaker.</strong></p>
+        <p>Instead, it should think more carefully before spending money. It should make smart plans using order data, map coordinates, history, rules, and LLM reasoning first. Only after that should it pay Google/Route Optimizer to check the best few plans.</p>
+      </div>
+      <div class="grid">
+        <div class="half box green">
+          <h3>Good version</h3>
+          <p>The agent studies today's orders, creates strong plan ideas, picks the best few, then pays to check only those serious plans.</p>
+        </div>
+        <div class="half box red">
+          <h3>Bad version</h3>
+          <p>The agent creates many random plan versions and pays Google to check all of them. This can become expensive very fast.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="problem">
+      <h2>2. What Went Wrong With Cost</h2>
+      <p>The expensive part is not the LLM. The expensive part is asking Route Optimizer / Google Maps to fully calculate routes too many times.</p>
+      <div class="important danger">
+        <p><strong>Cost spike formula:</strong></p>
+        <p>Too many Admin preview attempts x many stops inside each route x Google billing per stop/leg/geocode = big bill.</p>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Thing</th><th>Simple meaning</th><th>Cost risk</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Candidate plan</td>
+            <td>One possible delivery split, like Run A takes these orders and Run B takes those orders.</td>
+            <td>Cheap if we only create it locally.</td>
+          </tr>
+          <tr>
+            <td>Route Optimizer preview</td>
+            <td>Ask the routing system to calculate real route time/distance.</td>
+            <td>Can cost money because it uses Google APIs.</td>
+          </tr>
+          <tr>
+            <td>Repair / re-preview</td>
+            <td>If a route looks bad, try fixing and checking it again.</td>
+            <td>Can double the paid calls if uncontrolled.</td>
+          </tr>
+          <tr>
+            <td>Geocoding</td>
+            <td>Turning text address into latitude/longitude.</td>
+            <td>Can cost money if repeated often.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The old risky behavior was like asking for a full paid route calculation too early and too often.</p>
+    </section>
+
+    <section id="new-method">
+      <h2>3. The New Method: Think First, Pay Later</h2>
+      <p>The agent should work more like a careful planner. It should do cheap thinking first, then pay for proof at the end.</p>
+      <div class="flow">
+        <div class="step"><strong>Think</strong>Look at orders, addresses, areas, clusters, deadline, drivers, and history.</div>
+        <div class="step"><strong>Create</strong>Make several good plan ideas with exact order IDs.</div>
+        <div class="step"><strong>Filter</strong>Remove bad plans locally before spending money.</div>
+        <div class="step"><strong>Prove</strong>Pay Route Optimizer to check only the best few serious plans.</div>
+      </div>
+      <div class="important">
+        <p><strong>Important rule:</strong> Route Optimizer should be used as the final checker, not as the search engine.</p>
+      </div>
+    </section>
+
+    <section id="daily-flow">
+      <h2>4. What Should Happen on a Normal Delivery Day</h2>
+      <ol>
+        <li><strong>Load today's confirmed orders.</strong> Pending or invalid orders should not be planned.</li>
+        <li><strong>Prepare addresses and coordinates.</strong> The system should know where each stop is as precisely as possible.</li>
+        <li><strong>Understand today's shape.</strong> Example: many downtown stops, some North York, Markham/Richmond Hill together, one far outlier.</li>
+        <li><strong>Look at similar old days.</strong> Find historical days with similar geography and learn what worked or failed.</li>
+        <li><strong>Create plan ideas.</strong> Plans should include exact order IDs for Run A, Run B, Run C if needed.</li>
+        <li><strong>Check the plans locally.</strong> No missing orders, no duplicates, support/self only if needed, clusters kept together where possible.</li>
+        <li><strong>Pick the serious finalists.</strong> Do not just take the first 3. Pick the strongest and most different useful options.</li>
+        <li><strong>Pay to preview finalists.</strong> Route Optimizer checks real estimated time/distance for only the finalists.</li>
+        <li><strong>Recommend only a proven plan.</strong> If no proven plan works, say so clearly.</li>
+        <li><strong>Donald approves.</strong> Only after approval should final Route Optimizer runs be created.</li>
+        <li><strong>Learn after the day.</strong> Store what happened, including whether lateness was route problem or driver-start delay.</li>
+      </ol>
+    </section>
+
+    <section id="quality">
+      <h2>5. How We Keep Plan Quality High</h2>
+      <p>Reducing paid previews can hurt quality if done badly. The system must not simply preview fewer random plans.</p>
+      <div class="grid">
+        <div class="half box red">
+          <h3>Wrong way</h3>
+          <p>Generate 15 plans, preview the first 3, and ignore the rest. This might miss the best plan.</p>
+        </div>
+        <div class="half box green">
+          <h3>Right way</h3>
+          <p>Generate many ideas cheaply, score them locally, then preview the best 3-4 diverse finalists.</p>
+        </div>
+      </div>
+      <h3>What makes a plan good?</h3>
+      <table>
+        <thead>
+          <tr><th>Quality rule</th><th>Simple explanation</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Finish before 1 PM</td><td>This is the hard rule. No customer should be delivered after 1 PM.</td></tr>
+          <tr><td>5 minute minimum buffer now</td><td>Because current driver capacity is tight, 5 minutes is acceptable for now.</td></tr>
+          <tr><td>5-10 minute ideal buffer</td><td>Better if possible, but not always possible today.</td></tr>
+          <tr><td>Shortest total time</td><td>After deadline is safe, reduce total delivery time.</td></tr>
+          <tr><td>Drivers end near homebase if possible</td><td>This matters, but deadline and total time come first.</td></tr>
+          <tr><td>Respect preferred split pattern</td><td>Use Donald's preferred operations style when it still meets 1 PM.</td></tr>
+          <tr><td>Keep natural clusters together</td><td>Downtown/midtown together, Markham/Richmond Hill together for now, same-building together.</td></tr>
+          <tr><td>Support/self last</td><td>If Donald/self is needed, give the fewest possible orders.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="cost">
+      <h2>6. Cost Choices Explained</h2>
+      <p>You said you do not yet know the normal manual Google API cost. That is reasonable. The system should start with safe options and show real usage so we can tune later.</p>
+      <table>
+        <thead>
+          <tr><th>Mode</th><th>Paid route previews</th><th>When to use</th><th>Pros / Cons</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Very safe</strong></td>
+            <td>4-6 calls</td>
+            <td>Testing, early launch, low-risk days.</td>
+            <td>Lowest cost risk, but may miss a better plan on complex days.</td>
+          </tr>
+          <tr>
+            <td><strong>Balanced recommended</strong></td>
+            <td>8-12 calls</td>
+            <td>Normal daily planning.</td>
+            <td>Best starting option. Enough to check 3-4 serious plans without crazy fanout.</td>
+          </tr>
+          <tr>
+            <td><strong>Rescue mode</strong></td>
+            <td>14-18 calls</td>
+            <td>Hard day, close to 1 PM, unusual spread, or no safe plan found.</td>
+            <td>Higher chance to find a solution, but must require your confirmation.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="important warning">
+        <p><strong>Recommended default:</strong> Start with Balanced mode. Show cost usage in the UI. Add Google Cloud budget/quotas so another surprise bill cannot happen even if code has a bug.</p>
+      </div>
+      <h3>What happens if the budget runs out?</h3>
+      <ul>
+        <li>Stop paid previews immediately.</li>
+        <li>Show which plans were actually checked.</li>
+        <li>Only recommend a plan that was checked and passed.</li>
+        <li>Show the best unchecked idea separately as "unproven idea," not as the official recommendation.</li>
+        <li>Offer rescue mode if Donald wants to spend more preview budget that day.</li>
+      </ul>
+    </section>
+
+    <section id="addresses">
+      <h2>7. Address and Map Accuracy</h2>
+      <p>This is a big quality issue. Right now customers type addresses as text. The system does not fully use Google address autocomplete yet. That means area labels can be wrong or confusing.</p>
+      <div class="important warning">
+        <p>Example: a customer may choose "North York," but the actual address might be close to the kitchen or better grouped with downtown/midtown. The agent should trust coordinates more than area labels.</p>
+      </div>
+      <h3>Realistic plan</h3>
+      <div class="grid">
+        <div class="third box green">
+          <h3>Step 1: Now</h3>
+          <p>Use the existing geocode cache. Store successful and failed geocodes. Send lat/lng to Route Optimizer when available.</p>
+        </div>
+        <div class="third box blue">
+          <h3>Step 2: Soon</h3>
+          <p>Add coordinate fields to saved customer/order addresses, so good coordinates are not only temporary cache data.</p>
+        </div>
+        <div class="third box orange">
+          <h3>Step 3: Later</h3>
+          <p>Add Google address autocomplete to customer address entry/edit flows if it can be done without delaying cost guardrails too much.</p>
+        </div>
+      </div>
+      <p><strong>Recommendation:</strong> Do not pause the whole Delivery Agent project for full autocomplete. First make cost safe. Then add a focused address-quality milestone.</p>
+    </section>
+
+    <section id="drivers">
+      <h2>8. Driver and Run Design</h2>
+      <p>The system should think in Run A, Run B, Run C, not fixed person names. You can assign real driver names yourself later.</p>
+      <table>
+        <thead>
+          <tr><th>Current / future idea</th><th>How the agent should think</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Current 2 hired drivers</td>
+            <td>Use two hired runs first. Try to complete all orders before 1 PM without Donald/self if possible.</td>
+          </tr>
+          <tr>
+            <td>Donald/self support</td>
+            <td>Only use when hired-driver plan cannot safely meet 1 PM. Assign the fewest possible stops.</td>
+          </tr>
+          <tr>
+            <td>Future North York provider</td>
+            <td>System should allow provider role to change. The provider may pick up from kitchen, go north, hand off, and finish North York.</td>
+          </tr>
+          <tr>
+            <td>Future 3 hired drivers</td>
+            <td>Use 3 hired drivers first before Donald/self. Early new driver may have fewer orders until volume grows.</td>
+          </tr>
+          <tr>
+            <td>Driver pay minimum</td>
+            <td>Since drivers are paid at least 2 hours, the system should optimize total operation quality, not only make one driver extremely short.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="meetup">
+      <h2>9. Meet-Up / Handoff Design</h2>
+      <p>The meet-up cannot be vague. "Somewhere in central North York" is not good enough because every minute matters.</p>
+      <ul>
+        <li>The system should find an exact meet-up address or stop.</li>
+        <li>The provider should sometimes deliver on-the-way stops before meet-up if that saves backtracking.</li>
+        <li>The receiver should be able to start from the meet-up and still finish before 1 PM.</li>
+        <li>The meet-up should not be too close to the kitchen, too far west, too far north, or bad for the receiving driver.</li>
+        <li>Route Optimizer proof is important here, but only after local logic chooses good meet-up finalists.</li>
+      </ul>
+    </section>
+
+    <section id="llm">
+      <h2>10. What the LLM Should Do</h2>
+      <p>The LLM should help make smart plans, but the system must still check its work.</p>
+      <div class="grid">
+        <div class="half box green">
+          <h3>LLM should do</h3>
+          <ul>
+            <li>Suggest complete candidate plans with exact order IDs.</li>
+            <li>Use history and today's map shape to reason.</li>
+            <li>Think flexibly about Run A, Run B, Run C.</li>
+            <li>Explain why a plan is good or risky.</li>
+            <li>Suggest support/self if it seems necessary.</li>
+          </ul>
+        </div>
+        <div class="half box red">
+          <h3>LLM should not be trusted alone for</h3>
+          <ul>
+            <li>Making sure every order appears exactly once.</li>
+            <li>Final 1 PM deadline proof.</li>
+            <li>Paid preview budget control.</li>
+            <li>Final route creation.</li>
+            <li>Address/geocode correctness.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="important">
+        <p><strong>Best design:</strong> LLM proposes. Local code validates. Route Optimizer proves. Donald approves.</p>
+      </div>
+    </section>
+
+    <section id="learning">
+      <h2>11. How Historical Learning Helps</h2>
+      <p>Historical learning should make the agent smarter without spending Google API money.</p>
+      <table>
+        <thead>
+          <tr><th>Historical information</th><th>What it teaches the agent</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Similar geography</td><td>What split worked when the order map looked similar.</td></tr>
+          <tr><td>Outliers</td><td>Which far stops usually cause trouble.</td></tr>
+          <tr><td>Clusters</td><td>Which areas/buildings should stay together.</td></tr>
+          <tr><td>Handoff quality</td><td>Which meet-up patterns worked or failed.</td></tr>
+          <tr><td>Late because route was bad</td><td>Avoid that pattern.</td></tr>
+          <tr><td>Late because driver started late</td><td>Do not unfairly blame the route. Use cautiously as a weak-positive pattern.</td></tr>
+          <tr><td>Donald rejected a plan</td><td>Use as "what not to do."</td></tr>
+          <tr><td>Donald approved a plan</td><td>Use as a strong preference signal, unless it violates hard operational rules.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="trust">
+      <h2>12. What Donald Should See in the UI</h2>
+      <p>The UI should be simple and honest. It should not hide uncertainty.</p>
+      <ul>
+        <li>Recommended plan name.</li>
+        <li>Run A / Run B / Run C split.</li>
+        <li>Latest finish time and buffer before 1 PM.</li>
+        <li>Whether Donald/self support is needed and why.</li>
+        <li>Exact meet-up location if used.</li>
+        <li>Cost budget used, such as "8 of 12 preview calls used."</li>
+        <li>Warnings if proof budget ran out.</li>
+        <li>Best unproven idea separately, only as warning-only.</li>
+      </ul>
+      <div class="important danger">
+        <p>The agent should never show an unchecked plan as the official recommendation. It may show it as an unproven idea, but the official recommendation must be proven.</p>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2>13. Roadmap in Easy Words</h2>
+      <ol>
+        <li><strong>Make Admin preview safe:</strong> limit paid previews, but choose finalists intelligently.</li>
+        <li><strong>Make Route Optimizer protect itself:</strong> even if Admin has a bug, RO should reject expensive requests.</li>
+        <li><strong>Add tracking ID:</strong> every click should be traceable through Admin, RO, and Google usage.</li>
+        <li><strong>Add preview cache:</strong> if the same plan is checked twice, reuse the result instead of paying again.</li>
+        <li><strong>Improve geocoding:</strong> cache better, store coordinates, reduce repeated address conversion.</li>
+        <li><strong>Finish historical learning builder:</strong> turn old delivery days into learning cases.</li>
+        <li><strong>Backfill history:</strong> load 30-60 past days and review uncertain matches simply.</li>
+        <li><strong>Add historical similarity:</strong> use old similar days to make better plans before paid preview.</li>
+        <li><strong>Add LLM complete plan generation:</strong> LLM creates exact candidate plans with order IDs.</li>
+        <li><strong>Add final proof loop:</strong> preview only top finalists and qualify the recommendation.</li>
+        <li><strong>Polish UI:</strong> show cost, confidence, support/self reason, and warnings clearly.</li>
+        <li><strong>Support future 3-driver setup:</strong> flexible provider role, Run A/B/C resources, and future equal-driver mode.</li>
+      </ol>
+    </section>
+
+    <section id="decisions">
+      <h2>14. Decisions We Can Already Lock In</h2>
+      <div class="grid">
+        <div class="half box green">
+          <h3>Locked based on your answers</h3>
+          <ul>
+            <li>Use Run A / Run B / Run C, not fixed driver names.</li>
+            <li>5 minutes buffer is acceptable now.</li>
+            <li>5-10 minutes buffer is ideal.</li>
+            <li>Support/self is last resort, fewest stops possible.</li>
+            <li>Markham and Richmond Hill should stay together for now.</li>
+            <li>Downtown and midtown should stay together, including mislabeled nearby "North York" stops.</li>
+            <li>Meet-up must be exact and operationally useful.</li>
+            <li>Donald should see budget details if it is not too much work.</li>
+          </ul>
+        </div>
+        <div class="half box orange">
+          <h3>Still needs future decision</h3>
+          <ul>
+            <li>Exact monthly Google budget limit after we collect real usage data.</li>
+            <li>Whether rescue mode confirms every time or only above a cost estimate.</li>
+            <li>Whether Google address autocomplete becomes required for all users.</li>
+            <li>Whether future North York provider always picks up from kitchen or only when best for the day.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>15. Final Plain-English Summary</h2>
+      <p>The Delivery AI Agent is worth building only if it can make good delivery plans. So we should not just cut cost by limiting it too hard.</p>
+      <p>The right design is: let the agent think deeply using cheap information first, then pay Google only to verify the best few plans. This keeps daily planning useful while preventing another surprise bill.</p>
+      <div class="important good">
+        <p><strong>Best next coding milestone:</strong> COST-1A Admin quality-preserving preview budget. This means smart finalist selection plus paid-call limits, not blind truncation.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

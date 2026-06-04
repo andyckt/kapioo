@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kapioo Delivery AI Agent - Cost-Safe High-Performance System Design</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --paper: #ffffff;
+      --ink: #172033;
+      --muted: #657085;
+      --line: #dfe5ef;
+      --brand: #2f6f73;
+      --brand-dark: #1f4f52;
+      --accent: #b8792f;
+      --danger: #b42318;
+      --warn: #9a5b00;
+      --good: #196c38;
+      --soft-brand: #e7f2f1;
+      --soft-warn: #fff3d8;
+      --soft-danger: #feeceb;
+      --soft-good: #e7f6ed;
+      --shadow: 0 18px 48px rgba(23, 32, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: var(--brand-dark); }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    .hero {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      color: var(--brand-dark);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 8px 0 10px;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 12px; }
+
+    .muted { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .section {
+      margin-top: 20px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(23, 32, 51, 0.04);
+    }
+
+    .span-12 { grid-column: span 12; }
+    .span-8 { grid-column: span 8; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+    }
+
+    .card.soft { background: #fbfcfe; }
+    .card.good { background: var(--soft-good); border-color: #bfe5cd; }
+    .card.warn { background: var(--soft-warn); border-color: #f3d58c; }
+    .card.danger { background: var(--soft-danger); border-color: #f5b9b5; }
+    .card.brand { background: var(--soft-brand); border-color: #b9d9d7; }
+
+    .tag {
+      display: inline-block;
+      margin: 2px 6px 2px 0;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #edf1f7;
+      color: #394255;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag.good { background: var(--soft-good); color: var(--good); }
+    .tag.warn { background: var(--soft-warn); color: var(--warn); }
+    .tag.danger { background: var(--soft-danger); color: var(--danger); }
+    .tag.brand { background: var(--soft-brand); color: var(--brand-dark); }
+
+    ul, ol {
+      padding-left: 22px;
+      margin: 8px 0 0;
+    }
+
+    li { margin: 5px 0; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .step {
+      min-height: 94px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--brand-dark);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef3f8;
+      font-size: 13px;
+      color: #344054;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .equation {
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #f3d58c;
+      background: #fff8e8;
+      color: #5b3700;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .toc a {
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #fff;
+      font-size: 13px;
+    }
+
+    .callout {
+      padding: 14px;
+      border-radius: 8px;
+      border-left: 4px solid var(--brand);
+      background: var(--soft-brand);
+    }
+
+    .callout.warn { border-left-color: var(--warn); background: var(--soft-warn); }
+    .callout.danger { border-left-color: var(--danger); background: var(--soft-danger); }
+
+    code {
+      background: #edf1f7;
+      border: 1px solid #d8dee8;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .span-8, .span-6, .span-4 { grid-column: span 12; }
+      .flow { grid-template-columns: 1fr; }
+      .hero, .section { padding: 18px; }
+      table { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Kapioo Admin repo planning artifact</div>
+      <h1>Delivery AI Agent: Cost-Safe, High-Performance System Design</h1>
+      <p class="muted">Last updated: 2026-06-03. This document reflects repo inspection plus Donald's clarified operating preferences for current 2-driver planning, support/self fallback, near-future 3-driver growth, exact meet-up quality, and Google API cost safety.</p>
+      <div>
+        <span class="tag brand">Think cheaply first</span>
+        <span class="tag good">Pay only for final proof</span>
+        <span class="tag warn">Preserve recommendation quality</span>
+        <span class="tag danger">Do not use RO as search</span>
+      </div>
+      <nav class="toc">
+        <a href="#summary">Summary</a>
+        <a href="#diagnosis">Diagnosis</a>
+        <a href="#architecture">Final Architecture</a>
+        <a href="#candidate">Candidate Planning</a>
+        <a href="#cost">Cost Design</a>
+        <a href="#geocoding">Geocoding</a>
+        <a href="#learning">Historical Learning</a>
+        <a href="#llm">LLM Role</a>
+        <a href="#trust">Recommendation Trust</a>
+        <a href="#guardrails">Guardrails</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#questions">Questions</a>
+      </nav>
+    </section>
+
+    <section id="summary" class="section">
+      <h2>Executive Summary</h2>
+      <div class="grid">
+        <div class="span-6 card good">
+          <h3>What should change</h3>
+          <p>The Delivery Agent should generate and rank strong candidate plans locally, then use Route Optimizer only to prove the finalists. Cost safety should be added without making the agent cheap but weak.</p>
+          <ul>
+            <li>Normal target: 30 orders today, growing slowly over time.</li>
+            <li>Current acceptable minimum buffer: 5 minutes before 1 PM.</li>
+            <li>Ideal buffer: 5-10 minutes, with current operations sometimes pushed close to 1 PM.</li>
+            <li>Support/self is last resort and should receive the fewest possible stops.</li>
+          </ul>
+        </div>
+        <div class="span-6 card warn">
+          <h3>What should not happen</h3>
+          <p>A hard low preview cap by itself can miss the best plan. The system must not simply preview the first 1-3 generated variants. It must select finalists intelligently using local quality signals.</p>
+          <ul>
+            <li>Never recommend an unpreviewed candidate as proven.</li>
+            <li>Never hide that paid proof was budget-limited.</li>
+            <li>Never let repeated clicks multiply paid previews.</li>
+            <li>Never treat area labels as stronger than coordinates.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">
+        <strong>Final design principle:</strong> LLM, historical learning, coordinate geometry, deterministic validation, and local scoring are the search engine. Route Optimizer is the final proof engine.
+      </div>
+    </section>
+
+    <section id="diagnosis" class="section">
+      <h2>Current System Diagnosis</h2>
+      <div class="equation">
+        Admin candidate preview fanout x Route Optimizer per-stop/per-shipment Google billing = 10k+ Google billable units
+      </div>
+      <div class="grid">
+        <div class="span-4 card">
+          <h3>Safe / local today</h3>
+          <ul>
+            <li>Order validation and daily order preview.</li>
+            <li>Template candidate generation before route preview.</li>
+            <li>Planning profile and business rules.</li>
+            <li>Best-plan scoring after previews.</li>
+            <li>Historical learning extractors are pure/local.</li>
+            <li>Donald review/approval persistence.</li>
+          </ul>
+        </div>
+        <div class="span-4 card danger">
+          <h3>Expensive today</h3>
+          <ul>
+            <li><code>preview-candidate-plans</code> can expand up to 15 full variants.</li>
+            <li>Each variant may call RO 2-3 times.</li>
+            <li>Repair/re-preview can call RO again.</li>
+            <li>Improved generation reuses the same preview pipeline.</li>
+            <li>Simple route preview is lower risk but still paid proof.</li>
+            <li>Geocode enrichment can call RO geocode for uncached address-only stops.</li>
+          </ul>
+        </div>
+        <div class="span-4 card warn">
+          <h3>Quality risk</h3>
+          <ul>
+            <li>Fixed templates are useful but not enough for exact daily operations.</li>
+            <li>Area labels can be wrong, especially North York near the kitchen.</li>
+            <li>Meet-up location must be exact, not just "central North York."</li>
+            <li>Blind preview caps can skip the best split.</li>
+            <li>Historical similarity is not wired into scoring yet.</li>
+          </ul>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Path</th><th>Role</th><th>Current issue</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>generate-candidate-plans.ts</code></td><td>Initial local templates</td><td>Uses fixed DT/Marco/Self concepts and area/coordinate heuristics. Good base, but not enough for future flexible Run A/B/C profiles.</td></tr>
+          <tr><td><code>preview-candidate-plans.ts</code></td><td>Preview orchestration</td><td>Main paid fanout loop. Needs quality-preserving finalist selection and budget object.</td></tr>
+          <tr><td><code>preview-candidate-handoff.ts</code></td><td>RO proof for runs/handoff</td><td>Direct RO calls. Needs budget guard, correlation, and idempotency fields.</td></tr>
+          <tr><td><code>preview-candidate-route-repair.ts</code></td><td>Repair/re-preview</td><td>Can multiply paid calls. Repairs must use a separate budget and skip honestly when exhausted.</td></tr>
+          <tr><td><code>score-candidate-plan.ts</code></td><td>Recommendation scoring</td><td>Already values deadline, buffer, shape, coordinates, self policy. Historical similarity currently neutral.</td></tr>
+          <tr><td><code>enrich-routing-stops.ts</code></td><td>Coordinate preparation</td><td>Has cache and failed cache behavior, but order/user schemas do not yet store lat/lng/place IDs.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="architecture" class="section">
+      <h2>Refined Final Architecture</h2>
+      <p>The final architecture should be a staged planning system. Paid proof comes late, after cheap intelligence has narrowed the plan space.</p>
+      <div class="flow">
+        <div class="step"><strong>1. Coordinates</strong>Prepare lat/lng, cache hits, coverage score, and address-quality warnings.</div>
+        <div class="step"><strong>2. Fingerprint</strong>Compute today's order count, spread, clusters, outliers, and confusing area labels.</div>
+        <div class="step"><strong>3. History</strong>Retrieve similar learning cases by geography, profile compatibility, shape, and outcome quality.</div>
+        <div class="step"><strong>4. Draft plans</strong>Use deterministic rules plus LLM to output exact order IDs per run.</div>
+        <div class="step"><strong>5. Validate</strong>Check every order once, no duplicates, clusters preserved, support/self policy, profile rules.</div>
+        <div class="step"><strong>6. Score locally</strong>Rank by deadline risk estimate, geography, driver end/homebase fit, handoff quality, history, and Donald preferences.</div>
+        <div class="step"><strong>7. RO proof</strong>Preview only top serious finalists under budget, with exact correlation and idempotency.</div>
+        <div class="step"><strong>8. Qualify</strong>Recommend only previewed candidates that meet 1 PM and operational trust rules.</div>
+        <div class="step"><strong>9. Review</strong>Donald approves, requests improvement, or views best unproven idea as warning-only.</div>
+        <div class="step"><strong>10. Learn</strong>Store review/outcome, build learning case, and use normalized lateness signals later.</div>
+      </div>
+      <div class="callout warn">
+        The key design change is not "preview fewer." It is "preview fewer after selecting better finalists."
+      </div>
+    </section>
+
+    <section id="candidate" class="section">
+      <h2>Candidate Planning Redesign</h2>
+      <div class="grid">
+        <div class="span-6 card brand">
+          <h3>How candidate generation should evolve</h3>
+          <ul>
+            <li>Keep fixed templates as a fallback and baseline safety net.</li>
+            <li>Add LLM-generated complete candidate plans with exact order IDs per run.</li>
+            <li>Represent resources as Run A, Run B, Run C, not driver names.</li>
+            <li>Support current and future profiles: current 2 hired drivers + self backup, future 3 hired drivers, and future equal-driver mode.</li>
+            <li>Generate many ideas cheaply, but preview only strong finalists.</li>
+          </ul>
+        </div>
+        <div class="span-6 card">
+          <h3>Donald's clarified operating model</h3>
+          <ul>
+            <li>One provider role always picks up meals from the kitchen and can bring meals north.</li>
+            <li>Today this is often the downtown driver, but future North York driver may become the provider.</li>
+            <li>Downtown/midtown route should focus downtown and may deliver midtown on the way.</li>
+            <li>Markham/Richmond Hill should stay together for now.</li>
+            <li>Self/support is not optional when no paid-driver plan can meet 1 PM, but should get the fewest possible stops.</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Local finalist selection before paid proof</h3>
+      <table>
+        <thead>
+          <tr><th>Signal</th><th>Why it matters</th><th>Use before RO?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Order completeness</td><td>No missing or duplicate orders. Core reliability.</td><td>Hard gate</td></tr>
+          <tr><td>Coordinate quality</td><td>Coordinates beat area labels for confusing North York/kitchen-near stops.</td><td>Hard/soft gate</td></tr>
+          <tr><td>Cluster preservation</td><td>Downtown/midtown, same building, Markham/Richmond Hill should stay together where possible.</td><td>Score plus warning</td></tr>
+          <tr><td>Run resource profile</td><td>Use hired drivers first, self last, future 3-driver profile transferable.</td><td>Hard/score</td></tr>
+          <tr><td>Estimated local travel shape</td><td>Cheap distance/spread checks can eliminate obvious bad splits.</td><td>Score</td></tr>
+          <tr><td>Handoff precision</td><td>Meet-up must be exact and time-saving, not just generally central.</td><td>Score and RO finalist reason</td></tr>
+          <tr><td>Historical similarity</td><td>Old good/bad days reduce need to explore with paid RO calls.</td><td>Score</td></tr>
+          <tr><td>Donald feedback</td><td>Improved generation must preserve the feedback-aligned candidate.</td><td>Priority boost</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        Finalist policy for COST-1A/M23: include diverse high-quality finalists, not the first N variants. Include the best 2-driver candidate, best handoff candidate, best feedback-aligned candidate, and best minimal-self fallback only when needed.
+      </div>
+    </section>
+
+    <section id="cost" class="section">
+      <h2>Cost-Safe Performance Design</h2>
+      <p>Donald does not yet know the manual API cost baseline and historically stayed within free credits. Therefore the system should start with conservative code budgets plus Google Cloud quotas, then show real usage so the budget can be tuned.</p>
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Normal RO preview calls</th><th>Pros</th><th>Cons</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Conservative</strong></td>
+            <td>4-6</td>
+            <td>Lowest spike risk. Good while learning actual billing.</td>
+            <td>May miss a better handoff/fallback plan on complex days.</td>
+          </tr>
+          <tr>
+            <td><strong>Balanced recommended</strong></td>
+            <td>8-12</td>
+            <td>Enough for 3-4 serious finalists with 2-3 runs each. Strong quality/cost balance.</td>
+            <td>Still needs RO-side guardrails and cache to be fully safe.</td>
+          </tr>
+          <tr>
+            <td><strong>Rescue confirmed</strong></td>
+            <td>14-18</td>
+            <td>Useful on difficult days close to 1 PM or with unusual geography.</td>
+            <td>Must require explicit confirmation and display cost risk.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="grid">
+        <div class="span-6 card good">
+          <h3>Recommended starting defaults</h3>
+          <ul>
+            <li>Normal mode: 8-12 RO optimize-preview calls total.</li>
+            <li>Finalist candidates: 3-4 high-quality diverse candidates.</li>
+            <li>Repair/re-preview: max 2 normal repair calls.</li>
+            <li>Simple route preview: 1 call.</li>
+            <li>Rescue mode: max 14-18 calls, explicit confirmation only.</li>
+          </ul>
+        </div>
+        <div class="span-6 card warn">
+          <h3>Budget exhaustion behavior</h3>
+          <ul>
+            <li>Stop paid preview calls immediately.</li>
+            <li>Return partial proof honestly.</li>
+            <li>Recommend only proven qualified candidates.</li>
+            <li>Show "best unproven idea" separately as warning-only.</li>
+            <li>Record correlation ID, budget used, and skipped candidates.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="geocoding" class="section">
+      <h2>Geocoding Redesign</h2>
+      <p>Current address capture is plain structured text. Delivery Agent has a geocode cache, but User and DailyDeliveryOrder address schemas do not currently store lat/lng/place IDs. This is a major quality and cost issue because precise meet-up and cluster decisions need coordinates.</p>
+      <div class="grid">
+        <div class="span-4 card good">
+          <h3>Phase 1: fast and realistic</h3>
+          <ul>
+            <li>Keep using Delivery Agent geocode cache.</li>
+            <li>Cache successes and failures.</li>
+            <li>Send lat/lng to RO whenever available.</li>
+            <li>Warn or block recommendation when coordinate coverage is low.</li>
+            <li>Detect "North York" labels near kitchen by coordinate, not area string.</li>
+          </ul>
+        </div>
+        <div class="span-4 card brand">
+          <h3>Phase 2: store address quality</h3>
+          <ul>
+            <li>Add lat/lng and normalized address fields to customer/order address records.</li>
+            <li>Backfill existing active customers from cache/geocode.</li>
+            <li>Preserve per-order override behavior because customers can change delivery address.</li>
+            <li>Use address hash/place ID for invalidating stale coordinates.</li>
+          </ul>
+        </div>
+        <div class="span-4 card warn">
+          <h3>Phase 3: autocomplete</h3>
+          <ul>
+            <li>Add Google Places autocomplete to address entry/edit flows.</li>
+            <li>Store place ID, formatted address, lat/lng, postal code, and components.</li>
+            <li>Do this after cost guardrails unless it is scoped tightly.</li>
+            <li>Do not block Delivery Agent progress on full autocomplete migration.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">
+        Recommendation: implement cost guardrails first, then add a small address-quality milestone. Full autocomplete is valuable but touches customer flows and should be treated as a separate scoped project.
+      </div>
+    </section>
+
+    <section id="learning" class="section">
+      <h2>Historical Learning and Retrieval</h2>
+      <p>M20C learning modules are the right direction because they turn old delivery days into cheap intelligence. They should reduce paid preview calls by improving local finalist selection.</p>
+      <table>
+        <thead>
+          <tr><th>Learning feature</th><th>How it helps planning quality</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Geo/spread features</td><td>Retrieve days with similar downtown/midtown, North York, Markham/Richmond Hill, outlier, and same-building patterns.</td></tr>
+          <tr><td>Route-shape features</td><td>Warn against backtracking, downtown/north ping-pong, and poor endpoint choices.</td></tr>
+          <tr><td>Stop-control features</td><td>Learn when fixed stops, end stops, and handoff stops helped or hurt.</td></tr>
+          <tr><td>Outcome features</td><td>Separate good plan vs bad plan vs late-driver-start artifacts.</td></tr>
+          <tr><td>Resource profile features</td><td>Transfer 2-driver lessons to 3-driver planning without copying old run counts blindly.</td></tr>
+          <tr><td>Donald feedback</td><td>Turn approvals, requests for improvement, and rejected patterns into retrieval labels.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        M20C-3E should continue only after COST-1 guardrails are understood. It should build one-date learning cases from existing Admin/RO historical data without paid preview/create calls.
+      </div>
+    </section>
+
+    <section id="llm" class="section">
+      <h2>LLM Involvement</h2>
+      <div class="grid">
+        <div class="span-6 card good">
+          <h3>Use LLM for</h3>
+          <ul>
+            <li>Generating complete candidate plans with exact order IDs.</li>
+            <li>Reasoning over today's fingerprint and similar historical cases.</li>
+            <li>Explaining tradeoffs in Donald-readable language.</li>
+            <li>Suggesting support/self only when rules indicate hired-driver plans cannot meet 1 PM.</li>
+            <li>Adapting to Run A/B/C resource profiles without hardcoded driver names.</li>
+          </ul>
+        </div>
+        <div class="span-6 card danger">
+          <h3>Do not trust LLM for</h3>
+          <ul>
+            <li>Final order completeness.</li>
+            <li>Duplicate prevention.</li>
+            <li>Hard deadline qualification.</li>
+            <li>Paid preview budget decisions.</li>
+            <li>Final route creation payload validity.</li>
+          </ul>
+        </div>
+      </div>
+      <h3>LLM output contract</h3>
+      <ul>
+        <li>Return max 3 complete candidate plans in normal mode.</li>
+        <li>Each candidate includes exact order IDs per run, planned provider/receiver roles, handoff proposal, before-handoff stops, support/self usage, and reasoning.</li>
+        <li>Every output is validated deterministically before any RO preview.</li>
+        <li>Invalid outputs are repaired locally or rejected without paid RO calls.</li>
+        <li>If no qualified plan is likely, LLM may say manual support is required, but deterministic proof/validation decides final status.</li>
+      </ul>
+    </section>
+
+    <section id="trust" class="section">
+      <h2>Recommendation and Trust Design</h2>
+      <div class="grid">
+        <div class="span-6 card good">
+          <h3>Qualified plan requirements</h3>
+          <ul>
+            <li>Every confirmed order assigned exactly once.</li>
+            <li>All previewed runs finish by 1 PM.</li>
+            <li>At least 5 minutes buffer in current operations, ideally 5-10 minutes.</li>
+            <li>No blocking coordinate, validation, or route-shape issue.</li>
+            <li>Support/self only if hired-driver plan cannot safely meet deadline.</li>
+            <li>RO proof exists for the recommended candidate.</li>
+          </ul>
+        </div>
+        <div class="span-6 card warn">
+          <h3>When no proof is enough</h3>
+          <ul>
+            <li>If all previewed candidates miss 1 PM, show no safe recommendation.</li>
+            <li>If budget is exhausted, show best proven plan and best unproven idea separately.</li>
+            <li>If manual support is needed, say so directly and show the fewest support stops found.</li>
+            <li>If coordinate coverage is low, mark recommendation confidence low.</li>
+          </ul>
+        </div>
+      </div>
+      <p>The UI should show the recommendation in plain operational terms: latest finish, buffer, run split, support/self use, meet-up location, why this plan, cost budget used, and warnings.</p>
+    </section>
+
+    <section id="guardrails" class="section">
+      <h2>Guardrails and Observability</h2>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Guardrail</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Admin</td><td>Preview budget, finalist count, repair cap</td><td>Stop fanout before it reaches RO.</td></tr>
+          <tr><td>Admin</td><td>Quality-preserving finalist selector</td><td>Keep planning strong under budget.</td></tr>
+          <tr><td>Admin</td><td>Duplicate-click lock</td><td>Prevent repeated server work from UI clicks/aborts.</td></tr>
+          <tr><td>Admin</td><td>Correlation ID</td><td>Trace one action across UI, Admin, RO, and logs.</td></tr>
+          <tr><td>RO</td><td>Estimated billable units</td><td>Know shipments, Directions legs, geocodes before paid calls.</td></tr>
+          <tr><td>RO</td><td>Hard reject high-cost preview</td><td>Protect against Admin bugs or direct misuse.</td></tr>
+          <tr><td>RO</td><td>Preview cache/idempotency</td><td>Never pay twice for identical proof.</td></tr>
+          <tr><td>RO/Admin</td><td>Geocode cache</td><td>Reduce repeated customer/start/end geocoding.</td></tr>
+          <tr><td>Testing</td><td>Dry-run/mock mode</td><td>Allow development without paid Google calls.</td></tr>
+          <tr><td>Cloud</td><td>Budgets and quotas</td><td>Last-resort protection against unknown bugs.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="roadmap" class="section">
+      <h2>Refined Roadmap</h2>
+      <ol>
+        <li><strong>COST-1A Admin quality-preserving preview budget:</strong> finalist selector, budget object, repair cap, correlation, UI budget display.</li>
+        <li><strong>COST-1B RO paid-call budget:</strong> estimate billable units and reject high-cost previews before Google calls.</li>
+        <li><strong>COST-1C correlation/logging:</strong> unified trace across UI, Admin, RO, and Google-call estimates.</li>
+        <li><strong>COST-1D preview cache/idempotency:</strong> normalized preview payload hash and short TTL reuse.</li>
+        <li><strong>COST-1E geocode cache improvements:</strong> start/end/kitchen cache, failed geocode TTL, and customer coordinate storage plan.</li>
+        <li><strong>M20C-3E one-date learning builder:</strong> save/upsert learning cases from existing historical data only.</li>
+        <li><strong>M20C-4 backfill and uncertain match review:</strong> 30-60 days plus simple accept/edit/ignore review.</li>
+        <li><strong>M21 similarity retrieval:</strong> retrieve profile-compatible historical cases by spread, clusters, outliers, and outcomes.</li>
+        <li><strong>M22 LLM complete candidate plans:</strong> exact order IDs, run resources, support/self rules, deterministic validation.</li>
+        <li><strong>M23 budgeted RO proof loop:</strong> preview top finalists, qualify recommendation, show best unproven idea separately.</li>
+        <li><strong>M24 UI/verification polish:</strong> cost budget, confidence, tradeoff explanation, and manual support warnings.</li>
+        <li><strong>M25 future profile adaptation:</strong> 3 hired drivers, North York provider role, equal-driver mode, and role-homebase learning.</li>
+      </ol>
+    </section>
+
+    <section id="repo-gaps" class="section">
+      <h2>Current Repo Gap Analysis</h2>
+      <div class="grid">
+        <div class="span-6 card good">
+          <h3>Already exists</h3>
+          <ul>
+            <li>Planning profile, deadline, self fallback, handoff, scoring rules.</li>
+            <li>Geocode cache and coordinate coverage summaries.</li>
+            <li>Candidate preview, handoff preview, repair, and best-plan selection.</li>
+            <li>Donald review/approval and improved generation loop.</li>
+            <li>Final route idempotency/external ID SSOT.</li>
+            <li>Historical learning contracts, model, matching, coordinate, geo, outcome, route-shape, stop-control, and profile feature extractors.</li>
+            <li>Strong unit/integration test base across Delivery Agent modules.</li>
+          </ul>
+        </div>
+        <div class="span-6 card danger">
+          <h3>Missing or risky</h3>
+          <ul>
+            <li>No server-side RO preview budget in Admin.</li>
+            <li>No quality-preserving finalist selector before RO preview.</li>
+            <li>No preview cache/idempotency for optimize-preview.</li>
+            <li>No duplicate-click server lock.</li>
+            <li>No full correlation ID through UI/Admin/RO/Google.</li>
+            <li>Historical similarity scoring is not active.</li>
+            <li>User/order address schemas do not store lat/lng/place ID.</li>
+            <li>Current candidate logic still uses role names like DT/Marco conceptually.</li>
+            <li>Potential repair issue: constrained kitchen-run repair helper should be checked because constraints may not be passed through as intended.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="questions" class="section">
+      <h2>Remaining Questions for Donald</h2>
+      <p>These are not blockers for COST-1A, but they matter before M22/M23.</p>
+      <div class="grid">
+        <div class="span-6 card">
+          <h3>Operations</h3>
+          <ul>
+            <li>What is the normal kitchen departure time, and how often does it slip?</li>
+            <li>For the future North York provider, should that driver always pick up from kitchen, or only when today's geography makes it better?</li>
+            <li>Do drivers have hard latest work limits beyond the 1 PM customer deadline?</li>
+          </ul>
+        </div>
+        <div class="span-6 card">
+          <h3>Cost</h3>
+          <ul>
+            <li>After COST-1 logging is added, what monthly Google spend should trigger an automatic pause: $25, $50, or another number?</li>
+            <li>Should rescue mode require confirmation every time, or only when estimated cost passes a threshold?</li>
+          </ul>
+        </div>
+        <div class="span-6 card">
+          <h3>Addresses</h3>
+          <ul>
+            <li>Should autocomplete be required for all new address edits, or optional with admin fallback?</li>
+            <li>Should current users be asked to re-confirm addresses, or should Admin quietly backfill coordinates first?</li>
+          </ul>
+        </div>
+        <div class="span-6 card">
+          <h3>LLM and review</h3>
+          <ul>
+            <li>When LLM suggests a plan that local rules reject, should Donald see the rejected idea or should it stay hidden?</li>
+            <li>How much explanation do you want in daily UI: compact summary only, or expandable reasoning details?</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
