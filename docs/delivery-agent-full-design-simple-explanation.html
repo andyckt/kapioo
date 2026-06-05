@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kapioo Delivery AI Agent - Simple Full Design Explanation</title>
+  <style>
+    :root {
+      --ink: #18202a;
+      --muted: #5f6c7b;
+      --paper: #f7f8fb;
+      --panel: #ffffff;
+      --line: #dfe5ec;
+      --blue: #2f6fed;
+      --blue-soft: #e8f0ff;
+      --green: #147d56;
+      --green-soft: #e7f6ef;
+      --amber: #946200;
+      --amber-soft: #fff4d8;
+      --red: #b42318;
+      --red-soft: #ffebe8;
+      --violet: #6b4eff;
+      --violet-soft: #efeaff;
+      --shadow: 0 18px 48px rgba(30, 42, 62, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #eef4ff 0, rgba(238, 244, 255, 0) 520px),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 72px;
+    }
+
+    .hero {
+      padding: 34px 0 28px;
+    }
+
+    .eyebrow {
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      letter-spacing: 0;
+      line-height: 1.15;
+    }
+
+    h1 {
+      max-width: 980px;
+      margin: 12px 0 16px;
+      font-size: clamp(36px, 6vw, 66px);
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: clamp(26px, 4vw, 38px);
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    .lead {
+      max-width: 900px;
+      color: var(--muted);
+      font-size: 20px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .pill.blue {
+      border-color: #bdd0ff;
+      background: var(--blue-soft);
+      color: #1d4ec9;
+    }
+
+    .pill.green {
+      border-color: #b9e4cf;
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .pill.amber {
+      border-color: #f0d18a;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 26px 0 0;
+    }
+
+    .toc a {
+      min-height: 44px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: 0 8px 28px rgba(30, 42, 62, 0.05);
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: var(--shadow);
+    }
+
+    .section.tight {
+      padding-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      grid-column: span 4;
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+
+    .card.span-3 {
+      grid-column: span 3;
+    }
+
+    .card.span-4 {
+      grid-column: span 4;
+    }
+
+    .card.span-5 {
+      grid-column: span 5;
+    }
+
+    .card.span-6 {
+      grid-column: span 6;
+    }
+
+    .card.span-7 {
+      grid-column: span 7;
+    }
+
+    .card.span-8 {
+      grid-column: span 8;
+    }
+
+    .card.span-12 {
+      grid-column: span 12;
+    }
+
+    .card.blue {
+      border-color: #c7d7ff;
+      background: var(--blue-soft);
+    }
+
+    .card.green {
+      border-color: #c0e8d4;
+      background: var(--green-soft);
+    }
+
+    .card.amber {
+      border-color: #f0d18a;
+      background: var(--amber-soft);
+    }
+
+    .card.red {
+      border-color: #ffc5be;
+      background: var(--red-soft);
+    }
+
+    .card.violet {
+      border-color: #d7ccff;
+      background: var(--violet-soft);
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.74);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    ul,
+    ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin: 7px 0;
+    }
+
+    .plain-list {
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .plain-list li {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(24, 32, 42, 0.08);
+    }
+
+    .plain-list li:last-child {
+      border-bottom: 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .step {
+      min-height: 150px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--blue);
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+
+    .number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      margin-bottom: 12px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lane:last-child {
+      border-bottom: 0;
+    }
+
+    .lane-title {
+      font-weight: 900;
+      color: var(--blue);
+    }
+
+    .callout {
+      margin-top: 16px;
+      padding: 16px 18px;
+      border-left: 5px solid var(--blue);
+      border-radius: 8px;
+      background: #eef4ff;
+    }
+
+    .callout.green {
+      border-color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .callout.amber {
+      border-color: #c98500;
+      background: var(--amber-soft);
+    }
+
+    .callout.red {
+      border-color: var(--red);
+      background: var(--red-soft);
+    }
+
+    table {
+      width: 100%;
+      margin-top: 16px;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f0f4fa;
+      color: #344256;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: rgba(24, 32, 42, 0.08);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .decision {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .decision .card {
+      grid-column: auto;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .status.done {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .status.next {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .status.wait {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .mini {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .toc {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card,
+      .card.span-3,
+      .card.span-4,
+      .card.span-5,
+      .card.span-6,
+      .card.span-7,
+      .card.span-8 {
+        grid-column: span 12;
+      }
+
+      .lane {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      .section {
+        padding: 20px;
+      }
+
+      .toc,
+      .flow,
+      .decision {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Kapioo Delivery AI Agent</div>
+      <h1>The Full Design, Explained Simply</h1>
+      <p class="lead">
+        This document explains what we are building, why we are building it this way,
+        how it avoids surprise costs, how it protects delivery-plan quality, and what
+        still needs to happen before the agent can go live.
+      </p>
+      <div class="meta-row">
+        <span class="pill blue">Plain English</span>
+        <span class="pill green">Quality first</span>
+        <span class="pill amber">Cost controlled</span>
+        <span class="pill">Updated 2026-06-05</span>
+      </div>
+      <nav class="toc" aria-label="Page sections">
+        <a href="#one-minute">One-Minute Version</a>
+        <a href="#terms">Terms Translated</a>
+        <a href="#daily-flow">Daily Flow</a>
+        <a href="#feedback-loop">Approve/Reject Loop</a>
+        <a href="#parts">System Parts</a>
+        <a href="#cost">Cost Design</a>
+        <a href="#quality">Quality Design</a>
+        <a href="#learning">Learning</a>
+        <a href="#llm">LLM Design</a>
+        <a href="#live">Going Live</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#decisions">Donald Decisions</a>
+        <a href="#summary">Final Summary</a>
+      </nav>
+    </section>
+
+    <section id="one-minute" class="section">
+      <h2>One-Minute Version</h2>
+      <div class="grid">
+        <article class="card span-6 green">
+          <span class="label">What we are building</span>
+          <h3>A daily delivery planning assistant</h3>
+          <p>
+            The agent helps you create the best delivery plan for today's confirmed
+            orders. It should decide which orders go into Run A, Run B, and later Run C,
+            where drivers should meet if needed, whether support/self is required, and
+            whether the plan can finish before 1 PM.
+          </p>
+        </article>
+        <article class="card span-6 blue">
+          <span class="label">What it must protect</span>
+          <h3>Cost and quality at the same time</h3>
+          <p>
+            The old danger was paying Google/Route Optimizer too many times while the
+            system searched for a good plan. The new design makes the system think
+            cheaply first, then pay for proof only after it has found a few serious plans.
+          </p>
+        </article>
+        <article class="card span-4">
+          <h3>The agent thinks</h3>
+          <p>
+            It uses today's orders, map coordinates, old delivery days, your business
+            rules, and an LLM when needed.
+          </p>
+        </article>
+        <article class="card span-4">
+          <h3>The agent checks</h3>
+          <p>
+            Local code verifies no missing orders, no duplicate orders, good split shape,
+            good handoff logic, and self/support only when needed.
+          </p>
+        </article>
+        <article class="card span-4">
+          <h3>The agent proves</h3>
+          <p>
+            Route Optimizer checks only the top finalists with Google route math. Donald
+            approves before final routes are created.
+          </p>
+        </article>
+      </div>
+      <div class="callout green">
+        The main rule: <strong>Route Optimizer is the final proof engine, not the search engine.</strong>
+        The agent should not pay Google repeatedly just to discover what might work.
+      </div>
+    </section>
+
+    <section id="terms" class="section">
+      <h2>Important Terms, Translated</h2>
+      <p>
+        These words will come up often. This section is the simple version of what each one means.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Term</th>
+            <th>Plain meaning</th>
+            <th>Why it matters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Admin repo</td>
+            <td>The Kapioo website/admin system you use to manage the business.</td>
+            <td>This is where the Delivery Agent lives and where you approve plans.</td>
+          </tr>
+          <tr>
+            <td>Route Optimizer repo</td>
+            <td>The separate route calculation system.</td>
+            <td>It calls Google APIs and can cost money, so we use it carefully.</td>
+          </tr>
+          <tr>
+            <td>LLM</td>
+            <td>The AI reasoning model.</td>
+            <td>It helps create smart candidate plans, especially on difficult days.</td>
+          </tr>
+          <tr>
+            <td>Candidate plan</td>
+            <td>One possible delivery plan.</td>
+            <td>Example: Run A gets these order IDs, Run B gets those order IDs, meet here.</td>
+          </tr>
+          <tr>
+            <td>Local validation</td>
+            <td>Cheap code checks inside Admin.</td>
+            <td>It catches obvious mistakes before any paid route preview.</td>
+          </tr>
+          <tr>
+            <td>RO proof</td>
+            <td>A Route Optimizer preview of a finalist plan.</td>
+            <td>This is the paid check that proves estimated finish time and route order.</td>
+          </tr>
+          <tr>
+            <td>Fingerprint</td>
+            <td>A unique signature for today's planning situation.</td>
+            <td>If the orders/profile/rules did not change, the system can reuse cached results.</td>
+          </tr>
+          <tr>
+            <td>Cache</td>
+            <td>Reuse the same answer instead of paying again.</td>
+            <td>This stops repeated clicks or unchanged days from burning money.</td>
+          </tr>
+          <tr>
+            <td>Cost policy</td>
+            <td>The spending rulebook.</td>
+            <td>It says how many LLM calls and RO previews are allowed before the system stops.</td>
+          </tr>
+          <tr>
+            <td>Model routing</td>
+            <td>Choosing the right AI model strength for the day.</td>
+            <td>Easy days can skip LLM; hard days can use a stronger model.</td>
+          </tr>
+          <tr>
+            <td>Learning case</td>
+            <td>A saved historical delivery day.</td>
+            <td>The agent learns what worked, what failed, and which old days are useful examples.</td>
+          </tr>
+          <tr>
+            <td>Unproven idea</td>
+            <td>A plan that sounds promising but has not been Route Optimizer checked.</td>
+            <td>It can be shown as a warning-only idea, but never as the main recommendation.</td>
+          </tr>
+          <tr>
+            <td>Improvement loop</td>
+            <td>What happens after you reject a plan or ask for changes.</td>
+            <td>The agent stores your feedback, creates a better plan, and learns from the result.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="daily-flow" class="section">
+      <h2>How the Agent Should Work Every Day</h2>
+      <p>
+        The daily flow should feel simple to you, even though the system behind it is careful.
+      </p>
+      <div class="flow">
+        <article class="step">
+          <span class="number">1</span>
+          <strong>Load orders</strong>
+          Confirm today's delivery orders and ignore non-confirmed orders.
+        </article>
+        <article class="step">
+          <span class="number">2</span>
+          <strong>Check addresses</strong>
+          Use saved coordinates and geocode cache. Warn when address quality is weak.
+        </article>
+        <article class="step">
+          <span class="number">3</span>
+          <strong>Understand the day</strong>
+          Count orders, clusters, outliers, same-building stops, and confusing area labels.
+        </article>
+        <article class="step">
+          <span class="number">4</span>
+          <strong>Look at history</strong>
+          Find old delivery days that looked similar and learn from good/bad outcomes.
+        </article>
+        <article class="step">
+          <span class="number">5</span>
+          <strong>Make plans</strong>
+          Use local rules and LLM when needed to create exact Run A/B/C order splits.
+        </article>
+        <article class="step">
+          <span class="number">6</span>
+          <strong>Check plans cheaply</strong>
+          Make sure every order is assigned once and the plan follows your rules.
+        </article>
+        <article class="step">
+          <span class="number">7</span>
+          <strong>Pick finalists</strong>
+          Choose only a few strong, different plans worth paying to preview.
+        </article>
+        <article class="step">
+          <span class="number">8</span>
+          <strong>Pay for proof</strong>
+          Route Optimizer previews only the finalists under a strict budget.
+        </article>
+        <article class="step">
+          <span class="number">9</span>
+          <strong>Recommend honestly</strong>
+          Recommend only a proven qualified plan. Warn clearly if proof is partial.
+        </article>
+        <article class="step">
+          <span class="number">10</span>
+          <strong>Donald decides</strong>
+          Choose only one of two actions: Approve, or Reject with a required reason.
+        </article>
+      </div>
+      <div class="callout">
+        From your point of view, the final product should feel like this:
+        click one planning button, review one clear recommended plan, then either Approve it
+        or Reject it with a reason. Final driver runs are created only after approval.
+      </div>
+    </section>
+
+    <section id="feedback-loop" class="section">
+      <h2>The Approve or Reject Loop</h2>
+      <p>
+        After the agent shows a recommended plan, the UI should give you only two action
+        buttons: <strong>Approve</strong> or <strong>Reject with reason</strong>. If you reject,
+        the reason is not just a note. It becomes the most important instruction for the next
+        recommended plan.
+      </p>
+      <div class="flow">
+        <article class="step">
+          <span class="number">1</span>
+          <strong>Show one recommendation</strong>
+          The system shows one best proven plan, plus warnings, cost used, and optional
+          warning-only unproven ideas.
+        </article>
+        <article class="step">
+          <span class="number">2</span>
+          <strong>Approve or reject</strong>
+          Approve creates final driver runs. Reject must include a reason, such as wrong split,
+          meetup too late, not enough buffer, self used too much, or other notes.
+        </article>
+        <article class="step">
+          <span class="number">3</span>
+          <strong>Save the full context</strong>
+          Admin saves the rejected plan, your reason, cost used, proof results, candidate scores,
+          order set, and planning fingerprint.
+        </article>
+        <article class="step">
+          <span class="number">4</span>
+          <strong>LLM understands why</strong>
+          The LLM reads your rejection reason with the rejected plan and turns it into exact
+          planning adjustments, not vague advice.
+        </article>
+        <article class="step">
+          <span class="number">5</span>
+          <strong>Make adjustment rules</strong>
+          The system creates hard rules, soft preferences, avoid-patterns, order moves, meetup
+          constraints, and support/self changes for the next attempt.
+        </article>
+        <article class="step">
+          <span class="number">6</span>
+          <strong>Create next candidates</strong>
+          The agent first tries a targeted repair. If that is not enough, the LLM generates new
+          complete candidate plans that follow your rejection feedback.
+        </article>
+        <article class="step">
+          <span class="number">7</span>
+          <strong>Validate cheaply</strong>
+          Local code checks every order once, no duplicates, profile rules, handoff quality,
+          support/self logic, and deadline risk before any paid preview.
+        </article>
+        <article class="step">
+          <span class="number">8</span>
+          <strong>Preview only finalists</strong>
+          Route Optimizer proves only the strongest revised finalists, usually fewer than the
+          first attempt because the feedback narrowed the search.
+        </article>
+        <article class="step">
+          <span class="number">9</span>
+          <strong>Show what changed</strong>
+          The next recommendation clearly says what changed because of your rejection reason and
+          why this new plan is better.
+        </article>
+        <article class="step">
+          <span class="number">10</span>
+          <strong>Repeat until approved</strong>
+          The loop repeats after each rejection, unless the system honestly cannot find a qualified
+          plan within hard rules or cost safeguards.
+        </article>
+      </div>
+      <div class="grid" style="margin-top: 14px;">
+        <article class="card span-6 blue">
+          <h3>What the LLM should output from your rejection</h3>
+          <ul>
+            <li>Reason summary: what you disliked in plain words.</li>
+            <li>Hard changes: things the next plan must do or must avoid.</li>
+            <li>Soft changes: preferences that help scoring but can be overridden by 1 PM safety.</li>
+            <li>Concrete adjustments: orders to move, meetup to change, buffer to improve, or self/support to adjust.</li>
+            <li>Risk warning: whether the feedback may make the plan impossible or more expensive to prove.</li>
+          </ul>
+        </article>
+        <article class="card span-6 green">
+          <h3>How it stays accurate</h3>
+          <ul>
+            <li>The LLM can reason, but local code still checks every order exactly once.</li>
+            <li>The next plan must be different from the rejected plan in a meaningful way.</li>
+            <li>The rejected reason becomes part of the planning fingerprint and cache key.</li>
+            <li>Route Optimizer proves the final revised plan before it can be recommended.</li>
+            <li>Approval stores a positive signal; rejection stores an avoid/negative signal.</li>
+          </ul>
+        </article>
+      </div>
+      <h3>Simple Example</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Donald rejection reason</th>
+            <th>LLM turns it into</th>
+            <th>Next plan should change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>"Meetup is too late. Run B cannot finish uptown after that."</td>
+            <td>Hard rule: earlier meetup. Soft rule: reduce receiver burden after meetup.</td>
+            <td>Move meetup earlier, let Run A do more before handoff, or use support/self only if needed.</td>
+          </tr>
+          <tr>
+            <td>"Self has too many orders."</td>
+            <td>Hard rule: self/support should be minimized. Re-score self penalty higher.</td>
+            <td>Try moving self stops back to Run A/B while still proving 1 PM finish.</td>
+          </tr>
+          <tr>
+            <td>"Downtown and midtown are split weirdly."</td>
+            <td>Soft rule: preserve downtown/midtown grouping unless deadline proof requires otherwise.</td>
+            <td>Generate a cleaner downtown/midtown run and recheck handoff/outlier impact.</td>
+          </tr>
+          <tr>
+            <td>"Not enough buffer before 1 PM."</td>
+            <td>Hard target: improve deadline buffer. Rescue allowed if no hired-driver plan is safe.</td>
+            <td>Find shorter total duration, earlier handoff, better endpoint, or minimal support/self plan.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="grid" style="margin-top: 14px;">
+        <article class="card span-6 amber">
+          <h3>Cost-efficient loop design</h3>
+          <ul>
+            <li>One LLM feedback-reasoning pass per rejection.</li>
+            <li>Try local targeted repair before asking for a full new plan.</li>
+            <li>Generate fewer candidates after rejection because your feedback narrows the search.</li>
+            <li>Preview only the best revised finalists, not the whole idea list.</li>
+            <li>Use cache when the same rejected plan and same feedback appear again.</li>
+          </ul>
+        </article>
+        <article class="card span-6 red">
+          <h3>Edge cases the loop must handle</h3>
+          <ul>
+            <li>Reject reason is too vague: UI asks for a clearer reason before continuing.</li>
+            <li>Feedback conflicts with hard rules: the system explains why it cannot follow it fully.</li>
+            <li>Orders change during review: old recommendation expires and the agent replans from fresh data.</li>
+            <li>No qualified plan exists: the agent says so instead of pretending.</li>
+            <li>Cost limit is near: the UI warns before more expensive rescue planning.</li>
+          </ul>
+        </article>
+      </div>
+      <h3>What gets stored after each decision</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Decision</th>
+            <th>Stored signal</th>
+            <th>How the agent uses it later</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Approve</td>
+            <td>The approved plan, proof result, route shape, cost used, and current order/map fingerprint.</td>
+            <td>Similar future days can trust this pattern more, especially if the actual route finishes well.</td>
+          </tr>
+          <tr>
+            <td>Reject with reason</td>
+            <td>The rejected plan, rejection reason, LLM interpretation, avoid-pattern, and attempted adjustment rules.</td>
+            <td>Similar future days should avoid the rejected pattern and prefer plans that satisfy the stored reason.</td>
+          </tr>
+          <tr>
+            <td>Rejected plan later fixed</td>
+            <td>Before/after comparison: what changed and whether the new plan was approved.</td>
+            <td>The agent learns which adjustments actually solved the problem, not just that the first plan was bad.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout green">
+        Final loop design: every rejection should make the next recommendation more informed.
+        The agent should keep trying with your feedback until you approve, while still protecting
+        hard delivery rules, cost limits, and recommendation honesty.
+      </div>
+    </section>
+
+    <section id="parts" class="section">
+      <h2>The Main Parts of the System</h2>
+      <div class="grid">
+        <article class="card span-6">
+          <h3>1. Kapioo Admin</h3>
+          <p>
+            This is the control center. It knows today's orders, your planning profile,
+            your review decisions, historical learning cases, cost policy, and the final
+            recommendation shown to you.
+          </p>
+        </article>
+        <article class="card span-6">
+          <h3>2. Route Optimizer</h3>
+          <p>
+            This is the route proof engine. It checks exact route sequence, time, distance,
+            and finish time. Because it calls Google APIs, Admin should send only serious
+            finalists to it.
+          </p>
+        </article>
+        <article class="card span-6">
+          <h3>3. Historical learning</h3>
+          <p>
+            This is the memory. It saves old delivery days and marks whether their route
+            pattern was good, weak, bad, or not useful. This helps the agent avoid repeating
+            bad patterns.
+          </p>
+        </article>
+        <article class="card span-6">
+          <h3>4. LLM planning</h3>
+          <p>
+            This is the flexible reasoning layer. It helps create strong candidate plans
+            when templates are not enough, but local code and RO proof still check its work.
+          </p>
+        </article>
+      </div>
+      <div class="callout amber">
+        The LLM is not the final authority. The best design is:
+        <strong>LLM proposes, local code validates, Route Optimizer proves, Donald approves.</strong>
+      </div>
+    </section>
+
+    <section id="cost" class="section">
+      <h2>How We Keep It Cheap Without Making It Weak</h2>
+      <p>
+        There are two main cost areas: Google/Route Optimizer cost and LLM token cost.
+        The May 30/31 spike was mainly Google/Route Optimizer, not LLM. But before we add LLM,
+        we still need cost rules so tokens do not become the next problem.
+      </p>
+      <div class="grid">
+        <article class="card span-6 red">
+          <span class="label">Old danger</span>
+          <h3>Paying to search</h3>
+          <p>
+            The dangerous pattern is generating many plan variations and asking Route
+            Optimizer/Google to check all of them. That can become very expensive because
+            Google bills by stops, route legs, geocodes, and route optimization units.
+          </p>
+        </article>
+        <article class="card span-6 green">
+          <span class="label">New direction</span>
+          <h3>Think first, prove later</h3>
+          <p>
+            The safe pattern is to use history, coordinates, local rules, and LLM reasoning
+            to narrow the choices first. Then pay Route Optimizer to prove only the top few.
+          </p>
+        </article>
+      </div>
+      <div class="grid" style="margin-top: 14px;">
+        <article class="card span-4 green">
+          <h3>Donald's normal target</h3>
+          <p>
+            Normal daily planning should stay under <strong>$0.50/day</strong> after free credits
+            are ignored. That is already about $15/month, so the system should still optimize lower.
+          </p>
+        </article>
+        <article class="card span-4 amber">
+          <h3>Donald's rescue target</h3>
+          <p>
+            A difficult rescue day should stay under <strong>$1.00/day</strong> whenever possible.
+            Rescue should help avoid manual work, not become a normal expensive habit.
+          </p>
+        </article>
+        <article class="card span-4 red">
+          <h3>Monthly safety limit</h3>
+          <p>
+            Monthly planning cost should warn or pause at <strong>$20/month</strong> so spending
+            cannot quietly drift upward.
+          </p>
+        </article>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cost control</th>
+            <th>Simple meaning</th>
+            <th>Quality protection</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Preview budget</td>
+            <td>Limit how many paid Route Optimizer previews one action can send.</td>
+            <td>Choose finalists by quality signals, not just first few plans.</td>
+          </tr>
+          <tr>
+            <td>LLM call budget</td>
+            <td>Limit how many model calls one planning session can make.</td>
+            <td>Use strong model when needed; do not retry endlessly.</td>
+          </tr>
+          <tr>
+            <td>Cache</td>
+            <td>Reuse results when today's orders and rules did not change.</td>
+            <td>Same answer, lower cost, no quality loss.</td>
+          </tr>
+          <tr>
+            <td>Easy-day skip</td>
+            <td>Do not call LLM if local logic already has a strong proven plan.</td>
+            <td>Use LLM only when it adds value.</td>
+          </tr>
+          <tr>
+            <td>Rescue budget</td>
+            <td>Keep difficult-day planning under the rescue target and stop when budget is used.</td>
+            <td>Support/self can be recommended directly if it is the best proven plan.</td>
+          </tr>
+          <tr>
+            <td>Cost ledger</td>
+            <td>Track estimated cost per planning session.</td>
+            <td>You can see whether the system is worth the cost.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        The goal is not "spend the least possible money." The goal is:
+        <strong>spend a small, controlled amount only when it improves the delivery plan.</strong>
+      </div>
+    </section>
+
+    <section id="quality" class="section">
+      <h2>How We Protect Plan Quality</h2>
+      <p>
+        A cheap bad plan is not useful. The agent must protect business quality first:
+        all orders delivered, before 1 PM, with the least unnecessary support.
+      </p>
+      <div class="grid">
+        <article class="card span-4 green">
+          <h3>Hard rules</h3>
+          <ul>
+            <li>Every confirmed order assigned exactly once.</li>
+            <li>No order delivered after 1 PM.</li>
+            <li>No fake or missing order IDs.</li>
+            <li>Final recommendation must have RO proof.</li>
+          </ul>
+        </article>
+        <article class="card span-4 blue">
+          <h3>Business preferences</h3>
+          <ul>
+            <li>Prefer 5-10 minute deadline buffer.</li>
+            <li>Keep downtown/midtown together where sensible.</li>
+            <li>Keep Markham/Richmond Hill together for now.</li>
+            <li>Use self/support only as last resort.</li>
+          </ul>
+        </article>
+        <article class="card span-4 amber">
+          <h3>Warning areas</h3>
+          <ul>
+            <li>Low coordinate coverage.</li>
+            <li>Unproven plan ideas.</li>
+            <li>Budget exhausted before enough proof.</li>
+            <li>Manual support likely required.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Exact order split</div>
+        <div>
+          The LLM can suggest a split, but local code must verify every confirmed order ID appears
+          once and only once. This is not optional.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Meetup quality</div>
+        <div>
+          The system should not say "somewhere in central North York." It must select an exact
+          meeting stop/location and prove the timing.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Self/support use</div>
+        <div>
+          The agent should first try to make hired-driver plans work. If no safe plan can finish
+          before 1 PM, it should recommend the best proven support/self plan directly and give you
+          the fewest possible self/support stops.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Unproven plans</div>
+        <div>
+          A smart-looking idea is not enough. If it has not passed local validation and Route
+          Optimizer proof, it can be shown only as a warning or backup idea.
+        </div>
+      </div>
+    </section>
+
+    <section id="learning" class="section">
+      <h2>How Historical Learning Fits In</h2>
+      <p>
+        Historical learning is how the agent gets smarter without paying Google again.
+        It looks at old days that already happened and turns them into useful memory.
+      </p>
+      <div class="grid">
+        <article class="card span-6">
+          <h3>What each old day stores</h3>
+          <ul>
+            <li>How many orders there were.</li>
+            <li>Where the orders were on the map.</li>
+            <li>Which stops belonged to which run.</li>
+            <li>Where handoff/fixed/end stops happened.</li>
+            <li>Whether the route finished before 1 PM.</li>
+            <li>Whether lateness came from route design or driver start delay.</li>
+          </ul>
+        </article>
+        <article class="card span-6">
+          <h3>How it helps future days</h3>
+          <ul>
+            <li>Find old days with similar order spread.</li>
+            <li>Copy useful patterns, not exact old routes blindly.</li>
+            <li>Avoid patterns that caused lateness.</li>
+            <li>Understand when a 2-driver lesson transfers to a 3-driver future.</li>
+            <li>Reduce paid preview calls because the search starts smarter.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout green">
+        Historical learning is the agent's low-cost memory. It should make the LLM prompt smaller,
+        make candidate plans better, and reduce the need to test many plans with Route Optimizer.
+      </div>
+      <div class="callout amber">
+        Because you cannot remember exact good or bad historical dates, the system should prepare
+        suggested labels from data first. You can then approve the first learning labels manually
+        instead of trying to remember every old delivery day yourself.
+      </div>
+    </section>
+
+    <section id="llm" class="section">
+      <h2>How the LLM Should Be Used</h2>
+      <p>
+        The LLM should be used like a planner, not like an unchecked decision-maker.
+      </p>
+      <div class="grid">
+        <article class="card span-6 green">
+          <h3>Use LLM for</h3>
+          <ul>
+            <li>Creating complete candidate plans with exact order IDs.</li>
+            <li>Thinking through hard handoff and support/self tradeoffs.</li>
+            <li>Using historical cases and today's map shape together.</li>
+            <li>Explaining recommendations in plain language.</li>
+            <li>Understanding Donald's rejection reason and turning it into exact planning adjustments.</li>
+          </ul>
+        </article>
+        <article class="card span-6 red">
+          <h3>Do not trust LLM alone for</h3>
+          <ul>
+            <li>Order completeness.</li>
+            <li>Duplicate prevention.</li>
+            <li>Final finish-before-1-PM proof.</li>
+            <li>Paid cost budget decisions.</li>
+            <li>Final route creation.</li>
+          </ul>
+        </article>
+      </div>
+      <h3>Model routing in simple words</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Day type</th>
+            <th>Model choice</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Easy day</td>
+            <td>No LLM</td>
+            <td>If local rules and cached proof already produce a strong plan, do not spend tokens.</td>
+          </tr>
+          <tr>
+            <td>Simple explanation or feedback parsing</td>
+            <td>Cheap model</td>
+            <td>These tasks are lower risk and should not need the strongest model.</td>
+          </tr>
+          <tr>
+            <td>Normal complex planning</td>
+            <td>Strong model</td>
+            <td>Exact splitting, handoff, outliers, and 1 PM deadline require stronger reasoning.</td>
+          </tr>
+          <tr>
+            <td>No qualified plan found</td>
+            <td>Strongest rescue model</td>
+            <td>Use only when the system may need self/support or manual intervention.</td>
+          </tr>
+          <tr>
+            <td>Agent has learned enough</td>
+            <td>Cheaper model or no LLM more often</td>
+            <td>As history, cache, and local rules improve, fewer days should need the strong model.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout amber">
+        Early M22 should use a strong model by default on non-easy days. Over time, the agent should
+        need the strong model less often because learning, cache, and local rules become smarter.
+      </div>
+    </section>
+
+    <section id="live" class="section">
+      <h2>What "Live and Fully Functional" Means</h2>
+      <p>
+        The project is not truly live just because it can generate a plan. It is live when it is
+        reliable enough for your daily business operation.
+      </p>
+      <div class="grid">
+        <article class="card span-4 green">
+          <span class="label">Must work</span>
+          <h3>Daily planning</h3>
+          <ul>
+            <li>Load today's confirmed orders.</li>
+            <li>Generate strong candidate plans.</li>
+            <li>Preview finalists under budget.</li>
+            <li>Recommend only proven plans.</li>
+            <li>Offer only Approve or Reject with reason.</li>
+            <li>Use rejection reason to generate the next recommendation.</li>
+            <li>Create final driver runs after approval.</li>
+          </ul>
+        </article>
+        <article class="card span-4 blue">
+          <span class="label">Must be visible</span>
+          <h3>Donald review</h3>
+          <ul>
+            <li>Show latest finish time and buffer.</li>
+            <li>Show Run A/B/C split clearly.</li>
+            <li>Show handoff location and reason.</li>
+            <li>Show support/self reason.</li>
+            <li>Show why the previous plan was rejected and what changed.</li>
+            <li>Require a rejection reason before generating the next plan.</li>
+            <li>Show cost/warnings honestly.</li>
+          </ul>
+        </article>
+        <article class="card span-4 amber">
+          <span class="label">Must be safe</span>
+          <h3>Cost and fallback</h3>
+          <ul>
+            <li>No repeated paid previews from clicks.</li>
+            <li>No endless LLM retries.</li>
+            <li>No fake recommendation when proof is missing.</li>
+            <li>Manual support clearly marked.</li>
+            <li>Rejected-plan feedback stored and reused.</li>
+            <li>Cloud budgets/quotas as last protection.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section">
+      <h2>Roadmap From Now to Live</h2>
+      <p>
+        This is the practical path. The order matters because we want to avoid rebuilding the same
+        structure later.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Step</th>
+            <th>Plain-English goal</th>
+            <th>Status</th>
+            <th>Recommended model level</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>COST-1A to COST-1E</td>
+            <td>Stop Google/Route Optimizer cost spikes with budgets, cache, idempotency, and logs.</td>
+            <td><span class="status done">Mostly done/started</span></td>
+            <td>High or Extra High for cost architecture</td>
+          </tr>
+          <tr>
+            <td>LLM-COST-0A</td>
+            <td>Create the LLM cost policy, call types, and model routing rules before wiring a provider.</td>
+            <td><span class="status next">Next</span></td>
+            <td>Extra High</td>
+          </tr>
+          <tr>
+            <td>LLM-COST-0B</td>
+            <td>Create the planning fingerprint and cache rules so unchanged days do not spend tokens again.</td>
+            <td><span class="status wait">Needed</span></td>
+            <td>High or Extra High</td>
+          </tr>
+          <tr>
+            <td>LLM-COST-0C</td>
+            <td>Build compact historical packages so prompts stay small and useful.</td>
+            <td><span class="status wait">Needed</span></td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>LLM-COST-0D</td>
+            <td>Build the historical evaluation harness to compare cheap vs strong models.</td>
+            <td><span class="status wait">Needed</span></td>
+            <td>Extra High</td>
+          </tr>
+          <tr>
+            <td>M21</td>
+            <td>Retrieve similar historical days by map shape, outcome, profile, and quality label.</td>
+            <td><span class="status wait">Needed</span></td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>M22</td>
+            <td>Wire the LLM to generate complete candidate plans with exact order IDs.</td>
+            <td><span class="status wait">Later</span></td>
+            <td>Extra High</td>
+          </tr>
+          <tr>
+            <td>M23</td>
+            <td>Connect LLM candidates, local validation, RO proof, retry caps, and recommendation status.</td>
+            <td><span class="status wait">Later</span></td>
+            <td>Extra High</td>
+          </tr>
+          <tr>
+            <td>M23B</td>
+            <td>Complete the reject/improve loop: store Donald feedback, regenerate better candidates, and learn from approval or rejection.</td>
+            <td><span class="status wait">Later</span></td>
+            <td>Extra High</td>
+          </tr>
+          <tr>
+            <td>M24</td>
+            <td>Polish UI so you can review plans, costs, confidence, and warnings easily.</td>
+            <td><span class="status wait">Later</span></td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>Address quality milestone</td>
+            <td>Add/store better address coordinates and possibly Google autocomplete.</td>
+            <td><span class="status wait">Separate</span></td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>Production launch</td>
+            <td>Use the agent on real days with cost ledger, logging, Cloud quotas, and manual fallback.</td>
+            <td><span class="status wait">Final</span></td>
+            <td>High for QA, Extra High for launch-risk review</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="decisions" class="section">
+      <h2>Donald Decisions Recorded</h2>
+      <p>
+        These answers are now part of the current design direction.
+      </p>
+      <div class="decision">
+        <article class="card span-6">
+          <h3>Cost comfort</h3>
+          <ul>
+            <li>Normal daily planning target: under $0.50/day, still optimized as low as possible.</li>
+            <li>Rescue-day target: under $1.00/day, still optimized as low as possible.</li>
+            <li>Monthly warning/pause threshold: $20/month.</li>
+          </ul>
+        </article>
+        <article class="card span-6">
+          <h3>Quality behavior</h3>
+          <ul>
+            <li>Early M22 should use a strong model by default on non-easy days.</li>
+            <li>Over time, the agent should need the strong model less as it learns.</li>
+            <li>Unproven ideas can be visible, but must be clearly warning-only.</li>
+            <li>Support/self does not require special confirmation if it is the best optimized proven plan.</li>
+          </ul>
+        </article>
+        <article class="card span-6">
+          <h3>Historical examples</h3>
+          <ul>
+            <li>You cannot remember exact good/bad dates because there are too many.</li>
+            <li>The system should suggest learning labels from data instead of relying on memory.</li>
+            <li>You want to approve the first learning labels manually.</li>
+          </ul>
+        </article>
+        <article class="card span-6">
+          <h3>Address quality</h3>
+          <ul>
+            <li>Address autocomplete should happen after the Delivery Agent unless it is very small/easy.</li>
+            <li>Do not let address upgrade delay the Delivery Agent.</li>
+            <li>Use current geocode/cache approach with safeguards for now.</li>
+            <li>Gradually clean old addresses after the agent is working.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout">
+        Remaining small decision: after we implement the agent, we can choose the exact address
+        cleanup/autocomplete rollout plan. It should not block the delivery planning launch.
+      </div>
+    </section>
+
+    <section id="current-state" class="section">
+      <h2>Where We Are Right Now</h2>
+      <div class="grid">
+        <article class="card span-6 green">
+          <h3>Already in good shape</h3>
+          <ul>
+            <li>Admin has route preview guardrails and cache started.</li>
+            <li>Historical learning case foundation exists.</li>
+            <li>Current deterministic candidate generation exists.</li>
+            <li>Donald review and final route creation flow exists.</li>
+            <li>The repo does not yet have LLM provider calls wired, so we can still design that layer correctly.</li>
+          </ul>
+        </article>
+        <article class="card span-6 amber">
+          <h3>Not ready yet</h3>
+          <ul>
+            <li>LLM cost policy is not implemented yet.</li>
+            <li>Model routing is not implemented yet.</li>
+            <li>Planning fingerprint/cache for LLM is not implemented yet.</li>
+            <li>Historical similarity retrieval is not fully connected to planning yet.</li>
+            <li>Model evaluation against historical days is not built yet.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout">
+        The current direction is strong. We do not need to restart. We need to add the missing
+        cost-quality layer before wiring in the LLM.
+      </div>
+    </section>
+
+    <section id="summary" class="section">
+      <h2>Final Summary</h2>
+      <div class="grid">
+        <article class="card span-4 green">
+          <h3>The business goal</h3>
+          <p>
+            Help you plan daily deliveries faster, finish before 1 PM, use drivers well, and use
+            self/support only when necessary.
+          </p>
+        </article>
+        <article class="card span-4 blue">
+          <h3>The design goal</h3>
+          <p>
+            Let the agent think deeply with cheap information first, then pay for Route Optimizer
+            proof only on a few serious plans.
+          </p>
+        </article>
+        <article class="card span-4 amber">
+          <h3>The launch goal</h3>
+          <p>
+            Make the agent reliable enough for daily use, with cost visibility, clear warnings,
+            historical evaluation, and the approve/reject loop before final routes.
+          </p>
+        </article>
+      </div>
+      <div class="callout green">
+        The safest path forward is not to rush the LLM. The safest path is to build the cost policy,
+        fingerprint/cache, retrieval package, and evaluation harness first, then connect the LLM
+        behind those guardrails.
+      </div>
+      <div class="callout">
+        The approval loop is part of the final product: if Donald rejects a plan, the agent must
+        store the reason, improve the next plan, and use that feedback as future learning.
+      </div>
+    </section>
+
+    <p class="footer">
+      Kapioo Delivery AI Agent simple design explanation. This is a planning document, not production app code.
+    </p>
+  </main>
+</body>
+</html>
