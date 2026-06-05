@@ -1,9 +1,13 @@
 import { z } from "zod";
 
-import { deliveryAgentLlmCallTypeSchema } from "@/lib/contracts/delivery-agent-cost-policy";
+import {
+  deliveryAgentLlmCallTypeSchema,
+  deliveryAgentLlmModelTierSchema,
+} from "@/lib/contracts/delivery-agent-cost-policy";
 import type {
   DeliveryAgentConfiguredModelTier,
   DeliveryAgentLlmCallType,
+  DeliveryAgentLlmModelTier,
 } from "@/lib/contracts/delivery-agent-cost-policy";
 import type { DeliveryAgentCandidateRecommendationStatus } from "@/lib/contracts/delivery-agent";
 import {
@@ -28,6 +32,15 @@ export const DELIVERY_AGENT_COMPACT_HISTORICAL_PACKAGE_VERSION =
 
 export const DELIVERY_AGENT_LLM_EVALUATION_REPORT_VERSION =
   "delivery-agent-llm-evaluation-report-v1" as const;
+
+export const DELIVERY_AGENT_LLM_PROMPT_PACKAGE_VERSION =
+  "delivery-agent-llm-prompt-package-v1" as const;
+
+export const DELIVERY_AGENT_DAILY_CANDIDATE_PROMPT_VERSION =
+  "delivery-agent-daily-candidate-prompt-v1" as const;
+
+export const DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION =
+  "delivery-agent-llm-candidate-output-v1" as const;
 
 export const DELIVERY_AGENT_LLM_PLANNING_SCOPES = [
   "daily_generation",
@@ -83,6 +96,36 @@ export const deliveryAgentLlmModelApprovalDecisionSchema = z.enum(
 
 export type DeliveryAgentLlmPlanningScope =
   (typeof DELIVERY_AGENT_LLM_PLANNING_SCOPES)[number];
+
+export const DELIVERY_AGENT_LLM_PROMPT_MESSAGE_ROLES = ["system", "user"] as const;
+
+export type DeliveryAgentLlmPromptMessageRole =
+  (typeof DELIVERY_AGENT_LLM_PROMPT_MESSAGE_ROLES)[number];
+
+export const deliveryAgentLlmPromptMessageRoleSchema = z.enum(
+  DELIVERY_AGENT_LLM_PROMPT_MESSAGE_ROLES
+);
+
+export const DELIVERY_AGENT_LLM_PROMPT_RULE_SEVERITIES = ["must", "should"] as const;
+
+export type DeliveryAgentLlmPromptRuleSeverity =
+  (typeof DELIVERY_AGENT_LLM_PROMPT_RULE_SEVERITIES)[number];
+
+export const deliveryAgentLlmPromptRuleSeveritySchema = z.enum(
+  DELIVERY_AGENT_LLM_PROMPT_RULE_SEVERITIES
+);
+
+export const DELIVERY_AGENT_LLM_PROMPT_TOKEN_STATUSES = [
+  "within_limit",
+  "over_limit",
+] as const;
+
+export type DeliveryAgentLlmPromptTokenStatus =
+  (typeof DELIVERY_AGENT_LLM_PROMPT_TOKEN_STATUSES)[number];
+
+export const deliveryAgentLlmPromptTokenStatusSchema = z.enum(
+  DELIVERY_AGENT_LLM_PROMPT_TOKEN_STATUSES
+);
 
 export const deliveryAgentLlmPlanningScopeSchema = z.enum(
   DELIVERY_AGENT_LLM_PLANNING_SCOPES
@@ -179,6 +222,137 @@ export type DeliveryAgentLlmCacheDecision = {
   status: "enabled" | "disabled";
   ttlHours: number;
   reasons: string[];
+};
+
+export type DeliveryAgentLlmPromptOrderFact = {
+  orderId: string;
+  status: string;
+  area?: string;
+  addressHint?: string;
+  totalMealQuantity?: number;
+  lat?: number;
+  lng?: number;
+  coordinateConfidence?: string;
+  coordinateSource?: string;
+  planningTags?: string[];
+};
+
+export type DeliveryAgentLlmPromptOrderSummary = {
+  orderCount: number;
+  byArea: Record<string, number>;
+  coordinateCoveragePercent: number;
+  ordersMissingCoordinates: string[];
+  planningTagCounts: Record<string, number>;
+};
+
+export type DeliveryAgentLlmPromptDriverProfile = {
+  runSlot: string;
+  role: string;
+  startsFrom: string;
+  preferredEndRole: string;
+  isBackupOnly: boolean;
+};
+
+export type DeliveryAgentLlmPromptPlanningProfile = {
+  profileId: string;
+  profileVersion: string;
+  name: string;
+  timezone: string;
+  normalKitchenStartTime: string;
+  earliestKitchenStartTime: string;
+  hardDeliveryDeadline: string;
+  preferredDeadlineBufferMinutes: number;
+  drivers: DeliveryAgentLlmPromptDriverProfile[];
+  handoff: {
+    enabled: boolean;
+    providerRunSlot: string;
+    receiverRunSlots: string[];
+    serviceTimeMinutes: number;
+    allowStopsBeforeMeetup: boolean;
+    maxStopsBeforeMeetup: number;
+    preferredHandoffZoneLabel?: string;
+  };
+  selfFallback: {
+    enabled: boolean;
+    backupOnly: boolean;
+    maxPreferredStops: number;
+    preferMinimumStops: boolean;
+  };
+};
+
+export type DeliveryAgentLlmPromptHardRule = {
+  code: string;
+  severity: DeliveryAgentLlmPromptRuleSeverity;
+  rule: string;
+};
+
+export type DeliveryAgentLlmPromptCostControls = {
+  policyVersion: string;
+  modelRoutingPolicyVersion: string;
+  callType: DeliveryAgentLlmCallType;
+  modelTier: DeliveryAgentLlmModelTier;
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  maxAttemptsPerPlanningSession: number;
+  cacheable: boolean;
+  maxDetailedHistoricalCases: number;
+  maxCompactHistoricalLessons: number;
+  maxRawHistoricalCasesInPrompt: number;
+};
+
+export type DeliveryAgentLlmPromptOutputContract = {
+  outputSchemaVersion: typeof DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION;
+  responseFormat: "json_object";
+  requiredTopLevelFields: string[];
+  candidateRequiredFields: string[];
+  hardRuleChecklistRequired: boolean;
+  instructions: string[];
+};
+
+export type DeliveryAgentLlmPromptTokenEstimate = {
+  estimatedInputTokens: number;
+  maxInputTokens: number;
+  estimatedOutputTokens: number;
+  maxOutputTokens: number;
+  status: DeliveryAgentLlmPromptTokenStatus;
+};
+
+export type DeliveryAgentLlmPromptMessage = {
+  role: DeliveryAgentLlmPromptMessageRole;
+  content: string;
+};
+
+export type DeliveryAgentLlmPromptInputObject = {
+  objective: string;
+  scope: DeliveryAgentLlmPlanningScope;
+  deliveryDate: string;
+  profile: DeliveryAgentLlmPromptPlanningProfile;
+  orders: DeliveryAgentLlmPromptOrderFact[];
+  orderSummary: DeliveryAgentLlmPromptOrderSummary;
+  historicalPackage?: DeliveryAgentCompactHistoricalPackage;
+  feedback?: DeliveryAgentPlanningFingerprintFeedback;
+  localCandidateSeedHash?: string;
+  previousFailureHash?: string;
+  hardRules: DeliveryAgentLlmPromptHardRule[];
+  outputContract: DeliveryAgentLlmPromptOutputContract;
+  costControls: DeliveryAgentLlmPromptCostControls;
+  planningGuidance: string[];
+};
+
+export type DeliveryAgentLlmPromptPackage = {
+  promptPackageVersion: typeof DELIVERY_AGENT_LLM_PROMPT_PACKAGE_VERSION;
+  promptVersion: typeof DELIVERY_AGENT_DAILY_CANDIDATE_PROMPT_VERSION | string;
+  outputSchemaVersion: typeof DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION;
+  scope: DeliveryAgentLlmPlanningScope;
+  callType: DeliveryAgentLlmCallType;
+  deliveryDate: string;
+  profileId: string;
+  profileVersion: string;
+  planningFingerprint: DeliveryAgentPlanningFingerprint;
+  tokenEstimate: DeliveryAgentLlmPromptTokenEstimate;
+  messages: DeliveryAgentLlmPromptMessage[];
+  promptInput: DeliveryAgentLlmPromptInputObject;
+  warnings: string[];
 };
 
 export type DeliveryAgentCompactHistoricalCase = {
@@ -407,6 +581,104 @@ export const deliveryAgentLlmCacheKeySchema = z.object({
   outputSchemaVersion: z.string().trim().min(1),
 });
 
+export const deliveryAgentLlmPromptOrderFactSchema = z.object({
+  orderId: z.string().trim().min(1),
+  status: z.string().trim().min(1),
+  area: z.string().trim().min(1).optional(),
+  addressHint: z.string().trim().min(1).optional(),
+  totalMealQuantity: z.number().finite().optional(),
+  lat: z.number().finite().optional(),
+  lng: z.number().finite().optional(),
+  coordinateConfidence: z.string().trim().min(1).optional(),
+  coordinateSource: z.string().trim().min(1).optional(),
+  planningTags: z.array(z.string().trim().min(1)).optional(),
+});
+
+export const deliveryAgentLlmPromptOrderSummarySchema = z.object({
+  orderCount: z.number().int().min(0),
+  byArea: z.record(z.string(), z.number().int().min(0)),
+  coordinateCoveragePercent: z.number().finite().min(0).max(100),
+  ordersMissingCoordinates: z.array(z.string().trim().min(1)),
+  planningTagCounts: z.record(z.string(), z.number().int().min(0)),
+});
+
+export const deliveryAgentLlmPromptDriverProfileSchema = z.object({
+  runSlot: z.string().trim().min(1),
+  role: z.string().trim().min(1),
+  startsFrom: z.string().trim().min(1),
+  preferredEndRole: z.string().trim().min(1),
+  isBackupOnly: z.boolean(),
+});
+
+export const deliveryAgentLlmPromptPlanningProfileSchema = z.object({
+  profileId: z.string().trim().min(1),
+  profileVersion: z.string().trim().min(1),
+  name: z.string().trim().min(1),
+  timezone: z.string().trim().min(1),
+  normalKitchenStartTime: z.string().trim().min(1),
+  earliestKitchenStartTime: z.string().trim().min(1),
+  hardDeliveryDeadline: z.string().trim().min(1),
+  preferredDeadlineBufferMinutes: z.number().int().min(0),
+  drivers: z.array(deliveryAgentLlmPromptDriverProfileSchema),
+  handoff: z.object({
+    enabled: z.boolean(),
+    providerRunSlot: z.string().trim().min(1),
+    receiverRunSlots: z.array(z.string().trim().min(1)),
+    serviceTimeMinutes: z.number().int().min(0),
+    allowStopsBeforeMeetup: z.boolean(),
+    maxStopsBeforeMeetup: z.number().int().min(0),
+    preferredHandoffZoneLabel: z.string().trim().min(1).optional(),
+  }),
+  selfFallback: z.object({
+    enabled: z.boolean(),
+    backupOnly: z.boolean(),
+    maxPreferredStops: z.number().int().min(0),
+    preferMinimumStops: z.boolean(),
+  }),
+});
+
+export const deliveryAgentLlmPromptHardRuleSchema = z.object({
+  code: z.string().trim().min(1),
+  severity: deliveryAgentLlmPromptRuleSeveritySchema,
+  rule: z.string().trim().min(1),
+});
+
+export const deliveryAgentLlmPromptCostControlsSchema = z.object({
+  policyVersion: z.string().trim().min(1),
+  modelRoutingPolicyVersion: z.string().trim().min(1),
+  callType: deliveryAgentLlmCallTypeSchema,
+  modelTier: deliveryAgentLlmModelTierSchema,
+  maxInputTokens: z.number().int().min(0),
+  maxOutputTokens: z.number().int().min(0),
+  maxAttemptsPerPlanningSession: z.number().int().min(0),
+  cacheable: z.boolean(),
+  maxDetailedHistoricalCases: z.number().int().min(0),
+  maxCompactHistoricalLessons: z.number().int().min(0),
+  maxRawHistoricalCasesInPrompt: z.number().int().min(0),
+});
+
+export const deliveryAgentLlmPromptOutputContractSchema = z.object({
+  outputSchemaVersion: z.literal(DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION),
+  responseFormat: z.literal("json_object"),
+  requiredTopLevelFields: z.array(z.string().trim().min(1)),
+  candidateRequiredFields: z.array(z.string().trim().min(1)),
+  hardRuleChecklistRequired: z.boolean(),
+  instructions: z.array(z.string().trim().min(1)),
+});
+
+export const deliveryAgentLlmPromptTokenEstimateSchema = z.object({
+  estimatedInputTokens: z.number().int().min(0),
+  maxInputTokens: z.number().int().min(0),
+  estimatedOutputTokens: z.number().int().min(0),
+  maxOutputTokens: z.number().int().min(0),
+  status: deliveryAgentLlmPromptTokenStatusSchema,
+});
+
+export const deliveryAgentLlmPromptMessageSchema = z.object({
+  role: deliveryAgentLlmPromptMessageRoleSchema,
+  content: z.string().trim().min(1),
+});
+
 export const deliveryAgentCompactHistoricalCaseSchema = z.object({
   caseKey: z.string().trim().min(1),
   deliveryDate: z.string().trim().min(1),
@@ -469,6 +741,39 @@ export const deliveryAgentCompactHistoricalPackageSchema = z.object({
   detailedCases: z.array(deliveryAgentCompactHistoricalCaseSchema),
   compactLessons: z.array(z.string().trim().min(1)),
   omittedCaseCount: z.number().int().min(0),
+  warnings: z.array(z.string().trim().min(1)),
+});
+
+export const deliveryAgentLlmPromptInputObjectSchema = z.object({
+  objective: z.string().trim().min(1),
+  scope: deliveryAgentLlmPlanningScopeSchema,
+  deliveryDate: z.string().trim().min(1),
+  profile: deliveryAgentLlmPromptPlanningProfileSchema,
+  orders: z.array(deliveryAgentLlmPromptOrderFactSchema),
+  orderSummary: deliveryAgentLlmPromptOrderSummarySchema,
+  historicalPackage: deliveryAgentCompactHistoricalPackageSchema.optional(),
+  feedback: deliveryAgentPlanningFingerprintFeedbackSchema.optional(),
+  localCandidateSeedHash: z.string().trim().min(1).optional(),
+  previousFailureHash: z.string().trim().min(1).optional(),
+  hardRules: z.array(deliveryAgentLlmPromptHardRuleSchema),
+  outputContract: deliveryAgentLlmPromptOutputContractSchema,
+  costControls: deliveryAgentLlmPromptCostControlsSchema,
+  planningGuidance: z.array(z.string().trim().min(1)),
+});
+
+export const deliveryAgentLlmPromptPackageSchema = z.object({
+  promptPackageVersion: z.literal(DELIVERY_AGENT_LLM_PROMPT_PACKAGE_VERSION),
+  promptVersion: z.string().trim().min(1),
+  outputSchemaVersion: z.literal(DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION),
+  scope: deliveryAgentLlmPlanningScopeSchema,
+  callType: deliveryAgentLlmCallTypeSchema,
+  deliveryDate: z.string().trim().min(1),
+  profileId: z.string().trim().min(1),
+  profileVersion: z.string().trim().min(1),
+  planningFingerprint: deliveryAgentPlanningFingerprintSchema,
+  tokenEstimate: deliveryAgentLlmPromptTokenEstimateSchema,
+  messages: z.array(deliveryAgentLlmPromptMessageSchema).min(1),
+  promptInput: deliveryAgentLlmPromptInputObjectSchema,
   warnings: z.array(z.string().trim().min(1)),
 });
 
