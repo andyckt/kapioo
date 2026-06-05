@@ -42,6 +42,8 @@ export const DELIVERY_AGENT_DAILY_CANDIDATE_PROMPT_VERSION =
 export const DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION =
   "delivery-agent-llm-candidate-output-v1" as const;
 
+export const DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_MAX_CANDIDATES = 3 as const;
+
 export const DELIVERY_AGENT_LLM_PLANNING_SCOPES = [
   "daily_generation",
   "rejection_regeneration",
@@ -125,6 +127,31 @@ export type DeliveryAgentLlmPromptTokenStatus =
 
 export const deliveryAgentLlmPromptTokenStatusSchema = z.enum(
   DELIVERY_AGENT_LLM_PROMPT_TOKEN_STATUSES
+);
+
+export const DELIVERY_AGENT_LLM_CANDIDATE_PARSE_STATUSES = [
+  "valid",
+  "partial_valid",
+  "invalid",
+] as const;
+
+export type DeliveryAgentLlmCandidateParseStatus =
+  (typeof DELIVERY_AGENT_LLM_CANDIDATE_PARSE_STATUSES)[number];
+
+export const deliveryAgentLlmCandidateParseStatusSchema = z.enum(
+  DELIVERY_AGENT_LLM_CANDIDATE_PARSE_STATUSES
+);
+
+export const DELIVERY_AGENT_LLM_CANDIDATE_VALIDATION_SEVERITIES = [
+  "warning",
+  "error",
+] as const;
+
+export type DeliveryAgentLlmCandidateValidationSeverity =
+  (typeof DELIVERY_AGENT_LLM_CANDIDATE_VALIDATION_SEVERITIES)[number];
+
+export const deliveryAgentLlmCandidateValidationSeveritySchema = z.enum(
+  DELIVERY_AGENT_LLM_CANDIDATE_VALIDATION_SEVERITIES
 );
 
 export const deliveryAgentLlmPlanningScopeSchema = z.enum(
@@ -352,6 +379,114 @@ export type DeliveryAgentLlmPromptPackage = {
   tokenEstimate: DeliveryAgentLlmPromptTokenEstimate;
   messages: DeliveryAgentLlmPromptMessage[];
   promptInput: DeliveryAgentLlmPromptInputObject;
+  warnings: string[];
+};
+
+export type DeliveryAgentLlmCandidateOutputRun = {
+  runSlot: string;
+  orderIds: string[];
+  notes?: string[];
+};
+
+export type DeliveryAgentLlmCandidateOutputHandoffPlan = {
+  required: boolean;
+  providerRunSlot?: string;
+  receiverRunSlot?: string;
+  strategy?: string;
+  suggestedMeetupArea?: string;
+  sourceOrderIds?: string[];
+  stopBeforeMeetupOrderId?: string;
+  notes?: string[];
+};
+
+export type DeliveryAgentLlmCandidateOutputSelfUse = {
+  used: boolean;
+  orderIds: string[];
+  reason?: string;
+};
+
+export type DeliveryAgentLlmCandidateOutputCandidate = {
+  candidateId: string;
+  strategyName: string;
+  reasoningSummary: string;
+  runs: DeliveryAgentLlmCandidateOutputRun[];
+  handoffPlan: DeliveryAgentLlmCandidateOutputHandoffPlan;
+  selfUse: DeliveryAgentLlmCandidateOutputSelfUse;
+  risks: string[];
+  historicalCaseIdsUsed: string[];
+  expectedStrengths?: string[];
+  warnings?: string[];
+};
+
+export type DeliveryAgentLlmCandidateOutputUnprovenIdea = {
+  title: string;
+  reason: string;
+  risk: string;
+  relatedOrderIds?: string[];
+};
+
+export type DeliveryAgentLlmCandidateOutputHardRuleChecklist = {
+  allOrdersAssignedExactlyOnce: boolean;
+  noDuplicateOrderIds: boolean;
+  noInventedOrderIds: boolean;
+  selfUsedOnlyAsBackup: boolean;
+  routeOptimizerNotUsedAsSearch: boolean;
+  unprovenIdeasNotRecommended: boolean;
+};
+
+export type DeliveryAgentLlmCandidateOutput = {
+  schemaVersion: typeof DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION;
+  summary: {
+    planningSummary: string;
+    candidateCount: number;
+    assumptions: string[];
+  };
+  candidates: DeliveryAgentLlmCandidateOutputCandidate[];
+  unprovenIdeas: DeliveryAgentLlmCandidateOutputUnprovenIdea[];
+  hardRuleChecklist: DeliveryAgentLlmCandidateOutputHardRuleChecklist;
+  warnings: string[];
+};
+
+export type DeliveryAgentLlmCandidateValidationIssue = {
+  code: string;
+  severity: DeliveryAgentLlmCandidateValidationSeverity;
+  message: string;
+  candidateId?: string;
+  runSlot?: string;
+  orderId?: string;
+  details?: Record<string, unknown>;
+};
+
+export type DeliveryAgentLlmCandidateHardRuleValidation = {
+  allOrdersAssignedExactlyOnce: boolean;
+  noDuplicateOrderIds: boolean;
+  noInventedOrderIds: boolean;
+  runSlotsKnown: boolean;
+  selfUseConsistent: boolean;
+};
+
+export type DeliveryAgentLlmCandidateValidationResult = {
+  candidateId: string;
+  accepted: boolean;
+  assignedOrderIds: string[];
+  missingOrderIds: string[];
+  duplicateOrderIds: string[];
+  inventedOrderIds: string[];
+  unknownRunSlots: string[];
+  hardRuleValidation: DeliveryAgentLlmCandidateHardRuleValidation;
+  issues: DeliveryAgentLlmCandidateValidationIssue[];
+};
+
+export type DeliveryAgentLlmCandidateOutputParseResult = {
+  status: DeliveryAgentLlmCandidateParseStatus;
+  outputSchemaVersion: typeof DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION;
+  planningFingerprint: string;
+  acceptedCandidates: DeliveryAgentLlmCandidateOutputCandidate[];
+  rejectedCandidates: DeliveryAgentLlmCandidateOutputCandidate[];
+  omittedCandidates: DeliveryAgentLlmCandidateOutputCandidate[];
+  parsedOutput?: DeliveryAgentLlmCandidateOutput;
+  candidateValidations: DeliveryAgentLlmCandidateValidationResult[];
+  issues: DeliveryAgentLlmCandidateValidationIssue[];
   warnings: string[];
 };
 
@@ -774,6 +909,114 @@ export const deliveryAgentLlmPromptPackageSchema = z.object({
   tokenEstimate: deliveryAgentLlmPromptTokenEstimateSchema,
   messages: z.array(deliveryAgentLlmPromptMessageSchema).min(1),
   promptInput: deliveryAgentLlmPromptInputObjectSchema,
+  warnings: z.array(z.string().trim().min(1)),
+});
+
+export const deliveryAgentLlmCandidateOutputRunSchema = z.object({
+  runSlot: z.string().trim().min(1),
+  orderIds: z.array(z.string().trim().min(1)),
+  notes: z.array(z.string().trim().min(1)).optional(),
+});
+
+export const deliveryAgentLlmCandidateOutputHandoffPlanSchema = z.object({
+  required: z.boolean(),
+  providerRunSlot: z.string().trim().min(1).optional(),
+  receiverRunSlot: z.string().trim().min(1).optional(),
+  strategy: z.string().trim().min(1).optional(),
+  suggestedMeetupArea: z.string().trim().min(1).optional(),
+  sourceOrderIds: z.array(z.string().trim().min(1)).optional(),
+  stopBeforeMeetupOrderId: z.string().trim().min(1).optional(),
+  notes: z.array(z.string().trim().min(1)).optional(),
+});
+
+export const deliveryAgentLlmCandidateOutputSelfUseSchema = z.object({
+  used: z.boolean(),
+  orderIds: z.array(z.string().trim().min(1)),
+  reason: z.string().trim().min(1).optional(),
+});
+
+export const deliveryAgentLlmCandidateOutputCandidateSchema = z.object({
+  candidateId: z.string().trim().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
+  strategyName: z.string().trim().min(1),
+  reasoningSummary: z.string().trim().min(1),
+  runs: z.array(deliveryAgentLlmCandidateOutputRunSchema).min(1),
+  handoffPlan: deliveryAgentLlmCandidateOutputHandoffPlanSchema,
+  selfUse: deliveryAgentLlmCandidateOutputSelfUseSchema,
+  risks: z.array(z.string().trim().min(1)),
+  historicalCaseIdsUsed: z.array(z.string().trim().min(1)),
+  expectedStrengths: z.array(z.string().trim().min(1)).optional(),
+  warnings: z.array(z.string().trim().min(1)).optional(),
+});
+
+export const deliveryAgentLlmCandidateOutputUnprovenIdeaSchema = z.object({
+  title: z.string().trim().min(1),
+  reason: z.string().trim().min(1),
+  risk: z.string().trim().min(1),
+  relatedOrderIds: z.array(z.string().trim().min(1)).optional(),
+});
+
+export const deliveryAgentLlmCandidateOutputHardRuleChecklistSchema = z.object({
+  allOrdersAssignedExactlyOnce: z.boolean(),
+  noDuplicateOrderIds: z.boolean(),
+  noInventedOrderIds: z.boolean(),
+  selfUsedOnlyAsBackup: z.boolean(),
+  routeOptimizerNotUsedAsSearch: z.boolean(),
+  unprovenIdeasNotRecommended: z.boolean(),
+});
+
+export const deliveryAgentLlmCandidateOutputSchema = z.object({
+  schemaVersion: z.literal(DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION),
+  summary: z.object({
+    planningSummary: z.string().trim().min(1),
+    candidateCount: z.number().int().min(0),
+    assumptions: z.array(z.string().trim().min(1)),
+  }),
+  candidates: z.array(deliveryAgentLlmCandidateOutputCandidateSchema),
+  unprovenIdeas: z.array(deliveryAgentLlmCandidateOutputUnprovenIdeaSchema),
+  hardRuleChecklist: deliveryAgentLlmCandidateOutputHardRuleChecklistSchema,
+  warnings: z.array(z.string().trim().min(1)),
+});
+
+export const deliveryAgentLlmCandidateValidationIssueSchema = z.object({
+  code: z.string().trim().min(1),
+  severity: deliveryAgentLlmCandidateValidationSeveritySchema,
+  message: z.string().trim().min(1),
+  candidateId: z.string().trim().min(1).optional(),
+  runSlot: z.string().trim().min(1).optional(),
+  orderId: z.string().trim().min(1).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const deliveryAgentLlmCandidateHardRuleValidationSchema = z.object({
+  allOrdersAssignedExactlyOnce: z.boolean(),
+  noDuplicateOrderIds: z.boolean(),
+  noInventedOrderIds: z.boolean(),
+  runSlotsKnown: z.boolean(),
+  selfUseConsistent: z.boolean(),
+});
+
+export const deliveryAgentLlmCandidateValidationResultSchema = z.object({
+  candidateId: z.string().trim().min(1),
+  accepted: z.boolean(),
+  assignedOrderIds: z.array(z.string().trim().min(1)),
+  missingOrderIds: z.array(z.string().trim().min(1)),
+  duplicateOrderIds: z.array(z.string().trim().min(1)),
+  inventedOrderIds: z.array(z.string().trim().min(1)),
+  unknownRunSlots: z.array(z.string().trim().min(1)),
+  hardRuleValidation: deliveryAgentLlmCandidateHardRuleValidationSchema,
+  issues: z.array(deliveryAgentLlmCandidateValidationIssueSchema),
+});
+
+export const deliveryAgentLlmCandidateOutputParseResultSchema = z.object({
+  status: deliveryAgentLlmCandidateParseStatusSchema,
+  outputSchemaVersion: z.literal(DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION),
+  planningFingerprint: z.string().trim().min(1),
+  acceptedCandidates: z.array(deliveryAgentLlmCandidateOutputCandidateSchema),
+  rejectedCandidates: z.array(deliveryAgentLlmCandidateOutputCandidateSchema),
+  omittedCandidates: z.array(deliveryAgentLlmCandidateOutputCandidateSchema),
+  parsedOutput: deliveryAgentLlmCandidateOutputSchema.optional(),
+  candidateValidations: z.array(deliveryAgentLlmCandidateValidationResultSchema),
+  issues: z.array(deliveryAgentLlmCandidateValidationIssueSchema),
   warnings: z.array(z.string().trim().min(1)),
 });
 

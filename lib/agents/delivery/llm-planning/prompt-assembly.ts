@@ -7,6 +7,7 @@ import type {
 } from "@/lib/contracts/delivery-agent-cost-policy";
 import {
   DELIVERY_AGENT_DAILY_CANDIDATE_PROMPT_VERSION,
+  DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_MAX_CANDIDATES,
   DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION,
   DELIVERY_AGENT_LLM_PROMPT_PACKAGE_VERSION,
   type DeliveryAgentCompactHistoricalPackage,
@@ -274,6 +275,7 @@ function buildOutputContract(): DeliveryAgentLlmPromptOutputContract {
     ],
     hardRuleChecklistRequired: true,
     instructions: [
+      `Return at most ${DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_MAX_CANDIDATES} complete candidates, sorted best-first.`,
       "Each candidate run must contain runSlot and orderIds.",
       "candidateId must be stable and lowercase, using letters, numbers, underscores, or dashes.",
       "handoffPlan may suggest a handoff strategy or source orderIds, but exact proof is deferred to local/RO validation.",
