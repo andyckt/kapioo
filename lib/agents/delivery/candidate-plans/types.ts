@@ -5,7 +5,8 @@ export type CandidateStrategyType =
   | "dt_heavy_north_york"
   | "marco_heavy_north_york"
   | "balanced_north_york"
-  | "self_fallback_light";
+  | "self_fallback_light"
+  | "llm_generated";
 
 export type NorthYorkSplitMode = "balanced" | "dt_heavy" | "marco_heavy";
 
