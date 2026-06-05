@@ -82,6 +82,7 @@ function CandidatePreviewBudgetBanner({
 
   const exhausted = guardrail.status === "budget_exhausted"
   const rateLimited = guardrail.status === "rate_limited"
+  const googleEstimate = guardrail.routeOptimizerGoogleCostEstimate
 
   return (
     <div
@@ -100,6 +101,14 @@ function CandidatePreviewBudgetBanner({
         {guardrail.fullCandidateVariantsSelected} finalist plan(s). Correlation ID:{" "}
         {guardrail.correlationId}
       </p>
+      {googleEstimate && (
+        <p className="mt-1">
+          RO estimate: {googleEstimate.estimated_billable_units} billable unit(s), including{" "}
+          {googleEstimate.route_optimization_billable_units} route unit(s),{" "}
+          {googleEstimate.directions_requests} Directions request(s), and{" "}
+          {googleEstimate.geocoding_requests} Geocoding request(s).
+        </p>
+      )}
       {guardrail.warnings.length > 0 && (
         <ul className="mt-2 list-disc space-y-1 pl-5">
           {guardrail.warnings.slice(0, 3).map((warning) => (

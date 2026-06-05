@@ -226,6 +226,17 @@ describe("lib/agents/delivery/preview-simple-route", () => {
       warnings: [],
       validation_errors: [],
       geocode_failures: [],
+      google_cost_estimate: {
+        customer_count: 1,
+        customer_geocoding_requests: 1,
+        start_geocoding_requests: 1,
+        end_geocoding_requests: 0,
+        geocoding_requests: 2,
+        route_optimization_requests: 1,
+        route_optimization_billable_units: 1,
+        directions_requests: 1,
+        estimated_billable_units: 4,
+      },
     });
 
     const result = await previewSimpleRouteForAgent("2026-06-09");
@@ -257,6 +268,8 @@ describe("lib/agents/delivery/preview-simple-route", () => {
       ],
     });
     expect(result.routePreview.status).toBe("preview");
+    expect(result.routePreview.googleCostEstimate?.estimated_billable_units).toBe(4);
+    expect(result.costGuardrail?.routeOptimizerGoogleCostEstimate?.estimated_billable_units).toBe(4);
     expect(result.routePreview.stopCount).toBe(1);
     expect(result.routePreview.optimizedStops[0]).toEqual({
       sequence: 1,

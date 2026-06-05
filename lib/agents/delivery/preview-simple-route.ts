@@ -74,6 +74,13 @@ export async function previewSimpleRouteForAgent(
   const routeResult = await previewRouteOptimizerRun(
     addBudgetMetadataToPreviewPayload({ payload, budget, consume })
   );
+  budget.recordRouteOptimizerGoogleCostEstimate({
+    estimate: routeResult.google_cost_estimate,
+    candidateId: `simple-route:${deliveryDate}`,
+    runSlot: "simple",
+    phase: "initial",
+    callIndex: consume.callIndex,
+  });
   budget.recordVariantPreviewed();
 
   return {

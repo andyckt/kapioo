@@ -17,6 +17,7 @@ import type { RoutingStop } from "@/lib/agents/delivery/types";
 import {
   addBudgetMetadataToPreviewPayload,
   previewBudgetExhaustedError,
+  readRouteOptimizerGoogleCostEstimate,
   type DeliveryAgentPreviewBudget,
   type DeliveryAgentPreviewBudgetPhase,
 } from "@/lib/agents/delivery/candidate-plans/preview-budget";
@@ -76,13 +77,40 @@ async function previewRouteOptimizerRunWithBudget(input: {
     throw previewBudgetExhaustedError(consume.message);
   }
 
-  return previewRouteOptimizerRun(
-    addBudgetMetadataToPreviewPayload({
-      payload: input.payload,
-      budget: input.budget,
-      consume,
-    })
-  );
+  let routeResult: RouteOptimizerRunResult;
+  try {
+    routeResult = await previewRouteOptimizerRun(
+      addBudgetMetadataToPreviewPayload({
+        payload: input.payload,
+        budget: input.budget,
+        consume,
+      })
+    );
+  } catch (error) {
+    const errorBody =
+      error && typeof error === "object" ? (error as { body?: unknown }).body : undefined;
+    const errorEstimate =
+      errorBody && typeof errorBody === "object"
+        ? (errorBody as Record<string, unknown>).google_cost_estimate
+        : undefined;
+    input.budget.recordRouteOptimizerGoogleCostEstimate({
+      estimate: readRouteOptimizerGoogleCostEstimate(errorEstimate),
+      candidateId: input.candidateId,
+      runSlot: input.runSlot,
+      phase: input.phase,
+      callIndex: consume.callIndex,
+    });
+    throw error;
+  }
+  input.budget.recordRouteOptimizerGoogleCostEstimate({
+    estimate: routeResult.google_cost_estimate,
+    candidateId: input.candidateId,
+    runSlot: input.runSlot,
+    phase: input.phase,
+    callIndex: consume.callIndex,
+  });
+
+  return routeResult;
 }
 
 function buildSkippedRunPreview(run: DeliveryAgentCandidateRun): DeliveryAgentCandidateRunPreview {
@@ -152,6 +180,7 @@ function buildRunPreviewFromResult(input: {
     routeOptimizerWarnings: mapped.warnings,
     routeOptimizerValidationErrors: mapped.validationErrors,
     geocodeFailures: mapped.geocodeFailures,
+    routeOptimizerGoogleCostEstimate: input.routeResult.google_cost_estimate,
     previewStatus: "previewed",
     syntheticMeetupIncluded: input.meetupFields?.syntheticMeetupIncluded,
     meetupSequence: input.meetupFields?.meetupSequence,

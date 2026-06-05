@@ -7,6 +7,7 @@ import type {
   RecommendationConfidence,
 } from "@/lib/agents/delivery/geocode/types";
 import type { DeliveryAgentPreviewBudgetSummary } from "@/lib/agents/delivery/candidate-plans/preview-budget";
+import type { RouteOptimizerGoogleCostEstimate } from "@/lib/integrations/route-optimizer/types";
 
 export type {
   DeliveryAgentCoordinateCoverageSummary,
@@ -133,6 +134,7 @@ export type DeliveryAgentSimpleRoutePreviewResult = {
   warnings: unknown[];
   validationErrors: unknown[];
   geocodeFailures: unknown[];
+  googleCostEstimate?: RouteOptimizerGoogleCostEstimate;
 };
 
 export type DeliveryAgentSimpleRoutePreviewSourceSummary = {
@@ -320,6 +322,7 @@ export type DeliveryAgentCandidateRunPreview = {
   routeOptimizerWarnings: unknown[];
   routeOptimizerValidationErrors: unknown[];
   geocodeFailures: unknown[];
+  routeOptimizerGoogleCostEstimate?: RouteOptimizerGoogleCostEstimate;
   previewStatus: DeliveryAgentCandidateRunPreviewStatus;
   previewError?: string;
   syntheticMeetupIncluded?: boolean;

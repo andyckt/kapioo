@@ -76,6 +76,18 @@ export type RouteOptimizerOptimizedRoute = {
   [key: string]: unknown;
 };
 
+export type RouteOptimizerGoogleCostEstimate = {
+  customer_count: number;
+  customer_geocoding_requests: number;
+  start_geocoding_requests: number;
+  end_geocoding_requests: number;
+  geocoding_requests: number;
+  route_optimization_requests: number;
+  route_optimization_billable_units: number;
+  directions_requests: number;
+  estimated_billable_units: number;
+};
+
 export type RouteOptimizerRunResult = {
   preview?: boolean;
   persisted?: boolean;
@@ -93,6 +105,7 @@ export type RouteOptimizerRunResult = {
   geocode_failures?: unknown[];
   validation_errors?: unknown[];
   warnings?: unknown[];
+  google_cost_estimate?: RouteOptimizerGoogleCostEstimate;
   [key: string]: unknown;
 };
 
@@ -117,6 +130,7 @@ export type RouteOptimizerBatchResult = {
   results?: RouteOptimizerRunResult[];
   errors?: RouteOptimizerBatchRunError[];
   failed_runs?: RouteOptimizerBatchRunError[];
+  google_cost_estimate?: RouteOptimizerGoogleCostEstimate;
   [key: string]: unknown;
 };
 
@@ -153,4 +167,5 @@ export type RouteOptimizerGeocodeAddressesResponse = {
   rate_limit?: {
     retry_after_seconds?: number | null;
   };
+  google_cost_estimate?: RouteOptimizerGoogleCostEstimate;
 };

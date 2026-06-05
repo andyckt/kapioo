@@ -147,6 +147,7 @@ export function mapRouteOptimizerPreviewResult(
     warnings: Array.isArray(result.warnings) ? result.warnings : [],
     validationErrors: Array.isArray(result.validation_errors) ? result.validation_errors : [],
     geocodeFailures: Array.isArray(result.geocode_failures) ? result.geocode_failures : [],
+    googleCostEstimate: result.google_cost_estimate,
   };
 }
 

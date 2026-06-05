@@ -42,6 +42,7 @@ import {
 import {
   RouteOptimizerConfigError,
   RouteOptimizerRateLimitError,
+  RouteOptimizerValidationError,
 } from "@/lib/integrations/route-optimizer/errors";
 import type { DeliveryAgentCandidatePlan } from "@/lib/contracts/delivery-agent";
 import { buildMixedAreaRoutingStops } from "./test-fixtures";
@@ -79,6 +80,17 @@ function buildRouteOptimizerSuccess(overrides: Record<string, unknown> = {}) {
     warnings: [],
     validation_errors: [],
     geocode_failures: [],
+    google_cost_estimate: {
+      customer_count: 2,
+      customer_geocoding_requests: 0,
+      start_geocoding_requests: 1,
+      end_geocoding_requests: 0,
+      geocoding_requests: 1,
+      route_optimization_requests: 1,
+      route_optimization_billable_units: 2,
+      directions_requests: 2,
+      estimated_billable_units: 5,
+    },
     ...overrides,
   };
 }
@@ -559,6 +571,12 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
       correlationId: "cost-1a-budget-stop",
       status: "budget_exhausted",
       optimizePreviewCallsUsed: 2,
+      routeOptimizerGoogleCostEstimate: expect.objectContaining({
+        estimated_billable_units: 10,
+        route_optimization_billable_units: 4,
+        directions_requests: 4,
+        geocoding_requests: 2,
+      }),
     });
     expect(result.selectionWarnings).toEqual(
       expect.arrayContaining([expect.stringContaining("budget exhausted")])
@@ -606,7 +624,23 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     );
     previewRouteOptimizerRunMock
       .mockResolvedValueOnce(buildRouteOptimizerSuccess())
-      .mockRejectedValueOnce(new Error("Invalid customer address"));
+      .mockRejectedValueOnce(
+        new RouteOptimizerValidationError("Google API budget exceeded", {
+          body: {
+            google_cost_estimate: {
+              customer_count: 1,
+              customer_geocoding_requests: 1,
+              start_geocoding_requests: 1,
+              end_geocoding_requests: 0,
+              geocoding_requests: 2,
+              route_optimization_requests: 1,
+              route_optimization_billable_units: 1,
+              directions_requests: 1,
+              estimated_billable_units: 4,
+            },
+          },
+        })
+      );
 
     const result = await previewCandidatePlansForAgent("2026-06-09");
     const baseline = result.candidates[0];
@@ -615,6 +649,12 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     expect(baseline.runs[0].previewStatus).toBe("previewed");
     expect(baseline.runs[1].previewStatus).toBe("failed");
     expect(baseline.errors.length).toBeGreaterThan(0);
+    expect(result.costGuardrail?.routeOptimizerGoogleCostEstimate).toMatchObject({
+      estimated_billable_units: 9,
+      route_optimization_billable_units: 3,
+      directions_requests: 3,
+      geocoding_requests: 3,
+    });
   });
 
   it("stops previewing additional candidates after Route Optimizer rate limiting", async () => {

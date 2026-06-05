@@ -672,6 +672,16 @@ export function DeliveryAgentReviewPanel({
               {candidateRoutePreview.costGuardrail.fullCandidateVariantsPreviewed} attempted
               finalist plan(s). Correlation ID: {candidateRoutePreview.costGuardrail.correlationId}
             </p>
+            {candidateRoutePreview.costGuardrail.routeOptimizerGoogleCostEstimate && (
+              <p className="mt-1 text-muted-foreground">
+                RO estimate:{" "}
+                {
+                  candidateRoutePreview.costGuardrail.routeOptimizerGoogleCostEstimate
+                    .estimated_billable_units
+                }{" "}
+                billable unit(s).
+              </p>
+            )}
           </div>
         )}
 
