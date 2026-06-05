@@ -43,3 +43,9 @@ export { extractDeliveryAgentLearningStopControlFeatures } from "@/lib/agents/de
 export { extractDeliveryAgentLearningRouteShapeFeatures } from "@/lib/agents/delivery/learning/route-shape/extract-route-shape-features";
 export { extractDeliveryAgentLearningOutcomeFeatures } from "@/lib/agents/delivery/learning/outcome/extract-outcome-features";
 export { extractDeliveryAgentLearningResourceProfileFeatures } from "@/lib/agents/delivery/learning/resource-profile/extract-resource-profile-features";
+export {
+  buildHistoricalRetrievalTargetFromLearningCase,
+  retrieveSimilarHistoricalLearningCases,
+  scoreHistoricalLearningCaseSimilarity,
+  type RetrieveSimilarHistoricalLearningCasesInput,
+} from "@/lib/agents/delivery/learning/retrieval/historical-similarity";

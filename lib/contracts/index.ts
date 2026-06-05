@@ -5,6 +5,7 @@ export * from "@/lib/contracts/admin-orders";
 export * from "@/lib/contracts/auth";
 export * from "@/lib/contracts/common";
 export * from "@/lib/contracts/content";
+export * from "@/lib/contracts/delivery-agent-historical-retrieval";
 export * from "@/lib/contracts/meal-rating";
 export * from "@/lib/contracts/proof-of-delivery";
 export * from "@/lib/contracts/credit-request";
