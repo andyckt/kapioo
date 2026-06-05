@@ -21,6 +21,11 @@ export {
   type DeliveryAgentLearningBackfillDateStatus,
   type DeliveryAgentLearningBackfillSummary,
 } from "@/lib/agents/delivery/learning/backfill/backfill-learning-cases-for-date-range";
+export {
+  getDeliveryLearningBackfillCliUsage,
+  parseDeliveryLearningBackfillCliArgs,
+  type DeliveryAgentLearningBackfillCliArgs,
+} from "@/lib/agents/delivery/learning/backfill/backfill-cli-args";
 export { flattenRouteOptimizerCustomerStops } from "@/lib/agents/delivery/learning/matching/flatten-route-optimizer-customer-stops";
 export { matchOrdersToRouteOptimizerRunsForDate } from "@/lib/agents/delivery/learning/matching/match-orders-to-ro-runs-for-date";
 export type {

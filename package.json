@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:security": "node scripts/security-smoke-check.js",
+    "backfill:delivery-learning": "tsx scripts/backfill-delivery-learning-cases.ts",
     "invalidate:sessions": "tsx scripts/invalidate-sessions.ts",
     "seed": "tsx scripts/seed-database.ts",
     "seed:atlas": "node scripts/seed-atlas.js",
