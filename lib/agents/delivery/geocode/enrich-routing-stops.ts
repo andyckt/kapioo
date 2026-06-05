@@ -34,6 +34,16 @@ import {
   routingStopHasCoordinates,
 } from "@/lib/agents/delivery/geocode/overlay-coordinates-on-routing-stop";
 
+type PendingGeocodeEntry = {
+  stop: RoutingStop;
+  normalizedAddressKey: string;
+};
+
+type PendingGeocodeGroup = {
+  normalizedAddressKey: string;
+  entries: PendingGeocodeEntry[];
+};
+
 function mapGeocodeStatusToCoordinateStatus(geocodeStatus?: string): CoordinateStatus {
   const normalized = geocodeStatus?.trim().toUpperCase();
   if (!normalized || normalized === "ZERO_RESULTS" || normalized === "FAILED") {
@@ -94,7 +104,7 @@ function buildStopCoordinateRecord(
 async function applyGeocodeFallbackForPendingStop(
   enrichedStops: RoutingStop[],
   stopCoordinates: DeliveryAgentStopCoordinateRecord[],
-  entry: { stop: RoutingStop; normalizedAddressKey: string },
+  entry: PendingGeocodeEntry,
   geocodeStatus: string,
   options?: { writeCache: boolean }
 ): Promise<void> {
@@ -136,8 +146,9 @@ async function applyGeocodeFallbackForPendingStop(
 async function applySuccessfulGeocodeResult(
   enrichedStops: RoutingStop[],
   stopCoordinates: DeliveryAgentStopCoordinateRecord[],
-  entry: { stop: RoutingStop; normalizedAddressKey: string },
-  result: RouteOptimizerGeocodeResultItem | undefined
+  entry: PendingGeocodeEntry,
+  result: RouteOptimizerGeocodeResultItem | undefined,
+  options?: { writeCache: boolean }
 ): Promise<void> {
   const { stop, normalizedAddressKey } = entry;
   const lat = readFiniteCoordinate(result?.lat);
@@ -150,15 +161,17 @@ async function applySuccessfulGeocodeResult(
 
   if (lat !== undefined && lng !== undefined && status !== "failed") {
     const confidence = result ? mapGeocodeConfidence(result) : "medium";
-    await writeGeocodeCacheEntry({
-      normalizedAddressKey,
-      formattedAddress: stop.formattedAddress,
-      lat,
-      lng,
-      status,
-      confidence,
-      geocodeStatus: result?.geocode_status,
-    });
+    if (options?.writeCache !== false) {
+      await writeGeocodeCacheEntry({
+        normalizedAddressKey,
+        formattedAddress: stop.formattedAddress,
+        lat,
+        lng,
+        status,
+        confidence,
+        geocodeStatus: result?.geocode_status,
+      });
+    }
 
     const enriched = overlayCoordinatesOnRoutingStop(stop, {
       lat,
@@ -187,7 +200,32 @@ async function applySuccessfulGeocodeResult(
     return;
   }
 
-  await applyGeocodeFallbackForPendingStop(enrichedStops, stopCoordinates, entry, geocodeStatus ?? "ZERO_RESULTS");
+  await applyGeocodeFallbackForPendingStop(
+    enrichedStops,
+    stopCoordinates,
+    entry,
+    geocodeStatus ?? "ZERO_RESULTS",
+    options
+  );
+}
+
+function groupPendingGeocodeByAddress(entries: PendingGeocodeEntry[]): PendingGeocodeGroup[] {
+  const groupsByKey = new Map<string, PendingGeocodeGroup>();
+
+  for (const entry of entries) {
+    const existing = groupsByKey.get(entry.normalizedAddressKey);
+    if (existing) {
+      existing.entries.push(entry);
+      continue;
+    }
+
+    groupsByKey.set(entry.normalizedAddressKey, {
+      normalizedAddressKey: entry.normalizedAddressKey,
+      entries: [entry],
+    });
+  }
+
+  return [...groupsByKey.values()];
 }
 
 export type EnrichRoutingStopsResult = {
@@ -224,10 +262,7 @@ export async function enrichRoutingStops(input: {
 
   const enrichedStops: RoutingStop[] = [];
   const stopCoordinates: DeliveryAgentStopCoordinateRecord[] = [];
-  const pendingGeocode: Array<{
-    stop: RoutingStop;
-    normalizedAddressKey: string;
-  }> = [];
+  const pendingGeocode: PendingGeocodeEntry[] = [];
 
   for (const { stop, normalizedAddressKey } of addressKeys) {
     if (
@@ -288,6 +323,7 @@ export async function enrichRoutingStops(input: {
         source: "fallback_unavailable",
         status: "failed",
         confidence: "low",
+        geocodeStatus: cached.geocodeStatus ?? "ZERO_RESULTS",
       });
       enrichedStops.push(enriched);
       stopCoordinates.push(
@@ -306,7 +342,8 @@ export async function enrichRoutingStops(input: {
   }
 
   if (pendingGeocode.length > 0) {
-    roGeocodeRequested = pendingGeocode.length;
+    const pendingGeocodeGroups = groupPendingGeocodeByAddress(pendingGeocode);
+    roGeocodeRequested = pendingGeocodeGroups.length;
 
     try {
       const response = await geocodeAddressesBatch({
@@ -315,12 +352,18 @@ export async function enrichRoutingStops(input: {
           input.deliveryDate,
           pendingGeocode.map((entry) => entry.stop.orderId)
         ),
-        addresses: pendingGeocode.map(({ stop }) => ({
-          client_ref: stop.orderId,
-          address: stop.formattedAddress,
-          area: stop.area,
-          country: stop.deliveryAddress.country || "Canada",
-        })),
+        addresses: pendingGeocodeGroups.map((group) => {
+          const representative = group.entries[0]?.stop;
+          if (!representative) {
+            throw new Error("Geocode address group is unexpectedly empty.");
+          }
+          return {
+            client_ref: representative.orderId,
+            address: representative.formattedAddress,
+            area: representative.area,
+            country: representative.deliveryAddress.country || "Canada",
+          };
+        }),
       });
 
       const resultByOrderId = new Map(
@@ -329,8 +372,12 @@ export async function enrichRoutingStops(input: {
 
       const batchFailedOrderIds: string[] = [];
 
-      for (const entry of pendingGeocode) {
-        const result = resultByOrderId.get(entry.stop.orderId);
+      for (const group of pendingGeocodeGroups) {
+        const representative = group.entries[0];
+        if (!representative) {
+          continue;
+        }
+        const result = resultByOrderId.get(representative.stop.orderId);
         const lat = readFiniteCoordinate(result?.lat);
         const lng = readFiniteCoordinate(result?.lng);
         const status =
@@ -339,18 +386,17 @@ export async function enrichRoutingStops(input: {
             : "failed";
 
         if (lat !== undefined && lng !== undefined && status !== "failed") {
-          roGeocodeSucceeded += 1;
+          roGeocodeSucceeded += group.entries.length;
         } else {
-          roGeocodeFailed += 1;
-          batchFailedOrderIds.push(entry.stop.orderId);
+          roGeocodeFailed += group.entries.length;
+          batchFailedOrderIds.push(...group.entries.map((entry) => entry.stop.orderId));
         }
 
-        await applySuccessfulGeocodeResult(
-          enrichedStops,
-          stopCoordinates,
-          entry,
-          result
-        );
+        for (const [index, entry] of group.entries.entries()) {
+          await applySuccessfulGeocodeResult(enrichedStops, stopCoordinates, entry, result, {
+            writeCache: index === 0,
+          });
+        }
       }
 
       const partialAlert = buildPartialGeocodeFailureAlert(batchFailedOrderIds);

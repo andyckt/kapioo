@@ -143,6 +143,91 @@ describe("enrichRoutingStops", () => {
     expect(writeGeocodeCacheEntryMock).toHaveBeenCalled();
   });
 
+  it("dedupes uncached duplicate addresses in one Route Optimizer geocode batch", async () => {
+    const firstStop = buildStop({ orderId: "DD-90000001", mongoId: "mongo-1" });
+    const secondStop = buildStop({ orderId: "DD-90000002", mongoId: "mongo-2" });
+
+    geocodeAddressesBatchMock.mockResolvedValue({
+      status: "completed",
+      total_requested: 1,
+      total_succeeded: 1,
+      total_failed: 0,
+      results: [
+        {
+          client_ref: "DD-90000001",
+          address: "Unit 5, 123 Main St, North York M2N 1A1, Canada",
+          lat: 43.7615,
+          lng: -79.4111,
+          geocode_status: "OK",
+          confidence: "high",
+        },
+      ],
+    });
+
+    const result = await enrichRoutingStops({
+      deliveryDate: "2026-06-09",
+      stops: [firstStop, secondStop],
+    });
+
+    expect(geocodeAddressesBatchMock).toHaveBeenCalledTimes(1);
+    expect(geocodeAddressesBatchMock.mock.calls[0][0].addresses).toHaveLength(1);
+    expect(result.stops.map((stop) => stop.coordinateSource)).toEqual([
+      "route_optimizer_geocode",
+      "route_optimizer_geocode",
+    ]);
+    expect(result.stops.map((stop) => stop.lat)).toEqual([43.7615, 43.7615]);
+    expect(writeGeocodeCacheEntryMock).toHaveBeenCalledTimes(1);
+    expect(result.geocodeEnrichment.runStats).toMatchObject({
+      roGeocodeRequested: 1,
+      roGeocodeSucceeded: 2,
+      roGeocodeFailed: 0,
+    });
+  });
+
+  it("dedupes uncached duplicate address failures and marks every matching order failed", async () => {
+    const firstStop = buildStop({ orderId: "DD-90000001", mongoId: "mongo-1" });
+    const secondStop = buildStop({ orderId: "DD-90000002", mongoId: "mongo-2" });
+
+    geocodeAddressesBatchMock.mockResolvedValue({
+      status: "completed",
+      total_requested: 1,
+      total_failed: 1,
+      total_succeeded: 0,
+      results: [
+        {
+          client_ref: "DD-90000001",
+          address: "Unit 5, 123 Main St, North York M2N 1A1, Canada",
+          geocode_status: "ZERO_RESULTS",
+          error: "Address could not be geocoded",
+        },
+      ],
+    });
+
+    const result = await enrichRoutingStops({
+      deliveryDate: "2026-06-09",
+      stops: [firstStop, secondStop],
+    });
+
+    expect(geocodeAddressesBatchMock).toHaveBeenCalledTimes(1);
+    expect(geocodeAddressesBatchMock.mock.calls[0][0].addresses).toHaveLength(1);
+    expect(result.stops.map((stop) => stop.coordinateSource)).toEqual([
+      "fallback_unavailable",
+      "fallback_unavailable",
+    ]);
+    expect(writeGeocodeCacheEntryMock).toHaveBeenCalledTimes(1);
+    expect(writeGeocodeCacheEntryMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "failed", geocodeStatus: "ZERO_RESULTS" })
+    );
+    expect(result.geocodeEnrichment.coordinateCoverage.failedStopOrderIds).toEqual(
+      expect.arrayContaining(["DD-90000001", "DD-90000002"])
+    );
+    expect(result.geocodeEnrichment.runStats).toMatchObject({
+      roGeocodeRequested: 1,
+      roGeocodeSucceeded: 0,
+      roGeocodeFailed: 2,
+    });
+  });
+
   it("handles partial geocode failure per stop", async () => {
     geocodeAddressesBatchMock.mockResolvedValue({
       status: "completed",
