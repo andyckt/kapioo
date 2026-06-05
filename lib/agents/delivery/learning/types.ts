@@ -12,6 +12,15 @@ export {
   type BuildAndUpsertDeliveryAgentLearningCaseForDateResult,
   type BuildDeliveryAgentLearningCaseFromHistoricalDataInput,
 } from "@/lib/agents/delivery/learning/historical-cases/build-learning-case-for-date";
+export {
+  backfillDeliveryAgentLearningCaseForDate,
+  backfillDeliveryAgentLearningCasesForDateRange,
+  buildLearningBackfillDateList,
+  type BackfillDeliveryAgentLearningCasesForDateRangeInput,
+  type DeliveryAgentLearningBackfillDateResult,
+  type DeliveryAgentLearningBackfillDateStatus,
+  type DeliveryAgentLearningBackfillSummary,
+} from "@/lib/agents/delivery/learning/backfill/backfill-learning-cases-for-date-range";
 export { flattenRouteOptimizerCustomerStops } from "@/lib/agents/delivery/learning/matching/flatten-route-optimizer-customer-stops";
 export { matchOrdersToRouteOptimizerRunsForDate } from "@/lib/agents/delivery/learning/matching/match-orders-to-ro-runs-for-date";
 export type {
