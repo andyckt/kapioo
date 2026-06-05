@@ -39,6 +39,7 @@ import {
   previewCandidatePlansPipeline,
   selectPreviewFinalists,
 } from "@/lib/agents/delivery/candidate-plans/preview-candidate-plans";
+import { clearCandidatePreviewCacheForTests } from "@/lib/agents/delivery/candidate-plans/preview-cache";
 import {
   RouteOptimizerConfigError,
   RouteOptimizerRateLimitError,
@@ -344,6 +345,7 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
     getEnrichedDeliveryOrdersForRoutingMock.mockReset();
     getKapiooKitchenStartLocationMock.mockReset();
     previewRouteOptimizerRunMock.mockReset();
+    clearCandidatePreviewCacheForTests();
   });
 
   it("propagates planning gate failures and does not call Route Optimizer", async () => {
@@ -585,6 +587,106 @@ describe("lib/agents/delivery/candidate-plans/preview-candidate-plans", () => {
       planning_session_id: "cost-1a-budget-stop",
       idempotency_key: expect.stringContaining("cost-1a-budget-stop"),
     });
+  });
+
+  it("reuses cached candidate preview for identical preview input without Route Optimizer calls", async () => {
+    generateCandidatePlansForAgentMock.mockResolvedValue(buildGenerationResponse());
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
+    getKapiooKitchenStartLocationMock.mockReturnValue(
+      "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
+    );
+    previewRouteOptimizerRunMock.mockResolvedValue(buildRouteOptimizerSuccess());
+
+    const first = await previewCandidatePlansPipeline({
+      deliveryDate: "2026-06-09",
+      previewBudget: {
+        action: "candidate_preview",
+        correlationId: "cost-1d-cache-first",
+        config: {
+          maxFullCandidateVariants: 1,
+          maxOptimizePreviewCalls: 12,
+          maxRepairPreviewCalls: 2,
+        },
+      },
+    });
+    const firstCallCount = previewRouteOptimizerRunMock.mock.calls.length;
+
+    previewRouteOptimizerRunMock.mockClear();
+
+    const second = await previewCandidatePlansPipeline({
+      deliveryDate: "2026-06-09",
+      previewBudget: {
+        action: "candidate_preview",
+        correlationId: "cost-1d-cache-second",
+        config: {
+          maxFullCandidateVariants: 1,
+          maxOptimizePreviewCalls: 12,
+          maxRepairPreviewCalls: 2,
+        },
+      },
+    });
+
+    expect(firstCallCount).toBeGreaterThan(0);
+    expect(first.previewCache?.status).toBe("miss");
+    expect(second.previewCache?.status).toBe("hit");
+    expect(second.costGuardrail?.correlationId).toBe("cost-1d-cache-second");
+    expect(previewRouteOptimizerRunMock).not.toHaveBeenCalled();
+    expect(second.recommendedCandidateId).toBe(first.recommendedCandidateId);
+  });
+
+  it("does not reuse cached candidate preview when candidate input changes", async () => {
+    const originalGeneration = buildGenerationResponse();
+    const changedGeneration = {
+      ...buildGenerationResponse(),
+      candidates: [
+        {
+          ...buildGenerationResponse().candidates[0],
+          candidateId: "baseline_two_run_changed:2026-06-09",
+          name: "Changed baseline two-run split",
+        },
+      ],
+    };
+
+    generateCandidatePlansForAgentMock.mockResolvedValueOnce(originalGeneration);
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildEnrichedRoutingResult());
+    getKapiooKitchenStartLocationMock.mockReturnValue(
+      "123 Kitchen Rd, Toronto, ON M5V 2B2, Canada"
+    );
+    previewRouteOptimizerRunMock.mockResolvedValue(buildRouteOptimizerSuccess());
+
+    const first = await previewCandidatePlansPipeline({
+      deliveryDate: "2026-06-09",
+      previewBudget: {
+        action: "candidate_preview",
+        correlationId: "cost-1d-cache-original",
+        config: {
+          maxFullCandidateVariants: 1,
+          maxOptimizePreviewCalls: 12,
+          maxRepairPreviewCalls: 2,
+        },
+      },
+    });
+
+    previewRouteOptimizerRunMock.mockClear();
+    generateCandidatePlansForAgentMock.mockResolvedValueOnce(changedGeneration);
+
+    const second = await previewCandidatePlansPipeline({
+      deliveryDate: "2026-06-09",
+      previewBudget: {
+        action: "candidate_preview",
+        correlationId: "cost-1d-cache-changed",
+        config: {
+          maxFullCandidateVariants: 1,
+          maxOptimizePreviewCalls: 12,
+          maxRepairPreviewCalls: 2,
+        },
+      },
+    });
+
+    expect(first.previewCache?.status).toBe("miss");
+    expect(second.previewCache?.status).toBe("miss");
+    expect(previewRouteOptimizerRunMock.mock.calls.length).toBeGreaterThan(0);
+    expect(second.candidates[0].candidateId).toContain("baseline_two_run_changed");
   });
 
   it("does not recommend a plan when no candidate can be fully previewed within budget", async () => {

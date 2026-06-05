@@ -427,6 +427,15 @@ export type DeliveryAgentRecommendedPlanSummary = {
   meetupBalanceNote?: string;
 };
 
+export type DeliveryAgentPreviewCacheSummary = {
+  status: "hit" | "miss";
+  cacheKey: string;
+  cachedAt?: string;
+  expiresAt?: string;
+  ttlSeconds: number;
+  note: string;
+};
+
 export type DeliveryAgentCandidateCombinationMeta = {
   baseSplitCandidateId: string;
   fullCandidateId: string;
@@ -486,6 +495,7 @@ export type DeliveryAgentPreviewCandidatePlansResponse = {
   coordinateCoverage: DeliveryAgentCoordinateCoverageSummary;
   geocodeEnrichment?: DeliveryAgentGeocodeEnrichment;
   costGuardrail?: DeliveryAgentPreviewBudgetSummary;
+  previewCache?: DeliveryAgentPreviewCacheSummary;
 };
 
 const deliveryAgentReviewFeedbackTagSchema = z.enum([

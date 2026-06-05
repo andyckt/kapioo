@@ -894,6 +894,13 @@ export function AdminDeliveryAgentTab() {
                     <CandidatePreviewBudgetBanner guardrail={candidateRoutePreview.costGuardrail} />
                   )}
 
+                  {candidateRoutePreview?.previewCache && (
+                    <p className="text-sm text-muted-foreground">
+                      Preview cache: {candidateRoutePreview.previewCache.status}.{" "}
+                      {candidateRoutePreview.previewCache.note}
+                    </p>
+                  )}
+
                   {candidateRoutePreview?.coordinateCoverage && (
                     <CoordinateCoverageBanner coverage={candidateRoutePreview.coordinateCoverage} />
                   )}

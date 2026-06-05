@@ -12,6 +12,12 @@ import {
   type DeliveryAgentPreviewBudgetConfig,
 } from "@/lib/agents/delivery/candidate-plans/preview-budget";
 import { repairCandidateRoutePreview } from "@/lib/agents/delivery/candidate-plans/preview-candidate-route-repair";
+import {
+  buildCandidatePreviewCacheKey,
+  markCandidatePreviewCacheMiss,
+  readCandidatePreviewCache,
+  writeCandidatePreviewCache,
+} from "@/lib/agents/delivery/candidate-plans/preview-cache";
 import { buildHandoffOverridesFromHints } from "@/lib/agents/delivery/feedback/apply-planning-hints";
 import { collectCoordinateCoverageWarnings } from "@/lib/agents/delivery/geocode/geocode-enrichment-alerts";
 import type { PlanningHints } from "@/lib/agents/delivery/feedback/planning-hints";
@@ -145,6 +151,15 @@ function buildPreviewCorrelationId(input: {
   deliveryDate: string;
 }): string {
   return `delivery-agent:${input.action}:${input.deliveryDate}:${randomUUID()}`;
+}
+
+function shouldCacheCandidatePreviewResponse(
+  response: DeliveryAgentPreviewCandidatePlansResponse
+): boolean {
+  return (
+    response.costGuardrail?.status === "within_budget" &&
+    response.candidates.some((candidate) => candidate.status === "previewed")
+  );
 }
 
 export function selectPreviewFinalists(input: {
@@ -327,6 +342,24 @@ export async function previewCandidatePlansPipeline(input: {
   const routingStopByOrderId = buildRoutingStopMap(enriched.routing.stops);
   const coordinateCoverage = enriched.coordinateCoverage;
   const geocodeEnrichment = enriched.geocodeEnrichment;
+  const previewCacheKey = buildCandidatePreviewCacheKey({
+    deliveryDate: input.deliveryDate,
+    profileId: generation.profileId,
+    profileVersion: generation.profileVersion,
+    deliveryAgentRunId: input.deliveryAgentRunId,
+    action: budgetAction,
+    budgetConfig: budget.config,
+    planningHints: input.planningHints,
+    candidates: generation.candidates,
+    routingStops: enriched.routing.stops,
+    coordinateCoverage,
+  });
+  const cachedPreview = readCandidatePreviewCache(previewCacheKey, {
+    correlationId: budget.correlationId,
+  });
+  if (cachedPreview) {
+    return cachedPreview;
+  }
 
   const expansion = expandFullCandidateVariants({
     splits: generation.candidates,
@@ -476,7 +509,7 @@ export async function previewCandidatePlansPipeline(input: {
 
   const costGuardrail = budget.summary();
 
-  return {
+  const response: DeliveryAgentPreviewCandidatePlansResponse = {
     deliveryDate: generation.deliveryDate,
     profileId: generation.profileId,
     profileVersion: generation.profileVersion,
@@ -491,6 +524,18 @@ export async function previewCandidatePlansPipeline(input: {
     geocodeEnrichment,
     costGuardrail,
   };
+
+  if (shouldCacheCandidatePreviewResponse(response)) {
+    return writeCandidatePreviewCache({
+      cacheKey: previewCacheKey,
+      response,
+    });
+  }
+
+  return markCandidatePreviewCacheMiss({
+    cacheKey: previewCacheKey,
+    response,
+  });
 }
 
 export async function previewCandidatePlansForAgent(
