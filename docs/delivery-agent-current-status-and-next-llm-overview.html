@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kapioo Delivery AI Agent - Current Status and Next LLM Step</title>
+  <style>
+    :root {
+      --ink: #18202a;
+      --muted: #5f6c7b;
+      --paper: #f6f8fb;
+      --panel: #ffffff;
+      --line: #dfe6ee;
+      --blue: #2563eb;
+      --blue-soft: #eaf1ff;
+      --green: #0f7a4f;
+      --green-soft: #e8f7ef;
+      --amber: #9a6700;
+      --amber-soft: #fff5d8;
+      --red: #b42318;
+      --red-soft: #fff0ee;
+      --purple: #5b43d6;
+      --purple-soft: #f0edff;
+      --shadow: 0 16px 44px rgba(24, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #ecf3ff 0, rgba(236, 243, 255, 0) 520px),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.58;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 70px;
+    }
+
+    .hero {
+      padding: 28px 0 24px;
+    }
+
+    .eyebrow {
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 980px;
+      margin: 12px 0 16px;
+      font-size: clamp(34px, 5.8vw, 62px);
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: clamp(25px, 3.8vw, 36px);
+    }
+
+    h3 {
+      margin: 0 0 9px;
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    ul,
+    ol {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    li {
+      margin: 7px 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #eef2f7;
+      color: #1f2937;
+      font-size: 0.94em;
+    }
+
+    .lead {
+      max-width: 900px;
+      color: var(--muted);
+      font-size: 20px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.74);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .pill.green {
+      border-color: #b9e5ce;
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .pill.amber {
+      border-color: #efd08a;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .pill.blue {
+      border-color: #c5d7ff;
+      background: var(--blue-soft);
+      color: #1d4fc4;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 26px;
+    }
+
+    .toc a {
+      min-height: 44px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: 0 8px 26px rgba(24, 32, 42, 0.05);
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: var(--shadow);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      grid-column: span 4;
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+
+    .card.span-3 {
+      grid-column: span 3;
+    }
+
+    .card.span-4 {
+      grid-column: span 4;
+    }
+
+    .card.span-6 {
+      grid-column: span 6;
+    }
+
+    .card.span-8 {
+      grid-column: span 8;
+    }
+
+    .card.span-12 {
+      grid-column: span 12;
+    }
+
+    .blue-box {
+      border-color: #c5d7ff;
+      background: var(--blue-soft);
+    }
+
+    .green-box {
+      border-color: #b9e5ce;
+      background: var(--green-soft);
+    }
+
+    .amber-box {
+      border-color: #efd08a;
+      background: var(--amber-soft);
+    }
+
+    .red-box {
+      border-color: #ffc2bd;
+      background: var(--red-soft);
+    }
+
+    .purple-box {
+      border-color: #d2c9ff;
+      background: var(--purple-soft);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .status.done {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .status.next {
+      background: var(--blue-soft);
+      color: #1d4fc4;
+    }
+
+    .status.wait {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .status.no {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .step {
+      position: relative;
+      min-height: 130px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 15px;
+    }
+
+    .step p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .number {
+      display: inline-grid;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 10px;
+      border-radius: 999px;
+      place-items: center;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+
+    table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .callout {
+      padding: 18px;
+      border: 1px solid #c5d7ff;
+      border-radius: 10px;
+      background: var(--blue-soft);
+    }
+
+    .decision {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .toc,
+      .flow,
+      .decision {
+        grid-template-columns: 1fr;
+      }
+
+      .card,
+      .card.span-3,
+      .card.span-4,
+      .card.span-6,
+      .card.span-8,
+      .card.span-12 {
+        grid-column: span 12;
+      }
+
+      .section {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Kapioo Delivery AI Agent</div>
+      <h1>Current Status, Next LLM Step, and How We Finish the Project</h1>
+      <p class="lead">
+        This document explains where the Delivery Agent stands now, when we should connect a real LLM,
+        how we should choose the model, how the wiring works, and what risks we must control before the system goes live.
+      </p>
+      <div class="meta-row">
+        <span class="pill green">Current status: provider safety gate built</span>
+        <span class="pill amber">Next big decision: first controlled live LLM dry run</span>
+        <span class="pill blue">Recommended model level for next coding milestone: Extra High</span>
+      </div>
+      <nav class="toc" aria-label="Table of contents">
+        <a href="#short-answer">Short Answer</a>
+        <a href="#what-is-built">What Is Built</a>
+        <a href="#next-step">What Is Next</a>
+        <a href="#llm-choice">How We Pick LLM</a>
+        <a href="#api-wiring">How Wiring Works</a>
+        <a href="#risks">Risks</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#terms">Terms</a>
+      </nav>
+    </section>
+
+    <section id="short-answer" class="section">
+      <h2>1. Short Answer</h2>
+      <div class="grid">
+        <article class="card span-6 green-box">
+          <h3>Are we wiring a real LLM next?</h3>
+          <p>
+            After the provider safety gate milestone, yes, the next major engineering step can be the first controlled live LLM dry run.
+            That does not mean the agent should freely spend tokens yet; it means one admin-only call with strict validation and budget controls.
+          </p>
+          <p>
+            The provider key, model, pricing, and cost gate must be configured before that call is allowed.
+          </p>
+        </article>
+        <article class="card span-6 amber-box">
+          <h3>Why not connect it immediately?</h3>
+          <p>
+            Because a real LLM call is the first time this part of the system can spend token money.
+            Before we turn that on, we should make sure the app knows which model is allowed, how much a run is expected to cost,
+            when to stop, and how to show you what happened.
+          </p>
+        </article>
+        <article class="card span-6 blue-box">
+          <h3>Is it like regular API wiring?</h3>
+          <p>
+            Yes, mostly. It is similar to connecting Stripe, Google Maps, or any external API:
+            save an API key in environment variables, build a server-side client, send a request, receive a response, validate it,
+            log it, and handle errors.
+          </p>
+          <p>
+            The difference is that an LLM can return imperfect text. So we need stricter validation than a normal API.
+          </p>
+        </article>
+        <article class="card span-6 purple-box">
+          <h3>Are we in good shape?</h3>
+          <p>
+            Yes. The current structure is pointed in the right direction: local logic and history search first,
+            small LLM candidate generation second, Route Optimizer proof only for finalists.
+          </p>
+          <p>
+            That is the right shape for both quality and cost.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="what-is-built" class="section">
+      <h2>2. What We Have Built So Far</h2>
+      <p>
+        Think of the Delivery Agent as a careful operations assistant. It is not one giant "ask AI and hope" button.
+        We are building layers so it can reason, check itself, avoid wasting Google calls, and learn from your approval/rejection.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Status</th>
+              <th>Plain Meaning</th>
+              <th>Why It Matters</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Admin preview cost guardrails</td>
+              <td><span class="status done">Done</span></td>
+              <td>Admin limits how many candidate plans are sent to Route Optimizer preview.</td>
+              <td>Stops the Google API spike pattern where too many variants get previewed.</td>
+            </tr>
+            <tr>
+              <td>Route Optimizer cost guardrails</td>
+              <td><span class="status done">Done</span></td>
+              <td>RO has stronger protection against expensive preview requests.</td>
+              <td>Even if Admin makes a mistake, RO can reject dangerous paid calls.</td>
+            </tr>
+            <tr>
+              <td>Preview cache and idempotency</td>
+              <td><span class="status done">Done</span></td>
+              <td>Same preview can be reused instead of paid again.</td>
+              <td>Prevents duplicate-click and repeated-test waste.</td>
+            </tr>
+            <tr>
+              <td>Historical learning foundation</td>
+              <td><span class="status done">Done</span></td>
+              <td>The system can store and retrieve past delivery days as examples.</td>
+              <td>Lets the agent learn patterns instead of starting from zero every day.</td>
+            </tr>
+            <tr>
+              <td>Similar-history retrieval</td>
+              <td><span class="status done">Done</span></td>
+              <td>The system can find old days that look similar to today.</td>
+              <td>Keeps prompts smaller and improves plan quality with relevant examples.</td>
+            </tr>
+            <tr>
+              <td>LLM prompt package</td>
+              <td><span class="status done">Done</span></td>
+              <td>The system can prepare the information an LLM needs without exposing raw messy data.</td>
+              <td>Good prompt structure improves quality and reduces token cost.</td>
+            </tr>
+            <tr>
+              <td>LLM output parser</td>
+              <td><span class="status done">Done</span></td>
+              <td>The system can check whether an LLM's answer follows our required plan format.</td>
+              <td>Prevents vague or broken AI output from becoming an operational plan.</td>
+            </tr>
+            <tr>
+              <td>Local plan conversion and ranking</td>
+              <td><span class="status done">Done</span></td>
+              <td>LLM-style plan ideas can be converted into real local candidate plans and ranked before paid preview.</td>
+              <td>Route Optimizer is only used on serious finalists, not as a search engine.</td>
+            </tr>
+            <tr>
+              <td>Provider-free LLM planning route</td>
+              <td><span class="status done">Done</span></td>
+              <td>Admin can prepare a real-date LLM planning request, but it cannot spend money yet.</td>
+              <td>This is the safe bridge right before real LLM wiring.</td>
+            </tr>
+            <tr>
+              <td>LLM provider readiness and cost gate</td>
+              <td><span class="status done">Done</span></td>
+              <td>The system can check provider/model/API-key/pricing readiness and estimate cost before a live call.</td>
+              <td>This creates the hard server-side gate needed before first live LLM dry runs.</td>
+            </tr>
+            <tr>
+              <td>Live LLM provider call</td>
+              <td><span class="status next">Next soon</span></td>
+              <td>Actually call OpenAI, Gemini, Anthropic, or another model provider.</td>
+              <td>This is where token spending starts, so it needs strong controls.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="next-step" class="section">
+      <h2>3. What I Think The Next Step Should Be</h2>
+      <div class="callout">
+        <p>
+          My recommendation after the provider safety gate: the next milestone can be the first live LLM dry run,
+          but only in an admin-only, tightly budgeted path.
+        </p>
+      </div>
+      <div class="flow">
+        <article class="step">
+          <span class="number">1</span>
+          <strong>Use provider settings</strong>
+          <p>Read the configured provider, model, API key readiness, and pricing before any call.</p>
+        </article>
+        <article class="step">
+          <span class="number">2</span>
+          <strong>Keep secret checks</strong>
+          <p>Confirm the API key exists on the server, never in browser code.</p>
+        </article>
+        <article class="step">
+          <span class="number">3</span>
+          <strong>Show cost estimate</strong>
+          <p>Estimate token cost before a real call so you know whether the run is normal or risky.</p>
+        </article>
+        <article class="step">
+          <span class="number">4</span>
+          <strong>Respect strict gate</strong>
+          <p>Require explicit server permission before any live LLM call can happen.</p>
+        </article>
+        <article class="step">
+          <span class="number">5</span>
+          <strong>Call LLM once</strong>
+          <p>Connect the first real admin-only dry run, then validate the returned plan before using it.</p>
+        </article>
+      </div>
+      <p class="small">
+        This is careful, but not slow for the sake of being slow. It prevents us from adding a money-spending feature without a dashboard,
+        a stop button, or proof that the output is valid.
+      </p>
+    </section>
+
+    <section id="llm-choice" class="section">
+      <h2>4. How We Should Pick The LLM</h2>
+      <p>
+        We should not pick the LLM only by price. We should pick it by <strong>cost per approved working plan</strong>.
+        A cheap model that creates bad plans can become expensive because it causes more retries, more Route Optimizer previews,
+        and more manual work.
+      </p>
+      <div class="grid">
+        <article class="card span-4">
+          <h3>Quality first</h3>
+          <p>
+            The model must handle exact order IDs, driver split logic, handoff timing, fixed/end stops, self backup,
+            and the 1 PM deadline. If it cannot do that reliably, it is not cheap in real life.
+          </p>
+        </article>
+        <article class="card span-4">
+          <h3>Cost second</h3>
+          <p>
+            We should estimate input tokens, output tokens, retry count, cache hit rate, and Route Optimizer preview count.
+            The real daily cost is all of these combined.
+          </p>
+        </article>
+        <article class="card span-4">
+          <h3>Reliability third</h3>
+          <p>
+            The model must return structured JSON that our app can validate. If it returns messy text often,
+            it will slow operations down.
+          </p>
+        </article>
+      </div>
+      <div class="table-wrap" style="margin-top: 14px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Day Type</th>
+              <th>Recommended LLM Use</th>
+              <th>Reason</th>
+              <th>Cost Control</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Easy day</td>
+              <td>No LLM if cached/local plan is clearly good</td>
+              <td>No reason to pay tokens for a simple repeat pattern.</td>
+              <td>Use local logic, history match, and cached proof.</td>
+            </tr>
+            <tr>
+              <td>Normal day</td>
+              <td>Strong model once</td>
+              <td>Good enough reasoning matters more than saving fractions of a dollar.</td>
+              <td>Limit to one generation call, then local validation and finalist preview.</td>
+            </tr>
+            <tr>
+              <td>Complex day</td>
+              <td>Strong or strongest model</td>
+              <td>Handoff, outliers, tight deadline, and support planning need better reasoning.</td>
+              <td>Use compact prompt, no raw history dump, max candidates, and no repeated loop.</td>
+            </tr>
+            <tr>
+              <td>Rejected plan</td>
+              <td>Use feedback-aware next-plan call only when needed</td>
+              <td>Your reason should guide the next plan instead of random regeneration.</td>
+              <td>Cache by feedback fingerprint and cap each rejection round.</td>
+            </tr>
+            <tr>
+              <td>Rescue day</td>
+              <td>Strongest model only if no qualified plan exists</td>
+              <td>This is when the cost is justified because the alternative is manual emergency planning.</td>
+              <td>Show warning; stay under rescue-day budget unless manually overridden.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="api-wiring" class="section">
+      <h2>5. How The LLM Gets Linked Exactly</h2>
+      <p>
+        Yes, it is regular API wiring, but with extra safety because the response is used for real operations.
+        The browser should never call the LLM directly. Only the server should call it.
+      </p>
+      <div class="flow">
+        <article class="step">
+          <span class="number">1</span>
+          <strong>Admin clicks generate</strong>
+          <p>You choose a date and start AI planning from the Admin UI.</p>
+        </article>
+        <article class="step">
+          <span class="number">2</span>
+          <strong>Server prepares package</strong>
+          <p>The server gathers orders, profile rules, similar history, and budget limits.</p>
+        </article>
+        <article class="step">
+          <span class="number">3</span>
+          <strong>Server checks permission</strong>
+          <p>The server checks whether live LLM calls are enabled and allowed for this action.</p>
+        </article>
+        <article class="step">
+          <span class="number">4</span>
+          <strong>Server calls provider</strong>
+          <p>The server sends the compact prompt to the selected model using a private API key.</p>
+        </article>
+        <article class="step">
+          <span class="number">5</span>
+          <strong>Server validates output</strong>
+          <p>The server rejects invented orders, missing orders, duplicate assignments, bad JSON, and unsafe plans.</p>
+        </article>
+      </div>
+      <div class="grid" style="margin-top: 14px;">
+        <article class="card span-6 green-box">
+          <h3>What is an API key?</h3>
+          <p>
+            An API key is like a private password that lets your app use another company's service.
+            For LLMs, this key must stay on the server, not in the customer/admin browser.
+          </p>
+        </article>
+        <article class="card span-6 blue-box">
+          <h3>What is a provider?</h3>
+          <p>
+            A provider is the company that runs the model, for example OpenAI, Google, or Anthropic.
+            The app can be designed so we can change providers later without rebuilding the whole Delivery Agent.
+          </p>
+        </article>
+        <article class="card span-6 amber-box">
+          <h3>What is a model?</h3>
+          <p>
+            A model is the specific AI brain we choose from the provider. Usually there are cheaper/faster models
+            and stronger/slower models. The best choice depends on the task.
+          </p>
+        </article>
+        <article class="card span-6 purple-box">
+          <h3>What are tokens?</h3>
+          <p>
+            Tokens are the pieces of text the model reads and writes. More text usually means more cost.
+            That is why we built compact planning packages instead of sending raw database data.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="feedback-loop" class="section">
+      <h2>6. Approve Or Reject Loop</h2>
+      <p>
+        The final user flow should stay simple for you: after the system recommends one plan, you only need two choices.
+      </p>
+      <div class="decision">
+        <article class="card span-6 green-box">
+          <h3>Approve</h3>
+          <p>
+            You accept the recommended plan. The system records this as a positive learning example.
+            Then it can create the final Route Optimizer runs.
+          </p>
+        </article>
+        <article class="card span-6 red-box">
+          <h3>Reject with reason</h3>
+          <p>
+            You reject the plan, but you must write why. The system turns your reason into structured planning hints,
+            then tries to create the next best recommendation.
+          </p>
+        </article>
+      </div>
+      <div class="flow">
+        <article class="step">
+          <span class="number">1</span>
+          <strong>Plan shown</strong>
+          <p>The UI shows only the proven recommendation, plus warning-only ideas separately.</p>
+        </article>
+        <article class="step">
+          <span class="number">2</span>
+          <strong>You reject with reason</strong>
+          <p>Example: "Run A has too many North York stops" or "Self should not take Markham."</p>
+        </article>
+        <article class="step">
+          <span class="number">3</span>
+          <strong>Reason becomes rules</strong>
+          <p>The system converts your text into concrete hints: avoid, prefer, move order, change handoff, reduce self, etc.</p>
+        </article>
+        <article class="step">
+          <span class="number">4</span>
+          <strong>Next plan generated</strong>
+          <p>The LLM uses the original facts plus your new feedback. It should not repeat the rejected mistake.</p>
+        </article>
+        <article class="step">
+          <span class="number">5</span>
+          <strong>Learning saved</strong>
+          <p>Approved and rejected plans become memory so future days get better and cheaper.</p>
+        </article>
+      </div>
+      <p class="small">
+        Important: rejection should not mean "start over randomly." It should mean "keep today's facts, keep the good parts,
+        apply Donald's reason, and produce the next best proven recommendation."
+      </p>
+    </section>
+
+    <section id="risks" class="section">
+      <h2>7. Risks And Concerns I See So Far</h2>
+      <div class="grid">
+        <article class="card span-6 red-box">
+          <h3>Risk: Bad AI plan looks confident</h3>
+          <p>
+            LLMs can sound correct even when they are wrong. We must not trust the text alone.
+            Every plan must pass strict local checks before it can be recommended.
+          </p>
+        </article>
+        <article class="card span-6 amber-box">
+          <h3>Risk: Cheap model causes more retries</h3>
+          <p>
+            If the model is too weak, it may create bad split plans and indirectly burn more Route Optimizer previews.
+            We should measure approved-plan quality, not just token price.
+          </p>
+        </article>
+        <article class="card span-6 amber-box">
+          <h3>Risk: Feedback loop becomes expensive</h3>
+          <p>
+            If every rejection triggers many new LLM calls, cost can grow. We need one controlled next-plan attempt per rejection round,
+            with cache and clear budget status.
+          </p>
+        </article>
+        <article class="card span-6 blue-box">
+          <h3>Risk: Address quality</h3>
+          <p>
+            Current addresses are free-text strings, so coordinate quality can be uneven.
+            We should keep using current geocode/cache safeguards now and add Google address autocomplete after the agent is working.
+          </p>
+        </article>
+        <article class="card span-6 purple-box">
+          <h3>Risk: Too much history in prompt</h3>
+          <p>
+            Sending many raw old days to the model would cost too much and can confuse it.
+            The correct design is compact similar cases only.
+          </p>
+        </article>
+        <article class="card span-6 green-box">
+          <h3>Risk: Cost controls reduce quality</h3>
+          <p>
+            We should not simply cut candidates blindly. We should let local logic create enough diversity,
+            then use paid proof only on the best serious finalists.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section">
+      <h2>8. Roadmap From Here To Live</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Status</th>
+              <th>What Happens</th>
+              <th>Spends LLM Money?</th>
+              <th>Recommended Model Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Provider configuration and cost gate</td>
+              <td><span class="status done">Done</span></td>
+              <td>Add provider/model settings, API key checks, estimated token cost, and live-call off switch.</td>
+              <td>No</td>
+              <td>Extra High</td>
+            </tr>
+            <tr>
+              <td>First live LLM dry run</td>
+              <td><span class="status next">Next</span></td>
+              <td>Call the model for one admin-only planning request, parse output, but keep final recommendation gated.</td>
+              <td>Yes, controlled</td>
+              <td>Extra High</td>
+            </tr>
+            <tr>
+              <td>LLM candidate to preview proof</td>
+              <td><span class="status wait">Later</span></td>
+              <td>Send only top LLM/local finalist plans to Route Optimizer preview.</td>
+              <td>LLM + limited Google/RO</td>
+              <td>Extra High</td>
+            </tr>
+            <tr>
+              <td>Approve/reject feedback loop</td>
+              <td><span class="status wait">Later</span></td>
+              <td>Require reject reason, generate next best plan, save approved/rejected learning.</td>
+              <td>Yes, capped</td>
+              <td>Extra High</td>
+            </tr>
+            <tr>
+              <td>Historical evaluation</td>
+              <td><span class="status wait">Later</span></td>
+              <td>Test model quality against past delivery days before trusting cheaper models.</td>
+              <td>Optional test cost</td>
+              <td>High or Extra High</td>
+            </tr>
+            <tr>
+              <td>UI polish and launch controls</td>
+              <td><span class="status wait">Later</span></td>
+              <td>Show cost, warnings, model used, proof status, reject reason box, and monthly warning state.</td>
+              <td>No direct model cost</td>
+              <td>High</td>
+            </tr>
+            <tr>
+              <td>Full live daily use</td>
+              <td><span class="status wait">Final</span></td>
+              <td>Use the agent for real planning with budget caps, logs, and your approval before final route creation.</td>
+              <td>Yes, daily but controlled</td>
+              <td>High for maintenance, Extra High for core changes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="terms" class="section">
+      <h2>9. Terms You Should Know Before Moving On</h2>
+      <div class="grid">
+        <article class="card span-4">
+          <h3>LLM</h3>
+          <p>A large language model. This is the AI brain that reads the delivery facts and suggests candidate plans.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Provider</h3>
+          <p>The company serving the model, such as OpenAI, Google, or Anthropic.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Model</h3>
+          <p>The specific AI product from a provider. Some are cheaper, some reason better.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Token</h3>
+          <p>A piece of text. LLM cost is usually based on how many tokens go in and come out.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Prompt</h3>
+          <p>The carefully prepared message we send to the LLM.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Prompt package</h3>
+          <p>The clean bundle of today's orders, profile rules, similar history, and required output format.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Parser</h3>
+          <p>Code that reads the model's answer and checks whether it follows our exact format.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Validation</h3>
+          <p>Checks that no orders are missing, duplicated, invented, or assigned in an unsafe way.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Route Optimizer proof</h3>
+          <p>The paid routing check that proves timing, route order, and feasibility. This should only run for finalists.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Cache</h3>
+          <p>Saved result from the same unchanged input, so we do not pay again for repeated work.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Fingerprint</h3>
+          <p>A stable ID representing today's orders, rules, feedback, model, and prompt version. It helps decide whether cache is still valid.</p>
+        </article>
+        <article class="card span-4">
+          <h3>Dry run</h3>
+          <p>A safe test mode that prepares or tests output without creating final route runs.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>10. My Recommendation Before We Continue</h2>
+      <div class="callout">
+        <p>
+          We should continue, but the next coding milestone should still be controlled:
+          one live LLM dry run, strict JSON validation, no final route creation, no automatic repeated retry loop, and clear cost reporting.
+        </p>
+        <p>
+          After that, we can safely wire the first real LLM call. I do not see a reason to redesign the whole project.
+          The current structure is good because it separates the AI thinking, local validation, paid route proof, and your final approval.
+        </p>
+      </div>
+      <p class="small">
+        Plain-English decision: we are not trying to make the LLM drive the whole system blindly.
+        We are building a controlled planner where AI suggests, local code checks, Route Optimizer proves, and Donald approves.
+      </p>
+    </section>
+  </main>
+</body>
+</html>

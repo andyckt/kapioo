@@ -1,5 +1,6 @@
 import { createDefaultDeliveryAgentCostPolicy } from "@/lib/agents/delivery/cost-policy/delivery-agent-cost-policy";
 import { clearDeliveryAgentLlmCandidateOutputCacheForTests } from "@/lib/agents/delivery/llm-planning/candidate-output-cache";
+import { resolveDeliveryAgentLlmProviderRuntimeConfig } from "@/lib/agents/delivery/llm-planning/provider-readiness";
 import {
   runDeliveryAgentLlmCandidateProviderAdapter,
   type DeliveryAgentLlmCandidateProviderExecutor,
@@ -383,6 +384,31 @@ describe("runDeliveryAgentLlmCandidateProviderAdapter", () => {
     expect(result.providerCall.status).toBe("not_configured");
     expect(result.providerCall.reason).toBe("provider_executor_not_supplied");
     expect(result.dryRunResult?.status).toBe("prompt_ready");
+  });
+
+  it("enforces runtime readiness before calling an injected provider", async () => {
+    const provider = vi.fn<DeliveryAgentLlmCandidateProviderExecutor>(() => ({
+      rawCandidateOutput: buildOutput(),
+    }));
+
+    const result = await runAdapter({
+      allowProviderCall: true,
+      provider,
+      providerRuntimeConfig: resolveDeliveryAgentLlmProviderRuntimeConfig({
+        DELIVERY_AGENT_LLM_PROVIDER: "openai",
+        DELIVERY_AGENT_LLM_STRONG_MODEL: "strong-v1",
+        OPENAI_API_KEY: "test-key",
+      }),
+      enforceProviderRuntimeGate: true,
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.liveCallGate?.status).toBe("blocked");
+    expect(result.providerCall.status).toBe("blocked_by_policy");
+    expect(result.providerCall.errors).toEqual(
+      expect.arrayContaining(["input_pricing_missing", "output_pricing_missing"])
+    );
+    expect(provider).not.toHaveBeenCalled();
   });
 
   it("blocks provider calls when the prompt is over the token limit", async () => {

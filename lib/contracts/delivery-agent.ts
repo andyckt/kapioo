@@ -274,6 +274,42 @@ export type DeliveryAgentLlmCandidatePlanningHistoryStatus =
   | "skipped"
   | "unavailable";
 
+export type DeliveryAgentLlmCandidatePlanningLiveCallGateStatus =
+  | "not_requested"
+  | "allowed"
+  | "blocked";
+
+export type DeliveryAgentLlmCandidatePlanningLiveCallReadinessStatus =
+  | "ready"
+  | "blocked";
+
+export type DeliveryAgentLlmCandidatePlanningLiveCallGate = {
+  gateVersion: string;
+  status: DeliveryAgentLlmCandidatePlanningLiveCallGateStatus;
+  readinessStatus: DeliveryAgentLlmCandidatePlanningLiveCallReadinessStatus;
+  liveCallRequested: boolean;
+  liveCallAllowed: boolean;
+  callType: string;
+  modelTier: string;
+  provider?: string;
+  modelId?: string;
+  modelConfigured: boolean;
+  apiKeyConfigured: boolean;
+  apiKeyEnvVar?: string;
+  pricingConfigured: boolean;
+  pricingVersion: string;
+  inputCentsPerMillion?: number;
+  outputCentsPerMillion?: number;
+  estimatedInputTokens: number;
+  estimatedOutputTokens: number;
+  estimatedTotalTokens: number;
+  estimatedCostCents?: number;
+  targetCents: number;
+  withinTarget?: boolean;
+  blockingReasons: string[];
+  warnings: string[];
+};
+
 export type DeliveryAgentLlmCandidatePlanningResponse = {
   pipelineVersion: string;
   status:
@@ -347,6 +383,7 @@ export type DeliveryAgentLlmCandidatePlanningResponse = {
     modelId?: string;
     modelConfigured: boolean;
   };
+  liveCallGate: DeliveryAgentLlmCandidatePlanningLiveCallGate;
   localCandidates: {
     dryRunStatus: "not_started" | "prompt_ready" | "ranked" | "partial" | "fallback_selected" | "blocked";
     candidatePlanCount: number;

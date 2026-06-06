@@ -26,6 +26,7 @@ vi.mock("@/lib/agents/delivery/llm-planning/similar-historical-package", () => (
 
 import { clearDeliveryAgentLlmCandidateOutputCacheForTests } from "@/lib/agents/delivery/llm-planning/candidate-output-cache";
 import { runDeliveryAgentLlmCandidatePlanningForDate } from "@/lib/agents/delivery/llm-planning/candidate-planning-for-date";
+import { resolveDeliveryAgentLlmProviderRuntimeConfig } from "@/lib/agents/delivery/llm-planning/provider-readiness";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { DEFAULT_DELIVERY_PLANNING_PROFILE } from "@/lib/agents/delivery/planning-profile/default-profile";
 import { buildRoutingStop } from "@/__tests__/unit/agents/delivery/candidate-plans/test-fixtures";
@@ -36,6 +37,7 @@ import {
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 
 const NOW_MS = Date.parse("2026-06-16T10:00:00.000Z");
+const EMPTY_PROVIDER_RUNTIME_CONFIG = resolveDeliveryAgentLlmProviderRuntimeConfig({});
 
 function buildStops(): RoutingStop[] {
   return [
@@ -171,6 +173,7 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
 
     const result = await runDeliveryAgentLlmCandidatePlanningForDate({
       deliveryDate: "2026-06-16",
+      providerRuntimeConfig: EMPTY_PROVIDER_RUNTIME_CONFIG,
       nowMs: NOW_MS,
     });
 
@@ -178,6 +181,11 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     expect(result.provider.apiCallMade).toBe(false);
     expect(result.provider.allowProviderCall).toBe(false);
     expect(result.provider.modelConfigured).toBe(false);
+    expect(result.liveCallGate.status).toBe("not_requested");
+    expect(result.liveCallGate.liveCallAllowed).toBe(false);
+    expect(result.liveCallGate.blockingReasons).toEqual(
+      expect.arrayContaining(["model_not_configured", "provider_api_key_missing"])
+    );
     expect(result.prompt?.hasHistoricalPackage).toBe(true);
     expect(result.prompt?.promptOrderCount).toBe(3);
     expect(result.orderSummary.ordersWithCoordinates).toBe(2);
@@ -216,6 +224,7 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     await expect(
       runDeliveryAgentLlmCandidatePlanningForDate({
         deliveryDate: "2026-06-16",
+        providerRuntimeConfig: EMPTY_PROVIDER_RUNTIME_CONFIG,
         nowMs: NOW_MS,
       })
     ).rejects.toBeInstanceOf(DeliveryAgentPlanningBlockedError);
@@ -246,6 +255,7 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     await expect(
       runDeliveryAgentLlmCandidatePlanningForDate({
         deliveryDate: "2026-06-16",
+        providerRuntimeConfig: EMPTY_PROVIDER_RUNTIME_CONFIG,
         nowMs: NOW_MS,
       })
     ).rejects.toBeInstanceOf(DeliveryAgentPlanningBlockedError);
@@ -261,6 +271,7 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
 
     const result = await runDeliveryAgentLlmCandidatePlanningForDate({
       deliveryDate: "2026-06-16",
+      providerRuntimeConfig: EMPTY_PROVIDER_RUNTIME_CONFIG,
       nowMs: NOW_MS,
     });
 
@@ -276,6 +287,7 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     const result = await runDeliveryAgentLlmCandidatePlanningForDate({
       deliveryDate: "2026-06-16",
       includeHistoricalPackage: false,
+      providerRuntimeConfig: EMPTY_PROVIDER_RUNTIME_CONFIG,
       nowMs: NOW_MS,
     });
 

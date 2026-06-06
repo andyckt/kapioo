@@ -1,4 +1,3 @@
-import { createDefaultDeliveryAgentCostPolicy } from "@/lib/agents/delivery/cost-policy/delivery-agent-cost-policy";
 import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
 import {
   buildSimilarCompactHistoricalPackageForDeliveryAgent,
@@ -9,6 +8,12 @@ import {
   type DeliveryAgentLlmCandidateProviderAdapterResult,
   type DeliveryAgentLlmCandidateProviderExecutor,
 } from "@/lib/agents/delivery/llm-planning/candidate-provider-adapter";
+import {
+  createDeliveryAgentCostPolicyWithProviderRuntime,
+  resolveDeliveryAgentLlmLiveCallGate,
+  resolveDeliveryAgentLlmProviderRuntimeConfig,
+  type DeliveryAgentLlmProviderRuntimeConfig,
+} from "@/lib/agents/delivery/llm-planning/provider-readiness";
 import { getDeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/get-profile";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
 import { toPlanningStops } from "@/lib/agents/delivery/candidate-plans/classify-stop-for-planning";
@@ -35,6 +40,7 @@ export type RunDeliveryAgentLlmCandidatePlanningForDateInput = {
   forceRefresh?: boolean;
   allowProviderCall?: boolean;
   provider?: DeliveryAgentLlmCandidateProviderExecutor;
+  providerRuntimeConfig?: DeliveryAgentLlmProviderRuntimeConfig;
   policy?: DeliveryAgentCostPolicy;
   nowMs?: number;
 };
@@ -223,11 +229,22 @@ function mapAdapterToResponse(input: {
   orderSummary: DeliveryAgentLlmCandidatePlanningResponse["orderSummary"];
   historical: HistoricalPackageResolution;
   allowProviderCall: boolean;
+  policy: DeliveryAgentCostPolicy;
+  providerRuntimeConfig: DeliveryAgentLlmProviderRuntimeConfig;
 }): DeliveryAgentLlmCandidatePlanningResponse {
   const promptPackage = input.adapterResult.promptPackage;
   const model = input.adapterResult.providerCall.modelResolution.model;
   const cacheContext = input.adapterResult.cacheContext;
   const dryRunResult = input.adapterResult.dryRunResult;
+  const liveCallGate =
+    input.adapterResult.liveCallGate ??
+    resolveDeliveryAgentLlmLiveCallGate({
+      promptPackage,
+      policy: input.policy,
+      modelResolution: input.adapterResult.providerCall.modelResolution,
+      runtimeConfig: input.providerRuntimeConfig,
+      allowProviderCall: input.allowProviderCall,
+    });
 
   return {
     pipelineVersion: DELIVERY_AGENT_LLM_CANDIDATE_PLANNING_FOR_DATE_VERSION,
@@ -278,6 +295,7 @@ function mapAdapterToResponse(input: {
       modelId: model?.modelId ?? cacheContext?.modelId,
       modelConfigured: Boolean(model?.configured),
     },
+    liveCallGate,
     localCandidates: {
       dryRunStatus: dryRunResult?.status ?? "not_started",
       candidatePlanCount: dryRunResult?.candidatePlans.length ?? 0,
@@ -301,7 +319,13 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
 ): Promise<DeliveryAgentLlmCandidatePlanningResponse> {
   const deliveryDate = input.deliveryDate.trim();
   const profile = getDeliveryPlanningProfile(input.profileId);
-  const policy = input.policy ?? createDefaultDeliveryAgentCostPolicy();
+  const providerRuntimeConfig =
+    input.providerRuntimeConfig ?? resolveDeliveryAgentLlmProviderRuntimeConfig();
+  const policy =
+    input.policy ??
+    createDeliveryAgentCostPolicyWithProviderRuntime({
+      runtimeConfig: providerRuntimeConfig,
+    });
   const orderPreview = await previewDeliveryOrdersForAgent(deliveryDate);
 
   if (!orderPreview.canContinueToPlanning) {
@@ -346,6 +370,8 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
     forceRefresh: input.forceRefresh,
     allowProviderCall,
     provider: input.provider,
+    providerRuntimeConfig,
+    enforceProviderRuntimeGate: true,
     nowMs: input.nowMs,
   });
 
@@ -361,5 +387,7 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
     }),
     historical,
     allowProviderCall,
+    policy,
+    providerRuntimeConfig,
   });
 }

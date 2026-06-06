@@ -16,8 +16,13 @@ import {
   buildDeliveryAgentLlmPromptPackage,
   type BuildDeliveryAgentLlmPromptPackageInput,
 } from "@/lib/agents/delivery/llm-planning/prompt-assembly";
+import {
+  resolveDeliveryAgentLlmLiveCallGate,
+  type DeliveryAgentLlmProviderRuntimeConfig,
+} from "@/lib/agents/delivery/llm-planning/provider-readiness";
 import type { CandidatePlan, PlanningStop } from "@/lib/agents/delivery/candidate-plans/types";
 import type { DeliveryPlanningProfile } from "@/lib/agents/delivery/planning-profile/types";
+import type { DeliveryAgentLlmCandidatePlanningLiveCallGate } from "@/lib/contracts/delivery-agent";
 import type {
   DeliveryAgentCostPolicy,
   DeliveryAgentLlmCallType,
@@ -115,6 +120,8 @@ export type RunDeliveryAgentLlmCandidateProviderAdapterInput = {
   modelId?: string;
   allowProviderCall?: boolean;
   provider?: DeliveryAgentLlmCandidateProviderExecutor;
+  providerRuntimeConfig?: DeliveryAgentLlmProviderRuntimeConfig;
+  enforceProviderRuntimeGate?: boolean;
   nowMs?: number;
   maxAcceptedCandidates?: number;
   maxCandidatePlans?: number;
@@ -135,6 +142,7 @@ export type DeliveryAgentLlmCandidateProviderAdapterResult = {
   cacheRead?: DeliveryAgentLlmCandidateOutputCacheReadResult;
   cacheWrite?: DeliveryAgentLlmCandidateOutputCacheWriteResult;
   dryRunResult?: DeliveryAgentLlmCandidatePlanningDryRunResult;
+  liveCallGate?: DeliveryAgentLlmCandidatePlanningLiveCallGate;
   providerCall: DeliveryAgentLlmCandidateProviderCall;
   candidatePlans: CandidatePlan[];
   finalistCandidates: CandidatePlan[];
@@ -255,6 +263,7 @@ function buildResult(input: {
   cacheRead?: DeliveryAgentLlmCandidateOutputCacheReadResult;
   cacheWrite?: DeliveryAgentLlmCandidateOutputCacheWriteResult;
   dryRunResult?: DeliveryAgentLlmCandidatePlanningDryRunResult;
+  liveCallGate?: DeliveryAgentLlmCandidatePlanningLiveCallGate;
   providerCall: DeliveryAgentLlmCandidateProviderCall;
   extraWarnings?: string[];
   extraErrors?: string[];
@@ -274,6 +283,7 @@ function buildResult(input: {
     cacheRead: input.cacheRead,
     cacheWrite: input.cacheWrite,
     dryRunResult,
+    liveCallGate: input.liveCallGate,
     providerCall: input.providerCall,
     candidatePlans: dryRunResult?.candidatePlans ?? [],
     finalistCandidates: dryRunResult?.finalistCandidates ?? [],
@@ -394,6 +404,16 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
     context: cacheContext,
     nowMs: input.nowMs,
   });
+  const liveCallGate =
+    input.providerRuntimeConfig || input.enforceProviderRuntimeGate
+      ? resolveDeliveryAgentLlmLiveCallGate({
+          promptPackage,
+          policy: input.policy,
+          modelResolution: cacheContext.modelResolution,
+          runtimeConfig: input.providerRuntimeConfig,
+          allowProviderCall,
+        })
+      : undefined;
 
   if (cacheRead.status === "hit" && cacheRead.record) {
     const dryRunResult = runDeliveryAgentLlmCandidatePlanningDryRun(
@@ -412,6 +432,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
       cacheContext,
       cacheRead,
       dryRunResult,
+      liveCallGate,
       providerCall,
       extraWarnings:
         dryRunResult.status === "blocked"
@@ -437,6 +458,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
       cacheContext,
       cacheRead,
       dryRunResult: dryRunPromptOnly,
+      liveCallGate,
       providerCall: buildProviderCall({
         status: policyBlock.status,
         reason: policyBlock.reason,
@@ -453,6 +475,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
       cacheContext,
       cacheRead,
       dryRunResult: dryRunPromptOnly,
+      liveCallGate,
       providerCall: buildProviderCall({
         status: "not_allowed",
         reason: "allow_provider_call_false",
@@ -468,6 +491,25 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
     });
   }
 
+  if (input.enforceProviderRuntimeGate && liveCallGate && !liveCallGate.liveCallAllowed) {
+    return buildResult({
+      status: "blocked",
+      baseInput: input,
+      promptPackage,
+      cacheContext,
+      cacheRead,
+      dryRunResult: dryRunPromptOnly,
+      liveCallGate,
+      providerCall: buildProviderCall({
+        status: "blocked_by_policy",
+        reason: liveCallGate.blockingReasons[0] ?? "live_call_gate_blocked",
+        context: cacheContext,
+        warnings: liveCallGate.warnings,
+        errors: liveCallGate.blockingReasons,
+      }),
+    });
+  }
+
   if (!input.provider) {
     return buildResult({
       status: "ready_for_provider",
@@ -476,6 +518,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
       cacheContext,
       cacheRead,
       dryRunResult: dryRunPromptOnly,
+      liveCallGate,
       providerCall: buildProviderCall({
         status: "not_configured",
         reason: "provider_executor_not_supplied",
@@ -497,6 +540,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
       cacheContext,
       cacheRead,
       dryRunResult: dryRunPromptOnly,
+      liveCallGate,
       providerCall: buildProviderCall({
         status: "failed",
         reason: "provider_executor_failed",
@@ -514,6 +558,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
       cacheContext,
       cacheRead,
       dryRunResult: dryRunPromptOnly,
+      liveCallGate,
       providerCall: buildProviderCall({
         status: "called",
         reason: "provider_executor_returned_no_candidate_output",
@@ -556,6 +601,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
     cacheRead,
     cacheWrite,
     dryRunResult,
+    liveCallGate,
     providerCall,
   });
 }
