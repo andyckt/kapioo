@@ -31,6 +31,14 @@ export const deliveryAgentGenerateCandidatePlansBodySchema = z.object({
   deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
 });
 
+export const deliveryAgentLlmCandidatePlanningBodySchema = z.object({
+  deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+  profileId: z.string().trim().min(1).optional(),
+  includeHistoricalPackage: z.boolean().optional(),
+  forceRefresh: z.boolean().optional(),
+  allowProviderCall: z.literal(false).optional(),
+});
+
 export const deliveryAgentPreviewCandidatePlansBodySchema = z.object({
   deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
 });
@@ -47,6 +55,10 @@ export type DeliveryAgentSimpleRoutePreviewBody = z.infer<
 
 export type DeliveryAgentGenerateCandidatePlansBody = z.infer<
   typeof deliveryAgentGenerateCandidatePlansBodySchema
+>;
+
+export type DeliveryAgentLlmCandidatePlanningBody = z.infer<
+  typeof deliveryAgentLlmCandidatePlanningBodySchema
 >;
 
 export type DeliveryAgentPreviewCandidatePlansBody = z.infer<
@@ -254,6 +266,97 @@ export type DeliveryAgentGenerateCandidatePlansResponse = {
   notes: string;
   coordinateCoverage: DeliveryAgentCoordinateCoverageSummary;
   geocodeEnrichment?: DeliveryAgentGeocodeEnrichment;
+};
+
+export type DeliveryAgentLlmCandidatePlanningHistoryStatus =
+  | "included"
+  | "empty"
+  | "skipped"
+  | "unavailable";
+
+export type DeliveryAgentLlmCandidatePlanningResponse = {
+  pipelineVersion: string;
+  status:
+    | "cache_hit"
+    | "ready_for_provider"
+    | "provider_completed"
+    | "provider_completed_not_cached"
+    | "blocked";
+  deliveryDate: string;
+  profileId: string;
+  profileVersion: string;
+  planningFingerprint?: string;
+  orderSummary: {
+    totalOrders: number;
+    validStops: number;
+    invalidStops: number;
+    pendingOrders: number;
+    ordersWithCoordinates: number;
+    ordersMissingCoordinates: string[];
+    coordinateCoveragePercent: number;
+    byArea: Record<string, number>;
+  };
+  historicalPackage: {
+    status: DeliveryAgentLlmCandidatePlanningHistoryStatus;
+    selectedCaseIds: string[];
+    selectedCaseCount: number;
+    warningCount: number;
+  };
+  prompt?: {
+    promptPackageVersion: string;
+    promptVersion: string;
+    outputSchemaVersion: string;
+    scope: string;
+    callType: string;
+    estimatedInputTokens: number;
+    maxInputTokens: number;
+    estimatedOutputTokens: number;
+    maxOutputTokens: number;
+    tokenStatus: "within_limit" | "over_limit";
+    messageCount: number;
+    promptOrderCount: number;
+    hasHistoricalPackage: boolean;
+  };
+  cache: {
+    readStatus: "not_started" | "disabled" | "miss" | "hit" | "stale";
+    writeStatus:
+      | "not_started"
+      | "written"
+      | "disabled"
+      | "skipped_invalid_output"
+      | "skipped_fingerprint_mismatch";
+    decisionStatus: "enabled" | "disabled";
+    decisionReasons: string[];
+    ttlHours: number;
+    cacheKey?: string;
+  };
+  provider: {
+    allowProviderCall: boolean;
+    apiCallMade: boolean;
+    status:
+      | "not_allowed"
+      | "not_configured"
+      | "not_needed_cache_hit"
+      | "blocked_by_policy"
+      | "blocked_by_token_limit"
+      | "called"
+      | "failed";
+    reason: string;
+    modelTier: string;
+    modelProvider?: string;
+    modelId?: string;
+    modelConfigured: boolean;
+  };
+  localCandidates: {
+    dryRunStatus: "not_started" | "prompt_ready" | "ranked" | "partial" | "fallback_selected" | "blocked";
+    candidatePlanCount: number;
+    finalistCandidateCount: number;
+    parsedAcceptedCandidateIds: string[];
+    parsedRejectedCandidateIds: string[];
+    finalistCandidateIds: string[];
+  };
+  warnings: string[];
+  errors: string[];
 };
 
 export type DeliveryAgentRouteShapeIssueType =

@@ -1,0 +1,287 @@
+const {
+  previewDeliveryOrdersForAgentMock,
+  getDeliveryOrdersForRoutingMock,
+  loadHistoricalLearningCasesForRetrievalMock,
+  buildSimilarCompactHistoricalPackageForDeliveryAgentMock,
+} = vi.hoisted(() => ({
+  previewDeliveryOrdersForAgentMock: vi.fn(),
+  getDeliveryOrdersForRoutingMock: vi.fn(),
+  loadHistoricalLearningCasesForRetrievalMock: vi.fn(),
+  buildSimilarCompactHistoricalPackageForDeliveryAgentMock: vi.fn(),
+}));
+
+vi.mock("@/lib/agents/delivery/preview-delivery-orders", () => ({
+  previewDeliveryOrdersForAgent: previewDeliveryOrdersForAgentMock,
+}));
+
+vi.mock("@/lib/agents/delivery/get-delivery-orders-for-routing", () => ({
+  getDeliveryOrdersForRouting: getDeliveryOrdersForRoutingMock,
+}));
+
+vi.mock("@/lib/agents/delivery/llm-planning/similar-historical-package", () => ({
+  loadHistoricalLearningCasesForRetrieval: loadHistoricalLearningCasesForRetrievalMock,
+  buildSimilarCompactHistoricalPackageForDeliveryAgent:
+    buildSimilarCompactHistoricalPackageForDeliveryAgentMock,
+}));
+
+import { clearDeliveryAgentLlmCandidateOutputCacheForTests } from "@/lib/agents/delivery/llm-planning/candidate-output-cache";
+import { runDeliveryAgentLlmCandidatePlanningForDate } from "@/lib/agents/delivery/llm-planning/candidate-planning-for-date";
+import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
+import { DEFAULT_DELIVERY_PLANNING_PROFILE } from "@/lib/agents/delivery/planning-profile/default-profile";
+import { buildRoutingStop } from "@/__tests__/unit/agents/delivery/candidate-plans/test-fixtures";
+import {
+  DELIVERY_AGENT_COMPACT_HISTORICAL_PACKAGE_VERSION,
+  type DeliveryAgentCompactHistoricalPackage,
+} from "@/lib/contracts/delivery-agent-llm-planning";
+import type { RoutingStop } from "@/lib/agents/delivery/types";
+
+const NOW_MS = Date.parse("2026-06-16T10:00:00.000Z");
+
+function buildStops(): RoutingStop[] {
+  return [
+    buildRoutingStop({
+      orderId: "DD-91000001",
+      area: "Downtown Toronto",
+      lat: 43.6487,
+      lng: -79.3817,
+    }),
+    buildRoutingStop({
+      orderId: "DD-91000002",
+      area: "North York",
+      streetAddress: "5000 Yonge St",
+      postalCode: "M2N 7E9",
+      lat: 43.7661,
+      lng: -79.4149,
+    }),
+    buildRoutingStop({
+      orderId: "DD-91000003",
+      area: "Richmond Hill",
+      streetAddress: "30 High Tech Rd",
+      postalCode: "L4B 4L8",
+    }),
+  ];
+}
+
+function buildOrderPreview(
+  overrides: Partial<Awaited<ReturnType<typeof previewDeliveryOrdersForAgentMock>>> = {}
+) {
+  return {
+    deliveryDate: "2026-06-16",
+    queriedAt: "2026-06-15T12:00:00.000Z",
+    confirmed: {
+      totalStops: 3,
+      validStops: 3,
+      invalidStops: 0,
+      warningStops: 0,
+      totalMealQuantity: 6,
+      byArea: {
+        "Downtown Toronto": 1,
+        "North York": 1,
+        "Richmond Hill": 1,
+      },
+      byStatus: { confirmed: 3 },
+      stops: [],
+      invalid: [],
+      warnings: [],
+    },
+    pending: {
+      count: 0,
+      orders: [],
+    },
+    canContinueToPlanning: true,
+    blockingReasons: [],
+    notes: "Order preview only.",
+    ...overrides,
+  };
+}
+
+function buildRoutingResult(stops = buildStops()) {
+  return {
+    deliveryDate: "2026-06-16",
+    profileId: "daily-default",
+    queriedAt: "2026-06-15T12:00:00.000Z",
+    timezone: "America/Toronto",
+    summary: {
+      totalOrders: stops.length,
+      validStops: stops.length,
+      invalidStops: 0,
+      warningStops: 0,
+      byArea: {
+        "Downtown Toronto": 1,
+        "North York": 1,
+        "Richmond Hill": 1,
+      },
+      byStatus: { confirmed: stops.length },
+      totalMealQuantity: 6,
+    },
+    stops,
+    invalid: [],
+    warnings: [],
+    sourceOrderResultSummary: {
+      orderCount: stops.length,
+      excludedCount: 0,
+      itemCount: stops.length,
+      totalMealQuantity: 6,
+      byStatus: { confirmed: stops.length },
+      byArea: {},
+    },
+  };
+}
+
+function buildHistoricalPackage(
+  selectedCaseIds: string[] = ["case-good"]
+): DeliveryAgentCompactHistoricalPackage {
+  return {
+    packageVersion: DELIVERY_AGENT_COMPACT_HISTORICAL_PACKAGE_VERSION,
+    deliveryDate: "2026-06-16",
+    profileId: DEFAULT_DELIVERY_PLANNING_PROFILE.profileId,
+    selectedCaseIds,
+    retrievalHash: "retrieval-hash",
+    compactLessonHash: "lesson-hash",
+    detailedCases: [],
+    compactLessons: selectedCaseIds.map((caseId) => `Lesson from ${caseId}.`),
+    omittedCaseCount: 0,
+    warnings: [],
+  };
+}
+
+function setupHappyPath() {
+  previewDeliveryOrdersForAgentMock.mockResolvedValue(buildOrderPreview());
+  getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+  loadHistoricalLearningCasesForRetrievalMock.mockResolvedValue([
+    { caseKey: "case-good" },
+  ]);
+  buildSimilarCompactHistoricalPackageForDeliveryAgentMock.mockReturnValue({
+    target: {},
+    retrieval: { warnings: [] },
+    historicalPackage: buildHistoricalPackage(),
+    selectedLearningCases: [],
+    warnings: [],
+  });
+}
+
+describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
+  beforeEach(() => {
+    clearDeliveryAgentLlmCandidateOutputCacheForTests();
+    vi.clearAllMocks();
+  });
+
+  it("prepares a real-date LLM planning request without calling a provider", async () => {
+    setupHappyPath();
+
+    const result = await runDeliveryAgentLlmCandidatePlanningForDate({
+      deliveryDate: "2026-06-16",
+      nowMs: NOW_MS,
+    });
+
+    expect(result.status).toBe("ready_for_provider");
+    expect(result.provider.apiCallMade).toBe(false);
+    expect(result.provider.allowProviderCall).toBe(false);
+    expect(result.provider.modelConfigured).toBe(false);
+    expect(result.prompt?.hasHistoricalPackage).toBe(true);
+    expect(result.prompt?.promptOrderCount).toBe(3);
+    expect(result.orderSummary.ordersWithCoordinates).toBe(2);
+    expect(result.orderSummary.ordersMissingCoordinates).toEqual(["DD-91000003"]);
+    expect(result.historicalPackage.status).toBe("included");
+    expect(result.historicalPackage.selectedCaseIds).toEqual(["case-good"]);
+    expect(result.cache.readStatus).toBe("miss");
+    expect(result.localCandidates.dryRunStatus).toBe("prompt_ready");
+    expect(getDeliveryOrdersForRoutingMock).toHaveBeenCalledWith({
+      deliveryDate: "2026-06-16",
+      profileId: DEFAULT_DELIVERY_PLANNING_PROFILE.profileId,
+      statuses: ["confirmed"],
+    });
+
+    const similarInput =
+      buildSimilarCompactHistoricalPackageForDeliveryAgentMock.mock.calls[0][0];
+    expect(similarInput.orders[0]).toMatchObject({
+      orderId: "DD-91000001",
+      area: "Downtown Toronto",
+      formattedAddress: expect.any(String),
+    });
+    expect(similarInput.orders[0]).not.toHaveProperty("customerName");
+    expect(similarInput.orders[0]).not.toHaveProperty("customerPhone");
+    expect(similarInput.orders[0]).not.toHaveProperty("customerEmail");
+  });
+
+  it("blocks before routing and history work when order preview is not plannable", async () => {
+    previewDeliveryOrdersForAgentMock.mockResolvedValue(
+      buildOrderPreview({
+        canContinueToPlanning: false,
+        blockingReasons: ["1 pending order(s) must be confirmed before planning."],
+        pending: { count: 1, orders: [] },
+      })
+    );
+
+    await expect(
+      runDeliveryAgentLlmCandidatePlanningForDate({
+        deliveryDate: "2026-06-16",
+        nowMs: NOW_MS,
+      })
+    ).rejects.toBeInstanceOf(DeliveryAgentPlanningBlockedError);
+
+    expect(getDeliveryOrdersForRoutingMock).not.toHaveBeenCalled();
+    expect(loadHistoricalLearningCasesForRetrievalMock).not.toHaveBeenCalled();
+  });
+
+  it("rechecks routing validity after preview in case the order set changed", async () => {
+    setupHappyPath();
+    const invalidRouting = buildRoutingResult([]);
+    getDeliveryOrdersForRoutingMock.mockResolvedValue({
+      ...invalidRouting,
+      summary: {
+        ...invalidRouting.summary,
+        totalOrders: 1,
+        invalidStops: 1,
+      },
+      invalid: [
+        {
+          orderId: "DD-91000004",
+          errors: [{ code: "ROUTING_MISSING_PHONE", message: "Missing phone" }],
+          warnings: [],
+        },
+      ],
+    });
+
+    await expect(
+      runDeliveryAgentLlmCandidatePlanningForDate({
+        deliveryDate: "2026-06-16",
+        nowMs: NOW_MS,
+      })
+    ).rejects.toBeInstanceOf(DeliveryAgentPlanningBlockedError);
+
+    expect(loadHistoricalLearningCasesForRetrievalMock).not.toHaveBeenCalled();
+  });
+
+  it("continues without history when historical retrieval fails", async () => {
+    setupHappyPath();
+    loadHistoricalLearningCasesForRetrievalMock.mockRejectedValue(
+      new Error("learning DB unavailable")
+    );
+
+    const result = await runDeliveryAgentLlmCandidatePlanningForDate({
+      deliveryDate: "2026-06-16",
+      nowMs: NOW_MS,
+    });
+
+    expect(result.status).toBe("ready_for_provider");
+    expect(result.historicalPackage.status).toBe("unavailable");
+    expect(result.prompt?.hasHistoricalPackage).toBe(false);
+    expect(result.warnings.join(" ")).toContain("learning DB unavailable");
+  });
+
+  it("can skip similar history explicitly", async () => {
+    setupHappyPath();
+
+    const result = await runDeliveryAgentLlmCandidatePlanningForDate({
+      deliveryDate: "2026-06-16",
+      includeHistoricalPackage: false,
+      nowMs: NOW_MS,
+    });
+
+    expect(result.historicalPackage.status).toBe("skipped");
+    expect(result.prompt?.hasHistoricalPackage).toBe(false);
+    expect(loadHistoricalLearningCasesForRetrievalMock).not.toHaveBeenCalled();
+    expect(buildSimilarCompactHistoricalPackageForDeliveryAgentMock).not.toHaveBeenCalled();
+  });
+});

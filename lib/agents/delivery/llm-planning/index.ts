@@ -2,6 +2,7 @@ export * from "@/lib/agents/delivery/llm-planning/candidate-output-parser";
 export * from "@/lib/agents/delivery/llm-planning/candidate-output-cache";
 export * from "@/lib/agents/delivery/llm-planning/candidate-plan-adapter";
 export * from "@/lib/agents/delivery/llm-planning/candidate-planning-dry-run";
+export * from "@/lib/agents/delivery/llm-planning/candidate-planning-for-date";
 export * from "@/lib/agents/delivery/llm-planning/candidate-provider-adapter";
 export * from "@/lib/agents/delivery/llm-planning/compact-historical-package";
 export * from "@/lib/agents/delivery/llm-planning/local-candidate-ranking";

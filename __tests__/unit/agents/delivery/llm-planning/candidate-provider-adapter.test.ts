@@ -356,6 +356,24 @@ describe("runDeliveryAgentLlmCandidateProviderAdapter", () => {
     expect(provider).not.toHaveBeenCalled();
   });
 
+  it("still prepares a provider-free request when the selected model is not configured", async () => {
+    const provider = vi.fn<DeliveryAgentLlmCandidateProviderExecutor>(() => ({
+      rawCandidateOutput: buildOutput(),
+    }));
+
+    const result = await runAdapter({
+      provider,
+      policy: createDefaultDeliveryAgentCostPolicy(),
+    });
+
+    expect(result.status).toBe("ready_for_provider");
+    expect(result.providerCall.status).toBe("not_allowed");
+    expect(result.providerCall.reason).toBe("allow_provider_call_false");
+    expect(result.providerCall.modelResolution.model?.configured).toBe(false);
+    expect(result.warnings.join(" ")).toContain("model is not configured");
+    expect(provider).not.toHaveBeenCalled();
+  });
+
   it("gets ready for a future provider when the model is configured but no executor is supplied", async () => {
     const result = await runAdapter({
       allowProviderCall: true,

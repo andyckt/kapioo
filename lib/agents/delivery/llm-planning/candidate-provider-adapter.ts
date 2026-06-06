@@ -317,6 +317,7 @@ function buildProviderRequest(input: {
 function providerPolicyBlockReason(input: {
   promptPackage: DeliveryAgentLlmPromptPackage;
   context: DeliveryAgentLlmCandidateOutputCacheContext;
+  requireConfiguredModel: boolean;
 }): { status: DeliveryAgentLlmCandidateProviderCallStatus; reason: string } | null {
   const disabledReason = input.context.modelResolution.disabledReason;
   const model = input.context.modelResolution.model;
@@ -335,7 +336,7 @@ function providerPolicyBlockReason(input: {
     };
   }
 
-  if (!model || !model.configured) {
+  if (input.requireConfiguredModel && (!model || !model.configured)) {
     return {
       status: "not_configured",
       reason: "model_not_configured",
@@ -425,6 +426,7 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
   const policyBlock = providerPolicyBlockReason({
     promptPackage,
     context: cacheContext,
+    requireConfiguredModel: allowProviderCall,
   });
 
   if (policyBlock) {
@@ -455,6 +457,13 @@ export async function runDeliveryAgentLlmCandidateProviderAdapter(
         status: "not_allowed",
         reason: "allow_provider_call_false",
         context: cacheContext,
+        warnings:
+          cacheContext.modelResolution.model &&
+          !cacheContext.modelResolution.model.configured
+            ? [
+                "LLM model is not configured yet; provider-free planning can continue, but a live provider call would be blocked.",
+              ]
+            : [],
       }),
     });
   }
