@@ -435,7 +435,7 @@ export type DeliveryAgentLlmCandidateOutputHardRuleChecklist = {
 };
 
 export type DeliveryAgentLlmCandidateOutput = {
-  schemaVersion: typeof DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION;
+  schemaVersion: string;
   summary: {
     planningSummary: string;
     candidateCount: number;
@@ -958,10 +958,10 @@ export const deliveryAgentLlmCandidateOutputCandidateSchema = z.object({
 });
 
 export const deliveryAgentLlmCandidateOutputUnprovenIdeaSchema = z.object({
-  title: z.string().trim().min(1),
-  reason: z.string().trim().min(1),
-  risk: z.string().trim().min(1),
-  relatedOrderIds: z.array(z.string().trim().min(1)).optional(),
+  title: z.string().trim().min(1).optional().catch(undefined),
+  reason: z.string().trim().min(1).optional().catch(undefined),
+  risk: z.string().trim().min(1).optional().catch(undefined),
+  relatedOrderIds: z.array(z.string().trim().min(1)).optional().catch(undefined),
 });
 
 export const deliveryAgentLlmCandidateOutputHardRuleChecklistSchema = z.object({
@@ -1003,7 +1003,7 @@ const hardRuleChecklistCoercedSchema = z.union([
 ]);
 
 export const deliveryAgentLlmCandidateOutputSchema = z.object({
-  schemaVersion: z.literal(DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION),
+  schemaVersion: z.string().catch(DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION),
   summary: summaryCoercedSchema,
   candidates: z.array(deliveryAgentLlmCandidateOutputCandidateSchema),
   unprovenIdeas: z.array(deliveryAgentLlmCandidateOutputUnprovenIdeaSchema),
