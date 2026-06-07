@@ -14,6 +14,10 @@ describe("models/DeliveryAgentLearningCase", () => {
     expect(DeliveryAgentLearningCase.schema.path("reviewStatus")?.defaultValue).toBe("none");
   });
 
+  it("defaults manualReview to null", () => {
+    expect(DeliveryAgentLearningCase.schema.path("manualReview")?.defaultValue).toBeNull();
+  });
+
   it("declares required indexes", () => {
     const indexes = DeliveryAgentLearningCase.schema.indexes();
 

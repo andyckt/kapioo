@@ -5,6 +5,7 @@ import {
   DELIVERY_AGENT_LEARNING_COORDINATE_SOURCES,
   DELIVERY_AGENT_LEARNING_LABELS,
   DELIVERY_AGENT_LEARNING_LATENESS_ATTRIBUTIONS,
+  DELIVERY_AGENT_LEARNING_MANUAL_REVIEW_ACTIONS,
   DELIVERY_AGENT_PROFILE_COMPATIBILITY_VALUES,
   deliveryAgentLearningLabelSchema,
   ROUTE_OPTIMIZER_HISTORICAL_ETA_BASIS_VALUES,
@@ -90,6 +91,20 @@ describe("lib/contracts/delivery-agent-learning", () => {
     );
   });
 
+  it("includes manual review action values", () => {
+    expect(DELIVERY_AGENT_LEARNING_MANUAL_REVIEW_ACTIONS).toEqual(
+      expect.arrayContaining([
+        "approve_positive",
+        "approve_weak_positive",
+        "mark_negative",
+        "mark_avoid_pattern",
+        "exclude",
+        "keep_uncertain",
+        "reset_pending",
+      ])
+    );
+  });
+
   it("creates an empty learning case contract with defaults", () => {
     const learningCase = createEmptyDeliveryAgentLearningCaseContract({
       deliveryDate: "2026-05-31",
@@ -99,6 +114,7 @@ describe("lib/contracts/delivery-agent-learning", () => {
     expect(learningCase.schemaVersion).toBe("learning-case-v1");
     expect(learningCase.caseKey).toBe("delivery-agent-learning-case:2026-05-31:daily-default");
     expect(learningCase.reviewStatus).toBe("none");
+    expect(learningCase.manualReview).toBeNull();
     expect(learningCase.quality.learningLabel).toBe("uncertain");
     expect(learningCase.adminOrdersSnapshot).toEqual([]);
     expect(learningCase.geoFeatures.dynamicOutliers).toEqual([]);

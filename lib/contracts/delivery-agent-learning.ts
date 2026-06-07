@@ -417,6 +417,28 @@ export type DeliveryAgentLearningQualitySummary = {
   warnings: string[];
 };
 
+export const DELIVERY_AGENT_LEARNING_MANUAL_REVIEW_ACTIONS = [
+  "approve_positive",
+  "approve_weak_positive",
+  "mark_negative",
+  "mark_avoid_pattern",
+  "exclude",
+  "keep_uncertain",
+  "reset_pending",
+] as const;
+
+export type DeliveryAgentLearningManualReviewAction =
+  (typeof DELIVERY_AGENT_LEARNING_MANUAL_REVIEW_ACTIONS)[number];
+
+export type DeliveryAgentLearningManualReview = {
+  reviewedAt: string;
+  reviewedBy?: string | null;
+  action: DeliveryAgentLearningManualReviewAction;
+  previousLearningLabel: DeliveryAgentLearningLabel;
+  learningLabel: DeliveryAgentLearningLabel;
+  notes?: string | null;
+};
+
 export type DeliveryAgentLearningCaseContract = {
   schemaVersion: typeof DELIVERY_AGENT_LEARNING_CASE_SCHEMA_VERSION;
   deliveryDate: string;
@@ -440,6 +462,7 @@ export type DeliveryAgentLearningCaseContract = {
   resourceProfileFeatures: DeliveryAgentLearningResourceProfileFeatures;
   quality: DeliveryAgentLearningQualitySummary;
   reviewStatus: DeliveryAgentLearningReviewStatus;
+  manualReview?: DeliveryAgentLearningManualReview | null;
   warnings: string[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -610,6 +633,7 @@ export function createEmptyDeliveryAgentLearningCaseContract(input: {
     resourceProfileFeatures: createEmptyDeliveryAgentLearningResourceProfileFeatures(profileId),
     quality: createEmptyDeliveryAgentLearningQualitySummary(),
     reviewStatus: "none",
+    manualReview: null,
     warnings: [],
   };
 }

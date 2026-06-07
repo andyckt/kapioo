@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kapioo Delivery AI Agent - Current Status Snapshot</title>
+  <style>
+    :root {
+      --ink: #17202b;
+      --muted: #627080;
+      --paper: #f6f8fb;
+      --panel: #ffffff;
+      --line: #dbe3ec;
+      --blue: #2868d8;
+      --blue-soft: #e8f1ff;
+      --green: #147a55;
+      --green-soft: #e7f6ef;
+      --amber: #8a5a00;
+      --amber-soft: #fff3cf;
+      --red: #b3261e;
+      --red-soft: #ffe8e6;
+      --dark: #253041;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 72px;
+    }
+
+    .hero {
+      padding: 30px 0 18px;
+    }
+
+    .eyebrow {
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      letter-spacing: 0;
+      line-height: 1.15;
+    }
+
+    h1 {
+      max-width: 980px;
+      margin: 10px 0 14px;
+      font-size: clamp(34px, 5vw, 58px);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: clamp(25px, 3.8vw, 36px);
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    .lead {
+      max-width: 900px;
+      color: var(--muted);
+      font-size: 20px;
+    }
+
+    .meta-row,
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .meta-row {
+      margin-top: 20px;
+    }
+
+    .pill,
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .pill.good {
+      border-color: #bde7d2;
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    .pill.warn {
+      border-color: #f1d387;
+      background: var(--amber-soft);
+      color: var(--amber);
+      font-weight: 800;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      margin: 22px 0 28px;
+      padding: 12px 0;
+      background: rgba(246, 248, 251, 0.92);
+      backdrop-filter: blur(10px);
+    }
+
+    section {
+      margin: 24px 0;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+
+    .card {
+      grid-column: span 4;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .card.wide {
+      grid-column: span 6;
+    }
+
+    .card.full {
+      grid-column: 1 / -1;
+    }
+
+    .number {
+      margin-bottom: 4px;
+      color: var(--dark);
+      font-size: 34px;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .simple-flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .step {
+      min-height: 118px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .callout {
+      margin: 16px 0 0;
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--blue-soft);
+      border: 1px solid #cfe0ff;
+    }
+
+    .callout.good {
+      background: var(--green-soft);
+      border-color: #bde7d2;
+    }
+
+    .callout.warn {
+      background: var(--amber-soft);
+      border-color: #f1d387;
+    }
+
+    .callout.danger {
+      background: var(--red-soft);
+      border-color: #ffc8c4;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin: 8px 0;
+    }
+
+    .status-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .status-table th,
+    .status-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .status-table th {
+      background: #f0f4f8;
+      color: var(--dark);
+      font-size: 14px;
+    }
+
+    .status-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: var(--dark);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .tag.good {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .tag.warn {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .tag.bad {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #eef2f7;
+      color: #263241;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    .plain-box {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    @media (max-width: 860px) {
+      .card,
+      .card.wide {
+        grid-column: 1 / -1;
+      }
+
+      .simple-flow {
+        grid-template-columns: 1fr;
+      }
+
+      section {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="eyebrow">Kapioo Delivery AI Agent</div>
+      <h1>Current Status Snapshot After Historical Learning Backfill</h1>
+      <p class="lead">
+        This page explains where the delivery AI agent project stands right now, what we have already built, how the historical learning database works, and what still needs to happen before the agent can reliably recommend daily delivery plans.
+      </p>
+      <div class="meta-row">
+        <span class="pill good">Historical lat/lng reused from RO</span>
+        <span class="pill good">No Google geocode calls for old history</span>
+        <span class="pill warn">Strong foundation, not perfect yet</span>
+        <span class="pill">Updated after commit 912967f</span>
+      </div>
+    </header>
+
+    <nav class="nav" aria-label="Page sections">
+      <a href="#short-answer">Short Answer</a>
+      <a href="#done">What We Have Done</a>
+      <a href="#database">Historical Database</a>
+      <a href="#retrieval">How LLM Uses History</a>
+      <a href="#plan">Full Plan</a>
+      <a href="#next">Next Steps</a>
+    </nav>
+
+    <section id="short-answer">
+      <h2>1. Short Answer</h2>
+      <div class="callout good">
+        <p><strong>We are in a much better position now.</strong> The historical learning database is no longer empty. It now has real historical delivery cases, real route split information, and real coordinates copied from the Route Optimizer system.</p>
+      </div>
+      <div class="callout warn">
+        <p><strong>But I would not call it perfect yet.</strong> It is strong enough to start powering LLM planning tests, but not all historical cases should be trusted equally. Some old days have missing RO runs, low matching quality, or need Donald review. The system now marks those cases clearly instead of pretending they are good examples.</p>
+      </div>
+      <p>
+        The correct way to think about it:
+      </p>
+      <div class="plain-box">
+        <p><strong>Before:</strong> The LLM had almost no real memory.</p>
+        <p><strong>Now:</strong> The LLM has a real memory database, but it must retrieve only the best and most relevant memory, not blindly use everything.</p>
+      </div>
+    </section>
+
+    <section id="done">
+      <h2>2. What We Have Done So Far</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="number">125</div>
+          <div class="label">Historical learning cases saved</div>
+        </article>
+        <article class="card">
+          <div class="number">2113</div>
+          <div class="label">Historical coordinate snapshots saved</div>
+        </article>
+        <article class="card">
+          <div class="number">100%</div>
+          <div class="label">Saved coordinate coverage for usable coordinate snapshots</div>
+        </article>
+        <article class="card">
+          <div class="number">2113</div>
+          <div class="label">Coordinates came from RO historical data</div>
+        </article>
+        <article class="card">
+          <div class="number">0</div>
+          <div class="label">New Google calls needed for old historical coordinates</div>
+        </article>
+        <article class="card">
+          <div class="number">27</div>
+          <div class="label">Positive/weak-positive cases ready as strong learning candidates</div>
+        </article>
+      </div>
+
+      <div class="callout good">
+        <p>
+          This means we successfully reused the old Route Optimizer data. RO had already geocoded many old addresses in past runs, so the Admin historical learning database copied those saved <code>lat/lng</code> values instead of paying Google again.
+        </p>
+      </div>
+
+      <table class="status-table">
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Status</th>
+            <th>Simple Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Google cost safety</td>
+            <td><span class="tag good">Much safer</span></td>
+            <td>Admin preview and RO calls now have stronger budget controls from previous milestones.</td>
+          </tr>
+          <tr>
+            <td>Historical coordinates</td>
+            <td><span class="tag good">Strong</span></td>
+            <td>Old delivery coordinates were extracted from RO historical runs, not newly geocoded.</td>
+          </tr>
+          <tr>
+            <td>Historical case quality</td>
+            <td><span class="tag warn">Mixed but measured</span></td>
+            <td>Some cases are good, some are weak, and some are blocked. The system records this instead of hiding it.</td>
+          </tr>
+          <tr>
+            <td>LLM connection</td>
+            <td><span class="tag warn">Technically wired, not fully trusted yet</span></td>
+            <td>DeepSeek connection exists, but we still need better output sizing/schema testing and real planning evaluation.</td>
+          </tr>
+          <tr>
+            <td>Daily usable agent</td>
+            <td><span class="tag bad">Not live yet</span></td>
+            <td>The agent is not ready to fully replace manual planning yet. We still need planning, review, reject-loop, and production QA milestones.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="database">
+      <h2>3. Do We Have A Strong Historical Learning Database?</h2>
+      <p>
+        <strong>Yes, we now have a strong foundation.</strong> It is strong because the system has real past delivery days, real RO route information, and real coordinates.
+      </p>
+      <p>
+        <strong>No, it is not perfect yet.</strong> It still needs Donald review and triage so the agent knows which old days were truly good examples and which days should be treated as warning examples.
+      </p>
+
+      <div class="grid">
+        <article class="card wide">
+          <h3>What Makes It Strong</h3>
+          <ul>
+            <li>It stores old Admin orders by delivery date.</li>
+            <li>It matches Admin orders to old Route Optimizer stops.</li>
+            <li>It stores which run each stop belonged to.</li>
+            <li>It stores route shape, timing, handoff, support/self usage, and driver/run patterns.</li>
+            <li>It stores coordinate spread, clusters, outliers, and area distribution.</li>
+            <li>It labels cases as positive, weak positive, negative, avoid pattern, uncertain, or excluded.</li>
+          </ul>
+        </article>
+
+        <article class="card wide">
+          <h3>What Still Needs Review</h3>
+          <ul>
+            <li>Some dates have no RO history, so they cannot teach the agent.</li>
+            <li>Some dates have low Admin-to-RO matching coverage.</li>
+            <li>Some dates have duplicate or uncertain matches.</li>
+            <li>Some old routes look late or messy and should become avoid-pattern examples.</li>
+            <li>Donald should manually approve important learning labels later.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="callout warn">
+        <p>
+          The database is now useful, but the safest design is not to let every historical case teach the LLM. Good cases should teach. Bad cases should warn. Unclear cases should stay out until reviewed.
+        </p>
+      </div>
+    </section>
+
+    <section id="retrieval">
+      <h2>4. How The LLM Uses Historical Cases</h2>
+      <p>
+        The system does <strong>not</strong> send all historical cases into the LLM. Sending everything would be expensive, confusing, and risky. Instead, the backend searches the historical database first, chooses only useful examples, summarizes them, and sends the LLM a small package.
+      </p>
+
+      <div class="simple-flow">
+        <div class="step">
+          <strong>1. Read Today</strong>
+          <span>Look at today’s orders, areas, coordinates, order count, and driver profile.</span>
+        </div>
+        <div class="step">
+          <strong>2. Search History</strong>
+          <span>Find past days that look similar to today.</span>
+        </div>
+        <div class="step">
+          <strong>3. Filter Bad Cases</strong>
+          <span>Remove excluded, pending, same-day, and low-quality cases.</span>
+        </div>
+        <div class="step">
+          <strong>4. Pick A Small Set</strong>
+          <span>Select useful positive examples, avoid examples, and context examples.</span>
+        </div>
+        <div class="step">
+          <strong>5. Send Compact Memory</strong>
+          <span>Send only summaries and lessons to the LLM, not raw full history.</span>
+        </div>
+      </div>
+
+      <h3>Is This RAG?</h3>
+      <p>
+        <strong>Yes, it is RAG-like.</strong> RAG means the AI does not rely only on its own general knowledge. The system first retrieves useful information from your database, then gives that information to the LLM so it can reason with your real business history.
+      </p>
+      <p>
+        But this is <strong>not embedding/vector RAG yet</strong>. We are not currently turning every case into embedding vectors.
+      </p>
+
+      <div class="grid">
+        <article class="card wide">
+          <h3>What We Use Now</h3>
+          <ul>
+            <li>Rule-based retrieval.</li>
+            <li>Similarity scoring from real delivery features.</li>
+            <li>Order count comparison.</li>
+            <li>Area distribution comparison.</li>
+            <li>Coordinate spread and outlier comparison.</li>
+            <li>Route shape and driver/resource comparison.</li>
+            <li>Quality gates before a case can be used.</li>
+          </ul>
+        </article>
+        <article class="card wide">
+          <h3>Why This Is Good For Kapioo</h3>
+          <ul>
+            <li>It is cheaper than sending huge raw history to the LLM.</li>
+            <li>It is easier to control and inspect.</li>
+            <li>It avoids confusing the LLM with bad or unrelated days.</li>
+            <li>It is based on delivery facts, not only text similarity.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="callout">
+        <p>
+          Simple version: the LLM does not read the whole library. The backend acts like a librarian. It picks a few relevant books, marks which ones are good and which ones are bad examples, then gives the LLM only the useful notes.
+        </p>
+      </div>
+
+      <h3>Should We Add Embeddings Later?</h3>
+      <p>
+        Maybe later, but not first. Embeddings are useful when you need text similarity, such as finding similar written feedback. For delivery planning, the most important similarity is geography, timing, order count, route shape, and driver resources. Those are better handled with structured logic first.
+      </p>
+      <p>
+        Future best design:
+      </p>
+      <ul>
+        <li>Use structured matching for route/geography similarity.</li>
+        <li>Use embeddings later for Donald feedback text and special-case notes.</li>
+        <li>Keep the LLM prompt compact so daily cost stays low.</li>
+      </ul>
+    </section>
+
+    <section id="logic">
+      <h2>5. Backend Logic In Simple Words</h2>
+      <table class="status-table">
+        <thead>
+          <tr>
+            <th>Backend Step</th>
+            <th>What It Means</th>
+            <th>Why It Matters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Historical backfill</td>
+            <td>Builds one learning case for each old delivery day.</td>
+            <td>Gives the agent memory from real business operations.</td>
+          </tr>
+          <tr>
+            <td>RO coordinate extraction</td>
+            <td>Copies old <code>lat/lng</code> from Route Optimizer stops/customers.</td>
+            <td>Avoids paying Google again and gives accurate map data.</td>
+          </tr>
+          <tr>
+            <td>Order-to-stop matching</td>
+            <td>Matches Admin orders to RO route stops using order ID first, then high-confidence name/phone logic.</td>
+            <td>Prevents wrong coordinates or wrong route lessons from being attached to an order.</td>
+          </tr>
+          <tr>
+            <td>Quality labels</td>
+            <td>Marks each case as positive, weak positive, negative, avoid pattern, uncertain, or excluded.</td>
+            <td>The LLM should copy good days, avoid bad patterns, and ignore garbage.</td>
+          </tr>
+          <tr>
+            <td>Retrieval</td>
+            <td>Searches for a few relevant past cases instead of sending all cases.</td>
+            <td>Keeps cost low and planning quality higher.</td>
+          </tr>
+          <tr>
+            <td>Compact prompt package</td>
+            <td>Sends summarized lessons to the LLM, not raw customer/private data.</td>
+            <td>Controls token cost and reduces privacy/noise risk.</td>
+          </tr>
+          <tr>
+            <td>RO final proof</td>
+            <td>Uses Route Optimizer only to prove a small number of serious candidate plans.</td>
+            <td>Prevents another Google API fanout spike.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="plan">
+      <h2>6. Full Plan Until The Agent Is Fully Functional</h2>
+      <div class="grid">
+        <article class="card full">
+          <h3>Phase 1: Cost Safety Foundation</h3>
+          <p>Status: <span class="tag good">Mostly done</span></p>
+          <ul>
+            <li>Limit how many candidate plans can be previewed.</li>
+            <li>Limit how many RO proof calls can happen per action.</li>
+            <li>Add duplicate-click locks and budget controls.</li>
+            <li>Stop using RO as the search engine.</li>
+          </ul>
+        </article>
+
+        <article class="card full">
+          <h3>Phase 2: Historical Learning Foundation</h3>
+          <p>Status: <span class="tag good">Built, needs review UI later</span></p>
+          <ul>
+            <li>Build historical learning cases from Admin + RO.</li>
+            <li>Extract historical <code>lat/lng</code> from RO.</li>
+            <li>Classify cases by quality.</li>
+            <li>Keep bad/unclear cases from being trusted blindly.</li>
+          </ul>
+        </article>
+
+        <article class="card full">
+          <h3>Phase 3: Today’s Data Readiness</h3>
+          <p>Status: <span class="tag warn">Next important step</span></p>
+          <ul>
+            <li>Make sure today’s orders have coordinates before the LLM plans.</li>
+            <li>Use Admin cache and RO/geocode cache safely.</li>
+            <li>Only geocode missing new addresses when necessary.</li>
+            <li>Show warnings for bad or unclear addresses.</li>
+          </ul>
+        </article>
+
+        <article class="card full">
+          <h3>Phase 4: LLM Planning Engine</h3>
+          <p>Status: <span class="tag warn">Partly wired, not production-ready yet</span></p>
+          <ul>
+            <li>Use DeepSeek V4 Pro first, as Donald requested.</li>
+            <li>Send compact today data and compact historical memory.</li>
+            <li>Ask the LLM to create exact candidate split plans with order IDs.</li>
+            <li>Require strict JSON output so the backend can verify it.</li>
+            <li>Use local scoring to rank and reject nonsense before RO proof.</li>
+          </ul>
+        </article>
+
+        <article class="card full">
+          <h3>Phase 5: Proof, Recommendation, Approval</h3>
+          <p>Status: <span class="tag">Planned</span></p>
+          <ul>
+            <li>Only send serious candidates to RO for final proof.</li>
+            <li>Recommend the best proven plan.</li>
+            <li>Show unproven ideas separately as warning-only options.</li>
+            <li>Donald gets two main actions: Approve or Reject with reason.</li>
+          </ul>
+        </article>
+
+        <article class="card full">
+          <h3>Phase 6: Reject Feedback Loop</h3>
+          <p>Status: <span class="tag">Planned</span></p>
+          <ul>
+            <li>If Donald rejects, he must give a reason.</li>
+            <li>The LLM reads the reason and converts it into concrete changes.</li>
+            <li>The backend prevents repeated bad ideas.</li>
+            <li>The system generates the next best recommendation.</li>
+            <li>This repeats until Donald approves a plan.</li>
+            <li>The approved/rejected result becomes future learning data.</li>
+          </ul>
+        </article>
+
+        <article class="card full">
+          <h3>Phase 7: Production QA And Daily Use</h3>
+          <p>Status: <span class="tag">Not started yet</span></p>
+          <ul>
+            <li>Run historical replay tests.</li>
+            <li>Compare LLM recommendations against known good days.</li>
+            <li>Measure cost per planning day.</li>
+            <li>Set monthly warning/pause around Donald’s $20 comfort limit.</li>
+            <li>Make the admin UI simple enough for daily operations.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="next">
+      <h2>7. What Is Next</h2>
+      <p>
+        The next best step is not to blindly ask the LLM to plan every day. The next best step is to make sure the LLM receives strong, clean, compact input.
+      </p>
+
+      <div class="grid">
+        <article class="card wide">
+          <h3>Next Milestone A: Historical Review Dashboard</h3>
+          <p>Show Donald which historical cases are ready, which need review, and which are blocked.</p>
+          <ul>
+            <li>Approve good cases.</li>
+            <li>Mark bad cases as avoid patterns.</li>
+            <li>Ignore blocked/noisy cases.</li>
+          </ul>
+        </article>
+
+        <article class="card wide">
+          <h3>Next Milestone B: Today Coordinate Readiness</h3>
+          <p>Make sure today’s orders have good coordinates before DeepSeek tries to plan.</p>
+          <ul>
+            <li>Use cached coordinates first.</li>
+            <li>Use RO/geocode history where possible.</li>
+            <li>Only call Google for missing new addresses if needed.</li>
+          </ul>
+        </article>
+
+        <article class="card wide">
+          <h3>Next Milestone C: LLM Planning Test</h3>
+          <p>Run DeepSeek with compact memory and strict output rules.</p>
+          <ul>
+            <li>Fix empty/too-long JSON output issue.</li>
+            <li>Ask for exact order IDs in each run.</li>
+            <li>Reject invalid plans before RO proof.</li>
+          </ul>
+        </article>
+
+        <article class="card wide">
+          <h3>Next Milestone D: Historical Replay Evaluation</h3>
+          <p>Test the agent against old known delivery days.</p>
+          <ul>
+            <li>Hide the old final plan.</li>
+            <li>Ask the agent to recommend a plan.</li>
+            <li>Compare with the actual historical result.</li>
+            <li>Measure quality and cost before live use.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="callout good">
+        <p>
+          Recommended model level for the next coding milestone: <strong>High</strong> if we build the review/readiness UI, <strong>Extra High</strong> if we go directly into LLM planning and historical replay evaluation.
+        </p>
+      </div>
+    </section>
+
+    <section id="final">
+      <h2>8. Final Honest Status</h2>
+      <div class="plain-box">
+        <p><strong>Can the agent fully run the daily business yet?</strong> Not yet.</p>
+        <p><strong>Do we now have a real learning foundation?</strong> Yes.</p>
+        <p><strong>Is it strong enough to start serious LLM planning tests?</strong> Yes, if we use only the high-quality retrieved cases and keep weak cases out.</p>
+        <p><strong>Will it be perfect automatically?</strong> No. We still need Donald review, today-coordinate readiness, LLM output validation, RO proof, reject feedback loop, and QA.</p>
+        <p><strong>Are we moving in the right direction?</strong> Yes. The design now protects both quality and cost instead of sacrificing one for the other.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

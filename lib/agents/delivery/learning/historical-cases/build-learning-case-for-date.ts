@@ -20,6 +20,7 @@ import { extractDeliveryAgentLearningStopControlFeatures } from "@/lib/agents/de
 import { extractDeliveryAgentLearningRouteShapeFeatures } from "@/lib/agents/delivery/learning/route-shape/extract-route-shape-features";
 import { extractDeliveryAgentLearningOutcomeFeatures } from "@/lib/agents/delivery/learning/outcome/extract-outcome-features";
 import { extractDeliveryAgentLearningResourceProfileFeatures } from "@/lib/agents/delivery/learning/resource-profile/extract-resource-profile-features";
+import { getDeliveryAgentLearningLabelWeight } from "@/lib/agents/delivery/learning/shared/learning-label-weight";
 import type { DeliveryAgentHistoricalOrderStopMatchingResult } from "@/lib/agents/delivery/learning/matching/types";
 import type {
   DeliveryAgentLearningCoordinateCoverage,
@@ -141,23 +142,6 @@ function scoreEtaBasis(etaBasisQuality: string): number {
   return 30;
 }
 
-function labelWeight(label: DeliveryAgentLearningLabel): number {
-  switch (label) {
-    case "positive":
-      return 0.9;
-    case "weak_positive":
-      return 0.55;
-    case "avoid_pattern":
-      return 0.75;
-    case "negative":
-      return 0.5;
-    case "uncertain":
-      return 0.15;
-    case "excluded":
-      return 0;
-  }
-}
-
 function classifyLearningCaseQuality(input: {
   orders: DeliveryAgentLearningOrderSnapshot[];
   routeOptimizerResponse: RouteOptimizerRunsByDateResponse;
@@ -247,7 +231,7 @@ function classifyLearningCaseQuality(input: {
 
   return {
     learningLabel,
-    learningWeight: labelWeight(learningLabel),
+    learningWeight: getDeliveryAgentLearningLabelWeight(learningLabel),
     dataQualityScore,
     canUseForPositiveRetrieval,
     excludeReason,

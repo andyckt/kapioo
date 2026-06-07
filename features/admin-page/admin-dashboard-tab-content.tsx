@@ -88,6 +88,14 @@ const AdminDeliveryAgentTab = dynamic(
   { loading: () => <AdminTabSkeleton /> }
 )
 
+const AdminDeliveryAgentLearningReviewDashboard = dynamic(
+  () =>
+    import("@/features/admin-delivery-agent-learning-review").then((m) => ({
+      default: m.AdminDeliveryAgentLearningReviewDashboard,
+    })),
+  { loading: () => <AdminTabSkeleton /> }
+)
+
 const AdminDailyMenuTab = dynamic(
   () =>
     import("@/features/admin-daily-menu").then((m) => ({
@@ -305,6 +313,12 @@ export function AdminDashboardTabContent(p: AdminDashboardTabContentProps) {
       {p.activeTab === "delivery-agent" && (
         <AdminTabPanel panelKey="delivery-agent">
           <AdminDeliveryAgentTab />
+        </AdminTabPanel>
+      )}
+
+      {p.activeTab === "delivery-agent-learning-review" && (
+        <AdminTabPanel panelKey="delivery-agent-learning-review">
+          <AdminDeliveryAgentLearningReviewDashboard />
         </AdminTabPanel>
       )}
 

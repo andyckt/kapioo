@@ -12,6 +12,12 @@ import {
   getDryRunBackfillStatus,
   type DeliveryAgentLearningBackfillReadiness,
 } from "@/lib/agents/delivery/learning/backfill/learning-backfill-readiness";
+import type {
+  DeliveryAgentLearningCaseContract,
+  DeliveryAgentLearningLabel,
+  DeliveryAgentLearningManualReview,
+  DeliveryAgentLearningReviewStatus,
+} from "@/lib/contracts/delivery-agent-learning";
 import { fetchRouteOptimizerRunsByDate } from "@/lib/integrations/route-optimizer/fetch-runs-by-date";
 import {
   RouteOptimizerError,
@@ -93,8 +99,9 @@ export type BackfillDeliveryAgentLearningCasesForDateRangeInput = {
 type ExistingLearningCaseSummary = {
   caseKey: string;
   sourceHash?: string | null;
-  reviewStatus?: string | null;
-  quality?: { learningLabel?: string | null };
+  reviewStatus?: DeliveryAgentLearningReviewStatus | null;
+  quality?: { learningLabel?: DeliveryAgentLearningLabel | null };
+  manualReview?: DeliveryAgentLearningManualReview | null;
 };
 
 function parseDateOnlyUtc(date: string): Date {
@@ -205,7 +212,7 @@ function sanitizeNonNegativeInteger(value: number | undefined, fallback: number)
 
 async function readExistingLearningCase(caseKey: string): Promise<ExistingLearningCaseSummary | null> {
   const existing = await DeliveryAgentLearningCase.findOne({ caseKey })
-    .select("caseKey sourceHash reviewStatus quality.learningLabel")
+    .select("caseKey sourceHash reviewStatus quality.learningLabel manualReview")
     .lean();
 
   return existing as ExistingLearningCaseSummary | null;
@@ -343,13 +350,14 @@ export async function backfillDeliveryAgentLearningCaseForDate(input: {
   });
 
   if (existing?.sourceHash && existing.sourceHash === learningCase.sourceHash) {
-    const unchangedLearningCase = {
+    const unchangedLearningCase: DeliveryAgentLearningCaseContract = {
       ...learningCase,
       quality: {
         ...learningCase.quality,
         learningLabel: existing.quality?.learningLabel ?? learningCase.quality.learningLabel,
       },
       reviewStatus: existing.reviewStatus ?? learningCase.reviewStatus,
+      manualReview: existing.manualReview ?? learningCase.manualReview ?? null,
     };
     const readiness = assessDeliveryAgentLearningBackfillReadiness(unchangedLearningCase);
 
@@ -357,7 +365,7 @@ export async function backfillDeliveryAgentLearningCaseForDate(input: {
       deliveryDate: input.deliveryDate,
       status: "skipped_unchanged",
       caseKey,
-      sourceHash: learningCase.sourceHash,
+      sourceHash: learningCase.sourceHash ?? null,
       orderCount: orders.length,
       routeOptimizerRunCount: routeOptimizerResponse.runs.length,
       learningCase: unchangedLearningCase,
@@ -372,7 +380,7 @@ export async function backfillDeliveryAgentLearningCaseForDate(input: {
       deliveryDate: input.deliveryDate,
       status: getDryRunBackfillStatus(readiness.readiness),
       caseKey,
-      sourceHash: learningCase.sourceHash,
+      sourceHash: learningCase.sourceHash ?? null,
       orderCount: orders.length,
       routeOptimizerRunCount: routeOptimizerResponse.runs.length,
       learningCase,

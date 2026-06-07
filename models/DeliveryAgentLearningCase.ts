@@ -9,6 +9,7 @@ import {
   DELIVERY_AGENT_LEARNING_COORDINATE_REF_TYPES,
   DELIVERY_AGENT_LEARNING_COORDINATE_SOURCES,
   DELIVERY_AGENT_LEARNING_LABELS,
+  DELIVERY_AGENT_LEARNING_MANUAL_REVIEW_ACTIONS,
   DELIVERY_AGENT_LEARNING_REVIEW_STATUSES,
   type DeliveryAgentLearningCaseContract,
 } from "@/lib/contracts/delivery-agent-learning";
@@ -173,6 +174,30 @@ const QualitySummarySchema = new Schema(
   { _id: false }
 );
 
+const ManualReviewSchema = new Schema(
+  {
+    reviewedAt: { type: String, required: true, trim: true },
+    reviewedBy: { type: String, trim: true },
+    action: {
+      type: String,
+      enum: DELIVERY_AGENT_LEARNING_MANUAL_REVIEW_ACTIONS,
+      required: true,
+    },
+    previousLearningLabel: {
+      type: String,
+      enum: DELIVERY_AGENT_LEARNING_LABELS,
+      required: true,
+    },
+    learningLabel: {
+      type: String,
+      enum: DELIVERY_AGENT_LEARNING_LABELS,
+      required: true,
+    },
+    notes: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
 const DeliveryAgentLearningCaseSchema = new Schema<IDeliveryAgentLearningCase>(
   {
     schemaVersion: {
@@ -268,6 +293,10 @@ const DeliveryAgentLearningCaseSchema = new Schema<IDeliveryAgentLearningCase>(
       enum: DELIVERY_AGENT_LEARNING_REVIEW_STATUSES,
       default: "none",
       required: true,
+    },
+    manualReview: {
+      type: ManualReviewSchema,
+      default: null,
     },
     warnings: {
       type: [String],
