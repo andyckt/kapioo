@@ -108,7 +108,7 @@ export const DEFAULT_DELIVERY_AGENT_LLM_CALL_POLICIES: Record<
     countsTowardHighValuePlanningCalls: true,
     maxAttemptsPerPlanningSession: 1,
     maxInputTokens: 35000,
-    maxOutputTokens: 5000,
+    maxOutputTokens: 10000,
   },
   rejection_feedback_interpretation: {
     callType: "rejection_feedback_interpretation",

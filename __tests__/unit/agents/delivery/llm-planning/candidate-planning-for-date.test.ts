@@ -1,11 +1,11 @@
 const {
   previewDeliveryOrdersForAgentMock,
-  getDeliveryOrdersForRoutingMock,
+  getEnrichedDeliveryOrdersForRoutingMock,
   loadHistoricalLearningCasesForRetrievalMock,
   buildSimilarCompactHistoricalPackageForDeliveryAgentMock,
 } = vi.hoisted(() => ({
   previewDeliveryOrdersForAgentMock: vi.fn(),
-  getDeliveryOrdersForRoutingMock: vi.fn(),
+  getEnrichedDeliveryOrdersForRoutingMock: vi.fn(),
   loadHistoricalLearningCasesForRetrievalMock: vi.fn(),
   buildSimilarCompactHistoricalPackageForDeliveryAgentMock: vi.fn(),
 }));
@@ -14,8 +14,8 @@ vi.mock("@/lib/agents/delivery/preview-delivery-orders", () => ({
   previewDeliveryOrdersForAgent: previewDeliveryOrdersForAgentMock,
 }));
 
-vi.mock("@/lib/agents/delivery/get-delivery-orders-for-routing", () => ({
-  getDeliveryOrdersForRouting: getDeliveryOrdersForRoutingMock,
+vi.mock("@/lib/agents/delivery/geocode", () => ({
+  getEnrichedDeliveryOrdersForRouting: getEnrichedDeliveryOrdersForRoutingMock,
 }));
 
 vi.mock("@/lib/agents/delivery/llm-planning/similar-historical-package", () => ({
@@ -100,7 +100,7 @@ function buildOrderPreview(
 }
 
 function buildRoutingResult(stops = buildStops()) {
-  return {
+  const routingData = {
     deliveryDate: "2026-06-16",
     profileId: "daily-default",
     queriedAt: "2026-06-15T12:00:00.000Z",
@@ -130,6 +130,28 @@ function buildRoutingResult(stops = buildStops()) {
       byArea: {},
     },
   };
+
+  return {
+    routing: routingData,
+    coordinateCoverage: {
+      coveragePercent: 100,
+      coveredCount: stops.length,
+      totalCount: stops.length,
+      missingCount: 0,
+      sourceBreakdown: {},
+    },
+    geocodeEnrichment: {
+      coordinateCoverage: {
+        coveragePercent: 100,
+        coveredCount: stops.length,
+        totalCount: stops.length,
+        missingCount: 0,
+        sourceBreakdown: {},
+      },
+      alerts: [],
+      stats: { cached: stops.length, geocoded: 0, failed: 0, skipped: 0 },
+    },
+  };
 }
 
 function buildHistoricalPackage(
@@ -151,7 +173,7 @@ function buildHistoricalPackage(
 
 function setupHappyPath() {
   previewDeliveryOrdersForAgentMock.mockResolvedValue(buildOrderPreview());
-  getDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
+  getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue(buildRoutingResult());
   loadHistoricalLearningCasesForRetrievalMock.mockResolvedValue([
     { caseKey: "case-good" },
   ]);
@@ -196,7 +218,7 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     expect(result.historicalPackage.selectedCaseIds).toEqual(["case-good"]);
     expect(result.cache.readStatus).toBe("miss");
     expect(result.localCandidates.dryRunStatus).toBe("prompt_ready");
-    expect(getDeliveryOrdersForRoutingMock).toHaveBeenCalledWith({
+    expect(getEnrichedDeliveryOrdersForRoutingMock).toHaveBeenCalledWith({
       deliveryDate: "2026-06-16",
       profileId: DEFAULT_DELIVERY_PLANNING_PROFILE.profileId,
       statuses: ["confirmed"],
@@ -231,27 +253,30 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
       })
     ).rejects.toBeInstanceOf(DeliveryAgentPlanningBlockedError);
 
-    expect(getDeliveryOrdersForRoutingMock).not.toHaveBeenCalled();
+    expect(getEnrichedDeliveryOrdersForRoutingMock).not.toHaveBeenCalled();
     expect(loadHistoricalLearningCasesForRetrievalMock).not.toHaveBeenCalled();
   });
 
   it("rechecks routing validity after preview in case the order set changed", async () => {
     setupHappyPath();
-    const invalidRouting = buildRoutingResult([]);
-    getDeliveryOrdersForRoutingMock.mockResolvedValue({
-      ...invalidRouting,
-      summary: {
-        ...invalidRouting.summary,
-        totalOrders: 1,
-        invalidStops: 1,
-      },
-      invalid: [
-        {
-          orderId: "DD-91000004",
-          errors: [{ code: "ROUTING_MISSING_PHONE", message: "Missing phone" }],
-          warnings: [],
+    const invalidRoutingBase = buildRoutingResult([]);
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue({
+      ...invalidRoutingBase,
+      routing: {
+        ...invalidRoutingBase.routing,
+        summary: {
+          ...invalidRoutingBase.routing.summary,
+          totalOrders: 1,
+          invalidStops: 1,
         },
-      ],
+        invalid: [
+          {
+            orderId: "DD-91000004",
+            errors: [{ code: "ROUTING_MISSING_PHONE", message: "Missing phone" }],
+            warnings: [],
+          },
+        ],
+      },
     });
 
     await expect(
@@ -297,6 +322,29 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     expect(result.prompt?.hasHistoricalPackage).toBe(false);
     expect(loadHistoricalLearningCasesForRetrievalMock).not.toHaveBeenCalled();
     expect(buildSimilarCompactHistoricalPackageForDeliveryAgentMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks planning when coordinate coverage is below 70% after geocode enrichment", async () => {
+    setupHappyPath();
+    const lowCoverage = buildRoutingResult();
+    getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue({
+      ...lowCoverage,
+      coordinateCoverage: {
+        coveragePercent: 50,
+        coveredCount: 1,
+        totalCount: 2,
+        missingCount: 1,
+        sourceBreakdown: {},
+      },
+    });
+
+    await expect(
+      runDeliveryAgentLlmCandidatePlanningForDate({
+        deliveryDate: "2026-06-16",
+        providerRuntimeConfig: EMPTY_PROVIDER_RUNTIME_CONFIG,
+        nowMs: NOW_MS,
+      })
+    ).rejects.toBeInstanceOf(DeliveryAgentPlanningBlockedError);
   });
 
   it("returns undefined finalists when no provider call was made", async () => {

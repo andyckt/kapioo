@@ -259,7 +259,7 @@ describe("runDeliveryAgentLlmCandidateProviderAdapter", () => {
       modelProvider: "test-provider",
       modelId: "strong-v1",
       responseFormat: "json_object",
-      maxOutputTokens: 5000,
+      maxOutputTokens: 10000,
     });
   });
 

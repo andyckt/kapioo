@@ -1,4 +1,4 @@
-import { getDeliveryOrdersForRouting } from "@/lib/agents/delivery/get-delivery-orders-for-routing";
+import { getEnrichedDeliveryOrdersForRouting } from "@/lib/agents/delivery/geocode";
 import {
   buildSimilarCompactHistoricalPackageForDeliveryAgent,
   loadHistoricalLearningCasesForRetrieval,
@@ -379,7 +379,7 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
     throw new DeliveryAgentPlanningBlockedError(orderPreview.blockingReasons);
   }
 
-  const routing = await getDeliveryOrdersForRouting({
+  const { routing, coordinateCoverage } = await getEnrichedDeliveryOrdersForRouting({
     deliveryDate,
     profileId: profile.profileId,
     statuses: ["confirmed"],
@@ -394,6 +394,17 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
   if (routing.stops.length === 0) {
     throw new DeliveryAgentPlanningBlockedError([
       "No confirmed valid stops for this delivery date.",
+    ]);
+  }
+
+  const coveragePercent = coordinateCoverage.coveragePercent ?? 0;
+  const MIN_COORDINATE_COVERAGE_PERCENT = 70;
+
+  if (coveragePercent < MIN_COORDINATE_COVERAGE_PERCENT) {
+    throw new DeliveryAgentPlanningBlockedError([
+      `Coordinate coverage is ${Math.round(coveragePercent)}% (${MIN_COORDINATE_COVERAGE_PERCENT}% required). ` +
+        `${routing.stops.length - Math.round((coveragePercent / 100) * routing.stops.length)} stop(s) are missing coordinates after geocode enrichment. ` +
+        `Resolve missing addresses before calling the LLM to avoid wasting tokens.`,
     ]);
   }
 
