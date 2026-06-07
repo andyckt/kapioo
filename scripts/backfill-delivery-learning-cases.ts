@@ -32,8 +32,12 @@ async function main(): Promise<void> {
     endDate: args.endDate,
     profileId: args.profileId,
     force: args.force,
+    dryRun: args.dryRun,
     maxDates: args.maxDates,
     backfillBatchId: args.backfillBatchId,
+    routeOptimizerRequestDelayMs: args.routeOptimizerRequestDelayMs,
+    routeOptimizerRateLimitRetries: args.routeOptimizerRateLimitRetries,
+    routeOptimizerRateLimitRetryDelayMs: args.routeOptimizerRateLimitRetryDelayMs,
     logProgress: args.logProgress,
   });
 

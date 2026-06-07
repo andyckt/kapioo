@@ -7,6 +7,11 @@ import {
   buildDeliveryAgentLearningCaseFromHistoricalData,
   upsertDeliveryAgentLearningCase,
 } from "@/lib/agents/delivery/learning/historical-cases/build-learning-case-for-date";
+import {
+  assessDeliveryAgentLearningBackfillReadiness,
+  getDryRunBackfillStatus,
+  type DeliveryAgentLearningBackfillReadiness,
+} from "@/lib/agents/delivery/learning/backfill/learning-backfill-readiness";
 import { fetchRouteOptimizerRunsByDate } from "@/lib/integrations/route-optimizer/fetch-runs-by-date";
 import {
   RouteOptimizerError,
@@ -17,6 +22,9 @@ import DeliveryAgentLearningCase from "@/models/DeliveryAgentLearningCase";
 const DEFAULT_MAX_BACKFILL_DATES = 60;
 
 export type DeliveryAgentLearningBackfillDateStatus =
+  | "dry_run_ready"
+  | "dry_run_needs_review"
+  | "dry_run_blocked"
   | "saved"
   | "skipped_existing"
   | "skipped_no_orders"
@@ -32,6 +40,17 @@ export type DeliveryAgentLearningBackfillDateResult = {
   routeOptimizerRunCount?: number;
   learningLabel?: string;
   reviewStatus?: string;
+  readiness?: DeliveryAgentLearningBackfillReadiness;
+  positiveRetrievalReady?: boolean;
+  dataQualityScore?: number;
+  matchCoveragePercent?: number;
+  matchedOrders?: number;
+  unmatchedOrders?: number;
+  coordinateCoveragePercent?: number;
+  stopsWithCoordinates?: number;
+  totalCoordinateStops?: number;
+  readinessReasons?: string[];
+  warnings?: string[];
   error?: {
     name: string;
     message: string;
@@ -47,8 +66,13 @@ export type DeliveryAgentLearningBackfillSummary = {
   endDate: string;
   totalDates: number;
   savedCount: number;
+  dryRunCount: number;
   skippedCount: number;
   errorCount: number;
+  readyCount: number;
+  needsReviewCount: number;
+  blockedCount: number;
+  positiveRetrievalReadyCount: number;
   results: DeliveryAgentLearningBackfillDateResult[];
 };
 
@@ -57,6 +81,10 @@ export type BackfillDeliveryAgentLearningCasesForDateRangeInput = {
   endDate: string;
   profileId?: string;
   force?: boolean;
+  dryRun?: boolean;
+  routeOptimizerRequestDelayMs?: number;
+  routeOptimizerRateLimitRetries?: number;
+  routeOptimizerRateLimitRetryDelayMs?: number;
   maxDates?: number;
   backfillBatchId?: string;
   logProgress?: boolean;
@@ -155,6 +183,26 @@ function logBackfillProgress(event: string, payload: Record<string, unknown>): v
   );
 }
 
+function sleep(ms: number): Promise<void> {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function sanitizeNonNegativeInteger(value: number | undefined, fallback: number): number {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error("Backfill timing options must be non-negative integers.");
+  }
+
+  return value;
+}
+
 async function readExistingLearningCase(caseKey: string): Promise<ExistingLearningCaseSummary | null> {
   const existing = await DeliveryAgentLearningCase.findOne({ caseKey })
     .select("caseKey sourceHash reviewStatus quality.learningLabel")
@@ -163,11 +211,91 @@ async function readExistingLearningCase(caseKey: string): Promise<ExistingLearni
   return existing as ExistingLearningCaseSummary | null;
 }
 
+function buildResultFromLearningCase(input: {
+  deliveryDate: string;
+  status: DeliveryAgentLearningBackfillDateStatus;
+  caseKey: string;
+  sourceHash: string | null;
+  orderCount: number;
+  routeOptimizerRunCount: number;
+  learningCase: {
+    quality: {
+      learningLabel: string;
+      dataQualityScore: number;
+      canUseForPositiveRetrieval: boolean;
+    };
+    reviewStatus: string;
+    matchCoverage: {
+      matchCoveragePercent: number;
+      matchedOrders: number;
+      unmatchedOrders: number;
+    };
+    coordinateCoverage: {
+      coveragePercent: number;
+      stopsWithCoordinates: number;
+      totalStops: number;
+    };
+    warnings?: string[];
+  };
+  readiness: ReturnType<typeof assessDeliveryAgentLearningBackfillReadiness>;
+}): DeliveryAgentLearningBackfillDateResult {
+  return {
+    deliveryDate: input.deliveryDate,
+    status: input.status,
+    caseKey: input.caseKey,
+    sourceHash: input.sourceHash,
+    orderCount: input.orderCount,
+    routeOptimizerRunCount: input.routeOptimizerRunCount,
+    learningLabel: input.learningCase.quality.learningLabel,
+    reviewStatus: input.learningCase.reviewStatus,
+    readiness: input.readiness.readiness,
+    positiveRetrievalReady: input.readiness.positiveRetrievalReady,
+    dataQualityScore: input.learningCase.quality.dataQualityScore,
+    matchCoveragePercent: input.learningCase.matchCoverage.matchCoveragePercent,
+    matchedOrders: input.learningCase.matchCoverage.matchedOrders,
+    unmatchedOrders: input.learningCase.matchCoverage.unmatchedOrders,
+    coordinateCoveragePercent: input.learningCase.coordinateCoverage.coveragePercent,
+    stopsWithCoordinates: input.learningCase.coordinateCoverage.stopsWithCoordinates,
+    totalCoordinateStops: input.learningCase.coordinateCoverage.totalStops,
+    readinessReasons: input.readiness.reasons,
+    warnings: input.readiness.warnings,
+  };
+}
+
+async function fetchRouteOptimizerRunsByDateForBackfill(input: {
+  deliveryDate: string;
+  requestDelayMs: number;
+  rateLimitRetries: number;
+  rateLimitRetryDelayMs: number;
+}): Promise<Awaited<ReturnType<typeof fetchRouteOptimizerRunsByDate>>> {
+  await sleep(input.requestDelayMs);
+
+  for (let attempt = 0; attempt <= input.rateLimitRetries; attempt += 1) {
+    try {
+      return await fetchRouteOptimizerRunsByDate(input.deliveryDate);
+    } catch (error) {
+      const isLastAttempt = attempt >= input.rateLimitRetries;
+
+      if (!(error instanceof RouteOptimizerRateLimitError) || isLastAttempt) {
+        throw error;
+      }
+
+      await sleep(input.rateLimitRetryDelayMs);
+    }
+  }
+
+  return fetchRouteOptimizerRunsByDate(input.deliveryDate);
+}
+
 export async function backfillDeliveryAgentLearningCaseForDate(input: {
   deliveryDate: string;
   profileId: string;
   backfillBatchId: string;
   force: boolean;
+  dryRun: boolean;
+  routeOptimizerRequestDelayMs: number;
+  routeOptimizerRateLimitRetries: number;
+  routeOptimizerRateLimitRetryDelayMs: number;
   logProgress: boolean;
 }): Promise<DeliveryAgentLearningBackfillDateResult> {
   const caseKey = buildDeliveryAgentLearningCaseKey({
@@ -200,7 +328,12 @@ export async function backfillDeliveryAgentLearningCaseForDate(input: {
     };
   }
 
-  const routeOptimizerResponse = await fetchRouteOptimizerRunsByDate(input.deliveryDate);
+  const routeOptimizerResponse = await fetchRouteOptimizerRunsByDateForBackfill({
+    deliveryDate: input.deliveryDate,
+    requestDelayMs: input.routeOptimizerRequestDelayMs,
+    rateLimitRetries: input.routeOptimizerRateLimitRetries,
+    rateLimitRetryDelayMs: input.routeOptimizerRateLimitRetryDelayMs,
+  });
   const learningCase = buildDeliveryAgentLearningCaseFromHistoricalData({
     deliveryDate: input.deliveryDate,
     profileId: input.profileId,
@@ -210,16 +343,41 @@ export async function backfillDeliveryAgentLearningCaseForDate(input: {
   });
 
   if (existing?.sourceHash && existing.sourceHash === learningCase.sourceHash) {
-    return {
+    const unchangedLearningCase = {
+      ...learningCase,
+      quality: {
+        ...learningCase.quality,
+        learningLabel: existing.quality?.learningLabel ?? learningCase.quality.learningLabel,
+      },
+      reviewStatus: existing.reviewStatus ?? learningCase.reviewStatus,
+    };
+    const readiness = assessDeliveryAgentLearningBackfillReadiness(unchangedLearningCase);
+
+    return buildResultFromLearningCase({
       deliveryDate: input.deliveryDate,
       status: "skipped_unchanged",
       caseKey,
       sourceHash: learningCase.sourceHash,
       orderCount: orders.length,
       routeOptimizerRunCount: routeOptimizerResponse.runs.length,
-      learningLabel: existing.quality?.learningLabel ?? undefined,
-      reviewStatus: existing.reviewStatus ?? undefined,
-    };
+      learningCase: unchangedLearningCase,
+      readiness,
+    });
+  }
+
+  const readiness = assessDeliveryAgentLearningBackfillReadiness(learningCase);
+
+  if (input.dryRun) {
+    return buildResultFromLearningCase({
+      deliveryDate: input.deliveryDate,
+      status: getDryRunBackfillStatus(readiness.readiness),
+      caseKey,
+      sourceHash: learningCase.sourceHash,
+      orderCount: orders.length,
+      routeOptimizerRunCount: routeOptimizerResponse.runs.length,
+      learningCase,
+      readiness,
+    });
   }
 
   const saved = await upsertDeliveryAgentLearningCase(learningCase);
@@ -233,16 +391,16 @@ export async function backfillDeliveryAgentLearningCaseForDate(input: {
     });
   }
 
-  return {
+  return buildResultFromLearningCase({
     deliveryDate: input.deliveryDate,
     status: "saved",
     caseKey,
     sourceHash: saved.sourceHash ?? null,
     orderCount: orders.length,
     routeOptimizerRunCount: routeOptimizerResponse.runs.length,
-    learningLabel: saved.quality.learningLabel,
-    reviewStatus: saved.reviewStatus,
-  };
+    learningCase: saved,
+    readiness,
+  });
 }
 
 export async function backfillDeliveryAgentLearningCasesForDateRange(
@@ -261,6 +419,18 @@ export async function backfillDeliveryAgentLearningCasesForDateRange(
     input.backfillBatchId?.trim() ||
     buildDefaultBackfillBatchId({ startDate, endDate, profileId });
   const logProgress = input.logProgress === true;
+  const routeOptimizerRequestDelayMs = sanitizeNonNegativeInteger(
+    input.routeOptimizerRequestDelayMs,
+    0
+  );
+  const routeOptimizerRateLimitRetries = sanitizeNonNegativeInteger(
+    input.routeOptimizerRateLimitRetries,
+    0
+  );
+  const routeOptimizerRateLimitRetryDelayMs = sanitizeNonNegativeInteger(
+    input.routeOptimizerRateLimitRetryDelayMs,
+    0
+  );
 
   await connectToDatabase();
 
@@ -284,6 +454,10 @@ export async function backfillDeliveryAgentLearningCasesForDateRange(
         profileId,
         backfillBatchId,
         force: input.force === true,
+        dryRun: input.dryRun === true,
+        routeOptimizerRequestDelayMs,
+        routeOptimizerRateLimitRetries,
+        routeOptimizerRateLimitRetryDelayMs,
         logProgress,
       });
       results.push(result);
@@ -298,8 +472,15 @@ export async function backfillDeliveryAgentLearningCasesForDateRange(
   }
 
   const savedCount = results.filter((result) => result.status === "saved").length;
+  const dryRunCount = results.filter((result) => result.status.startsWith("dry_run_")).length;
   const errorCount = results.filter((result) => result.status === "failed").length;
-  const skippedCount = results.length - savedCount - errorCount;
+  const skippedCount = results.length - savedCount - dryRunCount - errorCount;
+  const readyCount = results.filter((result) => result.readiness === "ready").length;
+  const needsReviewCount = results.filter((result) => result.readiness === "needs_review").length;
+  const blockedCount = results.filter((result) => result.readiness === "blocked").length;
+  const positiveRetrievalReadyCount = results.filter(
+    (result) => result.positiveRetrievalReady === true
+  ).length;
 
   const summary: DeliveryAgentLearningBackfillSummary = {
     backfillBatchId,
@@ -308,8 +489,13 @@ export async function backfillDeliveryAgentLearningCasesForDateRange(
     endDate,
     totalDates: dates.length,
     savedCount,
+    dryRunCount,
     skippedCount,
     errorCount,
+    readyCount,
+    needsReviewCount,
+    blockedCount,
+    positiveRetrievalReadyCount,
     results,
   };
 
@@ -318,8 +504,13 @@ export async function backfillDeliveryAgentLearningCasesForDateRange(
       backfillBatchId,
       profileId,
       savedCount,
+      dryRunCount,
       skippedCount,
       errorCount,
+      readyCount,
+      needsReviewCount,
+      blockedCount,
+      positiveRetrievalReadyCount,
     });
   }
 

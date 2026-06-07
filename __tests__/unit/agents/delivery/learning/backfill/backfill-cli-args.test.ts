@@ -13,6 +13,10 @@ describe("parseDeliveryLearningBackfillCliArgs", () => {
       "--max-dates=31",
       "--batch-id=batch-123",
       "--force",
+      "--dry-run",
+      "--ro-delay-ms=8000",
+      "--ro-retries=3",
+      "--ro-retry-delay-ms=25000",
       "--log-progress",
       "--confirm",
     ]);
@@ -24,6 +28,10 @@ describe("parseDeliveryLearningBackfillCliArgs", () => {
       maxDates: 31,
       backfillBatchId: "batch-123",
       force: true,
+      dryRun: true,
+      routeOptimizerRequestDelayMs: 8000,
+      routeOptimizerRateLimitRetries: 3,
+      routeOptimizerRateLimitRetryDelayMs: 25000,
       logProgress: true,
       confirm: true,
       help: false,
@@ -43,6 +51,8 @@ describe("parseDeliveryLearningBackfillCliArgs", () => {
       confirm: false,
     });
     expect(getDeliveryLearningBackfillCliUsage()).toContain("--confirm");
+    expect(getDeliveryLearningBackfillCliUsage()).toContain("--dry-run");
+    expect(getDeliveryLearningBackfillCliUsage()).toContain("--ro-delay-ms");
   });
 
   it("rejects invalid dates and invalid max date counts", () => {
@@ -57,5 +67,27 @@ describe("parseDeliveryLearningBackfillCliArgs", () => {
         "--max-dates=0",
       ])
     ).toThrow("--max-dates must be a positive integer");
+
+    expect(() =>
+      parseDeliveryLearningBackfillCliArgs([
+        "--start=2026-05-01",
+        "--end=2026-05-31",
+        "--ro-delay-ms=-1",
+      ])
+    ).toThrow("--ro-delay-ms must be a non-negative integer");
+  });
+
+  it("uses safe RO throttle defaults when timing flags are omitted", () => {
+    const parsed = parseDeliveryLearningBackfillCliArgs([
+      "--start=2026-05-01",
+      "--end=2026-05-31",
+      "--confirm",
+    ]);
+
+    expect(parsed).toMatchObject({
+      routeOptimizerRequestDelayMs: 7000,
+      routeOptimizerRateLimitRetries: 2,
+      routeOptimizerRateLimitRetryDelayMs: 20000,
+    });
   });
 });

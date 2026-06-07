@@ -166,4 +166,75 @@ describe("buildLearningCoordinateSnapshots", () => {
     expect(snapshots).toHaveLength(1);
     expect(snapshots[0]?.lat).toBe(43.65);
   });
+
+  it("uses RO customer lat/lng recovered from historical run customers", () => {
+    const orders = [makeLearningOrder({ orderId: "DD-RECOVERED" })];
+    const routeOptimizerResponse = makeRoResponse({
+      runs: [
+        makeRunWithStops(
+          "run-abc123",
+          [
+            makeCustomerStop(0, {
+              lat: null,
+              lng: null,
+              order_ids: [],
+              customer_name: "Recovered Customer-1111",
+            }),
+          ],
+          {
+            customers: [
+              {
+                customer_index: 0,
+                name: "Recovered Customer-1111",
+                phone: "4379891111",
+                address: "Recovered Address, Toronto",
+                lat: 43.711,
+                lng: -79.411,
+                order_ids: ["DD-RECOVERED"],
+                stop_type: "customer",
+              },
+            ],
+          }
+        ),
+      ],
+    });
+    const matchingResult = {
+      matchedStops: [
+        makeMatchedStop({
+          kapiooOrderId: "DD-RECOVERED",
+          roRunId: "run-abc123",
+        }),
+      ],
+      unmatchedOrders: [],
+      unmatchedRoStops: [],
+      matchCoverage: {
+        totalOrders: 1,
+        matchedOrders: 1,
+        unmatchedOrders: 0,
+        totalRoCustomerStops: 1,
+        matchedRoCustomerStops: 1,
+        unmatchedRoCustomerStops: 0,
+        matchCoveragePercent: 100,
+        exactMatches: 1,
+        highConfidenceMatches: 0,
+        uncertainMatches: 0,
+        syntheticUnmatchedStops: 0,
+      },
+      warnings: [],
+    };
+
+    const snapshots = buildLearningCoordinateSnapshots({
+      orders,
+      routeOptimizerResponse,
+      matchingResult,
+    });
+
+    expect(snapshots[0]).toMatchObject({
+      orderId: "DD-RECOVERED",
+      lat: 43.711,
+      lng: -79.411,
+      coordinateSource: "route_optimizer_historical",
+      coordinateConfidence: "high",
+    });
+  });
 });

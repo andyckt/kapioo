@@ -157,6 +157,40 @@ describe("backfillDeliveryAgentLearningCasesForDateRange", () => {
     });
   });
 
+  it("dry-runs a learning case with readiness metrics without writing to the database", async () => {
+    getHistoricalOrdersForLearningMock.mockResolvedValue([
+      makeLearningOrder({ deliveryDate: DELIVERY_DATE }),
+    ]);
+    fetchRouteOptimizerRunsByDateMock.mockResolvedValue(buildOnTimeSingleRunResponse());
+
+    const summary = await backfillDeliveryAgentLearningCasesForDateRange({
+      startDate: DELIVERY_DATE,
+      endDate: DELIVERY_DATE,
+      backfillBatchId: "batch-test",
+      dryRun: true,
+    });
+
+    expect(findOneAndUpdateMock).not.toHaveBeenCalled();
+    expect(summary).toMatchObject({
+      savedCount: 0,
+      dryRunCount: 1,
+      skippedCount: 0,
+      errorCount: 0,
+      readyCount: 1,
+      positiveRetrievalReadyCount: 1,
+    });
+    expect(summary.results[0]).toMatchObject({
+      status: "dry_run_ready",
+      readiness: "ready",
+      positiveRetrievalReady: true,
+      dataQualityScore: expect.any(Number),
+      matchCoveragePercent: 100,
+      coordinateCoveragePercent: 100,
+      matchedOrders: 1,
+      unmatchedOrders: 0,
+    });
+  });
+
   it("continues to the next date after a Route Optimizer read failure", async () => {
     getHistoricalOrdersForLearningMock.mockResolvedValue([
       makeLearningOrder({ deliveryDate: DELIVERY_DATE }),
@@ -185,6 +219,31 @@ describe("backfillDeliveryAgentLearningCasesForDateRange", () => {
     expect(summary.results[1]).toMatchObject({
       deliveryDate: "2026-06-01",
       status: "saved",
+    });
+  });
+
+  it("retries a Route Optimizer rate limit before marking the date failed", async () => {
+    getHistoricalOrdersForLearningMock.mockResolvedValue([
+      makeLearningOrder({ deliveryDate: DELIVERY_DATE }),
+    ]);
+    fetchRouteOptimizerRunsByDateMock
+      .mockRejectedValueOnce(new RouteOptimizerRateLimitError("RATE_LIMITED"))
+      .mockResolvedValueOnce(buildOnTimeSingleRunResponse());
+
+    const summary = await backfillDeliveryAgentLearningCasesForDateRange({
+      startDate: DELIVERY_DATE,
+      endDate: DELIVERY_DATE,
+      backfillBatchId: "batch-test",
+      routeOptimizerRateLimitRetries: 1,
+      routeOptimizerRateLimitRetryDelayMs: 0,
+    });
+
+    expect(fetchRouteOptimizerRunsByDateMock).toHaveBeenCalledTimes(2);
+    expect(summary.errorCount).toBe(0);
+    expect(summary.savedCount).toBe(1);
+    expect(summary.results[0]).toMatchObject({
+      status: "saved",
+      readiness: "ready",
     });
   });
 

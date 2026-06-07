@@ -103,4 +103,58 @@ describe("flattenRouteOptimizerCustomerStops", () => {
 
     expect(response.runs[0]?.stops[0]?.order_ids).toEqual(["DD-90000001"]);
   });
+
+  it("recovers historical RO customer coordinates when the optimized stop omits them", () => {
+    const response = makeRoResponse({
+      runs: [
+        makeRunWithStops(
+          "run-1",
+          [
+            makeCustomerStop(0, {
+              customer_name: undefined,
+              customer_phone: null,
+              customer_address: null,
+              lat: null,
+              lng: null,
+              order_ids: [],
+              is_first_stop: undefined,
+              is_end_point: undefined,
+            }),
+          ],
+          {
+            customers: [
+              {
+                customer_index: 0,
+                name: "Recovered Customer-1111",
+                phone: "4379891111",
+                address: "Recovered Address, Toronto",
+                lat: 43.701,
+                lng: -79.401,
+                order_ids: ["DD-RECOVERED"],
+                fixed_stop_position: 2,
+                is_first_stop: true,
+                is_end_point: false,
+                is_synthetic: false,
+                stop_type: "customer",
+              },
+            ],
+          }
+        ),
+      ],
+    });
+
+    const flattened = flattenRouteOptimizerCustomerStops(response);
+
+    expect(flattened[0]).toMatchObject({
+      orderIds: ["DD-RECOVERED"],
+      customerName: "Recovered Customer-1111",
+      customerPhone: "4379891111",
+      customerAddress: "Recovered Address, Toronto",
+      lat: 43.701,
+      lng: -79.401,
+      fixedStopPosition: 2,
+      isFirstStop: true,
+      isEndPoint: false,
+    });
+  });
 });
