@@ -861,16 +861,19 @@ export function AdminDeliveryAgentTab() {
                 </>
               )}
 
-              {candidatePlans && (
+              {(candidatePlans || candidateRoutePreview) && (
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">{candidatePlans.notes}</p>
+                  {candidatePlans && (
+                    <p className="text-sm text-muted-foreground">{candidatePlans.notes}</p>
+                  )}
 
-                  {candidatePlans.coordinateCoverage && (
+                  {candidatePlans?.coordinateCoverage && (
                     <CoordinateCoverageBanner coverage={candidatePlans.coordinateCoverage} />
                   )}
 
-                  {!candidateRoutePreview && <CandidatePreviewBudgetBanner />}
+                  {candidatePlans && !candidateRoutePreview && <CandidatePreviewBudgetBanner />}
 
+                  {candidatePlans && (
                   <div className="flex justify-end">
                     <Button
                       onClick={handlePreviewCandidateRoutes}
@@ -886,6 +889,7 @@ export function AdminDeliveryAgentTab() {
                       )}
                     </Button>
                   </div>
+                  )}
 
                   {candidateRoutePreview && (
                     <p className="text-sm text-muted-foreground">{candidateRoutePreview.notes}</p>
@@ -904,6 +908,25 @@ export function AdminDeliveryAgentTab() {
 
                   {candidateRoutePreview?.coordinateCoverage && (
                     <CoordinateCoverageBanner coverage={candidateRoutePreview.coordinateCoverage} />
+                  )}
+
+                  {candidateRoutePreview && !candidateRoutePreview.recommendedCandidateId && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 space-y-1">
+                      <p className="font-medium">No recommendation was selected after Route Optimizer preview.</p>
+                      {candidateRoutePreview.selectionNotes && (
+                        <p>{candidateRoutePreview.selectionNotes}</p>
+                      )}
+                      {candidateRoutePreview.selectionWarnings.length > 0 && (
+                        <ul className="list-disc pl-5 space-y-0.5">
+                          {candidateRoutePreview.selectionWarnings.map((w, i) => (
+                            <li key={i}>{w}</li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="text-xs text-amber-700">
+                        Check the candidates below. All previewed plans may be late or infeasible for today.
+                      </p>
+                    </div>
                   )}
 
                   {candidateRoutePreview?.recommendedCandidateId && (
@@ -1181,7 +1204,6 @@ export function AdminDeliveryAgentTab() {
           deliveryDate={deliveryDate}
           onPreviewComplete={(previewResult) => {
             setCandidateRoutePreview(previewResult)
-            setCandidatePlans(null)
             setImprovedGenerationNotice(null)
             setSavedReview(null)
             loadSavedReview({
