@@ -324,15 +324,15 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     expect(buildSimilarCompactHistoricalPackageForDeliveryAgentMock).not.toHaveBeenCalled();
   });
 
-  it("blocks planning when coordinate coverage is below 70% after geocode enrichment", async () => {
+  it("blocks planning when any stop is missing coordinates after geocode enrichment", async () => {
     setupHappyPath();
-    const lowCoverage = buildRoutingResult();
+    const withMissing = buildRoutingResult();
     getEnrichedDeliveryOrdersForRoutingMock.mockResolvedValue({
-      ...lowCoverage,
+      ...withMissing,
       coordinateCoverage: {
-        coveragePercent: 50,
-        coveredCount: 1,
-        totalCount: 2,
+        coveragePercent: 66,
+        coveredCount: 2,
+        totalCount: 3,
         missingCount: 1,
         sourceBreakdown: {},
       },

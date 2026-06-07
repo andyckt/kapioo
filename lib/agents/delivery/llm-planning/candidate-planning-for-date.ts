@@ -398,13 +398,13 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
   }
 
   const coveragePercent = coordinateCoverage.coveragePercent ?? 0;
-  const MIN_COORDINATE_COVERAGE_PERCENT = 70;
+  const missingCount = coordinateCoverage.missingCount ?? (routing.stops.length - Math.round((coveragePercent / 100) * routing.stops.length));
 
-  if (coveragePercent < MIN_COORDINATE_COVERAGE_PERCENT) {
+  if (missingCount > 0) {
     throw new DeliveryAgentPlanningBlockedError([
-      `Coordinate coverage is ${Math.round(coveragePercent)}% (${MIN_COORDINATE_COVERAGE_PERCENT}% required). ` +
-        `${routing.stops.length - Math.round((coveragePercent / 100) * routing.stops.length)} stop(s) are missing coordinates after geocode enrichment. ` +
-        `Resolve missing addresses before calling the LLM to avoid wasting tokens.`,
+      `${missingCount} stop(s) are missing coordinates after geocode enrichment (${Math.round(coveragePercent)}% coverage). ` +
+        `Every stop must have coordinates — a single missing outlier stop significantly affects LLM planning quality. ` +
+        `Resolve the missing address(es) before calling the LLM.`,
     ]);
   }
 
