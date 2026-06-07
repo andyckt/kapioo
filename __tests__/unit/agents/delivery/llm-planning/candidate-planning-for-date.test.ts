@@ -32,7 +32,9 @@ import { DEFAULT_DELIVERY_PLANNING_PROFILE } from "@/lib/agents/delivery/plannin
 import { buildRoutingStop } from "@/__tests__/unit/agents/delivery/candidate-plans/test-fixtures";
 import {
   DELIVERY_AGENT_COMPACT_HISTORICAL_PACKAGE_VERSION,
+  DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION,
   type DeliveryAgentCompactHistoricalPackage,
+  type DeliveryAgentLlmCandidateOutput,
 } from "@/lib/contracts/delivery-agent-llm-planning";
 import type { RoutingStop } from "@/lib/agents/delivery/types";
 
@@ -295,5 +297,110 @@ describe("runDeliveryAgentLlmCandidatePlanningForDate", () => {
     expect(result.prompt?.hasHistoricalPackage).toBe(false);
     expect(loadHistoricalLearningCasesForRetrievalMock).not.toHaveBeenCalled();
     expect(buildSimilarCompactHistoricalPackageForDeliveryAgentMock).not.toHaveBeenCalled();
+  });
+
+  it("returns undefined finalists when no provider call was made", async () => {
+    setupHappyPath();
+
+    const result = await runDeliveryAgentLlmCandidatePlanningForDate({
+      deliveryDate: "2026-06-16",
+      providerRuntimeConfig: EMPTY_PROVIDER_RUNTIME_CONFIG,
+      nowMs: NOW_MS,
+    });
+
+    expect(result.localCandidates.dryRunStatus).toBe("prompt_ready");
+    expect(result.localCandidates.finalistCandidateCount).toBe(0);
+    expect(result.localCandidates.finalists).toBeUndefined();
+  });
+
+  it("populates finalists with run detail when a fake provider returns valid output", async () => {
+    setupHappyPath();
+
+    const fakeOutput: DeliveryAgentLlmCandidateOutput = {
+      schemaVersion: DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION,
+      summary: {
+        planningSummary: "Fake provider output for finalist test.",
+        candidateCount: 1,
+        assumptions: [],
+      },
+      candidates: [
+        {
+          candidateId: "test-plan-a",
+          strategyName: "test plan A",
+          reasoningSummary: "Two-run split.",
+          runs: [
+            { runSlot: "A", orderIds: ["DD-91000001"] },
+            { runSlot: "B", orderIds: ["DD-91000002", "DD-91000003"] },
+          ],
+          handoffPlan: {
+            required: true,
+            providerRunSlot: "A",
+            receiverRunSlot: "B",
+            strategy: "Central North York meetup.",
+            suggestedMeetupArea: "North York",
+            sourceOrderIds: ["DD-91000001"],
+          },
+          selfUse: { used: false, orderIds: [], reason: undefined },
+          risks: [],
+          historicalCaseIdsUsed: [],
+          expectedStrengths: [],
+          warnings: [],
+        },
+      ],
+      unprovenIdeas: [],
+      hardRuleChecklist: {
+        allOrdersAssignedExactlyOnce: true,
+        noDuplicateOrderIds: true,
+        noInventedOrderIds: true,
+        selfUsedOnlyAsBackup: true,
+        routeOptimizerNotUsedAsSearch: true,
+        unprovenIdeasNotRecommended: true,
+      },
+      warnings: [],
+    };
+
+    const fakeProvider = vi.fn().mockResolvedValue({
+      status: "called",
+      reason: "fake_provider_responded",
+      rawCandidateOutput: fakeOutput,
+      modelTier: "strong",
+      modelProvider: "deepseek",
+      modelId: "deepseek-chat",
+      inputTokens: 1000,
+      outputTokens: 200,
+    });
+
+    const configuredRuntimeConfig = resolveDeliveryAgentLlmProviderRuntimeConfig({
+      DELIVERY_AGENT_LLM_PROVIDER: "deepseek",
+      DELIVERY_AGENT_LLM_STRONG_MODEL: "deepseek-chat",
+      DEEPSEEK_API_KEY: "test-key",
+      DELIVERY_AGENT_LLM_STRONG_INPUT_CENTS_PER_MILLION: "14",
+      DELIVERY_AGENT_LLM_STRONG_OUTPUT_CENTS_PER_MILLION: "28",
+    });
+
+    const result = await runDeliveryAgentLlmCandidatePlanningForDate({
+      deliveryDate: "2026-06-16",
+      providerRuntimeConfig: configuredRuntimeConfig,
+      allowProviderCall: true,
+      provider: fakeProvider,
+      nowMs: NOW_MS,
+    });
+
+    expect(result.provider.apiCallMade).toBe(true);
+    expect(result.localCandidates.finalistCandidateCount).toBeGreaterThan(0);
+
+    const finalists = result.localCandidates.finalists;
+    expect(finalists).toBeDefined();
+    expect(finalists).toHaveLength(result.localCandidates.finalistCandidateCount);
+
+    const first = finalists![0];
+    expect(first.strategyType).toBe("llm_generated");
+    expect(first.runs).toHaveLength(2);
+    expect(first.runs.find((r) => r.runSlot === "A")?.orderIds).toEqual(["DD-91000001"]);
+    expect(first.runs.find((r) => r.runSlot === "B")?.orderIds).toEqual(
+      expect.arrayContaining(["DD-91000002", "DD-91000003"])
+    );
+    expect(first.totalStops).toBeGreaterThan(0);
+    expect(first.localScore).toBeGreaterThanOrEqual(0);
   });
 });

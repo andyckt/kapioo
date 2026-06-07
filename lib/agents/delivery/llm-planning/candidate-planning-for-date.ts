@@ -24,7 +24,9 @@ import type { DeliveryAgentCostPolicy } from "@/lib/contracts/delivery-agent-cos
 import type {
   DeliveryAgentLlmCandidatePlanningResponse,
   DeliveryAgentLlmCandidatePlanningHistoryStatus,
+  DeliveryAgentLlmCandidatePlanningFinalistSummary,
 } from "@/lib/contracts/delivery-agent";
+import type { CandidatePlan } from "@/lib/agents/delivery/candidate-plans/types";
 import type {
   DeliveryAgentCompactHistoricalPackage,
   DeliveryAgentPlanningFingerprintOrderFact,
@@ -222,6 +224,44 @@ function buildOrderSummary(input: {
   };
 }
 
+function buildFinalistSummaries(
+  finalistCandidates: CandidatePlan[],
+  localRankingResult?: { rankedCandidates: Array<{ candidateId: string; score: number; rank: number; blockingIssues: string[]; warnings: string[] }> }
+): DeliveryAgentLlmCandidatePlanningFinalistSummary[] {
+  if (finalistCandidates.length === 0) {
+    return [];
+  }
+
+  const rankingByCandidate = new Map(
+    (localRankingResult?.rankedCandidates ?? []).map((r) => [r.candidateId, r])
+  );
+
+  return finalistCandidates.map((plan, index) => {
+    const ranking = rankingByCandidate.get(plan.candidateId);
+
+    return {
+      candidateId: plan.candidateId,
+      name: plan.name,
+      strategyType: plan.strategyType,
+      localScore: ranking?.score ?? 0,
+      rank: ranking?.rank ?? index + 1,
+      runs: plan.runs.map((run) => ({
+        runSlot: run.runSlot,
+        driverName: run.driverName,
+        orderIds: run.stops.map((stop) => stop.orderId),
+        stopCount: run.stopCount,
+        areaBreakdown: run.areaBreakdown,
+      })),
+      usesHandoff: Boolean(plan.handoffPlan),
+      usesSelfRun: plan.summary.selfUsed,
+      totalStops: plan.summary.totalStops,
+      totalMeals: plan.summary.totalMeals,
+      blockingIssues: ranking?.blockingIssues ?? [],
+      warnings: ranking?.warnings ?? plan.warnings,
+    };
+  });
+}
+
 function mapAdapterToResponse(input: {
   deliveryDate: string;
   profile: DeliveryPlanningProfile;
@@ -305,6 +345,13 @@ function mapAdapterToResponse(input: {
       parsedRejectedCandidateIds:
         dryRunResult?.candidateIds.parsedRejectedCandidateIds ?? [],
       finalistCandidateIds: dryRunResult?.candidateIds.finalistCandidateIds ?? [],
+      finalists:
+        dryRunResult && dryRunResult.finalistCandidates.length > 0
+          ? buildFinalistSummaries(
+              dryRunResult.finalistCandidates,
+              dryRunResult.localRankingResult
+            )
+          : undefined,
     },
     warnings: uniqueInOriginalOrder([
       ...input.historical.warnings,

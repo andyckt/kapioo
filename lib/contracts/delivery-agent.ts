@@ -320,6 +320,29 @@ export type DeliveryAgentLlmCandidatePlanningLiveCallGate = {
   warnings: string[];
 };
 
+export type DeliveryAgentLlmCandidatePlanningFinalistRun = {
+  runSlot: string;
+  driverName: string;
+  orderIds: string[];
+  stopCount: number;
+  areaBreakdown: Record<string, number>;
+};
+
+export type DeliveryAgentLlmCandidatePlanningFinalistSummary = {
+  candidateId: string;
+  name: string;
+  strategyType: string;
+  localScore: number;
+  rank: number;
+  runs: DeliveryAgentLlmCandidatePlanningFinalistRun[];
+  usesHandoff: boolean;
+  usesSelfRun: boolean;
+  totalStops: number;
+  totalMeals: number;
+  blockingIssues: string[];
+  warnings: string[];
+};
+
 export type DeliveryAgentLlmCandidatePlanningResponse = {
   pipelineVersion: string;
   status:
@@ -401,6 +424,7 @@ export type DeliveryAgentLlmCandidatePlanningResponse = {
     parsedAcceptedCandidateIds: string[];
     parsedRejectedCandidateIds: string[];
     finalistCandidateIds: string[];
+    finalists?: DeliveryAgentLlmCandidatePlanningFinalistSummary[];
   };
   warnings: string[];
   errors: string[];

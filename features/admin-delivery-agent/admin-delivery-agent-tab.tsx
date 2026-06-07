@@ -29,6 +29,7 @@ import type {
 } from "@/lib/contracts/delivery-agent"
 import { DeliveryAgentReviewPanel } from "@/features/admin-delivery-agent/delivery-agent-review-panel"
 import { CoordinateCoverageBanner } from "@/features/admin-delivery-agent/coordinate-coverage-banner"
+import { DeliveryAgentLlmPlanningPanel } from "@/features/admin-delivery-agent/delivery-agent-llm-planning-panel"
 
 function SummaryCard({
   label,
@@ -1173,6 +1174,10 @@ export function AdminDeliveryAgentTab() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {preview?.canContinueToPlanning && deliveryDate && (
+        <DeliveryAgentLlmPlanningPanel deliveryDate={deliveryDate} />
       )}
     </div>
   )
