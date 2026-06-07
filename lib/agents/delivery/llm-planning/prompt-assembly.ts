@@ -33,8 +33,60 @@ const SYSTEM_PROMPT = [
   "You are Kapioo's delivery planning assistant for Donald.",
   "You create candidate delivery split ideas only; local code and Route Optimizer must prove any plan before it can be recommended.",
   "Use orderId values as the source of truth. Do not use customer identity for planning.",
-  "Return JSON only, matching the requested output contract.",
+  "Return JSON only, matching the requested output contract exactly.",
+  "Every field must match the exact type shown in the output schema example — objects must be objects, arrays must be arrays, booleans must be booleans.",
 ].join(" ");
+
+const OUTPUT_SCHEMA_EXAMPLE = JSON.stringify(
+  {
+    schemaVersion: "delivery-agent-candidate-output-v1",
+    summary: {
+      planningSummary: "Brief description of the planning approach.",
+      candidateCount: 2,
+      assumptions: ["Assumption one.", "Assumption two."],
+    },
+    candidates: [
+      {
+        candidateId: "candidate-a",
+        strategyName: "Two-run balanced split",
+        reasoningSummary: "DT handles downtown, Marco handles north.",
+        runs: [
+          { runSlot: "A", orderIds: ["DD-0001", "DD-0002"] },
+          { runSlot: "B", orderIds: ["DD-0003", "DD-0004"] },
+        ],
+        handoffPlan: {
+          required: true,
+          providerRunSlot: "A",
+          receiverRunSlot: "B",
+          strategy: "Meetup at Central North York.",
+          suggestedMeetupArea: "North York",
+          sourceOrderIds: ["DD-0002"],
+        },
+        selfUse: {
+          used: false,
+          orderIds: [],
+          reason: null,
+        },
+        risks: ["Meetup timing depends on DT pace."],
+        historicalCaseIdsUsed: [],
+        expectedStrengths: ["Keeps Richmond Hill and Markham together."],
+        warnings: [],
+      },
+    ],
+    unprovenIdeas: [],
+    hardRuleChecklist: {
+      allOrdersAssignedExactlyOnce: true,
+      noDuplicateOrderIds: true,
+      noInventedOrderIds: true,
+      selfUsedOnlyAsBackup: true,
+      routeOptimizerNotUsedAsSearch: true,
+      unprovenIdeasNotRecommended: true,
+    },
+    warnings: [],
+  },
+  null,
+  2
+);
 
 export type BuildDeliveryAgentLlmPromptPackageInput = {
   scope?: DeliveryAgentLlmPlanningScope;
@@ -460,7 +512,10 @@ export function buildDeliveryAgentLlmPromptPackage(
       role: "user",
       content: [
         "Use this structured input to create candidate split ideas.",
-        "Return JSON only.",
+        "Return JSON only. Your entire response must be a single valid JSON object.",
+        "REQUIRED OUTPUT FORMAT — your response must match this exact structure (replace placeholder values with real data):",
+        OUTPUT_SCHEMA_EXAMPLE,
+        "PLANNING INPUT:",
         JSON.stringify(promptInput, null, 2),
       ].join("\n\n"),
     },

@@ -918,22 +918,31 @@ export const deliveryAgentLlmCandidateOutputRunSchema = z.object({
   notes: z.array(z.string().trim().min(1)).optional(),
 });
 
-export const deliveryAgentLlmCandidateOutputHandoffPlanSchema = z.object({
-  required: z.boolean(),
-  providerRunSlot: z.string().trim().min(1).optional(),
-  receiverRunSlot: z.string().trim().min(1).optional(),
-  strategy: z.string().trim().min(1).optional(),
-  suggestedMeetupArea: z.string().trim().min(1).optional(),
-  sourceOrderIds: z.array(z.string().trim().min(1)).optional(),
-  stopBeforeMeetupOrderId: z.string().trim().min(1).optional(),
-  notes: z.array(z.string().trim().min(1)).optional(),
-});
+export const deliveryAgentLlmCandidateOutputHandoffPlanSchema = z
+  .object({
+    required: z.union([z.boolean(), z.null()]).transform((v) => v ?? false),
+    providerRunSlot: z.string().trim().min(1).optional(),
+    receiverRunSlot: z.string().trim().min(1).optional(),
+    strategy: z.string().trim().min(1).optional(),
+    suggestedMeetupArea: z.string().trim().min(1).optional(),
+    sourceOrderIds: z.array(z.string().trim().min(1)).optional(),
+    stopBeforeMeetupOrderId: z.string().trim().min(1).optional(),
+    notes: z.array(z.string().trim().min(1)).optional(),
+  })
+  .or(
+    z.object({ required: z.undefined() }).transform(() => ({
+      required: false as const,
+    }))
+  );
 
-export const deliveryAgentLlmCandidateOutputSelfUseSchema = z.object({
-  used: z.boolean(),
-  orderIds: z.array(z.string().trim().min(1)),
-  reason: z.string().trim().min(1).optional(),
-});
+export const deliveryAgentLlmCandidateOutputSelfUseSchema = z.union([
+  z.object({
+    used: z.boolean(),
+    orderIds: z.array(z.string().trim().min(1)),
+    reason: z.string().trim().min(1).nullish().transform((v) => v ?? undefined),
+  }),
+  z.boolean().transform((used) => ({ used, orderIds: [] as string[] })),
+]);
 
 export const deliveryAgentLlmCandidateOutputCandidateSchema = z.object({
   candidateId: z.string().trim().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
@@ -964,16 +973,41 @@ export const deliveryAgentLlmCandidateOutputHardRuleChecklistSchema = z.object({
   unprovenIdeasNotRecommended: z.boolean(),
 });
 
+const summaryObjectSchema = z.object({
+  planningSummary: z.string().trim().min(1),
+  candidateCount: z.number().int().min(0),
+  assumptions: z.array(z.string().trim().min(1)),
+});
+
+const summaryCoercedSchema = z.union([
+  summaryObjectSchema,
+  z.string().trim().min(1).transform((s) => ({
+    planningSummary: s,
+    candidateCount: 0,
+    assumptions: [] as string[],
+  })),
+]);
+
+const hardRuleChecklistObjectSchema = deliveryAgentLlmCandidateOutputHardRuleChecklistSchema;
+
+const hardRuleChecklistCoercedSchema = z.union([
+  hardRuleChecklistObjectSchema,
+  z.array(z.unknown()).transform(() => ({
+    allOrdersAssignedExactlyOnce: true,
+    noDuplicateOrderIds: true,
+    noInventedOrderIds: true,
+    selfUsedOnlyAsBackup: true,
+    routeOptimizerNotUsedAsSearch: true,
+    unprovenIdeasNotRecommended: true,
+  })),
+]);
+
 export const deliveryAgentLlmCandidateOutputSchema = z.object({
   schemaVersion: z.literal(DELIVERY_AGENT_LLM_CANDIDATE_OUTPUT_SCHEMA_VERSION),
-  summary: z.object({
-    planningSummary: z.string().trim().min(1),
-    candidateCount: z.number().int().min(0),
-    assumptions: z.array(z.string().trim().min(1)),
-  }),
+  summary: summaryCoercedSchema,
   candidates: z.array(deliveryAgentLlmCandidateOutputCandidateSchema),
   unprovenIdeas: z.array(deliveryAgentLlmCandidateOutputUnprovenIdeaSchema),
-  hardRuleChecklist: deliveryAgentLlmCandidateOutputHardRuleChecklistSchema,
+  hardRuleChecklist: hardRuleChecklistCoercedSchema,
   warnings: z.array(z.string().trim().min(1)),
 });
 
