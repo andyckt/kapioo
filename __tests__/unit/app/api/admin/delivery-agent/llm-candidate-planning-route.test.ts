@@ -1,6 +1,13 @@
-const { requireAdminMfaMock, runPlanningForDateMock } = vi.hoisted(() => ({
+const {
+  requireAdminMfaMock,
+  runPlanningForDateMock,
+  createProviderExecutorMock,
+  providerExecutor,
+} = vi.hoisted(() => ({
   requireAdminMfaMock: vi.fn(),
   runPlanningForDateMock: vi.fn(),
+  createProviderExecutorMock: vi.fn(),
+  providerExecutor: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/guards", () => ({
@@ -9,6 +16,10 @@ vi.mock("@/lib/auth/guards", () => ({
 
 vi.mock("@/lib/agents/delivery/llm-planning/candidate-planning-for-date", () => ({
   runDeliveryAgentLlmCandidatePlanningForDate: runPlanningForDateMock,
+}));
+
+vi.mock("@/lib/agents/delivery/llm-planning/openai-compatible-provider", () => ({
+  createDeliveryAgentOpenAiCompatibleCandidateProviderExecutor: createProviderExecutorMock,
 }));
 
 import { POST } from "@/app/api/admin/delivery-agent/llm-candidate-planning/route";
@@ -126,6 +137,7 @@ describe("POST /api/admin/delivery-agent/llm-candidate-planning", () => {
       response: null,
     });
     runPlanningForDateMock.mockResolvedValue(buildResponse());
+    createProviderExecutorMock.mockReturnValue(providerExecutor);
   });
 
   it("requires admin MFA and runs provider-free planning preparation", async () => {
@@ -152,10 +164,12 @@ describe("POST /api/admin/delivery-agent/llm-candidate-planning", () => {
       includeHistoricalPackage: false,
       forceRefresh: true,
       allowProviderCall: false,
+      provider: undefined,
     });
+    expect(createProviderExecutorMock).not.toHaveBeenCalled();
   });
 
-  it("rejects attempts to enable provider calls through the admin route body", async () => {
+  it("rejects attempts to enable provider calls without explicit live dry-run confirmation", async () => {
     const response = await POST(
       buildJsonRequest(
         "http://localhost:3000/api/admin/delivery-agent/llm-candidate-planning",
@@ -170,6 +184,33 @@ describe("POST /api/admin/delivery-agent/llm-candidate-planning", () => {
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
     expect(runPlanningForDateMock).not.toHaveBeenCalled();
+    expect(createProviderExecutorMock).not.toHaveBeenCalled();
+  });
+
+  it("allows an explicit live LLM dry-run request and injects the server provider executor", async () => {
+    const response = await POST(
+      buildJsonRequest(
+        "http://localhost:3000/api/admin/delivery-agent/llm-candidate-planning",
+        {
+          deliveryDate: "2026-06-16",
+          allowProviderCall: true,
+          liveDryRunConfirmation: "LIVE_LLM_DRY_RUN",
+        }
+      )
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(createProviderExecutorMock).toHaveBeenCalledTimes(1);
+    expect(runPlanningForDateMock).toHaveBeenCalledWith({
+      deliveryDate: "2026-06-16",
+      profileId: undefined,
+      includeHistoricalPackage: undefined,
+      forceRefresh: undefined,
+      allowProviderCall: true,
+      provider: providerExecutor,
+    });
   });
 
   it("returns the admin auth response before parsing the body", async () => {

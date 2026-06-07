@@ -108,6 +108,34 @@ describe("delivery-agent LLM provider readiness", () => {
       inputCentsPerMillion: 25,
       outputCentsPerMillion: 100,
     });
+    expect(runtimeConfig.tiers.strong.baseUrl).toBe("https://api.openai.com/v1");
+    expect(runtimeConfig.tiers.strong.protocol).toBe("openai_chat_completions");
+  });
+
+  it("supports DeepSeek V4 through the OpenAI-compatible provider runtime config", () => {
+    const runtimeConfig = resolveDeliveryAgentLlmProviderRuntimeConfig({
+      DELIVERY_AGENT_LLM_PROVIDER: "deepseek",
+      DELIVERY_AGENT_LLM_STRONG_MODEL: "deepseek-v4-pro",
+      DEEPSEEK_API_KEY: "test-key",
+      DELIVERY_AGENT_LLM_STRONG_INPUT_CENTS_PER_MILLION: "1",
+      DELIVERY_AGENT_LLM_STRONG_OUTPUT_CENTS_PER_MILLION: "2",
+    });
+    const policy = createDeliveryAgentCostPolicyWithProviderRuntime({
+      runtimeConfig,
+    });
+
+    expect(policy.models.strong).toMatchObject({
+      tier: "strong",
+      provider: "deepseek",
+      modelId: "deepseek-v4-pro",
+      configured: true,
+    });
+    expect(runtimeConfig.tiers.strong.apiKey).toEqual({
+      configured: true,
+      envVar: "DEEPSEEK_API_KEY",
+    });
+    expect(runtimeConfig.tiers.strong.baseUrl).toBe("https://api.deepseek.com");
+    expect(runtimeConfig.tiers.strong.protocol).toBe("openai_chat_completions");
   });
 
   it("blocks live calls when pricing is missing even if the model API key is configured", () => {

@@ -30,6 +30,7 @@ const MODEL_TIERS: DeliveryAgentConfiguredModelTier[] = [
 
 const DEFAULT_PROVIDER_API_KEY_ENV: Record<string, string[]> = {
   openai: ["OPENAI_API_KEY", "DELIVERY_AGENT_LLM_API_KEY"],
+  deepseek: ["DEEPSEEK_API_KEY", "DELIVERY_AGENT_LLM_API_KEY"],
   anthropic: ["ANTHROPIC_API_KEY", "DELIVERY_AGENT_LLM_API_KEY"],
   gemini: [
     "GEMINI_API_KEY",
@@ -45,6 +46,13 @@ const DEFAULT_PROVIDER_API_KEY_ENV: Record<string, string[]> = {
   ],
   custom: ["DELIVERY_AGENT_LLM_API_KEY"],
 };
+
+const DEFAULT_PROVIDER_BASE_URL: Record<string, string> = {
+  openai: "https://api.openai.com/v1",
+  deepseek: "https://api.deepseek.com",
+};
+
+const OPENAI_COMPATIBLE_PROVIDER_PROTOCOLS = new Set(["openai", "deepseek", "custom"]);
 
 export type DeliveryAgentLlmProviderEnv = Record<string, string | undefined>;
 
@@ -63,6 +71,8 @@ export type DeliveryAgentLlmProviderTierRuntimeConfig = {
   tier: DeliveryAgentConfiguredModelTier;
   provider?: string;
   modelId?: string;
+  baseUrl?: string;
+  protocol: "openai_chat_completions" | "unsupported";
   modelRef?: DeliveryAgentModelRef;
   apiKey: DeliveryAgentLlmProviderApiKeyReadiness;
   pricing: DeliveryAgentLlmProviderPricing;
@@ -91,6 +101,13 @@ export type ResolveDeliveryAgentLlmLiveCallGateInput = {
   allowProviderCall: boolean;
 };
 
+export type ResolveDeliveryAgentLlmProviderApiKeyValueInput = {
+  runtimeConfig: DeliveryAgentLlmProviderRuntimeConfig;
+  modelProvider: string;
+  modelId: string;
+  env?: DeliveryAgentLlmProviderEnv;
+};
+
 function readEnv(input: {
   env: DeliveryAgentLlmProviderEnv;
   name: string;
@@ -106,6 +123,26 @@ function normalizeProvider(value: string | undefined): string | undefined {
 
 function tierEnvPrefix(tier: DeliveryAgentConfiguredModelTier): string {
   return `DELIVERY_AGENT_LLM_${tier.toUpperCase()}`;
+}
+
+function resolveProviderProtocol(provider: string | undefined): DeliveryAgentLlmProviderTierRuntimeConfig["protocol"] {
+  if (provider && OPENAI_COMPATIBLE_PROVIDER_PROTOCOLS.has(provider)) {
+    return "openai_chat_completions";
+  }
+
+  return "unsupported";
+}
+
+function resolveBaseUrl(input: {
+  env: DeliveryAgentLlmProviderEnv;
+  provider?: string;
+  prefix: string;
+}): string | undefined {
+  return (
+    readEnv({ env: input.env, name: `${input.prefix}_BASE_URL` }) ??
+    readEnv({ env: input.env, name: "DELIVERY_AGENT_LLM_BASE_URL" }) ??
+    (input.provider ? DEFAULT_PROVIDER_BASE_URL[input.provider] : undefined)
+  );
 }
 
 function resolveApiKeyReadiness(input: {
@@ -181,6 +218,8 @@ function resolveTierRuntimeConfig(input: {
       readEnv({ env: input.env, name: "DELIVERY_AGENT_LLM_PROVIDER" })
   );
   const modelId = readEnv({ env: input.env, name: `${prefix}_MODEL` });
+  const baseUrl = resolveBaseUrl({ env: input.env, provider, prefix });
+  const protocol = resolveProviderProtocol(provider);
   const apiKey = resolveApiKeyReadiness({ env: input.env, provider });
   const pricing: DeliveryAgentLlmProviderPricing = {
     pricingVersion: DELIVERY_AGENT_LLM_PRICING_VERSION_ENV,
@@ -205,6 +244,10 @@ function resolveTierRuntimeConfig(input: {
     missing.push(`${prefix}_MODEL`);
   }
 
+  if (!baseUrl && protocol === "openai_chat_completions") {
+    missing.push(`${prefix}_BASE_URL or DELIVERY_AGENT_LLM_BASE_URL`);
+  }
+
   if (provider && !apiKey.configured) {
     missing.push(apiKey.envVar ?? "DELIVERY_AGENT_LLM_API_KEY");
   }
@@ -221,6 +264,8 @@ function resolveTierRuntimeConfig(input: {
     tier: input.tier,
     provider,
     modelId,
+    baseUrl,
+    protocol,
     modelRef: buildModelRef({
       tier: input.tier,
       provider,
@@ -288,6 +333,34 @@ export function resolveDeliveryAgentLlmProviderRuntimeConfig(
     tiers,
     warnings: uniqueInOriginalOrder(MODEL_TIERS.flatMap((tier) => tiers[tier].warnings)),
   };
+}
+
+export function findDeliveryAgentLlmProviderTierRuntimeConfig(input: {
+  runtimeConfig: DeliveryAgentLlmProviderRuntimeConfig;
+  modelProvider: string;
+  modelId: string;
+}): DeliveryAgentLlmProviderTierRuntimeConfig | undefined {
+  return MODEL_TIERS.map((tier) => input.runtimeConfig.tiers[tier]).find(
+    (tierConfig) =>
+      tierConfig.provider === input.modelProvider && tierConfig.modelId === input.modelId
+  );
+}
+
+export function resolveDeliveryAgentLlmProviderApiKeyValue(
+  input: ResolveDeliveryAgentLlmProviderApiKeyValueInput
+): string | undefined {
+  const tierRuntime = findDeliveryAgentLlmProviderTierRuntimeConfig({
+    runtimeConfig: input.runtimeConfig,
+    modelProvider: input.modelProvider,
+    modelId: input.modelId,
+  });
+  const envVar = tierRuntime?.apiKey.envVar;
+
+  if (!envVar) {
+    return undefined;
+  }
+
+  return readEnv({ env: input.env ?? process.env, name: envVar });
 }
 
 export function createDeliveryAgentCostPolicyWithProviderRuntime(
@@ -369,6 +442,14 @@ export function resolveDeliveryAgentLlmLiveCallGate(
 
   if (tierRuntime && !tierRuntime.apiKey.configured) {
     blockingReasons.push("provider_api_key_missing");
+  }
+
+  if (tierRuntime && tierRuntime.protocol !== "openai_chat_completions") {
+    blockingReasons.push("provider_protocol_not_supported_for_live_dry_run");
+  }
+
+  if (tierRuntime && !tierRuntime.baseUrl && tierRuntime.protocol === "openai_chat_completions") {
+    blockingReasons.push("provider_base_url_missing");
   }
 
   if (tierRuntime?.pricing.inputCentsPerMillion === undefined) {

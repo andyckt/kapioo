@@ -1,6 +1,7 @@
 import { errorJson, handleRouteError, parseJsonBody, successJson } from "@/lib/api";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
 import { runDeliveryAgentLlmCandidatePlanningForDate } from "@/lib/agents/delivery/llm-planning/candidate-planning-for-date";
+import { createDeliveryAgentOpenAiCompatibleCandidateProviderExecutor } from "@/lib/agents/delivery/llm-planning/openai-compatible-provider";
 import { DeliveryPlanningProfileNotFoundError } from "@/lib/agents/delivery/planning-profile";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import { deliveryAgentLlmCandidatePlanningBodySchema } from "@/lib/contracts/delivery-agent";
@@ -21,12 +22,16 @@ export async function POST(request: Request) {
       return error;
     }
 
+    const allowProviderCall = data.allowProviderCall === true;
     const result = await runDeliveryAgentLlmCandidatePlanningForDate({
       deliveryDate: data.deliveryDate,
       profileId: data.profileId,
       includeHistoricalPackage: data.includeHistoricalPackage,
       forceRefresh: data.forceRefresh,
-      allowProviderCall: false,
+      allowProviderCall,
+      provider: allowProviderCall
+        ? createDeliveryAgentOpenAiCompatibleCandidateProviderExecutor()
+        : undefined,
     });
 
     return successJson(result);

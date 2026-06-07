@@ -36,7 +36,17 @@ export const deliveryAgentLlmCandidatePlanningBodySchema = z.object({
   profileId: z.string().trim().min(1).optional(),
   includeHistoricalPackage: z.boolean().optional(),
   forceRefresh: z.boolean().optional(),
-  allowProviderCall: z.literal(false).optional(),
+  allowProviderCall: z.boolean().optional(),
+  liveDryRunConfirmation: z.string().trim().optional(),
+}).superRefine((data, ctx) => {
+  if (data.allowProviderCall === true && data.liveDryRunConfirmation !== "LIVE_LLM_DRY_RUN") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["liveDryRunConfirmation"],
+      message:
+        "liveDryRunConfirmation must be LIVE_LLM_DRY_RUN when allowProviderCall is true",
+    });
+  }
 });
 
 export const deliveryAgentPreviewCandidatePlansBodySchema = z.object({
