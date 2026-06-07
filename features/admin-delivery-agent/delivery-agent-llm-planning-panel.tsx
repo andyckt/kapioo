@@ -19,8 +19,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import type {
+  DeliveryAgentLlmCandidatePreviewResponse,
   DeliveryAgentLlmCandidatePlanningFinalistSummary,
   DeliveryAgentLlmCandidatePlanningResponse,
+  DeliveryAgentPreviewCandidatePlansResponse,
 } from "@/lib/contracts/delivery-agent"
 
 function centsDisplay(cents: number | undefined): string {
@@ -244,8 +246,10 @@ function LiveResultPanel({
 
 export function DeliveryAgentLlmPlanningPanel({
   deliveryDate,
+  onPreviewComplete,
 }: {
   deliveryDate: string
+  onPreviewComplete?: (previewResult: DeliveryAgentPreviewCandidatePlansResponse) => void
 }) {
   const { toast } = useToast()
   const toastRef = useRef(toast)
@@ -253,13 +257,24 @@ export function DeliveryAgentLlmPlanningPanel({
 
   const [readinessLoading, setReadinessLoading] = useState(false)
   const [liveLoading, setLiveLoading] = useState(false)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [readinessResult, setReadinessResult] =
     useState<DeliveryAgentLlmCandidatePlanningResponse | null>(null)
   const [liveResult, setLiveResult] =
     useState<DeliveryAgentLlmCandidatePlanningResponse | null>(null)
 
   const canRunLive =
-    readinessResult?.liveCallGate.readinessStatus === "ready" && !readinessLoading && !liveLoading
+    readinessResult?.liveCallGate.readinessStatus === "ready" &&
+    !readinessLoading &&
+    !liveLoading &&
+    !previewLoading
+
+  const canPreview =
+    liveResult !== null &&
+    liveResult.localCandidates.finalistCandidateCount > 0 &&
+    !readinessLoading &&
+    !liveLoading &&
+    !previewLoading
 
   async function checkReadiness() {
     if (!deliveryDate.trim()) {
@@ -354,6 +369,55 @@ export function DeliveryAgentLlmPlanningPanel({
     }
   }
 
+  async function previewViaRouteOptimizer() {
+    if (!deliveryDate.trim() || !canPreview) return
+
+    setPreviewLoading(true)
+
+    try {
+      const res = await fetch("/api/admin/delivery-agent/llm-candidate-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deliveryDate,
+          includeHistoricalPackage: true,
+          allowProviderCall: true,
+          liveDryRunConfirmation: "LIVE_LLM_DRY_RUN",
+        }),
+      })
+
+      const json: { data?: DeliveryAgentLlmCandidatePreviewResponse; error?: string } =
+        await res.json()
+
+      if (!res.ok || !json.data) {
+        toastRef.current({
+          title: "Preview failed",
+          description: json.error ?? `HTTP ${res.status}`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      const { previewResult } = json.data
+      onPreviewComplete?.(previewResult)
+      toastRef.current({
+        title: "LLM plans previewed via Route Optimizer",
+        description:
+          previewResult.recommendedCandidateId
+            ? "Recommended plan ready for review."
+            : "Preview complete — no recommendation was selected.",
+      })
+    } catch (err) {
+      toastRef.current({
+        title: "Preview error",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      })
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -375,7 +439,7 @@ export function DeliveryAgentLlmPlanningPanel({
             variant="outline"
             size="sm"
             onClick={checkReadiness}
-            disabled={readinessLoading || liveLoading || !deliveryDate}
+            disabled={readinessLoading || liveLoading || previewLoading || !deliveryDate}
           >
             {readinessLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Check LLM readiness
@@ -414,6 +478,18 @@ export function DeliveryAgentLlmPlanningPanel({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {canPreview && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={previewViaRouteOptimizer}
+              disabled={previewLoading}
+            >
+              {previewLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Preview via Route Optimizer
+            </Button>
+          )}
         </div>
 
         {readinessResult && !liveResult && (
@@ -438,6 +514,13 @@ export function DeliveryAgentLlmPlanningPanel({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Calling DeepSeek…
+          </div>
+        )}
+
+        {previewLoading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Previewing LLM plans via Route Optimizer…
           </div>
         )}
 

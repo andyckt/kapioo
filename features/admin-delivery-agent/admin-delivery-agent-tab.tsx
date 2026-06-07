@@ -1177,7 +1177,25 @@ export function AdminDeliveryAgentTab() {
       )}
 
       {preview?.canContinueToPlanning && deliveryDate && (
-        <DeliveryAgentLlmPlanningPanel deliveryDate={deliveryDate} />
+        <DeliveryAgentLlmPlanningPanel
+          deliveryDate={deliveryDate}
+          onPreviewComplete={(previewResult) => {
+            setCandidateRoutePreview(previewResult)
+            setCandidatePlans(null)
+            setImprovedGenerationNotice(null)
+            setSavedReview(null)
+            loadSavedReview({
+              deliveryDate: previewResult.deliveryDate,
+              profileId: previewResult.profileId,
+              recommendedCandidateId: previewResult.recommendedCandidateId,
+            })
+            requestAnimationFrame(() => {
+              document
+                .querySelector("[data-review-panel]")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            })
+          }}
+        />
       )}
     </div>
   )

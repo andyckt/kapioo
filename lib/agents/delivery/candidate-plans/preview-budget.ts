@@ -6,6 +6,7 @@ import type {
 export type DeliveryAgentPreviewBudgetAction =
   | "candidate_preview"
   | "improved_candidate_preview"
+  | "llm_candidate_preview"
   | "simple_route_preview";
 
 export type DeliveryAgentPreviewBudgetPhase = "initial" | "repair";
@@ -59,6 +60,11 @@ const DEFAULT_BUDGETS: Record<DeliveryAgentPreviewBudgetAction, DeliveryAgentPre
     maxRepairPreviewCalls: 2,
   },
   improved_candidate_preview: {
+    maxFullCandidateVariants: 4,
+    maxOptimizePreviewCalls: 12,
+    maxRepairPreviewCalls: 2,
+  },
+  llm_candidate_preview: {
     maxFullCandidateVariants: 4,
     maxOptimizePreviewCalls: 12,
     maxRepairPreviewCalls: 2,

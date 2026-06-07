@@ -361,9 +361,14 @@ function mapAdapterToResponse(input: {
   };
 }
 
-export async function runDeliveryAgentLlmCandidatePlanningForDate(
+type LlmPlanningCoreResult = {
+  response: DeliveryAgentLlmCandidatePlanningResponse;
+  finalistCandidates: CandidatePlan[];
+};
+
+async function runLlmPlanningCore(
   input: RunDeliveryAgentLlmCandidatePlanningForDateInput
-): Promise<DeliveryAgentLlmCandidatePlanningResponse> {
+): Promise<LlmPlanningCoreResult> {
   const deliveryDate = input.deliveryDate.trim();
   const profile = getDeliveryPlanningProfile(input.profileId);
   const providerRuntimeConfig =
@@ -398,7 +403,9 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
   }
 
   const coveragePercent = coordinateCoverage.coveragePercent ?? 0;
-  const missingCount = coordinateCoverage.missingCount ?? (routing.stops.length - Math.round((coveragePercent / 100) * routing.stops.length));
+  const missingCount =
+    coordinateCoverage.missingCount ??
+    routing.stops.length - Math.round((coveragePercent / 100) * routing.stops.length);
 
   if (missingCount > 0) {
     throw new DeliveryAgentPlanningBlockedError([
@@ -433,7 +440,7 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
     nowMs: input.nowMs,
   });
 
-  return mapAdapterToResponse({
+  const response = mapAdapterToResponse({
     deliveryDate,
     profile,
     adapterResult,
@@ -448,4 +455,18 @@ export async function runDeliveryAgentLlmCandidatePlanningForDate(
     policy,
     providerRuntimeConfig,
   });
+
+  return {
+    response,
+    finalistCandidates: adapterResult.dryRunResult?.finalistCandidates ?? [],
+  };
 }
+
+export async function runDeliveryAgentLlmCandidatePlanningForDate(
+  input: RunDeliveryAgentLlmCandidatePlanningForDateInput
+): Promise<DeliveryAgentLlmCandidatePlanningResponse> {
+  const { response } = await runLlmPlanningCore(input);
+  return response;
+}
+
+export { runLlmPlanningCore as runDeliveryAgentLlmCandidatePlanningCore };

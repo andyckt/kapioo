@@ -53,6 +53,30 @@ export const deliveryAgentPreviewCandidatePlansBodySchema = z.object({
   deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
 });
 
+export const deliveryAgentLlmCandidatePreviewBodySchema = z
+  .object({
+    deliveryDate: z.string().regex(DATE_YYYY_MM_DD, "deliveryDate must be YYYY-MM-DD"),
+    profileId: z.string().trim().min(1).optional(),
+    includeHistoricalPackage: z.boolean().optional(),
+    forceRefresh: z.boolean().optional(),
+    allowProviderCall: z.boolean().optional(),
+    liveDryRunConfirmation: z.string().trim().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.allowProviderCall === true && data.liveDryRunConfirmation !== "LIVE_LLM_DRY_RUN") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["liveDryRunConfirmation"],
+        message:
+          "liveDryRunConfirmation must be LIVE_LLM_DRY_RUN when allowProviderCall is true",
+      });
+    }
+  });
+
+export type DeliveryAgentLlmCandidatePreviewBody = z.infer<
+  typeof deliveryAgentLlmCandidatePreviewBodySchema
+>;
+
 export const deliveryAgentPlanningProfileQuerySchema = z.object({
   profileId: z.string().trim().min(1).optional(),
 });
@@ -428,6 +452,11 @@ export type DeliveryAgentLlmCandidatePlanningResponse = {
   };
   warnings: string[];
   errors: string[];
+};
+
+export type DeliveryAgentLlmCandidatePreviewResponse = {
+  llmResult: DeliveryAgentLlmCandidatePlanningResponse;
+  previewResult: DeliveryAgentPreviewCandidatePlansResponse;
 };
 
 export type DeliveryAgentRouteShapeIssueType =
