@@ -146,11 +146,15 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
     enabled: true,
     useOnlyWhenNeeded: true,
     preferMinimumStops: true,
-    maxPreferredStops: 3,
+    // Light rescue (1–3 stops): normal use when 2-driver plan is slightly over budget.
+    // Heavy rescue (up to 8 stops): triggered automatically when total stops ≥ 17,
+    // since 2-driver plans genuinely cannot finish before 1 PM on heavy days.
+    maxPreferredStops: 8,
     reasons: [
       "Paid drivers cannot finish before the hard delivery deadline.",
       "Route shape cannot be repaired safely within constraints.",
       "Too little buffer before 1:00 PM deadline.",
+      "Total stop count exceeds 2-driver capacity for the 1:00 PM deadline.",
     ],
   },
   operationalScoringRules: {

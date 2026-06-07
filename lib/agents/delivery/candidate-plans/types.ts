@@ -6,6 +6,7 @@ export type CandidateStrategyType =
   | "marco_heavy_north_york"
   | "balanced_north_york"
   | "self_fallback_light"
+  | "rescue_split"
   | "llm_generated";
 
 export type NorthYorkSplitMode = "balanced" | "dt_heavy" | "marco_heavy";
@@ -111,6 +112,10 @@ export type StopAssignment = {
 };
 
 export const MIN_STOPS_FOR_SELF_FALLBACK_CANDIDATE = 4;
+// When total stops meet or exceed this threshold, 2-driver plans alone are unlikely to
+// finish before 1 PM. The generator adds a dedicated rescue split with Self taking a
+// full load instead of the usual 1–3 stop light fallback.
+export const MIN_STOPS_FOR_RESCUE_SPLIT = 17;
 
 export const DOWNTOWN_REFERENCE = {
   lat: 43.653,

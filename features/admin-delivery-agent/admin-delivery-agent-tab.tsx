@@ -911,7 +911,7 @@ export function AdminDeliveryAgentTab() {
                   )}
 
                   {candidateRoutePreview && !candidateRoutePreview.recommendedCandidateId && (
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 space-y-1">
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 space-y-2">
                       <p className="font-medium">No recommendation was selected after Route Optimizer preview.</p>
                       {candidateRoutePreview.selectionNotes && (
                         <p>{candidateRoutePreview.selectionNotes}</p>
@@ -923,9 +923,22 @@ export function AdminDeliveryAgentTab() {
                           ))}
                         </ul>
                       )}
-                      <p className="text-xs text-amber-700">
-                        Check the candidates below. All previewed plans may be late or infeasible for today.
-                      </p>
+                      {(preview?.confirmed?.validStops ?? 0) >= 17 && (
+                        <div className="rounded border border-amber-300 bg-amber-100 px-3 py-2 space-y-1">
+                          <p className="font-semibold">Heavy delivery day ({preview?.confirmed?.validStops} stops) — two drivers cannot finish before 1 PM.</p>
+                          <p>Next steps:</p>
+                          <ul className="list-disc pl-5 space-y-0.5">
+                            <li><strong>Re-generate candidate plans</strong> — a rescue split (Self takes 5+ stops) is now included automatically.</li>
+                            <li><strong>Re-run LLM dry run</strong> — the prompt now tells DeepSeek to include a full rescue candidate on heavy days.</li>
+                            <li><strong>Earlier start (9:45)</strong> — if DT and Marco can start earlier, some 2-driver plans may become feasible.</li>
+                          </ul>
+                        </div>
+                      )}
+                      {(preview?.confirmed?.validStops ?? 0) < 17 && (
+                        <p className="text-xs text-amber-700">
+                          All previewed plans returned late or infeasible times from Route Optimizer. Check the candidates below.
+                        </p>
+                      )}
                     </div>
                   )}
 

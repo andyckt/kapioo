@@ -19,6 +19,7 @@ import type {
 } from "@/lib/agents/delivery/candidate-plans/types";
 import {
   DOWNTOWN_REFERENCE,
+  MIN_STOPS_FOR_RESCUE_SPLIT,
   MIN_STOPS_FOR_SELF_FALLBACK_CANDIDATE,
 } from "@/lib/agents/delivery/candidate-plans/types";
 import { DeliveryAgentPlanningBlockedError } from "@/lib/agents/delivery/errors";
@@ -114,6 +115,35 @@ function buildSelfFallbackAssignment(
   };
 }
 
+function buildRescueSplitAssignment(
+  stops: PlanningStop[],
+  profile: DeliveryPlanningProfile
+): StopAssignment {
+  // Rescue split: Self takes the farthest flexible/unknown stops; DT takes core downtown
+  // stops; Marco takes core uptown stops + remaining flexible stops.
+  // Target: Self covers ~30% of total stops on heavy days to bring 2-driver load back
+  // within 1 PM reach.
+  const maxSelfStops = Math.min(
+    profile.selfFallbackRules.maxPreferredStops,
+    Math.ceil(stops.length * 0.3)
+  );
+
+  const baseline = buildStopAssignment(stops, "balanced");
+
+  const flexibleCandidates = [...baseline.dt, ...baseline.marco]
+    .filter(isFlexibleStop)
+    .sort((a, b) => distanceFromDowntown(b) - distanceFromDowntown(a));
+
+  const selfStops = flexibleCandidates.slice(0, maxSelfStops);
+  const selfOrderIds = new Set(selfStops.map((s) => s.orderId));
+
+  return {
+    dt: baseline.dt.filter((s) => !selfOrderIds.has(s.orderId)),
+    marco: baseline.marco.filter((s) => !selfOrderIds.has(s.orderId)),
+    self: selfStops,
+  };
+}
+
 function buildSharedAssumptions(stops: PlanningStop[]): string[] {
   const assumptions: string[] = [];
 
@@ -193,6 +223,36 @@ function buildAllStrategies(
         deliveryDate,
         sharedAssumptions,
         warnings
+      )
+    );
+  }
+
+  // Heavy-day rescue split: when stop count meets or exceeds the threshold, add a
+  // dedicated 3-driver plan where Self takes a real load (~30% of stops) — not the
+  // light fallback of 1–3 stops. This ensures the expansion always has a genuine
+  // 3-driver variant to prove when 2-driver plans are infeasible.
+  if (profile.selfFallbackRules.enabled && stops.length >= MIN_STOPS_FOR_RESCUE_SPLIT) {
+    const rescueAssignment = buildRescueSplitAssignment(stops, profile);
+    const rescueWarnings: string[] = [];
+
+    if (rescueAssignment.self.length === 0) {
+      rescueWarnings.push("No flexible stops could be assigned to Self in rescue split.");
+    } else {
+      rescueWarnings.push(
+        `Heavy day (${stops.length} stops): rescue split assigns ${rescueAssignment.self.length} stop(s) to Self to bring 2-driver load within 1 PM reach.`
+      );
+    }
+
+    candidates.push(
+      buildCandidatePlan(
+        "rescue_split",
+        "Rescue split — Self takes full load",
+        `Heavy-day plan: Self run C takes the ${rescueAssignment.self.length} farthest flexible stops to reduce DT and Marco load below the 1 PM threshold.`,
+        rescueAssignment,
+        profile,
+        deliveryDate,
+        sharedAssumptions,
+        rescueWarnings
       )
     );
   }

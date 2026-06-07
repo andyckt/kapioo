@@ -276,6 +276,11 @@ function buildHardRules(profile: DeliveryPlanningProfile): DeliveryAgentLlmPromp
       rule: "Use Self only when hired drivers cannot safely finish; if used, assign the fewest practical stops to Self.",
     },
     {
+      code: "HEAVY_DAY_RESCUE",
+      severity: "must",
+      rule: `When total stops are ${profile.selfFallbackRules.enabled ? "17 or more" : "unusually high"}, always include at least one candidate where Self (run C) takes a meaningful rescue load (5 or more stops, not just 1–3), because 2-driver plans alone cannot finish before the 1 PM deadline on heavy days. Do not produce only 2-driver candidates when the stop count is this high.`,
+    },
+    {
       code: "HANDOFF_LOGIC",
       severity: "must",
       rule: `When handoff is needed, run ${providerRunSlot} provides meals and receiver run(s) ${receiverRunSlots} start from the handoff.`,
@@ -369,6 +374,7 @@ function buildPlanningGuidance(input: {
     "Keep Midtown, Downtown, and near-kitchen North York-like stops together when geography supports it.",
     "Keep Markham and Richmond Hill together unless evidence suggests the current day needs a different split.",
     "Use Self as rescue support only; if Self appears, explain why two hired drivers were not enough.",
+    "When total stop count is 17 or higher, the two hired drivers alone cannot reliably finish before 1 PM. On these heavy days you MUST include at least one full rescue candidate where Self (run C) takes a real load of 5 or more stops — not just 1–3. A heavy day with only 2-driver candidates will fail because those plans will all be infeasible.",
   ];
 
   if (input.historicalPackage && input.historicalPackage.selectedCaseIds.length > 0) {
