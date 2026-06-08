@@ -283,7 +283,7 @@ function buildHardRules(profile: DeliveryPlanningProfile): DeliveryAgentLlmPromp
     {
       code: "HANDOFF_LOGIC",
       severity: "must",
-      rule: `When handoff is needed, run ${providerRunSlot} provides meals and receiver run(s) ${receiverRunSlots} start from the handoff.`,
+      rule: `When handoff is needed, run ${providerRunSlot} provides meals and receiver run(s) ${receiverRunSlots} start from the handoff. The handoff should happen EARLY in ${providerRunSlot}'s route — ideally as the 1st or 2nd stop — so both drivers work in parallel from the start. The optimal handoff zone is due north of the kitchen (same longitude ≈ -79.345), not northwest. Avoid forcing ${providerRunSlot} to travel significantly west (toward -79.40 or further) for the handoff when the kitchen is at lng ≈ -79.345.`,
     },
     {
       code: "NO_UNPROVEN_RECOMMENDATION",

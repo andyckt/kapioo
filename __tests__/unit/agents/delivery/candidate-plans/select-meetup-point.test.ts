@@ -78,7 +78,7 @@ describe("lib/agents/delivery/candidate-plans/select-meetup-point", () => {
       expect(result.meetupFixedStopPosition).toBe(1);
       expect(result.variant).toBe("meetup_stop_1");
       expect(result.score).toBeGreaterThan(0);
-      expect(result.reasoning.toLowerCase()).toContain("central north york");
+      expect(result.reasoning.toLowerCase()).toMatch(/central north york|don mill|north york/i);
       expect(result.selectionConfidence).toBeTruthy();
       expect(result.scoreBreakdown.length).toBeGreaterThan(0);
     }

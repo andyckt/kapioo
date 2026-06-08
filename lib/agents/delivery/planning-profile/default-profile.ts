@@ -70,7 +70,15 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
     maxStopsBeforeMeetup: 2,
     meetupShouldBeEarly: true,
     meetupSelectionPreferences: {
-      preferredHandoffZoneLabel: "Central North York",
+      // The preferred handoff zone is the Don Mills / eastern North York corridor — roughly
+      // due north of the kitchen at 105 Vanderhoof Ave. This is confirmed by June 8 2026
+      // where Donald used 66 Forest Manor Rd (lat: 43.772, lng: -79.342) as the handoff.
+      // The kitchen is at 105 Vanderhoof Ave (lat: ~43.709, lng: ~-79.345). The optimal
+      // handoff is almost directly north — minimal east-west detour for DT.
+      // INCORRECT HISTORICAL VALUE: preferredHandoffCenterLng was -79.4111 (Yonge/Sheppard,
+      // western North York), which is ~7 km too far west and caused all meetup candidates
+      // to score poorly, making every route appear infeasible.
+      preferredHandoffZoneLabel: "Don Mills / North York (eastern corridor)",
       preferredHandoffAreaLabels: ["North York"],
       avoidHandoffAreaLabels: ["Downtown Toronto", "Midtown", "Markham", "Richmond Hill"],
       receiverDriverReferenceArea: "Markham / Richmond Hill direction",
@@ -81,15 +89,19 @@ export const DEFAULT_DELIVERY_PLANNING_PROFILE: DeliveryPlanningProfile = {
       routeFinishImpactWeight: 50,
       kitchenProximityPenaltyWeight: 70,
       fallbackAllowed: true,
-      preferredHandoffCenterLat: 43.7615,
-      preferredHandoffCenterLng: -79.4111,
+      // Preferred handoff center: Don Mills / Sheppard East area — due north of kitchen.
+      // Derived from June 8 2026 actual successful handoff at 66 Forest Manor Rd.
+      preferredHandoffCenterLat: 43.770,
+      preferredHandoffCenterLng: -79.345,
       receiverReferenceLat: 43.856,
       receiverReferenceLng: -79.337,
       dtReferenceLat: DOWNTOWN_REFERENCE.lat,
       dtReferenceLng: DOWNTOWN_REFERENCE.lng,
-      // Kitchen start is typically downtown/M5V — used to penalize meet-ups too close when Marco serves uptown.
-      kitchenReferenceLat: 43.642,
-      kitchenReferenceLng: -79.395,
+      // Kitchen: 105 Vanderhoof Ave #8, East York, ON M4G 2B5 (corrected from wrong value).
+      // Used to ensure meetup is not too close to kitchen (Marco should start from North York,
+      // not from the kitchen area) and not too far east-west from kitchen's longitude.
+      kitchenReferenceLat: 43.709,
+      kitchenReferenceLng: -79.345,
       maxKitchenProximityDegrees: 0.06,
     },
   },

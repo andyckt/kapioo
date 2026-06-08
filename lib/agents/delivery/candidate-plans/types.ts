@@ -112,10 +112,12 @@ export type StopAssignment = {
 };
 
 export const MIN_STOPS_FOR_SELF_FALLBACK_CANDIDATE = 4;
-// When total stops meet or exceed this threshold, 2-driver plans alone are unlikely to
-// finish before 1 PM. The generator adds a dedicated rescue split with Self taking a
-// full load instead of the usual 1–3 stop light fallback.
-export const MIN_STOPS_FOR_RESCUE_SPLIT = 17;
+// When total stops meet or exceed this threshold, 2-driver plans alone may not finish
+// before 1 PM even with a correct meetup location. The generator adds a dedicated rescue
+// split with Self taking a full load (~30% of stops) instead of the usual 1–3 stop light
+// fallback. 22 stops with correct meetup is still feasible for 2 drivers (confirmed June 8
+// 2026 — DT 14 stops 2h43m, Marco 9 stops 2h10m). Threshold set conservatively at 25.
+export const MIN_STOPS_FOR_RESCUE_SPLIT = 25;
 
 export const DOWNTOWN_REFERENCE = {
   lat: 43.653,
