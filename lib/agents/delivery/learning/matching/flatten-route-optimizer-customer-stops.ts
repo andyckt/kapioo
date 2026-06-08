@@ -19,40 +19,6 @@ export function isSyntheticRouteOptimizerStop(input: {
   return input.stop_type === "handoff";
 }
 
-/**
- * Detects pure transfer/meetup stops that have no order IDs.
- * These exist only so the driver visits a location to hand off meals (e.g. "Meet up
- * with Marco Driver here" at 66 Forest Manor Rd for June 8 2026). Unlike the broader
- * isSyntheticRouteOptimizerStop, this should only be called in contexts where customer
- * presence has already been checked — stops with no order_ids but a real customer name
- * are still matchable customer stops and should NOT be flagged as pure meetup stops.
- *
- * Use this in route-shape / stop-control detection only, not in order matching.
- */
-export function isPureMeetupTransferStop(input: {
-  is_synthetic?: boolean;
-  stop_type?: string | null;
-  order_ids?: string[] | null;
-  customer_name?: string | null;
-}): boolean {
-  if (isSyntheticRouteOptimizerStop(input)) {
-    return true;
-  }
-
-  const orderIds = input.order_ids;
-  const hasNoOrders =
-    Array.isArray(orderIds) && orderIds.filter(Boolean).length === 0;
-
-  if (!hasNoOrders) {
-    return false;
-  }
-
-  // A stop with no orders but a real customer name is matchable — don't treat it as synthetic.
-  const name = input.customer_name?.trim();
-  const hasRealCustomerName = Boolean(name) && name!.length > 2;
-
-  return !hasRealCustomerName;
-}
 
 export function isUnsupportedStopType(stopType: string | null | undefined): boolean {
   if (!stopType) {
