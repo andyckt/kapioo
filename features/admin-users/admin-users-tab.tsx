@@ -37,8 +37,10 @@ export interface AdminUsersTabProps {
   userGrowthRate: number
   totalUsersLoading: boolean
   isExportingUsers: boolean
+  isExportingSituationReport: boolean
   onRefresh: () => void
   onExportUsers: () => void
+  onExportSituationReport: () => void
   onSearch: () => void
   onResetSearch: () => void
   onPaginate: (direction: "prev" | "next") => void
@@ -120,8 +122,10 @@ export function AdminUsersTab({
   userGrowthRate,
   totalUsersLoading,
   isExportingUsers,
+  isExportingSituationReport,
   onRefresh,
   onExportUsers,
+  onExportSituationReport,
   onSearch,
   onResetSearch,
   onPaginate,
@@ -161,6 +165,25 @@ export function AdminUsersTab({
               <>
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Export Users</span>
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExportSituationReport}
+            className="h-9 gap-1 flex-1 sm:flex-none"
+            disabled={isExportingSituationReport}
+          >
+            {isExportingSituationReport ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="hidden sm:inline">Generating...</span>
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export Customer Order Situation Report</span>
               </>
             )}
           </Button>

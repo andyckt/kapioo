@@ -80,6 +80,7 @@ export function useAdminUsers({ hasVerifiedAdminSession, activeTab }: UseAdminUs
   const [userGrowthRate, setUserGrowthRate] = useState(0)
   const [totalUsersLoading, setTotalUsersLoading] = useState(true)
   const [isExportingUsers, setIsExportingUsers] = useState(false)
+  const [isExportingSituationReport, setIsExportingSituationReport] = useState(false)
   const [isDeletingUser, setIsDeletingUser] = useState(false)
 
   const lastUsersFetchKeyRef = useRef<string | null>(null)
@@ -331,6 +332,50 @@ export function useAdminUsers({ hasVerifiedAdminSession, activeTab }: UseAdminUs
     }
   }, [])
 
+  const handleExportSituationReport = useCallback(async () => {
+    try {
+      setIsExportingSituationReport(true)
+      toastRef.current({
+        title: "Generating report",
+        description: "Building customer order situation report. This may take a moment...",
+      })
+
+      const response = await fetch("/api/admin/users/order-situation-report/export")
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error((errorData as { error?: string }).error ?? `HTTP ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const date = new Date().toISOString().split("T")[0]
+      const fileName = `kapioo_customer_order_situation_report_${date}.xlsx`
+
+      const link = document.createElement("a")
+      link.href = url
+      link.download = fileName
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toastRef.current({
+        title: "Report downloaded",
+        description: `Saved as ${fileName}`,
+      })
+    } catch (error) {
+      console.error("Error exporting situation report:", error)
+      toastRef.current({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "There was an error generating the report. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsExportingSituationReport(false)
+    }
+  }, [])
+
   const handleDeleteUser = useCallback(async (userId: string) => {
     try {
       setIsDeletingUser(true)
@@ -398,6 +443,7 @@ export function useAdminUsers({ hasVerifiedAdminSession, activeTab }: UseAdminUs
     userGrowthRate,
     totalUsersLoading,
     isExportingUsers,
+    isExportingSituationReport,
     isDeletingUser,
     fetchUsers,
     fetchTotalUsersStats,
@@ -406,6 +452,7 @@ export function useAdminUsers({ hasVerifiedAdminSession, activeTab }: UseAdminUs
     resetUserSearch,
     handleUserPagination,
     handleExportUsers,
+    handleExportSituationReport,
     handleDeleteUser,
   }
 }

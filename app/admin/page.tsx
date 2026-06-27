@@ -52,6 +52,7 @@ export default function AdminDashboardPage() {
     userGrowthRate,
     totalUsersLoading,
     isExportingUsers,
+    isExportingSituationReport,
     isDeletingUser,
     fetchUsers,
     fetchTotalUsersStats,
@@ -60,6 +61,7 @@ export default function AdminDashboardPage() {
     resetUserSearch,
     handleUserPagination,
     handleExportUsers,
+    handleExportSituationReport,
     handleDeleteUser: deleteUserById,
   } = useAdminUsers({ hasVerifiedAdminSession, activeTab })
 
@@ -244,9 +246,11 @@ export default function AdminDashboardPage() {
         userGrowthRate={userGrowthRate}
         totalUsersLoading={totalUsersLoading}
         isExportingUsers={isExportingUsers}
+        isExportingSituationReport={isExportingSituationReport}
         fetchUsers={fetchUsers}
         fetchTotalUsersStats={fetchTotalUsersStats}
         handleExportUsers={handleExportUsers}
+        handleExportSituationReport={handleExportSituationReport}
         handleUserSearch={handleUserSearch}
         resetUserSearch={resetUserSearch}
         handleUserPagination={handleUserPagination}

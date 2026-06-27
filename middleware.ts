@@ -78,6 +78,7 @@ const ADMIN_API_PATHS = [
   '/api/credits/request/admin/export',
   '/api/weekly-delivery-history',
   '/api/weekly-meals/admin',
+  '/api/admin/users/order-situation-report/export',
 ];
 
 const LEGACY_AUTHJS_COOKIE_NAMES = [
