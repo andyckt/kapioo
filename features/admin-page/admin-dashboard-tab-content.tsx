@@ -145,6 +145,8 @@ export interface AdminDashboardTabContentProps {
   ) => void | Promise<void>
   fetchTotalUsersStats: (opts?: { signal?: AbortSignal }) => void | Promise<void>
   handleExportUsers: () => void | Promise<void>
+  handleExportSituationReport: () => void | Promise<void>
+  isExportingSituationReport: boolean
   handleUserSearch: () => void
   resetUserSearch: () => void
   handleUserPagination: (direction: "prev" | "next") => void
@@ -210,12 +212,16 @@ export function AdminDashboardTabContent(p: AdminDashboardTabContentProps) {
             userGrowthRate={p.userGrowthRate}
             totalUsersLoading={p.totalUsersLoading}
             isExportingUsers={p.isExportingUsers}
+            isExportingSituationReport={p.isExportingSituationReport}
             onRefresh={() => {
               void p.fetchUsers(p.usersPagination.page, p.usersPagination.limit)
               void p.fetchTotalUsersStats()
             }}
             onExportUsers={() => {
               void p.handleExportUsers()
+            }}
+            onExportSituationReport={() => {
+              void p.handleExportSituationReport()
             }}
             onSearch={p.handleUserSearch}
             onResetSearch={p.resetUserSearch}
