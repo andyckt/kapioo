@@ -78,6 +78,13 @@ export type DailyOrderBaseAddress = {
   country: string;
   buzzCode: string;
   formatted: string;
+  geo?: {
+    placeId?: string;
+    formattedAddress?: string;
+    lat?: number;
+    lng?: number;
+    source?: string;
+  };
 };
 
 export type DailyOrderBaseCustomer = {
@@ -234,4 +241,11 @@ export type UserLeanForOrderData = {
   name?: string;
   email?: string;
   phone?: string;
+  addressGeo?: {
+    placeId?: string;
+    formattedAddress?: string;
+    lat?: number;
+    lng?: number;
+    source?: string;
+  };
 };

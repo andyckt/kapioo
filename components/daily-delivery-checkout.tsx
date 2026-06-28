@@ -85,6 +85,7 @@ export function DailyDeliveryCheckout({
     setTempSelectedArea,
     handleInputChange,
     handleAddressInputChange,
+    handleAddressSelect,
     handleAreaSelect,
     handleSaveAddress,
   } = useDailyCheckoutState({
@@ -335,6 +336,7 @@ export function DailyDeliveryCheckout({
                     showAreaValidationHint={!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea)}
                     onPopoverOpenChange={setPopoverOpen}
                     onAddressInputChange={handleAddressInputChange}
+                    onAddressSelect={handleAddressSelect}
                     onAreaSelect={handleAreaSelect}
                     onSaveAddressForFutureChange={setSaveAddressForFuture}
                     onCancel={() => {

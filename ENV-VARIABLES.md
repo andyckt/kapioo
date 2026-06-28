@@ -20,6 +20,12 @@ NEXT_PUBLIC_BASE_URL=https://kapioo.com
 ```
 Base URL of your application (used in email links).
 
+### Google Maps Platform
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_browser_api_key
+```
+Browser API key for Google Places address autocomplete. Enable Places API and restrict the key to the production domains and local development origins used by the customer app.
+
 ### Database
 ```bash
 MONGODB_URI=your_mongodb_connection_string

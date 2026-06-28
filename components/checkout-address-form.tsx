@@ -2,6 +2,7 @@
 
 import { Check, MapPin } from "lucide-react"
 
+import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -20,6 +21,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import type { AddressGeo } from "@/lib/contracts/common"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
 
 export type CheckoutAddressFormData = {
   unitNumber: string
@@ -28,6 +31,7 @@ export type CheckoutAddressFormData = {
   postalCode: string
   country: string
   buzzCode: string
+  addressGeo?: AddressGeo
 }
 
 type CheckoutAddressFormProps = {
@@ -40,6 +44,7 @@ type CheckoutAddressFormProps = {
   showAreaValidationHint?: boolean
   onPopoverOpenChange: (open: boolean) => void
   onAddressInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onAddressSelect: (address: ParsedGoogleAddress) => void
   onAreaSelect: (area: string) => void
   onSaveAddressForFutureChange: (checked: boolean) => void
   onCancel: () => void
@@ -56,6 +61,7 @@ export function CheckoutAddressForm({
   showAreaValidationHint = false,
   onPopoverOpenChange,
   onAddressInputChange,
+  onAddressSelect,
   onAreaSelect,
   onSaveAddressForFutureChange,
   onCancel,
@@ -84,12 +90,16 @@ export function CheckoutAddressForm({
           <Label htmlFor="streetAddress" className="text-sm">
             Street name <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="streetAddress"
+          <AddressAutocomplete
             value={addressFormData.streetAddress}
-            onChange={onAddressInputChange}
-            required
+            language={language}
             disabled={disabled}
+            onInputChange={(value) =>
+              onAddressInputChange({
+                target: { id: "streetAddress", value },
+              } as React.ChangeEvent<HTMLInputElement>)
+            }
+            onAddressSelect={onAddressSelect}
           />
         </div>
 

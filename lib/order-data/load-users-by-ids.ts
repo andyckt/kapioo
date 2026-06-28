@@ -11,7 +11,7 @@ export async function loadUsersByIds(userIds: string[]): Promise<Map<string, Use
   }
 
   const users = (await User.find({ _id: { $in: uniqueIds } })
-    .select("name email phone")
+    .select("name email phone addressGeo")
     .lean()) as UserLeanForOrderData[];
 
   for (const user of users) {

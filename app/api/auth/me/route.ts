@@ -35,6 +35,16 @@ export async function GET(request: NextRequest) {
           buzzCode: u.address.buzzCode || "",
         }
       : undefined;
+    const legacyAddress = u.legacyAddress
+      ? {
+          unitNumber: u.legacyAddress.unitNumber || "",
+          streetAddress: u.legacyAddress.streetAddress || "",
+          province: u.legacyAddress.province || "",
+          postalCode: u.legacyAddress.postalCode || "",
+          country: u.legacyAddress.country || "Canada",
+          buzzCode: u.legacyAddress.buzzCode || "",
+        }
+      : undefined;
 
     const adminMfaEmail = process.env.ADMIN_EMAIL || "kapioomeal@gmail.com";
     return NextResponse.json({
@@ -60,6 +70,11 @@ export async function GET(request: NextRequest) {
         languagePreference: u.languagePreference || "zh",
         isVerified: Boolean(u.isVerified),
         address,
+        addressGeo: u.addressGeo,
+        deliveryNotes: u.deliveryNotes || "",
+        addressVerified: Boolean(u.addressVerified),
+        addressVerifiedAt: u.addressVerifiedAt?.toISOString?.(),
+        legacyAddress,
         area: address?.province || "",
       },
     });

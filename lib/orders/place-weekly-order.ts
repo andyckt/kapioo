@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 import { ApiError } from "@/lib/api/errors";
 import type { AuthenticatedActor } from "@/lib/api/types";
+import { isAddressVerified } from "@/lib/address/is-verified";
 import {
   applyBalanceMutations,
   type BalanceMutationEntry,
@@ -320,6 +321,13 @@ export async function placeWeeklyOrder({
       const user = await findBalanceMutationUser(userId, session);
       if (!user) {
         throw new ApiError("User not found", { status: 404, code: "USER_NOT_FOUND" });
+      }
+
+      if (!isAddressVerified(user)) {
+        throw new ApiError("Please verify your delivery address before placing an order", {
+          status: 403,
+          code: "ADDRESS_VERIFICATION_REQUIRED",
+        });
       }
 
       if (weeklyEntitlementGroupId) {

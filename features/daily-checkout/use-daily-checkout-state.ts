@@ -8,6 +8,7 @@ import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
 import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { useToast } from "@/hooks/use-toast"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
 
 export type DailyCheckoutFormData = {
   name: string
@@ -72,6 +73,7 @@ export function useDailyCheckoutState({
           postalCode: user.address.postalCode || "",
           country: user.address.country || "Canada",
           buzzCode: user.address.buzzCode || "",
+          addressGeo: user.addressGeo,
         })
         const userArea = user.address.province || ""
         setIsValidDeliveryArea(deliveryRegions.includes(userArea))
@@ -136,6 +138,17 @@ export function useDailyCheckoutState({
     setAddressFormData((current) => ({
       ...current,
       [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+      ...(id === "streetAddress" ? { addressGeo: undefined } : {}),
+    }))
+  }
+
+  const handleAddressSelect = (result: ParsedGoogleAddress) => {
+    setAddressFormData((current) => ({
+      ...current,
+      streetAddress: result.address.streetAddress || "",
+      postalCode: result.address.postalCode || current.postalCode,
+      country: result.address.country || "Canada",
+      addressGeo: result.addressGeo,
     }))
   }
 
@@ -178,23 +191,40 @@ export function useDailyCheckoutState({
 
     if (saveAddressForFuture && userData?._id) {
       try {
-        const response = await fetch(`/api/users/${userData._id}`, {
-          method: "PATCH",
+        if (!addressFormData.addressGeo) {
+          toast({
+            title: language === "zh" ? "请选择 Google 地址" : "Select a Google address",
+            description:
+              language === "zh"
+                ? "保存常用地址前，请从地址建议中选择配送地址。"
+                : "Please choose an address from the suggestions before saving it for future orders.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        const response = await fetch(`/api/users/${userData._id}/verify-address`, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            address: addressFormData,
+            address: {
+              unitNumber: addressFormData.unitNumber,
+              streetAddress: addressFormData.streetAddress,
+              province: addressFormData.province,
+              postalCode: addressFormData.postalCode,
+              country: addressFormData.country || "Canada",
+              buzzCode: addressFormData.buzzCode,
+            },
+            addressGeo: addressFormData.addressGeo,
           }),
         })
 
         const result = await response.json()
 
         if (result.success) {
-          mergeStoredUser({
-            address: { ...addressFormData },
-            area: addressFormData.province || "",
-          })
+          mergeStoredUser(result.data)
 
           toast({
             title: language === "zh" ? "地址已保存" : "Address Saved",
@@ -239,6 +269,7 @@ export function useDailyCheckoutState({
     setTempSelectedArea,
     handleInputChange,
     handleAddressInputChange,
+    handleAddressSelect,
     handleAreaSelect,
     handleSaveAddress,
   }

@@ -69,6 +69,7 @@ export function WeeklySubscriptionCheckout({
     setPopoverOpen,
     handleInputChange,
     handleAddressInputChange,
+    handleAddressSelect,
     handleAreaSelect,
     handleSaveAddress,
   } = useWeeklyCheckoutState()
@@ -241,6 +242,7 @@ export function WeeklySubscriptionCheckout({
                   saveAddressForFuture={saveAddressForFuture}
                   onPopoverOpenChange={setPopoverOpen}
                   onAddressInputChange={handleAddressInputChange}
+                  onAddressSelect={handleAddressSelect}
                   onAreaSelect={handleAreaSelect}
                   onSaveAddressForFutureChange={setSaveAddressForFuture}
                   onCancel={() => setEditingAddress(false)}

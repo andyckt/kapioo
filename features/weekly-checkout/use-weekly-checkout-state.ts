@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 
 import type { CheckoutAddressFormData } from "@/components/checkout-address-form"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
@@ -63,6 +64,7 @@ export function useWeeklyCheckoutState() {
           postalCode: user.address.postalCode || "",
           country: "Canada",
           buzzCode: user.address.buzzCode || "",
+          addressGeo: user.addressGeo,
         })
       }
     }
@@ -123,6 +125,17 @@ export function useWeeklyCheckoutState() {
     setAddressFormData((current) => ({
       ...current,
       [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+      ...(id === "streetAddress" ? { addressGeo: undefined } : {}),
+    }))
+  }
+
+  const handleAddressSelect = (result: ParsedGoogleAddress) => {
+    setAddressFormData((current) => ({
+      ...current,
+      streetAddress: result.address.streetAddress || "",
+      postalCode: result.address.postalCode || current.postalCode,
+      country: result.address.country || "Canada",
+      addressGeo: result.addressGeo,
     }))
   }
 
@@ -146,8 +159,20 @@ export function useWeeklyCheckoutState() {
 
     if (saveAddressForFuture && userData?._id) {
       try {
-        const response = await fetch(`/api/users/${userData._id}`, {
-          method: "PATCH",
+        if (!addressFormData.addressGeo) {
+          toast({
+            title: language === "zh" ? "请选择 Google 地址" : "Select a Google address",
+            description:
+              language === "zh"
+                ? "保存常用地址前，请从地址建议中选择配送地址。"
+                : "Please choose an address from the suggestions before saving it for future orders.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        const response = await fetch(`/api/users/${userData._id}/verify-address`, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
@@ -156,19 +181,14 @@ export function useWeeklyCheckoutState() {
               ...addressFormData,
               country: "Canada",
             },
+            addressGeo: addressFormData.addressGeo,
           }),
         })
 
         const result = await response.json()
 
         if (result.success) {
-          mergeStoredUser({
-            address: {
-              ...addressFormData,
-              country: "Canada",
-            },
-            area: addressFormData.province || "",
-          })
+          mergeStoredUser(result.data)
 
           toast({
             title: language === "zh" ? "地址已保存" : "Address Saved",
@@ -218,6 +238,7 @@ export function useWeeklyCheckoutState() {
     setPopoverOpen,
     handleInputChange,
     handleAddressInputChange,
+    handleAddressSelect,
     handleAreaSelect,
     handleSaveAddress,
   }

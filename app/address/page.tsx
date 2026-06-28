@@ -4,11 +4,12 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useLanguage } from "@/lib/language-context"
 
@@ -21,10 +22,11 @@ export default function AddressPage() {
   const [buzzCode, setBuzzCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [selectedAddress, setSelectedAddress] = useState<ParsedGoogleAddress | null>(null)
   
   const router = useRouter()
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { language } = useLanguage()
 
   useEffect(() => {
     // Check if user is logged in
@@ -45,10 +47,11 @@ export default function AddressPage() {
 
   const validateForm = () => {
     // Check required fields
-    if (!streetAddress || !postalCode || !province) {
+    const addressToSave = selectedAddress
+    if (!streetAddress || !postalCode || !province || !addressToSave?.addressGeo) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields",
+        description: "Please select an address from the suggestions and fill in all required fields",
         variant: "destructive",
       })
       return false
@@ -60,16 +63,16 @@ export default function AddressPage() {
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm() || !user) {
+    const addressToSave = selectedAddress
+    if (!validateForm() || !user || !addressToSave?.addressGeo) {
       return
     }
     
     setIsLoading(true)
 
     try {
-      // Call API to update user address
-      const response = await fetch(`/api/users/${user._id || user.userID}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/users/${user._id || user.userID}/verify-address`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -81,7 +84,8 @@ export default function AddressPage() {
             province,
             country, // Always "Canada"
             buzzCode,
-          }
+          },
+          addressGeo: addressToSave.addressGeo,
         }),
       });
 
@@ -121,18 +125,7 @@ export default function AddressPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
-      <div className="container relative pt-4">
-        <div className="absolute top-0 right-0">
-          <Button 
-            onClick={() => router.push('/dashboard')}
-            variant="ghost"
-            className="inline-flex items-center gap-1 text-[#D1A46C] hover:text-[#C2884E] hover:bg-transparent text-xs py-1 px-2 h-auto"
-          >
-            直接进入 Kapioo
-            <ArrowRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-1" />
-          </Button>
-        </div>
-      </div>
+      <div className="container relative pt-4" />
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
         <div className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[500px] animate-fade-in-up">
           <div className="flex flex-col items-center space-y-5 text-center">
@@ -163,13 +156,20 @@ export default function AddressPage() {
               
               <div className="grid gap-2.5">
                 <Label htmlFor="streetAddress" className="text-sm font-medium">Street Address <span className="text-red-500">*</span></Label>
-                <Input
-                  id="streetAddress"
-                  placeholder="Street address"
+                <AddressAutocomplete
                   value={streetAddress}
-                  onChange={(e) => setStreetAddress(e.target.value)}
-                  className="h-11 text-base placeholder:text-sm"
-                  required
+                  language={language}
+                  placeholder="Street address"
+                  disabled={isLoading}
+                  onInputChange={(value) => {
+                    setStreetAddress(value)
+                    setSelectedAddress(null)
+                  }}
+                  onAddressSelect={(result) => {
+                    setSelectedAddress(result)
+                    setStreetAddress(result.address.streetAddress || "")
+                    setPostalCode(result.address.postalCode || "")
+                  }}
                 />
               </div>
               

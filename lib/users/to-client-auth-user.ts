@@ -15,6 +15,17 @@ export function toClientAuthUser(user: IUser, role: AuthenticatedRole = resolveU
       }
     : undefined;
 
+  const legacyAddress = user.legacyAddress
+    ? {
+        unitNumber: user.legacyAddress.unitNumber || "",
+        streetAddress: user.legacyAddress.streetAddress || "",
+        province: user.legacyAddress.province || "",
+        postalCode: user.legacyAddress.postalCode || "",
+        country: user.legacyAddress.country || "Canada",
+        buzzCode: user.legacyAddress.buzzCode || "",
+      }
+    : undefined;
+
   return {
     _id: String(user._id),
     userID: user.userID,
@@ -33,6 +44,11 @@ export function toClientAuthUser(user: IUser, role: AuthenticatedRole = resolveU
     languagePreference: user.languagePreference || "zh",
     isVerified: Boolean(user.isVerified),
     address,
+    addressGeo: user.addressGeo,
+    deliveryNotes: user.deliveryNotes || "",
+    addressVerified: Boolean(user.addressVerified),
+    addressVerifiedAt: user.addressVerifiedAt?.toISOString?.(),
+    legacyAddress,
     area: address?.province || "",
   };
 }

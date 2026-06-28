@@ -53,7 +53,8 @@ function toIsoString(value: unknown): string | undefined {
 
 function buildDeliveryAddress(
   effectiveAddress: ReturnType<typeof resolveEffectiveOrderCustomerInfo>["deliveryAddress"],
-  effectiveArea: string
+  effectiveArea: string,
+  geo?: DailyOrderBaseAddress["geo"]
 ): DailyOrderBaseAddress {
   const unitNumber = effectiveAddress.unitNumber ?? "";
   const streetAddress = effectiveAddress.streetAddress ?? "";
@@ -72,6 +73,7 @@ function buildDeliveryAddress(
     country,
     buzzCode,
     formatted: formatExportDeliveryAddress(effectiveAddress, effectiveArea),
+    ...(geo ? { geo } : {}),
   };
 }
 
@@ -85,6 +87,7 @@ function mapOrderToDailyOrderBase(params: {
   const { order, user, filters, now, includeValidation } = params;
   const effective = resolveEffectiveOrderCustomerInfo(order, user);
   const overrideMeta = getOrderOnlyOverrideMeta(order);
+  const hasOverride = hasOrderCustomerOverride(order);
 
   const slicedItems = filterDailyOrderItems({
     items: order.items,
@@ -100,7 +103,11 @@ function mapOrderToDailyOrderBase(params: {
   const deliveryDateDisplay = firstItem?.date ?? null;
   const dayLabel = firstItem ? getDayLabelFromItem(firstItem) : null;
 
-  const deliveryAddress = buildDeliveryAddress(effective.deliveryAddress, effective.area);
+  const deliveryAddress = buildDeliveryAddress(
+    effective.deliveryAddress,
+    effective.area,
+    hasOverride ? undefined : user?.addressGeo
+  );
   const mealSummary = summarizeDailyOrderItems(slicedItems, order.voucherCost);
 
   const validation = includeValidation
@@ -140,7 +147,7 @@ function mapOrderToDailyOrderBase(params: {
       phone: effective.phoneNumber,
       area: effective.area,
       specialInstructions: effective.specialInstructions,
-      hasAdminOverride: hasOrderCustomerOverride(order),
+      hasAdminOverride: hasOverride,
       overrideMeta: overrideMeta.updatedAt || overrideMeta.updatedBy
         ? {
             updatedAt: toIsoString(overrideMeta.updatedAt),

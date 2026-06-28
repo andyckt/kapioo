@@ -189,17 +189,17 @@ export default function VerifyEmailPage() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
               <Button 
-                onClick={() => router.push('/address')} 
+                onClick={() => router.push('/address/verify')} 
                 className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
               >
                 继续设置地址
               </Button>
               <Button 
-                onClick={() => router.push('/dashboard')} 
+                onClick={() => router.push('/address/verify')} 
                 variant="outline" 
                 className="w-full"
               >
-                进入 Kapioo
+                更新配送地址
               </Button>
             </CardFooter>
           </>
