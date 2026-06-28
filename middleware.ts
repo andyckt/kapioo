@@ -224,9 +224,12 @@ export async function middleware(request: any) {
   // in dashboard recharge flows; (2) img-src blob: for payment-proof preview (URL.createObjectURL).
   // frame-src/child-src: Vimeo (homepage kitchen tour) + YouTube (e.g. `/bgm`).
   // Do not remove blob: from worker-src or img-src without verifying dashboard top-up flows.
+  // script-src includes maps.googleapis.com + maps.gstatic.com for the Google Maps JS API loader
+  // (address autocomplete). The loader dynamically injects <script> tags from those origins.
+  const googleMapsSrc = "https://maps.googleapis.com https://maps.gstatic.com";
   const contentSecurityPolicy = isBgmPage
-    ? "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; child-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-    : "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; child-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+    ? `default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com ${googleMapsSrc}; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; child-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`
+    : `default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${googleMapsSrc}; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; child-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
   response.headers.set(
     'Content-Security-Policy',
     contentSecurityPolicy

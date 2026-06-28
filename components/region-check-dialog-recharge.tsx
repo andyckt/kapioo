@@ -23,9 +23,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from '@/lib/utils'
+import type { ParsedGoogleAddress } from "@/lib/address/types"
+import type { AddressGeo } from "@/lib/contracts/common"
 import { useLanguage } from '@/lib/language-context'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { useToast } from '@/hooks/use-toast'
@@ -50,6 +53,7 @@ interface AddressData {
   postalCode?: string;
   country?: string; // Always "Canada", not shown in UI
   buzzCode?: string;
+  addressGeo?: AddressGeo;
 }
 
 export function RegionCheckDialogRecharge({
@@ -76,8 +80,10 @@ export function RegionCheckDialogRecharge({
     streetAddress: existingAddress?.streetAddress || '',
     postalCode: existingAddress?.postalCode || '',
     country: existingAddress?.country || 'Canada', // Always Canada
-    buzzCode: existingAddress?.buzzCode || ''
+    buzzCode: existingAddress?.buzzCode || '',
+    addressGeo: existingAddress?.addressGeo,
   })
+  const [, setSelectedGeo] = useState<ParsedGoogleAddress | null>(null)
 
   // Keep dialog state in sync whenever it opens or the region validity changes.
   useEffect(() => {
@@ -90,8 +96,10 @@ export function RegionCheckDialogRecharge({
       streetAddress: existingAddress?.streetAddress || '',
       postalCode: existingAddress?.postalCode || '',
       country: existingAddress?.country || 'Canada',
-      buzzCode: existingAddress?.buzzCode || ''
+      buzzCode: existingAddress?.buzzCode || '',
+      addressGeo: existingAddress?.addressGeo,
     })
+    setSelectedGeo(null)
     setPopoverOpen(false)
     setAddressRegionPopoverOpen(false)
   }, [open, isValidRegion, currentRegion, existingAddress])
@@ -336,16 +344,40 @@ export function RegionCheckDialogRecharge({
           </div>
           
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="streetAddress" className="text-xs sm:text-sm">
+            <Label className="text-xs sm:text-sm">
               <span className="text-red-500">*</span>
               Street Address
             </Label>
-            <Input 
-              id="streetAddress" 
-              value={addressData.streetAddress} 
-              onChange={handleAddressChange}
-              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-              required
+            <AddressAutocomplete
+              value={addressData.streetAddress || ''}
+              language={language}
+              onInputChange={(value) => {
+                setAddressData((prev) => ({ ...prev, streetAddress: value, addressGeo: undefined }))
+                setSelectedGeo(null)
+              }}
+              onAddressSelect={(result) => {
+                if (!result.address.province) {
+                  toast({
+                    title: language === 'zh' ? "地址不在服务范围内" : "Address outside service area",
+                    description:
+                      language === 'zh'
+                        ? "此地址不在配送范围内，请选择服务区域内的地址。"
+                        : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+                    variant: "destructive",
+                  })
+                  setAddressData((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined }))
+                  return
+                }
+                setSelectedGeo(result)
+                setAddressData((prev) => ({
+                  ...prev,
+                  streetAddress: result.address.streetAddress || prev.streetAddress || '',
+                  postalCode: result.address.postalCode || prev.postalCode || '',
+                  country: result.address.country || 'Canada',
+                  addressGeo: result.addressGeo,
+                }))
+                setSelectedRegion(result.address.province)
+              }}
             />
           </div>
           

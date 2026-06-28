@@ -166,9 +166,21 @@ export default function AddressPage() {
                     setSelectedAddress(null)
                   }}
                   onAddressSelect={(result) => {
+                    if (!result.address.province) {
+                      toast({
+                        title: "Address outside service area",
+                        description:
+                          "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+                        variant: "destructive",
+                      })
+                      setStreetAddress("")
+                      setSelectedAddress(null)
+                      return
+                    }
                     setSelectedAddress(result)
                     setStreetAddress(result.address.streetAddress || "")
                     setPostalCode(result.address.postalCode || "")
+                    setProvince(result.address.province)
                   }}
                 />
               </div>

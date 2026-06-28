@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AddressAutocomplete } from "@/components/address-autocomplete";
@@ -41,15 +41,6 @@ const INITIAL_FORM: VerifyAddressForm = {
   deliveryNotes: "",
 };
 
-function formatReferenceAddress(address: VerifyAddressForm | undefined) {
-  if (!address) return ["-"];
-  return [
-    [address.unitNumber, address.streetAddress].filter(Boolean).join(" "),
-    [address.province, address.postalCode].filter(Boolean).join(" "),
-    address.country,
-    address.buzzCode ? `Buzz: ${address.buzzCode}` : "",
-  ].filter(Boolean);
-}
 
 export default function VerifyAddressPage() {
   const router = useRouter();
@@ -83,34 +74,29 @@ export default function VerifyAddressPage() {
     });
   }, [authenticated, router, status, user]);
 
-  const oldAddressLines = useMemo(
-    () =>
-      formatReferenceAddress(
-        user?.address
-          ? {
-              unitNumber: user.address.unitNumber || "",
-              streetAddress: user.address.streetAddress || "",
-              province: user.address.province || "",
-              postalCode: user.address.postalCode || "",
-              country: user.address.country || "Canada",
-              buzzCode: user.address.buzzCode || "",
-              deliveryNotes: "",
-            }
-          : undefined
-      ),
-    [user?.address]
-  );
-
   const updateForm = (patch: Partial<VerifyAddressForm>) => {
     setForm((current) => ({ ...current, ...patch }));
   };
 
   const handleAddressSelect = (result: ParsedGoogleAddress) => {
+    if (!result.address.province) {
+      toast({
+        title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
+        description:
+          language === "zh"
+            ? "此地址不在 Kapioo 配送范围内，请选择服务区域内的地址。"
+            : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+        variant: "destructive",
+      });
+      updateForm({ streetAddress: "" });
+      return;
+    }
     setSelectedAddress(result);
     updateForm({
       streetAddress: result.address.streetAddress || "",
       postalCode: result.address.postalCode || "",
       country: result.address.country || "Canada",
+      province: result.address.province,
     });
   };
 
@@ -195,26 +181,10 @@ export default function VerifyAddressPage() {
   return (
     <div className="min-h-screen bg-[#fff6ef]/50 px-4 py-10">
       <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6 rounded-xl bg-white p-6 shadow-lg">
-        <div className="space-y-2 text-center">
+        <div className="text-center">
           <h1 className="text-2xl font-bold text-[#C2884E]">
             {language === "zh" ? "请更新配送地址" : "Update your delivery address"}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {language === "zh"
-              ? "为了确保配送准确，请使用 Google 地址建议重新选择您的配送地址。完成后您只需要更新一次。"
-              : "Please re-select your delivery address with Google address suggestions so deliveries and future routing stay accurate. You only need to do this once."}
-          </p>
-        </div>
-
-        <div className="rounded-md border bg-slate-50 p-4">
-          <Label className="text-sm text-muted-foreground">
-            {language === "zh" ? "旧地址参考" : "Old address reference"}
-          </Label>
-          <div className="mt-2 space-y-1 text-sm">
-            {oldAddressLines.map((line) => (
-              <p key={line}>{line}</p>
-            ))}
-          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

@@ -10,6 +10,7 @@ import type {
   DashboardPersonalInfo,
 } from "@/features/dashboard-settings/dashboard-settings-tab"
 
+
 export function useDashboardUserProfileSync(
   setLanguage: (lang: "en" | "zh") => void,
   setUserData: Dispatch<SetStateAction<DashboardUserData | null>>,
@@ -116,6 +117,7 @@ export function useDashboardUserProfileSync(
         postalCode: normalizedUser.address?.postalCode || "",
         country: normalizedUser.address?.country || "Canada",
         buzzCode: normalizedUser.address?.buzzCode || "",
+        addressGeo: nextUser.addressGeo,
       })
     },
     [setAddressInfo, setCredits, setLanguage, setPersonalInfo, setUserData]

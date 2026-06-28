@@ -11,6 +11,7 @@ import type {
   DashboardPasswordInfo,
   DashboardPersonalInfo,
 } from "@/features/dashboard-settings/dashboard-settings-tab"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
 
 type TFn = ReturnType<typeof useLanguage>["t"]
 type ToastFn = ReturnType<typeof useToast>["toast"]
@@ -60,9 +61,35 @@ export function useDashboardSettingsHandlers({
       setAddressInfo((prev) => ({
         ...prev,
         [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+        // Clear geo when the user manually types a new street address so the gate blocks a bad save
+        ...(id === "streetAddress" ? { addressGeo: undefined } : {}),
       }))
     },
     [setAddressInfo]
+  )
+
+  const handleAddressGeoSelect = useCallback(
+    (result: ParsedGoogleAddress) => {
+      if (!result.address.province) {
+        toast({
+          title: "Address outside service area",
+          description:
+            "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+          variant: "destructive",
+        })
+        setAddressInfo((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined }))
+        return
+      }
+      setAddressInfo((prev) => ({
+        ...prev,
+        streetAddress: result.address.streetAddress || prev.streetAddress,
+        postalCode: result.address.postalCode || prev.postalCode,
+        country: result.address.country || "Canada",
+        province: result.address.province,
+        addressGeo: result.addressGeo,
+      }))
+    },
+    [setAddressInfo, toast]
   )
 
   const handlePasswordChange = useCallback(
@@ -128,21 +155,29 @@ export function useDashboardSettingsHandlers({
   const handleSaveAddressInfo = useCallback(async () => {
     if (!userData?._id) return
 
+    if (!addressInfo.addressGeo) {
+      toast({
+        title: t("errorOccurred"),
+        description: "Please select your street address from the Google suggestions to ensure accurate delivery.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      const response = await fetch(`/api/users/${userData._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await fetch(`/api/users/${userData._id}/verify-address`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: {
             unitNumber: addressInfo.unitNumber,
             streetAddress: addressInfo.streetAddress,
             province: addressInfo.province,
             postalCode: addressInfo.postalCode,
-            country: addressInfo.country,
+            country: addressInfo.country || "Canada",
             buzzCode: addressInfo.buzzCode,
           },
+          addressGeo: addressInfo.addressGeo,
         }),
       })
 
@@ -246,6 +281,7 @@ export function useDashboardSettingsHandlers({
   return {
     handlePersonalInfoChange,
     handleAddressInfoChange,
+    handleAddressGeoSelect,
     handlePasswordChange,
     handleSavePersonalInfo,
     handleSaveAddressInfo,

@@ -5,6 +5,7 @@ import type React from "react"
 import { motion } from "framer-motion"
 import { Check, ChevronsUpDown } from "lucide-react"
 
+import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -12,8 +13,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { AddressGeo } from "@/lib/contracts/common"
 import { ALL_WEEKLY_AREAS } from "@/lib/constants/areas"
 import type { useLanguage } from "@/lib/language-context"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { cn } from "@/lib/utils"
 
 export type DashboardPersonalInfo = {
@@ -31,6 +34,7 @@ export type DashboardAddressInfo = {
   postalCode: string
   country: string
   buzzCode: string
+  addressGeo?: AddressGeo
 }
 
 export type DashboardPasswordInfo = {
@@ -52,6 +56,7 @@ export interface DashboardSettingsTabProps {
   onPasswordChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onLanguagePreferenceChange: (languagePreference: "zh" | "en") => void
   onAddressProvinceChange: (province: string) => void
+  onAddressGeoSelect: (result: ParsedGoogleAddress) => void
   onSavePersonalInfo: () => void
   onSaveAddressInfo: () => void
   onSavePassword: () => void
@@ -74,6 +79,7 @@ export function DashboardSettingsTab({
   onPasswordChange,
   onLanguagePreferenceChange,
   onAddressProvinceChange,
+  onAddressGeoSelect,
   onSavePersonalInfo,
   onSaveAddressInfo,
   onSavePassword,
@@ -185,8 +191,17 @@ export function DashboardSettingsTab({
                   <Input id="unitNumber" value={addressInfo.unitNumber} onChange={onAddressInfoChange} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="streetAddress">{t("streetAddress")}</Label>
-                  <Input id="streetAddress" value={addressInfo.streetAddress} onChange={onAddressInfoChange} />
+                  <Label>{t("streetAddress")}</Label>
+                  <AddressAutocomplete
+                    value={addressInfo.streetAddress}
+                    language={language}
+                    onInputChange={(value) =>
+                      onAddressInfoChange({
+                        target: { id: "streetAddress", value },
+                      } as React.ChangeEvent<HTMLInputElement>)
+                    }
+                    onAddressSelect={onAddressGeoSelect}
+                  />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
