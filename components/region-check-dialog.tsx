@@ -12,11 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
-import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
-
-// Use centralized daily delivery areas
-const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
 
 interface RegionCheckDialogProps {
   open: boolean
@@ -62,8 +58,8 @@ export function RegionCheckDialog({
                 </p>
                 <p className="text-xs text-amber-700 mt-1">
                   {language === 'zh' 
-                    ? `${PRODUCT_LINE_LABELS.daily.zh}服务目前仅限于以下区域：Downtown Toronto、Midtown、North York、Markham、Richmond Hill`
-                    : `${PRODUCT_LINE_LABELS.daily.en} service is currently limited to the following areas: Downtown Toronto, Midtown, North York, Markham, Richmond Hill`}
+                    ? `${PRODUCT_LINE_LABELS.daily.zh}服务目前仅限于 Downtown Toronto、Midtown、North York、Markham，以及 Richmond Hill 部分区域。请输入详细地址确认。`
+                    : `${PRODUCT_LINE_LABELS.daily.en} service is currently limited to Downtown Toronto, Midtown, North York, Markham, and selected areas of Richmond Hill. Enter your exact address to confirm.`}
                 </p>
               </div>
             </div>

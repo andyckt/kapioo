@@ -33,6 +33,7 @@ import { useLanguage } from '@/lib/language-context'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { useToast } from '@/hooks/use-toast'
 import { DAILY_DELIVERY_AREAS } from '@/lib/constants/areas'
+import { canDeliverDaily, resolveServiceability } from '@/lib/zones/service-areas'
 
 // Use centralized daily delivery areas
 const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
@@ -154,6 +155,18 @@ export function RegionCheckDialogRecharge({
       })
       return
     }
+
+    if (!canDeliverDaily(regionToUse, addressData.addressGeo?.postalCode || addressData.postalCode)) {
+      toast({
+        title: language === 'zh' ? "地址不支持每日配送" : "Daily delivery unavailable",
+        description:
+          language === 'zh'
+            ? "此地址目前不支持每日配送，请选择每日配送服务范围内的地址。"
+            : "Daily delivery is not available at this address. Please choose an address in the daily delivery service area.",
+        variant: "destructive"
+      })
+      return
+    }
     
     setIsLoading(true)
     try {
@@ -187,8 +200,8 @@ export function RegionCheckDialogRecharge({
             </p>
             <p className="text-xs text-amber-700 mt-1">
               {language === 'zh'
-                ? `${PRODUCT_LINE_LABELS.daily.zh}服务目前仅限于以下区域：Downtown Toronto、Midtown、North York、Markham、Richmond Hill`
-                : `${PRODUCT_LINE_LABELS.daily.en} service is currently limited to: Downtown Toronto, Midtown, North York, Markham, Richmond Hill`
+                ? `${PRODUCT_LINE_LABELS.daily.zh}服务目前仅限于 Downtown Toronto、Midtown、North York、Markham，以及 Richmond Hill 部分区域。请输入详细地址确认。`
+                : `${PRODUCT_LINE_LABELS.daily.en} service is currently limited to Downtown Toronto, Midtown, North York, Markham, and selected areas of Richmond Hill. Enter your exact address to confirm.`
               }
             </p>
           </div>
@@ -356,13 +369,21 @@ export function RegionCheckDialogRecharge({
                 setSelectedGeo(null)
               }}
               onAddressSelect={(result) => {
-                if (!result.address.province) {
+                const serviceability = resolveServiceability({
+                  areaLabel: result.address.province,
+                  postalCode: result.addressGeo.postalCode || result.address.postalCode,
+                })
+                if (!serviceability.canDaily) {
                   toast({
-                    title: language === 'zh' ? "地址不在服务范围内" : "Address outside service area",
+                    title: language === 'zh' ? "地址不支持每日配送" : "Daily delivery unavailable",
                     description:
                       language === 'zh'
-                        ? "此地址不在配送范围内，请选择服务区域内的地址。"
-                        : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+                        ? serviceability.canWeekly
+                          ? "此地址目前不支持每日配送，但可以使用周餐盒服务。"
+                          : "此地址不在配送范围内，请选择服务区域内的地址。"
+                        : serviceability.canWeekly
+                          ? "Daily delivery is not available at this address yet, but weekly meal box is available."
+                          : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
                     variant: "destructive",
                   })
                   setAddressData((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined }))
@@ -376,7 +397,7 @@ export function RegionCheckDialogRecharge({
                   country: result.address.country || 'Canada',
                   addressGeo: result.addressGeo,
                 }))
-                setSelectedRegion(result.address.province)
+                setSelectedRegion(result.address.province || "")
               }}
             />
           </div>

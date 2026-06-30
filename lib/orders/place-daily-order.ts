@@ -9,6 +9,7 @@ import {
   type BalanceMutationEntry,
 } from "@/lib/balances/mutations";
 import type { CreateDailyOrderBody, CreateDailyOrderItemInput } from "@/lib/contracts/daily-order";
+import { canDeliverDaily } from "@/lib/zones/service-areas";
 import DailyDeliveryOrder, { type IDailyDeliveryOrder } from "@/models/DailyDeliveryOrder";
 import type { ITransaction } from "@/models/Transaction";
 import type { IUser } from "@/models/User";
@@ -170,6 +171,13 @@ export async function placeDailyOrder({
         throw new ApiError("Please verify your delivery address before placing an order", {
           status: 403,
           code: "ADDRESS_VERIFICATION_REQUIRED",
+        });
+      }
+
+      if (!canDeliverDaily(user.address?.province, user.addressGeo?.postalCode || user.address?.postalCode)) {
+        throw new ApiError("Daily delivery is not available at this address", {
+          status: 403,
+          code: "DAILY_SERVICE_AREA_UNAVAILABLE",
         });
       }
 

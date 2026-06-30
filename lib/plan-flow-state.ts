@@ -2,6 +2,7 @@
 
 const STORAGE_KEYS = {
   starterLocation: "kapioo.starter.selectedLocation",
+  starterAddressSelection: "kapioo.starter.addressSelection",
   weeklyMeal: "kapioo.weeklyMeal.state",
   dailyDelivery: "kapioo.dailyDelivery.state",
 } as const
@@ -39,6 +40,49 @@ export function getStarterLocation(): string | null {
 /** Save starter location before navigating to weekly/daily */
 export function setStarterLocation(location: string): void {
   safeSet(STORAGE_KEYS.starterLocation, location)
+}
+
+export interface StarterAddressSelection {
+  areaLabel: string
+  postalCode: string
+  fsa: string
+  streetAddress?: string
+  canDaily: boolean
+  canWeekly: boolean
+  savedAt: number
+}
+
+/** Restore starter address eligibility selected from Google autocomplete */
+export function getStarterAddressSelection(): StarterAddressSelection | null {
+  return safeParse(STORAGE_KEYS.starterAddressSelection, (v) => {
+    if (!v || typeof v !== "object") return null
+    const o = v as Record<string, unknown>
+    const areaLabel = typeof o.areaLabel === "string" ? o.areaLabel.trim() : ""
+    const postalCode = typeof o.postalCode === "string" ? o.postalCode.trim() : ""
+    const fsa = typeof o.fsa === "string" ? o.fsa.trim() : ""
+    const savedAt = typeof o.savedAt === "number" ? o.savedAt : 0
+    if (!areaLabel || Date.now() - savedAt > STALE_MS) return null
+    return {
+      areaLabel,
+      postalCode,
+      fsa,
+      streetAddress: typeof o.streetAddress === "string" ? o.streetAddress : undefined,
+      canDaily: o.canDaily === true,
+      canWeekly: o.canWeekly === true,
+      savedAt,
+    }
+  })
+}
+
+/** Save precise starter address eligibility before navigating to weekly/daily */
+export function setStarterAddressSelection(
+  selection: Omit<StarterAddressSelection, "savedAt">
+): void {
+  safeSet(STORAGE_KEYS.starterAddressSelection, {
+    ...selection,
+    savedAt: Date.now(),
+  })
+  setStarterLocation(selection.areaLabel)
 }
 
 /** Weekly meal page state */

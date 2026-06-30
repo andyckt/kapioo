@@ -458,7 +458,11 @@ export function HowItWorksContent() {
                             className="flex items-center gap-2 text-[#6B5F53] text-sm"
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-[#C2884E]/60 flex-shrink-0" aria-hidden />
-                            {area}
+                            {area === "Richmond Hill"
+                              ? isZh
+                                ? "Richmond Hill（部分区域）"
+                                : "Richmond Hill (selected areas)"
+                              : area}
                           </li>
                         ))}
                       </ul>
@@ -487,7 +491,7 @@ export function HowItWorksContent() {
                   </div>
 
                   <p className="text-xs text-[#8A7968] px-5 pb-5 pt-2">
-                    {isZh ? "不确定自己属于哪种计划？" : "Not sure which plan you're in?"} <Link href="/starter" className="text-[#C2884E] font-medium hover:underline">{isZh ? "查看菜单并下单" : "View menu and order"}</Link> — {isZh ? "我们会根据您的地址显示可选方案。" : "we'll show options for your location."}
+                    {isZh ? "不确定自己属于哪种计划？" : "Not sure which plan you're in?"} <Link href="/starter" className="text-[#C2884E] font-medium hover:underline">{isZh ? "输入地址查看" : "Check your address"}</Link> — {isZh ? "我们会根据您的详细地址显示可选方案。" : "we'll show options for your exact address."}
                   </p>
                 </div>
               </div>

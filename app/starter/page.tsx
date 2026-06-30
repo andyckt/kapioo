@@ -3,35 +3,45 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { MapPin, Check, ChevronLeft } from "lucide-react"
+import { ChevronLeft, MapPin } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { useSmartBack } from "@/hooks/use-smart-back"
+import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Button } from "@/components/ui/button"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
-import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from '@/lib/constants/areas'
-import { getStarterLocation, setStarterLocation } from '@/lib/plan-flow-state'
-
-// Location types - using centralized constants
-type Location = 
-  | typeof DAILY_DELIVERY_AREAS[number]
-  | typeof WEEKLY_ONLY_AREAS[number]
-
-// Group locations by service availability - using centralized constants
-const FULL_SERVICE_LOCATIONS = [...DAILY_DELIVERY_AREAS] as Location[]
-const WEEKLY_ONLY_LOCATIONS_TYPED = [...WEEKLY_ONLY_AREAS] as Location[]
-const ALL_LOCATIONS: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS_TYPED]
+import type { ParsedGoogleAddress } from "@/lib/address/types"
+import {
+  getStarterAddressSelection,
+  setStarterAddressSelection,
+} from "@/lib/plan-flow-state"
+import { resolveServiceability, type ServiceabilityResult } from "@/lib/zones/service-areas"
 
 export default function StarterPage() {
   const router = useRouter()
   const handleBack = useSmartBack()
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(() => {
-    if (typeof window === 'undefined') return null
-    const saved = getStarterLocation()
-    return saved && ALL_LOCATIONS.includes(saved as Location) ? (saved as Location) : null
+  const [streetAddress, setStreetAddress] = useState(() => {
+    if (typeof window === 'undefined') return ""
+    return getStarterAddressSelection()?.streetAddress || ""
   })
-  const [isLocationOpen, setIsLocationOpen] = useState(false)
+  const [postalCode, setPostalCode] = useState(() => {
+    if (typeof window === 'undefined') return ""
+    return getStarterAddressSelection()?.postalCode || ""
+  })
+  const [serviceability, setServiceability] = useState<ServiceabilityResult | null>(() => {
+    if (typeof window === 'undefined') return null
+    const saved = getStarterAddressSelection()
+    return saved
+      ? {
+          areaLabel: saved.areaLabel,
+          fsa: saved.fsa,
+          canDaily: saved.canDaily,
+          canWeekly: saved.canWeekly,
+          isServed: saved.canDaily || saved.canWeekly,
+        }
+      : null
+  })
   const [animationComplete, setAnimationComplete] = useState(false)
-  const { language, t } = useLanguage()
+  const { language } = useLanguage()
   
   // Set animation complete after initial render
   useEffect(() => {
@@ -42,25 +52,27 @@ export default function StarterPage() {
     return () => clearTimeout(timer)
   }, [])
   
-  // Check if location has daily delivery service
-  const hasDailyDelivery = (location: Location | null) => {
-    if (!location) return false
-    return FULL_SERVICE_LOCATIONS.includes(location)
+  const handleAddressSelect = (result: ParsedGoogleAddress) => {
+    const next = resolveServiceability({
+      areaLabel: result.address.province,
+      postalCode: result.addressGeo.postalCode || result.address.postalCode,
+    })
+
+    setStreetAddress(result.address.streetAddress || "")
+    setPostalCode(result.addressGeo.postalCode || result.address.postalCode || "")
+    setServiceability(next)
   }
-  
-  // Check if location has weekly delivery service
-  const hasWeeklyDelivery = (location: Location | null) => {
-    if (!location) return false
-    return FULL_SERVICE_LOCATIONS.includes(location) || WEEKLY_ONLY_LOCATIONS_TYPED.includes(location)
-  }
-  
-  // All locations
-  const allLocations: Location[] = [...FULL_SERVICE_LOCATIONS, ...WEEKLY_ONLY_LOCATIONS_TYPED]
-  
-  // Format location display names (no longer needed - using actual names)
-  const getLocationDisplayName = (location: Location | null): string => {
-    if (!location) return ""
-    return location
+
+  const saveStarterSelection = () => {
+    if (!serviceability) return
+    setStarterAddressSelection({
+      areaLabel: serviceability.areaLabel,
+      postalCode,
+      fsa: serviceability.fsa,
+      streetAddress: streetAddress || undefined,
+      canDaily: serviceability.canDaily,
+      canWeekly: serviceability.canWeekly,
+    })
   }
   
   return (
@@ -94,95 +106,70 @@ export default function StarterPage() {
             </h1>
             <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto mb-6"></div>
             <p className="text-[#6B5F53] text-lg">
-              {language === 'zh' ? '请选择您的位置，查看适用的 Kapioo 计划' : 'Please select your location to see available meal plans'}
+              {language === 'zh' ? '请输入配送地址，查看适用的 Kapioo 计划' : 'Enter your delivery address to see available meal plans'}
             </p>
           </motion.div>
           
-          {/* Location Selector */}
+          {/* Address Selector */}
           <motion.div 
             className="mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
           >
-            <div className="relative">
-              <button
-                onClick={() => setIsLocationOpen(!isLocationOpen)}
-                className="w-full flex items-center justify-between p-4 border border-[#C2884E]/20 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-300"
-              >
-                <div className="flex items-center">
-                  <MapPin className="h-5 w-5 text-[#C2884E] mr-3" />
-                  <span className={`text-lg ${selectedLocation ? 'text-[#6B5F53]' : 'text-[#6B5F53]/60'}`}>
-                    {getLocationDisplayName(selectedLocation) || (language === 'zh' ? '选择位置' : 'Select location')}
-                  </span>
-                </div>
-                <div className={`transition-transform duration-300 ${isLocationOpen ? 'rotate-180' : ''}`}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 6L8 10L12 6" stroke="#C2884E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </button>
-              
-              {/* Dropdown */}
-              {isLocationOpen && (
-                <motion.div 
-                  className="absolute left-0 right-0 mt-2 bg-white rounded-xl border border-[#C2884E]/20 shadow-xl overflow-hidden z-30 max-h-[320px] overflow-y-auto"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="p-2">
-                    {allLocations.map((location) => (
-                      <button
-                        key={location}
-                        className={`w-full text-left px-4 py-3 rounded-lg hover:bg-[#C2884E]/5 transition-colors ${
-                          selectedLocation === location ? 'bg-[#C2884E]/10 font-medium' : ''
-                        }`}
-                        onClick={() => {
-                          setSelectedLocation(location)
-                          setIsLocationOpen(false)
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className={`${selectedLocation === location ? 'text-[#C2884E]' : 'text-[#6B5F53]'}`}>
-                            {getLocationDisplayName(location)}
-                          </span>
-                          {selectedLocation === location && (
-                            <Check className="h-4 w-4 text-[#C2884E]" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
+            <div className="rounded-xl border border-[#C2884E]/20 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center gap-2 text-[#6B5F53]">
+                <MapPin className="h-5 w-5 text-[#C2884E]" />
+                <span className="font-medium">
+                  {language === 'zh' ? '检查您的配送地址' : 'Check your delivery address'}
+                </span>
+              </div>
+              <AddressAutocomplete
+                value={streetAddress || ""}
+                language={language}
+                placeholder={language === 'zh' ? '输入配送地址...' : 'Enter delivery address...'}
+                onInputChange={(value) => {
+                  setStreetAddress(value)
+                  setPostalCode("")
+                  setServiceability(null)
+                }}
+                onAddressSelect={handleAddressSelect}
+              />
             </div>
           </motion.div>
           
           {/* Service Options */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: selectedLocation ? 1 : 0 }}
+            animate={{ opacity: serviceability ? 1 : 0 }}
             transition={{ duration: 0.7 }}
             className="space-y-6"
           >
-            {selectedLocation && (
+            {serviceability?.isServed && (
               <ServiceSelectionCards 
-                showDaily={hasDailyDelivery(selectedLocation)}
-                showWeekly={hasWeeklyDelivery(selectedLocation)}
+                showDaily={serviceability.canDaily}
+                showWeekly={serviceability.canWeekly}
                 onSelectDaily={() => {
-                  setStarterLocation(selectedLocation)
+                  saveStarterSelection()
                   router.push("/daily-delivery")
                 }}
                 onSelectWeekly={() => {
-                  setStarterLocation(selectedLocation)
+                  saveStarterSelection()
                   router.push("/weekly-meal")
                 }}
               />
             )}
+
+            {serviceability && !serviceability.isServed && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-center text-amber-800">
+                {language === 'zh'
+                  ? '此地址暂不在配送范围内。请尝试其他地址，或稍后再查看服务范围更新。'
+                  : 'This address is not in our current delivery area. Please try another address or check back as we expand coverage.'}
+              </div>
+            )}
             
             {/* No location selected state */}
-            {!selectedLocation && animationComplete && (
+            {!serviceability && animationComplete && (
               <motion.div 
                 className="text-center py-10"
                 initial={{ opacity: 0 }}
@@ -190,7 +177,7 @@ export default function StarterPage() {
                 transition={{ duration: 0.5 }}
               >
                 <p className="text-[#6B5F53]/70 italic">
-                  {language === 'zh' ? '请选择您的位置以查看可用的餐食计划' : 'Please select your location to view available meal plans'}
+                  {language === 'zh' ? '请输入您的地址以查看可用的餐食计划' : 'Please enter your address to view available meal plans'}
                 </p>
               </motion.div>
             )}

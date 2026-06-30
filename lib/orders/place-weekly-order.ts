@@ -10,6 +10,7 @@ import {
 } from "@/lib/balances/mutations";
 import type { WeeklySubscriptionUserOrderBody } from "@/lib/contracts/weekly-subscription";
 import { toWeeklyPlanId } from "@/lib/plans/service";
+import { canDeliverWeekly } from "@/lib/zones/service-areas";
 import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
 import WeeklyOrder, { type IWeeklyOrder } from "@/models/WeeklyOrder";
 import type { ITransaction } from "@/models/Transaction";
@@ -327,6 +328,13 @@ export async function placeWeeklyOrder({
         throw new ApiError("Please verify your delivery address before placing an order", {
           status: 403,
           code: "ADDRESS_VERIFICATION_REQUIRED",
+        });
+      }
+
+      if (!canDeliverWeekly(user.address?.province, user.addressGeo?.postalCode || user.address?.postalCode)) {
+        throw new ApiError("Weekly meal box delivery is not available at this address", {
+          status: 403,
+          code: "WEEKLY_SERVICE_AREA_UNAVAILABLE",
         });
       }
 

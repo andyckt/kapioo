@@ -8,6 +8,7 @@ import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
 import { useToast } from "@/hooks/use-toast"
+import { resolveServiceability } from "@/lib/zones/service-areas"
 
 export type WeeklyCheckoutFormData = {
   name: string
@@ -130,7 +131,11 @@ export function useWeeklyCheckoutState() {
   }
 
   const handleAddressSelect = (result: ParsedGoogleAddress) => {
-    if (!result.address.province) {
+    const serviceability = resolveServiceability({
+      areaLabel: result.address.province,
+      postalCode: result.addressGeo.postalCode || result.address.postalCode,
+    })
+    if (!serviceability.canWeekly) {
       toast({
         title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
         description:
@@ -147,7 +152,7 @@ export function useWeeklyCheckoutState() {
       streetAddress: result.address.streetAddress || "",
       postalCode: result.address.postalCode || current.postalCode,
       country: result.address.country || "Canada",
-      province: result.address.province,
+      province: result.address.province || "",
       addressGeo: result.addressGeo,
     }))
   }

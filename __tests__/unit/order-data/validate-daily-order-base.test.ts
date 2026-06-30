@@ -98,7 +98,6 @@ describe("lib/order-data/validate-daily-order-base", () => {
 
     expect(result.warnings.map((issue) => issue.code)).toEqual(
       expect.arrayContaining([
-        "NON_DAILY_DELIVERY_AREA",
         "MISSING_POSTAL_CODE",
         "MISSING_UNIT",
         "MISSING_CUSTOMER_NAME",
@@ -106,5 +105,24 @@ describe("lib/order-data/validate-daily-order-base", () => {
         "HAS_ADMIN_OVERRIDE",
       ])
     );
+    expect(result.warnings.map((issue) => issue.code)).not.toContain("NON_DAILY_DELIVERY_AREA");
+  });
+
+  it("warns when a daily order address is outside the daily postal zone", () => {
+    const result = validate({
+      customer: {
+        name: "Jane Doe",
+        phone: "416-555-0100",
+        area: "Richmond Hill",
+      },
+      deliveryAddress: {
+        streetAddress: "123 Main St",
+        unitNumber: "1001",
+        postalCode: "L4Z 1A1",
+        buzzCode: "1234",
+      },
+    });
+
+    expect(result.warnings.map((issue) => issue.code)).toContain("NON_DAILY_DELIVERY_AREA");
   });
 });

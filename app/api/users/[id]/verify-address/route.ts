@@ -4,6 +4,7 @@ import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteCont
 import { requireSelfOrAdmin } from "@/lib/auth/guards";
 import { addressSchema, verifiedAddressGeoSchema } from "@/lib/contracts/common";
 import connectToDatabase from "@/lib/db";
+import { resolveServiceability } from "@/lib/zones/service-areas";
 import User from "@/models/User";
 
 const verifyAddressBodySchema = z.object({
@@ -47,6 +48,17 @@ export async function POST(request: Request, { params }: RouteContext<{ id: stri
     const { data, error } = await parseJsonBody(request, verifyAddressBodySchema);
     if (error) {
       return error;
+    }
+
+    const serviceability = resolveServiceability({
+      areaLabel: data.address.province,
+      postalCode: data.addressGeo.postalCode || data.address.postalCode,
+    });
+    if (!serviceability.isServed) {
+      return errorJson(
+        "This address is not within Kapioo's current delivery service area.",
+        422
+      );
     }
 
     await connectToDatabase();

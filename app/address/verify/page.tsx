@@ -20,6 +20,7 @@ import type { ParsedGoogleAddress } from "@/lib/address/types";
 import { ALL_AREAS } from "@/lib/constants/areas";
 import { useClientAuth } from "@/lib/client-auth";
 import { mergeStoredUser } from "@/lib/client-user-cache";
+import { resolveServiceability } from "@/lib/zones/service-areas";
 
 type VerifyAddressForm = {
   unitNumber: string;
@@ -79,7 +80,11 @@ export default function VerifyAddressPage() {
   };
 
   const handleAddressSelect = (result: ParsedGoogleAddress) => {
-    if (!result.address.province) {
+    const serviceability = resolveServiceability({
+      areaLabel: result.address.province,
+      postalCode: result.addressGeo.postalCode || result.address.postalCode,
+    });
+    if (!serviceability.isServed) {
       toast({
         title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
         description:

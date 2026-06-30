@@ -32,6 +32,7 @@ import type { AddressGeo } from "@/lib/contracts/common"
 import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/hooks/use-toast'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
+import { canDeliverWeekly, resolveServiceability } from '@/lib/zones/service-areas'
 
 // Use centralized area list
 const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
@@ -146,6 +147,18 @@ export function WeeklyAddressDialog({
       toast({
         title: language === 'zh' ? "请填写必填字段" : "Please fill in required fields",
         description: language === 'zh' ? "街道地址和邮政编码是必填的" : "Street address and ZIP code are required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!canDeliverWeekly(regionToUse, addressData.addressGeo?.postalCode || addressData.postalCode)) {
+      toast({
+        title: language === 'zh' ? "地址不在服务范围内" : "Address outside service area",
+        description:
+          language === 'zh'
+            ? "此地址目前不支持周餐盒配送，请选择服务区域内的地址。"
+            : "Weekly meal box delivery is not available at this address. Please choose a supported address.",
         variant: "destructive"
       })
       return
@@ -272,7 +285,11 @@ export function WeeklyAddressDialog({
                   setSelectedGeo(null)
                 }}
                 onAddressSelect={(result) => {
-                  if (!result.address.province) {
+                  const serviceability = resolveServiceability({
+                    areaLabel: result.address.province,
+                    postalCode: result.addressGeo.postalCode || result.address.postalCode,
+                  })
+                  if (!serviceability.canWeekly) {
                     toast({
                       title: language === 'zh' ? "地址不在服务范围内" : "Address outside service area",
                       description:
@@ -292,7 +309,7 @@ export function WeeklyAddressDialog({
                     country: result.address.country || 'Canada',
                     addressGeo: result.addressGeo,
                   }))
-                  handleRegionSelect(result.address.province)
+                  handleRegionSelect(result.address.province || "")
                 }}
               />
             </div>

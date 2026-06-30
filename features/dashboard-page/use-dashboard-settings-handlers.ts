@@ -12,6 +12,7 @@ import type {
   DashboardPersonalInfo,
 } from "@/features/dashboard-settings/dashboard-settings-tab"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
+import { resolveServiceability } from "@/lib/zones/service-areas"
 
 type TFn = ReturnType<typeof useLanguage>["t"]
 type ToastFn = ReturnType<typeof useToast>["toast"]
@@ -70,7 +71,11 @@ export function useDashboardSettingsHandlers({
 
   const handleAddressGeoSelect = useCallback(
     (result: ParsedGoogleAddress) => {
-      if (!result.address.province) {
+      const serviceability = resolveServiceability({
+        areaLabel: result.address.province,
+        postalCode: result.addressGeo.postalCode || result.address.postalCode,
+      })
+      if (!serviceability.isServed) {
         toast({
           title: "Address outside service area",
           description:
@@ -85,7 +90,7 @@ export function useDashboardSettingsHandlers({
         streetAddress: result.address.streetAddress || prev.streetAddress,
         postalCode: result.address.postalCode || prev.postalCode,
         country: result.address.country || "Canada",
-        province: result.address.province,
+        province: result.address.province || "",
         addressGeo: result.addressGeo,
       }))
     },

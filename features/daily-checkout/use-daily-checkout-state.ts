@@ -9,6 +9,7 @@ import { useLanguage } from "@/lib/language-context"
 import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { useToast } from "@/hooks/use-toast"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
+import { canDeliverDaily, resolveServiceability } from "@/lib/zones/service-areas"
 
 export type DailyCheckoutFormData = {
   name: string
@@ -76,7 +77,7 @@ export function useDailyCheckoutState({
           addressGeo: user.addressGeo,
         })
         const userArea = user.address.province || ""
-        setIsValidDeliveryArea(deliveryRegions.includes(userArea))
+        setIsValidDeliveryArea(canDeliverDaily(userArea, user.addressGeo?.postalCode || user.address.postalCode))
       } else {
         setIsValidDeliveryArea(false)
       }
@@ -143,13 +144,21 @@ export function useDailyCheckoutState({
   }
 
   const handleAddressSelect = (result: ParsedGoogleAddress) => {
-    if (!result.address.province) {
+    const serviceability = resolveServiceability({
+      areaLabel: result.address.province,
+      postalCode: result.addressGeo.postalCode || result.address.postalCode,
+    })
+    if (!serviceability.canDaily) {
       toast({
         title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
         description:
           language === "zh"
-            ? "此地址不在配送范围内，请选择服务区域内的地址。"
-            : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+            ? serviceability.canWeekly
+              ? "此地址目前不支持每日配送，但可以使用周餐盒服务。"
+              : "此地址不在配送范围内，请选择服务区域内的地址。"
+            : serviceability.canWeekly
+              ? "Daily delivery is not available at this address yet, but weekly meal box is available."
+              : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
         variant: "destructive",
       })
       setAddressFormData((current) => ({ ...current, streetAddress: "", addressGeo: undefined }))
@@ -160,7 +169,7 @@ export function useDailyCheckoutState({
       streetAddress: result.address.streetAddress || "",
       postalCode: result.address.postalCode || current.postalCode,
       country: result.address.country || "Canada",
-      province: result.address.province,
+      province: result.address.province || "",
       addressGeo: result.addressGeo,
     }))
   }
@@ -176,7 +185,10 @@ export function useDailyCheckoutState({
 
   const handleSaveAddress = async () => {
     const selectedArea = addressFormData.province
-    const isValid = deliveryRegions.includes(selectedArea)
+    const isValid = canDeliverDaily(
+      selectedArea,
+      addressFormData.addressGeo?.postalCode || addressFormData.postalCode
+    )
     setIsValidDeliveryArea(isValid)
 
     if (!isValid) {

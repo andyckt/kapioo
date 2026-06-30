@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useLanguage } from "@/lib/language-context"
+import { resolveServiceability } from "@/lib/zones/service-areas"
 
 export default function AddressPage() {
   const [unitNumber, setUnitNumber] = useState("")
@@ -166,7 +167,11 @@ export default function AddressPage() {
                     setSelectedAddress(null)
                   }}
                   onAddressSelect={(result) => {
-                    if (!result.address.province) {
+                    const serviceability = resolveServiceability({
+                      areaLabel: result.address.province,
+                      postalCode: result.addressGeo.postalCode || result.address.postalCode,
+                    })
+                    if (!serviceability.isServed) {
                       toast({
                         title: "Address outside service area",
                         description:
@@ -180,7 +185,7 @@ export default function AddressPage() {
                     setSelectedAddress(result)
                     setStreetAddress(result.address.streetAddress || "")
                     setPostalCode(result.address.postalCode || "")
-                    setProvince(result.address.province)
+                    setProvince(result.address.province || "")
                   }}
                 />
               </div>

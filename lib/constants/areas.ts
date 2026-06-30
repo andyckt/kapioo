@@ -1,11 +1,15 @@
+import {
+  DAILY_DELIVERY_AREA_LABELS,
+  WEEKLY_DELIVERY_AREA_LABELS,
+  WEEKLY_ONLY_AREA_LABELS,
+} from "@/lib/zones/service-areas";
+
 /**
- * Central source of truth for all delivery areas
- * 
- * To add a new area in the future:
- * 1. Add the area name to either DAILY_DELIVERY_AREAS or WEEKLY_ONLY_AREAS
- * 2. That's it! The change will automatically reflect in all components
- * 
- * No need to edit multiple files anymore.
+ * Backward-compatible area exports.
+ *
+ * The canonical service rules live in lib/zones/service-areas.ts. Keep importing
+ * these names for display/dropdowns, but use the zone helpers when postal-code
+ * precision matters.
  */
 
 // ============================================
@@ -13,32 +17,16 @@
 // ============================================
 // These areas have BOTH daily delivery AND weekly meal box service
 export const DAILY_DELIVERY_AREAS = [
-  "Downtown Toronto",
-  "Midtown",
-  "North York",
-  "Markham",
-  "Richmond Hill"
-] as const
+  ...DAILY_DELIVERY_AREA_LABELS,
+]
 
 // ============================================
 // WEEKLY-ONLY AREAS
 // ============================================
 // These areas have ONLY weekly meal box service (no daily delivery)
 export const WEEKLY_ONLY_AREAS = [
-  "East York",
-  "York",
-  "Etobicoke",
-  "Scarborough",
-  "Thornhill",
-  "Vaughan (including Maple, Concord, King)",
-  "Aurora",
-  "Newmarket",
-  "Brampton",
-  "Mississauga",
-  "Oakville",
-  "Hamilton",
-  "Burlington"
-] as const
+  ...WEEKLY_ONLY_AREA_LABELS,
+]
 
 // ============================================
 // COMBINED LISTS
@@ -46,9 +34,8 @@ export const WEEKLY_ONLY_AREAS = [
 
 // All areas that support weekly meal box (daily + weekly-only)
 export const ALL_WEEKLY_AREAS = [
-  ...DAILY_DELIVERY_AREAS,
-  ...WEEKLY_ONLY_AREAS
-] as const
+  ...WEEKLY_DELIVERY_AREA_LABELS,
+]
 
 // All areas (same as ALL_WEEKLY_AREAS for now)
 export const ALL_AREAS = ALL_WEEKLY_AREAS
