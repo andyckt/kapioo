@@ -63,7 +63,7 @@ export function useDashboardSettingsHandlers({
         ...prev,
         [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
         // Clear geo when the user manually types a new street address so the gate blocks a bad save
-        ...(id === "streetAddress" ? { addressGeo: undefined } : {}),
+        ...(id === "streetAddress" ? { addressGeo: undefined, postalCode: "" } : {}),
       }))
     },
     [setAddressInfo]
@@ -82,13 +82,13 @@ export function useDashboardSettingsHandlers({
             "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
           variant: "destructive",
         })
-        setAddressInfo((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined }))
+        setAddressInfo((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined, postalCode: "" }))
         return
       }
       setAddressInfo((prev) => ({
         ...prev,
         streetAddress: result.address.streetAddress || prev.streetAddress,
-        postalCode: result.address.postalCode || prev.postalCode,
+        postalCode: result.addressGeo.postalCode || result.address.postalCode || "",
         country: result.address.country || "Canada",
         province: result.address.province || "",
         addressGeo: result.addressGeo,

@@ -9,6 +9,7 @@ import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -255,7 +256,11 @@ export function DashboardSettingsTab({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="zip">{t("zipCode")}</Label>
-                  <Input id="zip" value={addressInfo.postalCode} onChange={onAddressInfoChange} />
+                  <GoogleDerivedPostalCodeInput
+                    id="zip"
+                    value={addressInfo.postalCode}
+                    language={language}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="buzzCode" className="text-sm">

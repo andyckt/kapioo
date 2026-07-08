@@ -6,6 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Button } from "@/components/ui/button"
+import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
@@ -164,6 +165,7 @@ export default function AddressPage() {
                   disabled={isLoading}
                   onInputChange={(value) => {
                     setStreetAddress(value)
+                    setPostalCode("")
                     setSelectedAddress(null)
                   }}
                   onAddressSelect={(result) => {
@@ -179,12 +181,13 @@ export default function AddressPage() {
                         variant: "destructive",
                       })
                       setStreetAddress("")
+                      setPostalCode("")
                       setSelectedAddress(null)
                       return
                     }
                     setSelectedAddress(result)
                     setStreetAddress(result.address.streetAddress || "")
-                    setPostalCode(result.address.postalCode || "")
+                    setPostalCode(result.addressGeo.postalCode || result.address.postalCode || "")
                     setProvince(result.address.province || "")
                   }}
                 />
@@ -205,13 +208,12 @@ export default function AddressPage() {
                 
                 <div className="grid gap-2.5">
                   <Label htmlFor="postalCode" className="text-sm font-medium">ZIP Code <span className="text-red-500">*</span></Label>
-                  <Input
+                  <GoogleDerivedPostalCodeInput
                     id="postalCode"
-                    placeholder="ZIP code"
                     value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
+                    language={language}
+                    disabled={isLoading}
                     className="h-11 text-base placeholder:text-sm"
-                    required
                   />
                 </div>
               </div>

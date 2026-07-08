@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { Button } from "@/components/ui/button";
+import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -93,13 +94,13 @@ export default function VerifyAddressPage() {
             : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
         variant: "destructive",
       });
-      updateForm({ streetAddress: "" });
+      updateForm({ streetAddress: "", postalCode: "" });
       return;
     }
     setSelectedAddress(result);
     updateForm({
       streetAddress: result.address.streetAddress || "",
-      postalCode: result.address.postalCode || "",
+      postalCode: result.addressGeo.postalCode || result.address.postalCode || "",
       country: result.address.country || "Canada",
       province: result.address.province,
     });
@@ -202,7 +203,7 @@ export default function VerifyAddressPage() {
               language={language}
               disabled={isSaving}
               onInputChange={(value) => {
-                updateForm({ streetAddress: value });
+                updateForm({ streetAddress: value, postalCode: "" });
                 setSelectedAddress(null);
               }}
               onAddressSelect={handleAddressSelect}
@@ -223,12 +224,11 @@ export default function VerifyAddressPage() {
             <Label htmlFor="postalCode">
               {language === "zh" ? "邮编" : "Postal code"} <span className="text-red-500">*</span>
             </Label>
-            <Input
+            <GoogleDerivedPostalCodeInput
               id="postalCode"
               value={form.postalCode}
-              onChange={(event) => updateForm({ postalCode: event.target.value })}
+              language={language}
               disabled={isSaving}
-              required
             />
           </div>
 

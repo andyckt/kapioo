@@ -13,6 +13,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -161,11 +162,10 @@ export function CheckoutAddressForm({
           <Label htmlFor="zip" className="text-sm">
             ZIP Code <span className="text-red-500">*</span>
           </Label>
-          <Input
+          <GoogleDerivedPostalCodeInput
             id="zip"
             value={addressFormData.postalCode}
-            onChange={onAddressInputChange}
-            required
+            language={language}
             disabled={disabled}
           />
         </div>

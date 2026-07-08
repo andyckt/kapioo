@@ -139,7 +139,7 @@ export function useDailyCheckoutState({
     setAddressFormData((current) => ({
       ...current,
       [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
-      ...(id === "streetAddress" ? { addressGeo: undefined } : {}),
+      ...(id === "streetAddress" ? { addressGeo: undefined, postalCode: "" } : {}),
     }))
   }
 
@@ -161,13 +161,13 @@ export function useDailyCheckoutState({
               : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
         variant: "destructive",
       })
-      setAddressFormData((current) => ({ ...current, streetAddress: "", addressGeo: undefined }))
+      setAddressFormData((current) => ({ ...current, streetAddress: "", addressGeo: undefined, postalCode: "" }))
       return
     }
     setAddressFormData((current) => ({
       ...current,
       streetAddress: result.address.streetAddress || "",
-      postalCode: result.address.postalCode || current.postalCode,
+      postalCode: result.addressGeo.postalCode || result.address.postalCode || "",
       country: result.address.country || "Canada",
       province: result.address.province || "",
       addressGeo: result.addressGeo,

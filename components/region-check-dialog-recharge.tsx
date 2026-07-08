@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { AddressAutocomplete } from "@/components/address-autocomplete"
+import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from '@/lib/utils'
@@ -107,6 +108,7 @@ export function RegionCheckDialogRecharge({
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
+    if (id === "postalCode") return
     setAddressData(prev => ({
       ...prev,
       [id]: value
@@ -365,7 +367,7 @@ export function RegionCheckDialogRecharge({
               value={addressData.streetAddress || ''}
               language={language}
               onInputChange={(value) => {
-                setAddressData((prev) => ({ ...prev, streetAddress: value, addressGeo: undefined }))
+                setAddressData((prev) => ({ ...prev, streetAddress: value, addressGeo: undefined, postalCode: "" }))
                 setSelectedGeo(null)
               }}
               onAddressSelect={(result) => {
@@ -386,14 +388,14 @@ export function RegionCheckDialogRecharge({
                           : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
                     variant: "destructive",
                   })
-                  setAddressData((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined }))
+                  setAddressData((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined, postalCode: "" }))
                   return
                 }
                 setSelectedGeo(result)
                 setAddressData((prev) => ({
                   ...prev,
                   streetAddress: result.address.streetAddress || prev.streetAddress || '',
-                  postalCode: result.address.postalCode || prev.postalCode || '',
+                  postalCode: result.addressGeo.postalCode || result.address.postalCode || '',
                   country: result.address.country || 'Canada',
                   addressGeo: result.addressGeo,
                 }))
@@ -407,12 +409,11 @@ export function RegionCheckDialogRecharge({
               <span className="text-red-500">*</span>
               ZIP Code
             </Label>
-            <Input 
-              id="postalCode" 
-              value={addressData.postalCode} 
-              onChange={handleAddressChange}
+            <GoogleDerivedPostalCodeInput
+              id="postalCode"
+              value={addressData.postalCode || ""}
+              language={language}
               className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
-              required
             />
           </div>
           
