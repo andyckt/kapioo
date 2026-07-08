@@ -11,6 +11,11 @@ import {
   normalizeFsa,
   resolveServiceability,
 } from "@/lib/zones/service-areas";
+import {
+  formatDailyCoverageList,
+  formatWeeklyOnlyCoverageList,
+  getAreaDisplayLabel,
+} from "@/lib/zones/coverage-copy";
 
 describe("service area postal-zone helpers", () => {
   it("normalizes Canadian FSA prefixes", () => {
@@ -54,6 +59,43 @@ describe("service area postal-zone helpers", () => {
     expect(isWeeklyDeliveryArea("Scarborough")).toBe(true);
   });
 
+  it("returns not-served for unknown area", () => {
+    expect(resolveServiceability({ areaLabel: "Atlantis", postalCode: "Z9Z 9Z9" })).toMatchObject({
+      canDaily: false,
+      canWeekly: false,
+      isServed: false,
+    });
+  });
+});
+
+describe("coverage-copy formatters", () => {
+  it("includes partial qualifier only for include-mode areas", () => {
+    expect(getAreaDisplayLabel("Richmond Hill", "daily", "en")).toBe("Richmond Hill (selected areas)");
+    expect(getAreaDisplayLabel("Richmond Hill", "daily", "zh")).toBe("Richmond Hill（部分区域）");
+    expect(getAreaDisplayLabel("Richmond Hill", "weekly", "en")).toBe("Richmond Hill");
+    expect(getAreaDisplayLabel("Downtown Toronto", "daily", "en")).toBe("Downtown Toronto");
+  });
+
+  it("includes all daily areas in the formatted list", () => {
+    const list = formatDailyCoverageList("en");
+    expect(list).toContain("Downtown Toronto");
+    expect(list).toContain("Richmond Hill (selected areas)");
+    expect(list).not.toContain("Scarborough");
+  });
+
+  it("includes weekly-only areas (not daily areas) in the weekly-only list", () => {
+    const list = formatWeeklyOnlyCoverageList("en");
+    expect(list).toContain("Scarborough");
+    expect(list).not.toContain("Downtown Toronto");
+  });
+
+  it("generates zh daily list with Chinese partial qualifier", () => {
+    const list = formatDailyCoverageList("zh");
+    expect(list).toContain("Richmond Hill（部分区域）");
+  });
+});
+
+describe("is-verified grandfathering", () => {
   it("keeps Google parser labels compatible with the service registry", () => {
     const parsed = parseGooglePlaceToAddress({
       id: "place-richmond-hill",

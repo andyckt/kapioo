@@ -9,41 +9,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button'
-import { Check, MapPin, Home } from 'lucide-react'
-import { 
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Home } from 'lucide-react'
 import { AddressAutocomplete } from "@/components/address-autocomplete"
+import { GoogleDerivedAreaInput } from "@/components/google-derived-area-input"
 import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { cn } from '@/lib/utils'
-import type { ParsedGoogleAddress } from "@/lib/address/types"
 import type { AddressGeo } from "@/lib/contracts/common"
 import { useLanguage } from '@/lib/language-context'
-import { useToast } from '@/hooks/use-toast'
-import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
-import { canDeliverWeekly, resolveServiceability } from '@/lib/zones/service-areas'
-
-// Use centralized area list
-const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
+import { useAddressSelection } from '@/hooks/use-address-selection'
 
 interface AddressData {
   unitNumber?: string
   streetAddress?: string
   province?: string
   postalCode?: string
-  country?: string // Always "Canada", not shown in UI
+  country?: string
   buzzCode?: string
   addressGeo?: AddressGeo
 }
@@ -54,131 +35,79 @@ interface WeeklyAddressDialogProps {
   currentRegion: string | undefined
   onRegionChange: (region: string, addressData?: AddressData) => Promise<void>
   onProceed: () => void
-  existingAddress?: AddressData // Existing address data to pre-populate the form
+  existingAddress?: AddressData
 }
 
 export function WeeklyAddressDialog({
   open,
   onClose,
-  currentRegion,
   onRegionChange,
   onProceed,
   existingAddress
 }: WeeklyAddressDialogProps) {
   const { language, t } = useLanguage()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  
-  // State for region selection
-  const [selectedRegion, setSelectedRegion] = useState<string | undefined>(currentRegion)
-  const [regionPopoverOpen, setRegionPopoverOpen] = useState(false)
-  const [, setSelectedGeo] = useState<ParsedGoogleAddress | null>(null)
-  
-  // State for address form
-  const [addressData, setAddressData] = useState<AddressData>({
-    unitNumber: existingAddress?.unitNumber || '',
-    streetAddress: existingAddress?.streetAddress || '',
-    province: selectedRegion || '',
-    postalCode: existingAddress?.postalCode || '',
-    country: existingAddress?.country || 'Canada', // Always Canada
-    buzzCode: existingAddress?.buzzCode || '',
-    addressGeo: existingAddress?.addressGeo,
+  const [unitNumber, setUnitNumber] = useState(existingAddress?.unitNumber || '')
+  const [buzzCode, setBuzzCode] = useState(existingAddress?.buzzCode || '')
+
+  const {
+    address,
+    handleAddressSelect,
+    handleStreetInputChange,
+    setAddress,
+  } = useAddressSelection({
+    service: 'weekly',
+    language,
+    initial: {
+      streetAddress: existingAddress?.streetAddress || '',
+      postalCode: existingAddress?.postalCode || '',
+      province: existingAddress?.province || '',
+      country: existingAddress?.country || 'Canada',
+      addressGeo: existingAddress?.addressGeo,
+    },
   })
-  
-  // Update address data when existing address changes
-  useEffect(() => {
-    if (existingAddress) {
-      setAddressData({
-        unitNumber: existingAddress.unitNumber || '',
-        streetAddress: existingAddress.streetAddress || '',
-        province: selectedRegion || existingAddress.province || '',
-        postalCode: existingAddress.postalCode || '',
-        country: existingAddress.country || 'Canada', // Always Canada
-        buzzCode: existingAddress.buzzCode || '',
-        addressGeo: existingAddress.addressGeo,
-      })
-    }
-  }, [existingAddress, selectedRegion])
-  
-  // Update selected region when current region changes
-  useEffect(() => {
-    setSelectedRegion(currentRegion)
-  }, [currentRegion])
-  
-  // Handle address field changes
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target
-    if (id === "postalCode") return
-    setAddressData(prev => ({
-      ...prev,
-      [id]: value
-    }))
-  }
-  
-  // Handle region selection
-  const handleRegionSelect = (region: string) => {
-    setSelectedRegion(region)
-    setRegionPopoverOpen(false)
-    setAddressData(prev => ({
-      ...prev,
-      province: region
-    }))
-  }
 
-  // Ensure wheel/trackpad scrolling works inside the area dropdown
-  const handleRegionListWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    e.currentTarget.scrollTop += e.deltaY
-  }
-  
-  // Handle form submission
-  const handleAddressSubmit = async () => {
-    const regionToUse = selectedRegion
-    
-    if (!regionToUse) {
-      toast({
-        title: language === 'zh' ? "请选择区域" : "Please select a region",
-        variant: "destructive"
-      })
-      return
-    }
-    
-    // Validate required fields: street address and ZIP code
-    if (!addressData.streetAddress || !addressData.postalCode) {
-      toast({
-        title: language === 'zh' ? "请填写必填字段" : "Please fill in required fields",
-        description: language === 'zh' ? "街道地址和邮政编码是必填的" : "Street address and ZIP code are required",
-        variant: "destructive"
-      })
-      return
-    }
+  // Sync with existingAddress when dialog opens
+  useEffect(() => {
+    if (!open) return
+    setUnitNumber(existingAddress?.unitNumber || '')
+    setBuzzCode(existingAddress?.buzzCode || '')
+    setAddress((prev) => ({
+      ...prev,
+      streetAddress: existingAddress?.streetAddress || '',
+      postalCode: existingAddress?.postalCode || '',
+      province: existingAddress?.province || '',
+      country: existingAddress?.country || 'Canada',
+      addressGeo: existingAddress?.addressGeo,
+    }))
+  }, [open, existingAddress, setAddress])
 
-    if (!canDeliverWeekly(regionToUse, addressData.addressGeo?.postalCode || addressData.postalCode)) {
-      toast({
-        title: language === 'zh' ? "地址不在服务范围内" : "Address outside service area",
-        description:
-          language === 'zh'
-            ? "此地址目前不支持周餐盒配送，请选择服务区域内的地址。"
-            : "Weekly meal box delivery is not available at this address. Please choose a supported address.",
-        variant: "destructive"
-      })
-      return
-    }
-    
+  const handleSubmit = async () => {
+    if (!address.streetAddress || !address.postalCode || !address.province) return
+
     setIsLoading(true)
     try {
-      // Pass both region and address data
-      await onRegionChange(regionToUse, addressData)
-      onClose() // Close the dialog first
-      onProceed() // Then proceed with the flow
+      const fullAddress: AddressData = {
+        unitNumber,
+        streetAddress: address.streetAddress,
+        province: address.province,
+        postalCode: address.postalCode,
+        country: address.country || 'Canada',
+        buzzCode,
+        addressGeo: address.addressGeo,
+      }
+      await onRegionChange(address.province, fullAddress)
+      onClose()
+      onProceed()
     } catch (error) {
       console.error('Error updating address:', error)
     } finally {
       setIsLoading(false)
     }
   }
-  
+
+  const canSubmit = Boolean(address.streetAddress && address.postalCode && address.province)
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 sm:border-[#C2884E]/10 shadow-xl rounded-xl sm:rounded-[24px] max-h-[90vh] w-[95vw] sm:w-auto">
@@ -190,7 +119,7 @@ export function WeeklyAddressDialog({
             {language === 'zh' ? '请确认您的详细地址' : 'Please confirm your address details'}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="p-4 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
           <div className="flex items-center gap-2 mb-2">
             <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center">
@@ -200,158 +129,88 @@ export function WeeklyAddressDialog({
               {t('deliveryAddress')}
             </h3>
           </div>
-          
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Region Selection */}
-            <div className="space-y-1 sm:col-span-2">
-              <Label htmlFor="region" className="text-xs sm:text-sm">
-                <span className="text-red-500">*</span>
-                {language === 'zh' ? '区域' : 'Region'}
-              </Label>
-              <Popover open={regionPopoverOpen} onOpenChange={setRegionPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={regionPopoverOpen}
-                    className="w-full justify-between h-9 text-sm border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-                  >
-                    {selectedRegion || (language === 'zh' ? '选择区域' : 'Select a region')}
-                    <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="start"
-                  className="w-[var(--radix-popover-trigger-width)] p-0"
-                >
-                  <Command>
-                    <CommandInput 
-                      placeholder={language === 'zh' ? '搜索区域...' : 'Search regions...'}
-                      className="h-9"
-                    />
-                    <CommandList
-                      className="max-h-[260px] overflow-y-scroll overflow-x-hidden visible-scrollbar overscroll-contain"
-                      onWheel={handleRegionListWheel}
-                    >
-                      <CommandEmpty>
-                        {language === 'zh' ? '没有找到匹配的区域' : 'No regions found'}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {WEEKLY_DELIVERY_REGIONS.map((region) => (
-                          <CommandItem
-                            key={region}
-                            value={region}
-                            onSelect={() => handleRegionSelect(region)}
-                            className="cursor-pointer"
-                          >
-                            {region}
-                            <Check
-                              className={cn(
-                                "ml-auto h-4 w-4",
-                                selectedRegion === region ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            
             {/* Unit Number */}
             <div className="space-y-1">
               <Label htmlFor="unitNumber" className="text-xs sm:text-sm">
-                Unit/Apt Number
+                {language === 'zh' ? '单元/公寓号' : 'Unit/Apt Number'}
               </Label>
-              <Input 
-                id="unitNumber" 
-                value={addressData.unitNumber} 
-                onChange={handleAddressChange}
+              <Input
+                id="unitNumber"
+                value={unitNumber}
+                onChange={(e) => setUnitNumber(e.target.value)}
                 className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
               />
             </div>
-            
+
             {/* Street Address */}
             <div className="space-y-1 sm:col-span-2">
               <Label className="text-xs sm:text-sm">
-                <span className="text-red-500">*</span>
-                Street Address
+                <span className="text-red-500">*</span>{' '}
+                {language === 'zh' ? '街道地址' : 'Street Address'}
               </Label>
               <AddressAutocomplete
-                value={addressData.streetAddress || ''}
+                value={address.streetAddress}
                 language={language}
-                onInputChange={(value) => {
-                  setAddressData((prev) => ({ ...prev, streetAddress: value, addressGeo: undefined, postalCode: "" }))
-                  setSelectedGeo(null)
-                }}
-                onAddressSelect={(result) => {
-                  const serviceability = resolveServiceability({
-                    areaLabel: result.address.province,
-                    postalCode: result.addressGeo.postalCode || result.address.postalCode,
-                  })
-                  if (!serviceability.canWeekly) {
-                    toast({
-                      title: language === 'zh' ? "地址不在服务范围内" : "Address outside service area",
-                      description:
-                        language === 'zh'
-                          ? "此地址不在配送范围内，请选择服务区域内的地址。"
-                          : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
-                      variant: "destructive",
-                    })
-                    setAddressData((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined, postalCode: "" }))
-                    return
-                  }
-                  setSelectedGeo(result)
-                  setAddressData((prev) => ({
-                    ...prev,
-                    streetAddress: result.address.streetAddress || prev.streetAddress || '',
-                    postalCode: result.addressGeo.postalCode || result.address.postalCode || '',
-                    country: result.address.country || 'Canada',
-                    addressGeo: result.addressGeo,
-                  }))
-                  handleRegionSelect(result.address.province || "")
-                }}
+                onInputChange={handleStreetInputChange}
+                onAddressSelect={handleAddressSelect}
               />
             </div>
-            
+
+            {/* Delivery Area (read-only, Google-derived) */}
+            <div className="space-y-1">
+              <Label htmlFor="province" className="text-xs sm:text-sm">
+                <span className="text-red-500">*</span>{' '}
+                {language === 'zh' ? '配送区域' : 'Delivery area'}
+              </Label>
+              <GoogleDerivedAreaInput
+                id="province"
+                value={address.province}
+                language={language}
+                className="border-[#C2884E]/20 h-9 text-sm"
+              />
+            </div>
+
             {/* ZIP Code */}
             <div className="space-y-1">
               <Label htmlFor="postalCode" className="text-xs sm:text-sm">
-                <span className="text-red-500">*</span>
-                ZIP Code
+                <span className="text-red-500">*</span>{' '}
+                {language === 'zh' ? '邮编' : 'ZIP Code'}
               </Label>
               <GoogleDerivedPostalCodeInput
                 id="postalCode"
-                value={addressData.postalCode || ""}
+                value={address.postalCode}
                 language={language}
-                className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
+                className="border-[#C2884E]/20 h-9 text-sm"
               />
             </div>
-            
+
             {/* Buzz Code */}
             <div className="space-y-1">
               <Label htmlFor="buzzCode" className="text-xs sm:text-sm">
-                Buzz Code / Entry Code <span className="text-xs text-muted-foreground">(Optional)</span>
+                {language === 'zh' ? '门禁码' : 'Buzz Code / Entry Code'}{' '}
+                <span className="text-xs text-muted-foreground">
+                  {language === 'zh' ? '（可选）' : '(Optional)'}
+                </span>
               </Label>
-              <Input 
-                id="buzzCode" 
-                value={addressData.buzzCode} 
-                onChange={handleAddressChange}
+              <Input
+                id="buzzCode"
+                value={buzzCode}
+                onChange={(e) => setBuzzCode(e.target.value)}
                 className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10 h-9 text-sm"
               />
             </div>
           </div>
-          
+
           <div className="flex justify-end space-x-3 pt-3 border-t border-[#C2884E]/10 sticky bottom-0 bg-white pb-2">
-            <Button 
+            <Button
               className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white text-sm px-3 py-1 h-9"
-              onClick={handleAddressSubmit}
-              disabled={!addressData.streetAddress || !addressData.postalCode || !selectedRegion || isLoading}
+              onClick={handleSubmit}
+              disabled={!canSubmit || isLoading}
             >
-              {isLoading 
-                ? (language === 'zh' ? '处理中...' : 'Processing...') 
+              {isLoading
+                ? (language === 'zh' ? '处理中...' : 'Processing...')
                 : (language === 'zh' ? '保存并继续' : 'Save & Continue')}
             </Button>
           </div>

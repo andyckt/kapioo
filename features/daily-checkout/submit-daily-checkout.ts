@@ -132,15 +132,15 @@ export async function submitDailyCheckout({
         throw new Error("Insufficient vouchers for all orders")
       }
 
+      const effectiveAddress = (editingAddress ? addressFormData : userData?.address) as DeliveryAddress;
       const orderData = {
         userId: userData?._id || "",
         items: enhancedDateItems,
         specialInstructions: formData.specialInstructions,
-        deliveryAddress: (editingAddress
-          ? addressFormData
-          : userData?.address) as DeliveryAddress,
+        deliveryAddress: effectiveAddress,
         phoneNumber: formData.phone,
-        area: formData.area,
+        // Derive area from address province so there's one source of truth
+        area: effectiveAddress?.province || formData.area,
         idempotencyKey,
       }
 

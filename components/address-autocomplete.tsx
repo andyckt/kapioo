@@ -18,7 +18,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { usePlacesAutocomplete } from "@/hooks/use-places-autocomplete";
-import { buildManualAddressGeo } from "@/lib/address/parse-google-place";
 import type { ParsedGoogleAddress } from "@/lib/address/types";
 import { cn } from "@/lib/utils";
 
@@ -49,24 +48,6 @@ export function AddressAutocomplete({
     resetSession,
     selectSuggestion,
   } = usePlacesAutocomplete(value);
-
-  const useManualAddress = () => {
-    const streetAddress = value.trim();
-    if (!streetAddress) return;
-
-    onAddressSelect({
-      address: {
-        streetAddress,
-        country: "Canada",
-      },
-      addressGeo: buildManualAddressGeo({
-        streetAddress,
-        country: "Canada",
-      }),
-    });
-    resetSession();
-    setOpen(false);
-  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -104,18 +85,20 @@ export function AddressAutocomplete({
               <div className="space-y-2 px-3 py-3 text-sm">
                 <p className="text-destructive">
                   {language === "zh"
-                    ? "无法加载 Google 地址建议。"
-                    : "Unable to load Google address suggestions."}
+                    ? "无法加载 Google 地址建议，请检查网络连接后重试。"
+                    : "Unable to load address suggestions. Please check your connection and try again."}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" size="sm" variant="outline" onClick={retry}>
                     <RotateCcw className="mr-2 h-3.5 w-3.5" />
                     {language === "zh" ? "重试" : "Retry"}
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={useManualAddress}>
-                    {language === "zh" ? "使用手动地址" : "Use manual address"}
-                  </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {language === "zh"
+                    ? "如问题持续，请联系客服：kapioomeal@gmail.com"
+                    : "If the issue persists, contact us at kapioomeal@gmail.com"}
+                </p>
               </div>
             ) : (
               <>

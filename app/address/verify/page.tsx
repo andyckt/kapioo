@@ -4,54 +4,38 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AddressAutocomplete } from "@/components/address-autocomplete";
-import { Button } from "@/components/ui/button";
+import { GoogleDerivedAreaInput } from "@/components/google-derived-area-input";
 import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import type { ParsedGoogleAddress } from "@/lib/address/types";
-import { ALL_AREAS } from "@/lib/constants/areas";
 import { useClientAuth } from "@/lib/client-auth";
 import { mergeStoredUser } from "@/lib/client-user-cache";
-import { resolveServiceability } from "@/lib/zones/service-areas";
-
-type VerifyAddressForm = {
-  unitNumber: string;
-  streetAddress: string;
-  province: string;
-  postalCode: string;
-  country: string;
-  buzzCode: string;
-  deliveryNotes: string;
-};
-
-const INITIAL_FORM: VerifyAddressForm = {
-  unitNumber: "",
-  streetAddress: "",
-  province: "",
-  postalCode: "",
-  country: "Canada",
-  buzzCode: "",
-  deliveryNotes: "",
-};
-
+import { useAddressSelection } from "@/hooks/use-address-selection";
+import { getStarterAddressSelection } from "@/lib/plan-flow-state";
 
 export default function VerifyAddressPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { authenticated, status, user, refreshAuthState } = useClientAuth();
   const language = user?.languagePreference === "zh" ? "zh" : "en";
-  const [form, setForm] = useState<VerifyAddressForm>(INITIAL_FORM);
-  const [selectedAddress, setSelectedAddress] = useState<ParsedGoogleAddress | null>(null);
+  const [unitNumber, setUnitNumber] = useState("");
+  const [buzzCode, setBuzzCode] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [fromPage, setFromPage] = useState<string | null>(null);
+  const [planIdentifier, setPlanIdentifier] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setFromPage(params.get("from"));
+    setPlanIdentifier(params.get("plan"));
+  }, []);
+
+  const { address, handleAddressSelect, handleStreetInputChange, setAddress } =
+    useAddressSelection({ service: "any", language });
 
   useEffect(() => {
     if (status !== "ready") return;
@@ -65,67 +49,41 @@ export default function VerifyAddressPage() {
       return;
     }
 
-    setForm({
-      unitNumber: user.address?.unitNumber || "",
-      streetAddress: user.address?.streetAddress || "",
-      province: user.address?.province || "",
-      postalCode: user.address?.postalCode || "",
-      country: user.address?.country || "Canada",
-      buzzCode: user.address?.buzzCode || "",
-      deliveryNotes: user.deliveryNotes || "",
-    });
-  }, [authenticated, router, status, user]);
+    // Pre-fill from starter flow if user entered address on marketing page before signing up
+    const starterSelection = getStarterAddressSelection();
 
-  const updateForm = (patch: Partial<VerifyAddressForm>) => {
-    setForm((current) => ({ ...current, ...patch }));
-  };
-
-  const handleAddressSelect = (result: ParsedGoogleAddress) => {
-    const serviceability = resolveServiceability({
-      areaLabel: result.address.province,
-      postalCode: result.addressGeo.postalCode || result.address.postalCode,
-    });
-    if (!serviceability.isServed) {
-      toast({
-        title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
-        description:
-          language === "zh"
-            ? "此地址不在 Kapioo 配送范围内，请选择服务区域内的地址。"
-            : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
-        variant: "destructive",
-      });
-      updateForm({ streetAddress: "", postalCode: "" });
-      return;
-    }
-    setSelectedAddress(result);
-    updateForm({
-      streetAddress: result.address.streetAddress || "",
-      postalCode: result.addressGeo.postalCode || result.address.postalCode || "",
-      country: result.address.country || "Canada",
-      province: result.address.province,
-    });
-  };
+    setUnitNumber(user.address?.unitNumber || "");
+    setBuzzCode(user.address?.buzzCode || "");
+    setDeliveryNotes(user.deliveryNotes || "");
+    setAddress((prev) => ({
+      ...prev,
+      streetAddress: starterSelection?.streetAddress || user.address?.streetAddress || "",
+      postalCode: starterSelection?.postalCode || user.address?.postalCode || "",
+      province: starterSelection?.areaLabel || user.address?.province || "",
+    }));
+  }, [authenticated, router, status, user, setAddress]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user?._id) return;
 
-    if (!form.streetAddress.trim() || !form.postalCode.trim() || !form.province.trim()) {
+    if (!address.streetAddress.trim() || !address.postalCode.trim() || !address.province.trim()) {
       toast({
         title: language === "zh" ? "资料不完整" : "Missing information",
-        description: language === "zh" ? "请选择地址并填写配送区域。" : "Please select an address and delivery area.",
+        description: language === "zh"
+          ? "请从地址建议中选择配送地址。"
+          : "Please select your delivery address from the suggestions.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!selectedAddress?.addressGeo) {
+    if (!address.addressGeo) {
       toast({
         title: language === "zh" ? "请选择 Google 地址" : "Select a Google address",
-        description:
-          language === "zh"
-            ? "请从地址建议中选择配送地址。"
-            : "Please choose your delivery address from the suggestions.",
+        description: language === "zh"
+          ? "请从地址建议中选择配送地址。"
+          : "Please choose your delivery address from the suggestions.",
         variant: "destructive",
       });
       return;
@@ -138,15 +96,15 @@ export default function VerifyAddressPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: {
-            unitNumber: form.unitNumber,
-            streetAddress: form.streetAddress,
-            province: form.province,
-            postalCode: form.postalCode,
-            country: form.country || "Canada",
-            buzzCode: form.buzzCode,
+            unitNumber,
+            streetAddress: address.streetAddress,
+            province: address.province,
+            postalCode: address.postalCode,
+            country: address.country || "Canada",
+            buzzCode,
           },
-          addressGeo: selectedAddress.addressGeo,
-          deliveryNotes: form.deliveryNotes,
+          addressGeo: address.addressGeo,
+          deliveryNotes,
         }),
       });
 
@@ -159,12 +117,25 @@ export default function VerifyAddressPage() {
       await refreshAuthState({ force: true });
       toast({
         title: language === "zh" ? "地址已验证" : "Address verified",
-        description:
-          language === "zh"
-            ? "您的配送地址已更新。"
-            : "Your delivery address has been updated.",
+        description: language === "zh"
+          ? "您的配送地址已更新。"
+          : "Your delivery address has been updated.",
       });
-      router.replace("/dashboard");
+
+      // Redirect to plan page if user came from a plan flow, otherwise dashboard
+      if (fromPage === "daily-delivery") {
+        const url = planIdentifier
+          ? `/dashboard?tab=meal-vouchers&selectPlan=true&plan=${planIdentifier}`
+          : `/dashboard?tab=meal-vouchers&selectPlan=true`;
+        router.replace(url);
+      } else if (fromPage === "weekly-meal") {
+        const url = planIdentifier
+          ? `/dashboard?tab=credits&selectPlan=true&plan=${planIdentifier}`
+          : `/dashboard?tab=credits&selectPlan=true`;
+        router.replace(url);
+      } else {
+        router.replace("/dashboard");
+      }
     } catch (error) {
       toast({
         title: language === "zh" ? "保存失败" : "Save failed",
@@ -199,13 +170,10 @@ export default function VerifyAddressPage() {
               {language === "zh" ? "配送地址" : "Delivery address"} <span className="text-red-500">*</span>
             </Label>
             <AddressAutocomplete
-              value={form.streetAddress}
+              value={address.streetAddress}
               language={language}
               disabled={isSaving}
-              onInputChange={(value) => {
-                updateForm({ streetAddress: value, postalCode: "" });
-                setSelectedAddress(null);
-              }}
+              onInputChange={handleStreetInputChange}
               onAddressSelect={handleAddressSelect}
             />
           </div>
@@ -214,8 +182,20 @@ export default function VerifyAddressPage() {
             <Label htmlFor="unitNumber">{language === "zh" ? "单元/公寓号" : "Unit/Apt number"}</Label>
             <Input
               id="unitNumber"
-              value={form.unitNumber}
-              onChange={(event) => updateForm({ unitNumber: event.target.value })}
+              value={unitNumber}
+              onChange={(event) => setUnitNumber(event.target.value)}
+              disabled={isSaving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="province">
+              {language === "zh" ? "配送区域" : "Delivery area"} <span className="text-red-500">*</span>
+            </Label>
+            <GoogleDerivedAreaInput
+              id="province"
+              value={address.province}
+              language={language}
               disabled={isSaving}
             />
           </div>
@@ -226,36 +206,18 @@ export default function VerifyAddressPage() {
             </Label>
             <GoogleDerivedPostalCodeInput
               id="postalCode"
-              value={form.postalCode}
+              value={address.postalCode}
               language={language}
               disabled={isSaving}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>
-              {language === "zh" ? "配送区域" : "Delivery area"} <span className="text-red-500">*</span>
-            </Label>
-            <Select value={form.province} onValueChange={(value) => updateForm({ province: value })} disabled={isSaving}>
-              <SelectTrigger>
-                <SelectValue placeholder={language === "zh" ? "选择配送区域" : "Select delivery area"} />
-              </SelectTrigger>
-              <SelectContent>
-                {ALL_AREAS.map((area) => (
-                  <SelectItem key={area} value={area}>
-                    {area}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="buzzCode">{language === "zh" ? "门禁/蜂鸣码" : "Buzz/entry code"}</Label>
             <Input
               id="buzzCode"
-              value={form.buzzCode}
-              onChange={(event) => updateForm({ buzzCode: event.target.value })}
+              value={buzzCode}
+              onChange={(event) => setBuzzCode(event.target.value)}
               disabled={isSaving}
             />
           </div>
@@ -264,8 +226,8 @@ export default function VerifyAddressPage() {
             <Label htmlFor="deliveryNotes">{language === "zh" ? "配送备注" : "Delivery notes"}</Label>
             <Textarea
               id="deliveryNotes"
-              value={form.deliveryNotes}
-              onChange={(event) => updateForm({ deliveryNotes: event.target.value })}
+              value={deliveryNotes}
+              onChange={(event) => setDeliveryNotes(event.target.value)}
               disabled={isSaving}
               placeholder={
                 language === "zh"
@@ -278,12 +240,8 @@ export default function VerifyAddressPage() {
 
         <Button type="submit" className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]" disabled={isSaving}>
           {isSaving
-            ? language === "zh"
-              ? "保存中..."
-              : "Saving..."
-            : language === "zh"
-              ? "保存并继续"
-              : "Save and continue"}
+            ? (language === "zh" ? "保存中..." : "Saving...")
+            : (language === "zh" ? "保存并继续" : "Save and continue")}
         </Button>
       </form>
     </div>

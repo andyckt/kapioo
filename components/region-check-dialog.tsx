@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
+import { formatDailyCoverageSentence } from '@/lib/zones/coverage-copy'
 
 interface RegionCheckDialogProps {
   open: boolean
@@ -27,6 +28,9 @@ export function RegionCheckDialog({
 }: RegionCheckDialogProps) {
   const { language } = useLanguage()
   const router = useRouter()
+
+  const dailyProductName = language === 'zh' ? PRODUCT_LINE_LABELS.daily.zh : PRODUCT_LINE_LABELS.daily.en
+  const coverageSentence = formatDailyCoverageSentence(dailyProductName, language)
 
   const handleBack = () => {
     onClose()
@@ -56,11 +60,7 @@ export function RegionCheckDialog({
                     <>Your selected area <span className="font-bold">{currentRegion || "Not set"}</span> is not within the {PRODUCT_LINE_LABELS.daily.en} service area</>
                   )}
                 </p>
-                <p className="text-xs text-amber-700 mt-1">
-                  {language === 'zh' 
-                    ? `${PRODUCT_LINE_LABELS.daily.zh}服务目前仅限于 Downtown Toronto、Midtown、North York、Markham，以及 Richmond Hill 部分区域。请输入详细地址确认。`
-                    : `${PRODUCT_LINE_LABELS.daily.en} service is currently limited to Downtown Toronto, Midtown, North York, Markham, and selected areas of Richmond Hill. Enter your exact address to confirm.`}
-                </p>
+                <p className="text-xs text-amber-700 mt-1">{coverageSentence}</p>
               </div>
             </div>
           </div>

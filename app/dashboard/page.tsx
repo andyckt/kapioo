@@ -282,12 +282,6 @@ export default function DashboardPage() {
           onLanguagePreferenceChange={(languagePreference) =>
             setPersonalInfo((prev) => ({ ...prev, languagePreference }))
           }
-          onAddressProvinceChange={(province) =>
-            setAddressInfo((prev) => ({
-              ...prev,
-              province,
-            }))
-          }
           handleSavePersonalInfo={handleSavePersonalInfo}
           handleSaveAddressInfo={handleSaveAddressInfo}
           handleSavePassword={handleSavePassword}

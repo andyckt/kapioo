@@ -31,6 +31,7 @@ import { DailyDaySidebar } from '@/features/daily-ordering/daily-day-sidebar'
 import { useDailyCart } from '@/features/daily-ordering/use-daily-cart'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
 import { RegionCheckDialog } from './region-check-dialog'
+import { DAILY_DELIVERY_AREA_LABELS, canDeliverDaily } from '@/lib/zones/service-areas'
 import { 
   Dialog,
   DialogContent,
@@ -102,14 +103,8 @@ export default function DailyDelivery() {
     }
     return dishTranslations[dishName] || dishName
   }
-  // Define the supported regions for daily delivery
-  const DAILY_DELIVERY_REGIONS = [
-    "Downtown Toronto",
-    "Midtown", 
-    "North York", 
-    "Markham", 
-    "Richmond Hill"
-  ]
+  // Derived from registry — no need to update manually when coverage changes
+  const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREA_LABELS
   
   const fetchDishTranslations = async (options?: { signal?: AbortSignal }): Promise<Record<string, string>> => {
     try {
@@ -179,7 +174,7 @@ export default function DailyDelivery() {
 
     const nextRegion = user.address?.province
     setUserRegion(nextRegion)
-    setShowRegionDialog(Boolean(nextRegion && !DAILY_DELIVERY_REGIONS.includes(nextRegion)))
+    setShowRegionDialog(Boolean(nextRegion && !canDeliverDaily(nextRegion)))
   }
 
   // Function to fetch user data from API

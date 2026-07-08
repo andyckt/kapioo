@@ -59,11 +59,13 @@ export function useDashboardSettingsHandlers({
   const handleAddressInfoChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { id, value } = e.target
+      // Only allow editing unitNumber and buzzCode — street/postal/area are Google-derived
+      if (id === "postalCode" || id === "province" || id === "state" || id === "zip") return
       setAddressInfo((prev) => ({
         ...prev,
-        [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
-        // Clear geo when the user manually types a new street address so the gate blocks a bad save
-        ...(id === "streetAddress" ? { addressGeo: undefined, postalCode: "" } : {}),
+        [id]: value,
+        // Clear geo when user types a new street address (triggers Google re-selection)
+        ...(id === "streetAddress" ? { addressGeo: undefined, postalCode: "", province: "" } : {}),
       }))
     },
     [setAddressInfo]
@@ -82,7 +84,7 @@ export function useDashboardSettingsHandlers({
             "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
           variant: "destructive",
         })
-        setAddressInfo((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined, postalCode: "" }))
+        setAddressInfo((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined, postalCode: "", province: "" }))
         return
       }
       setAddressInfo((prev) => ({

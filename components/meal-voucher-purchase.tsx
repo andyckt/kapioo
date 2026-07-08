@@ -11,6 +11,7 @@ import { useLanguage } from '@/lib/language-context'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
 import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
+import { getAreaDisplayLabel } from '@/lib/zones/coverage-copy'
 import { listDailyPlans } from '@/lib/plans/service'
 import type { PricingBreakdown } from '@/lib/promo-code-shared'
 import {
@@ -861,7 +862,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               key={area} 
               className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"
             >
-              {area}
+              {getAreaDisplayLabel(area, "daily", language === 'zh' ? 'zh' : 'en')}
             </div>
           ))}
         </div>

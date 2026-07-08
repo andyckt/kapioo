@@ -1,27 +1,12 @@
 "use client"
 
-import { Check, MapPin } from "lucide-react"
-
 import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
+import { GoogleDerivedAreaInput } from "@/components/google-derived-area-input"
 import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 import type { AddressGeo } from "@/lib/contracts/common"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
 
@@ -37,16 +22,11 @@ export type CheckoutAddressFormData = {
 
 type CheckoutAddressFormProps = {
   addressFormData: CheckoutAddressFormData
-  availableRegions: readonly string[]
   language: "en" | "zh"
-  popoverOpen: boolean
   saveAddressForFuture: boolean
   disabled?: boolean
-  showAreaValidationHint?: boolean
-  onPopoverOpenChange: (open: boolean) => void
   onAddressInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onAddressSelect: (address: ParsedGoogleAddress) => void
-  onAreaSelect: (area: string) => void
   onSaveAddressForFutureChange: (checked: boolean) => void
   onCancel: () => void
   onSave: () => void
@@ -54,16 +34,11 @@ type CheckoutAddressFormProps = {
 
 export function CheckoutAddressForm({
   addressFormData,
-  availableRegions,
   language,
-  popoverOpen,
   saveAddressForFuture,
   disabled = false,
-  showAreaValidationHint = false,
-  onPopoverOpenChange,
   onAddressInputChange,
   onAddressSelect,
-  onAreaSelect,
   onSaveAddressForFutureChange,
   onCancel,
   onSave,
@@ -71,13 +46,13 @@ export function CheckoutAddressForm({
   return (
     <div className="mt-2 space-y-4 p-4 rounded-md border border-primary/30 bg-primary/5 shadow-sm">
       <div className="text-sm font-medium text-primary mb-2">
-        Edit Delivery Details
+        {language === "zh" ? "修改配送信息" : "Edit Delivery Details"}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="unitNumber" className="text-sm">
-            Unit/Apt Number
+            {language === "zh" ? "单元/公寓号" : "Unit/Apt Number"}
           </Label>
           <Input
             id="unitNumber"
@@ -89,7 +64,7 @@ export function CheckoutAddressForm({
 
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="streetAddress" className="text-sm">
-            Street name <span className="text-red-500">*</span>
+            {language === "zh" ? "街道地址" : "Street address"} <span className="text-red-500">*</span>
           </Label>
           <AddressAutocomplete
             value={addressFormData.streetAddress}
@@ -105,62 +80,20 @@ export function CheckoutAddressForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="state" className="text-sm flex items-center gap-2">
-            <span>
-              Area <span className="text-red-500">*</span>
-            </span>
-            {showAreaValidationHint && (
-              <span className="text-xs text-red-600 font-medium">
-                ({language === "zh" ? "请选择有效区域" : "Please select valid area"})
-              </span>
-            )}
+          <Label htmlFor="province" className="text-sm">
+            {language === "zh" ? "配送区域" : "Delivery area"} <span className="text-red-500">*</span>
           </Label>
-
-          <Popover open={popoverOpen} onOpenChange={onPopoverOpenChange}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className="w-full justify-between"
-                disabled={disabled}
-              >
-                {addressFormData.province || (language === "zh" ? "选择区域..." : "Select area...")}
-                <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-content-available-width)]">
-              <Command>
-                <CommandInput placeholder={language === "zh" ? "搜索区域..." : "Search area..."} />
-                <CommandList className="max-h-[200px] overflow-y-auto">
-                  <CommandEmpty>
-                    {language === "zh" ? "未找到匹配的区域" : "No matching areas found"}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {availableRegions.map((region) => (
-                      <CommandItem
-                        key={region}
-                        value={region}
-                        onSelect={() => onAreaSelect(region)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            addressFormData.province === region ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {region}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <GoogleDerivedAreaInput
+            id="province"
+            value={addressFormData.province}
+            language={language}
+            disabled={disabled}
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="zip" className="text-sm">
-            ZIP Code <span className="text-red-500">*</span>
+            {language === "zh" ? "邮编" : "ZIP Code"} <span className="text-red-500">*</span>
           </Label>
           <GoogleDerivedPostalCodeInput
             id="zip"
@@ -172,9 +105,9 @@ export function CheckoutAddressForm({
 
         <div className="space-y-2">
           <Label htmlFor="buzzCode" className="text-sm">
-            Buzz Code
+            {language === "zh" ? "门禁码" : "Buzz Code"}
             <span className="text-muted-foreground text-xs ml-1">
-              (Optional)
+              {language === "zh" ? "（可选）" : "(Optional)"}
             </span>
           </Label>
           <Input

@@ -6,7 +6,6 @@ import type { CheckoutAddressFormData } from "@/components/checkout-address-form
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
-import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { useToast } from "@/hooks/use-toast"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { canDeliverDaily, resolveServiceability } from "@/lib/zones/service-areas"
@@ -52,9 +51,7 @@ export function useDailyCheckoutState({
   )
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
-  const [popoverOpen, setPopoverOpen] = useState(false)
   const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
-  const [tempSelectedArea, setTempSelectedArea] = useState("")
 
   useEffect(() => {
     const applyUserToForm = (user: any) => {
@@ -174,15 +171,6 @@ export function useDailyCheckoutState({
     }))
   }
 
-  const handleAreaSelect = (area: string) => {
-    setAddressFormData((current) => ({
-      ...current,
-      province: area,
-    }))
-    setPopoverOpen(false)
-    setTempSelectedArea(area)
-  }
-
   const handleSaveAddress = async () => {
     const selectedArea = addressFormData.province
     const isValid = canDeliverDaily(
@@ -193,17 +181,14 @@ export function useDailyCheckoutState({
 
     if (!isValid) {
       toast({
-        title: language === "zh" ? "无效区域" : "Invalid Area",
-        description:
-          language === "zh"
-            ? `请选择${PRODUCT_LINE_LABELS.daily.zh}服务覆盖的区域`
-            : `Please select an area covered by ${PRODUCT_LINE_LABELS.daily.en} service`,
+        title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
+        description: language === "zh"
+          ? "此地址目前不支持每日配送，请选择服务区域内的地址。"
+          : "Daily delivery is not available at this address. Please select a supported address.",
         variant: "destructive",
       })
       return
     }
-
-    setTempSelectedArea("")
 
     setUserData((prev: any) =>
       prev
@@ -285,17 +270,12 @@ export function useDailyCheckoutState({
     addressFormData,
     editingAddress,
     saveAddressForFuture,
-    popoverOpen,
     isValidDeliveryArea,
-    tempSelectedArea,
     setEditingAddress,
     setSaveAddressForFuture,
-    setPopoverOpen,
-    setTempSelectedArea,
     handleInputChange,
     handleAddressInputChange,
     handleAddressSelect,
-    handleAreaSelect,
     handleSaveAddress,
   }
 }

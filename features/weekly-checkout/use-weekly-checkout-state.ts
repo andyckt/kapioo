@@ -45,7 +45,6 @@ export function useWeeklyCheckoutState() {
   )
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
-  const [popoverOpen, setPopoverOpen] = useState(false)
 
   useEffect(() => {
     const applyUserToForm = (user: any) => {
@@ -157,14 +156,6 @@ export function useWeeklyCheckoutState() {
     }))
   }
 
-  const handleAreaSelect = (area: string) => {
-    setAddressFormData((current) => ({
-      ...current,
-      province: area,
-    }))
-    setPopoverOpen(false)
-  }
-
   const handleSaveAddress = async () => {
     setUserData((prev: any) =>
       prev
@@ -250,14 +241,11 @@ export function useWeeklyCheckoutState() {
     addressFormData,
     editingAddress,
     saveAddressForFuture,
-    popoverOpen,
     setEditingAddress,
     setSaveAddressForFuture,
-    setPopoverOpen,
     handleInputChange,
     handleAddressInputChange,
     handleAddressSelect,
-    handleAreaSelect,
     handleSaveAddress,
   }
 }

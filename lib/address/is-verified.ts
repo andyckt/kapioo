@@ -1,6 +1,7 @@
 type AddressVerificationUser = {
   role?: string;
   addressVerified?: boolean;
+  addressVerifiedAt?: string | Date | null;
   address?: {
     streetAddress?: string;
     postalCode?: string;
@@ -22,10 +23,26 @@ function hasCompleteLegacyAddress(user: AddressVerificationUser) {
   );
 }
 
+/**
+ * Returns true only for Google-sourced geo with valid coordinates.
+ * Manual-source records are only grandfathered if the user was verified
+ * before the Google-only policy (addressVerifiedAt set before July 2026).
+ * New manual saves are not accepted for customers.
+ */
 function hasValidGeo(user: AddressVerificationUser) {
   const geo = user?.addressGeo;
   if (!geo) return false;
-  if (geo.source === "manual") return true;
+
+  if (geo.source === "manual") {
+    // Grandfather: accept manual geo only if the record was verified before
+    // Google-only enforcement. New manual verifications are not issued.
+    const verifiedAt = user?.addressVerifiedAt
+      ? new Date(user.addressVerifiedAt as string)
+      : null;
+    const cutoff = new Date("2026-07-01T00:00:00Z");
+    return verifiedAt !== null && verifiedAt < cutoff;
+  }
+
   return Boolean(
     geo.placeId &&
       typeof geo.lat === "number" &&

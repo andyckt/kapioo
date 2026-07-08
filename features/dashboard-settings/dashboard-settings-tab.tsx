@@ -3,19 +3,16 @@
 import type React from "react"
 
 import { motion } from "framer-motion"
-import { Check, ChevronsUpDown } from "lucide-react"
 
 import { AddressAutocomplete } from "@/components/address-autocomplete"
+import { GoogleDerivedAreaInput } from "@/components/google-derived-area-input"
+import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { AddressGeo } from "@/lib/contracts/common"
-import { ALL_WEEKLY_AREAS } from "@/lib/constants/areas"
 import type { useLanguage } from "@/lib/language-context"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { cn } from "@/lib/utils"
@@ -56,15 +53,10 @@ export interface DashboardSettingsTabProps {
   onAddressInfoChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onPasswordChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onLanguagePreferenceChange: (languagePreference: "zh" | "en") => void
-  onAddressProvinceChange: (province: string) => void
   onAddressGeoSelect: (result: ParsedGoogleAddress) => void
   onSavePersonalInfo: () => void
   onSaveAddressInfo: () => void
   onSavePassword: () => void
-}
-
-function isValidDeliveryArea(area: string) {
-  return ALL_WEEKLY_AREAS.includes(area as (typeof ALL_WEEKLY_AREAS)[number])
 }
 
 export function DashboardSettingsTab({
@@ -79,7 +71,6 @@ export function DashboardSettingsTab({
   onAddressInfoChange,
   onPasswordChange,
   onLanguagePreferenceChange,
-  onAddressProvinceChange,
   onAddressGeoSelect,
   onSavePersonalInfo,
   onSaveAddressInfo,
@@ -205,54 +196,12 @@ export function DashboardSettingsTab({
                   />
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="state">{t("state")}</Label>
-                    {addressInfo.province && !isValidDeliveryArea(addressInfo.province) && (
-                      <span className="text-red-500 text-xs">
-                        ({language === "zh" ? "请选择有效的配送区域" : "Please select a valid delivery area"})
-                      </span>
-                    )}
-                  </div>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className={cn(
-                          "w-full justify-between",
-                          addressInfo.province && !isValidDeliveryArea(addressInfo.province) && "border-red-500"
-                        )}
-                      >
-                        {addressInfo.province || "Select an area..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 w-full">
-                      <Command>
-                        <CommandInput placeholder="Search area..." />
-                        <CommandList className="max-h-[200px] overflow-y-auto">
-                          <CommandEmpty>No area found.</CommandEmpty>
-                          <CommandGroup>
-                            {ALL_WEEKLY_AREAS.map((area) => (
-                              <CommandItem
-                                key={area}
-                                value={area}
-                                onSelect={() => onAddressProvinceChange(area)}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    addressInfo.province === area ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {area}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="state">{t("state")}</Label>
+                  <GoogleDerivedAreaInput
+                    id="state"
+                    value={addressInfo.province}
+                    language={language}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="zip">{t("zipCode")}</Label>

@@ -5,35 +5,33 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { AddressAutocomplete } from "@/components/address-autocomplete"
-import { Button } from "@/components/ui/button"
+import { GoogleDerivedAreaInput } from "@/components/google-derived-area-input"
 import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useLanguage } from "@/lib/language-context"
-import { resolveServiceability } from "@/lib/zones/service-areas"
+import { useAddressSelection } from "@/hooks/use-address-selection"
 
 export default function AddressPage() {
   const [unitNumber, setUnitNumber] = useState("")
-  const [streetAddress, setStreetAddress] = useState("")
-  const [postalCode, setPostalCode] = useState("")
-  const [province, setProvince] = useState("")
-  const [country] = useState("Canada") // Always Canada, not shown in UI
   const [buzzCode, setBuzzCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
-  const [selectedAddress, setSelectedAddress] = useState<ParsedGoogleAddress | null>(null)
   
   const router = useRouter()
   const { toast } = useToast()
   const { language } = useLanguage()
 
+  const { address, handleAddressSelect, handleStreetInputChange } = useAddressSelection({
+    service: "any",
+    language,
+  })
+
   useEffect(() => {
-    // Check if user is logged in
     const storedUser = localStorage.getItem('user')
-    
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser)
@@ -47,77 +45,62 @@ export default function AddressPage() {
     }
   }, [router])
 
-  const validateForm = () => {
-    // Check required fields
-    const addressToSave = selectedAddress
-    if (!streetAddress || !postalCode || !province || !addressToSave?.addressGeo) {
-      toast({
-        title: "Missing information",
-        description: "Please select an address from the suggestions and fill in all required fields",
-        variant: "destructive",
-      })
-      return false
-    }
-    
-    return true
-  }
-
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const addressToSave = selectedAddress
-    if (!validateForm() || !user || !addressToSave?.addressGeo) {
+    if (!address.streetAddress || !address.postalCode || !address.province || !address.addressGeo) {
+      toast({
+        title: language === "zh" ? "信息不完整" : "Missing information",
+        description: language === "zh"
+          ? "请从地址建议中选择一个地址"
+          : "Please select an address from the suggestions",
+        variant: "destructive",
+      })
       return
     }
+
+    if (!user) return
     
     setIsLoading(true)
 
     try {
       const response = await fetch(`/api/users/${user._id || user.userID}/verify-address`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           address: {
             unitNumber,
-            streetAddress,
-            postalCode,
-            province,
-            country, // Always "Canada"
+            streetAddress: address.streetAddress,
+            postalCode: address.postalCode,
+            province: address.province,
+            country: "Canada",
             buzzCode,
           },
-          addressGeo: addressToSave.addressGeo,
+          addressGeo: address.addressGeo,
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        // Merge the updated response so other cached fields survive address edits.
         mergeStoredUser(result.data);
-        
-        // Show success toast
         toast({
-          title: "Address saved",
-          description: "Your delivery address has been saved successfully",
+          title: language === "zh" ? "地址已保存" : "Address saved",
+          description: language === "zh" ? "配送地址已成功保存" : "Your delivery address has been saved successfully",
         });
-        
-        // Redirect to dashboard
         router.push('/dashboard');
       } else {
-        // Show error toast
         toast({
-          title: "Failed to save address",
-          description: result.error || "Something went wrong",
+          title: language === "zh" ? "保存失败" : "Failed to save address",
+          description: result.error || (language === "zh" ? "请重试" : "Something went wrong"),
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Error saving address:', error);
       toast({
-        title: "Failed to save address",
-        description: "An error occurred. Please try again.",
+        title: language === "zh" ? "保存失败" : "Failed to save address",
+        description: language === "zh" ? "发生错误，请重试" : "An error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -146,10 +129,12 @@ export default function AddressPage() {
           <form onSubmit={handleSaveAddress} className="p-7 sm:p-8 bg-white shadow-lg rounded-xl">
             <div className="grid gap-5">
               <div className="grid gap-2.5">
-                <Label htmlFor="unitNumber" className="text-sm font-medium">Unit Number</Label>
+                <Label htmlFor="unitNumber" className="text-sm font-medium">
+                  {language === "zh" ? "单元/公寓号" : "Unit Number"}
+                </Label>
                 <Input
                   id="unitNumber"
-                  placeholder="Apartment, suite, unit, etc."
+                  placeholder={language === "zh" ? "公寓、套房等" : "Apartment, suite, unit, etc."}
                   value={unitNumber}
                   onChange={(e) => setUnitNumber(e.target.value)}
                   className="h-11 text-base placeholder:text-sm"
@@ -157,60 +142,40 @@ export default function AddressPage() {
               </div>
               
               <div className="grid gap-2.5">
-                <Label htmlFor="streetAddress" className="text-sm font-medium">Street Address <span className="text-red-500">*</span></Label>
+                <Label htmlFor="streetAddress" className="text-sm font-medium">
+                  {language === "zh" ? "街道地址" : "Street Address"} <span className="text-red-500">*</span>
+                </Label>
                 <AddressAutocomplete
-                  value={streetAddress}
+                  value={address.streetAddress}
                   language={language}
-                  placeholder="Street address"
+                  placeholder={language === "zh" ? "街道地址" : "Street address"}
                   disabled={isLoading}
-                  onInputChange={(value) => {
-                    setStreetAddress(value)
-                    setPostalCode("")
-                    setSelectedAddress(null)
-                  }}
-                  onAddressSelect={(result) => {
-                    const serviceability = resolveServiceability({
-                      areaLabel: result.address.province,
-                      postalCode: result.addressGeo.postalCode || result.address.postalCode,
-                    })
-                    if (!serviceability.isServed) {
-                      toast({
-                        title: "Address outside service area",
-                        description:
-                          "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
-                        variant: "destructive",
-                      })
-                      setStreetAddress("")
-                      setPostalCode("")
-                      setSelectedAddress(null)
-                      return
-                    }
-                    setSelectedAddress(result)
-                    setStreetAddress(result.address.streetAddress || "")
-                    setPostalCode(result.addressGeo.postalCode || result.address.postalCode || "")
-                    setProvince(result.address.province || "")
-                  }}
+                  onInputChange={handleStreetInputChange}
+                  onAddressSelect={handleAddressSelect}
                 />
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="grid gap-2.5">
-                  <Label htmlFor="province" className="text-sm font-medium">Area <span className="text-red-500">*</span></Label>
-                  <Input
+                  <Label htmlFor="province" className="text-sm font-medium">
+                    {language === "zh" ? "配送区域" : "Delivery Area"} <span className="text-red-500">*</span>
+                  </Label>
+                  <GoogleDerivedAreaInput
                     id="province"
-                    placeholder="Province or state"
-                    value={province}
-                    onChange={(e) => setProvince(e.target.value)}
+                    value={address.province}
+                    language={language}
+                    disabled={isLoading}
                     className="h-11 text-base placeholder:text-sm"
-                    required
                   />
                 </div>
                 
                 <div className="grid gap-2.5">
-                  <Label htmlFor="postalCode" className="text-sm font-medium">ZIP Code <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="postalCode" className="text-sm font-medium">
+                    {language === "zh" ? "邮编" : "ZIP Code"} <span className="text-red-500">*</span>
+                  </Label>
                   <GoogleDerivedPostalCodeInput
                     id="postalCode"
-                    value={postalCode}
+                    value={address.postalCode}
                     language={language}
                     disabled={isLoading}
                     className="h-11 text-base placeholder:text-sm"
@@ -219,10 +184,12 @@ export default function AddressPage() {
               </div>
               
               <div className="grid gap-2.5">
-                <Label htmlFor="buzzCode" className="text-sm font-medium">Buzz/Entry Code</Label>
+                <Label htmlFor="buzzCode" className="text-sm font-medium">
+                  {language === "zh" ? "门禁/蜂鸣码" : "Buzz/Entry Code"}
+                </Label>
                 <Input
                   id="buzzCode"
-                  placeholder="Buzz code for building access (if needed)"
+                  placeholder={language === "zh" ? "如有需要，用于进入建筑物" : "Buzz code for building access (if needed)"}
                   value={buzzCode}
                   onChange={(e) => setBuzzCode(e.target.value)}
                   className="h-11 text-base placeholder:text-sm"
@@ -235,17 +202,21 @@ export default function AddressPage() {
                   className="w-full h-11 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base" 
                   disabled={isLoading}
                 >
-                  {isLoading ? "Saving..." : "Save Address"}
+                  {isLoading
+                    ? (language === "zh" ? "保存中..." : "Saving...")
+                    : (language === "zh" ? "保存地址" : "Save Address")}
                 </Button>
               </div>
             </div>
           </form>
           
           <p className="text-xs text-center text-muted-foreground">
-            You can update your delivery address at any time from your account settings.
+            {language === "zh"
+              ? "您可以随时在账户设置中更新配送地址。"
+              : "You can update your delivery address at any time from your account settings."}
           </p>
         </div>
       </div>
     </div>
   )
-} 
+}

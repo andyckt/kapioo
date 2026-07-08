@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DAILY_DELIVERY_AREAS, WEEKLY_ONLY_AREAS } from "@/lib/constants/areas";
+import { getAreaDisplayLabel } from "@/lib/zones/coverage-copy";
 import { useLanguage } from "@/lib/language-context";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import {
@@ -458,11 +459,7 @@ export function HowItWorksContent() {
                             className="flex items-center gap-2 text-[#6B5F53] text-sm"
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-[#C2884E]/60 flex-shrink-0" aria-hidden />
-                            {area === "Richmond Hill"
-                              ? isZh
-                                ? "Richmond Hill（部分区域）"
-                                : "Richmond Hill (selected areas)"
-                              : area}
+                            {getAreaDisplayLabel(area, "daily", isZh ? "zh" : "en")}
                           </li>
                         ))}
                       </ul>

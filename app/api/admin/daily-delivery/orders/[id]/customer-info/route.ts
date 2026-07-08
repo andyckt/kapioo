@@ -10,6 +10,7 @@ import { dailyOrderCustomerInfoPatchBodySchema } from "@/lib/contracts/daily-ord
 import { ALL_WEEKLY_AREAS } from "@/lib/constants/areas";
 import connectToDatabase from "@/lib/db";
 import { enrichAdminOrderResponse } from "@/lib/orders/admin-order-response";
+import { resolveServiceability } from "@/lib/zones/service-areas";
 import {
   normalizeOptionalText,
   normalizePhoneNumber,
@@ -280,7 +281,21 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
       return errorJson("Order not found after update attempt", 404);
     }
 
-    return successJson(await enrichAdminOrderResponse(updatedOrder));
+    const enriched = await enrichAdminOrderResponse(updatedOrder);
+
+    // Compute serviceability warning for the effective address
+    const effectiveInfo = enriched.effectiveCustomerInfo;
+    const svc = resolveServiceability({
+      areaLabel: effectiveInfo.area,
+      postalCode: effectiveInfo.deliveryAddress?.postalCode,
+    });
+    const serviceabilityWarning = !svc.isServed
+      ? `Area "${effectiveInfo.area}" is not in any Kapioo service zone.`
+      : !svc.canDaily
+        ? `Area "${effectiveInfo.area}" is not in the daily delivery service zone.`
+        : null;
+
+    return successJson({ ...enriched, serviceabilityWarning });
   } catch (error: unknown) {
     return handleRouteError(
       error,

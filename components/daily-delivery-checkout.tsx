@@ -24,7 +24,6 @@ import { CheckoutAddressForm } from '@/components/checkout-address-form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DailyCheckoutSummary } from '@/features/daily-checkout/daily-checkout-summary'
 import { submitDailyCheckout } from '@/features/daily-checkout/submit-daily-checkout'
 import { useDailyCheckoutState } from '@/features/daily-checkout/use-daily-checkout-state'
@@ -34,15 +33,6 @@ import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { CartItem, DayData, formatAddress } from '@/lib/daily-delivery'
-
-// Define the supported regions for daily delivery
-const DAILY_DELIVERY_REGIONS = [
-  "Downtown Toronto",
-  "Midtown", 
-  "North York", 
-  "Markham", 
-  "Richmond Hill"
-]
 
 interface DailyDeliveryCheckoutProps {
   cart: CartItem[]
@@ -76,20 +66,15 @@ export function DailyDeliveryCheckout({
     addressFormData,
     editingAddress,
     saveAddressForFuture,
-    popoverOpen,
     isValidDeliveryArea,
-    tempSelectedArea,
     setEditingAddress,
     setSaveAddressForFuture,
-    setPopoverOpen,
-    setTempSelectedArea,
     handleInputChange,
     handleAddressInputChange,
     handleAddressSelect,
-    handleAreaSelect,
     handleSaveAddress,
   } = useDailyCheckoutState({
-    deliveryRegions: DAILY_DELIVERY_REGIONS,
+    deliveryRegions: [],
   })
 
   // Calculate total vouchers needed by type
@@ -112,15 +97,6 @@ export function DailyDeliveryCheckout({
       toast({
         title: language === 'zh' ? '请填写电话号码' : 'Phone Number Required',
         description: language === 'zh' ? '请提供您的联系电话' : 'Please provide your contact phone number',
-        variant: "destructive"
-      })
-      return
-    }
-    
-    if (!formData.area) {
-      toast({
-        title: language === 'zh' ? '请选择区域' : 'Area Required',
-        description: language === 'zh' ? '请选择您的配送区域' : 'Please select your delivery area',
         variant: "destructive"
       })
       return
@@ -280,34 +256,13 @@ export function DailyDeliveryCheckout({
                     required
                   />
                 </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="area">
-                    {language === 'zh' ? '区域' : 'Area'} <span className="text-red-500">*</span>
-                  </Label>
-                  <Select 
-                    value={formData.area} 
-                    onValueChange={(value) => setFormData({ ...formData, area: value })}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={language === 'zh' ? '选择区域' : 'Select area'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DAILY_DELIVERY_REGIONS.map((region) => (
-                        <SelectItem key={region} value={region}>
-                          {region}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Label>{t('deliveryAddress')}</Label>
-                    {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
+                    {!isValidDeliveryArea && (
                       <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded border border-red-200">
                         {language === 'zh' ? '不在服务范围内' : 'Not in service area'}
                       </span>
@@ -328,25 +283,17 @@ export function DailyDeliveryCheckout({
                 {editingAddress ? (
                   <CheckoutAddressForm
                     addressFormData={addressFormData}
-                    availableRegions={DAILY_DELIVERY_REGIONS}
                     language={language}
-                    popoverOpen={popoverOpen}
                     saveAddressForFuture={saveAddressForFuture}
                     disabled={isLoading}
-                    showAreaValidationHint={!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea)}
-                    onPopoverOpenChange={setPopoverOpen}
                     onAddressInputChange={handleAddressInputChange}
                     onAddressSelect={handleAddressSelect}
-                    onAreaSelect={handleAreaSelect}
                     onSaveAddressForFutureChange={setSaveAddressForFuture}
-                    onCancel={() => {
-                      setEditingAddress(false)
-                      setTempSelectedArea("")
-                    }}
+                    onCancel={() => setEditingAddress(false)}
                     onSave={handleSaveAddress}
                   />
                 ) : (
-                  <div className={`p-3 rounded-md border ${!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) ? 'bg-red-50 border-red-200' : 'bg-muted/20'}`}>
+                  <div className={`p-3 rounded-md border ${!isValidDeliveryArea ? 'bg-red-50 border-red-200' : 'bg-muted/20'}`}>
                     {userData?.address ? (
                       <div>
                         <p className="text-sm">{formatAddress(userData.address)}</p>
@@ -356,12 +303,12 @@ export function DailyDeliveryCheckout({
                             {userData.address.buzzCode}
                           </p>
                         )}
-                        {!isValidDeliveryArea && !DAILY_DELIVERY_REGIONS.includes(tempSelectedArea) && (
+                        {!isValidDeliveryArea && (
                           <div className="mt-2 pt-2 border-t border-red-200">
                             <p className="text-xs text-red-600 font-medium">
                               {language === 'zh' 
-                                ? `⚠️ 此地址不在${PRODUCT_LINE_LABELS.daily.zh}服务范围内。请点击"编辑"更新为有效区域。` 
-                                : `⚠️ This address is not in the ${PRODUCT_LINE_LABELS.daily.en} service area. Please click "Edit" to update to a valid area.`}
+                                ? `⚠️ 此地址不在${PRODUCT_LINE_LABELS.daily.zh}服务范围内。请点击"编辑"更新地址。` 
+                                : `⚠️ This address is not in the ${PRODUCT_LINE_LABELS.daily.en} service area. Please click "Edit" to update your address.`}
                             </p>
                           </div>
                         )}
