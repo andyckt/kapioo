@@ -30,7 +30,7 @@ export interface IWeeklyOrder extends Document {
   weeklyEntitlementGroupId?: string;
   allocatedMealCount?: number;
   specialInstructions?: string;
-  deliveryAddress: IAddress;
+  deliveryAddress: IAddress & { lat?: number; lng?: number };
   phoneNumber: string;
   area: string;
   orderCustomerOverride?: {
@@ -110,6 +110,13 @@ const AddressSchema = new Schema({
   },
   buzzCode: {
     type: String,
+  },
+  // Coordinates snapshot from addressGeo at order placement
+  lat: {
+    type: Number,
+  },
+  lng: {
+    type: Number,
   },
 });
 

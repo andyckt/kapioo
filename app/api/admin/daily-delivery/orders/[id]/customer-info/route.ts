@@ -283,7 +283,9 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
 
     const enriched = await enrichAdminOrderResponse(updatedOrder);
 
-    // Compute serviceability warning for the effective address
+    // Compute serviceability warning for the effective address.
+    // Coordinates are not available in admin override context, so polygon-mode
+    // areas degrade to label/FSA check. coordsMissing is noted in the warning.
     const effectiveInfo = enriched.effectiveCustomerInfo;
     const svc = resolveServiceability({
       areaLabel: effectiveInfo.area,
@@ -292,7 +294,7 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
     const serviceabilityWarning = !svc.isServed
       ? `Area "${effectiveInfo.area}" is not in any Kapioo service zone.`
       : !svc.canDaily
-        ? `Area "${effectiveInfo.area}" is not in the daily delivery service zone.`
+        ? `Area "${effectiveInfo.area}" is not in the daily delivery service zone.${svc.coordsMissing ? " (coordinates unavailable — polygon check skipped)" : ""}`
         : null;
 
     return successJson({ ...enriched, serviceabilityWarning });

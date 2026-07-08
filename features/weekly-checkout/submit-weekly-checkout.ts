@@ -154,9 +154,15 @@ export async function submitWeeklyCheckout({
     return
   }
 
+  // Snapshot coordinates from addressGeo for polygon-based historical accuracy
+  const geoCoords = editingAddress
+    ? { lat: addressFormData.addressGeo?.lat, lng: addressFormData.addressGeo?.lng }
+    : { lat: (userData as any)?.addressGeo?.lat, lng: (userData as any)?.addressGeo?.lng };
+
   const deliveryAddress = {
     ...(editingAddress ? addressFormData : userData?.address),
     country: "Canada",
+    ...(geoCoords.lat != null && geoCoords.lng != null ? geoCoords : {}),
   }
 
   if (

@@ -37,6 +37,8 @@ export default function StarterPage() {
           canDaily: saved.canDaily,
           canWeekly: saved.canWeekly,
           isServed: saved.canDaily || saved.canWeekly,
+          coordsMissing: true,
+          matchedAreaLabel: null,
         }
       : null
   })
@@ -56,6 +58,8 @@ export default function StarterPage() {
     const next = resolveServiceability({
       areaLabel: result.address.province,
       postalCode: result.addressGeo.postalCode || result.address.postalCode,
+      lat: result.addressGeo.lat,
+      lng: result.addressGeo.lng,
     })
 
     setStreetAddress(result.address.streetAddress || "")

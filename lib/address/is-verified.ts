@@ -24,28 +24,20 @@ function hasCompleteLegacyAddress(user: AddressVerificationUser) {
 }
 
 /**
- * Returns true only for Google-sourced geo with valid coordinates.
- * Manual-source records are only grandfathered if the user was verified
- * before the Google-only policy (addressVerifiedAt set before July 2026).
- * New manual saves are not accepted for customers.
+ * Returns true only when the address geo record contains valid coordinates.
+ *
+ * Coordinates are required for polygon-based delivery zone validation.
+ * The manual-source grandfather (pre-July 2026) has been removed — all users
+ * must now have lat/lng captured via Google autocomplete. The address
+ * verification gate (address-verification-gate.tsx) routes any user without
+ * valid coordinates to /address/verify where they re-enter via autocomplete.
  */
 function hasValidGeo(user: AddressVerificationUser) {
   const geo = user?.addressGeo;
   if (!geo) return false;
 
-  if (geo.source === "manual") {
-    // Grandfather: accept manual geo only if the record was verified before
-    // Google-only enforcement. New manual verifications are not issued.
-    const verifiedAt = user?.addressVerifiedAt
-      ? new Date(user.addressVerifiedAt as string)
-      : null;
-    const cutoff = new Date("2026-07-01T00:00:00Z");
-    return verifiedAt !== null && verifiedAt < cutoff;
-  }
-
   return Boolean(
-    geo.placeId &&
-      typeof geo.lat === "number" &&
+    typeof geo.lat === "number" &&
       Number.isFinite(geo.lat) &&
       typeof geo.lng === "number" &&
       Number.isFinite(geo.lng)

@@ -21,6 +21,11 @@ export type ValidateDailyOrderBaseInput = {
     postalCode: string;
     buzzCode: string;
   };
+  /** Optional coordinates from the customer's addressGeo for polygon-based checks. */
+  addressGeoCoords?: {
+    lat?: number | null;
+    lng?: number | null;
+  };
   deliveryDateIso: string | null;
   sliceItemsToDeliveryDate: boolean;
   orderDoc: DailyOrderLeanDocument;
@@ -93,7 +98,7 @@ export function validateDailyOrderBase(input: ValidateDailyOrderBaseInput): {
   if (
     area &&
     !hasCustomerOverride &&
-    !canDeliverDaily(area, input.deliveryAddress.postalCode.trim())
+    !canDeliverDaily(area, input.deliveryAddress.postalCode.trim(), input.addressGeoCoords)
   ) {
     warnings.push(
       issue("NON_DAILY_DELIVERY_AREA", "Area is not in the daily delivery service list", "customer.area")

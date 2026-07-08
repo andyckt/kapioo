@@ -21,6 +21,10 @@ type CreateUserOverrides = Partial<Pick<
   | "weeklySIXTEENmeals"
   | "phone"
   | "languagePreference"
+  | "address"
+  | "addressGeo"
+  | "addressVerified"
+  | "addressVerifiedAt"
 >>
 
 export async function createTestUser(
@@ -46,6 +50,25 @@ export async function createTestUser(
     weeklySIXTEENmeals: overrides.weeklySIXTEENmeals ?? 0,
     phone: overrides.phone,
     languagePreference: overrides.languagePreference ?? "en",
+    // Default: a verified Downtown Toronto address with coordinates
+    // so that isAddressVerified() passes for integration tests.
+    // Override via overrides.address / addressGeo / addressVerified as needed.
+    address: overrides.address ?? {
+      streetAddress: "123 King St W",
+      province: "Downtown Toronto",
+      postalCode: "M5V 1J1",
+      country: "Canada",
+    },
+    addressGeo: overrides.addressGeo ?? {
+      placeId: "test-place-id",
+      formattedAddress: "123 King St W, Toronto, ON M5V 1J1, Canada",
+      lat: 43.6447,
+      lng: -79.3837,
+      postalCode: "M5V 1J1",
+      source: "google",
+    },
+    addressVerified: overrides.addressVerified ?? true,
+    addressVerifiedAt: overrides.addressVerifiedAt ?? new Date(),
   })
 
   await user.setPassword(password)

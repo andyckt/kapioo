@@ -53,6 +53,8 @@ export async function POST(request: Request, { params }: RouteContext<{ id: stri
     const serviceability = resolveServiceability({
       areaLabel: data.address.province,
       postalCode: data.addressGeo.postalCode || data.address.postalCode,
+      lat: data.addressGeo.lat,
+      lng: data.addressGeo.lng,
     });
     if (!serviceability.isServed) {
       return errorJson(

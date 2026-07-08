@@ -8,14 +8,21 @@ import { SERVICE_AREAS } from "@/lib/zones/service-areas";
 
 describe("coverage-copy formatters", () => {
   describe("getAreaDisplayLabel", () => {
-    it("appends English partial qualifier for include-mode daily areas", () => {
+    it("appends English partial qualifier for include-mode (FSA) daily areas", () => {
       const partialAreas = SERVICE_AREAS.filter((a) => a.daily.mode === "include").map((a) => a.label);
       for (const label of partialAreas) {
         expect(getAreaDisplayLabel(label, "daily", "en")).toBe(`${label} (selected areas)`);
       }
     });
 
-    it("appends Chinese partial qualifier for include-mode daily areas", () => {
+    it("appends English partial qualifier for polygon-mode daily areas", () => {
+      const polygonAreas = SERVICE_AREAS.filter((a) => a.daily.mode === "polygon").map((a) => a.label);
+      for (const label of polygonAreas) {
+        expect(getAreaDisplayLabel(label, "daily", "en")).toBe(`${label} (selected areas)`);
+      }
+    });
+
+    it("appends Chinese partial qualifier for include-mode (FSA) daily areas", () => {
       const partialAreas = SERVICE_AREAS.filter((a) => a.daily.mode === "include").map((a) => a.label);
       for (const label of partialAreas) {
         expect(getAreaDisplayLabel(label, "daily", "zh")).toBe(`${label}（部分区域）`);

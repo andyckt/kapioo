@@ -125,6 +125,10 @@ function mapOrderToDailyOrderBase(params: {
           postalCode: deliveryAddress.postalCode,
           buzzCode: deliveryAddress.buzzCode,
         },
+        addressGeoCoords: hasOverride ? undefined : {
+          lat: user?.addressGeo?.lat,
+          lng: user?.addressGeo?.lng,
+        },
         deliveryDateIso,
         sliceItemsToDeliveryDate: filters.sliceItemsToDeliveryDate,
         orderDoc: order,

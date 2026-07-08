@@ -103,6 +103,8 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
     let serviceabilityWarning: string | null = null;
     if (isAdmin && data.address) {
       const addr = data.address as { province?: string; postalCode?: string };
+      // Coords are not available in a direct admin PATCH (no addressGeo submitted here).
+      // Degrade gracefully to label/FSA check and note coordsMissing in the warning.
       const svc = resolveServiceability({
         areaLabel: addr.province,
         postalCode: addr.postalCode,

@@ -133,6 +133,8 @@ export function useWeeklyCheckoutState() {
     const serviceability = resolveServiceability({
       areaLabel: result.address.province,
       postalCode: result.addressGeo.postalCode || result.address.postalCode,
+      lat: result.addressGeo.lat,
+      lng: result.addressGeo.lng,
     })
     if (!serviceability.canWeekly) {
       toast({

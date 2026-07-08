@@ -28,6 +28,8 @@ export default function LocationMealPlans() {
     const next = resolveServiceability({
       areaLabel: result.address.province,
       postalCode: result.addressGeo.postalCode || result.address.postalCode,
+      lat: result.addressGeo.lat,
+      lng: result.addressGeo.lng,
     })
     setStreetAddress(result.address.streetAddress || "")
     setPostalCode(result.addressGeo.postalCode || result.address.postalCode || "")

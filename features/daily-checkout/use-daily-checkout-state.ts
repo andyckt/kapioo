@@ -74,7 +74,7 @@ export function useDailyCheckoutState({
           addressGeo: user.addressGeo,
         })
         const userArea = user.address.province || ""
-        setIsValidDeliveryArea(canDeliverDaily(userArea, user.addressGeo?.postalCode || user.address.postalCode))
+        setIsValidDeliveryArea(canDeliverDaily(userArea, user.addressGeo?.postalCode || user.address.postalCode, { lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }))
       } else {
         setIsValidDeliveryArea(false)
       }
@@ -144,6 +144,8 @@ export function useDailyCheckoutState({
     const serviceability = resolveServiceability({
       areaLabel: result.address.province,
       postalCode: result.addressGeo.postalCode || result.address.postalCode,
+      lat: result.addressGeo.lat,
+      lng: result.addressGeo.lng,
     })
     if (!serviceability.canDaily) {
       toast({
@@ -175,7 +177,8 @@ export function useDailyCheckoutState({
     const selectedArea = addressFormData.province
     const isValid = canDeliverDaily(
       selectedArea,
-      addressFormData.addressGeo?.postalCode || addressFormData.postalCode
+      addressFormData.addressGeo?.postalCode || addressFormData.postalCode,
+      { lat: addressFormData.addressGeo?.lat, lng: addressFormData.addressGeo?.lng }
     )
     setIsValidDeliveryArea(isValid)
 

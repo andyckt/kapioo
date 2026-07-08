@@ -133,11 +133,18 @@ export async function submitDailyCheckout({
       }
 
       const effectiveAddress = (editingAddress ? addressFormData : userData?.address) as DeliveryAddress;
+      // Snapshot coordinates from addressGeo for polygon-based historical accuracy
+      const geoCoords = editingAddress
+        ? { lat: addressFormData.addressGeo?.lat, lng: addressFormData.addressGeo?.lng }
+        : { lat: (userData as any)?.addressGeo?.lat, lng: (userData as any)?.addressGeo?.lng };
       const orderData = {
         userId: userData?._id || "",
         items: enhancedDateItems,
         specialInstructions: formData.specialInstructions,
-        deliveryAddress: effectiveAddress,
+        deliveryAddress: {
+          ...effectiveAddress,
+          ...(geoCoords.lat != null && geoCoords.lng != null ? geoCoords : {}),
+        },
         phoneNumber: formData.phone,
         // Derive area from address province so there's one source of truth
         area: effectiveAddress?.province || formData.area,

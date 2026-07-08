@@ -76,8 +76,10 @@ export function useAddressSelection({
     (result: ParsedGoogleAddress) => {
       const postalCode = result.addressGeo.postalCode || result.address.postalCode || "";
       const areaLabel = result.address.province || "";
+      const lat = result.addressGeo.lat;
+      const lng = result.addressGeo.lng;
 
-      const svc = resolveServiceability({ areaLabel, postalCode });
+      const svc = resolveServiceability({ areaLabel, postalCode, lat, lng });
       setServiceability(svc);
 
       const canProceed =

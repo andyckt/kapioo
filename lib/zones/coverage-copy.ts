@@ -8,11 +8,15 @@
 
 import { SERVICE_AREAS, DAILY_DELIVERY_AREA_LABELS, WEEKLY_ONLY_AREA_LABELS } from "./service-areas";
 
-/** Whether an area has partial (FSA-gated) coverage for a given service. */
+/**
+ * Whether an area has partial (polygon-gated or FSA-gated) coverage for a
+ * given service. Both "polygon" and "include" modes indicate partial coverage —
+ * only part of the geographic area is served.
+ */
 function isPartialCoverage(areaLabel: string, service: "daily" | "weekly"): boolean {
   const area = SERVICE_AREAS.find((a) => a.label === areaLabel);
   if (!area) return false;
-  return area[service].mode === "include";
+  return area[service].mode === "polygon" || area[service].mode === "include";
 }
 
 /**
