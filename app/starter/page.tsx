@@ -38,7 +38,6 @@ export default function StarterPage() {
           canWeekly: saved.canWeekly,
           isServed: saved.canDaily || saved.canWeekly,
           coordsMissing: true,
-          matchedAreaLabel: null,
         }
       : null
   })

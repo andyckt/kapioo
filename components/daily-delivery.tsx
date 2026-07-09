@@ -174,7 +174,7 @@ export default function DailyDelivery() {
 
     const nextRegion = user.address?.province
     setUserRegion(nextRegion)
-    setShowRegionDialog(Boolean(nextRegion && !canDeliverDaily(nextRegion)))
+    setShowRegionDialog(Boolean(nextRegion && !canDeliverDaily(undefined, nextRegion)))
   }
 
   // Function to fetch user data from API

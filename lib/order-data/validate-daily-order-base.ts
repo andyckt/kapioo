@@ -98,7 +98,7 @@ export function validateDailyOrderBase(input: ValidateDailyOrderBaseInput): {
   if (
     area &&
     !hasCustomerOverride &&
-    !canDeliverDaily(area, input.deliveryAddress.postalCode.trim(), input.addressGeoCoords)
+    !canDeliverDaily(input.addressGeoCoords, area)
   ) {
     warnings.push(
       issue("NON_DAILY_DELIVERY_AREA", "Area is not in the daily delivery service list", "customer.area")

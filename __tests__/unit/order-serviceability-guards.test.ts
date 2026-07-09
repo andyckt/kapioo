@@ -46,7 +46,7 @@ import { placeDailyOrder } from "@/lib/orders/place-daily-order";
 import { placeWeeklyOrder } from "@/lib/orders/place-weekly-order";
 
 describe("order serviceability guards", () => {
-  const verifiedRichmondHillWeeklyOnlyUser = {
+  const verifiedRichmondHillOutsideDailyPolygonUser = {
     _id: "507f1f77bcf86cd799439011",
     role: "user",
     addressVerified: true,
@@ -58,8 +58,9 @@ describe("order serviceability guards", () => {
     addressGeo: {
       source: "google",
       placeId: "place-id",
-      lat: 43.85,
-      lng: -79.38,
+      // Far north of both interim polygons — outside the global daily zone
+      lat: 44.1,
+      lng: -79.4,
       postalCode: "L4Z 1A1",
     },
     twoDishVoucher: 10,
@@ -69,14 +70,14 @@ describe("order serviceability guards", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.findBalanceMutationUser.mockResolvedValue(verifiedRichmondHillWeeklyOnlyUser);
+    mocks.findBalanceMutationUser.mockResolvedValue(verifiedRichmondHillOutsideDailyPolygonUser);
   });
 
-  it("blocks new daily orders when the verified address is outside the daily postal zone", async () => {
+  it("blocks new daily orders when the verified address is outside the daily polygon", async () => {
     await expect(
       placeDailyOrder({
         userId: "507f1f77bcf86cd799439011",
-        actor: { user: verifiedRichmondHillWeeklyOnlyUser as any, role: "user", sessionVersion: 1 },
+        actor: { user: verifiedRichmondHillOutsideDailyPolygonUser as any, role: "user", sessionVersion: 1 },
         request: new Request("https://example.test"),
         data: {
           phoneNumber: "416-555-0100",
@@ -102,11 +103,11 @@ describe("order serviceability guards", () => {
     });
   });
 
-  it("allows the weekly guard for the same Richmond Hill postal zone", async () => {
+  it("allows the weekly guard for the same Richmond Hill address outside daily polygon", async () => {
     await expect(
       placeWeeklyOrder({
         userId: "507f1f77bcf86cd799439011",
-        actor: { user: verifiedRichmondHillWeeklyOnlyUser as any, role: "user", sessionVersion: 1 },
+        actor: { user: verifiedRichmondHillOutsideDailyPolygonUser as any, role: "user", sessionVersion: 1 },
         request: new Request("https://example.test"),
         orderItems: [],
         mealPlanType: "6aweek",

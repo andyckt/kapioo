@@ -331,7 +331,7 @@ export async function placeWeeklyOrder({
         });
       }
 
-      if (!canDeliverWeekly(user.address?.province, user.addressGeo?.postalCode || user.address?.postalCode, { lat: user.addressGeo?.lat, lng: user.addressGeo?.lng })) {
+      if (!canDeliverWeekly(user.addressGeo?.postalCode || user.address?.postalCode, user.address?.province)) {
         throw new ApiError("Weekly meal box delivery is not available at this address", {
           status: 403,
           code: "WEEKLY_SERVICE_AREA_UNAVAILABLE",

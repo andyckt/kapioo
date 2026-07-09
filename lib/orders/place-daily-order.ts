@@ -174,7 +174,7 @@ export async function placeDailyOrder({
         });
       }
 
-      if (!canDeliverDaily(user.address?.province, user.addressGeo?.postalCode || user.address?.postalCode, { lat: user.addressGeo?.lat, lng: user.addressGeo?.lng })) {
+      if (!canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, user.address?.province)) {
         throw new ApiError("Daily delivery is not available at this address", {
           status: 403,
           code: "DAILY_SERVICE_AREA_UNAVAILABLE",

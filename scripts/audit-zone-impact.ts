@@ -1,24 +1,19 @@
 #!/usr/bin/env tsx
 /**
- * Preflight impact audit for polygon-based delivery zone changes.
+ * Zone impact audit — run this BEFORE activating a new daily polygon or weekly FSA list.
  *
- * Run this BEFORE switching any area's coverage to `mode: "polygon"` in
- * service-areas.ts. It lists:
- *   - Verified users whose stored lat/lng falls OUTSIDE the proposed polygon
- *   - Active weekly subscribers (status="active") with the same issue
+ * Checks every verified customer in the database against the current zone data files
+ * and lists anyone who would be affected (outside the daily polygon, or outside the
+ * weekly FSA list). Use this to catch problems before customers do.
  *
  * Usage:
- *   npx tsx scripts/audit-zone-impact.ts --area richmond-hill --service daily
- *   npx tsx scripts/audit-zone-impact.ts --area richmond-hill --service weekly
- *   npx tsx scripts/audit-zone-impact.ts --area downtown-toronto --service daily --dry-run
- *
- * The polygon to test against is read from ZONE_GEOMETRIES in
- * lib/zones/zone-geometry.ts. Make sure to add your polygon there before running.
+ *   npx tsx scripts/audit-zone-impact.ts --service daily
+ *   npx tsx scripts/audit-zone-impact.ts --service weekly
  *
  * Options:
- *   --area      Required. The ServiceArea.id to audit (e.g. "richmond-hill")
  *   --service   Required. "daily" or "weekly"
- *   --dry-run   Print results only (default behaviour — this script never writes)
+ *
+ * Always run BOTH audits before deploying a zone change.
  */
 
 import dotenv from "dotenv";
@@ -28,61 +23,21 @@ dotenv.config({ path: ".env.local" });
 dotenv.config();
 
 const args = process.argv.slice(2);
-
-function getArg(flag: string): string | undefined {
-  const idx = args.indexOf(flag);
-  return idx !== -1 ? args[idx + 1] : undefined;
-}
-
-const areaId = getArg("--area");
-const service = getArg("--service") as "daily" | "weekly" | undefined;
-
-if (!areaId) {
-  console.error("Error: --area is required (e.g. --area richmond-hill)");
-  process.exit(1);
-}
+const service = args[args.indexOf("--service") + 1] as "daily" | "weekly" | undefined;
 
 if (!service || (service !== "daily" && service !== "weekly")) {
   console.error('Error: --service is required and must be "daily" or "weekly"');
+  console.error("  npx tsx scripts/audit-zone-impact.ts --service daily");
+  console.error("  npx tsx scripts/audit-zone-impact.ts --service weekly");
   process.exit(1);
 }
 
-// Dynamic imports so this script doesn't cause circular-dep issues at cold start
 async function main() {
-  const { ZONE_GEOMETRIES } = await import("../lib/zones/zone-geometry");
   const { isPointInGeometry, validateGeometry } = await import("../lib/zones/geo");
-  const { SERVICE_AREAS } = await import("../lib/zones/service-areas");
+  const { DAILY_DELIVERY_ZONE } = await import("../lib/zones/daily-zone");
+  const { WEEKLY_FSA_LIST } = await import("../lib/zones/weekly-fsas");
+  const { normalizeFsa } = await import("../lib/zones/service-areas");
 
-  // Resolve the area
-  const area = SERVICE_AREAS.find((a) => a.id === areaId);
-  if (!area) {
-    console.error(`Error: No service area found with id "${areaId}"`);
-    console.error("Available area ids:", SERVICE_AREAS.map((a) => a.id).join(", "));
-    process.exit(1);
-  }
-
-  // Resolve the polygon
-  const geometry = ZONE_GEOMETRIES[areaId]?.[service];
-  if (!geometry) {
-    console.error(
-      `Error: No polygon found for area "${areaId}" / service "${service}" in lib/zones/zone-geometry.ts`
-    );
-    console.error("Add your polygon there first, then re-run this audit.");
-    process.exit(1);
-  }
-
-  // Validate the polygon before using it
-  const validationErrors = validateGeometry(geometry);
-  if (validationErrors.length > 0) {
-    console.error("Error: The polygon geometry has validation errors:");
-    validationErrors.forEach((e) => console.error(" •", e));
-    process.exit(1);
-  }
-
-  console.log(`\nPolygon audit: ${area.label} — ${service} delivery`);
-  console.log("=".repeat(60));
-
-  // Connect to DB
   const mongoUri = process.env.MONGODB_URI;
   if (!mongoUri) {
     console.error("Error: MONGODB_URI environment variable is not set");
@@ -90,136 +45,132 @@ async function main() {
   }
 
   await mongoose.connect(mongoUri);
-  console.log("Connected to MongoDB\n");
+  console.log(`\nZone impact audit — service: ${service}`);
+  console.log("=".repeat(60));
 
-  // Dynamically import models (after mongoose is connected)
   const UserModule = await import("../models/User");
   const User = UserModule.default;
-  const UserSubscriptionModule = await import("../models/UserSubscription");
-  const UserSubscription = UserSubscriptionModule.default;
 
-  // ── Verified users ────────────────────────────────────────────────────────
+  if (service === "daily") {
+    // Validate the polygon before using it
+    const errors = validateGeometry(DAILY_DELIVERY_ZONE);
+    if (errors.length > 0) {
+      console.error("Error: DAILY_DELIVERY_ZONE has validation errors:");
+      errors.forEach((e) => console.error(" •", e));
+      await mongoose.disconnect();
+      process.exit(1);
+    }
 
-  const verifiedUsers = await User.find({
-    addressVerified: true,
-    "addressGeo.lat": { $exists: true, $ne: null },
-    "addressGeo.lng": { $exists: true, $ne: null },
-    "address.province": area.label,
-    role: { $ne: "admin" },
-  })
-    .select("_id name email address addressGeo addressVerifiedAt")
-    .lean();
-
-  console.log(
-    `Verified users with area "${area.label}" and coordinates: ${verifiedUsers.length}`
-  );
-
-  const usersOutside = verifiedUsers.filter((u) => {
-    const lat = u.addressGeo?.lat;
-    const lng = u.addressGeo?.lng;
-    if (typeof lat !== "number" || typeof lng !== "number") return true;
-    return !isPointInGeometry(lat, lng, geometry);
-  });
-
-  if (usersOutside.length === 0) {
-    console.log("  All verified users in this area fall INSIDE the polygon.");
-  } else {
-    console.log(
-      `\n  WARNING: ${usersOutside.length} verified user(s) fall OUTSIDE the proposed polygon:`
-    );
-    usersOutside.forEach((u) => {
-      const lat = u.addressGeo?.lat?.toFixed(6) ?? "?";
-      const lng = u.addressGeo?.lng?.toFixed(6) ?? "?";
-      console.log(
-        `    - ${u.name || "(no name)"} <${u.email || "?"}>  lat=${lat} lng=${lng}`
-      );
-      console.log(`      Street: ${u.address?.streetAddress || "?"}, ${u.address?.postalCode || "?"}`);
-    });
-  }
-
-  // ── Active weekly subscribers ─────────────────────────────────────────────
-
-  if (service === "weekly") {
-    const activeSubscriptions = await UserSubscription.find({
-      status: "active",
-      "deliveryAddress.province": area.label,
+    const verified = await User.find({
+      addressVerified: true,
+      "addressGeo.lat": { $exists: true, $ne: null },
+      "addressGeo.lng": { $exists: true, $ne: null },
+      role: { $ne: "admin" },
     })
-      .select("_id userId deliveryAddress area")
+      .select("_id name email address addressGeo addressVerifiedAt")
       .lean();
 
-    // Join user coords
-    const userIds = activeSubscriptions.map((s) => s.userId);
-    const subUsers = await User.find({ _id: { $in: userIds } })
-      .select("_id addressGeo")
-      .lean();
+    console.log(`Verified users with coordinates: ${verified.length}`);
 
-    const coordsMap = new Map(
-      subUsers.map((u) => [String(u._id), u.addressGeo])
-    );
-
-    console.log(
-      `\nActive weekly subscriptions with area "${area.label}": ${activeSubscriptions.length}`
-    );
-
-    const subsOutside = activeSubscriptions.filter((s) => {
-      const geo = coordsMap.get(String(s.userId));
-      const lat = geo?.lat;
-      const lng = geo?.lng;
+    const outside = verified.filter((u) => {
+      const lat = u.addressGeo?.lat;
+      const lng = u.addressGeo?.lng;
       if (typeof lat !== "number" || typeof lng !== "number") return true;
-      return !isPointInGeometry(lat, lng, geometry);
+      return !isPointInGeometry(lat, lng, DAILY_DELIVERY_ZONE);
     });
 
-    if (subsOutside.length === 0) {
-      console.log("  All active weekly subscribers in this area fall INSIDE the polygon.");
+    const noCoords = await User.find({
+      addressVerified: true,
+      role: { $ne: "admin" },
+      $or: [
+        { "addressGeo.lat": { $exists: false } },
+        { "addressGeo.lat": null },
+        { "addressGeo.lng": { $exists: false } },
+        { "addressGeo.lng": null },
+      ],
+    })
+      .select("_id name email")
+      .lean();
+
+    if (outside.length === 0) {
+      console.log("  All verified users with coordinates fall INSIDE the daily zone.");
     } else {
-      console.log(
-        `\n  WARNING: ${subsOutside.length} active weekly subscriber(s) fall OUTSIDE the polygon:`
-      );
-      subsOutside.forEach((s) => {
-        const geo = coordsMap.get(String(s.userId));
-        const lat = geo?.lat?.toFixed(6) ?? "?";
-        const lng = geo?.lng?.toFixed(6) ?? "?";
-        console.log(
-          `    - userId=${s.userId}  lat=${lat} lng=${lng}  street=${s.deliveryAddress?.streetAddress || "?"}`
-        );
+      console.log(`\n  WARNING: ${outside.length} user(s) fall OUTSIDE the daily polygon:`);
+      outside.forEach((u) => {
+        const lat = u.addressGeo?.lat?.toFixed(6) ?? "?";
+        const lng = u.addressGeo?.lng?.toFixed(6) ?? "?";
+        console.log(`    - ${u.name || "(no name)"} <${u.email || "?"}>`);
+        console.log(`      lat=${lat}, lng=${lng}, street=${u.address?.streetAddress || "?"}, postal=${u.address?.postalCode || "?"}`);
       });
     }
+
+    if (noCoords.length > 0) {
+      console.log(`\n  NOTE: ${noCoords.length} verified user(s) have no stored coordinates.`);
+      console.log("  These users will be routed to /address/verify on next login.");
+    }
+
+    console.log("\n" + "=".repeat(60));
+    console.log(
+      outside.length === 0
+        ? "Audit complete: safe to activate this daily zone."
+        : `Audit complete: ${outside.length} customer(s) affected. Widen polygon or handle individually before activating.`
+    );
   }
 
-  // ── Verified users WITHOUT coordinates ───────────────────────────────────
+  if (service === "weekly") {
+    if (WEEKLY_FSA_LIST === null) {
+      console.log("\n  WEEKLY_FSA_LIST is null — carrier list not yet received.");
+      console.log("  Weekly eligibility currently uses the label fallback (same as before).");
+      console.log("  Run this audit after pasting the carrier FSA list into weekly-fsas.ts.");
+      await mongoose.disconnect();
+      return;
+    }
 
-  const usersWithoutCoords = await User.find({
-    addressVerified: true,
-    "address.province": area.label,
-    role: { $ne: "admin" },
-    $or: [
-      { "addressGeo.lat": { $exists: false } },
-      { "addressGeo.lat": null },
-      { "addressGeo.lng": { $exists: false } },
-      { "addressGeo.lng": null },
-    ],
-  })
-    .select("_id name email addressVerifiedAt")
-    .lean();
+    const normalizedList = WEEKLY_FSA_LIST.map(normalizeFsa);
 
-  if (usersWithoutCoords.length > 0) {
-    console.log(
-      `\n  NOTE: ${usersWithoutCoords.length} verified user(s) in this area have NO stored coordinates.`
-    );
-    console.log(
-      "  These users will be routed to /address/verify to re-capture their coordinates."
-    );
-    usersWithoutCoords.forEach((u) => {
-      console.log(`    - ${u.name || "(no name)"} <${u.email || "?"}>`);
+    const verified = await User.find({
+      addressVerified: true,
+      role: { $ne: "admin" },
+    })
+      .select("_id name email address addressGeo")
+      .lean();
+
+    console.log(`Verified users: ${verified.length}`);
+
+    const outside = verified.filter((u) => {
+      const postalCode = u.addressGeo?.postalCode || u.address?.postalCode;
+      const fsa = normalizeFsa(postalCode);
+      if (!fsa) return false; // no postal code — label fallback, not stranded
+      return !normalizedList.includes(fsa);
     });
-  }
 
-  console.log("\n" + "=".repeat(60));
-  console.log(
-    usersOutside.length === 0
-      ? "Audit complete: no customers will be stranded by this polygon."
-      : `Audit complete: ${usersOutside.length} customer(s) would be blocked. Review and widen polygon or handle individually.`
-  );
+    const noPostal = verified.filter((u) => {
+      const postalCode = u.addressGeo?.postalCode || u.address?.postalCode;
+      return !normalizeFsa(postalCode);
+    });
+
+    if (outside.length === 0) {
+      console.log("  All verified users with postal codes are within the carrier FSA list.");
+    } else {
+      console.log(`\n  WARNING: ${outside.length} user(s) have FSAs NOT in the carrier list:`);
+      outside.forEach((u) => {
+        const postal = u.addressGeo?.postalCode || u.address?.postalCode || "?";
+        const fsa = normalizeFsa(postal);
+        console.log(`    - ${u.name || "(no name)"} <${u.email || "?"}> FSA=${fsa} (${postal})`);
+      });
+    }
+
+    if (noPostal.length > 0) {
+      console.log(`\n  NOTE: ${noPostal.length} user(s) have no stored postal code (label fallback applies).`);
+    }
+
+    console.log("\n" + "=".repeat(60));
+    console.log(
+      outside.length === 0
+        ? "Audit complete: safe to activate this weekly FSA list."
+        : `Audit complete: ${outside.length} customer(s) would lose weekly access. Review before activating.`
+    );
+  }
 
   await mongoose.disconnect();
 }

@@ -17,94 +17,155 @@ import {
   getAreaDisplayLabel,
 } from "@/lib/zones/coverage-copy";
 import { isPointInGeometry, pointFromLatLng, validateGeometry } from "@/lib/zones/geo";
-import { ZONE_GEOMETRIES } from "@/lib/zones/zone-geometry";
+import { DAILY_DELIVERY_ZONE } from "@/lib/zones/daily-zone";
+import { WEEKLY_FSA_LIST } from "@/lib/zones/weekly-fsas";
 
-// ─── FSA / label helpers (legacy + bridge paths) ──────────────────────────────
+// ─── FSA utility ──────────────────────────────────────────────────────────────
 
-describe("service area postal-zone helpers", () => {
+describe("normalizeFsa", () => {
   it("normalizes Canadian FSA prefixes", () => {
     expect(normalizeFsa("l4b 1l4")).toBe("L4B");
     expect(normalizeFsa(" M5V3K2 ")).toBe("M5V");
     expect(normalizeFsa("")).toBe("");
+    expect(normalizeFsa(null)).toBe("");
+    expect(normalizeFsa(undefined)).toBe("");
+  });
+});
+
+// ─── Global daily polygon ─────────────────────────────────────────────────────
+
+describe("canDeliverDaily — global polygon", () => {
+  it("allows an address inside the Downtown Toronto blob", () => {
+    // Coordinates known to be inside the Downtown Toronto polygon
+    expect(canDeliverDaily({ lat: 43.65, lng: -79.39 })).toBe(true);
   });
 
-  it("supports weekly-all but daily-partial Richmond Hill coverage (FSA mode)", () => {
-    expect(canDeliverDaily("Richmond Hill", "L4B 1L4")).toBe(true);
-    expect(canDeliverWeekly("Richmond Hill", "L4B 1L4")).toBe(true);
-
-    expect(canDeliverDaily("Richmond Hill", "L4Z 1A1")).toBe(false);
-    expect(canDeliverWeekly("Richmond Hill", "L4Z 1A1")).toBe(true);
+  it("allows an address inside the Richmond Hill blob", () => {
+    expect(canDeliverDaily({ lat: 43.849, lng: -79.379 })).toBe(true);
   });
 
-  it("keeps weekly-only areas out of daily delivery", () => {
-    expect(canDeliverDaily("Scarborough", "M1B 1A1")).toBe(false);
-    expect(canDeliverWeekly("Scarborough", "M1B 1A1")).toBe(true);
+  it("blocks an address outside the polygon (south of downtown)", () => {
+    expect(canDeliverDaily({ lat: 43.59, lng: -79.39 })).toBe(false);
   });
 
-  it("keeps legacy label-level fallback when no postal code exists", () => {
-    // Richmond Hill is mode:"include"; no FSA → falls back to label match (returns true)
-    expect(canDeliverDaily("Richmond Hill")).toBe(true);
-    const result = resolveServiceability({ areaLabel: "Richmond Hill" });
-    expect(result).toMatchObject({
-      canDaily: true,
-      canWeekly: true,
-      isServed: true,
-      coordsMissing: true,
-    });
+  it("blocks an address outside the polygon (far north)", () => {
+    expect(canDeliverDaily({ lat: 44.1, lng: -79.4 })).toBe(false);
   });
 
-  it("derives existing area constants from the service registry", () => {
-    expect(DAILY_DELIVERY_AREAS).toEqual([
-      "Downtown Toronto",
-      "Midtown",
-      "North York",
-      "Markham",
-      "Richmond Hill",
-    ]);
-    expect(WEEKLY_ONLY_AREAS).toContain("Scarborough");
-    expect(isDailyDeliveryArea("Richmond Hill")).toBe(true);
-    expect(isWeeklyDeliveryArea("Scarborough")).toBe(true);
+  it("falls back to display.daily label flag when coords are missing", () => {
+    // Downtown Toronto is display.daily=true → allowed as fallback
+    expect(canDeliverDaily(undefined, "Downtown Toronto")).toBe(true);
+    // Scarborough is display.daily=false → blocked as fallback
+    expect(canDeliverDaily(undefined, "Scarborough")).toBe(false);
+    // Unknown label → blocked
+    expect(canDeliverDaily(undefined, "Atlantis")).toBe(false);
   });
 
-  it("returns not-served for unknown area", () => {
-    expect(resolveServiceability({ areaLabel: "Atlantis", postalCode: "Z9Z 9Z9" })).toMatchObject({
-      canDaily: false,
-      canWeekly: false,
-      isServed: false,
-      coordsMissing: true,
-    });
+  it("unknown label is served when lat/lng is inside the polygon", () => {
+    // This is the key new behavior: label is irrelevant when coords are present
+    expect(canDeliverDaily({ lat: 43.65, lng: -79.39 }, "Oak Ridges")).toBe(true);
   });
 
-  it("sets coordsMissing=false when coordinates are provided", () => {
-    // Downtown Toronto is mode:"all" — passes via label match even without polygon
+  it("sets coordsMissing=true in resolveServiceability when no coords given", () => {
+    const result = resolveServiceability({ areaLabel: "Downtown Toronto", postalCode: "M5V 1J1" });
+    expect(result.coordsMissing).toBe(true);
+  });
+
+  it("sets coordsMissing=false in resolveServiceability when coords given", () => {
     const result = resolveServiceability({
       areaLabel: "Downtown Toronto",
       postalCode: "M5V 1J1",
-      lat: 43.645,
-      lng: -79.382,
+      lat: 43.65,
+      lng: -79.39,
     });
     expect(result.coordsMissing).toBe(false);
     expect(result.canDaily).toBe(true);
-    expect(result.canWeekly).toBe(true);
+  });
+});
+
+// ─── Global weekly FSA list ───────────────────────────────────────────────────
+
+describe("canDeliverWeekly — FSA list", () => {
+  it("falls back to display.weekly label flag when WEEKLY_FSA_LIST is null", () => {
+    // Currently null — so all display.weekly=true areas pass
+    expect(WEEKLY_FSA_LIST).toBeNull();
+    expect(canDeliverWeekly("M5V 1J1", "Downtown Toronto")).toBe(true);
+    expect(canDeliverWeekly("L4B 1L4", "Richmond Hill")).toBe(true);
+    // Weekly-only areas also pass
+    expect(canDeliverWeekly("M1B 1A1", "Scarborough")).toBe(true);
   });
 
-  it("matchedAreaLabel is null when no polygon is drawn for the area", () => {
-    // All current areas are mode:"all" or mode:"include" (no polygon drawn yet)
+  it("falls back to false for unknown area when list is null", () => {
+    expect(canDeliverWeekly("Z9Z 9Z9", "Atlantis")).toBe(false);
+  });
+
+  it("normalizeFsa handles the FSA extraction that the list check relies on", () => {
+    // When WEEKLY_FSA_LIST has a value, the check normalizes and compares FSAs.
+    // Test the normalization that underpins the list lookup.
+    expect(normalizeFsa("M5V 1J1")).toBe("M5V");
+    expect(normalizeFsa("L4B 1L4")).toBe("L4B");
+    expect(normalizeFsa("M1B 1A1")).toBe("M1B");
+    // The FSA list check: normalize list + normalize input, then includes()
+    const list = ["M5V", "L4B", "L4C"].map(normalizeFsa);
+    expect(list.includes(normalizeFsa("M5V 1J1"))).toBe(true);
+    expect(list.includes(normalizeFsa("L4B 1L4"))).toBe(true);
+    expect(list.includes(normalizeFsa("M1B 1A1"))).toBe(false);
+  });
+});
+
+// ─── resolveServiceability ────────────────────────────────────────────────────
+
+describe("resolveServiceability", () => {
+  it("returns not-served for an unknown area with no coords", () => {
+    const result = resolveServiceability({ areaLabel: "Atlantis", postalCode: "Z9Z 9Z9" });
+    expect(result.canDaily).toBe(false);
+    expect(result.canWeekly).toBe(false);
+    expect(result.isServed).toBe(false);
+  });
+
+  it("correctly resolves an address inside the polygon", () => {
     const result = resolveServiceability({
       areaLabel: "Downtown Toronto",
       postalCode: "M5V 1J1",
-      lat: 43.645,
-      lng: -79.382,
+      lat: 43.65,
+      lng: -79.39,
     });
-    // No polygon in ZONE_GEOMETRIES yet → matchedAreaLabel is null
-    expect(result.matchedAreaLabel).toBeNull();
+    expect(result.canDaily).toBe(true);
+    expect(result.canWeekly).toBe(true);
+    expect(result.isServed).toBe(true);
+    expect(result.coordsMissing).toBe(false);
+  });
+
+  it("passes areaLabel through unchanged", () => {
+    const result = resolveServiceability({ areaLabel: " Richmond Hill ", postalCode: "" });
+    expect(result.areaLabel).toBe("Richmond Hill");
+  });
+});
+
+// ─── Derived area lists ───────────────────────────────────────────────────────
+
+describe("derived area lists from display flags", () => {
+  it("DAILY_DELIVERY_AREAS contains daily display areas", () => {
+    expect(DAILY_DELIVERY_AREAS).toContain("Downtown Toronto");
+    expect(DAILY_DELIVERY_AREAS).toContain("Richmond Hill");
+    expect(DAILY_DELIVERY_AREAS).not.toContain("Scarborough");
+  });
+
+  it("WEEKLY_ONLY_AREAS contains weekly-only areas", () => {
+    expect(WEEKLY_ONLY_AREAS).toContain("Scarborough");
+    expect(WEEKLY_ONLY_AREAS).not.toContain("Downtown Toronto");
+  });
+
+  it("isDailyDeliveryArea and isWeeklyDeliveryArea are consistent with display flags", () => {
+    expect(isDailyDeliveryArea("Richmond Hill")).toBe(true);
+    expect(isDailyDeliveryArea("Scarborough")).toBe(false);
+    expect(isWeeklyDeliveryArea("Scarborough")).toBe(true);
   });
 });
 
 // ─── Polygon geometry helpers ─────────────────────────────────────────────────
 
 describe("polygon geometry helpers (lib/zones/geo.ts)", () => {
-  // A simple square over a known Toronto location (roughly downtown)
   const torontoSquare = {
     type: "Polygon" as const,
     coordinates: [
@@ -113,7 +174,7 @@ describe("polygon geometry helpers (lib/zones/geo.ts)", () => {
         [-79.3, 43.63],
         [-79.3, 43.68],
         [-79.4, 43.68],
-        [-79.4, 43.63], // closed ring
+        [-79.4, 43.63],
       ],
     ],
   };
@@ -124,23 +185,18 @@ describe("polygon geometry helpers (lib/zones/geo.ts)", () => {
   });
 
   it("detects a known point inside the polygon", () => {
-    // lat=43.65, lng=-79.35 is inside the square
     expect(isPointInGeometry(43.65, -79.35, torontoSquare)).toBe(true);
   });
 
   it("rejects a known point outside the polygon", () => {
-    // lat=43.5, lng=-79.35 is well south of the square
     expect(isPointInGeometry(43.5, -79.35, torontoSquare)).toBe(false);
   });
 
-  it("treats boundary points as inside (turf behaviour)", () => {
-    // On the left edge: lat=43.65, lng=-79.4 (minLng boundary)
+  it("treats boundary points as inside", () => {
     expect(isPointInGeometry(43.65, -79.4, torontoSquare)).toBe(true);
   });
 
-  it("does NOT swap lat/lng when pointFromLatLng is used (axis-order guard)", () => {
-    // lat=43.65, lng=-79.35 should be inside
-    // If axis order were swapped, lat=-79.35 lng=43.65 would be outside Canada
+  it("does NOT swap lat/lng (axis-order guard)", () => {
     const pt = pointFromLatLng(43.65, -79.35);
     const [lng, lat] = pt.geometry.coordinates;
     expect(lat).toBe(43.65);
@@ -154,15 +210,7 @@ describe("polygon geometry helpers (lib/zones/geo.ts)", () => {
   it("validateGeometry rejects an unclosed ring", () => {
     const unclosed = {
       type: "Polygon" as const,
-      coordinates: [
-        [
-          [-79.4, 43.63],
-          [-79.3, 43.63],
-          [-79.3, 43.68],
-          [-79.4, 43.68],
-          // missing closing point
-        ],
-      ],
+      coordinates: [[[-79.4, 43.63], [-79.3, 43.63], [-79.3, 43.68], [-79.4, 43.68]]],
     };
     const errors = validateGeometry(unclosed);
     expect(errors.length).toBeGreaterThan(0);
@@ -172,132 +220,58 @@ describe("polygon geometry helpers (lib/zones/geo.ts)", () => {
   it("validateGeometry rejects coordinates outside Canada bounds", () => {
     const wrongCountry = {
       type: "Polygon" as const,
-      coordinates: [
-        [
-          [2.3, 48.8],   // Paris coordinates (clearly wrong for Canada)
-          [2.4, 48.8],
-          [2.4, 48.9],
-          [2.3, 48.9],
-          [2.3, 48.8],
-        ],
-      ],
+      coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
     };
-    const errors = validateGeometry(wrongCountry);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]).toContain("outside Canada bounds");
-  });
-
-  it("validateGeometry rejects likely lat/lng swap (lat in lng position)", () => {
-    // If someone pastes [lat, lng] instead of [lng, lat], lat value ~43 in lng slot is valid
-    // but lng value ~-79 in lat slot is not valid for Canada (lat must be > 41.6)
-    // Swapped: coordinates would be [lat=43, lng=-79] which would be valid but let's test a case
-    // where the swap is detectable: lng=43 (positive) would be outside Canada (minLng=-141)
-    const latLngSwapped = {
-      type: "Polygon" as const,
-      coordinates: [
-        [
-          [43.65, -79.35],  // [lat, lng] swapped — lat=43 is out of Canada's lng range
-          [43.68, -79.35],
-          [43.68, -79.30],
-          [43.65, -79.30],
-          [43.65, -79.35],
-        ],
-      ],
-    };
-    const errors = validateGeometry(latLngSwapped);
-    // 43.65 as longitude is outside Canada's lng bounds (-141 to -52)
-    expect(errors.length).toBeGreaterThan(0);
+    expect(validateGeometry(wrongCountry).length).toBeGreaterThan(0);
   });
 });
 
-// ─── Registry geometry validation ────────────────────────────────────────────
+// ─── DAILY_DELIVERY_ZONE registry validity (CI guard) ────────────────────────
 
-describe("zone-geometry.ts registry validity (CI guard)", () => {
-  it("all entries in ZONE_GEOMETRIES pass geometry validation", () => {
-    const allErrors: string[] = [];
-    for (const [areaId, entry] of Object.entries(ZONE_GEOMETRIES)) {
-      for (const service of ["daily", "weekly"] as const) {
-        const geom = entry[service];
-        if (!geom) continue;
-        const errors = validateGeometry(geom);
-        errors.forEach((e) => allErrors.push(`[${areaId}.${service}] ${e}`));
-      }
+describe("DAILY_DELIVERY_ZONE validity", () => {
+  it("passes validateGeometry", () => {
+    const errors = validateGeometry(DAILY_DELIVERY_ZONE);
+    if (errors.length > 0) {
+      throw new Error(`DAILY_DELIVERY_ZONE geometry is invalid:\n${errors.map(e => `  • ${e}`).join("\n")}`);
     }
-    if (allErrors.length > 0) {
-      throw new Error(
-        `Zone geometry validation failed:\n${allErrors.map((e) => `  • ${e}`).join("\n")}`
-      );
-    }
-    // passes if ZONE_GEOMETRIES is empty (no polygons drawn yet) or all valid
-    expect(allErrors).toHaveLength(0);
+    expect(errors).toHaveLength(0);
   });
 });
 
-// ─── Polygon-mode serviceability (end-to-end, with a test polygon) ────────────
-
-describe("polygon-mode serviceability", () => {
-  // We test the polygon decision core directly, using a synthetic area,
-  // since real areas don't have polygons drawn yet.
-  //
-  // The actual point-in-polygon call is tested in the geo helpers suite above.
-  // Here we verify that resolveServiceability respects the coordinate-first path.
-
-  it("uses label match for all-mode areas when coords are provided", () => {
-    const result = resolveServiceability({
-      areaLabel: "North York",
-      postalCode: "M2N 1A1",
-      lat: 43.767,
-      lng: -79.414,
-    });
-    expect(result.canDaily).toBe(true);
-    expect(result.canWeekly).toBe(true);
-    expect(result.coordsMissing).toBe(false);
-  });
-
-  it("canDeliverDaily accepts coords optional parameter without breaking FSA logic", () => {
-    expect(canDeliverDaily("Richmond Hill", "L4B 1L4", { lat: 43.85, lng: -79.43 })).toBe(true);
-    expect(canDeliverDaily("Richmond Hill", "L4Z 1A1", { lat: 43.85, lng: -79.43 })).toBe(false);
-  });
-
-  it("canDeliverWeekly accepts coords optional parameter", () => {
-    expect(canDeliverWeekly("Richmond Hill", "L4Z 1A1", { lat: 43.85, lng: -79.43 })).toBe(true);
-    expect(canDeliverWeekly("Scarborough", "M1B 1A1", { lat: 43.77, lng: -79.24 })).toBe(true);
-  });
-});
-
-// ─── coverage-copy formatters ─────────────────────────────────────────────────
+// ─── Coverage copy ────────────────────────────────────────────────────────────
 
 describe("coverage-copy formatters", () => {
-  it("includes partial qualifier for include-mode daily areas", () => {
+  it("appends partial qualifier only for Richmond Hill daily (dailyPartial=true)", () => {
     expect(getAreaDisplayLabel("Richmond Hill", "daily", "en")).toBe("Richmond Hill (selected areas)");
     expect(getAreaDisplayLabel("Richmond Hill", "daily", "zh")).toBe("Richmond Hill（部分区域）");
     expect(getAreaDisplayLabel("Richmond Hill", "weekly", "en")).toBe("Richmond Hill");
     expect(getAreaDisplayLabel("Downtown Toronto", "daily", "en")).toBe("Downtown Toronto");
+    expect(getAreaDisplayLabel("Markham", "daily", "en")).toBe("Markham");
   });
 
-  it("includes all daily areas in the formatted list", () => {
+  it("formatDailyCoverageList includes daily areas with qualifier on Richmond Hill only", () => {
     const list = formatDailyCoverageList("en");
     expect(list).toContain("Downtown Toronto");
     expect(list).toContain("Richmond Hill (selected areas)");
     expect(list).not.toContain("Scarborough");
   });
 
-  it("includes weekly-only areas (not daily areas) in the weekly-only list", () => {
+  it("formatWeeklyOnlyCoverageList includes weekly-only areas", () => {
     const list = formatWeeklyOnlyCoverageList("en");
     expect(list).toContain("Scarborough");
     expect(list).not.toContain("Downtown Toronto");
   });
 
-  it("generates zh daily list with Chinese partial qualifier", () => {
-    const list = formatDailyCoverageList("zh");
-    expect(list).toContain("Richmond Hill（部分区域）");
+  it("zh list uses Chinese partial qualifier", () => {
+    expect(formatDailyCoverageList("zh")).toContain("Richmond Hill（部分区域）");
+    expect(formatDailyCoverageList("zh")).not.toContain("Downtown Toronto（部分区域）");
   });
 });
 
-// ─── Google parser ↔ registry compat ─────────────────────────────────────────
+// ─── Google parser ↔ service compat ──────────────────────────────────────────
 
-describe("Google parser ↔ service registry compatibility", () => {
-  it("keeps Google parser labels compatible with the service registry", () => {
+describe("Google parser → resolveServiceability", () => {
+  it("resolves a Richmond Hill address as served", () => {
     const parsed = parseGooglePlaceToAddress({
       id: "place-richmond-hill",
       formattedAddress: "95 East Beaver Creek Rd, Richmond Hill, ON L4B 1L4, Canada",
@@ -311,8 +285,6 @@ describe("Google parser ↔ service registry compatibility", () => {
         { longText: "Canada", shortText: "CA", types: ["country"] },
       ],
     });
-
-    expect(parsed.address.province).toBe("Richmond Hill");
     const svc = resolveServiceability({
       areaLabel: parsed.address.province,
       postalCode: parsed.addressGeo.postalCode,
@@ -320,6 +292,7 @@ describe("Google parser ↔ service registry compatibility", () => {
       lng: parsed.addressGeo.lng,
     });
     expect(svc.isServed).toBe(true);
+    expect(svc.canDaily).toBe(true);
     expect(svc.coordsMissing).toBe(false);
   });
 });

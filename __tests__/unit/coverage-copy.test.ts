@@ -8,36 +8,27 @@ import { SERVICE_AREAS } from "@/lib/zones/service-areas";
 
 describe("coverage-copy formatters", () => {
   describe("getAreaDisplayLabel", () => {
-    it("appends English partial qualifier for include-mode (FSA) daily areas", () => {
-      const partialAreas = SERVICE_AREAS.filter((a) => a.daily.mode === "include").map((a) => a.label);
+    it("appends partial qualifier for areas with dailyPartial=true", () => {
+      const partialAreas = SERVICE_AREAS.filter((a) => a.display.dailyPartial).map((a) => a.label);
+      expect(partialAreas).toContain("Richmond Hill");
       for (const label of partialAreas) {
         expect(getAreaDisplayLabel(label, "daily", "en")).toBe(`${label} (selected areas)`);
-      }
-    });
-
-    it("appends English partial qualifier for polygon-mode daily areas", () => {
-      const polygonAreas = SERVICE_AREAS.filter((a) => a.daily.mode === "polygon").map((a) => a.label);
-      for (const label of polygonAreas) {
-        expect(getAreaDisplayLabel(label, "daily", "en")).toBe(`${label} (selected areas)`);
-      }
-    });
-
-    it("appends Chinese partial qualifier for include-mode (FSA) daily areas", () => {
-      const partialAreas = SERVICE_AREAS.filter((a) => a.daily.mode === "include").map((a) => a.label);
-      for (const label of partialAreas) {
         expect(getAreaDisplayLabel(label, "daily", "zh")).toBe(`${label}（部分区域）`);
       }
     });
 
-    it("returns plain label for all-mode daily areas", () => {
-      const allAreas = SERVICE_AREAS.filter((a) => a.daily.mode === "all").map((a) => a.label);
-      for (const label of allAreas) {
+    it("returns plain label for areas with dailyPartial=false", () => {
+      const nonPartialDailyAreas = SERVICE_AREAS
+        .filter((a) => a.display.daily && !a.display.dailyPartial)
+        .map((a) => a.label);
+      expect(nonPartialDailyAreas).toContain("Downtown Toronto");
+      for (const label of nonPartialDailyAreas) {
         expect(getAreaDisplayLabel(label, "daily", "en")).toBe(label);
       }
     });
 
-    it("returns plain label for weekly coverage (even when daily is partial)", () => {
-      // Richmond Hill: daily=include, weekly=all
+    it("returns plain label for weekly regardless of dailyPartial", () => {
+      // Richmond Hill: dailyPartial=true for daily, but weekly shows plain
       expect(getAreaDisplayLabel("Richmond Hill", "weekly", "en")).toBe("Richmond Hill");
     });
 
@@ -47,23 +38,20 @@ describe("coverage-copy formatters", () => {
   });
 
   describe("formatDailyCoverageList", () => {
-    it("includes all daily-eligible areas", () => {
-      const dailyLabels = SERVICE_AREAS.filter((a) => a.daily.mode !== "none").map((a) => a.label);
+    it("includes all daily display areas", () => {
+      const dailyLabels = SERVICE_AREAS.filter((a) => a.display.daily).map((a) => a.label);
       const list = formatDailyCoverageList("en");
       for (const label of dailyLabels) {
-        // partial areas will appear with qualifier, so check label is contained
         expect(list).toContain(label);
       }
     });
 
-    it("excludes weekly-only area labels as separate tokens", () => {
-      // Use the daily-eligible label list directly — weekly-only ones must not appear in it
-      const dailyLabels = SERVICE_AREAS.filter((a) => a.daily.mode !== "none").map((a) => a.label);
-      const weeklyOnlyLabels = SERVICE_AREAS.filter(
-        (a) => a.daily.mode === "none" && a.weekly.mode !== "none"
-      ).map((a) => a.label);
+    it("excludes weekly-only area labels", () => {
+      const weeklyOnlyLabels = SERVICE_AREAS
+        .filter((a) => a.display.weekly && !a.display.daily)
+        .map((a) => a.label);
+      const dailyLabels = SERVICE_AREAS.filter((a) => a.display.daily).map((a) => a.label);
       for (const label of weeklyOnlyLabels) {
-        // Make sure none of the daily labels equals this label (exact, not substring)
         expect(dailyLabels).not.toContain(label);
       }
     });
@@ -75,14 +63,17 @@ describe("coverage-copy formatters", () => {
     it("emits partial qualifier for Richmond Hill in Chinese", () => {
       expect(formatDailyCoverageList("zh")).toContain("Richmond Hill（部分区域）");
     });
+
+    it("does NOT emit partial qualifier for Downtown Toronto", () => {
+      expect(formatDailyCoverageList("en")).not.toContain("Downtown Toronto (selected areas)");
+      expect(formatDailyCoverageList("en")).toContain("Downtown Toronto");
+    });
   });
 
   describe("formatWeeklyOnlyCoverageList", () => {
     it("includes only weekly-only areas (not daily areas)", () => {
       const list = formatWeeklyOnlyCoverageList("en");
-      // Scarborough is weekly-only
       expect(list).toContain("Scarborough");
-      // Downtown Toronto is both daily+weekly — must not appear
       expect(list).not.toContain("Downtown Toronto");
     });
   });

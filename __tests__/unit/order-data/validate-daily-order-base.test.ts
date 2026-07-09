@@ -108,7 +108,7 @@ describe("lib/order-data/validate-daily-order-base", () => {
     expect(result.warnings.map((issue) => issue.code)).not.toContain("NON_DAILY_DELIVERY_AREA");
   });
 
-  it("warns when a daily order address is outside the daily postal zone", () => {
+  it("warns when a daily order address is outside the daily polygon", () => {
     const result = validate({
       customer: {
         name: "Jane Doe",
@@ -121,6 +121,7 @@ describe("lib/order-data/validate-daily-order-base", () => {
         postalCode: "L4Z 1A1",
         buzzCode: "1234",
       },
+      addressGeoCoords: { lat: 43.82, lng: -79.4 },
     });
 
     expect(result.warnings.map((issue) => issue.code)).toContain("NON_DAILY_DELIVERY_AREA");

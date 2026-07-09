@@ -74,7 +74,7 @@ export function useDailyCheckoutState({
           addressGeo: user.addressGeo,
         })
         const userArea = user.address.province || ""
-        setIsValidDeliveryArea(canDeliverDaily(userArea, user.addressGeo?.postalCode || user.address.postalCode, { lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }))
+        setIsValidDeliveryArea(canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, userArea))
       } else {
         setIsValidDeliveryArea(false)
       }
@@ -176,9 +176,8 @@ export function useDailyCheckoutState({
   const handleSaveAddress = async () => {
     const selectedArea = addressFormData.province
     const isValid = canDeliverDaily(
-      selectedArea,
-      addressFormData.addressGeo?.postalCode || addressFormData.postalCode,
-      { lat: addressFormData.addressGeo?.lat, lng: addressFormData.addressGeo?.lng }
+      { lat: addressFormData.addressGeo?.lat, lng: addressFormData.addressGeo?.lng },
+      selectedArea
     )
     setIsValidDeliveryArea(isValid)
 

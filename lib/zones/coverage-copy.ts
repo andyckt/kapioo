@@ -9,18 +9,8 @@
 import { SERVICE_AREAS, DAILY_DELIVERY_AREA_LABELS, WEEKLY_ONLY_AREA_LABELS } from "./service-areas";
 
 /**
- * Whether an area has partial (polygon-gated or FSA-gated) coverage for a
- * given service. Both "polygon" and "include" modes indicate partial coverage —
- * only part of the geographic area is served.
- */
-function isPartialCoverage(areaLabel: string, service: "daily" | "weekly"): boolean {
-  const area = SERVICE_AREAS.find((a) => a.label === areaLabel);
-  if (!area) return false;
-  return area[service].mode === "polygon" || area[service].mode === "include";
-}
-
-/**
  * Display label for a single area — appends the partial qualifier when needed.
+ * Controlled by display.dailyPartial on the area entry in service-areas.ts.
  * e.g. "Richmond Hill" → "Richmond Hill (selected areas)" or "Richmond Hill（部分区域）"
  */
 export function getAreaDisplayLabel(
@@ -28,7 +18,9 @@ export function getAreaDisplayLabel(
   service: "daily" | "weekly",
   lang: "zh" | "en"
 ): string {
-  if (!isPartialCoverage(areaLabel, service)) return areaLabel;
+  if (service !== "daily") return areaLabel;
+  const area = SERVICE_AREAS.find((a) => a.label === areaLabel);
+  if (!area?.display.dailyPartial) return areaLabel;
   return lang === "zh"
     ? `${areaLabel}（部分区域）`
     : `${areaLabel} (selected areas)`;
@@ -46,7 +38,6 @@ export function formatDailyCoverageList(lang: "zh" | "en"): string {
   if (labels.length === 1) return labels[0];
   const last = labels[labels.length - 1];
   const rest = labels.slice(0, -1);
-  const conjunction = lang === "zh" ? "以及 " : "and ";
   return rest.join("、") + (lang === "zh" ? "，以及 " : ", and ") + last;
 }
 
