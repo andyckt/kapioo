@@ -160,7 +160,7 @@ export default function VerifyAddressPage() {
       <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6 rounded-xl bg-white p-6 shadow-lg">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-[#C2884E]">
-            {language === "zh" ? "请更新配送地址" : "Update your delivery address"}
+            {language === "zh" ? "设置配送地址" : "Delivery address"}
           </h1>
         </div>
 
@@ -213,7 +213,7 @@ export default function VerifyAddressPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="buzzCode">{language === "zh" ? "门禁/蜂鸣码" : "Buzz/entry code"}</Label>
+            <Label htmlFor="buzzCode">{language === "zh" ? "Buzz code/门禁码" : "Buzz code"}</Label>
             <Input
               id="buzzCode"
               value={buzzCode}
