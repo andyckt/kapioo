@@ -86,17 +86,27 @@ describe("canDeliverDaily — global polygon", () => {
 // ─── Global weekly FSA list ───────────────────────────────────────────────────
 
 describe("canDeliverWeekly — FSA list", () => {
-  it("falls back to display.weekly label flag when WEEKLY_FSA_LIST is null", () => {
-    // Currently null — so all display.weekly=true areas pass
-    expect(WEEKLY_FSA_LIST).toBeNull();
-    expect(canDeliverWeekly("M5V 1J1", "Downtown Toronto")).toBe(true);
-    expect(canDeliverWeekly("L4B 1L4", "Richmond Hill")).toBe(true);
-    // Weekly-only areas also pass
-    expect(canDeliverWeekly("M1B 1A1", "Scarborough")).toBe(true);
+  it("WEEKLY_FSA_LIST is active (carrier list received)", () => {
+    expect(WEEKLY_FSA_LIST).not.toBeNull();
+    expect(Array.isArray(WEEKLY_FSA_LIST)).toBe(true);
   });
 
-  it("falls back to false for unknown area when list is null", () => {
-    expect(canDeliverWeekly("Z9Z 9Z9", "Atlantis")).toBe(false);
+  it("allows FSAs that are in the carrier list", () => {
+    expect(canDeliverWeekly("M5V 1J1")).toBe(true);   // Downtown Toronto
+    expect(canDeliverWeekly("L4B 1L4")).toBe(true);   // Richmond Hill
+    expect(canDeliverWeekly("M1B 1A1")).toBe(true);   // Scarborough
+    expect(canDeliverWeekly("L8H 1A1")).toBe(true);   // Hamilton
+  });
+
+  it("blocks FSAs that are NOT in the carrier list", () => {
+    expect(canDeliverWeekly("Z9Z 9Z9")).toBe(false);  // unknown
+    expect(canDeliverWeekly("A1A 1A1")).toBe(false);  // Newfoundland
+  });
+
+  it("falls back to display.weekly label flag when postal code is empty", () => {
+    // No postal code → label fallback
+    expect(canDeliverWeekly("", "Downtown Toronto")).toBe(true);
+    expect(canDeliverWeekly("", "Atlantis")).toBe(false);
   });
 
   it("normalizeFsa handles the FSA extraction that the list check relies on", () => {
