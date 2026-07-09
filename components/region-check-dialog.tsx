@@ -1,7 +1,6 @@
 "use client"
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
@@ -31,19 +30,17 @@ export function RegionCheckDialog({
   canWeekly = false,
 }: RegionCheckDialogProps) {
   const { language } = useLanguage()
-  const router = useRouter()
-
   const daily = PRODUCT_LINE_LABELS.daily
   const weekly = PRODUCT_LINE_LABELS.weekly
 
-  const handleBack = () => {
+  const handleUpdateAddress = () => {
     onClose()
-    router.back()
+    window.location.href = '/dashboard?tab=settings'
   }
 
   const handleGoWeekly = () => {
     onClose()
-    router.push('/dashboard?tab=credits')
+    window.location.href = '/dashboard?tab=credits'
   }
 
   /* ── Scenario A: outside daily, but weekly is available ── */
@@ -90,28 +87,21 @@ export function RegionCheckDialog({
                       ? '可配送到此地址'
                       : 'Available at this address'}
                   </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    {language === 'zh'
+                      ? '每周配送 2 次，一次配送多餐，轻松覆盖整周~'
+                      : 'Delivered twice a week, multiple meals per drop — covers your whole week~'}
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Main message */}
-            <div className="text-sm text-[#6B5F53] space-y-3 leading-relaxed">
-              <p>
-                {language === 'zh'
-                  ? <>您选择的地址暂不在{productLineBracketZh('daily')}配送范围内，但 Kapioo 经典热卖的{productLineBracketZh('weekly')}仍可配送到您的地址。</>
-                  : <>Your address is currently outside the {`【${daily.en}】`} delivery zone, but the popular {`【${weekly.en}】`} can still be delivered to you.</>}
-              </p>
-              <p className="text-xs text-[#8A7968]">
-                {language === 'zh'
-                  ? <>{productLineBracketZh('daily')}目前覆盖 Downtown Toronto、Midtown、North York、Markham 和 Richmond Hill 的部分地址。由于各区域内仍有部分地址暂未开放每日配送，您可以尝试更换地址后重新确认。</>
-                  : <>{`【${daily.en}】`} currently covers selected addresses in Downtown Toronto, Midtown, North York, Markham and Richmond Hill. Coverage is based on your exact address — not the city name — so you can try a different address to check again.</>}
-              </p>
-              <p className="text-xs text-[#8A7968]">
-                {language === 'zh'
-                  ? <>{productLineBracketZh('weekly')}每周配送 2 次（周日 &amp; 周二），一次配送多餐，轻松覆盖整周。</>
-                  : <>{`【${weekly.en}】`} delivers twice a week (Sunday &amp; Tuesday) with multiple meals per delivery, conveniently covering your whole week.</>}
-              </p>
-            </div>
+            <p className="text-xs text-[#8A7968] leading-relaxed">
+              {language === 'zh'
+                ? <>{productLineBracketZh('daily')}目前覆盖 Downtown Toronto、Midtown、North York、Markham 和 Richmond Hill 的部分地址。由于各区域内仍有部分地址暂未开放每日配送，您也可以尝试更换地址后重新确认。</>
+                : <>{`【${daily.en}】`} covers selected addresses in Downtown Toronto, Midtown, North York, Markham, and Richmond Hill. Coverage is address-specific, so you can also try updating to a different address.</>}
+            </p>
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#C2884E]/10">
@@ -119,10 +109,10 @@ export function RegionCheckDialog({
                 type="button"
                 variant="outline"
                 className="flex-1 border-[#C2884E]/25 text-[#6B5F53] hover:bg-[#fff6ef]"
-                onClick={handleBack}
+                onClick={handleUpdateAddress}
               >
                 <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-                {language === 'zh' ? '返回' : 'Go back'}
+                {language === 'zh' ? '更新地址' : 'Update address'}
               </Button>
               <Button
                 type="button"
@@ -182,10 +172,10 @@ export function RegionCheckDialog({
               type="button"
               variant="outline"
               className="border-[#C2884E]/25 text-[#6B5F53] hover:bg-[#fff6ef] px-8"
-              onClick={handleBack}
+              onClick={handleUpdateAddress}
             >
               <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-              {language === 'zh' ? '返回' : 'Go back'}
+              {language === 'zh' ? '更新地址' : 'Update address'}
             </Button>
           </div>
         </div>

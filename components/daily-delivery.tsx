@@ -652,8 +652,8 @@ export default function DailyDelivery() {
               <div className="flex-1 space-y-1.5">
                 <p className="text-sm text-amber-800 font-medium">
                   {language === 'zh'
-                    ? <>您的地址暂不在【{PRODUCT_LINE_LABELS.daily.zh}】配送范围内，但【{PRODUCT_LINE_LABELS.weekly.zh}】仍可配送到您的地址。</>
-                    : <>Your address is outside the 【{PRODUCT_LINE_LABELS.daily.en}】 zone, but 【{PRODUCT_LINE_LABELS.weekly.en}】 can still deliver to you.</>}
+                    ? <>您的地址暂不在【{PRODUCT_LINE_LABELS.daily.zh}】配送范围内。</>
+                    : <>Your address is outside the 【{PRODUCT_LINE_LABELS.daily.en}】 delivery zone.</>}
                 </p>
                 <p className="text-xs text-amber-700">
                   {language === 'zh'
@@ -667,7 +667,7 @@ export default function DailyDelivery() {
                 type="button"
                 size="sm"
                 className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white"
-                onClick={() => router.push('/dashboard?tab=credits')}
+                onClick={() => { window.location.href = '/dashboard?tab=credits' }}
               >
                 {language === 'zh' ? `查看【${PRODUCT_LINE_LABELS.weekly.zh}】` : `View 【${PRODUCT_LINE_LABELS.weekly.en}】`}
               </Button>
