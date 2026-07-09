@@ -45,7 +45,7 @@ describe("canDeliverDaily — global polygon", () => {
   });
 
   it("blocks an address outside the polygon (south of downtown)", () => {
-    expect(canDeliverDaily({ lat: 43.59, lng: -79.39 })).toBe(false);
+    expect(canDeliverDaily({ lat: 43.55, lng: -79.38 })).toBe(false);
   });
 
   it("blocks an address outside the polygon (far north)", () => {

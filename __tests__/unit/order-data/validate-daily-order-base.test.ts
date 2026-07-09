@@ -121,7 +121,7 @@ describe("lib/order-data/validate-daily-order-base", () => {
         postalCode: "L4Z 1A1",
         buzzCode: "1234",
       },
-      addressGeoCoords: { lat: 43.82, lng: -79.4 },
+      addressGeoCoords: { lat: 43.55, lng: -79.38 }, // south of downtown — outside daily polygon
     });
 
     expect(result.warnings.map((issue) => issue.code)).toContain("NON_DAILY_DELIVERY_AREA");
