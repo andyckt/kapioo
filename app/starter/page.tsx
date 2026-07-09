@@ -109,7 +109,7 @@ export default function StarterPage() {
             </h1>
             <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto mb-6"></div>
             <p className="text-[#6B5F53] text-lg">
-              {language === 'zh' ? '请输入配送地址，查看适用的 Kapioo 计划' : 'Enter your delivery address to see available meal plans'}
+              {language === 'zh' ? '输入配送地址，查看可用的餐食计划' : 'Enter your delivery address to see available meal plans'}
             </p>
           </motion.div>
           
@@ -124,7 +124,7 @@ export default function StarterPage() {
               <div className="mb-3 flex items-center gap-2 text-[#6B5F53]">
                 <MapPin className="h-5 w-5 text-[#C2884E]" />
                 <span className="font-medium">
-                  {language === 'zh' ? '检查您的配送地址' : 'Check your delivery address'}
+                  {language === 'zh' ? '配送地址' : 'Delivery address'}
                 </span>
               </div>
               <AddressAutocomplete
