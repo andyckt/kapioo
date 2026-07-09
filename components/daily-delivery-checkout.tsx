@@ -73,9 +73,7 @@ export function DailyDeliveryCheckout({
     handleAddressInputChange,
     handleAddressSelect,
     handleSaveAddress,
-  } = useDailyCheckoutState({
-    deliveryRegions: [],
-  })
+  } = useDailyCheckoutState()
 
   // Calculate total vouchers needed by type
   const vouchersNeeded = cart.reduce(

@@ -33,13 +33,7 @@ const INITIAL_ADDRESS_FORM_DATA: CheckoutAddressFormData = {
   buzzCode: "",
 }
 
-type UseDailyCheckoutStateOptions = {
-  deliveryRegions: readonly string[]
-}
-
-export function useDailyCheckoutState({
-  deliveryRegions,
-}: UseDailyCheckoutStateOptions) {
+export function useDailyCheckoutState() {
   const { language } = useLanguage()
   const { toast } = useToast()
   const sharedUserProfile = useOptionalUserProfile()
@@ -52,6 +46,19 @@ export function useDailyCheckoutState({
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
   const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
+
+  const profileSyncKey = sharedUserProfile?.userData
+    ? [
+        sharedUserProfile.userData._id,
+        sharedUserProfile.userData.name,
+        sharedUserProfile.userData.phone,
+        sharedUserProfile.userData.address?.streetAddress,
+        sharedUserProfile.userData.address?.province,
+        sharedUserProfile.userData.address?.postalCode,
+        sharedUserProfile.userData.addressGeo?.lat,
+        sharedUserProfile.userData.addressGeo?.lng,
+      ].join("|")
+    : null
 
   useEffect(() => {
     const applyUserToForm = (user: any) => {
@@ -121,7 +128,7 @@ export function useDailyCheckoutState({
           .catch(() => {})
       }
     }
-  }, [deliveryRegions, sharedUserProfile?.userData])
+  }, [profileSyncKey, sharedUserProfile])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target

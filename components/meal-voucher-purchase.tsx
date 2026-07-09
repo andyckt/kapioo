@@ -10,8 +10,9 @@ import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
-import { DAILY_DELIVERY_AREAS, isDailyDeliveryArea } from '@/lib/constants/areas'
 import { getAreaDisplayLabel } from '@/lib/zones/coverage-copy'
+import { DAILY_DELIVERY_AREA_LABELS } from '@/lib/zones/service-areas'
+import { getUserDailyEligibility } from '@/lib/address/daily-eligibility'
 import { listDailyPlans } from '@/lib/plans/service'
 import type { PricingBreakdown } from '@/lib/promo-code-shared'
 import {
@@ -52,6 +53,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RegionCheckDialogRecharge } from '@/components/region-check-dialog-recharge'
+import { RegionCheckDialog } from '@/components/region-check-dialog'
 
 // Define types for voucher plans
 interface VoucherPlan {
@@ -83,7 +85,10 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   const [showRegionDialog, setShowRegionDialog] = useState(false)
+  const [showServiceAreaNotice, setShowServiceAreaNotice] = useState(false)
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
+  const [canWeeklyAtAddress, setCanWeeklyAtAddress] = useState(false)
+  const [isDailyEligible, setIsDailyEligible] = useState(false)
   const allDailyPlans: VoucherPlan[] = listDailyPlans().map((plan) => ({
     id: plan.id,
     type: plan.dishType,
@@ -97,8 +102,13 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const twoDishPlans: VoucherPlan[] = allDailyPlans.filter((plan) => plan.type === 'twoDish')
   const threeDishPlans: VoucherPlan[] = allDailyPlans.filter((plan) => plan.type === 'threeDish')
 
-  // Use centralized daily delivery areas
-  const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREAS
+  const syncAddressEligibility = (user: ReturnType<typeof getStoredUser>) => {
+    const eligibility = getUserDailyEligibility(user)
+    setUserRegion(eligibility.areaLabel || user?.address?.province)
+    setCanWeeklyAtAddress(eligibility.canWeekly)
+    setIsDailyEligible(eligibility.canDaily)
+    return eligibility
+  }
 
   const defaultPricing: PricingBreakdown | null = selectedPlan
     ? {
@@ -199,16 +209,13 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     }
   }
 
-  // Load user data and check region on component mount
+  // Load user data and show service-area notice when outside daily polygon
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
-      
-      // Check user's region
-      if (user.address && user.address.province) {
-        setUserRegion(user.address.province)
-      }
+    const user = getStoredUser()
+    if (!user) return
+    const eligibility = syncAddressEligibility(user)
+    if (!eligibility.canDaily && (eligibility.areaLabel || user.address?.province)) {
+      setShowServiceAreaNotice(true)
     }
   }, [])
 
@@ -216,25 +223,21 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const handlePlanSelect = (plan: VoucherPlan) => {
     console.log('MealVoucherPurchase - Plan selected:', plan)
     setSelectedPlan(plan)
-    
-    // Check if user's region is in the supported list
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
-      if (user.address && user.address.province) {
-        const userProvince = user.address.province
-        const isValidRegion = DAILY_DELIVERY_REGIONS.includes(userProvince)
-        
-        // Always show the dialog to collect/confirm address details
-        setUserRegion(userProvince)
-        setShowRegionDialog(true)
-        
-        // The dialog will handle skipping the region selection if the region is valid
+
+    const user = getStoredUser()
+    if (user?.address?.province || user?.address?.streetAddress) {
+      const eligibility = syncAddressEligibility(user)
+
+      if (!eligibility.canDaily) {
+        setShowServiceAreaNotice(true)
         return
       }
+
+      setShowRegionDialog(true)
+      return
     }
-    
-    // If no region is set, proceed to upload step
+
+    // If no address on file, proceed to upload step
     setPurchaseStep('upload')
     console.log('MealVoucherPurchase - Purchase step set to upload')
   }
@@ -506,7 +509,17 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
 
   return (
     <div className="flex flex-col h-full space-y-6">
-      {/* Region Check Dialog */}
+      {/* Service area notice — outside daily polygon */}
+      {showServiceAreaNotice && (
+        <RegionCheckDialog
+          open={showServiceAreaNotice}
+          onClose={() => setShowServiceAreaNotice(false)}
+          currentRegion={userRegion}
+          canWeekly={canWeeklyAtAddress}
+        />
+      )}
+
+      {/* Address confirmation — inside daily polygon */}
       {showRegionDialog && (
         <RegionCheckDialogRecharge
           open={showRegionDialog}
@@ -514,12 +527,12 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           currentRegion={userRegion}
           onRegionChange={handleRegionChange}
           onProceed={() => setPurchaseStep('upload')}
-          isValidRegion={isDailyDeliveryArea(userRegion || '')}
+          isDailyEligible={isDailyEligible}
           existingAddress={(() => {
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
               const user = JSON.parse(storedUser)
-              return user.address
+              return user.address ? { ...user.address, addressGeo: user.addressGeo } : undefined
             }
             return undefined
           })()}
@@ -857,7 +870,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {DAILY_DELIVERY_REGIONS.map((area) => (
+          {DAILY_DELIVERY_AREA_LABELS.map((area) => (
             <div 
               key={area} 
               className="px-3 py-1.5 text-xs font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors duration-300"
