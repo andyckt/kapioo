@@ -231,10 +231,8 @@ export default function VerifyEmailSentPage() {
         if (fromPage) verifyParams.set('from', fromPage)
         if (planIdentifier) verifyParams.set('plan', planIdentifier)
         const paramStr = verifyParams.toString()
-        router.replace(`/address/verify${paramStr ? `?${paramStr}` : ''}`)
-        return
-
         setVerificationStatus("success")
+        router.replace(`/address/verify${paramStr ? `?${paramStr}` : ''}`)
       } else {
         setVerificationStatus("error")
         setErrorMessage(data.error || "账户创建失败")
@@ -258,13 +256,6 @@ export default function VerifyEmailSentPage() {
     }
   }
   
-  // (area-saving removed — users are redirected to /address/verify after registration)
-  const _unused = () => {
-    if (false) {
-      router.push('/dashboard')
-        }
-    }
-  }
 
   const renderContent = () => {
     switch (verificationStatus) {
