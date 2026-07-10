@@ -33,7 +33,7 @@ import { useDailyCart } from '@/features/daily-ordering/use-daily-cart'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
 import { RegionCheckDialog } from './region-check-dialog'
 import { DAILY_DELIVERY_AREA_LABELS } from '@/lib/zones/service-areas'
-import { getUserDailyEligibility } from '@/lib/address/daily-eligibility'
+import { getUserDailyEligibility, hasDailyBalance } from '@/lib/address/daily-eligibility'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { 
   Dialog,
@@ -180,18 +180,18 @@ export default function DailyDelivery() {
 
     const eligibility = getUserDailyEligibility(user)
     const nextRegion = eligibility.areaLabel || user.address?.province
+    // Allow ordering when user has existing daily vouchers to use up
+    const canOrder = eligibility.canDaily || hasDailyBalance(user)
     setUserRegion((prev) => (prev === nextRegion ? prev : nextRegion))
     setCanWeeklyAtAddress((prev) =>
       prev === eligibility.canWeekly ? prev : eligibility.canWeekly
     )
-    setIsDailyEligible((prev) =>
-      prev === eligibility.canDaily ? prev : eligibility.canDaily
-    )
+    setIsDailyEligible((prev) => (prev === canOrder ? prev : canOrder))
 
     const hasAddress = Boolean(eligibility.areaLabel || user.address?.province)
     if (
       options?.showNoticeOnMount &&
-      !eligibility.canDaily &&
+      !canOrder &&
       hasAddress
     ) {
       setShowRegionDialog(true)

@@ -8,6 +8,7 @@ import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
 import { useToast } from "@/hooks/use-toast"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
+import { hasDailyBalance } from "@/lib/address/daily-eligibility"
 import { canDeliverDaily, resolveServiceability } from "@/lib/zones/service-areas"
 
 export type DailyCheckoutFormData = {
@@ -81,7 +82,7 @@ export function useDailyCheckoutState() {
           addressGeo: user.addressGeo,
         })
         const userArea = user.address.province || ""
-        setIsValidDeliveryArea(canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, userArea))
+        setIsValidDeliveryArea(canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, userArea) || hasDailyBalance(user))
       } else {
         setIsValidDeliveryArea(false)
       }

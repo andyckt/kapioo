@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { errorJson, handleRouteError, parseJsonBody, successJson, type RouteContext } from "@/lib/api";
+import { isSameSavedAddress } from "@/lib/address/daily-eligibility";
 import { requireSelfOrAdmin } from "@/lib/auth/guards";
 import { addressSchema, verifiedAddressGeoSchema } from "@/lib/contracts/common";
 import connectToDatabase from "@/lib/db";
@@ -50,19 +51,6 @@ export async function POST(request: Request, { params }: RouteContext<{ id: stri
       return error;
     }
 
-    const serviceability = resolveServiceability({
-      areaLabel: data.address.province,
-      postalCode: data.addressGeo.postalCode || data.address.postalCode,
-      lat: data.addressGeo.lat,
-      lng: data.addressGeo.lng,
-    });
-    if (!serviceability.isServed) {
-      return errorJson(
-        "This address is not within Kapioo's current delivery service area.",
-        422
-      );
-    }
-
     await connectToDatabase();
 
     const user = await User.findOne({
@@ -71,6 +59,23 @@ export async function POST(request: Request, { params }: RouteContext<{ id: stri
 
     if (!user) {
       return errorJson("User not found", 404);
+    }
+
+    const serviceability = resolveServiceability({
+      areaLabel: data.address.province,
+      postalCode: data.addressGeo.postalCode || data.address.postalCode,
+      lat: data.addressGeo.lat,
+      lng: data.addressGeo.lng,
+    });
+    const isSameAddress = isSameSavedAddress(
+      { placeId: data.addressGeo.placeId, streetAddress: data.address.streetAddress, postalCode: data.address.postalCode },
+      { placeId: user.addressGeo?.placeId, streetAddress: user.address?.streetAddress, postalCode: user.address?.postalCode }
+    );
+    if (!serviceability.isServed && !isSameAddress) {
+      return errorJson(
+        "This address is not within Kapioo's current delivery service area.",
+        422
+      );
     }
 
     if (!user.legacyAddress && user.address) {

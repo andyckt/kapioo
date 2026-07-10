@@ -10,6 +10,7 @@ import {
 } from "@/lib/balances/mutations";
 import type { WeeklySubscriptionUserOrderBody } from "@/lib/contracts/weekly-subscription";
 import { toWeeklyPlanId } from "@/lib/plans/service";
+import { hasWeeklyBalance } from "@/lib/address/daily-eligibility";
 import { canDeliverWeekly } from "@/lib/zones/service-areas";
 import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
 import WeeklyOrder, { type IWeeklyOrder } from "@/models/WeeklyOrder";
@@ -331,7 +332,7 @@ export async function placeWeeklyOrder({
         });
       }
 
-      if (!canDeliverWeekly(user.addressGeo?.postalCode || user.address?.postalCode, user.address?.province)) {
+      if (!canDeliverWeekly(user.addressGeo?.postalCode || user.address?.postalCode, user.address?.province) && !hasWeeklyBalance(user)) {
         throw new ApiError("Weekly meal box delivery is not available at this address", {
           status: 403,
           code: "WEEKLY_SERVICE_AREA_UNAVAILABLE",

@@ -9,6 +9,7 @@ import {
   type BalanceMutationEntry,
 } from "@/lib/balances/mutations";
 import type { CreateDailyOrderBody, CreateDailyOrderItemInput } from "@/lib/contracts/daily-order";
+import { hasDailyBalance } from "@/lib/address/daily-eligibility";
 import { canDeliverDaily } from "@/lib/zones/service-areas";
 import DailyDeliveryOrder, { type IDailyDeliveryOrder } from "@/models/DailyDeliveryOrder";
 import type { ITransaction } from "@/models/Transaction";
@@ -174,7 +175,7 @@ export async function placeDailyOrder({
         });
       }
 
-      if (!canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, user.address?.province)) {
+      if (!canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, user.address?.province) && !hasDailyBalance(user)) {
         throw new ApiError("Daily delivery is not available at this address", {
           status: 403,
           code: "DAILY_SERVICE_AREA_UNAVAILABLE",
