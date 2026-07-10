@@ -11,6 +11,8 @@ import type {
   DashboardPasswordInfo,
   DashboardPersonalInfo,
 } from "@/features/dashboard-settings/dashboard-settings-tab"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
+import { resolveServiceability } from "@/lib/zones/service-areas"
 
 type TFn = ReturnType<typeof useLanguage>["t"]
 type ToastFn = ReturnType<typeof useToast>["toast"]
@@ -57,12 +59,46 @@ export function useDashboardSettingsHandlers({
   const handleAddressInfoChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { id, value } = e.target
+      // Only allow editing unitNumber and buzzCode — street/postal/area are Google-derived
+      if (id === "postalCode" || id === "province" || id === "state" || id === "zip") return
       setAddressInfo((prev) => ({
         ...prev,
-        [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+        [id]: value,
+        // Clear geo when user types a new street address (triggers Google re-selection)
+        ...(id === "streetAddress" ? { addressGeo: undefined, postalCode: "", province: "" } : {}),
       }))
     },
     [setAddressInfo]
+  )
+
+  const handleAddressGeoSelect = useCallback(
+    (result: ParsedGoogleAddress) => {
+      const serviceability = resolveServiceability({
+        areaLabel: result.address.province,
+        postalCode: result.addressGeo.postalCode || result.address.postalCode,
+        lat: result.addressGeo.lat,
+        lng: result.addressGeo.lng,
+      })
+      if (!serviceability.isServed) {
+        toast({
+          title: "Address outside service area",
+          description:
+            "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+          variant: "destructive",
+        })
+        setAddressInfo((prev) => ({ ...prev, streetAddress: "", addressGeo: undefined, postalCode: "", province: "" }))
+        return
+      }
+      setAddressInfo((prev) => ({
+        ...prev,
+        streetAddress: result.address.streetAddress || prev.streetAddress,
+        postalCode: result.addressGeo.postalCode || result.address.postalCode || "",
+        country: result.address.country || "Canada",
+        province: result.address.province || "",
+        addressGeo: result.addressGeo,
+      }))
+    },
+    [setAddressInfo, toast]
   )
 
   const handlePasswordChange = useCallback(
@@ -128,21 +164,29 @@ export function useDashboardSettingsHandlers({
   const handleSaveAddressInfo = useCallback(async () => {
     if (!userData?._id) return
 
+    if (!addressInfo.addressGeo) {
+      toast({
+        title: t("errorOccurred"),
+        description: "Please select your street address from the Google suggestions to ensure accurate delivery.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      const response = await fetch(`/api/users/${userData._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await fetch(`/api/users/${userData._id}/verify-address`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: {
             unitNumber: addressInfo.unitNumber,
             streetAddress: addressInfo.streetAddress,
             province: addressInfo.province,
             postalCode: addressInfo.postalCode,
-            country: addressInfo.country,
+            country: addressInfo.country || "Canada",
             buzzCode: addressInfo.buzzCode,
           },
+          addressGeo: addressInfo.addressGeo,
         }),
       })
 
@@ -246,6 +290,7 @@ export function useDashboardSettingsHandlers({
   return {
     handlePersonalInfoChange,
     handleAddressInfoChange,
+    handleAddressGeoSelect,
     handlePasswordChange,
     handleSavePersonalInfo,
     handleSaveAddressInfo,

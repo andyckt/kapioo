@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/lib/language-context'
-import { Plus, Minus, ShoppingCart, X, Utensils, Ticket } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, X, Utensils, Ticket, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import {
@@ -31,6 +32,9 @@ import { DailyDaySidebar } from '@/features/daily-ordering/daily-day-sidebar'
 import { useDailyCart } from '@/features/daily-ordering/use-daily-cart'
 import { DailyDeliveryCheckout } from './daily-delivery-checkout'
 import { RegionCheckDialog } from './region-check-dialog'
+import { DAILY_DELIVERY_AREA_LABELS } from '@/lib/zones/service-areas'
+import { getUserDailyEligibility, hasDailyBalance } from '@/lib/address/daily-eligibility'
+import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { 
   Dialog,
   DialogContent,
@@ -63,6 +67,7 @@ const getChineseDayName = (englishDayName: string): string => {
 };
 
 export default function DailyDelivery() {
+  const router = useRouter()
   const { t, language } = useLanguage()
   const { toast } = useToast()
   const sharedUserProfile = useOptionalUserProfile()
@@ -77,6 +82,8 @@ export default function DailyDelivery() {
   })
   const [showRegionDialog, setShowRegionDialog] = useState(false)
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
+  const [canWeeklyAtAddress, setCanWeeklyAtAddress] = useState(false)
+  const [isDailyEligible, setIsDailyEligible] = useState(true)
   const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
   const [localCutoffTime, setLocalCutoffTime] = useState<CutoffTime>(DEFAULT_DASHBOARD_CUTOFF_TIME)
   const cutoffTime = sharedUserProfile?.cutoffTime ?? localCutoffTime
@@ -102,14 +109,8 @@ export default function DailyDelivery() {
     }
     return dishTranslations[dishName] || dishName
   }
-  // Define the supported regions for daily delivery
-  const DAILY_DELIVERY_REGIONS = [
-    "Downtown Toronto",
-    "Midtown", 
-    "North York", 
-    "Markham", 
-    "Richmond Hill"
-  ]
+  // Derived from registry — no need to update manually when coverage changes
+  const DAILY_DELIVERY_REGIONS = DAILY_DELIVERY_AREA_LABELS
   
   const fetchDishTranslations = async (options?: { signal?: AbortSignal }): Promise<Record<string, string>> => {
     try {
@@ -167,19 +168,64 @@ export default function DailyDelivery() {
   
   // Tag helper functions removed as icons are no longer used
 
+  const regionNoticeKeyRef = useRef<string | null>(null)
+
+  const applyDailyEligibility = (
+    user: Partial<DashboardUserData> | null,
+    options?: { showNoticeOnMount?: boolean }
+  ) => {
+    if (!user) {
+      return
+    }
+
+    const eligibility = getUserDailyEligibility(user)
+    const nextRegion = eligibility.areaLabel || user.address?.province
+    // Allow ordering when user has existing daily vouchers to use up
+    const canOrder = eligibility.canDaily || hasDailyBalance(user)
+    setUserRegion((prev) => (prev === nextRegion ? prev : nextRegion))
+    setCanWeeklyAtAddress((prev) =>
+      prev === eligibility.canWeekly ? prev : eligibility.canWeekly
+    )
+    setIsDailyEligible((prev) => (prev === canOrder ? prev : canOrder))
+
+    const hasAddress = Boolean(eligibility.areaLabel || user.address?.province)
+    if (
+      options?.showNoticeOnMount &&
+      !canOrder &&
+      hasAddress
+    ) {
+      setShowRegionDialog(true)
+    }
+  }
+
   const syncUserSnapshot = (user: Partial<DashboardUserData> | null) => {
     if (!user) {
       return
     }
 
-    setUserVouchers({
-      twoDish: user.twoDishVoucher || 0,
-      threeDish: user.threeDishVoucher || 0,
-    })
+    const nextTwoDish = user.twoDishVoucher || 0
+    const nextThreeDish = user.threeDishVoucher || 0
+    setUserVouchers((prev) =>
+      prev.twoDish === nextTwoDish && prev.threeDish === nextThreeDish
+        ? prev
+        : { twoDish: nextTwoDish, threeDish: nextThreeDish }
+    )
 
-    const nextRegion = user.address?.province
-    setUserRegion(nextRegion)
-    setShowRegionDialog(Boolean(nextRegion && !DAILY_DELIVERY_REGIONS.includes(nextRegion)))
+    const noticeKey = [
+      user._id,
+      user.addressGeo?.lat,
+      user.addressGeo?.lng,
+      user.address?.province,
+      user.address?.postalCode,
+    ].join("|")
+
+    if (regionNoticeKeyRef.current !== noticeKey) {
+      regionNoticeKeyRef.current = noticeKey
+      applyDailyEligibility(user, { showNoticeOnMount: true })
+      return
+    }
+
+    applyDailyEligibility(user)
   }
 
   // Function to fetch user data from API
@@ -397,10 +443,25 @@ export default function DailyDelivery() {
     return () => controller.abort();
   }, [sharedUserProfile?.cutoffTime]);
 
+  const profileSyncKey = sharedUserProfile?.userData
+    ? [
+        sharedUserProfile.userData._id,
+        sharedUserProfile.userData.twoDishVoucher,
+        sharedUserProfile.userData.threeDishVoucher,
+        sharedUserProfile.userData.address?.province,
+        sharedUserProfile.userData.addressGeo?.lat,
+        sharedUserProfile.userData.addressGeo?.lng,
+      ].join("|")
+    : null
+
   useEffect(() => {
     if (sharedUserProfile) {
-      if (sharedUserProfile.userData) {
-        syncUserSnapshot(sharedUserProfile.userData)
+      const user = sharedUserProfile.userData
+      if (user) {
+        syncUserSnapshot(user)
+        if (user._id && typeof user.addressGeo?.lat !== "number") {
+          void fetchUserData(user._id)
+        }
       }
       return
     }
@@ -420,7 +481,7 @@ export default function DailyDelivery() {
     } catch (error) {
       console.error('Error parsing stored user data:', error)
     }
-  }, [sharedUserProfile?.userData])
+  }, [profileSyncKey, sharedUserProfile])
   
   // Periodically check for menu updates (every 30 seconds)
   useEffect(() => {
@@ -576,10 +637,67 @@ export default function DailyDelivery() {
         open={showRegionDialog}
         onClose={() => setShowRegionDialog(false)}
         currentRegion={userRegion}
+        canWeekly={canWeeklyAtAddress}
       />
       
       {/* Menu Update Notification Banner */}
       {menuUpdateAvailable && <MenuUpdateBanner language={language} onRefresh={handleRefreshMenu} />}
+
+      {!isDailyEligible && userRegion && !checkoutOpen && (
+        canWeeklyAtAddress ? (
+          /* Weekly available — encourage switching */
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <p className="text-sm text-amber-800 font-medium">
+                  {language === 'zh'
+                    ? <>您的地址暂不在【{PRODUCT_LINE_LABELS.daily.zh}】配送范围内。</>
+                    : <>Your address is outside the 【{PRODUCT_LINE_LABELS.daily.en}】 delivery zone.</>}
+                </p>
+                <p className="text-xs text-amber-700">
+                  {language === 'zh'
+                    ? <>【{PRODUCT_LINE_LABELS.weekly.zh}】每周配送 2 次（周日 &amp; 周二），一次配送多餐，轻松覆盖整周。</>
+                    : <>【{PRODUCT_LINE_LABELS.weekly.en}】 delivers twice a week (Sunday &amp; Tuesday) with multiple meals per delivery.</>}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white"
+                onClick={() => { window.location.href = '/dashboard?tab=credits' }}
+              >
+                {language === 'zh' ? `查看【${PRODUCT_LINE_LABELS.weekly.zh}】` : `View 【${PRODUCT_LINE_LABELS.weekly.en}】`}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-amber-300 text-amber-900 hover:bg-amber-100"
+                onClick={() => setShowRegionDialog(true)}
+              >
+                {language === 'zh' ? '了解更多' : 'Learn more'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Not in any service area */
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm text-red-800 font-medium">
+                  {language === 'zh'
+                    ? '您的地址暂不在 Kapioo 当前服务范围内，但我们很快会努力覆盖到更多区域！非常感谢您的支持～'
+                    : "Your address is not within Kapioo's current service area. We're working hard to expand — thank you for your support!"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+      )}
       
       {/* Header section with responsive layout - Sticky on mobile */}
       <div className="sticky top-0 z-20 bg-white pb-4 -mx-6 px-6 md:relative md:mx-0 md:px-0 md:z-0">
@@ -614,6 +732,11 @@ export default function DailyDelivery() {
                 variant="outline" 
                 className="flex items-center gap-2 border-[#C2884E]/30 hover:bg-[#F5EDE4]/50 hover:text-[#C2884E] rounded-xl"
                 onClick={() => {
+                if (!isDailyEligible) {
+                  setShowRegionDialog(true)
+                  return
+                }
+
                 if (cart.length === 0) {
                   toast({
                     title: t('cartEmpty'),

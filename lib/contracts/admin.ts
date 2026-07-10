@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { addressSchema, paymentMethodSchema, requestStatusSchema } from "@/lib/contracts/common";
+import { addressGeoSchema, addressSchema, paymentMethodSchema, requestStatusSchema } from "@/lib/contracts/common";
 
 export const adminUserSchema = z.object({
   _id: z.string(),
@@ -11,6 +11,11 @@ export const adminUserSchema = z.object({
   role: z.string(),
   joined: z.string().optional(),
   address: addressSchema.optional(),
+  addressGeo: addressGeoSchema.optional(),
+  deliveryNotes: z.string().optional(),
+  addressVerified: z.boolean().optional(),
+  addressVerifiedAt: z.string().optional(),
+  legacyAddress: addressSchema.optional(),
   credits: z.number().optional(),
   twoDishVoucher: z.number().optional(),
   threeDishVoucher: z.number().optional(),

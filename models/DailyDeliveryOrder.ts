@@ -28,6 +28,9 @@ export interface IDailyDeliveryOrderAddress {
   postalCode?: string;
   country?: string;
   buzzCode?: string;
+  /** Coordinates snapshot from addressGeo at order placement. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface IDailyOrderCustomerOverride {
@@ -125,6 +128,9 @@ const DailyDeliveryOrderSchema = new Schema(
       postalCode: String,
       country: String,
       buzzCode: String,
+      // Coordinates snapshot at order placement for polygon-based historical accuracy
+      lat: Number,
+      lng: Number,
     },
     phoneNumber: String,
     area: String,

@@ -6,8 +6,10 @@ import type { CheckoutAddressFormData } from "@/components/checkout-address-form
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
-import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { useToast } from "@/hooks/use-toast"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
+import { hasDailyBalance } from "@/lib/address/daily-eligibility"
+import { canDeliverDaily, resolveServiceability } from "@/lib/zones/service-areas"
 
 export type DailyCheckoutFormData = {
   name: string
@@ -32,13 +34,7 @@ const INITIAL_ADDRESS_FORM_DATA: CheckoutAddressFormData = {
   buzzCode: "",
 }
 
-type UseDailyCheckoutStateOptions = {
-  deliveryRegions: readonly string[]
-}
-
-export function useDailyCheckoutState({
-  deliveryRegions,
-}: UseDailyCheckoutStateOptions) {
+export function useDailyCheckoutState() {
   const { language } = useLanguage()
   const { toast } = useToast()
   const sharedUserProfile = useOptionalUserProfile()
@@ -50,9 +46,20 @@ export function useDailyCheckoutState({
   )
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
-  const [popoverOpen, setPopoverOpen] = useState(false)
   const [isValidDeliveryArea, setIsValidDeliveryArea] = useState(true)
-  const [tempSelectedArea, setTempSelectedArea] = useState("")
+
+  const profileSyncKey = sharedUserProfile?.userData
+    ? [
+        sharedUserProfile.userData._id,
+        sharedUserProfile.userData.name,
+        sharedUserProfile.userData.phone,
+        sharedUserProfile.userData.address?.streetAddress,
+        sharedUserProfile.userData.address?.province,
+        sharedUserProfile.userData.address?.postalCode,
+        sharedUserProfile.userData.addressGeo?.lat,
+        sharedUserProfile.userData.addressGeo?.lng,
+      ].join("|")
+    : null
 
   useEffect(() => {
     const applyUserToForm = (user: any) => {
@@ -72,9 +79,10 @@ export function useDailyCheckoutState({
           postalCode: user.address.postalCode || "",
           country: user.address.country || "Canada",
           buzzCode: user.address.buzzCode || "",
+          addressGeo: user.addressGeo,
         })
         const userArea = user.address.province || ""
-        setIsValidDeliveryArea(deliveryRegions.includes(userArea))
+        setIsValidDeliveryArea(canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, userArea) || hasDailyBalance(user))
       } else {
         setIsValidDeliveryArea(false)
       }
@@ -121,7 +129,7 @@ export function useDailyCheckoutState({
           .catch(() => {})
       }
     }
-  }, [deliveryRegions, sharedUserProfile?.userData])
+  }, [profileSyncKey, sharedUserProfile])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
@@ -136,36 +144,61 @@ export function useDailyCheckoutState({
     setAddressFormData((current) => ({
       ...current,
       [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+      ...(id === "streetAddress" ? { addressGeo: undefined, postalCode: "" } : {}),
     }))
   }
 
-  const handleAreaSelect = (area: string) => {
+  const handleAddressSelect = (result: ParsedGoogleAddress) => {
+    const serviceability = resolveServiceability({
+      areaLabel: result.address.province,
+      postalCode: result.addressGeo.postalCode || result.address.postalCode,
+      lat: result.addressGeo.lat,
+      lng: result.addressGeo.lng,
+    })
+    if (!serviceability.canDaily) {
+      toast({
+        title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
+        description:
+          language === "zh"
+            ? serviceability.canWeekly
+              ? "此地址目前不支持每日配送，但可以使用周餐盒服务。"
+              : "此地址不在配送范围内，请选择服务区域内的地址。"
+            : serviceability.canWeekly
+              ? "Daily delivery is not available at this address yet, but weekly meal box is available."
+              : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+        variant: "destructive",
+      })
+      setAddressFormData((current) => ({ ...current, streetAddress: "", addressGeo: undefined, postalCode: "" }))
+      return
+    }
     setAddressFormData((current) => ({
       ...current,
-      province: area,
+      streetAddress: result.address.streetAddress || "",
+      postalCode: result.addressGeo.postalCode || result.address.postalCode || "",
+      country: result.address.country || "Canada",
+      province: result.address.province || "",
+      addressGeo: result.addressGeo,
     }))
-    setPopoverOpen(false)
-    setTempSelectedArea(area)
   }
 
   const handleSaveAddress = async () => {
     const selectedArea = addressFormData.province
-    const isValid = deliveryRegions.includes(selectedArea)
+    const isValid = canDeliverDaily(
+      { lat: addressFormData.addressGeo?.lat, lng: addressFormData.addressGeo?.lng },
+      selectedArea
+    )
     setIsValidDeliveryArea(isValid)
 
     if (!isValid) {
       toast({
-        title: language === "zh" ? "无效区域" : "Invalid Area",
-        description:
-          language === "zh"
-            ? `请选择${PRODUCT_LINE_LABELS.daily.zh}服务覆盖的区域`
-            : `Please select an area covered by ${PRODUCT_LINE_LABELS.daily.en} service`,
+        title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
+        description: language === "zh"
+          ? "此地址目前不支持每日配送，请选择服务区域内的地址。"
+          : "Daily delivery is not available at this address. Please select a supported address.",
         variant: "destructive",
       })
       return
     }
-
-    setTempSelectedArea("")
 
     setUserData((prev: any) =>
       prev
@@ -178,23 +211,40 @@ export function useDailyCheckoutState({
 
     if (saveAddressForFuture && userData?._id) {
       try {
-        const response = await fetch(`/api/users/${userData._id}`, {
-          method: "PATCH",
+        if (!addressFormData.addressGeo) {
+          toast({
+            title: language === "zh" ? "请选择 Google 地址" : "Select a Google address",
+            description:
+              language === "zh"
+                ? "保存常用地址前，请从地址建议中选择配送地址。"
+                : "Please choose an address from the suggestions before saving it for future orders.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        const response = await fetch(`/api/users/${userData._id}/verify-address`, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            address: addressFormData,
+            address: {
+              unitNumber: addressFormData.unitNumber,
+              streetAddress: addressFormData.streetAddress,
+              province: addressFormData.province,
+              postalCode: addressFormData.postalCode,
+              country: addressFormData.country || "Canada",
+              buzzCode: addressFormData.buzzCode,
+            },
+            addressGeo: addressFormData.addressGeo,
           }),
         })
 
         const result = await response.json()
 
         if (result.success) {
-          mergeStoredUser({
-            address: { ...addressFormData },
-            area: addressFormData.province || "",
-          })
+          mergeStoredUser(result.data)
 
           toast({
             title: language === "zh" ? "地址已保存" : "Address Saved",
@@ -230,16 +280,12 @@ export function useDailyCheckoutState({
     addressFormData,
     editingAddress,
     saveAddressForFuture,
-    popoverOpen,
     isValidDeliveryArea,
-    tempSelectedArea,
     setEditingAddress,
     setSaveAddressForFuture,
-    setPopoverOpen,
-    setTempSelectedArea,
     handleInputChange,
     handleAddressInputChange,
-    handleAreaSelect,
+    handleAddressSelect,
     handleSaveAddress,
   }
 }

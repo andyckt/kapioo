@@ -1,5 +1,6 @@
-import { ALL_WEEKLY_AREAS, isDailyDeliveryArea, isWeeklyDeliveryArea } from "@/lib/constants/areas";
+import { ALL_WEEKLY_AREAS, isWeeklyDeliveryArea } from "@/lib/constants/areas";
 import { hasOrderCustomerOverride } from "@/lib/orders/effective-customer-info";
+import { canDeliverDaily } from "@/lib/zones/service-areas";
 import type {
   DailyOrderBaseItem,
   DailyOrderLeanDocument,
@@ -19,6 +20,11 @@ export type ValidateDailyOrderBaseInput = {
     unitNumber: string;
     postalCode: string;
     buzzCode: string;
+  };
+  /** Optional coordinates from the customer's addressGeo for polygon-based checks. */
+  addressGeoCoords?: {
+    lat?: number | null;
+    lng?: number | null;
   };
   deliveryDateIso: string | null;
   sliceItemsToDeliveryDate: boolean;
@@ -88,7 +94,12 @@ export function validateDailyOrderBase(input: ValidateDailyOrderBaseInput): {
   }
 
   const area = input.customer.area.trim();
-  if (area && !isDailyDeliveryArea(area)) {
+  const hasCustomerOverride = hasOrderCustomerOverride(input.orderDoc);
+  if (
+    area &&
+    !hasCustomerOverride &&
+    !canDeliverDaily(input.addressGeoCoords, area)
+  ) {
     warnings.push(
       issue("NON_DAILY_DELIVERY_AREA", "Area is not in the daily delivery service list", "customer.area")
     );
@@ -112,7 +123,7 @@ export function validateDailyOrderBase(input: ValidateDailyOrderBaseInput): {
     warnings.push(issue("MISSING_BUZZ_CODE", "Buzz code is missing", "deliveryAddress.buzzCode"));
   }
 
-  if (hasOrderCustomerOverride(input.orderDoc)) {
+  if (hasCustomerOverride) {
     warnings.push(
       issue("HAS_ADMIN_OVERRIDE", "Order has admin customer override applied", "orderCustomerOverride")
     );

@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react"
 
 import type { CheckoutAddressFormData } from "@/components/checkout-address-form"
+import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useOptionalUserProfile } from "@/lib/dashboard-user-profile"
 import { useLanguage } from "@/lib/language-context"
 import { useToast } from "@/hooks/use-toast"
+import { resolveServiceability } from "@/lib/zones/service-areas"
 
 export type WeeklyCheckoutFormData = {
   name: string
@@ -43,7 +45,6 @@ export function useWeeklyCheckoutState() {
   )
   const [editingAddress, setEditingAddress] = useState(false)
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true)
-  const [popoverOpen, setPopoverOpen] = useState(false)
 
   useEffect(() => {
     const applyUserToForm = (user: any) => {
@@ -63,6 +64,7 @@ export function useWeeklyCheckoutState() {
           postalCode: user.address.postalCode || "",
           country: "Canada",
           buzzCode: user.address.buzzCode || "",
+          addressGeo: user.addressGeo,
         })
       }
     }
@@ -123,15 +125,37 @@ export function useWeeklyCheckoutState() {
     setAddressFormData((current) => ({
       ...current,
       [id === "state" ? "province" : id === "zip" ? "postalCode" : id]: value,
+      ...(id === "streetAddress" ? { addressGeo: undefined, postalCode: "" } : {}),
     }))
   }
 
-  const handleAreaSelect = (area: string) => {
+  const handleAddressSelect = (result: ParsedGoogleAddress) => {
+    const serviceability = resolveServiceability({
+      areaLabel: result.address.province,
+      postalCode: result.addressGeo.postalCode || result.address.postalCode,
+      lat: result.addressGeo.lat,
+      lng: result.addressGeo.lng,
+    })
+    if (!serviceability.canWeekly) {
+      toast({
+        title: language === "zh" ? "地址不在服务范围内" : "Address outside service area",
+        description:
+          language === "zh"
+            ? "此地址不在配送范围内，请选择服务区域内的地址。"
+            : "This address is not within Kapioo's delivery area. Please select an address in a supported area.",
+        variant: "destructive",
+      })
+      setAddressFormData((current) => ({ ...current, streetAddress: "", addressGeo: undefined, postalCode: "" }))
+      return
+    }
     setAddressFormData((current) => ({
       ...current,
-      province: area,
+      streetAddress: result.address.streetAddress || "",
+      postalCode: result.addressGeo.postalCode || result.address.postalCode || "",
+      country: result.address.country || "Canada",
+      province: result.address.province || "",
+      addressGeo: result.addressGeo,
     }))
-    setPopoverOpen(false)
   }
 
   const handleSaveAddress = async () => {
@@ -146,8 +170,20 @@ export function useWeeklyCheckoutState() {
 
     if (saveAddressForFuture && userData?._id) {
       try {
-        const response = await fetch(`/api/users/${userData._id}`, {
-          method: "PATCH",
+        if (!addressFormData.addressGeo) {
+          toast({
+            title: language === "zh" ? "请选择 Google 地址" : "Select a Google address",
+            description:
+              language === "zh"
+                ? "保存常用地址前，请从地址建议中选择配送地址。"
+                : "Please choose an address from the suggestions before saving it for future orders.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        const response = await fetch(`/api/users/${userData._id}/verify-address`, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
@@ -156,19 +192,14 @@ export function useWeeklyCheckoutState() {
               ...addressFormData,
               country: "Canada",
             },
+            addressGeo: addressFormData.addressGeo,
           }),
         })
 
         const result = await response.json()
 
         if (result.success) {
-          mergeStoredUser({
-            address: {
-              ...addressFormData,
-              country: "Canada",
-            },
-            area: addressFormData.province || "",
-          })
+          mergeStoredUser(result.data)
 
           toast({
             title: language === "zh" ? "地址已保存" : "Address Saved",
@@ -212,13 +243,11 @@ export function useWeeklyCheckoutState() {
     addressFormData,
     editingAddress,
     saveAddressForFuture,
-    popoverOpen,
     setEditingAddress,
     setSaveAddressForFuture,
-    setPopoverOpen,
     handleInputChange,
     handleAddressInputChange,
-    handleAreaSelect,
+    handleAddressSelect,
     handleSaveAddress,
   }
 }

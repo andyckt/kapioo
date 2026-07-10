@@ -1,6 +1,6 @@
 "use client"
 
-import type { Dispatch, SetStateAction } from "react"
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react"
 
 import { Copy, Download, Eye, Loader2, RefreshCcw, Users, X } from "lucide-react"
 
@@ -21,6 +21,21 @@ import type { PaginationState } from "@/lib/types/pagination"
 import type { User } from "@/lib/utils"
 
 import type { AdminUserSearchType } from "./use-admin-users"
+
+type AddressVerificationFilter = "all" | "verified" | "needs-update"
+
+function AddressVerificationBadge({ verified }: { verified?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+        verified ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+      )}
+    >
+      {verified ? "Verified" : "Needs update"}
+    </span>
+  )
+}
 
 export interface AdminUsersTabProps {
   users: User[]
@@ -133,6 +148,18 @@ export function AdminUsersTab({
   onDeleteUser,
   onChangePageSize,
 }: AdminUsersTabProps) {
+  const [addressVerificationFilter, setAddressVerificationFilter] =
+    useState<AddressVerificationFilter>("all")
+  const visibleUsers = useMemo(() => {
+    if (addressVerificationFilter === "verified") {
+      return filteredUsers.filter((user) => user.addressVerified)
+    }
+    if (addressVerificationFilter === "needs-update") {
+      return filteredUsers.filter((user) => !user.addressVerified)
+    }
+    return filteredUsers
+  }, [addressVerificationFilter, filteredUsers])
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -229,6 +256,19 @@ export function AdminUsersTab({
                     <SelectItem value="userID">User ID</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select
+                  value={addressVerificationFilter}
+                  onValueChange={(value: AddressVerificationFilter) => setAddressVerificationFilter(value)}
+                >
+                  <SelectTrigger className="w-[150px] sm:w-[180px]">
+                    <SelectValue placeholder="Address status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All addresses</SelectItem>
+                    <SelectItem value="verified">Verified</SelectItem>
+                    <SelectItem value="needs-update">Needs update</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Input
                   placeholder={
                     userSearchType === "email"
@@ -276,6 +316,7 @@ export function AdminUsersTab({
                     <th className="text-left p-4 font-medium w-[150px]">Email</th>
                     <th className="text-left p-4 font-medium">Phone</th>
                     <th className="text-left p-4 font-medium">Area</th>
+                    <th className="text-left p-4 font-medium">Address verified</th>
                     <th className="text-left p-4 font-medium">Created</th>
                     <th className="text-left p-4 font-medium">Daily Orders</th>
                     <th className="text-left p-4 font-medium">Weekly Orders</th>
@@ -283,7 +324,7 @@ export function AdminUsersTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user) => (
+                  {visibleUsers.map((user) => (
                     <tr key={user._id} className="border-b">
                       <td className="p-4">{user.userID}</td>
                       <td className="p-4">{user.name}</td>
@@ -292,6 +333,7 @@ export function AdminUsersTab({
                       </td>
                       <td className="p-4">{user.phone || "-"}</td>
                       <td className="p-4">{user.address?.province || "-"}</td>
+                      <td className="p-4"><AddressVerificationBadge verified={user.addressVerified} /></td>
                       <td className="p-4" title={user.joined ? formatDateTime(user.joined) : "-"}>
                         {user.joined ? formatDate(user.joined) : "-"}
                       </td>
@@ -319,7 +361,7 @@ export function AdminUsersTab({
             </div>
 
             <div className="md:hidden space-y-3">
-              {filteredUsers.map((user) => (
+              {visibleUsers.map((user) => (
                 <Card key={user._id} className="overflow-hidden">
                   <CardContent className="p-4">
                     <div className="space-y-3">
@@ -355,6 +397,10 @@ export function AdminUsersTab({
                         <div>
                           <p className="text-xs text-muted-foreground">Area</p>
                           <p className="text-xs font-medium truncate">{user.address?.province || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Address</p>
+                          <AddressVerificationBadge verified={user.addressVerified} />
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Daily Orders</p>

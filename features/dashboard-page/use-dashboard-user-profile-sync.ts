@@ -10,6 +10,7 @@ import type {
   DashboardPersonalInfo,
 } from "@/features/dashboard-settings/dashboard-settings-tab"
 
+
 export function useDashboardUserProfileSync(
   setLanguage: (lang: "en" | "zh") => void,
   setUserData: Dispatch<SetStateAction<DashboardUserData | null>>,
@@ -61,6 +62,9 @@ export function useDashboardUserProfileSync(
         area: nextUser.area || nextUser.address?.province || "",
         role: nextUser.role || "user",
         isVerified: Boolean(nextUser.isVerified),
+        addressGeo: nextUser.addressGeo,
+        addressVerified: nextUser.addressVerified,
+        addressVerifiedAt: nextUser.addressVerifiedAt,
       }
 
       setUserData(normalizedUser)
@@ -76,6 +80,8 @@ export function useDashboardUserProfileSync(
         isVerified: normalizedUser.isVerified,
         phone: normalizedUser.phone || "",
         address: normalizedUser.address,
+        addressGeo: normalizedUser.addressGeo,
+        addressVerified: normalizedUser.addressVerified,
         area: normalizedUser.area || normalizedUser.address?.province || "",
         credits: normalizedUser.credits || 0,
         twoDishVoucher: normalizedUser.twoDishVoucher || 0,
@@ -116,6 +122,7 @@ export function useDashboardUserProfileSync(
         postalCode: normalizedUser.address?.postalCode || "",
         country: normalizedUser.address?.country || "Canada",
         buzzCode: normalizedUser.address?.buzzCode || "",
+        addressGeo: nextUser.addressGeo,
       })
     },
     [setAddressInfo, setCredits, setLanguage, setPersonalInfo, setUserData]

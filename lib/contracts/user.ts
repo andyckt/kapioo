@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  addressGeoSchema,
   addressSchema,
   mongoIdSchema,
   nonEmptyString,
@@ -39,6 +40,11 @@ export const userResponseSchema = z.object({
   planBalances: z.record(z.number()).optional(),
   phone: z.string().optional(),
   address: addressSchema.optional(),
+  addressGeo: addressGeoSchema.optional(),
+  deliveryNotes: z.string().optional(),
+  addressVerified: z.boolean().optional(),
+  addressVerifiedAt: z.string().optional(),
+  legacyAddress: addressSchema.optional(),
   isVerified: z.boolean().optional(),
   languagePreference: languagePreferenceSchema.optional(),
   emailPreferences: emailPreferencesSchema.optional(),

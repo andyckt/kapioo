@@ -534,7 +534,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
               const user = JSON.parse(storedUser)
-              return user.address
+              return user.address ? { ...user.address, addressGeo: user.addressGeo } : undefined
             }
             return undefined
           })()}

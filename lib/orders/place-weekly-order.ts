@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 import { ApiError } from "@/lib/api/errors";
 import type { AuthenticatedActor } from "@/lib/api/types";
+import { isAddressVerified } from "@/lib/address/is-verified";
 import {
   applyBalanceMutations,
   type BalanceMutationEntry,
@@ -9,6 +10,8 @@ import {
 } from "@/lib/balances/mutations";
 import type { WeeklySubscriptionUserOrderBody } from "@/lib/contracts/weekly-subscription";
 import { toWeeklyPlanId } from "@/lib/plans/service";
+import { hasWeeklyBalance } from "@/lib/address/daily-eligibility";
+import { canDeliverWeekly } from "@/lib/zones/service-areas";
 import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
 import WeeklyOrder, { type IWeeklyOrder } from "@/models/WeeklyOrder";
 import type { ITransaction } from "@/models/Transaction";
@@ -320,6 +323,20 @@ export async function placeWeeklyOrder({
       const user = await findBalanceMutationUser(userId, session);
       if (!user) {
         throw new ApiError("User not found", { status: 404, code: "USER_NOT_FOUND" });
+      }
+
+      if (!isAddressVerified(user)) {
+        throw new ApiError("Please verify your delivery address before placing an order", {
+          status: 403,
+          code: "ADDRESS_VERIFICATION_REQUIRED",
+        });
+      }
+
+      if (!canDeliverWeekly(user.addressGeo?.postalCode || user.address?.postalCode, user.address?.province) && !hasWeeklyBalance(user)) {
+        throw new ApiError("Weekly meal box delivery is not available at this address", {
+          status: 403,
+          code: "WEEKLY_SERVICE_AREA_UNAVAILABLE",
+        });
       }
 
       if (weeklyEntitlementGroupId) {

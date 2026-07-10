@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast"
 import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useLanguage } from "@/lib/language-context"
 import { getStoredUser } from "@/lib/phone-helper"
+import type { AddressGeo } from "@/lib/contracts/common"
 
 type AddressUpdateInput = {
   unitNumber?: string
@@ -13,6 +14,7 @@ type AddressUpdateInput = {
   postalCode?: string
   country?: string
   buzzCode?: string
+  addressGeo?: AddressGeo
 }
 
 type UseRegionAddressUpdateOptions = {
@@ -68,14 +70,21 @@ export function useRegionAddressUpdate({
         }
       }
 
-      const response = await fetch(`/api/users/${effectiveUserId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          address: updatedAddress,
-        }),
+      const hasGeo = Boolean(addressData?.addressGeo)
+      const url = hasGeo
+        ? `/api/users/${effectiveUserId}/verify-address`
+        : `/api/users/${effectiveUserId}`
+      const body = hasGeo
+        ? JSON.stringify({
+            address: updatedAddress,
+            addressGeo: addressData!.addressGeo,
+          })
+        : JSON.stringify({ address: updatedAddress })
+
+      const response = await fetch(url, {
+        method: hasGeo ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body,
       })
 
       const result = await response.json()
@@ -84,7 +93,7 @@ export function useRegionAddressUpdate({
         throw new Error(result.error || "Failed to update region")
       }
 
-      mergeStoredUser({ address: updatedAddress })
+      mergeStoredUser(result.data ?? { address: updatedAddress })
       onSuccess?.(region)
 
       const toastMessage = addressData

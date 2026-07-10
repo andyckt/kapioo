@@ -53,6 +53,16 @@ function formatActivityDate(activity: UserActivity) {
   })
 }
 
+function formatAddressLines(address: User["address"]) {
+  if (!address) return ["-"]
+  return [
+    [address.unitNumber, address.streetAddress || "-"].filter(Boolean).join(" "),
+    [address.province || "-", address.postalCode || ""].filter(Boolean).join(" "),
+    address.country || "-",
+    address.buzzCode ? `Buzz: ${address.buzzCode}` : "",
+  ].filter(Boolean)
+}
+
 export function ViewUserDialog({ open, user, onOpenChange }: ViewUserDialogProps) {
   const { toast } = useToast()
   const [userActivities, setUserActivities] = useState<UserActivity[]>([])
@@ -156,6 +166,15 @@ export function ViewUserDialog({ open, user, onOpenChange }: ViewUserDialogProps
                     <p className="font-medium">{user.status || "-"}</p>
                   </div>
                   <div>
+                    <Label className="text-sm text-muted-foreground">Address Verification</Label>
+                    <p className={user.addressVerified ? "font-medium text-green-700" : "font-medium text-yellow-700"}>
+                      {user.addressVerified ? "Verified" : "Needs update"}
+                    </p>
+                    {user.addressVerifiedAt && (
+                      <p className="text-xs text-muted-foreground">{formatDateTime(user.addressVerifiedAt)}</p>
+                    )}
+                  </div>
+                  <div>
                     <Label className="text-sm text-muted-foreground">Name</Label>
                     <p className="font-medium">{user.name}</p>
                   </div>
@@ -176,12 +195,36 @@ export function ViewUserDialog({ open, user, onOpenChange }: ViewUserDialogProps
                 <div>
                   <Label className="text-sm text-muted-foreground">Address</Label>
                   <div className="mt-2 rounded-md border p-3 bg-slate-50">
-                    <p>{user.address?.unitNumber || ""} {user.address?.streetAddress || "-"}</p>
-                    <p>
-                      {user.address?.province || "-"} {user.address?.postalCode || ""}
-                    </p>
-                    <p>{user.address?.country || "-"}</p>
-                    {user.address?.buzzCode && <p>Buzz: {user.address.buzzCode}</p>}
+                    {formatAddressLines(user.address).map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                    {user.deliveryNotes && <p className="mt-2">Notes: {user.deliveryNotes}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Google Address Data</Label>
+                    <div className="mt-2 rounded-md border p-3 bg-slate-50 text-sm">
+                      <p>{user.addressGeo?.formattedAddress || "-"}</p>
+                      <p>Place ID: {user.addressGeo?.placeId || "-"}</p>
+                      <p>
+                        Coordinates:{" "}
+                        {typeof user.addressGeo?.lat === "number" && typeof user.addressGeo?.lng === "number"
+                          ? `${user.addressGeo.lat}, ${user.addressGeo.lng}`
+                          : "-"}
+                      </p>
+                      <p>Source: {user.addressGeo?.source || "-"}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Legacy Address Snapshot</Label>
+                    <div className="mt-2 rounded-md border p-3 bg-slate-50 text-sm">
+                      {formatAddressLines(user.legacyAddress).map((line) => (
+                        <p key={line}>{line}</p>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

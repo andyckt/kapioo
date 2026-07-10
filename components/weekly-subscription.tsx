@@ -426,12 +426,12 @@ export default function WeeklySubscription({
           currentRegion={userRegion}
           onRegionChange={handleRegionChange}
           onProceed={proceedToCheckout}
-          isValidRegion={ALL_WEEKLY_AREAS.includes(userRegion as any)}
+          isDailyEligible={ALL_WEEKLY_AREAS.includes(userRegion as any)}
           existingAddress={(() => {
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
               const user = JSON.parse(storedUser)
-              return user.address
+              return user.address ? { ...user.address, addressGeo: user.addressGeo } : undefined
             }
             return undefined
           })()}

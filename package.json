@@ -22,6 +22,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",
     "@emotion/is-prop-valid": "latest",
+    "@googlemaps/js-api-loader": "^2.1.1",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
@@ -51,6 +52,8 @@
     "@radix-ui/react-toggle-group": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.1.6",
     "@react-email/render": "^2.0.4",
+    "@turf/boolean-point-in-polygon": "^7.3.5",
+    "@turf/helpers": "^7.3.5",
     "@types/nodemailer": "^6.4.17",
     "@vercel/analytics": "^2.0.1",
     "autoprefixer": "^10.4.20",

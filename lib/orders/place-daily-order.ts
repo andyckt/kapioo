@@ -2,12 +2,15 @@ import mongoose from "mongoose";
 
 import type { AuthenticatedActor } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
+import { isAddressVerified } from "@/lib/address/is-verified";
 import {
   applyBalanceMutations,
   findBalanceMutationUser,
   type BalanceMutationEntry,
 } from "@/lib/balances/mutations";
 import type { CreateDailyOrderBody, CreateDailyOrderItemInput } from "@/lib/contracts/daily-order";
+import { hasDailyBalance } from "@/lib/address/daily-eligibility";
+import { canDeliverDaily } from "@/lib/zones/service-areas";
 import DailyDeliveryOrder, { type IDailyDeliveryOrder } from "@/models/DailyDeliveryOrder";
 import type { ITransaction } from "@/models/Transaction";
 import type { IUser } from "@/models/User";
@@ -163,6 +166,20 @@ export async function placeDailyOrder({
       const user = await findBalanceMutationUser(userId, session);
       if (!user) {
         throw new ApiError("User not found", { status: 404, code: "USER_NOT_FOUND" });
+      }
+
+      if (!isAddressVerified(user)) {
+        throw new ApiError("Please verify your delivery address before placing an order", {
+          status: 403,
+          code: "ADDRESS_VERIFICATION_REQUIRED",
+        });
+      }
+
+      if (!canDeliverDaily({ lat: user.addressGeo?.lat, lng: user.addressGeo?.lng }, user.address?.province) && !hasDailyBalance(user)) {
+        throw new ApiError("Daily delivery is not available at this address", {
+          status: 403,
+          code: "DAILY_SERVICE_AREA_UNAVAILABLE",
+        });
       }
 
       const vouchersNeeded = countRequiredVouchers(data.items);

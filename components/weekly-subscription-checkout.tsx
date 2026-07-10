@@ -7,7 +7,6 @@ import { CheckoutAddressForm } from '@/components/checkout-address-form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { WeeklyCheckoutSummary } from '@/features/weekly-checkout/weekly-checkout-summary'
 import { submitWeeklyCheckout } from '@/features/weekly-checkout/submit-weekly-checkout'
@@ -16,10 +15,6 @@ import { useLanguage } from '@/lib/language-context'
 import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { CartItem, DeliveryDay } from '@/lib/weekly-subscription'
-import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
-
-// Use centralized area list
-const WEEKLY_DELIVERY_REGIONS = ALL_WEEKLY_AREAS
 
 interface WeeklySubscriptionCheckoutProps {
   cart: CartItem[]
@@ -63,13 +58,11 @@ export function WeeklySubscriptionCheckout({
     addressFormData,
     editingAddress,
     saveAddressForFuture,
-    popoverOpen,
     setEditingAddress,
     setSaveAddressForFuture,
-    setPopoverOpen,
     handleInputChange,
     handleAddressInputChange,
-    handleAreaSelect,
+    handleAddressSelect,
     handleSaveAddress,
   } = useWeeklyCheckoutState()
 
@@ -90,7 +83,7 @@ export function WeeklySubscriptionCheckout({
     
     try {
       // Validate delivery information
-      if (!formData.name || !formData.phone || !formData.area) {
+      if (!formData.name || !formData.phone) {
         toast({
           title: language === 'zh' ? '出错了' : 'Error Occurred',
           description: language === 'zh' ? '请填写所有必填的配送信息' : 'Please fill in all required delivery information',
@@ -181,27 +174,6 @@ export function WeeklySubscriptionCheckout({
                 </Label>
                 <Input id="phone" value={formData.phone} onChange={handleInputChange} />
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="area">
-                  {language === 'zh' ? '区域' : 'Area'} <span className="text-red-500">*</span>
-                </Label>
-                <Select 
-                  value={formData.area} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, area: value }))}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={language === 'zh' ? '选择区域' : 'Select area'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WEEKLY_DELIVERY_REGIONS.map((region) => (
-                      <SelectItem key={region} value={region}>
-                        {region}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             
             <div className="space-y-2">
@@ -235,13 +207,10 @@ export function WeeklySubscriptionCheckout({
               {editingAddress ? (
                 <CheckoutAddressForm
                   addressFormData={addressFormData}
-                  availableRegions={WEEKLY_DELIVERY_REGIONS}
                   language={language}
-                  popoverOpen={popoverOpen}
                   saveAddressForFuture={saveAddressForFuture}
-                  onPopoverOpenChange={setPopoverOpen}
                   onAddressInputChange={handleAddressInputChange}
-                  onAreaSelect={handleAreaSelect}
+                  onAddressSelect={handleAddressSelect}
                   onSaveAddressForFutureChange={setSaveAddressForFuture}
                   onCancel={() => setEditingAddress(false)}
                   onSave={handleSaveAddress}

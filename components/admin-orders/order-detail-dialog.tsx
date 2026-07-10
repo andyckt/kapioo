@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { Calendar, ClipboardList, MapPin, User } from "lucide-react"
+import { AlertTriangle, Calendar, ClipboardList, MapPin, User } from "lucide-react"
 
 import {
   Dialog,
@@ -181,7 +181,21 @@ export function OrderDetailDialog({
                   Created {order.createdAt ? formatDateTime(order.createdAt) : "N/A"}
                 </p>
               </div>
-              <OrderStatusBadge status={order.status} />
+              <div className="flex flex-col items-end gap-1">
+                <OrderStatusBadge status={order.status} />
+                {(order as any).hasOrderOnlyOverride && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 border border-amber-200">
+                    <AlertTriangle className="h-3 w-3" />
+                    Admin Override
+                  </span>
+                )}
+                {(order as any).serviceabilityWarning && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 border border-red-200">
+                    <AlertTriangle className="h-3 w-3" />
+                    Out of zone
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">

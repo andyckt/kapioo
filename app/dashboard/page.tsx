@@ -216,6 +216,7 @@ export default function DashboardPage() {
   const {
     handlePersonalInfoChange,
     handleAddressInfoChange,
+    handleAddressGeoSelect,
     handlePasswordChange,
     handleSavePersonalInfo,
     handleSaveAddressInfo,
@@ -276,15 +277,10 @@ export default function DashboardPage() {
           }}
           handlePersonalInfoChange={handlePersonalInfoChange}
           handleAddressInfoChange={handleAddressInfoChange}
+          handleAddressGeoSelect={handleAddressGeoSelect}
           handlePasswordChange={handlePasswordChange}
           onLanguagePreferenceChange={(languagePreference) =>
             setPersonalInfo((prev) => ({ ...prev, languagePreference }))
-          }
-          onAddressProvinceChange={(province) =>
-            setAddressInfo((prev) => ({
-              ...prev,
-              province,
-            }))
           }
           handleSavePersonalInfo={handleSavePersonalInfo}
           handleSaveAddressInfo={handleSaveAddressInfo}

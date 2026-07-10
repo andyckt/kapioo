@@ -6,6 +6,7 @@ import { CreditCard, Gem, History, ShoppingCart, Ticket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
+import { getUserDailyEligibility } from "@/lib/address/daily-eligibility"
 import type { DashboardUserData } from "@/lib/dashboard-user-profile"
 import { getWeeklyPlanBalanceRows } from "@/lib/plans/balances"
 import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
@@ -16,6 +17,7 @@ type DashboardTabId =
   | "meal-vouchers"
   | "weekly-subscription"
   | "credits"
+  | "settings"
 
 export interface DashboardOverviewTabProps {
   language: "en" | "zh"
@@ -60,6 +62,7 @@ export function DashboardOverviewTab({
   const weeklyVoucherCounts = userData ? getWeeklyVoucherCounts(userData) : []
   const hasDailyVouchers = Boolean((userData?.twoDishVoucher || 0) > 0 || (userData?.threeDishVoucher || 0) > 0)
   const hasWeeklyVouchers = weeklyVoucherCounts.length > 0
+  const serviceEligibility = userData ? getUserDailyEligibility(userData) : null
 
   return (
     <motion.div
@@ -150,10 +153,29 @@ export function DashboardOverviewTab({
                       {language === "en" ? "Choose Your Service" : "选择您的服务"}
                     </h3>
                   </div>
-                  <ServiceSelectionCards
-                    onSelectDaily={() => onTabChange("meal-vouchers")}
-                    onSelectWeekly={() => onTabChange("credits")}
-                  />
+                  {serviceEligibility?.isServed ? (
+                    <ServiceSelectionCards
+                      showDaily={serviceEligibility.canDaily}
+                      showWeekly={serviceEligibility.canWeekly}
+                      onSelectDaily={() => onTabChange("meal-vouchers")}
+                      onSelectWeekly={() => onTabChange("credits")}
+                    />
+                  ) : (
+                    <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-5 text-center text-amber-800 space-y-4">
+                      <p>
+                        {language === "en"
+                          ? "This address is not in our current delivery area. Please update your address or check back as we expand coverage."
+                          : "此地址暂不在配送范围内。请更新配送地址，或稍后再查看服务范围更新。"}
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="border-amber-300 text-amber-900 hover:bg-amber-100"
+                        onClick={() => onTabChange("settings")}
+                      >
+                        {language === "en" ? "Update address" : "更新地址"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

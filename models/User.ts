@@ -17,6 +17,20 @@ export interface IAddress {
   buzzCode?: string;
 }
 
+export interface IAddressGeo {
+  placeId?: string;
+  formattedAddress?: string;
+  lat?: number;
+  lng?: number;
+  streetNumber?: string;
+  route?: string;
+  locality?: string;
+  administrativeArea?: string;
+  postalCode?: string;
+  country?: string;
+  source?: 'google' | 'manual';
+}
+
 // Define Address schema - make all fields optional to allow for empty addresses during registration
 const AddressSchema: Schema = new Schema({
   unitNumber: { type: String },
@@ -26,6 +40,20 @@ const AddressSchema: Schema = new Schema({
   country: { type: String, default: 'Canada' },
   buzzCode: { type: String }
 }, { _id: false }); // Prevent MongoDB from creating an _id for embedded documents
+
+const AddressGeoSchema: Schema = new Schema({
+  placeId: { type: String },
+  formattedAddress: { type: String },
+  lat: { type: Number },
+  lng: { type: Number },
+  streetNumber: { type: String },
+  route: { type: String },
+  locality: { type: String },
+  administrativeArea: { type: String },
+  postalCode: { type: String },
+  country: { type: String },
+  source: { type: String, enum: ['google', 'manual'], default: 'google' },
+}, { _id: false });
 
 // Define User interface
 export interface IUser extends Document {
@@ -51,6 +79,11 @@ export interface IUser extends Document {
   planBalances?: Record<string, number>;
   phone?: string;
   address?: IAddress;
+  addressGeo?: IAddressGeo;
+  deliveryNotes?: string;
+  addressVerified: boolean;
+  addressVerifiedAt?: Date;
+  legacyAddress?: IAddress;
   verificationCode?: string;
   verificationExpires?: Date;
   isVerified: boolean;
@@ -172,6 +205,22 @@ const UserSchema: Schema = new Schema(
     address: { 
       type: AddressSchema,
       default: {} // Set a default empty object
+    },
+    addressGeo: {
+      type: AddressGeoSchema,
+    },
+    deliveryNotes: {
+      type: String,
+    },
+    addressVerified: {
+      type: Boolean,
+      default: false,
+    },
+    addressVerifiedAt: {
+      type: Date,
+    },
+    legacyAddress: {
+      type: AddressSchema,
     },
     // Email verification fields
     verificationCode: {

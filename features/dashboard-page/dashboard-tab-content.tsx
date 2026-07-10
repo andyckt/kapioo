@@ -48,9 +48,9 @@ export interface DashboardTabContentProps {
   onWeeklyVoucherUpdate: () => void
   handlePersonalInfoChange: (e: ChangeEvent<HTMLInputElement>) => void
   handleAddressInfoChange: (e: ChangeEvent<HTMLInputElement>) => void
+  handleAddressGeoSelect: (result: import("@/lib/address/types").ParsedGoogleAddress) => void
   handlePasswordChange: (e: ChangeEvent<HTMLInputElement>) => void
   onLanguagePreferenceChange: (languagePreference: "zh" | "en") => void
-  onAddressProvinceChange: (province: string) => void
   handleSavePersonalInfo: () => void | Promise<void>
   handleSaveAddressInfo: () => void | Promise<void>
   handleSavePassword: () => void | Promise<void>
@@ -80,9 +80,9 @@ export function DashboardTabContent({
   onWeeklyVoucherUpdate,
   handlePersonalInfoChange,
   handleAddressInfoChange,
+  handleAddressGeoSelect,
   handlePasswordChange,
   onLanguagePreferenceChange,
-  onAddressProvinceChange,
   handleSavePersonalInfo,
   handleSaveAddressInfo,
   handleSavePassword,
@@ -137,9 +137,9 @@ export function DashboardTabContent({
           passwordInfo={passwordInfo}
           onPersonalInfoChange={handlePersonalInfoChange}
           onAddressInfoChange={handleAddressInfoChange}
+          onAddressGeoSelect={handleAddressGeoSelect}
           onPasswordChange={handlePasswordChange}
           onLanguagePreferenceChange={onLanguagePreferenceChange}
-          onAddressProvinceChange={onAddressProvinceChange}
           onSavePersonalInfo={handleSavePersonalInfo}
           onSaveAddressInfo={handleSaveAddressInfo}
           onSavePassword={handleSavePassword}

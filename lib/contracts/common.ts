@@ -18,6 +18,52 @@ export const addressSchema = z.object({
 
 export type Address = z.infer<typeof addressSchema>;
 
+export const addressGeoSchema = z.object({
+  placeId: z.string().trim().optional(),
+  formattedAddress: z.string().trim().optional(),
+  lat: z.number().finite().optional(),
+  lng: z.number().finite().optional(),
+  streetNumber: z.string().trim().optional(),
+  route: z.string().trim().optional(),
+  locality: z.string().trim().optional(),
+  administrativeArea: z.string().trim().optional(),
+  postalCode: z.string().trim().optional(),
+  country: z.string().trim().optional(),
+  source: z.enum(["google", "manual"]).default("google"),
+});
+
+export const verifiedAddressGeoSchema = addressGeoSchema.superRefine((value, ctx) => {
+  if (value.source === "manual") {
+    return;
+  }
+
+  if (!value.placeId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["placeId"],
+      message: "Google place id is required",
+    });
+  }
+
+  if (typeof value.lat !== "number") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["lat"],
+      message: "Latitude is required",
+    });
+  }
+
+  if (typeof value.lng !== "number") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["lng"],
+      message: "Longitude is required",
+    });
+  }
+});
+
+export type AddressGeo = z.infer<typeof addressGeoSchema>;
+
 export const paginationStateSchema = z.object({
   page: z.number().int().positive(),
   limit: z.number().int().positive(),

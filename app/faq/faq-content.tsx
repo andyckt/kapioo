@@ -19,6 +19,7 @@ import {
 import { useLanguage } from "@/lib/language-context";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { PRODUCT_LINE_LABELS, productLineSeriesName } from "@/lib/product-lines/names";
+import { formatDailyCoverageList, formatWeeklyOnlyCoverageList } from "@/lib/zones/coverage-copy";
 
 function getFaqs(isZh: boolean) {
   const contactAnswer = (
@@ -82,8 +83,8 @@ function getFaqs(isZh: boolean) {
     {
       question: isZh ? "你们配送哪些区域？" : "Where do you deliver?",
       answer: isZh
-        ? "我们配送大多伦多地区。具体是否可达取决于您选择的计划和配送地址。"
-        : "We deliver across the GTA. Availability depends on the plan you choose and your delivery area.",
+        ? `每日配送 (${PRODUCT_LINE_LABELS.daily.zh}) 目前覆盖：${formatDailyCoverageList("zh")}。周次配送 (${PRODUCT_LINE_LABELS.weekly.zh}) 另额外服务：${formatWeeklyOnlyCoverageList("zh")}。输入您的详细地址即可确认是否可达。`
+        : `Daily delivery (${PRODUCT_LINE_LABELS.daily.en}) is available in: ${formatDailyCoverageList("en")}. Weekly meal box (${PRODUCT_LINE_LABELS.weekly.en}) also covers: ${formatWeeklyOnlyCoverageList("en")}. Enter your exact address to confirm coverage.`,
     },
     {
       question: isZh

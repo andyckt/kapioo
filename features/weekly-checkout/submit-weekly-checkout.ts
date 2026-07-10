@@ -154,9 +154,15 @@ export async function submitWeeklyCheckout({
     return
   }
 
+  // Snapshot coordinates from addressGeo for polygon-based historical accuracy
+  const geoCoords = editingAddress
+    ? { lat: addressFormData.addressGeo?.lat, lng: addressFormData.addressGeo?.lng }
+    : { lat: (userData as any)?.addressGeo?.lat, lng: (userData as any)?.addressGeo?.lng };
+
   const deliveryAddress = {
     ...(editingAddress ? addressFormData : userData?.address),
     country: "Canada",
+    ...(geoCoords.lat != null && geoCoords.lng != null ? geoCoords : {}),
   }
 
   if (
@@ -301,7 +307,8 @@ export async function submitWeeklyCheckout({
         specialInstructions: formData.specialInstructions,
         deliveryAddress,
         phoneNumber: formData.phone,
-        area: formData.area,
+        // Derive area from address province so there's one source of truth
+        area: (deliveryAddress as any)?.province || formData.area,
         mealPlanType: selectedMealPlanType,
         deductVoucher: true,
         weeklyEntitlementGroupId,
@@ -342,7 +349,7 @@ export async function submitWeeklyCheckout({
           specialInstructions: formData.specialInstructions,
           deliveryAddress,
           phoneNumber: formData.phone,
-          area: formData.area,
+          area: (deliveryAddress as any)?.province || formData.area,
           mealPlanType: selectedMealPlanType,
           deductVoucher: false,
           weeklyEntitlementGroupId,
