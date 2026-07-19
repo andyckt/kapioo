@@ -4,6 +4,10 @@ import { errorJson, parseJsonBody, successJson } from "@/lib/api";
 import { adminNotifyNextWeekMenuPostBodySchema } from "@/lib/contracts/admin-routes";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
+import {
+  NEXT_WEEK_MENU_ELIGIBLE_QUERY,
+  resolveNextWeekMenuRecipients,
+} from "@/lib/next-week-menu-email/recipients";
 import User from "@/models/User";
 import NextWeekMenuEmailJob from "@/models/NextWeekMenuEmailJob";
 import {
@@ -13,13 +17,6 @@ import {
 import { sendBatchEmailsWithResend } from "@/lib/services/resend-email";
 
 export const dynamic = "force-dynamic";
-
-const ELIGIBLE_USER_QUERY = {
-  isVerified: true,
-  emailStatus: { $ne: "bounced" },
-  email: { $exists: true, $nin: ["", null] },
-  "emailPreferences.nextWeekMenuUpdates": { $ne: false },
-};
 
 // POST handler - enqueue next week menu update job
 // (test mode remains immediate for convenience)
@@ -108,26 +105,19 @@ export async function POST(request: Request) {
 
     await connectToDatabase();
 
-    const query: Record<string, unknown> = { ...ELIGIBLE_USER_QUERY };
-    const selectedIds = Array.isArray(userIds) ? userIds : [];
-    const criteriaType = selectedIds.length > 0 ? "selected" : "all";
+    const resolved = await resolveNextWeekMenuRecipients({
+      userIds: Array.isArray(userIds) ? userIds : [],
+    });
 
-    if (criteriaType === "selected") {
-      query._id = { $in: selectedIds };
-    }
-
-    const users = await User.find(query).select("_id").lean();
-    const eligibleUserIds = users.map((user: { _id: unknown }) => String(user._id));
-
-    if (eligibleUserIds.length === 0) {
+    if (resolved.eligibleUserIds.length === 0) {
       return errorJson("No eligible users found for this job", 400);
     }
 
     const job = await NextWeekMenuEmailJob.create({
       status: "pending",
-      criteriaType,
-      userIds: eligibleUserIds,
-      totalUsers: eligibleUserIds.length,
+      criteriaType: resolved.criteriaType,
+      userIds: resolved.eligibleUserIds,
+      totalUsers: resolved.eligibleUserIds.length,
       cursor: 0,
       sentCount: 0,
       failedCount: 0,
@@ -162,7 +152,7 @@ export async function GET(request: Request) {
 
     const totalUsers = await User.countDocuments();
 
-    const eligibleUsers = await User.countDocuments(ELIGIBLE_USER_QUERY);
+    const eligibleUsers = await User.countDocuments(NEXT_WEEK_MENU_ELIGIBLE_QUERY);
 
     const unsubscribed = await User.countDocuments({
       "emailPreferences.nextWeekMenuUpdates": false,

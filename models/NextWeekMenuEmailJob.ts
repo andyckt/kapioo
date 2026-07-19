@@ -6,7 +6,7 @@ export type NextWeekEmailJobStatus =
   | 'completed'
   | 'failed';
 
-export type NextWeekEmailJobCriteriaType = 'all' | 'selected';
+export type NextWeekEmailJobCriteriaType = 'all' | 'selected' | 'emails';
 
 export interface INextWeekMenuEmailJob extends Document {
   status: NextWeekEmailJobStatus;
@@ -46,7 +46,7 @@ const NextWeekMenuEmailJobSchema = new Schema<INextWeekMenuEmailJob>(
     },
     criteriaType: {
       type: String,
-      enum: ['all', 'selected'],
+      enum: ['all', 'selected', 'emails'],
       required: true
     },
     userIds: {

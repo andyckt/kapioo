@@ -6,15 +6,29 @@ import {
 import { adminNextWeekEmailJobPostBodySchema } from "@/lib/contracts/admin-routes";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
-import User from "@/models/User";
+import { resolveNextWeekMenuRecipients } from "@/lib/next-week-menu-email/recipients";
 import NextWeekMenuEmailJob from "@/models/NextWeekMenuEmailJob";
 
-const ELIGIBLE_USER_QUERY = {
-  isVerified: true,
-  emailStatus: { $ne: "bounced" },
-  email: { $exists: true, $nin: ["", null] },
-  "emailPreferences.nextWeekMenuUpdates": { $ne: false },
-};
+function formatSkippedSummary(skipped: {
+  invalidFormat: string[];
+  notRegistered: string[];
+  unsubscribed: string[];
+  bounced: string[];
+  unverified: string[];
+  invalid: string[];
+  duplicateCount: number;
+}) {
+  return {
+    invalidFormat: skipped.invalidFormat.length,
+    notRegistered: skipped.notRegistered.length,
+    unsubscribed: skipped.unsubscribed.length,
+    bounced: skipped.bounced.length,
+    unverified: skipped.unverified.length,
+    invalid: skipped.invalid.length,
+    duplicates: skipped.duplicateCount,
+    details: skipped,
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -27,30 +41,32 @@ export async function POST(request: Request) {
     if (bodyParsed.error) {
       return bodyParsed.error;
     }
-    const { userIds: rawUserIds, createdBy } = bodyParsed.data;
-    const userIds = rawUserIds ?? [];
+
+    const { userIds, emails, createdBy, dryRun } = bodyParsed.data;
+
+    const resolved = await resolveNextWeekMenuRecipients({ userIds, emails });
+
+    if (dryRun) {
+      return successJson({
+        criteriaType: resolved.criteriaType,
+        eligibleCount: resolved.eligibleUserIds.length,
+        skipped: formatSkippedSummary(resolved.skipped),
+      });
+    }
+
+    if (resolved.eligibleUserIds.length === 0) {
+      return errorJson("No eligible users found for this job", 400, {
+        extra: { skipped: formatSkippedSummary(resolved.skipped) },
+      });
+    }
 
     await connectToDatabase();
 
-    const query: Record<string, unknown> = { ...ELIGIBLE_USER_QUERY };
-    const criteriaType = userIds.length > 0 ? "selected" : "all";
-
-    if (criteriaType === "selected") {
-      query._id = { $in: userIds };
-    }
-
-    const users = await User.find(query).select("_id").lean();
-    const eligibleUserIds = users.map((user: { _id: unknown }) => String(user._id));
-
-    if (eligibleUserIds.length === 0) {
-      return errorJson("No eligible users found for this job", 400);
-    }
-
     const job = await NextWeekMenuEmailJob.create({
       status: "pending",
-      criteriaType,
-      userIds: eligibleUserIds,
-      totalUsers: eligibleUserIds.length,
+      criteriaType: resolved.criteriaType,
+      userIds: resolved.eligibleUserIds,
+      totalUsers: resolved.eligibleUserIds.length,
       cursor: 0,
       sentCount: 0,
       failedCount: 0,
@@ -58,7 +74,7 @@ export async function POST(request: Request) {
       createdBy,
     });
     console.info(
-      `[NextWeekEmailJobCreate] jobId=${String(job._id)} criteria=${job.criteriaType} total=${job.totalUsers} selectedInput=${userIds.length}`
+      `[NextWeekEmailJobCreate] jobId=${String(job._id)} criteria=${job.criteriaType} total=${job.totalUsers} inputUsers=${userIds.length} inputEmails=${emails.length}`
     );
 
     return successJson({
@@ -69,6 +85,7 @@ export async function POST(request: Request) {
       sentCount: job.sentCount,
       failedCount: job.failedCount,
       progress: 0,
+      skipped: formatSkippedSummary(resolved.skipped),
     });
   } catch (error: unknown) {
     console.error("Error creating next-week email job:", error);

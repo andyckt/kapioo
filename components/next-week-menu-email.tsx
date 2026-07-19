@@ -1,14 +1,38 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Mail, Send, Users, TestTube, Loader2, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react'
+import { Mail, Send, Users, TestTube, Loader2, CheckCircle, XCircle, AlertCircle, Clock, ClipboardList } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
+import { Textarea } from '@/components/ui/textarea'
+import { parseEmailListFromText } from '@/lib/next-week-menu-email/parse-emails'
+
+type PastePreviewData = {
+  criteriaType: string
+  eligibleCount: number
+  skipped: {
+    invalidFormat: number
+    notRegistered: number
+    unsubscribed: number
+    bounced: number
+    unverified: number
+    invalid: number
+    duplicates: number
+    details?: {
+      invalidFormat: string[]
+      notRegistered: string[]
+      unsubscribed: string[]
+      bounced: string[]
+      unverified: string[]
+      invalid: string[]
+    }
+  }
+}
 
 export function NextWeekMenuEmail() {
   const { toast } = useToast()
@@ -16,6 +40,14 @@ export function NextWeekMenuEmail() {
   const [showSummaryDialog, setShowSummaryDialog] = useState(false)
   const [showSelectUsersDialog, setShowSelectUsersDialog] = useState(false)
   const [showProgressDialog, setShowProgressDialog] = useState(false)
+  const [pastedEmailText, setPastedEmailText] = useState('')
+  const [showPastePreviewDialog, setShowPastePreviewDialog] = useState(false)
+  const [pastePreview, setPastePreview] = useState<PastePreviewData | null>(null)
+  
+  const parsedPasteEmails = useMemo(
+    () => parseEmailListFromText(pastedEmailText),
+    [pastedEmailText]
+  )
   
   // Summary data
   const [summary, setSummary] = useState<any>(null)
@@ -475,6 +507,94 @@ export function NextWeekMenuEmail() {
     }
   }
 
+  const handlePastePreview = async () => {
+    const { valid } = parsedPasteEmails
+    if (valid.length === 0) {
+      toast({
+        title: "No valid emails",
+        description: "Paste at least one valid email address",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/admin/next-week-email-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails: valid, dryRun: true }),
+      })
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to preview recipients")
+      }
+
+      setPastePreview(result.data)
+      setShowPastePreviewDialog(true)
+    } catch (error) {
+      console.error("Error previewing pasted emails:", error)
+      toast({
+        title: "Error",
+        description: "Failed to preview email list",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const confirmPasteSend = async () => {
+    const { valid } = parsedPasteEmails
+    setShowPastePreviewDialog(false)
+    setShowProgressDialog(true)
+
+    try {
+      setProgress({
+        jobId: "",
+        status: "pending",
+        emailsSent: 0,
+        emailsFailed: 0,
+        totalUsers: pastePreview?.eligibleCount || valid.length,
+        progress: 0,
+        currentBatch: 0,
+        totalBatches: 0,
+        isComplete: false,
+        failedEmails: [],
+        startedAt: null,
+        lastProcessedAt: null,
+        completedAt: null,
+      })
+
+      const response = await fetch("/api/admin/next-week-email-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails: valid }),
+      })
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create email job")
+      }
+
+      const jobId = result.data?.jobId
+      if (!jobId) {
+        throw new Error("Email job id missing")
+      }
+
+      startJobPolling(jobId, result.data?.totalUsers || valid.length)
+    } catch (error) {
+      console.error("Error sending to pasted emails:", error)
+      toast({
+        title: "Error",
+        description: "Failed to queue emails for pasted list",
+        variant: "destructive",
+      })
+      setProgress((prev) => ({ ...prev, status: "failed", isComplete: true }))
+    }
+  }
+
   // Select/Deselect users from current page only
   const toggleSelectPage = () => {
     const currentPageIds = users.map((user) => user._id)
@@ -619,6 +739,49 @@ export function NextWeekMenuEmail() {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="border-2 border-amber-200/70 hover:border-amber-300/80 transition-colors">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-amber-700" />
+            Paste Email List
+          </CardTitle>
+          <CardDescription>
+            Paste addresses (one per line). Sends the same next-week reminder only to eligible
+            registered users — unsubscribed, bounced, and unverified addresses are skipped.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            placeholder={`maggiechenjq@gmail.com\nfrankyfang0324@gmail.com\njoeybz1992@gmail.com`}
+            value={pastedEmailText}
+            onChange={(e) => setPastedEmailText(e.target.value)}
+            rows={8}
+            className="font-mono text-sm"
+          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[#6B5F53]">
+              {parsedPasteEmails.valid.length} valid
+              {parsedPasteEmails.invalid.length > 0 &&
+                ` · ${parsedPasteEmails.invalid.length} invalid format`}
+              {parsedPasteEmails.duplicateCount > 0 &&
+                ` · ${parsedPasteEmails.duplicateCount} duplicate${parsedPasteEmails.duplicateCount === 1 ? "" : "s"} skipped`}
+            </p>
+            <Button
+              onClick={handlePastePreview}
+              disabled={isLoading || parsedPasteEmails.valid.length === 0}
+              className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Review &amp; Send
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       
       {/* Summary Dialog */}
       <Dialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog}>
@@ -680,6 +843,92 @@ export function NextWeekMenuEmail() {
               className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
             >
               Confirm Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPastePreviewDialog} onOpenChange={setShowPastePreviewDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Confirm pasted email list</DialogTitle>
+            <DialogDescription>
+              Review who will receive the next week menu reminder
+            </DialogDescription>
+          </DialogHeader>
+
+          {pastePreview && (
+            <div className="space-y-4">
+              <div className="bg-[#F5EDE4] rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Will receive email:</span>
+                  <span className="font-bold text-green-700">{pastePreview.eligibleCount}</span>
+                </div>
+              </div>
+
+              {(pastePreview.skipped.notRegistered > 0 ||
+                pastePreview.skipped.unsubscribed > 0 ||
+                pastePreview.skipped.bounced > 0 ||
+                pastePreview.skipped.unverified > 0 ||
+                pastePreview.skipped.invalid > 0 ||
+                pastePreview.skipped.invalidFormat > 0 ||
+                pastePreview.skipped.duplicates > 0) && (
+                <div>
+                  <h4 className="font-medium mb-2">Skipped:</h4>
+                  <div className="space-y-1 text-sm text-[#6B5F53] max-h-48 overflow-y-auto">
+                    {pastePreview.skipped.duplicates > 0 && (
+                      <div>• Duplicates in paste: {pastePreview.skipped.duplicates}</div>
+                    )}
+                    {pastePreview.skipped.invalidFormat > 0 && (
+                      <div>• Invalid format: {pastePreview.skipped.invalidFormat}</div>
+                    )}
+                    {pastePreview.skipped.notRegistered > 0 && (
+                      <div>• Not registered: {pastePreview.skipped.notRegistered}</div>
+                    )}
+                    {pastePreview.skipped.unsubscribed > 0 && (
+                      <div>• Unsubscribed: {pastePreview.skipped.unsubscribed}</div>
+                    )}
+                    {pastePreview.skipped.bounced > 0 && (
+                      <div>• Bounced/blocked: {pastePreview.skipped.bounced}</div>
+                    )}
+                    {pastePreview.skipped.unverified > 0 && (
+                      <div>• Unverified: {pastePreview.skipped.unverified}</div>
+                    )}
+                    {pastePreview.skipped.invalid > 0 && (
+                      <div>• Missing email on account: {pastePreview.skipped.invalid}</div>
+                    )}
+                    {pastePreview.skipped.details?.notRegistered?.length ? (
+                      <div className="pt-2 text-xs font-mono break-all">
+                        {pastePreview.skipped.details.notRegistered.join(", ")}
+                      </div>
+                    ) : null}
+                    {pastePreview.skipped.details?.unsubscribed?.length ? (
+                      <div className="pt-1 text-xs font-mono break-all text-amber-800">
+                        Unsubscribed: {pastePreview.skipped.details.unsubscribed.join(", ")}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+
+              {pastePreview.eligibleCount === 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                  No eligible recipients in this list. Adjust the list or check user status.
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPastePreviewDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmPasteSend}
+              disabled={!pastePreview || pastePreview.eligibleCount === 0}
+              className="bg-gradient-to-r from-amber-600 to-amber-500"
+            >
+              Send to {pastePreview?.eligibleCount ?? 0} users
             </Button>
           </DialogFooter>
         </DialogContent>

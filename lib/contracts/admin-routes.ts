@@ -41,16 +41,6 @@ export const adminPromoRedemptionsQuerySchema = z.object({
 
 export type AdminPromoRedemptionsQuery = z.infer<typeof adminPromoRedemptionsQuerySchema>;
 
-/** Body for POST /api/admin/next-week-email-jobs */
-export const adminNextWeekEmailJobPostBodySchema = z.object({
-  userIds: z.array(z.string()).optional().default([]),
-  createdBy: z.string().optional(),
-});
-
-export type AdminNextWeekEmailJobPostBody = z.infer<
-  typeof adminNextWeekEmailJobPostBodySchema
->;
-
 const optionalCoercedBoolean = z
   .union([z.boolean(), z.string()])
   .optional()
@@ -60,6 +50,22 @@ const optionalCoercedBoolean = z
     const s = String(v).toLowerCase();
     return s === "true" || s === "1";
   });
+
+/** Body for POST /api/admin/next-week-email-jobs */
+export const adminNextWeekEmailJobPostBodySchema = z
+  .object({
+    userIds: z.array(z.string()).optional().default([]),
+    emails: z.array(z.string()).optional().default([]),
+    createdBy: z.string().optional(),
+    dryRun: optionalCoercedBoolean,
+  })
+  .refine((data) => !(data.userIds.length > 0 && data.emails.length > 0), {
+    message: "Provide either userIds or emails, not both",
+  });
+
+export type AdminNextWeekEmailJobPostBody = z.infer<
+  typeof adminNextWeekEmailJobPostBodySchema
+>;
 
 /** Body for POST /api/admin/notify-next-week-menu */
 export const adminNotifyNextWeekMenuPostBodySchema = z.object({
