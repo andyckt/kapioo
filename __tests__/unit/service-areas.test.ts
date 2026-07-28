@@ -44,6 +44,10 @@ describe("canDeliverDaily — global polygon", () => {
     expect(canDeliverDaily({ lat: 43.849, lng: -79.379 })).toBe(true);
   });
 
+  it("allows 322 Wilson Ave North York patch", () => {
+    expect(canDeliverDaily({ lat: 43.737232, lng: -79.4363819 })).toBe(true);
+  });
+
   it("blocks an address outside the polygon (south of downtown)", () => {
     expect(canDeliverDaily({ lat: 43.55, lng: -79.38 })).toBe(false);
   });
