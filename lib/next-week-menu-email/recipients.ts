@@ -1,6 +1,7 @@
 import connectToDatabase from "@/lib/db";
 import User from "@/models/User";
 
+import { getNextWeekMenuBlocklist } from "./blocklist";
 import { parseEmailList, type ParsedEmailList } from "./parse-emails";
 
 export const NEXT_WEEK_MENU_ELIGIBLE_QUERY = {
@@ -16,6 +17,7 @@ export type NextWeekMenuSkippedRecipients = {
   invalidFormat: string[];
   notRegistered: string[];
   unsubscribed: string[];
+  adminExcluded: string[];
   bounced: string[];
   unverified: string[];
   invalid: string[];
@@ -40,23 +42,46 @@ const emptySkipped = (): NextWeekMenuSkippedRecipients => ({
   invalidFormat: [],
   notRegistered: [],
   unsubscribed: [],
+  adminExcluded: [],
   bounced: [],
   unverified: [],
   invalid: [],
   duplicateCount: 0,
 });
 
+export function buildNextWeekMenuEligibleQuery(blocklist: string[] = []) {
+  const query: Record<string, unknown> = {
+    ...NEXT_WEEK_MENU_ELIGIBLE_QUERY,
+  };
+
+  if (blocklist.length > 0) {
+    query.email = {
+      $exists: true,
+      $nin: ["", null, ...blocklist],
+    };
+  }
+
+  return query;
+}
+
 function categorizeIneligibleUser(
-  user: UserRecipientRow
+  user: UserRecipientRow,
+  blocklistSet: Set<string>
 ): keyof Omit<NextWeekMenuSkippedRecipients, "duplicateCount" | "invalidFormat" | "notRegistered"> | null {
   if (!user.email) return "invalid";
+
+  const normalizedEmail = user.email.trim().toLowerCase();
+  if (blocklistSet.has(normalizedEmail)) return "adminExcluded";
   if (user.emailPreferences?.nextWeekMenuUpdates === false) return "unsubscribed";
   if (user.emailStatus === "bounced" || user.emailStatus === "blocked") return "bounced";
   if (!user.isVerified) return "unverified";
   return null;
 }
 
-function resolveFromParsedEmails(parsed: ParsedEmailList): Promise<ResolveNextWeekMenuRecipientsResult> {
+function resolveFromParsedEmails(
+  parsed: ParsedEmailList,
+  blocklistSet: Set<string>
+): Promise<ResolveNextWeekMenuRecipientsResult> {
   const skipped = emptySkipped();
   skipped.invalidFormat = parsed.invalid;
   skipped.duplicateCount = parsed.duplicateCount;
@@ -69,7 +94,22 @@ function resolveFromParsedEmails(parsed: ParsedEmailList): Promise<ResolveNextWe
     });
   }
 
-  return User.find({ email: { $in: parsed.valid } })
+  for (const email of parsed.valid) {
+    if (blocklistSet.has(email)) {
+      skipped.adminExcluded.push(email);
+    }
+  }
+
+  const emailsToLookup = parsed.valid.filter((email) => !blocklistSet.has(email));
+  if (emailsToLookup.length === 0) {
+    return Promise.resolve({
+      criteriaType: "emails",
+      eligibleUserIds: [],
+      skipped,
+    });
+  }
+
+  return User.find({ email: { $in: emailsToLookup } })
     .select("_id email isVerified emailStatus emailPreferences")
     .lean<UserRecipientRow[]>()
     .then((users) => {
@@ -78,14 +118,14 @@ function resolveFromParsedEmails(parsed: ParsedEmailList): Promise<ResolveNextWe
       );
       const eligibleUserIds: string[] = [];
 
-      for (const email of parsed.valid) {
+      for (const email of emailsToLookup) {
         const user = userByEmail.get(email);
         if (!user) {
           skipped.notRegistered.push(email);
           continue;
         }
 
-        const reason = categorizeIneligibleUser(user);
+        const reason = categorizeIneligibleUser(user, blocklistSet);
         if (reason) {
           skipped[reason].push(email);
           continue;
@@ -108,15 +148,19 @@ export async function resolveNextWeekMenuRecipients(input: {
 }): Promise<ResolveNextWeekMenuRecipientsResult> {
   await connectToDatabase();
 
+  const blocklist = await getNextWeekMenuBlocklist();
+  const blocklistSet = new Set(blocklist);
+  const eligibleQuery = buildNextWeekMenuEligibleQuery(blocklist);
+
   const emailInputs = input.emails ?? [];
   if (emailInputs.length > 0) {
-    return resolveFromParsedEmails(parseEmailList(emailInputs));
+    return resolveFromParsedEmails(parseEmailList(emailInputs), blocklistSet);
   }
 
   const userIds = (input.userIds ?? []).filter(Boolean);
   if (userIds.length > 0) {
     const users = await User.find({
-      ...NEXT_WEEK_MENU_ELIGIBLE_QUERY,
+      ...eligibleQuery,
       _id: { $in: userIds },
     })
       .select("_id")
@@ -129,11 +173,16 @@ export async function resolveNextWeekMenuRecipients(input: {
     };
   }
 
-  const users = await User.find(NEXT_WEEK_MENU_ELIGIBLE_QUERY).select("_id").lean();
+  const users = await User.find(eligibleQuery).select("_id").lean();
 
   return {
     criteriaType: "all",
     eligibleUserIds: users.map((user) => String(user._id)),
     skipped: emptySkipped(),
   };
+}
+
+export async function getNextWeekMenuEligibleQuery() {
+  const blocklist = await getNextWeekMenuBlocklist();
+  return buildNextWeekMenuEligibleQuery(blocklist);
 }

@@ -1,5 +1,8 @@
 import {
-  parseEmailList,
+  buildNextWeekMenuEligibleQuery,
+  NEXT_WEEK_MENU_ELIGIBLE_QUERY,
+} from "@/lib/next-week-menu-email/recipients";
+import {
   parseEmailListFromText,
 } from "@/lib/next-week-menu-email/parse-emails";
 
@@ -37,5 +40,33 @@ describe("parseEmailListFromText", () => {
       "c@example.com",
       "d@example.com",
     ]);
+  });
+});
+
+describe("buildNextWeekMenuEligibleQuery", () => {
+  it("returns the base eligible query when blocklist is empty", () => {
+    expect(buildNextWeekMenuEligibleQuery([])).toEqual(NEXT_WEEK_MENU_ELIGIBLE_QUERY);
+  });
+
+  it("adds blocklisted emails to email $nin when blocklist is non-empty", () => {
+    expect(buildNextWeekMenuEligibleQuery(["blocked@example.com"])).toEqual({
+      ...NEXT_WEEK_MENU_ELIGIBLE_QUERY,
+      email: {
+        $exists: true,
+        $nin: ["", null, "blocked@example.com"],
+      },
+    });
+  });
+
+  it("preserves all blocklisted emails in $nin", () => {
+    const query = buildNextWeekMenuEligibleQuery([
+      "a@example.com",
+      "b@example.com",
+    ]);
+
+    expect(query.email).toEqual({
+      $exists: true,
+      $nin: ["", null, "a@example.com", "b@example.com"],
+    });
   });
 });

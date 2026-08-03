@@ -7,7 +7,7 @@ import {
 } from "@/lib/contracts/admin-routes";
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
-import { NEXT_WEEK_MENU_ELIGIBLE_QUERY } from "@/lib/next-week-menu-email/recipients";
+import { getNextWeekMenuEligibleQuery } from "@/lib/next-week-menu-email/recipients";
 import User from "@/models/User";
 
 // GET handler - get list of eligible users for email sending
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     await connectToDatabase();
 
     const query: Record<string, unknown> = {
-      ...NEXT_WEEK_MENU_ELIGIBLE_QUERY,
+      ...(await getNextWeekMenuEligibleQuery()),
     };
 
     // Add search filter if provided

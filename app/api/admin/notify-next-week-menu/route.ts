@@ -5,9 +5,10 @@ import { adminNotifyNextWeekMenuPostBodySchema } from "@/lib/contracts/admin-rou
 import { requireAdminMfa } from "@/lib/auth/guards";
 import connectToDatabase from "@/lib/db";
 import {
-  NEXT_WEEK_MENU_ELIGIBLE_QUERY,
+  getNextWeekMenuEligibleQuery,
   resolveNextWeekMenuRecipients,
 } from "@/lib/next-week-menu-email/recipients";
+import { getNextWeekMenuBlocklist } from "@/lib/next-week-menu-email/blocklist";
 import User from "@/models/User";
 import NextWeekMenuEmailJob from "@/models/NextWeekMenuEmailJob";
 import {
@@ -152,7 +153,8 @@ export async function GET(request: Request) {
 
     const totalUsers = await User.countDocuments();
 
-    const eligibleUsers = await User.countDocuments(NEXT_WEEK_MENU_ELIGIBLE_QUERY);
+    const eligibleQuery = await getNextWeekMenuEligibleQuery();
+    const eligibleUsers = await User.countDocuments(eligibleQuery);
 
     const unsubscribed = await User.countDocuments({
       "emailPreferences.nextWeekMenuUpdates": false,
@@ -170,11 +172,14 @@ export async function GET(request: Request) {
       isVerified: false,
     });
 
+    const adminBlocklist = await getNextWeekMenuBlocklist();
+
     return successJson({
       totalUsers,
       eligibleUsers,
       excluded: {
         unsubscribed,
+        adminBlocklist: adminBlocklist.length,
         bounced,
         invalid,
         unverified,

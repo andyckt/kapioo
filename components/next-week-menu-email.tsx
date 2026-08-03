@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { parseEmailListFromText } from '@/lib/next-week-menu-email/parse-emails'
+import { NextWeekMenuBlocklistCard } from '@/components/next-week-menu-blocklist-card'
 
 type PastePreviewData = {
   criteriaType: string
@@ -19,6 +20,7 @@ type PastePreviewData = {
     invalidFormat: number
     notRegistered: number
     unsubscribed: number
+    adminExcluded: number
     bounced: number
     unverified: number
     invalid: number
@@ -27,6 +29,7 @@ type PastePreviewData = {
       invalidFormat: string[]
       notRegistered: string[]
       unsubscribed: string[]
+      adminExcluded: string[]
       bounced: string[]
       unverified: string[]
       invalid: string[]
@@ -740,6 +743,8 @@ export function NextWeekMenuEmail() {
         </CardContent>
       </Card>
 
+      <NextWeekMenuBlocklistCard />
+
       <Card className="border-2 border-amber-200/70 hover:border-amber-300/80 transition-colors">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -814,6 +819,10 @@ export function NextWeekMenuEmail() {
                     <span>{summary.excluded.unsubscribed}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span>• Admin exclusion list:</span>
+                    <span>{summary.excluded.adminBlocklist ?? 0}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span>• Bounced/blocked emails:</span>
                     <span>{summary.excluded.bounced}</span>
                   </div>
@@ -868,6 +877,7 @@ export function NextWeekMenuEmail() {
 
               {(pastePreview.skipped.notRegistered > 0 ||
                 pastePreview.skipped.unsubscribed > 0 ||
+                pastePreview.skipped.adminExcluded > 0 ||
                 pastePreview.skipped.bounced > 0 ||
                 pastePreview.skipped.unverified > 0 ||
                 pastePreview.skipped.invalid > 0 ||
@@ -888,6 +898,9 @@ export function NextWeekMenuEmail() {
                     {pastePreview.skipped.unsubscribed > 0 && (
                       <div>• Unsubscribed: {pastePreview.skipped.unsubscribed}</div>
                     )}
+                    {pastePreview.skipped.adminExcluded > 0 && (
+                      <div>• Admin exclusion list: {pastePreview.skipped.adminExcluded}</div>
+                    )}
                     {pastePreview.skipped.bounced > 0 && (
                       <div>• Bounced/blocked: {pastePreview.skipped.bounced}</div>
                     )}
@@ -905,6 +918,11 @@ export function NextWeekMenuEmail() {
                     {pastePreview.skipped.details?.unsubscribed?.length ? (
                       <div className="pt-1 text-xs font-mono break-all text-amber-800">
                         Unsubscribed: {pastePreview.skipped.details.unsubscribed.join(", ")}
+                      </div>
+                    ) : null}
+                    {pastePreview.skipped.details?.adminExcluded?.length ? (
+                      <div className="pt-1 text-xs font-mono break-all text-rose-800">
+                        Admin excluded: {pastePreview.skipped.details.adminExcluded.join(", ")}
                       </div>
                     ) : null}
                   </div>

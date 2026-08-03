@@ -79,6 +79,15 @@ export type AdminNotifyNextWeekMenuPostBody = z.infer<
   typeof adminNotifyNextWeekMenuPostBodySchema
 >;
 
+/** Body for POST/DELETE /api/admin/next-week-menu-blocklist */
+export const adminNextWeekMenuBlocklistBodySchema = z.object({
+  emails: z.array(z.string()).min(1, "Provide at least one email"),
+});
+
+export type AdminNextWeekMenuBlocklistBody = z.infer<
+  typeof adminNextWeekMenuBlocklistBodySchema
+>;
+
 /** Body for POST /api/admin/promo-codes (create) */
 export const adminCreatePromoCodeBodySchema = z
   .object({

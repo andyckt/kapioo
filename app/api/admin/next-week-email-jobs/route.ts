@@ -13,6 +13,7 @@ function formatSkippedSummary(skipped: {
   invalidFormat: string[];
   notRegistered: string[];
   unsubscribed: string[];
+  adminExcluded: string[];
   bounced: string[];
   unverified: string[];
   invalid: string[];
@@ -22,6 +23,7 @@ function formatSkippedSummary(skipped: {
     invalidFormat: skipped.invalidFormat.length,
     notRegistered: skipped.notRegistered.length,
     unsubscribed: skipped.unsubscribed.length,
+    adminExcluded: skipped.adminExcluded.length,
     bounced: skipped.bounced.length,
     unverified: skipped.unverified.length,
     invalid: skipped.invalid.length,
