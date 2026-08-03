@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Mail, Send, Users, TestTube, Loader2, CheckCircle, XCircle, AlertCircle, Clock, ClipboardList } from 'lucide-react'
+import { Mail, Send, Users, TestTube, Loader2, CheckCircle, XCircle, AlertCircle, Clock, ClipboardList, UserMinus } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
@@ -360,6 +360,70 @@ export function NextWeekMenuEmail() {
         title: "Error",
         description: "Failed to select all users",
         variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const unselectOrderedUsers = async () => {
+    if (selectedUserIds.size === 0) {
+      toast({
+        title: "No users selected",
+        description: "Select users first, then unselect those with next-week orders",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/admin/next-week-menu-ordered-user-ids", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: Array.from(selectedUserIds) }),
+      })
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to check next-week orders")
+      }
+
+      const nextWeekMenuDates = result.data?.nextWeekMenuDates ?? []
+      if (nextWeekMenuDates.length === 0) {
+        toast({
+          title: "No next-week menu dates",
+          description: "Configure next week's daily or weekly menu dates before using this action",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const orderedSet = new Set<string>(result.data?.userIds ?? [])
+      const nextSelected = new Set(
+        Array.from(selectedUserIds).filter((id) => !orderedSet.has(id))
+      )
+      const removedCount = selectedUserIds.size - nextSelected.size
+
+      setSelectedUserIds(nextSelected)
+
+      if (removedCount > 0) {
+        toast({
+          title: "Ordered users unselected",
+          description: `Removed ${removedCount} user${removedCount === 1 ? "" : "s"} with pending or confirmed next-week orders`,
+        })
+      } else {
+        toast({
+          title: "No matches",
+          description: "None of the selected users have pending or confirmed orders for next week's menu dates",
+        })
+      }
+    } catch (error) {
+      console.error("Error unselecting ordered users:", error)
+      toast({
+        title: "Error",
+        description: "Failed to unselect users with next-week orders",
+        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
@@ -977,11 +1041,25 @@ export function NextWeekMenuEmail() {
             </div>
             
             {/* Selection summary */}
-            <div className="flex justify-between items-center bg-[#F5EDE4] rounded-lg p-3">
+            <div className="flex flex-col gap-3 bg-[#F5EDE4] rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="font-medium">
                 Selected: {selectedUserIds.size} of {totalUsers} users
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void unselectOrderedUsers()}
+                  disabled={isLoading || selectedUserIds.size === 0}
+                  className="border-amber-300 text-amber-800 hover:bg-amber-50"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserMinus className="h-4 w-4 mr-2" />
+                  )}
+                  Unselect ordered users
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

@@ -88,6 +88,15 @@ export type AdminNextWeekMenuBlocklistBody = z.infer<
   typeof adminNextWeekMenuBlocklistBodySchema
 >;
 
+/** Body for POST /api/admin/next-week-menu-ordered-user-ids */
+export const adminNextWeekMenuOrderedUserIdsBodySchema = z.object({
+  userIds: z.array(z.string()).optional().default([]),
+});
+
+export type AdminNextWeekMenuOrderedUserIdsBody = z.infer<
+  typeof adminNextWeekMenuOrderedUserIdsBodySchema
+>;
+
 /** Body for POST /api/admin/promo-codes (create) */
 export const adminCreatePromoCodeBodySchema = z
   .object({
