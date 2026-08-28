@@ -35,14 +35,7 @@ import { RegionCheckDialog } from './region-check-dialog'
 import { DAILY_DELIVERY_AREA_LABELS } from '@/lib/zones/service-areas'
 import { getUserDailyEligibility, hasDailyBalance } from '@/lib/address/daily-eligibility'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { OrderingInfoDialog } from '@/components/ordering-info-dialog'
 
 type MenuDataResult = {
   currentDates: string
@@ -702,7 +695,10 @@ export default function DailyDelivery() {
       {/* Header section with responsive layout - Sticky on mobile */}
       <div className="sticky top-0 z-20 bg-white pb-4 -mx-6 px-6 md:relative md:mx-0 md:px-0 md:z-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
+            <OrderingInfoDialog language={language} orderType="daily" />
+          </div>
           
           <div className="flex flex-wrap items-center gap-3">
             {/* Voucher display with rounded badges like weekly meal box */}

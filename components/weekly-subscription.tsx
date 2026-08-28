@@ -24,6 +24,7 @@ import { useRegionAddressUpdate } from '@/hooks/use-region-address-update'
 import { DEFAULT_DASHBOARD_CUTOFF_TIME, useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 import { ALL_WEEKLY_AREAS } from '@/lib/constants/areas'
 import { getDeliveryDayAvailability } from '@/lib/orders/delivery-day-availability'
+import { OrderingInfoDialog } from '@/components/ordering-info-dialog'
 
 interface WeeklySubscriptionProps {
   userCredits?: number;
@@ -441,7 +442,10 @@ export default function WeeklySubscription({
       {/* Header section with responsive layout */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">{language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en}</h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">{language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en}</h2>
+            <OrderingInfoDialog language={language} orderType="weekly" />
+          </div>
           <div className="h-1 w-20 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] rounded-full mt-1"></div>
         </div>
         
