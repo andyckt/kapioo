@@ -23,6 +23,11 @@ import {
 } from '@/lib/daily-delivery'
 import { getDeliveryDayAvailability } from '@/lib/orders/delivery-day-availability'
 import {
+  getDailyDeliveryMinimum,
+  getDailyDeliveryMinimumStatus,
+  type DailyDeliveryMinimumOverride,
+} from '@/lib/orders/daily-delivery-minimum'
+import {
   pickDefaultAvailableDay,
   resolveDailyMenuSelectedDayAfterFetch,
 } from '@/lib/daily-menu-selected-day'
@@ -77,6 +82,7 @@ export default function DailyDelivery() {
   const [userRegion, setUserRegion] = useState<string | undefined>(undefined)
   const [canWeeklyAtAddress, setCanWeeklyAtAddress] = useState(false)
   const [isDailyEligible, setIsDailyEligible] = useState(true)
+  const [dailyMinimumOverride, setDailyMinimumOverride] = useState<DailyDeliveryMinimumOverride | undefined>()
   const [dishTranslations, setDishTranslations] = useState<Record<string, string>>({}) // Map of Chinese name -> English name
   const [localCutoffTime, setLocalCutoffTime] = useState<CutoffTime>(DEFAULT_DASHBOARD_CUTOFF_TIME)
   const cutoffTime = sharedUserProfile?.cutoffTime ?? localCutoffTime
@@ -203,6 +209,7 @@ export default function DailyDelivery() {
         ? prev
         : { twoDish: nextTwoDish, threeDish: nextThreeDish }
     )
+    setDailyMinimumOverride(user.dailyDeliveryMinimumOverride)
 
     const noticeKey = [
       user._id,
@@ -444,6 +451,8 @@ export default function DailyDelivery() {
         sharedUserProfile.userData.address?.province,
         sharedUserProfile.userData.addressGeo?.lat,
         sharedUserProfile.userData.addressGeo?.lng,
+        sharedUserProfile.userData.dailyDeliveryMinimumOverride?.startsOn,
+        sharedUserProfile.userData.dailyDeliveryMinimumOverride?.endsOn,
       ].join("|")
     : null
 
@@ -452,7 +461,7 @@ export default function DailyDelivery() {
       const user = sharedUserProfile.userData
       if (user) {
         syncUserSnapshot(user)
-        if (user._id && typeof user.addressGeo?.lat !== "number") {
+        if (user._id) {
           void fetchUserData(user._id)
         }
       }
@@ -606,8 +615,12 @@ export default function DailyDelivery() {
 
     const currentDayItems = cart.filter((item) => item.day === selectedDay)
     const currentDayTotal = currentDayItems.reduce((total, item) => total + item.quantity, 0)
+    const currentDayMinimum = getDailyDeliveryMinimum(
+      dailyMinimumOverride,
+      days[selectedDay]?.date
+    )
 
-    if (currentDayTotal === 1) {
+    if (currentDayTotal > 0 && currentDayTotal < currentDayMinimum) {
       const displayName = days[selectedDay].displayName
       const capitalizedDay = displayName.charAt(0).toUpperCase() + displayName.slice(1)
       setDayWarning(
@@ -623,6 +636,8 @@ export default function DailyDelivery() {
     setSelectedDay(day)
   }
 
+  const singleMealExceptionStatus = getDailyDeliveryMinimumStatus(dailyMinimumOverride)
+
   return (
     <div className="flex flex-col h-full space-y-6">
       {/* Region Check Dialog */}
@@ -635,6 +650,14 @@ export default function DailyDelivery() {
       
       {/* Menu Update Notification Banner */}
       {menuUpdateAvailable && <MenuUpdateBanner language={language} onRefresh={handleRefreshMenu} />}
+
+      {(singleMealExceptionStatus === "active" || singleMealExceptionStatus === "scheduled") && dailyMinimumOverride && (
+        <div className="rounded-lg border border-[#C2884E]/30 bg-[#FBF7F2] px-4 py-3 text-sm text-[#6B5F53]">
+          {language === "zh"
+            ? `您的单餐配送例外适用于 ${dailyMinimumOverride.startsOn} 至 ${dailyMinimumOverride.endsOn} 的配送日期。`
+            : `Your single-meal exception applies to delivery dates from ${dailyMinimumOverride.startsOn} through ${dailyMinimumOverride.endsOn}.`}
+        </div>
+      )}
 
       {!isDailyEligible && userRegion && !checkoutOpen && (
         canWeeklyAtAddress ? (
@@ -753,9 +776,11 @@ export default function DailyDelivery() {
                   mealsPerDay[item.day] += item.quantity;
                 });
                 
-                // Check if any day has fewer than 2 meals
+                // Check each delivery date against this customer's effective minimum
                 const daysWithInsufficientMeals = Object.entries(mealsPerDay)
-                  .filter(([_, count]) => count < 2)
+                  .filter(([day, count]) =>
+                    count < getDailyDeliveryMinimum(dailyMinimumOverride, days[day]?.date)
+                  )
                   .map(([day, _]) => {
                     const displayName = days[day]?.displayName || day;
                     if (language === 'zh') {
@@ -807,6 +832,7 @@ export default function DailyDelivery() {
             setUserVouchers={setUserVouchers}
             days={days}
             dishTranslations={dishTranslations}
+            dailyMinimumOverride={dailyMinimumOverride}
           />
         </div>
       ) : isLoading ? (

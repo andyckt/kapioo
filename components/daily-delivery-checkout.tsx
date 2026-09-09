@@ -33,6 +33,10 @@ import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
 import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { CartItem, DayData, formatAddress } from '@/lib/daily-delivery'
+import {
+  getDailyDeliveryMinimum,
+  type DailyDeliveryMinimumOverride,
+} from '@/lib/orders/daily-delivery-minimum'
 
 interface DailyDeliveryCheckoutProps {
   cart: CartItem[]
@@ -45,6 +49,7 @@ interface DailyDeliveryCheckoutProps {
   setUserVouchers: (vouchers: { twoDish: number, threeDish: number }) => void
   days: Record<string, DayData>
   dishTranslations: Record<string, string>
+  dailyMinimumOverride?: DailyDeliveryMinimumOverride
 }
 
 export function DailyDeliveryCheckout({
@@ -54,7 +59,8 @@ export function DailyDeliveryCheckout({
   userVouchers,
   setUserVouchers,
   days,
-  dishTranslations
+  dishTranslations,
+  dailyMinimumOverride,
 }: DailyDeliveryCheckoutProps) {
   const { language, t } = useLanguage()
   const { toast } = useToast()
@@ -121,9 +127,11 @@ export function DailyDeliveryCheckout({
       mealsPerDay[item.day] += item.quantity;
     });
     
-    // Check if any day has fewer than 2 meals
+    // Check each delivery date against this customer's effective minimum
     const daysWithInsufficientMeals = Object.entries(mealsPerDay)
-      .filter(([_, count]) => count < 2)
+      .filter(([day, count]) =>
+        count < getDailyDeliveryMinimum(dailyMinimumOverride, days[day]?.date)
+      )
       .map(([day, _]) => {
         const displayName = days[day]?.displayName || day;
         if (language === 'zh') {

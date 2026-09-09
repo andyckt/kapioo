@@ -29,10 +29,13 @@ import type { UserActivity } from "@/lib/types/admin"
 import type { PaginationState } from "@/lib/types/pagination"
 import type { User } from "@/lib/utils"
 
+import { DailyDeliveryMinimumControl } from "./daily-delivery-minimum-control"
+
 interface ViewUserDialogProps {
   open: boolean
   user: User | null
   onOpenChange: (open: boolean) => void
+  onUserUpdated?: (user: User) => void
 }
 
 const DEFAULT_ACTIVITY_PAGINATION: PaginationState = {
@@ -63,7 +66,7 @@ function formatAddressLines(address: User["address"]) {
   ].filter(Boolean)
 }
 
-export function ViewUserDialog({ open, user, onOpenChange }: ViewUserDialogProps) {
+export function ViewUserDialog({ open, user, onOpenChange, onUserUpdated }: ViewUserDialogProps) {
   const { toast } = useToast()
   const [userActivities, setUserActivities] = useState<UserActivity[]>([])
   const [userActivitiesLoading, setUserActivitiesLoading] = useState(false)
@@ -252,6 +255,8 @@ export function ViewUserDialog({ open, user, onOpenChange }: ViewUserDialogProps
                     </div>
                   </div>
                 </div>
+
+                <DailyDeliveryMinimumControl user={user} onUserUpdated={onUserUpdated} />
 
                 <div className="mt-2 space-y-4">
                   <div className="rounded-md border p-3 bg-slate-50">

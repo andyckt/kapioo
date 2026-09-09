@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
         addressVerifiedAt: u.addressVerifiedAt?.toISOString?.(),
         legacyAddress,
         area: address?.province || "",
+        dailyDeliveryMinimumOverride: u.dailyDeliveryMinimumOverride,
       },
     });
   } catch (error) {
@@ -86,4 +87,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

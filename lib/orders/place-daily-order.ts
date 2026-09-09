@@ -10,6 +10,10 @@ import {
 } from "@/lib/balances/mutations";
 import type { CreateDailyOrderBody, CreateDailyOrderItemInput } from "@/lib/contracts/daily-order";
 import { hasDailyBalance } from "@/lib/address/daily-eligibility";
+import {
+  getDailyDeliveryMinimum,
+  normalizeDeliveryDateKey,
+} from "@/lib/orders/daily-delivery-minimum";
 import { canDeliverDaily } from "@/lib/zones/service-areas";
 import DailyDeliveryOrder, { type IDailyDeliveryOrder } from "@/models/DailyDeliveryOrder";
 import type { ITransaction } from "@/models/Transaction";
@@ -61,6 +65,36 @@ function countRequiredVouchers(items: CreateDailyOrderItemInput[]): VoucherTotal
     },
     { twoDish: 0, threeDish: 0 }
   );
+}
+
+function assertDailyDeliveryMinimum(user: IUser, items: CreateDailyOrderItemInput[]) {
+  const mealsByDeliveryDate = new Map<string, number>()
+
+  for (const item of items) {
+    const deliveryDate = String(item.date ?? "").trim()
+    const key = normalizeDeliveryDateKey(deliveryDate)
+      || deliveryDate
+      || String(item.day ?? "").trim()
+    const quantity = Number(item.quantity ?? 0)
+    mealsByDeliveryDate.set(
+      key,
+      (mealsByDeliveryDate.get(key) || 0) + (Number.isFinite(quantity) ? quantity : 0)
+    )
+  }
+
+  for (const [deliveryDate, mealCount] of mealsByDeliveryDate) {
+    const minimumMeals = getDailyDeliveryMinimum(
+      user.dailyDeliveryMinimumOverride,
+      deliveryDate
+    )
+
+    if (mealCount < minimumMeals) {
+      throw new ApiError(`Minimum ${minimumMeals} meals required for ${deliveryDate || "each delivery day"}`, {
+        status: 400,
+        code: "DAILY_DELIVERY_MINIMUM_NOT_MET",
+      })
+    }
+  }
 }
 
 function buildItemsToSave(items: CreateDailyOrderItemInput[]) {
@@ -181,6 +215,8 @@ export async function placeDailyOrder({
           code: "DAILY_SERVICE_AREA_UNAVAILABLE",
         });
       }
+
+      assertDailyDeliveryMinimum(user, data.items);
 
       const vouchersNeeded = countRequiredVouchers(data.items);
       const available = {

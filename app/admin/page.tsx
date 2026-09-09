@@ -176,6 +176,12 @@ export default function AdminDashboardPage() {
     setViewUserOpen(true)
   }
 
+  const handleUserUpdated = (updatedUser: User) => {
+    setSelectedUser(updatedUser)
+    setUsers((current) => current.map((item) => item._id === updatedUser._id ? updatedUser : item))
+    setFilteredUsers((current) => current.map((item) => item._id === updatedUser._id ? updatedUser : item))
+  }
+
   const handleDeleteUser = (u: User) => {
     setSelectedUser(u)
     setDeleteUserOpen(true)
@@ -294,6 +300,7 @@ export default function AdminDashboardPage() {
         addCreditsOpen={addCreditsOpen}
         setAddCreditsOpen={setAddCreditsOpen}
         selectedUser={selectedUser}
+        onUserUpdated={handleUserUpdated}
         creditAmount={creditAmount}
         setCreditAmount={setCreditAmount}
         confirmAddCredits={confirmAddCredits}

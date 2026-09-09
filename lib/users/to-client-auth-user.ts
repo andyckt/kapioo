@@ -50,5 +50,6 @@ export function toClientAuthUser(user: IUser, role: AuthenticatedRole = resolveU
     addressVerifiedAt: user.addressVerifiedAt?.toISOString?.(),
     legacyAddress,
     area: address?.province || "",
+    dailyDeliveryMinimumOverride: user.dailyDeliveryMinimumOverride,
   };
 }

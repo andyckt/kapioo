@@ -31,6 +31,12 @@ export interface IAddressGeo {
   source?: 'google' | 'manual';
 }
 
+export interface IDailyDeliveryMinimumOverride {
+  minimumMeals: 1;
+  startsOn: string;
+  endsOn: string;
+}
+
 // Define Address schema - make all fields optional to allow for empty addresses during registration
 const AddressSchema: Schema = new Schema({
   unitNumber: { type: String },
@@ -53,6 +59,22 @@ const AddressGeoSchema: Schema = new Schema({
   postalCode: { type: String },
   country: { type: String },
   source: { type: String, enum: ['google', 'manual'], default: 'google' },
+}, { _id: false });
+
+const DailyDeliveryMinimumOverrideSchema: Schema = new Schema({
+  minimumMeals: {
+    type: Number,
+    enum: [1],
+    required: true,
+  },
+  startsOn: {
+    type: String,
+    required: true,
+  },
+  endsOn: {
+    type: String,
+    required: true,
+  },
 }, { _id: false });
 
 // Define User interface
@@ -101,6 +123,7 @@ export interface IUser extends Document {
     marketing?: boolean;
   };
   emailStatus?: 'active' | 'bounced' | 'blocked' | 'invalid';
+  dailyDeliveryMinimumOverride?: IDailyDeliveryMinimumOverride;
   setPassword: (password: string) => Promise<void>;
   comparePassword: (candidatePassword: string) => Promise<boolean>;
   generateVerificationCode: () => { code: string, expires: Date };
@@ -283,7 +306,11 @@ const UserSchema: Schema = new Schema(
       type: String,
       enum: ['active', 'bounced', 'blocked', 'invalid'],
       default: 'active'
-    }
+    },
+    dailyDeliveryMinimumOverride: {
+      type: DailyDeliveryMinimumOverrideSchema,
+      required: false,
+    },
   },
   { 
     timestamps: true,

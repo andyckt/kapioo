@@ -65,6 +65,7 @@ export function useDashboardUserProfileSync(
         addressGeo: nextUser.addressGeo,
         addressVerified: nextUser.addressVerified,
         addressVerifiedAt: nextUser.addressVerifiedAt,
+        dailyDeliveryMinimumOverride: nextUser.dailyDeliveryMinimumOverride,
       }
 
       setUserData(normalizedUser)
@@ -91,6 +92,7 @@ export function useDashboardUserProfileSync(
         weeklyTENmeals: normalizedUser.weeklyTENmeals || 0,
         weeklyTWELVEmeals: normalizedUser.weeklyTWELVEmeals || 0,
         weeklySIXTEENmeals: normalizedUser.weeklySIXTEENmeals || 0,
+        dailyDeliveryMinimumOverride: normalizedUser.dailyDeliveryMinimumOverride,
       })
       localStorage.setItem("isAuthenticated", "true")
 

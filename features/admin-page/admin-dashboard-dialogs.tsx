@@ -14,6 +14,7 @@ export interface AdminDashboardDialogsProps {
   addCreditsOpen: boolean
   setAddCreditsOpen: (open: boolean) => void
   selectedUser: User | null
+  onUserUpdated: (user: User) => void
   creditAmount: number
   setCreditAmount: Dispatch<SetStateAction<number>>
   confirmAddCredits: () => void | Promise<void>
@@ -72,6 +73,7 @@ export function AdminDashboardDialogs(props: AdminDashboardDialogsProps) {
         open={props.viewUserOpen}
         user={props.selectedUser}
         onOpenChange={props.setViewUserOpen}
+        onUserUpdated={props.onUserUpdated}
       />
 
       <CreditRequestDialogs

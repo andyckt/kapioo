@@ -18,6 +18,12 @@ export const emailPreferencesSchema = z.object({
   marketing: z.boolean().optional(),
 });
 
+export const dailyDeliveryMinimumOverrideSchema = z.object({
+  minimumMeals: z.literal(1),
+  startsOn: z.string(),
+  endsOn: z.string(),
+});
+
 export const userResponseSchema = z.object({
   _id: z.string(),
   userID: z.string(),
@@ -49,6 +55,7 @@ export const userResponseSchema = z.object({
   languagePreference: languagePreferenceSchema.optional(),
   emailPreferences: emailPreferencesSchema.optional(),
   emailStatus: z.enum(["active", "bounced", "blocked", "invalid"]).optional(),
+  dailyDeliveryMinimumOverride: dailyDeliveryMinimumOverrideSchema.optional(),
   area: z.string().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -94,6 +101,17 @@ export const updateUserBodySchema = z
   });
 
 export type UpdateUserBody = z.infer<typeof updateUserBodySchema>;
+
+export const adminDailyDeliveryMinimumBodySchema = z.discriminatedUnion("enabled", [
+  z.object({ enabled: z.literal(false) }),
+  z.object({
+    enabled: z.literal(true),
+    startsOn: z.string(),
+    endsOn: z.string(),
+  }),
+]);
+
+export type AdminDailyDeliveryMinimumBody = z.infer<typeof adminDailyDeliveryMinimumBodySchema>;
 
 export const usersQuerySchema = paginationQuerySchema.extend({
   search: z.string().optional().default(""),

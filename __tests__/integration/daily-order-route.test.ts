@@ -74,7 +74,7 @@ describe("app/api/daily-delivery/order", () => {
           comboId: "combo-2",
           comboName: "Beef Combo",
           type: "B",
-          quantity: 1,
+          quantity: 2,
           voucherType: "threeDish",
           dishes: ["Dish 3"],
         },
@@ -103,19 +103,19 @@ describe("app/api/daily-delivery/order", () => {
       status: "pending",
       voucherCost: {
         twoDish: 2,
-        threeDish: 1,
+        threeDish: 2,
       },
     })
     expect(savedUser).toMatchObject({
       twoDishVoucher: 2,
-      threeDishVoucher: 1,
+      threeDishVoucher: 0,
       phone: "416-555-1234",
     })
     expect(transactions).toHaveLength(1)
     expect(transactions[0]).toMatchObject({
       userId: user._id,
       type: "Deduct",
-      amount: 3,
+      amount: 4,
       description: expect.stringContaining("Placed daily order"),
     })
   })
@@ -138,7 +138,7 @@ describe("app/api/daily-delivery/order", () => {
           comboId: "combo-1",
           comboName: "Chicken Combo",
           type: "A",
-          quantity: 1,
+          quantity: 2,
           voucherType: "twoDish",
         },
       ],
@@ -172,6 +172,54 @@ describe("app/api/daily-delivery/order", () => {
 
     expect(response.status).toBe(400)
     expect(await DailyDeliveryOrder.countDocuments()).toBe(0)
+  })
+
+  it("rejects a single meal when the customer has no exception", async () => {
+    const user = await createTestUser({ twoDishVoucher: 2 })
+    requireUserMock.mockResolvedValue({ response: null, actor: createActor(user) })
+
+    const response = await POST(buildJsonRequest("http://localhost:3000/api/daily-delivery/order", {
+      items: [{
+        day: "Monday",
+        date: "2026-09-14",
+        comboId: "combo-1",
+        comboName: "Chicken Combo",
+        type: "A",
+        quantity: 1,
+        voucherType: "twoDish",
+      }],
+    }))
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.errorCode).toBe("DAILY_DELIVERY_MINIMUM_NOT_MET")
+    expect(await DailyDeliveryOrder.countDocuments()).toBe(0)
+  })
+
+  it("allows one meal inside this customer's exception dates", async () => {
+    const user = await createTestUser({ twoDishVoucher: 2 })
+    user.dailyDeliveryMinimumOverride = {
+      minimumMeals: 1,
+      startsOn: "2026-09-14",
+      endsOn: "2026-09-20",
+    }
+    await user.save()
+    requireUserMock.mockResolvedValue({ response: null, actor: createActor(user) })
+
+    const response = await POST(buildJsonRequest("http://localhost:3000/api/daily-delivery/order", {
+      items: [{
+        day: "Monday",
+        date: "2026-09-14",
+        comboId: "combo-1",
+        comboName: "Chicken Combo",
+        type: "A",
+        quantity: 1,
+        voucherType: "twoDish",
+      }],
+    }))
+
+    expect(response.status).toBe(200)
+    expect(await DailyDeliveryOrder.countDocuments()).toBe(1)
   })
 
   it("returns only the authenticated user's daily orders", async () => {

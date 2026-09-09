@@ -25,6 +25,7 @@ type CreateUserOverrides = Partial<Pick<
   | "addressGeo"
   | "addressVerified"
   | "addressVerifiedAt"
+  | "dailyDeliveryMinimumOverride"
 >>
 
 export async function createTestUser(
@@ -69,6 +70,7 @@ export async function createTestUser(
     },
     addressVerified: overrides.addressVerified ?? true,
     addressVerifiedAt: overrides.addressVerifiedAt ?? new Date(),
+    dailyDeliveryMinimumOverride: overrides.dailyDeliveryMinimumOverride,
   })
 
   await user.setPassword(password)

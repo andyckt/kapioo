@@ -215,9 +215,17 @@ export async function submitDailyCheckout({
     onSuccess()
   } catch (error) {
     console.error("Error during daily checkout:", error)
+    const message = error instanceof Error ? error.message : ""
+    const requirementChanged = message.includes("Minimum")
     toast({
       title: language === "zh" ? "订单失败" : "Order Failed",
-      description: language === "zh" ? "处理您的订单时出错" : "Error processing your order",
+      description: requirementChanged
+        ? language === "zh"
+          ? "此配送日期目前要求至少选择两餐。请返回购物车并增加一餐。"
+          : message
+        : language === "zh"
+          ? "处理您的订单时出错"
+          : "Error processing your order",
       variant: "destructive",
     })
   } finally {
