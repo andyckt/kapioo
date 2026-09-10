@@ -307,8 +307,8 @@ export function AdminUsersTab({
               </div>
             )}
 
-            <div className="hidden md:block rounded-md border">
-              <table className="w-full">
+            <div className="relative hidden overflow-x-auto rounded-md border md:block">
+              <table className="w-full min-w-[1120px]">
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-4 font-medium">User ID</th>
@@ -320,7 +320,9 @@ export function AdminUsersTab({
                     <th className="text-left p-4 font-medium">Created</th>
                     <th className="text-left p-4 font-medium">Daily Orders</th>
                     <th className="text-left p-4 font-medium">Weekly Orders</th>
-                    <th className="text-center p-4 font-medium">Actions</th>
+                    <th className="sticky right-0 z-20 min-w-[148px] border-l bg-card p-4 text-center font-medium">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -339,7 +341,7 @@ export function AdminUsersTab({
                       </td>
                       <td className="p-4">{user.dailyOrdersCount || 0}</td>
                       <td className="p-4">{user.weeklyOrdersCount || 0}</td>
-                      <td className="p-4">
+                      <td className="sticky right-0 z-10 min-w-[148px] border-l bg-card p-4">
                         <div className="flex justify-center gap-1">
                           <Button variant="outline" size="sm" onClick={() => onViewUser(user)}>
                             View
