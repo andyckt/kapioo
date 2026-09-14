@@ -293,9 +293,6 @@ export async function POST(request: NextRequest) {
       ? normalizeInteracReference(interacReference)
       : undefined;
     const automationActiveForNewRequests = isEligibleForAutomaticChecks();
-    if (automationActiveForNewRequests && !interacReferenceNormalized) {
-      return errorJson("Interac transfer reference is required for automatic payment verification", 400);
-    }
     const automaticChecksEligible =
       Boolean(interacReferenceNormalized) && automationActiveForNewRequests;
 

@@ -122,6 +122,61 @@ describe("voucher request submission safety", () => {
     expect(await CreditPurchaseRequest.countDocuments()).toBe(0);
   });
 
+  it("accepts a daily request without a transfer reference for manual review", async () => {
+    const user = await createTestUser({ phone: "+14165550104" });
+    requireUserMock.mockResolvedValue({ actor: actorFor(user.toObject()), response: null });
+
+    const response = await postDailyRequest(
+      buildJsonRequest("http://localhost/api/voucher-requests", {
+        userId: String(user._id),
+        planId: "daily-2dish-6",
+        type: "twoDish",
+        quantity: 6,
+        imageProof: "https://example.com/proof.jpg",
+        referenceNumber: user.email,
+        interacReference: "",
+        submissionKey: "52fe69e6-8f55-46bd-9ae7-43654d571a95",
+      })
+    );
+    const saved = await VoucherPurchaseRequest.findOne().lean();
+
+    expect(response.status).toBe(201);
+    expect(saved).toMatchObject({
+      paymentVerificationStatus: "manual",
+      status: "pending",
+    });
+    expect(saved?.nextPaymentCheckAt).toBeUndefined();
+  });
+
+  it("accepts a weekly e-Transfer request without a reference for manual review", async () => {
+    const user = await createTestUser({ phone: "+14165550105" });
+    requireUserMock.mockResolvedValue({ actor: actorFor(user.toObject()), response: null });
+
+    const response = await postWeeklyRequest(
+      buildJsonRequest("http://localhost/api/credits/request", {
+        userId: String(user._id),
+        planId: "weekly-6x2",
+        mealsPerWeek: 6,
+        duration: 2,
+        mealPlanType: "6aweek",
+        mealPlanQuantity: 2,
+        paymentMethod: "emt",
+        imageProof: "https://example.com/proof.jpg",
+        referenceNumber: user.email,
+        interacReference: "",
+        submissionKey: "7305c747-1eb0-4bcd-93a6-916103761c5a",
+      })
+    );
+    const saved = await CreditPurchaseRequest.findOne().lean();
+
+    expect(response.status).toBe(200);
+    expect(saved).toMatchObject({
+      paymentVerificationStatus: "manual",
+      status: "pending",
+    });
+    expect(saved?.nextPaymentCheckAt).toBeUndefined();
+  });
+
   it("does not let a customer list another customer's weekly requests", async () => {
     const user = await createTestUser({ phone: "+14165550102" });
     const otherUser = await createTestUser({ phone: "+14165550103" });

@@ -54,8 +54,10 @@ function assertGmailAuthentication(source: Buffer) {
   if (!/\bdkim=pass\b[^;]*\bheader\.i=@payments\.interac\.ca\b/i.test(result)) {
     throw new InteracReceiptValidationError("Interac DKIM verification did not pass");
   }
+  const spfMailFrom = result.match(/\bspf=pass\b[^;]*\bsmtp\.mailfrom=([^;\s]+)/i)?.[1] || "";
+  const spfAligned = /^[^@;\s]+@(?:mail\.)?payments\.interac\.ca$/i.test(spfMailFrom);
   if (
-    !/\bspf=pass\b[^;]*\bsmtp\.mailfrom=payments\.interac\.ca\b/i.test(result) ||
+    !spfAligned ||
     !/\bdmarc=pass\b[^;]*\bheader\.from=payments\.interac\.ca\b/i.test(result)
   ) {
     throw new InteracReceiptValidationError("Interac SPF or DMARC verification did not pass");

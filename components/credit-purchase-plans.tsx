@@ -382,7 +382,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       !selectedPlan ||
       !paymentProof ||
       !interacEmail ||
-      (paymentMethod === 'emt' && !isValidInteracReference(interacReference))
+      (paymentMethod === 'emt' && interacReference.trim() && !isValidInteracReference(interacReference))
     ) {
       let errorTitle = language === 'zh' ? '请完成所有必填项' : 'Please complete all required fields'
       let errorDescription = ''
@@ -393,10 +393,10 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         errorDescription = language === 'zh' ? '请上传付款凭证' : 'Please upload your payment proof'
       } else if (!interacEmail) {
         errorDescription = language === 'zh' ? '请输入您用于发送电子转账的电子邮件地址' : 'Please enter the email you used to send the e-Transfer'
-      } else if (paymentMethod === 'emt') {
+      } else if (paymentMethod === 'emt' && interacReference.trim()) {
         errorDescription = language === 'zh'
-          ? '请输入银行转账确认中的 Interac 参考编号'
-          : 'Enter the Interac reference number from your bank confirmation'
+          ? '请检查银行转账确认中的 Interac 参考编号，或留空以提交人工审核'
+          : 'Check the Interac reference from your bank confirmation, or leave it blank for manual review'
       }
       
       toast({
@@ -484,7 +484,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           planDescription: planDescription,
           imageProof: imageUrl,
           referenceNumber: interacEmail,
-          interacReference: effectivePaymentMethod === 'emt' ? interacReference.trim() : undefined,
+          interacReference: effectivePaymentMethod === 'emt' ? interacReference.trim() || undefined : undefined,
           submissionKey: submissionKeyRef.current || (submissionKeyRef.current = crypto.randomUUID()),
           notes,
           mealPlanType,

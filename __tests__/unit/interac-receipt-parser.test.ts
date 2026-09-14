@@ -14,7 +14,7 @@ function receiptSource(overrides: {
   const amount = overrides.amount || "147.00";
   const bodyAmount = overrides.bodyAmount || amount;
   const authenticationResults = overrides.authenticationResults === undefined
-    ? "mx.google.com; dkim=pass header.i=@payments.interac.ca; spf=pass smtp.mailfrom=payments.interac.ca; dmarc=pass header.from=payments.interac.ca"
+    ? "mx.google.com; dkim=pass header.i=@payments.interac.ca; spf=pass smtp.mailfrom=notify@payments.interac.ca; dmarc=pass header.from=payments.interac.ca"
     : overrides.authenticationResults;
   return Buffer.from([
     `Authentication-Results: ${authenticationResults}`,
@@ -63,6 +63,28 @@ describe("Interac receipt parser", () => {
         expectedAccountLast4: "4994",
       })
     ).rejects.toBeInstanceOf(InteracReceiptValidationError);
+  });
+
+  it("accepts Interac's authenticated bounce sender under mail.payments.interac.ca", async () => {
+    const receipt = await parseInteracReceipt(receiptSource({
+      authenticationResults: "mx.google.com; dkim=pass header.i=@payments.interac.ca; spf=pass smtp.mailfrom=010d01-test@mail.payments.interac.ca; dmarc=pass header.from=payments.interac.ca",
+    }), {
+      expectedRecipient: "kapioomeal@gmail.com",
+      expectedAccountLast4: "4994",
+    });
+
+    expect(receipt.authenticationVerified).toBe(true);
+  });
+
+  it("rejects SPF mail-from values outside the Interac domain", async () => {
+    await expect(
+      parseInteracReceipt(receiptSource({
+        authenticationResults: "mx.google.com; dkim=pass header.i=@payments.interac.ca; spf=pass smtp.mailfrom=notify@payments.interac.ca.example.com; dmarc=pass header.from=payments.interac.ca",
+      }), {
+        expectedRecipient: "kapioomeal@gmail.com",
+        expectedAccountLast4: "4994",
+      })
+    ).rejects.toThrow("SPF or DMARC");
   });
 
   it("rejects a receipt whose subject and body amounts differ", async () => {
