@@ -268,12 +268,12 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       return
     }
 
-    if (!isValidInteracReference(interacReference)) {
+    if (interacReference.trim() && !isValidInteracReference(interacReference)) {
       toast({
-        title: language === 'zh' ? "缺少转账参考编号" : "Missing transfer reference",
+        title: language === 'zh' ? "转账参考编号无效" : "Invalid transfer reference",
         description: language === 'zh'
-          ? "请输入银行转账确认中的 Interac 参考编号"
-          : "Enter the Interac reference number from your bank confirmation",
+          ? "请检查银行转账确认中的 Interac 参考编号，或留空以提交人工审核"
+          : "Check the Interac reference from your bank confirmation, or leave it blank for manual review",
         variant: "destructive"
       })
       return
@@ -349,7 +349,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           taxRate: effectivePricing?.taxRate,
           imageProof: imageProofUrl,
           referenceNumber: interacEmail,
-          interacReference: interacReference.trim(),
+          interacReference: interacReference.trim() || undefined,
           submissionKey: submissionKeyRef.current || (submissionKeyRef.current = crypto.randomUUID()),
           notes: notes || undefined,
           promoCode: appliedPromoCode || undefined

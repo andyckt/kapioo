@@ -341,8 +341,7 @@ export function MealVoucherUploadStep({
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
             <Ticket className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "Interac 转账参考编号" : "Interac transfer reference"}
-            <span className="text-red-500">*</span>
+            {language === "zh" ? "Interac 转账参考编号（建议填写）" : "Interac transfer reference (recommended)"}
           </h3>
           <Input
             id="interacReference"
@@ -351,12 +350,11 @@ export function MealVoucherUploadStep({
             placeholder={language === "zh" ? "例如：C1AJH4XQXJVR" : "Example: C1AJH4XQXJVR"}
             autoComplete="off"
             className="border-[#C2884E]/20 font-mono uppercase focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-            required
           />
           <p className="text-xs text-[#8A7968]">
             {language === "zh"
-              ? "请复制银行转账确认中的参考编号。系统只会将每笔转账使用一次。"
-              : "Copy the reference number from your bank's transfer confirmation. Each transfer can be used only once."}
+              ? "填写后可加快自动核对。找不到时可以留空提交，我们会人工审核。每笔转账只会使用一次。"
+              : "Enter it for faster automatic verification. If you cannot find it, submit without it for manual review. Each transfer is used only once."}
           </p>
         </div>
 

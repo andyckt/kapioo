@@ -21,7 +21,10 @@ export const createVoucherPurchaseRequestBodySchema = z.object({
   quantity: z.coerce.number().positive(),
   imageProof: nonEmptyString,
   referenceNumber: z.string().trim().email(),
-  interacReference: z.string().trim().refine(isValidInteracReference, "Invalid Interac reference"),
+  interacReference: z.preprocess(
+    (value) => typeof value === "string" && !value.trim() ? undefined : value,
+    z.string().trim().refine(isValidInteracReference, "Invalid Interac reference").optional(),
+  ),
   submissionKey: z.string().uuid().optional(),
   notes: z.string().optional(),
   promoCode: z.string().optional(),

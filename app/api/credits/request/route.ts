@@ -206,13 +206,6 @@ export async function POST(request: Request) {
       ? normalizeInteracReference(data.interacReference)
       : undefined;
     const automationActiveForNewRequests = isEligibleForAutomaticChecks();
-    if (
-      effectivePaymentMethod === 'emt' &&
-      automationActiveForNewRequests &&
-      !interacReferenceNormalized
-    ) {
-      return errorJson('Interac transfer reference is required for automatic payment verification', 400);
-    }
     const automaticChecksEligible =
       effectivePaymentMethod === 'emt' &&
       Boolean(interacReferenceNormalized) &&

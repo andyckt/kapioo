@@ -4,6 +4,8 @@ This feature verifies completed Interac deposits in the Kapioo Gmail mailbox and
 
 Every new Interac request records the payer email and transfer reference, including while automation is disabled, so manual approvals receive the same one-payment protection during rollout.
 
+Customers may submit when they cannot find the transfer reference. Those requests are always routed to manual review and are never automatically approved. A missing optional reference must never prevent the company from receiving the customer's request.
+
 ## Safety rules
 
 A request is approved only when one Gmail-authenticated Interac receipt matches all of these values exactly:

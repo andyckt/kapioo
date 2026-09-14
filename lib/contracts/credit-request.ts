@@ -25,7 +25,10 @@ export const createCreditRequestBodySchema = z.object({
   imageProof: nonEmptyString,
   paymentMethod: paymentMethodSchema,
   referenceNumber: z.string().trim().email(),
-  interacReference: z.string().trim().refine(isValidInteracReference, "Invalid Interac reference").optional(),
+  interacReference: z.preprocess(
+    (value) => typeof value === "string" && !value.trim() ? undefined : value,
+    z.string().trim().refine(isValidInteracReference, "Invalid Interac reference").optional(),
+  ),
   submissionKey: z.string().uuid().optional(),
   notes: z.string().optional(),
   planDescription: z.string().optional(),
@@ -35,14 +38,6 @@ export const createCreditRequestBodySchema = z.object({
   duration: z.coerce.number().int().positive().optional(),
   planId: z.string().optional(),
   promoCode: z.string().optional(),
-}).superRefine((data, context) => {
-  if (data.paymentMethod === "emt" && !data.interacReference) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["interacReference"],
-      message: "Interac reference is required for e-Transfer payments",
-    });
-  }
 });
 
 export type CreateCreditRequestBody = z.infer<typeof createCreditRequestBodySchema>;
