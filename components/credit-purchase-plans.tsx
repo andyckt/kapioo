@@ -40,6 +40,7 @@ import { CreditUploadStep } from "@/features/credit-purchase/credit-upload-step"
 import { CreditMealCountStep } from "@/features/credit-purchase/credit-meal-count-step"
 import { CreditPlanSelectStep } from "@/features/credit-purchase/credit-plan-select-step"
 import { ensureUserPhone, getStoredUser } from "@/lib/phone-helper"
+import { isValidInteracReference } from "@/lib/etransfer/config"
 import type { PricingBreakdown } from "@/lib/promo-code-shared"
 import { useObjectUrl } from "@/hooks/use-object-url"
 import {
@@ -74,12 +75,15 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [automaticVerificationScheduled, setAutomaticVerificationScheduled] = useState(false)
   const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12 | 16>(6)
   const [selectedPlan, setSelectedPlan] = useState<PlanOption | null>(null)
   const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect' | 'upload'>('mealSelect')
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
   const [interacEmail, setInteracEmail] = useState('')
+  const [interacReference, setInteracReference] = useState('')
+  const submissionKeyRef = useRef<string | null>(null)
   const [phone, setPhone] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'wechat' | 'emt' | null>('emt') // Default to EMT
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
@@ -374,7 +378,12 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedPlan || !paymentProof || !interacEmail) {
+    if (
+      !selectedPlan ||
+      !paymentProof ||
+      !interacEmail ||
+      (paymentMethod === 'emt' && !isValidInteracReference(interacReference))
+    ) {
       let errorTitle = language === 'zh' ? '请完成所有必填项' : 'Please complete all required fields'
       let errorDescription = ''
       
@@ -384,6 +393,10 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         errorDescription = language === 'zh' ? '请上传付款凭证' : 'Please upload your payment proof'
       } else if (!interacEmail) {
         errorDescription = language === 'zh' ? '请输入您用于发送电子转账的电子邮件地址' : 'Please enter the email you used to send the e-Transfer'
+      } else if (paymentMethod === 'emt') {
+        errorDescription = language === 'zh'
+          ? '请输入银行转账确认中的 Interac 参考编号'
+          : 'Enter the Interac reference number from your bank confirmation'
       }
       
       toast({
@@ -471,6 +484,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           planDescription: planDescription,
           imageProof: imageUrl,
           referenceNumber: interacEmail,
+          interacReference: effectivePaymentMethod === 'emt' ? interacReference.trim() : undefined,
+          submissionKey: submissionKeyRef.current || (submissionKeyRef.current = crypto.randomUUID()),
           notes,
           mealPlanType,
           mealPlanQuantity: selectedPlan.duration,
@@ -486,6 +501,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
       }
       
       // Show success message
+      setAutomaticVerificationScheduled(result.data?.paymentVerificationStatus === 'pending')
       setIsSubmitted(true)
       
       // Call onSuccess callback if provided
@@ -511,10 +527,14 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
 
   // Reset form when going back to plan selection
   const handleBackToPlans = () => {
+    setIsSubmitted(false)
+    setAutomaticVerificationScheduled(false)
     setPurchaseStep('planSelect')
     setSelectedPlan(null)
     setPaymentProof(null)
     setInteracEmail('')
+    setInteracReference('')
+    submissionKeyRef.current = null
     setNotes('')
     setPromoCodeInput('')
     resetPromo()
@@ -644,6 +664,7 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         ) : (
           <CreditUploadStep
             appliedPromoCode={appliedPromoCode}
+            automaticVerificationScheduled={automaticVerificationScheduled}
             baseSubtotal={baseSubtotal}
             discountedUnitPrice={discountedUnitPrice}
             effectivePricing={effectivePricing}
@@ -655,12 +676,14 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
             handleRemovePromo={handleRemovePromo}
             handleSubmit={handleSubmit}
             interacEmail={interacEmail}
+            interacReference={interacReference}
             isApplyingPromo={isApplyingPromo}
             isLoading={isLoading}
             isSubmitted={isSubmitted}
             language={language}
             notes={notes}
             onInteracEmailChange={setInteracEmail}
+            onInteracReferenceChange={setInteracReference}
             onNotesChange={setNotes}
             onPaymentMethodChange={setPaymentMethod}
             onPhoneChange={setPhone}

@@ -62,6 +62,17 @@ function getRequestStatusBadge(status: CreditRequest["status"]) {
   return null
 }
 
+function paymentVerificationLabel(request: CreditRequest) {
+  if (request.approvalSource === "automatic") return "Automatically verified and approved"
+  if (request.paymentVerificationStatus === "matched") return "Verified deposit matched"
+  if (request.paymentVerificationStatus === "not_found") return "Waiting for completed deposit"
+  if (request.paymentVerificationStatus === "review") return "Manual review required"
+  if (request.paymentVerificationStatus === "duplicate") return "Duplicate payment request"
+  if (request.paymentVerificationStatus === "failed") return "Mailbox check will retry"
+  if (request.paymentVerificationStatus === "pending") return "Automatic check scheduled"
+  return "Manual verification"
+}
+
 function handleProofImageError(event: SyntheticEvent<HTMLImageElement>) {
   const target = event.target as HTMLImageElement
   target.onerror = null
@@ -183,6 +194,22 @@ export function CreditRequestDialogs({
                       <Label className="text-xs text-muted-foreground">User ID</Label>
                       <p className="font-medium text-sm mt-1 text-muted-foreground truncate">{selectedRequestUser.id}</p>
                     </div>
+
+                    {selectedRequest.paymentMethod === "emt" && (
+                      <>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Interac Reference</Label>
+                          <p className="font-medium text-sm mt-1">{selectedRequest.interacReference || "Not provided"}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Payment Verification</Label>
+                          <p className="font-medium text-sm mt-1">{paymentVerificationLabel(selectedRequest)}</p>
+                          {selectedRequest.paymentCheckError && (
+                            <p className="text-xs text-amber-700 mt-1">{selectedRequest.paymentCheckError}</p>
+                          )}
+                        </div>
+                      </>
+                    )}
 
                     <div className="border-t pt-4 col-span-1 sm:col-span-2 mt-2">
                       <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
@@ -491,6 +518,17 @@ export function CreditRequestDialogs({
                       <Label className="text-xs text-muted-foreground">INTERAC Email</Label>
                       <p className="font-medium">{selectedRequest.referenceNumber || "No INTERAC email provided"}</p>
                     </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Interac Reference</Label>
+                      <p className="font-medium">{selectedRequest.interacReference || "Not provided"}</p>
+                    </div>
+                    <div className="col-span-1 sm:col-span-2">
+                      <Label className="text-xs text-muted-foreground">Payment Verification</Label>
+                      <p className="font-medium">{paymentVerificationLabel(selectedRequest)}</p>
+                      {selectedRequest.paymentCheckError && (
+                        <p className="text-xs text-amber-700 mt-1">{selectedRequest.paymentCheckError}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -500,6 +538,9 @@ export function CreditRequestDialogs({
                   <h3 className="font-medium text-green-800">Meal Plans to Add</h3>
                 </div>
                 <div className="p-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    The entitlement is locked to the purchased plan and cannot be changed during approval.
+                  </p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <Label htmlFor="approved-six-meals" className="text-sm font-medium">
@@ -509,7 +550,7 @@ export function CreditRequestDialogs({
                         id="approved-six-meals"
                         type="number"
                         value={approvedSixMeals}
-                        onChange={(e) => setApprovedSixMeals(parseInt(e.target.value, 10) || 0)}
+                        disabled
                         className="mt-1"
                         min="0"
                       />
@@ -522,7 +563,7 @@ export function CreditRequestDialogs({
                         id="approved-eight-meals"
                         type="number"
                         value={approvedEightMeals}
-                        onChange={(e) => setApprovedEightMeals(parseInt(e.target.value, 10) || 0)}
+                        disabled
                         className="mt-1"
                         min="0"
                       />
@@ -535,7 +576,7 @@ export function CreditRequestDialogs({
                         id="approved-ten-meals"
                         type="number"
                         value={approvedTenMeals}
-                        onChange={(e) => setApprovedTenMeals(parseInt(e.target.value, 10) || 0)}
+                        disabled
                         className="mt-1"
                         min="0"
                       />
@@ -548,7 +589,7 @@ export function CreditRequestDialogs({
                         id="approved-twelve-meals"
                         type="number"
                         value={approvedTwelveMeals}
-                        onChange={(e) => setApprovedTwelveMeals(parseInt(e.target.value, 10) || 0)}
+                        disabled
                         className="mt-1"
                         min="0"
                       />
@@ -561,7 +602,7 @@ export function CreditRequestDialogs({
                         id="approved-sixteen-meals"
                         type="number"
                         value={approvedSixteenMeals}
-                        onChange={(e) => setApprovedSixteenMeals(parseInt(e.target.value, 10) || 0)}
+                        disabled
                         className="mt-1"
                         min="0"
                       />

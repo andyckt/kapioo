@@ -9,6 +9,7 @@ export interface EmailOptions {
   subject: string;
   html: string;
   from?: string;
+  idempotencyKey?: string;
 }
 
 // Send an email using Resend (professional transactional email service)
@@ -344,6 +345,8 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
   promoDiscountAmount?: number;
   imageProofUrl: string;
   referenceNumber?: string;
+  interacReference?: string;
+  automaticVerification?: boolean;
   notes?: string;
   planDescription?: string;
   requestId: string;
@@ -387,14 +390,16 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的周次充值请求待审核</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的周次充值请求</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
         用户 <strong>${requestDetails.userName}</strong> (${requestDetails.userEmail}) 提交了一个新的充值请求。
       </p>
       <ul style="list-style: none; padding: 0; margin-bottom: 20px; border: 1px solid #eee; border-radius: 8px; background-color: #f9f9f9;">
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款方式:</strong> ${requestDetails.paymentMethod === 'wechat' ? '微信转账' : 'Interac e-Transfer'}</li>
-        ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+        ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款人邮箱:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+        ${requestDetails.interacReference ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>Interac 转账参考编号:</strong> ${requestDetails.interacReference}</li>` : ''}
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款核对:</strong> ${requestDetails.automaticVerification ? '约10分钟后自动开始；银行待处理时会继续重试' : '需要人工核对'}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>小计:</strong> $${mealSubtotal.toFixed(2)}</li>
         ${requestDetails.promoCode ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>优惠折扣 (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>配送费:</strong> $${deliveryFeeTotal.toFixed(2)}${deliveryFeePerWeek > 0 ? ` ($${deliveryFeePerWeek.toFixed(2)} × ${requestDetails.mealPlanQuantity || 1} 周)` : ''}</li>
@@ -434,7 +439,7 @@ export const sendAdminCreditRequestNotification = async (requestDetails: {
 
   return sendEmail({
     to: adminEmail,
-    subject: `新的周次充值请求 (#${requestDetails.requestId}) 待审核`,
+    subject: `新的周次充值请求 (#${requestDetails.requestId})`,
     html,
   });
 };
@@ -458,6 +463,8 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
   promoDiscountAmount?: number;
   requestId: string;
   referenceNumber?: string;
+  interacReference?: string;
+  automaticVerification?: boolean;
   planDescription?: string;
   mealPlanQuantity?: number;
 }, language: Language = 'zh') => {
@@ -505,18 +512,23 @@ export const sendUserCreditRequestConfirmation = async (requestDetails: {
         <ul style="list-style: none; padding: 0; margin: 0;">
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.requestId}:</strong> ${requestDetails.requestId}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.paymentMethod}:</strong> ${paymentMethodText}</li>
-          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.referenceNumber}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '付款人邮箱' : 'Payer email'}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '小计' : 'Subtotal'}:</strong> $${mealSubtotal.toFixed(2)}</li>
           ${requestDetails.promoCode ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '优惠折扣' : 'Promo Discount'} (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '配送费' : 'Delivery fee'}:</strong> $${deliveryFeeTotal.toFixed(2)}${deliveryFeePerWeek > 0 ? ` ($${deliveryFeePerWeek.toFixed(2)} × ${requestDetails.mealPlanQuantity || 1} ${language === 'zh' ? '周' : 'weeks'})` : ''}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '税费' : 'Tax'}:</strong> $${taxAmount.toFixed(2)}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.actualPayment}:</strong> $${finalTotal.toFixed(2)} ${paymentNote}</li>
           ${requestDetails.planDescription ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.selectedPlan}:</strong> ${requestDetails.planDescription}</li>` : ''}
+          ${requestDetails.interacReference ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>Interac ${language === 'zh' ? '转账参考编号' : 'transfer reference'}:</strong> ${requestDetails.interacReference}</li>` : ''}
           <li style="padding: 10px 0;"><strong>${t.account.status}:</strong> <span style="color: #F59E0B; font-weight: 500;">${t.account.pendingReview}</span></li>
         </ul>
       </div>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
-        ${t.account.adminWillReview}.
+        ${requestDetails.automaticVerification
+          ? (language === 'zh'
+              ? '系统将在约10分钟后开始核对已完成的电子转账；如果银行仍显示待处理，系统会继续重试。'
+              : 'Automatic verification starts in about 10 minutes and keeps retrying while the bank transfer is pending.')
+          : `${t.account.adminWillReview}.`}
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
         ${t.account.contactForQuestions}.
@@ -553,6 +565,8 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
   promoDiscountAmount?: number;
   imageProofUrl: string;
   referenceNumber?: string;
+  interacReference?: string;
+  automaticVerification?: boolean;
   notes?: string;
   requestId: string;
   userAddress?: {
@@ -587,7 +601,7 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
       <div style="text-align: center; margin-bottom: 30px;">
         <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
       </div>
-      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的${voucherTypeText}购买请求待审核</h2>
+      <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">新的${voucherTypeText}购买请求</h2>
       <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
         用户 <strong>${requestDetails.userName}</strong> (${requestDetails.userEmail}) 提交了一个新的餐券购买请求。
       </p>
@@ -595,7 +609,9 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>请求ID:</strong> ${requestDetails.requestId}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>餐券类型:</strong> ${voucherTypeText}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>餐券数量:</strong> ${requestDetails.quantity}</li>
-        ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>参考号码:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+        ${requestDetails.referenceNumber ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款人邮箱:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+        ${requestDetails.interacReference ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>Interac 转账参考编号:</strong> ${requestDetails.interacReference}</li>` : ''}
+        <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>付款核对:</strong> ${requestDetails.automaticVerification ? '约10分钟后自动开始；银行待处理时会继续重试' : '需要人工核对'}</li>
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>小计:</strong> $${subtotal.toFixed(2)}</li>
         ${requestDetails.promoCode ? `<li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>优惠折扣 (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
         <li style="padding: 10px 15px; border-bottom: 1px solid #eee;"><strong>税费:</strong> $${taxAmount.toFixed(2)}</li>
@@ -633,7 +649,7 @@ export const sendAdminVoucherRequestNotification = async (requestDetails: {
 
   return sendEmail({
     to: adminEmail,
-    subject: `新的${voucherTypeText}购买请求 (#${requestDetails.requestId}) 待审核`,
+    subject: `新的${voucherTypeText}购买请求 (#${requestDetails.requestId})`,
     html,
   });
 };
@@ -653,6 +669,8 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   promoDiscountAmount?: number;
   requestId: string;
   referenceNumber?: string;
+  interacReference?: string;
+  automaticVerification?: boolean;
   notes?: string;
 }, language: Language = 'zh') => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -672,9 +690,13 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
   const promoDiscount = breakdown.promoDiscount;
   const taxAmount = breakdown.taxAmount;
   const finalTotal = breakdown.finalTotal;
-  const adminWillReviewVouchers = language === 'zh'
-    ? '我们的管理员将尽快审核您的请求。一旦审核通过，餐券将立即添加到您的账户中，您将收到确认邮件'
-    : 'Our administrator will review your request as soon as possible. Once approved, vouchers will be added to your account immediately and you will receive a confirmation email';
+  const adminWillReviewVouchers = requestDetails.automaticVerification
+    ? (language === 'zh'
+        ? '系统将在约10分钟后开始核对已完成的电子转账。如果银行仍显示待处理，系统会继续重试；核对完成后餐券会自动加入您的账户'
+        : 'Automatic verification starts in about 10 minutes. It keeps retrying while the bank transfer is pending and adds the vouchers after a verified match')
+    : (language === 'zh'
+        ? '我们的管理员将尽快审核您的请求。一旦审核通过，餐券将立即添加到您的账户中，您将收到确认邮件'
+        : 'Our administrator will review your request as soon as possible. Once approved, vouchers will be added to your account immediately and you will receive a confirmation email');
   
   const html = `
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
@@ -693,7 +715,8 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.requestId}:</strong> ${requestDetails.requestId}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.voucherType}:</strong> ${voucherTypeText}</li>
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.voucherQuantity}:</strong> ${requestDetails.quantity}</li>
-          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${t.account.referenceNumber}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+          ${requestDetails.referenceNumber ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '付款人邮箱' : 'Payer email'}:</strong> ${requestDetails.referenceNumber}</li>` : ''}
+          ${requestDetails.interacReference ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>Interac ${language === 'zh' ? '转账参考编号' : 'transfer reference'}:</strong> ${requestDetails.interacReference}</li>` : ''}
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '小计' : 'Subtotal'}:</strong> $${subtotal.toFixed(2)}</li>
           ${requestDetails.promoCode ? `<li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '优惠折扣' : 'Promo Discount'} (${requestDetails.promoCode}):</strong> -$${promoDiscount.toFixed(2)}</li>` : ''}
           <li style="padding: 10px 0; border-bottom: 1px dashed #E8D5C4;"><strong>${language === 'zh' ? '税费' : 'Tax'}:</strong> $${taxAmount.toFixed(2)}</li>
@@ -726,7 +749,7 @@ export const sendUserVoucherRequestConfirmation = async (requestDetails: {
 };
 
 // Send notification to user for credit purchase status
-export const sendCreditPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', credits?: number, planDescription?: string, language: Language = 'zh') => {
+export const sendCreditPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', credits?: number, planDescription?: string, language: Language = 'zh', idempotencyKey?: string) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const t = getTranslations(language);
   
@@ -797,11 +820,12 @@ export const sendCreditPurchaseStatusEmail = async (to: string, name: string, re
     to,
     subject: `[Kapioo] ${language === 'zh' ? '您的餐券充值请求' : 'Your Credit Purchase Request'} ${subjectText}`,
     html,
+    idempotencyKey,
   });
 };
 
 // Send notification to user for voucher purchase status
-export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', voucherType: 'twoDish' | 'threeDish', quantity: number, adminNotes?: string, language: Language = 'zh') => {
+export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, requestId: string, status: 'approved' | 'declined', voucherType: 'twoDish' | 'threeDish', quantity: number, adminNotes?: string, language: Language = 'zh', idempotencyKey?: string) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const t = getTranslations(language);
   
@@ -884,6 +908,7 @@ export const sendVoucherPurchaseStatusEmail = async (to: string, name: string, r
     to,
     subject: `[Kapioo] ${yourText}${voucherTypeText}${purchaseRequest} ${subjectStatus}`,
     html,
+    idempotencyKey,
   });
 };
 

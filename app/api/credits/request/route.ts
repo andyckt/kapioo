@@ -19,12 +19,17 @@ import {
   validatePromoForPreview
 } from '@/lib/promo-code';
 import {
-  derivePlanIdFromWeeklyType,
+  buildPlanLabel,
   getWeeklyPlanBy,
   getWeeklyPlanById,
-  getWeeklyDeliveryFee,
-  toWeeklyPlanId
+  getWeeklyDeliveryFee
 } from '@/lib/plans/service';
+import {
+  isEligibleForAutomaticChecks,
+  isLiveAutomaticApprovalEnabled,
+  moneyToCents,
+  normalizeInteracReference,
+} from '@/lib/etransfer/config';
 
 // POST handler - create a new credit purchase request
 export async function POST(request: Request) {
@@ -39,7 +44,6 @@ export async function POST(request: Request) {
     if (error) {
       return error;
     }
-    console.log('Credit request data:', JSON.stringify(data));
 
     const effectiveUserId =
       actor.role === 'admin' && data.userId
@@ -79,6 +83,14 @@ export async function POST(request: Request) {
       return errorJson('User not found', 404);
     }
 
+    if (data.submissionKey) {
+      const existingSubmission = await CreditPurchaseRequest.findOne({
+        userId: effectiveUserId,
+        submissionKey: data.submissionKey,
+      });
+      if (existingSubmission) return successJson(existingSubmission);
+    }
+
     // Phone is required for all credit requests
     const normalizedUserPhone = normalizePhone(user.phone);
     if (!normalizedUserPhone) {
@@ -90,15 +102,17 @@ export async function POST(request: Request) {
 
     const duration = Number(data.mealPlanQuantity || data.duration);
     const mealsPerWeek = Number(data.mealsPerWeek || String(data.mealPlanType || '').replace('aweek', ''));
-    const requestedPlanId =
-      data.planId ||
-      (Number.isFinite(mealsPerWeek) && Number.isFinite(duration)
-        ? toWeeklyPlanId(mealsPerWeek, duration)
-        : derivePlanIdFromWeeklyType(data.mealPlanType, duration));
-    const weeklyPlan = requestedPlanId ? getWeeklyPlanById(requestedPlanId) : getWeeklyPlanBy(mealsPerWeek, duration);
+    const weeklyPlan = data.planId
+      ? getWeeklyPlanById(data.planId)
+      : getWeeklyPlanBy(mealsPerWeek, duration);
     const planBasePrice = weeklyPlan?.basePrice;
 
-    if (!planBasePrice) {
+    if (
+      !planBasePrice ||
+      weeklyPlan?.mealsPerWeek !== mealsPerWeek ||
+      weeklyPlan.weeks !== duration ||
+      (data.mealPlanType && data.mealPlanType !== `${weeklyPlan.mealsPerWeek}aweek`)
+    ) {
       return errorJson('Invalid weekly plan combination', 400);
     }
 
@@ -175,13 +189,34 @@ export async function POST(request: Request) {
     }
     
     // Generate request ID
-    const requestId = data.requestId || (await CreditPurchaseRequest.generateRequestId());
-    const existingRequest = await CreditPurchaseRequest.findOne({ requestId });
+    const requestId =
+      actor.role === 'admin' && data.requestId
+        ? data.requestId
+        : await CreditPurchaseRequest.generateRequestId();
+    const existingRequest = await CreditPurchaseRequest.findOne({
+      requestId,
+      userId: effectiveUserId,
+    });
     if (existingRequest) {
       return successJson(existingRequest);
     }
 
     let savedRequest: ICreditPurchaseRequest | null = null;
+    const interacReferenceNormalized = data.interacReference
+      ? normalizeInteracReference(data.interacReference)
+      : undefined;
+    const automationActiveForNewRequests = isEligibleForAutomaticChecks();
+    if (
+      effectivePaymentMethod === 'emt' &&
+      automationActiveForNewRequests &&
+      !interacReferenceNormalized
+    ) {
+      return errorJson('Interac transfer reference is required for automatic payment verification', 400);
+    }
+    const automaticChecksEligible =
+      effectivePaymentMethod === 'emt' &&
+      Boolean(interacReferenceNormalized) &&
+      automationActiveForNewRequests;
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
@@ -256,10 +291,19 @@ export async function POST(request: Request) {
               promoId: promoDoc?._id,
               imageProof: data.imageProof,
               referenceNumber: data.referenceNumber,
+              interacReference: data.interacReference,
+              interacReferenceNormalized,
+              submissionKey: data.submissionKey,
+              amountCents: moneyToCents(pricing.finalTotal),
+              paymentVerificationStatus: automaticChecksEligible ? 'pending' : 'manual',
+              nextPaymentCheckAt: automaticChecksEligible
+                ? new Date(Date.now() + 10 * 60_000)
+                : undefined,
+              paymentCheckAttempts: 0,
               notes: data.notes || '',
-              planDescription: data.planDescription || '',
-              mealPlanType: data.mealPlanType,
-              mealPlanQuantity: duration,
+              planDescription: buildPlanLabel(weeklyPlan, user.languagePreference || 'zh'),
+              mealPlanType: `${weeklyPlan.mealsPerWeek}aweek`,
+              mealPlanQuantity: weeklyPlan.weeks,
               status: 'pending'
             }
           ],
@@ -273,6 +317,13 @@ export async function POST(request: Request) {
         return errorJson(code.replaceAll('_', ' '), 400, {
           errorCode: code,
         });
+      }
+      if ((txError as { code?: number })?.code === 11000 && data.submissionKey) {
+        const duplicateSubmission = await CreditPurchaseRequest.findOne({
+          userId: effectiveUserId,
+          submissionKey: data.submissionKey,
+        });
+        if (duplicateSubmission) return successJson(duplicateSubmission);
       }
       throw txError;
     } finally {
@@ -318,8 +369,10 @@ export async function POST(request: Request) {
         promoDiscountAmount: persistedRequest.promoDiscountAmount,
         imageProofUrl: data.imageProof,
         referenceNumber: data.referenceNumber,
+        interacReference: persistedRequest.interacReference,
+        automaticVerification: isLiveAutomaticApprovalEnabled(),
         notes: data.notes,
-        planDescription: data.planDescription || '',
+        planDescription: persistedRequest.planDescription || '',
         requestId: requestId,
         mealPlanQuantity: duration,
         userAddress: userAddress
@@ -350,7 +403,9 @@ export async function POST(request: Request) {
         promoCode: persistedRequest.promoCode,
         promoDiscountAmount: persistedRequest.promoDiscountAmount,
         referenceNumber: data.referenceNumber,
-        planDescription: data.planDescription || '',
+        interacReference: persistedRequest.interacReference,
+        automaticVerification: isLiveAutomaticApprovalEnabled(),
+        planDescription: persistedRequest.planDescription || '',
         mealPlanQuantity: duration,
         requestId: requestId
       }, user.languagePreference || 'zh'); // Pass user's language preference
@@ -369,6 +424,11 @@ export async function POST(request: Request) {
 // GET handler - get credit purchase requests for a user
 export async function GET(request: Request) {
   try {
+    const { actor, response } = await requireUser();
+    if (!actor || response) {
+      return response;
+    }
+
     const { data, error } = parseSearchParams(request, creditRequestsQuerySchema);
     if (error) {
       return error;
@@ -382,6 +442,13 @@ export async function GET(request: Request) {
     
     if (!userId) {
       return errorJson('User ID is required', 400);
+    }
+
+    const isSelf =
+      String(userId) === String(actor.user._id) ||
+      String(userId) === String(actor.user.userID);
+    if (!isSelf && actor.role !== 'admin') {
+      return errorJson('You cannot view requests for another user', 403);
     }
     
     await connectToDatabase();

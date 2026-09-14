@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
+import type { DateRange } from 'react-day-picker'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -49,6 +50,12 @@ interface VoucherPurchaseRequest {
   quantity: number;
   amount: number;
   referenceNumber?: string;
+  interacReference?: string;
+  paymentVerificationStatus?: 'manual' | 'pending' | 'not_found' | 'matched' | 'review' | 'duplicate' | 'failed';
+  paymentCheckError?: string;
+  paymentReviewRequired?: boolean;
+  approvalSource?: 'automatic' | 'manual';
+  duplicateOfRequestId?: string;
   originalSubtotal?: number;
   finalTotal?: number;
   promoCode?: string;
@@ -389,7 +396,7 @@ export function MealVoucherManagement() {
                     from: dateRange.startDate,
                     to: dateRange.endDate,
                   }}
-                  onSelect={(range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+                  onSelect={(range: DateRange | undefined) => {
                     setDateRange({
                       startDate: range?.from,
                       endDate: range?.to,
@@ -886,6 +893,36 @@ export function MealVoucherManagement() {
                           <dt className="font-medium text-[#6B5F53]">INTERAC Email:</dt>
                           <dd className="font-medium">{selectedRequest.referenceNumber || 'No INTERAC email'}</dd>
                         </div>
+                        <div className="flex justify-between">
+                          <dt className="font-medium text-[#6B5F53]">Interac Reference:</dt>
+                          <dd className="font-medium">{selectedRequest.interacReference || 'Not provided'}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt className="font-medium text-[#6B5F53]">Payment Verification:</dt>
+                          <dd className="font-medium text-right">
+                            {selectedRequest.approvalSource === 'automatic'
+                              ? 'Automatically verified and approved'
+                              : selectedRequest.paymentVerificationStatus === 'matched'
+                                ? 'Verified deposit matched'
+                                : selectedRequest.paymentVerificationStatus === 'not_found'
+                                  ? 'Waiting for completed deposit'
+                                  : selectedRequest.paymentVerificationStatus === 'review'
+                                    ? 'Manual review required'
+                                    : selectedRequest.paymentVerificationStatus === 'duplicate'
+                                      ? 'Duplicate payment request'
+                                      : selectedRequest.paymentVerificationStatus === 'failed'
+                                        ? 'Mailbox check will retry'
+                                        : selectedRequest.paymentVerificationStatus === 'pending'
+                                          ? 'Automatic check scheduled'
+                                          : 'Manual verification'}
+                          </dd>
+                        </div>
+                        {selectedRequest.paymentCheckError && (
+                          <div className="flex justify-between gap-4 text-amber-700">
+                            <dt className="font-medium">Check note:</dt>
+                            <dd className="text-right">{selectedRequest.paymentCheckError}</dd>
+                          </div>
+                        )}
                       </dl>
                     </CardContent>
                   </Card>
@@ -1015,7 +1052,7 @@ export function MealVoucherManagement() {
               <div>
                 <DialogTitle>Approve Voucher Purchase</DialogTitle>
                 <DialogDescription className="mt-1">
-                  This will add vouchers to the user's account and send a notification.
+                  This will add vouchers to the user&apos;s account and send a notification.
                 </DialogDescription>
               </div>
             </div>
