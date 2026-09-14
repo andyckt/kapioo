@@ -20,6 +20,12 @@ import {
   validatePromoForPreview,
 } from "@/lib/promo-code";
 import { derivePlanIdFromDaily, getDailyPlanBy, getDailyPlanById, toDailyPlanId } from '@/lib/plans/service';
+import {
+  isEligibleForAutomaticChecks,
+  isLiveAutomaticApprovalEnabled,
+  moneyToCents,
+  normalizeInteracReference,
+} from '@/lib/etransfer/config';
 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
@@ -186,6 +192,8 @@ export async function POST(request: NextRequest) {
       quantity,
       imageProof,
       referenceNumber,
+      interacReference,
+      submissionKey,
       notes,
       promoCode,
       requestId: clientRequestId,
@@ -210,6 +218,20 @@ export async function POST(request: NextRequest) {
       return errorJson("User not found", 404);
     }
 
+    if (submissionKey) {
+      const existingSubmission = await VoucherPurchaseRequest.findOne({
+        userId: effectiveUserId,
+        submissionKey,
+      });
+      if (existingSubmission) {
+        return NextResponse.json({
+          success: true,
+          data: existingSubmission,
+          message: 'Voucher purchase request already submitted'
+        });
+      }
+    }
+
     const normalizedUserPhone = normalizePhone(user.phone);
     if (!normalizedUserPhone) {
       return errorJson(
@@ -227,14 +249,26 @@ export async function POST(request: NextRequest) {
     if (!planId) {
       return errorJson("Invalid plan quantity for selected voucher type", 400);
     }
-    const dailyPlan = getDailyPlanById(planId) || getDailyPlanBy(voucherType, Number(quantity));
+    const dailyPlan = body.planId
+      ? getDailyPlanById(body.planId)
+      : getDailyPlanBy(voucherType, Number(quantity));
     const baseSubtotal = dailyPlan?.basePrice;
-    if (!baseSubtotal) {
+    if (
+      !baseSubtotal ||
+      dailyPlan?.dishType !== voucherType ||
+      dailyPlan.credits !== Number(quantity)
+    ) {
       return errorJson("Invalid plan quantity for selected voucher type", 400);
     }
 
-    const requestId = clientRequestId || (await VoucherPurchaseRequest.generateRequestId());
-    const existingRequest = await VoucherPurchaseRequest.findOne({ requestId });
+    const requestId =
+      actor.role === 'admin' && clientRequestId
+        ? clientRequestId
+        : await VoucherPurchaseRequest.generateRequestId();
+    const existingRequest = await VoucherPurchaseRequest.findOne({
+      requestId,
+      userId: effectiveUserId,
+    });
     if (existingRequest) {
       return NextResponse.json({
         success: true,
@@ -255,6 +289,15 @@ export async function POST(request: NextRequest) {
       finalTotal: parseFloat((baseSubtotal * (1 + taxRate)).toFixed(2))
     };
     const normalizedPromoCode = normalizePromoCode(promoCode || '');
+    const interacReferenceNormalized = interacReference
+      ? normalizeInteracReference(interacReference)
+      : undefined;
+    const automationActiveForNewRequests = isEligibleForAutomaticChecks();
+    if (automationActiveForNewRequests && !interacReferenceNormalized) {
+      return errorJson("Interac transfer reference is required for automatic payment verification", 400);
+    }
+    const automaticChecksEligible =
+      Boolean(interacReferenceNormalized) && automationActiveForNewRequests;
 
     if (normalizedPromoCode) {
       promoDoc = await PromoCode.findOne({ code: normalizedPromoCode });
@@ -358,6 +401,15 @@ export async function POST(request: NextRequest) {
               promoId: promoDoc?._id,
               imageProof,
               referenceNumber,
+              interacReference,
+              interacReferenceNormalized,
+              submissionKey,
+              amountCents: moneyToCents(promoBreakdown.finalTotal),
+              paymentVerificationStatus: automaticChecksEligible ? 'pending' : 'manual',
+              nextPaymentCheckAt: automaticChecksEligible
+                ? new Date(Date.now() + 10 * 60_000)
+                : undefined,
+              paymentCheckAttempts: 0,
               notes,
               status: 'pending'
             }
@@ -369,6 +421,19 @@ export async function POST(request: NextRequest) {
       const code = txError?.message as PromoErrorCode;
       if (Object.values(PromoErrorCode).includes(code)) {
         return errorJson(code.replaceAll("_", " "), 400, { errorCode: code });
+      }
+      if (txError?.code === 11000 && submissionKey) {
+        const duplicateSubmission = await VoucherPurchaseRequest.findOne({
+          userId: effectiveUserId,
+          submissionKey,
+        });
+        if (duplicateSubmission) {
+          return NextResponse.json({
+            success: true,
+            data: duplicateSubmission,
+            message: 'Voucher purchase request already submitted'
+          });
+        }
       }
       throw txError;
     } finally {
@@ -404,6 +469,8 @@ export async function POST(request: NextRequest) {
         promoDiscountAmount: createdRequest.promoDiscountAmount,
         imageProofUrl: imageProof,
         referenceNumber,
+        interacReference: createdRequest.interacReference,
+        automaticVerification: isLiveAutomaticApprovalEnabled(),
         notes,
         requestId,
         userAddress: userAddress
@@ -430,6 +497,8 @@ export async function POST(request: NextRequest) {
         promoCode: createdRequest.promoCode,
         promoDiscountAmount: createdRequest.promoDiscountAmount,
         referenceNumber,
+        interacReference: createdRequest.interacReference,
+        automaticVerification: isLiveAutomaticApprovalEnabled(),
         notes,
         requestId
       }, user.languagePreference || 'zh'); // Pass user's language preference

@@ -24,6 +24,7 @@ import type { CreditPlanOption } from "./credit-plan-select-step"
 
 type CreditUploadStepProps = {
   appliedPromoCode: string | null
+  automaticVerificationScheduled: boolean
   baseSubtotal: number
   discountedUnitPrice: number | null
   effectivePricing: PricingBreakdown | null
@@ -35,12 +36,14 @@ type CreditUploadStepProps = {
   handleRemovePromo: () => void
   handleSubmit: (event: FormEvent) => void | Promise<void>
   interacEmail: string
+  interacReference: string
   isApplyingPromo: boolean
   isLoading: boolean
   isSubmitted: boolean
   language: "en" | "zh"
   notes: string
   onInteracEmailChange: (value: string) => void
+  onInteracReferenceChange: (value: string) => void
   onNotesChange: (value: string) => void
   onPaymentMethodChange: (value: "wechat" | "emt" | null) => void
   onPhoneChange: (value: string) => void
@@ -58,6 +61,7 @@ type CreditUploadStepProps = {
 
 export function CreditUploadStep({
   appliedPromoCode,
+  automaticVerificationScheduled,
   baseSubtotal,
   discountedUnitPrice,
   effectivePricing,
@@ -69,12 +73,14 @@ export function CreditUploadStep({
   handleRemovePromo,
   handleSubmit,
   interacEmail,
+  interacReference,
   isApplyingPromo,
   isLoading,
   isSubmitted,
   language,
   notes,
   onInteracEmailChange,
+  onInteracReferenceChange,
   onNotesChange,
   onPaymentMethodChange,
   onPhoneChange,
@@ -375,6 +381,29 @@ export function CreditUploadStep({
               </p>
             </div>
 
+            {paymentMethod === "emt" ? (
+              <div>
+                <Label htmlFor="interacReference" className="font-medium text-[#6B5F53]">
+                  {language === "zh" ? "Interac 转账参考编号" : "Interac transfer reference"}
+                  <span className="ml-1 text-red-500">*</span>
+                </Label>
+                <Input
+                  id="interacReference"
+                  value={interacReference}
+                  onChange={(event) => onInteracReferenceChange(event.target.value.toUpperCase())}
+                  placeholder={language === "zh" ? "例如：C1AJH4XQXJVR" : "Example: C1AJH4XQXJVR"}
+                  autoComplete="off"
+                  className="mt-2 font-mono uppercase"
+                  required
+                />
+                <p className="mt-1 text-xs text-[#8A7968]">
+                  {language === "zh"
+                    ? "请复制银行转账确认中的参考编号。系统只会将每笔转账使用一次。"
+                    : "Copy the reference number from your bank's transfer confirmation. Each transfer can be used only once."}
+                </p>
+              </div>
+            ) : null}
+
             <div>
               <Label htmlFor="phone" className="font-medium text-[#6B5F53]">
                 {language === "zh" ? "手机号码" : "Phone number"}
@@ -438,9 +467,13 @@ export function CreditUploadStep({
               {language === "zh" ? "谢谢！" : "Thank You!"}
             </h3>
             <p className="mb-4 text-[#9B6B3F]">
-              {language === "zh"
-                ? "您的请求已提交，我们将在营业时间内（周一至周五上午11点至晚上8点）30-60分钟内处理。"
-                : "Your request has been submitted. We process in 30-60 mins during business hours Monday to Friday 11am to 8pm."}
+              {automaticVerificationScheduled
+                ? language === "zh"
+                  ? "您的请求已提交。系统将在约10分钟后开始核对已完成的电子转账；如果银行仍显示待处理，系统会继续重试。"
+                  : "Your request has been submitted. Automatic verification starts in about 10 minutes and keeps retrying while the bank transfer is pending."
+                : language === "zh"
+                  ? "您的请求已提交，付款将在发放餐券前由管理员核对。"
+                  : "Your request has been submitted for manual payment review before vouchers are issued."}
             </p>
             <div className="mt-4 border-t border-[#E5D6BC] pt-4">
               <p className="text-sm text-[#9B6B3F]">

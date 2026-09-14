@@ -86,7 +86,7 @@ export const sendEmailWithResend = async (options: EmailOptions) => {
           to: options.to,
           subject: options.subject,
           html: options.html
-        }) as Promise<any>,
+        }, options.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : undefined) as Promise<any>,
       'single send'
     );
     

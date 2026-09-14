@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { allocateSequentialId } from '@/lib/ids/atomic-sequence';
 
 // Interface for the document
 export interface ITransaction extends Document {
@@ -53,27 +54,12 @@ async function generateTransactionId(type: 'Add' | 'debit' | 'Deduct' | 'refund'
                 type === 'refund' ? 'RF-' : 'TX-';
   const baseNumber = type === 'Add' ? 1000 : 
                     type === 'Deduct' ? 2000 : 3000;
-  
-  // Use the Transaction model directly
-  const Transaction = mongoose.models.Transaction;
-  
-  // Find the highest existing transaction ID of this type
-  const highestTransaction = await Transaction.findOne(
-    { transactionId: new RegExp(`^${prefix}\\d+$`) },
-    { transactionId: 1 },
-    { sort: { transactionId: -1 } }
+  return allocateSequentialId(
+    `transaction-${type}`,
+    prefix,
+    baseNumber,
+    mongoose.models.Transaction
   );
-  
-  if (!highestTransaction) {
-    // If no transactions of this type exist, start with base number
-    return `${prefix}${baseNumber}`;
-  }
-  
-  // Extract the number from the highest transaction ID
-  const currentNumber = parseInt(highestTransaction.transactionId.replace(prefix, ''), 10);
-  
-  // Return the next number in sequence
-  return `${prefix}${currentNumber + 1}`;
 }
 
 // Add the static method
@@ -95,4 +81,4 @@ if (!Transaction.generateTransactionId) {
   Transaction.generateTransactionId = generateTransactionId;
 }
 
-export default Transaction; 
+export default Transaction;

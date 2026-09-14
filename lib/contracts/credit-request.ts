@@ -6,6 +6,7 @@ import {
   paymentMethodSchema,
   requestStatusSchema,
 } from "@/lib/contracts/common";
+import { isValidInteracReference } from "@/lib/etransfer/config";
 
 export const weeklyMealPlanTypeSchema = z.enum([
   "legacy",
@@ -23,7 +24,9 @@ export const createCreditRequestBodySchema = z.object({
   requestId: z.string().optional(),
   imageProof: nonEmptyString,
   paymentMethod: paymentMethodSchema,
-  referenceNumber: nonEmptyString,
+  referenceNumber: z.string().trim().email(),
+  interacReference: z.string().trim().refine(isValidInteracReference, "Invalid Interac reference").optional(),
+  submissionKey: z.string().uuid().optional(),
   notes: z.string().optional(),
   planDescription: z.string().optional(),
   mealPlanType: weeklyMealPlanTypeSchema.optional(),
@@ -32,6 +35,14 @@ export const createCreditRequestBodySchema = z.object({
   duration: z.coerce.number().int().positive().optional(),
   planId: z.string().optional(),
   promoCode: z.string().optional(),
+}).superRefine((data, context) => {
+  if (data.paymentMethod === "emt" && !data.interacReference) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["interacReference"],
+      message: "Interac reference is required for e-Transfer payments",
+    });
+  }
 });
 
 export type CreateCreditRequestBody = z.infer<typeof createCreditRequestBodySchema>;
@@ -99,6 +110,15 @@ export const creditRequestResponseSchema = z.object({
   taxAmount: z.number().optional(),
   imageProof: z.string(),
   referenceNumber: z.string(),
+  interacReference: z.string().optional(),
+  paymentVerificationStatus: z
+    .enum(["manual", "pending", "not_found", "matched", "review", "duplicate", "failed"])
+    .optional(),
+  paymentReviewRequired: z.boolean().optional(),
+  nextPaymentCheckAt: z.string().nullable().optional(),
+  lastPaymentCheckedAt: z.string().nullable().optional(),
+  duplicateOfRequestId: z.string().optional(),
+  approvalSource: z.enum(["automatic", "manual"]).optional(),
   status: requestStatusSchema,
   requestedCredits: z.number().optional(),
   approvedCredits: z.number().optional(),

@@ -13,6 +13,7 @@ import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
 import { getAreaDisplayLabel } from '@/lib/zones/coverage-copy'
 import { DAILY_DELIVERY_AREA_LABELS } from '@/lib/zones/service-areas'
 import { getUserDailyEligibility } from '@/lib/address/daily-eligibility'
+import { isValidInteracReference } from '@/lib/etransfer/config'
 import { listDailyPlans } from '@/lib/plans/service'
 import type { PricingBreakdown } from '@/lib/promo-code-shared'
 import {
@@ -76,11 +77,14 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [automaticVerificationScheduled, setAutomaticVerificationScheduled] = useState(false)
   const [activeTab, setActiveTab] = useState<'twoDish' | 'threeDish'>('twoDish')
   const [selectedPlan, setSelectedPlan] = useState<VoucherPlan | null>(null)
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
   const [interacEmail, setInteracEmail] = useState('')
+  const [interacReference, setInteracReference] = useState('')
+  const submissionKeyRef = useRef<string | null>(null)
   const [phone, setPhone] = useState('')
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
@@ -264,6 +268,17 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       return
     }
 
+    if (!isValidInteracReference(interacReference)) {
+      toast({
+        title: language === 'zh' ? "缺少转账参考编号" : "Missing transfer reference",
+        description: language === 'zh'
+          ? "请输入银行转账确认中的 Interac 参考编号"
+          : "Enter the Interac reference number from your bank confirmation",
+        variant: "destructive"
+      })
+      return
+    }
+
     // Submit the purchase directly
     await handleSubmitPurchase()
   }
@@ -334,24 +349,34 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           taxRate: effectivePricing?.taxRate,
           imageProof: imageProofUrl,
           referenceNumber: interacEmail,
+          interacReference: interacReference.trim(),
+          submissionKey: submissionKeyRef.current || (submissionKeyRef.current = crypto.randomUUID()),
           notes: notes || undefined,
           promoCode: appliedPromoCode || undefined
         })
       })
       
+      const responseData = await response.json()
       if (!response.ok) {
-        const errorData = await response.json()
         throw new Error(
-          errorData.error || errorData.errorCode || 'Failed to submit purchase request'
+          responseData.error || responseData.errorCode || 'Failed to submit purchase request'
         )
       }
       
       // 4. Handle success
+      const isAutomatic = responseData.data?.paymentVerificationStatus === 'pending'
+      setAutomaticVerificationScheduled(isAutomatic)
       setIsSubmitted(true)
       
       toast({
         title: language === 'zh' ? "购买请求已提交" : "Purchase request submitted",
-        description: language === 'zh' ? "我们将尽快审核您的请求" : "We will review your request as soon as possible"
+        description: isAutomatic
+          ? language === 'zh'
+            ? "系统将在约10分钟后开始核对已完成的电子转账"
+            : "Automatic verification will start in about 10 minutes"
+          : language === 'zh'
+            ? "付款将在发放餐券前由管理员核对"
+            : "Payment will be reviewed manually before vouchers are issued"
       })
       
       // Call onSuccess callback if provided to refresh the purchase history
@@ -373,9 +398,13 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
 
   const handleResetPurchaseFlow = () => {
     setIsSubmitted(false)
+    setAutomaticVerificationScheduled(false)
     setSelectedPlan(null)
     setPaymentProof(null)
     setNotes('')
+    setInteracEmail('')
+    setInteracReference('')
+    submissionKeyRef.current = null
     setPurchaseStep('select')
   }
 
@@ -998,6 +1027,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           >
             <MealVoucherUploadStep
               appliedPromoCode={appliedPromoCode}
+              automaticVerificationScheduled={automaticVerificationScheduled}
               discountedUnitPrice={discountedUnitPrice}
               effectivePricing={effectivePricing}
               fileInputRef={fileInputRef}
@@ -1005,6 +1035,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               handleFileChange={handleFileChange}
               handleRemovePromo={handleRemovePromo}
               interacEmail={interacEmail}
+              interacReference={interacReference}
               isApplyingPromo={isApplyingPromo}
               isLoading={isLoading}
               isSubmitted={isSubmitted}
@@ -1012,6 +1043,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               notes={notes}
               onBack={() => setPurchaseStep('select')}
               onInteracEmailChange={setInteracEmail}
+              onInteracReferenceChange={setInteracReference}
               onNotesChange={setNotes}
               onPhoneChange={setPhone}
               onPromoCodeInputChange={setPromoCodeInput}

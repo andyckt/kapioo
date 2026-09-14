@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { nonEmptyString, paginationQuerySchema, requestStatusSchema } from "@/lib/contracts/common";
+import { isValidInteracReference } from "@/lib/etransfer/config";
 
 export const voucherRequestsListQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
@@ -19,7 +20,9 @@ export const createVoucherPurchaseRequestBodySchema = z.object({
   type: z.enum(["twoDish", "threeDish"]),
   quantity: z.coerce.number().positive(),
   imageProof: nonEmptyString,
-  referenceNumber: nonEmptyString,
+  referenceNumber: z.string().trim().email(),
+  interacReference: z.string().trim().refine(isValidInteracReference, "Invalid Interac reference"),
+  submissionKey: z.string().uuid().optional(),
   notes: z.string().optional(),
   promoCode: z.string().optional(),
   requestId: z.string().optional(),

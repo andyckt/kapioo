@@ -95,6 +95,10 @@
     "app/api/cron/process-next-week-email-jobs/route": {
       "maxDuration": 10,
       "memory": 512
+    },
+    "app/api/cron/reconcile-etransfers/route": {
+      "maxDuration": 60,
+      "memory": 512
     }
   }
-} 
+}

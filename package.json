@@ -17,6 +17,7 @@
     "update-transactions": "node scripts/update-transactions.js",
     "vercel-build": "next build",
     "migrate:weekly": "tsx scripts/migrate-weekly-subscription.ts",
+    "setup:etransfer": "tsx scripts/setup-etransfer-automation.ts",
     "compress:images": "node scripts/compress-foodjpg.js"
   },
   "dependencies": {
@@ -65,8 +66,10 @@
     "embla-carousel-react": "8.5.1",
     "framer-motion": "^12.15.0",
     "heic2any": "^0.0.4",
+    "imapflow": "^2.0.2",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
+    "mailparser": "^3.9.26",
     "mongodb": "^6.15.0",
     "mongoose": "^8.13.2",
     "next": "^15.5.15",
@@ -91,6 +94,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",

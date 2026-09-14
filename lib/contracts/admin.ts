@@ -57,6 +57,17 @@ export const creditRequestSchema = z.object({
   mealPlanQuantity: z.number().optional(),
   paymentMethod: z.union([paymentMethodSchema, z.string()]).optional(),
   referenceNumber: z.string().optional(),
+  interacReference: z.string().optional(),
+  paymentVerificationStatus: z
+    .enum(["manual", "pending", "not_found", "matched", "review", "duplicate", "failed"])
+    .optional(),
+  paymentReviewRequired: z.boolean().optional(),
+  paymentCheckError: z.string().optional(),
+  paymentCheckAttempts: z.number().optional(),
+  nextPaymentCheckAt: z.string().nullable().optional(),
+  lastPaymentCheckedAt: z.string().nullable().optional(),
+  duplicateOfRequestId: z.string().optional(),
+  approvalSource: z.enum(["automatic", "manual"]).optional(),
   promoCode: z.string().optional(),
   promoDiscountAmount: z.number().optional(),
   mealSubtotal: z.number().optional(),

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { allocateSequentialId } from '@/lib/ids/atomic-sequence';
 
 // Interface for the document
 export interface IVoucherPurchaseRequest extends Document {
@@ -20,7 +21,20 @@ export interface IVoucherPurchaseRequest extends Document {
   promoId?: mongoose.Types.ObjectId;
   promoErrorCode?: string;
   imageProof: string; // URL to the uploaded proof image
-  referenceNumber: string; // Payment reference number
+  referenceNumber: string; // Email address used to send the Interac transfer
+  interacReference?: string;
+  interacReferenceNormalized?: string;
+  submissionKey?: string;
+  amountCents?: number;
+  paymentVerificationStatus?: 'manual' | 'pending' | 'not_found' | 'matched' | 'review' | 'duplicate' | 'failed';
+  nextPaymentCheckAt?: Date;
+  lastPaymentCheckedAt?: Date;
+  paymentCheckAttempts?: number;
+  paymentCheckError?: string;
+  paymentReviewRequired?: boolean;
+  matchedPaymentReceiptId?: mongoose.Types.ObjectId;
+  duplicateOfRequestId?: string;
+  approvalSource?: 'automatic' | 'manual';
   status: 'pending' | 'approved' | 'declined';
   notes?: string; // Additional notes from user
   adminNotes?: string; // Notes from admin (for internal use)
@@ -108,6 +122,23 @@ const VoucherPurchaseRequestSchema = new Schema<IVoucherPurchaseRequest>({
     type: String,
     required: true
   },
+  interacReference: { type: String, trim: true },
+  interacReferenceNormalized: { type: String, trim: true },
+  submissionKey: { type: String, trim: true },
+  amountCents: { type: Number, min: 1 },
+  paymentVerificationStatus: {
+    type: String,
+    enum: ['manual', 'pending', 'not_found', 'matched', 'review', 'duplicate', 'failed'],
+    default: 'manual'
+  },
+  nextPaymentCheckAt: { type: Date },
+  lastPaymentCheckedAt: { type: Date },
+  paymentCheckAttempts: { type: Number, default: 0 },
+  paymentCheckError: { type: String },
+  paymentReviewRequired: { type: Boolean, default: false },
+  matchedPaymentReceiptId: { type: Schema.Types.ObjectId, ref: 'InteracReceipt' },
+  duplicateOfRequestId: { type: String },
+  approvalSource: { type: String, enum: ['automatic', 'manual'] },
   status: {
     type: String,
     enum: ['pending', 'approved', 'declined'],
@@ -130,31 +161,21 @@ const VoucherPurchaseRequestSchema = new Schema<IVoucherPurchaseRequest>({
   timestamps: true
 });
 
+VoucherPurchaseRequestSchema.index(
+  { userId: 1, submissionKey: 1 },
+  { unique: true, partialFilterExpression: { submissionKey: { $type: 'string' } } }
+);
+VoucherPurchaseRequestSchema.index({ status: 1, nextPaymentCheckAt: 1 });
+VoucherPurchaseRequestSchema.index({ interacReferenceNormalized: 1, createdAt: 1 });
+
 // Function to generate the next requestId
 async function generateRequestId() {
-  const prefix = 'VPR-';
-  const baseNumber = 1000;
-  
-  // Use the VoucherPurchaseRequest model directly
-  const VoucherPurchaseRequest = mongoose.models.VoucherPurchaseRequest;
-  
-  // Find the highest existing request ID
-  const highestRequest = await VoucherPurchaseRequest.findOne(
-    { requestId: new RegExp(`^${prefix}\\d+$`) },
-    { requestId: 1 },
-    { sort: { requestId: -1 } }
+  return allocateSequentialId(
+    'voucher-purchase-request',
+    'VPR-',
+    1000,
+    mongoose.models.VoucherPurchaseRequest
   );
-  
-  if (!highestRequest) {
-    // If no requests exist, start with base number
-    return `${prefix}${baseNumber}`;
-  }
-  
-  // Extract the number from the highest request ID
-  const currentNumber = parseInt(highestRequest.requestId.replace(prefix, ''), 10);
-  
-  // Return the next number in sequence
-  return `${prefix}${currentNumber + 1}`;
 }
 
 // Add the static method

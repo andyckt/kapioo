@@ -27,6 +27,7 @@ import type { VoucherPlanCard } from "./meal-voucher-plan-grid"
 
 type MealVoucherUploadStepProps = {
   appliedPromoCode: string | null
+  automaticVerificationScheduled: boolean
   discountedUnitPrice: number | null
   effectivePricing: PricingBreakdown | null
   fileInputRef: RefObject<HTMLInputElement | null>
@@ -34,6 +35,7 @@ type MealVoucherUploadStepProps = {
   handleFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>
   handleRemovePromo: () => void
   interacEmail: string
+  interacReference: string
   isApplyingPromo: boolean
   isLoading: boolean
   isSubmitted: boolean
@@ -41,6 +43,7 @@ type MealVoucherUploadStepProps = {
   notes: string
   onBack: () => void
   onInteracEmailChange: (value: string) => void
+  onInteracReferenceChange: (value: string) => void
   onNotesChange: (value: string) => void
   onPhoneChange: (value: string) => void
   onPromoCodeInputChange: (value: string) => void
@@ -55,6 +58,7 @@ type MealVoucherUploadStepProps = {
 
 export function MealVoucherUploadStep({
   appliedPromoCode,
+  automaticVerificationScheduled,
   discountedUnitPrice,
   effectivePricing,
   fileInputRef,
@@ -62,6 +66,7 @@ export function MealVoucherUploadStep({
   handleFileChange,
   handleRemovePromo,
   interacEmail,
+  interacReference,
   isApplyingPromo,
   isLoading,
   isSubmitted,
@@ -69,6 +74,7 @@ export function MealVoucherUploadStep({
   notes,
   onBack,
   onInteracEmailChange,
+  onInteracReferenceChange,
   onNotesChange,
   onPhoneChange,
   onPromoCodeInputChange,
@@ -92,9 +98,13 @@ export function MealVoucherUploadStep({
               {language === "zh" ? "您的购买请求已提交" : "Your purchase request has been submitted"}
             </h3>
             <p className="text-muted-foreground">
-              {language === "zh"
-                ? "我们将在营业时间内（周一至周五上午11点至晚上8点）30-60分钟内处理您的请求"
-                : "We process in 30-60 mins during business hours Monday to Friday 11am to 8pm"}
+              {automaticVerificationScheduled
+                ? language === "zh"
+                  ? "系统将在约10分钟后开始核对已完成的电子转账；如果银行仍显示待处理，系统会继续重试"
+                  : "Automatic verification starts in about 10 minutes and keeps retrying while the bank transfer is pending"
+                : language === "zh"
+                  ? "付款将在发放餐券前由管理员核对"
+                  : "Payment will be reviewed manually before vouchers are issued"}
             </p>
             <p className="mt-2 text-muted-foreground">
               {language === "zh" ? "审核结果将通过电子邮件通知您" : "You will receive an email notification"}
@@ -325,6 +335,28 @@ export function MealVoucherUploadStep({
           />
           <p className="text-xs text-[#8A7968]">
             {language === "zh" ? "我们将使用此邮箱来匹配您的付款和订单。" : "We'll use this to match your payment to your order."}
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
+            <Ticket className="h-4 w-4 text-[#C2884E]" />
+            {language === "zh" ? "Interac 转账参考编号" : "Interac transfer reference"}
+            <span className="text-red-500">*</span>
+          </h3>
+          <Input
+            id="interacReference"
+            value={interacReference}
+            onChange={(event) => onInteracReferenceChange(event.target.value.toUpperCase())}
+            placeholder={language === "zh" ? "例如：C1AJH4XQXJVR" : "Example: C1AJH4XQXJVR"}
+            autoComplete="off"
+            className="border-[#C2884E]/20 font-mono uppercase focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            required
+          />
+          <p className="text-xs text-[#8A7968]">
+            {language === "zh"
+              ? "请复制银行转账确认中的参考编号。系统只会将每笔转账使用一次。"
+              : "Copy the reference number from your bank's transfer confirmation. Each transfer can be used only once."}
           </p>
         </div>
 
