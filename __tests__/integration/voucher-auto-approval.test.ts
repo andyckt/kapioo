@@ -302,4 +302,82 @@ describe("voucher auto approval accounting boundary", () => {
       gmailMessageId: "<signed-CA20040001@payments.interac.ca>",
     });
   });
+
+  it("requires a real reference for manual approval and cannot reuse it", async () => {
+    const user = await createTestUser({
+      email: "manual-reference@example.com",
+      twoDishVoucher: 0,
+    });
+    const base = {
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 148.03,
+      finalTotal: 148.03,
+      amountCents: 14803,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      paymentVerificationStatus: "manual",
+      status: "pending",
+    } as const;
+    await VoucherPurchaseRequest.create([
+      { ...base, requestId: "VPR-2005" },
+      { ...base, requestId: "VPR-2006" },
+    ]);
+
+    await expect(
+      approveVoucherPurchase({ kind: "daily", requestId: "VPR-2005", source: "manual" })
+    ).rejects.toMatchObject({ code: "PAYMENT_REFERENCE_REQUIRED" });
+
+    await approveVoucherPurchase({
+      kind: "daily",
+      requestId: "VPR-2005",
+      source: "manual",
+      manualPaymentReference: "CA20050001",
+    });
+    await expect(
+      approveVoucherPurchase({
+        kind: "daily",
+        requestId: "VPR-2006",
+        source: "manual",
+        manualPaymentReference: "CA20050001",
+      })
+    ).rejects.toMatchObject({ code: "PAYMENT_ALREADY_USED" });
+
+    expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(6);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+  });
+
+  it("keeps existing manual WeChat approvals working without an Interac reference", async () => {
+    const user = await createTestUser({
+      email: "wechat-manual@example.com",
+      weeklySIXmeals: 0,
+    });
+    await CreditPurchaseRequest.create({
+      requestId: "CR-REQ-2002",
+      userId: user._id,
+      planId: "weekly-6x2",
+      amount: 219,
+      finalTotal: 219,
+      amountCents: 21900,
+      originalPrice: 219,
+      paymentMethod: "wechat",
+      imageProof: "https://example.com/wechat-proof.jpg",
+      referenceNumber: user.email,
+      mealPlanType: "6aweek",
+      mealPlanQuantity: 2,
+      paymentVerificationStatus: "manual",
+      status: "pending",
+    });
+
+    await approveVoucherPurchase({
+      kind: "weekly",
+      requestId: "CR-REQ-2002",
+      source: "manual",
+    });
+
+    expect((await User.findById(user._id).lean() as Record<string, any>)?.weeklySIXmeals).toBe(2);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+  });
 });

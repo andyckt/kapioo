@@ -26,6 +26,8 @@ export interface ICreditPurchaseRequest extends Document {
   referenceNumber: string; // Email address used to send the transfer
   interacReference?: string;
   interacReferenceNormalized?: string;
+  payerEmailIdentityId?: mongoose.Types.ObjectId;
+  payerEmailVerifiedAt?: Date;
   submissionKey?: string;
   amountCents?: number;
   paymentVerificationStatus?: 'manual' | 'pending' | 'not_found' | 'matched' | 'review' | 'duplicate' | 'failed';
@@ -144,6 +146,8 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
   },
   interacReference: { type: String, trim: true },
   interacReferenceNormalized: { type: String, trim: true },
+  payerEmailIdentityId: { type: Schema.Types.ObjectId, ref: 'InteracPayerEmail' },
+  payerEmailVerifiedAt: { type: Date },
   submissionKey: { type: String, trim: true },
   amountCents: { type: Number, min: 1 },
   paymentVerificationStatus: {
@@ -225,6 +229,7 @@ CreditPurchaseRequestSchema.index(
 );
 CreditPurchaseRequestSchema.index({ status: 1, paymentMethod: 1, nextPaymentCheckAt: 1 });
 CreditPurchaseRequestSchema.index({ interacReferenceNormalized: 1, createdAt: 1 });
+CreditPurchaseRequestSchema.index({ payerEmailIdentityId: 1, amountCents: 1, createdAt: 1 });
 
 // Function to generate the next requestId
 async function generateRequestId() {

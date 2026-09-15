@@ -30,6 +30,7 @@ import {
   moneyToCents,
   normalizeInteracReference,
 } from '@/lib/etransfer/config';
+import { findVerifiedInteracPayerEmail } from '@/lib/etransfer/payer-email';
 
 // POST handler - create a new credit purchase request
 export async function POST(request: Request) {
@@ -205,10 +206,13 @@ export async function POST(request: Request) {
     const interacReferenceNormalized = data.interacReference
       ? normalizeInteracReference(data.interacReference)
       : undefined;
+    const verifiedPayerEmail = effectivePaymentMethod === 'emt'
+      ? await findVerifiedInteracPayerEmail(effectiveUserId, data.referenceNumber)
+      : null;
     const automationActiveForNewRequests = isEligibleForAutomaticChecks();
     const automaticChecksEligible =
       effectivePaymentMethod === 'emt' &&
-      Boolean(interacReferenceNormalized) &&
+      Boolean(verifiedPayerEmail?.verifiedAt) &&
       automationActiveForNewRequests;
     const session = await mongoose.startSession();
     try {
@@ -286,6 +290,8 @@ export async function POST(request: Request) {
               referenceNumber: data.referenceNumber,
               interacReference: data.interacReference,
               interacReferenceNormalized,
+              payerEmailIdentityId: verifiedPayerEmail?._id,
+              payerEmailVerifiedAt: verifiedPayerEmail?.verifiedAt,
               submissionKey: data.submissionKey,
               amountCents: moneyToCents(pricing.finalTotal),
               paymentVerificationStatus: automaticChecksEligible ? 'pending' : 'manual',
@@ -363,7 +369,7 @@ export async function POST(request: Request) {
         imageProofUrl: data.imageProof,
         referenceNumber: data.referenceNumber,
         interacReference: persistedRequest.interacReference,
-        automaticVerification: isLiveAutomaticApprovalEnabled(),
+        automaticVerification: automaticChecksEligible && isLiveAutomaticApprovalEnabled(),
         notes: data.notes,
         planDescription: persistedRequest.planDescription || '',
         requestId: requestId,
@@ -397,7 +403,7 @@ export async function POST(request: Request) {
         promoDiscountAmount: persistedRequest.promoDiscountAmount,
         referenceNumber: data.referenceNumber,
         interacReference: persistedRequest.interacReference,
-        automaticVerification: isLiveAutomaticApprovalEnabled(),
+        automaticVerification: automaticChecksEligible && isLiveAutomaticApprovalEnabled(),
         planDescription: persistedRequest.planDescription || '',
         mealPlanQuantity: duration,
         requestId: requestId

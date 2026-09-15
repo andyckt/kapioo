@@ -1,4 +1,5 @@
 import InteracReceipt from "@/models/InteracReceipt";
+import InteracPayerEmail from "@/models/InteracPayerEmail";
 import Transaction from "@/models/Transaction";
 import User from "@/models/User";
 import VoucherApprovalGrant from "@/models/VoucherApprovalGrant";
@@ -23,10 +24,22 @@ async function createDueDailyRequest(options: {
   requestId: string;
   userId: unknown;
   payerEmail: string;
-  reference: string;
+  reference?: string;
   createdAt?: Date;
   nextPaymentCheckAt?: Date;
 }) {
+  const payerEmail = options.payerEmail.toLowerCase();
+  let identity = await InteracPayerEmail.findOne({ emailNormalized: payerEmail });
+  if (!identity) {
+    identity = await InteracPayerEmail.create({
+      userId: options.userId,
+      slot: 1,
+      email: payerEmail,
+      emailNormalized: payerEmail,
+      status: "verified",
+      verifiedAt: new Date(Date.now() - 60_000),
+    });
+  }
   return VoucherPurchaseRequest.create({
     requestId: options.requestId,
     userId: options.userId,
@@ -40,6 +53,8 @@ async function createDueDailyRequest(options: {
     referenceNumber: options.payerEmail,
     interacReference: options.reference,
     interacReferenceNormalized: options.reference,
+    payerEmailIdentityId: identity._id,
+    payerEmailVerifiedAt: identity.verifiedAt,
     paymentVerificationStatus: "pending",
     nextPaymentCheckAt: options.nextPaymentCheckAt || new Date(Date.now() - 60_000),
     createdAt: options.createdAt,
@@ -99,6 +114,24 @@ describe("e-Transfer reconciliation", () => {
     const retryDelay = new Date(request?.nextPaymentCheckAt as Date).getTime() - Date.now();
     expect(retryDelay).toBeGreaterThan(59 * 60_000);
     expect(retryDelay).toBeLessThanOrEqual(60 * 60_000);
+  });
+
+  it("syncs the mailbox even when no request is due", async () => {
+    syncInteracReceiptsMock.mockResolvedValueOnce({
+      skipped: false,
+      processed: 1,
+      accepted: 1,
+      rejected: 0,
+    });
+
+    const result = await reconcileEtransferPurchases();
+
+    expect(syncInteracReceiptsMock).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      due: 0,
+      synced: { processed: 1, accepted: 1, rejected: 0 },
+      approved: 0,
+    });
   });
 
   it("approves the first identical ticket and declines the duplicate", async () => {
@@ -343,5 +376,209 @@ describe("e-Transfer reconciliation", () => {
     expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(0);
     expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
     expect(await Transaction.countDocuments()).toBe(0);
+  });
+
+  it("approves a reference-free request only from its verified sender email", async () => {
+    const user = await createTestUser({ email: "linked-sender@example.com", twoDishVoucher: 0 });
+    await createDueDailyRequest({
+      requestId: "VPR-5010",
+      userId: user._id,
+      payerEmail: user.email,
+    });
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "CA50100001",
+      referenceNormalized: "CA50100001",
+      gmailMessageId: "<CA50100001@payments.interac.ca>",
+      imapUid: 5010,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-CA50100001",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const [request, reloadedUser] = await Promise.all([
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-5010" }).lean(),
+      User.findById(user._id).lean() as Promise<Record<string, any> | null>,
+    ]);
+
+    expect(result.approved).toBe(1);
+    expect(request).toMatchObject({
+      status: "approved",
+      interacReferenceNormalized: "CA50100001",
+    });
+    expect(reloadedUser?.twoDishVoucher).toBe(6);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+  });
+
+  it("issues only one grant when duplicate reference-free tickets share one payment", async () => {
+    const user = await createTestUser({ email: "no-ref-duplicate@example.com", twoDishVoucher: 0 });
+    const createdAt = new Date(Date.now() - 20 * 60_000);
+    await createDueDailyRequest({
+      requestId: "VPR-5011",
+      userId: user._id,
+      payerEmail: user.email,
+      createdAt,
+    });
+    await createDueDailyRequest({
+      requestId: "VPR-5012",
+      userId: user._id,
+      payerEmail: user.email,
+      createdAt: new Date(createdAt.getTime() + 1_000),
+    });
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "CA50110001",
+      referenceNormalized: "CA50110001",
+      gmailMessageId: "<CA50110001@payments.interac.ca>",
+      imapUid: 5011,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-CA50110001",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const [first, second, reloadedUser] = await Promise.all([
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-5011" }).lean(),
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-5012" }).lean(),
+      User.findById(user._id).lean() as Promise<Record<string, any> | null>,
+    ]);
+
+    expect(result.approved).toBe(1);
+    expect(first?.status).toBe("approved");
+    expect(second?.status).toBe("pending");
+    expect(reloadedUser?.twoDishVoucher).toBe(6);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+    expect(await Transaction.countDocuments()).toBe(1);
+  });
+
+  it("stops automatic approval after the sender email is unlinked", async () => {
+    const user = await createTestUser({ email: "unlinked@example.com", twoDishVoucher: 0 });
+    const request = await createDueDailyRequest({
+      requestId: "VPR-5013",
+      userId: user._id,
+      payerEmail: user.email,
+      reference: "CA50130001",
+    });
+    await InteracPayerEmail.deleteOne({ _id: request.payerEmailIdentityId });
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "CA50130001",
+      referenceNormalized: "CA50130001",
+      gmailMessageId: "<CA50130001@payments.interac.ca>",
+      imapUid: 5013,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-CA50130001",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const reloaded = await VoucherPurchaseRequest.findById(request._id).lean();
+
+    expect(result.reviewed).toBe(1);
+    expect(reloaded).toMatchObject({ status: "pending", paymentVerificationStatus: "review" });
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
+  });
+
+  it("approves neither request when a reference-free payment could buy different plans", async () => {
+    const user = await createTestUser({ email: "ambiguous@example.com", twoDishVoucher: 0 });
+    const first = await createDueDailyRequest({
+      requestId: "VPR-5014",
+      userId: user._id,
+      payerEmail: user.email,
+    });
+    const second = await createDueDailyRequest({
+      requestId: "VPR-5015",
+      userId: user._id,
+      payerEmail: user.email,
+    });
+    await VoucherPurchaseRequest.updateOne(
+      { _id: second._id },
+      { $set: { planId: "daily-3dish-6", type: "threeDish" } }
+    );
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "CA50140001",
+      referenceNormalized: "CA50140001",
+      gmailMessageId: "<CA50140001@payments.interac.ca>",
+      imapUid: 5014,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-CA50140001",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const [reloadedFirst, reloadedSecond] = await Promise.all([
+      VoucherPurchaseRequest.findById(first._id).lean(),
+      VoucherPurchaseRequest.findById(second._id).lean(),
+    ]);
+
+    expect(result).toMatchObject({ approved: 0, reviewed: 2 });
+    expect(reloadedFirst?.paymentVerificationStatus).toBe("review");
+    expect(reloadedSecond?.paymentVerificationStatus).toBe("review");
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
+  });
+
+  it("fails the run when a purported Interac notification is rejected", async () => {
+    syncInteracReceiptsMock.mockResolvedValueOnce({
+      skipped: false,
+      processed: 1,
+      accepted: 0,
+      rejected: 1,
+    });
+
+    await expect(reconcileEtransferPurchases()).rejects.toThrow("Interac notification was rejected");
   });
 });

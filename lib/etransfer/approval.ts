@@ -123,12 +123,35 @@ function getEntitlement(
 async function ensureManualReceipt(
   kind: VoucherRequestKind,
   request: Record<string, any>,
+  manualPaymentReference: string | undefined,
   session: mongoose.ClientSession
 ) {
   const config = getEtransferAutomationConfig();
-  const normalizedReference = request.interacReferenceNormalized ||
-    normalizeInteracReference(request.interacReference || "") ||
-    `LEGACY${kind.toUpperCase()}${normalizeInteracReference(request.requestId)}`;
+  const isEtransfer = kind === "daily" || request.paymentMethod !== "wechat";
+  const submittedReference = request.interacReference || manualPaymentReference || "";
+  const suppliedReference = isEtransfer
+    ? submittedReference
+    : `manual-wechat-${request.requestId}`;
+  const normalizedReference = isEtransfer
+    ? request.interacReferenceNormalized || normalizeInteracReference(suppliedReference)
+    : `MANUALWECHAT${normalizeInteracReference(request.requestId)}`;
+  if (isEtransfer && (!normalizedReference || !/^[A-Z0-9]{8,24}$/.test(normalizedReference))) {
+    throw new VoucherApprovalError(
+      "Enter the real Interac transaction reference before approving",
+      "PAYMENT_REFERENCE_REQUIRED"
+    );
+  }
+  if (
+    isEtransfer &&
+    request.interacReferenceNormalized &&
+    manualPaymentReference &&
+    normalizeInteracReference(manualPaymentReference) !== request.interacReferenceNormalized
+  ) {
+    throw new VoucherApprovalError(
+      "The entered payment reference does not match the request",
+      "PAYMENT_MISMATCH"
+    );
+  }
   const existing = await InteracReceipt.findOne({
     provider: "interac",
     mailbox: config.recipientEmail,
@@ -141,9 +164,9 @@ async function ensureManualReceipt(
       {
         provider: "interac",
         mailbox: config.recipientEmail,
-        reference: request.interacReference || normalizedReference,
+        reference: suppliedReference,
         referenceNormalized: normalizedReference,
-        gmailMessageId: `manual:${kind}:${request.requestId}`,
+        gmailMessageId: `manual:${normalizedReference}`,
         imapUid: 0,
         uidValidity: "manual",
         payerEmail: request.referenceNumber,
@@ -155,7 +178,7 @@ async function ensureManualReceipt(
         depositedAt: new Date(),
         receivedAt: new Date(),
         subject: "Manual payment verification",
-        rawSha256: `manual:${kind}:${request.requestId}`,
+        rawSha256: `manual:${normalizedReference}`,
         parserVersion: "manual",
         authenticationVerified: false,
         status: "unmatched",
@@ -178,7 +201,7 @@ function assertReceiptMatchesRequest(
     throw new VoucherApprovalError("Payment receipt is not cryptographically verified", "UNVERIFIED_PAYMENT");
   }
   if (
-    !(source === "manual" && !request.interacReferenceNormalized) &&
+    request.interacReferenceNormalized &&
     receipt.referenceNormalized !== request.interacReferenceNormalized
   ) {
     throw new VoucherApprovalError("Payment reference does not match request", "PAYMENT_MISMATCH");
@@ -196,6 +219,7 @@ export async function approveVoucherPurchase(options: {
   requestId: string;
   source: ApprovalSource;
   receiptId?: string;
+  manualPaymentReference?: string;
   actor?: { user?: { _id?: unknown; email?: string }; role?: "admin" | "user" } | null;
   adminNotes?: string;
 }) {
@@ -230,7 +254,12 @@ export async function approveVoucherPurchase(options: {
         ? await InteracReceipt.findById(options.receiptId).session(session)
         : null;
       if (!receipt && options.source === "manual") {
-        receipt = await ensureManualReceipt(options.kind, requestObject, session);
+        receipt = await ensureManualReceipt(
+          options.kind,
+          requestObject,
+          options.manualPaymentReference,
+          session
+        );
       }
       if (!receipt) {
         throw new VoucherApprovalError("Verified payment receipt not found", "PAYMENT_NOT_FOUND");
@@ -285,6 +314,10 @@ export async function approveVoucherPurchase(options: {
       purchaseRequest.approvalSource = options.source;
       purchaseRequest.paymentVerificationStatus = "matched";
       purchaseRequest.matchedPaymentReceiptId = claimed._id;
+      if (!purchaseRequest.interacReferenceNormalized) {
+        purchaseRequest.interacReference = claimed.reference;
+        purchaseRequest.interacReferenceNormalized = claimed.referenceNormalized;
+      }
       purchaseRequest.nextPaymentCheckAt = undefined;
       purchaseRequest.paymentCheckError = undefined;
       if (options.kind === "weekly" && entitlement.weeklyFields) {

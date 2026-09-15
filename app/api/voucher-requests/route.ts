@@ -26,6 +26,7 @@ import {
   moneyToCents,
   normalizeInteracReference,
 } from '@/lib/etransfer/config';
+import { findVerifiedInteracPayerEmail } from '@/lib/etransfer/payer-email';
 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
@@ -292,9 +293,13 @@ export async function POST(request: NextRequest) {
     const interacReferenceNormalized = interacReference
       ? normalizeInteracReference(interacReference)
       : undefined;
+    const verifiedPayerEmail = await findVerifiedInteracPayerEmail(
+      effectiveUserId,
+      referenceNumber
+    );
     const automationActiveForNewRequests = isEligibleForAutomaticChecks();
     const automaticChecksEligible =
-      Boolean(interacReferenceNormalized) && automationActiveForNewRequests;
+      Boolean(verifiedPayerEmail?.verifiedAt) && automationActiveForNewRequests;
 
     if (normalizedPromoCode) {
       promoDoc = await PromoCode.findOne({ code: normalizedPromoCode });
@@ -400,6 +405,8 @@ export async function POST(request: NextRequest) {
               referenceNumber,
               interacReference,
               interacReferenceNormalized,
+              payerEmailIdentityId: verifiedPayerEmail?._id,
+              payerEmailVerifiedAt: verifiedPayerEmail?.verifiedAt,
               submissionKey,
               amountCents: moneyToCents(promoBreakdown.finalTotal),
               paymentVerificationStatus: automaticChecksEligible ? 'pending' : 'manual',
@@ -467,7 +474,7 @@ export async function POST(request: NextRequest) {
         imageProofUrl: imageProof,
         referenceNumber,
         interacReference: createdRequest.interacReference,
-        automaticVerification: isLiveAutomaticApprovalEnabled(),
+        automaticVerification: automaticChecksEligible && isLiveAutomaticApprovalEnabled(),
         notes,
         requestId,
         userAddress: userAddress
@@ -495,7 +502,7 @@ export async function POST(request: NextRequest) {
         promoDiscountAmount: createdRequest.promoDiscountAmount,
         referenceNumber,
         interacReference: createdRequest.interacReference,
-        automaticVerification: isLiveAutomaticApprovalEnabled(),
+        automaticVerification: automaticChecksEligible && isLiveAutomaticApprovalEnabled(),
         notes,
         requestId
       }, user.languagePreference || 'zh'); // Pass user's language preference

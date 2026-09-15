@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 import { Clock, Save, RefreshCw } from 'lucide-react'
+import { AdminEtransferMonitor } from '@/components/admin-etransfer-monitor'
 
 export function SettingsManagement() {
   const { toast } = useToast()
@@ -207,8 +208,9 @@ export function SettingsManagement() {
           )}
         </CardContent>
       </Card>
+
+      <AdminEtransferMonitor />
     </div>
   )
 }
-
 

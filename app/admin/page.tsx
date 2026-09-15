@@ -130,6 +130,8 @@ export default function AdminDashboardPage() {
     setApprovedSixteenMeals,
     adminNotes,
     setAdminNotes,
+    manualPaymentReference,
+    setManualPaymentReference,
     processingRequest,
     handleCreditRequestPagination,
     applyCreditRequestsDateRange,
@@ -325,6 +327,8 @@ export default function AdminDashboardPage() {
         setApprovedSixteenMeals={setApprovedSixteenMeals}
         adminNotes={adminNotes}
         setAdminNotes={setAdminNotes}
+        manualPaymentReference={manualPaymentReference}
+        setManualPaymentReference={setManualPaymentReference}
         processingRequest={processingRequest}
         handleApproveRequest={handleApproveRequest}
         handleDeclineRequest={handleDeclineRequest}
