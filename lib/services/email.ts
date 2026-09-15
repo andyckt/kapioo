@@ -204,6 +204,28 @@ export const sendVerificationEmail = async (to: string, code: string, language: 
   });
 };
 
+export const sendInteracPayerEmailVerification = async (
+  to: string,
+  code: string,
+  name: string,
+  language: Language = 'zh'
+) => {
+  const isZh = language === 'zh';
+  return sendEmail({
+    to,
+    subject: isZh ? '验证您的 Interac 转账邮箱 - Kapioo' : 'Verify your Interac sender email - Kapioo',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 28px; color: #333;">
+        <h2 style="color: #C2884E;">${isZh ? '验证 Interac 转账邮箱' : 'Verify your Interac sender email'}</h2>
+        <p>${isZh ? `${name}，请输入以下验证码，以确认您可以使用此邮箱发送 Interac e-Transfer。` : `${name}, enter this code to confirm that you control the email used to send Interac e-Transfers.`}</p>
+        <div style="margin: 24px 0; padding: 18px; border-radius: 8px; background: #F8F0E5; text-align: center; font-size: 30px; font-weight: bold; letter-spacing: 8px; color: #8A5A34;">${code}</div>
+        <p style="font-size: 14px; color: #666;">${isZh ? '验证码将在 10 分钟后失效。请勿将验证码告诉他人。' : 'This code expires in 10 minutes. Do not share it with anyone.'}</p>
+      </div>
+    `,
+    idempotencyKey: `interac-email-verification:${to.toLowerCase()}:${code}`,
+  });
+};
+
 export const sendAdminMfaCodeEmail = async (
   to: string,
   code: string,

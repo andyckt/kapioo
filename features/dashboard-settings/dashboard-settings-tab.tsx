@@ -16,6 +16,7 @@ import type { AddressGeo } from "@/lib/contracts/common"
 import type { useLanguage } from "@/lib/language-context"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
 import { cn } from "@/lib/utils"
+import { InteracPayerEmailPicker } from "@/components/interac-payer-email-picker"
 
 export type DashboardPersonalInfo = {
   name: string
@@ -169,6 +170,20 @@ export function DashboardSettingsTab({
             <CardFooter>
               <Button onClick={onSavePersonalInfo}>{t("saveChanges")}</Button>
             </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{language === "zh" ? "Interac 转账邮箱" : "Interac sender emails"}</CardTitle>
+              <CardDescription>
+                {language === "zh"
+                  ? "验证您用于发送 e-Transfer 的邮箱，让系统可以安全地自动匹配付款。"
+                  : "Verify the emails you use to send e-Transfers so payments can be matched safely."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InteracPayerEmailPicker language={language} allowRemove />
+            </CardContent>
           </Card>
 
           <Card>

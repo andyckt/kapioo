@@ -1,6 +1,7 @@
 import type { Model } from "mongoose";
 
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
+import InteracPayerEmail from "@/models/InteracPayerEmail";
 import InteracReceipt from "@/models/InteracReceipt";
 import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 
@@ -96,9 +97,9 @@ async function getDueRequests(activationAt: Date) {
   const now = new Date();
   const filter = {
     status: "pending",
-    paymentVerificationStatus: { $in: ["pending", "not_found", "failed"] },
+    paymentVerificationStatus: { $in: ["pending", "not_found", "failed", "review"] },
     nextPaymentCheckAt: { $lte: now },
-    interacReferenceNormalized: { $type: "string" },
+    payerEmailIdentityId: { $type: "objectId" },
     createdAt: { $gte: activationAt },
   };
   const [daily, weekly] = await Promise.all([
@@ -136,7 +137,8 @@ function requestMatchesReceipt(
     new Date(request.createdAt).getTime() - 24 * 60 * 60_000
   );
   return (
-    request.interacReferenceNormalized === receipt.referenceNormalized &&
+    (!request.interacReferenceNormalized ||
+      request.interacReferenceNormalized === receipt.referenceNormalized) &&
     normalizeEmail(request.referenceNumber || "") === receipt.payerEmailNormalized &&
     amountCents(request) === receipt.amountCents &&
     receipt.currency === "CAD" &&
@@ -144,6 +146,168 @@ function requestMatchesReceipt(
     receipt.status !== "conflict" &&
     new Date(receipt.receivedAt).getTime() >= earliestEligibleReceipt
   );
+}
+
+type ReceiptResolution =
+  | { status: "found"; receipt: Record<string, any> }
+  | { status: "not_found" }
+  | { status: "waiting"; requestId: string }
+  | { status: "ambiguous"; reason: string };
+
+function envelopeKey(kind: VoucherRequestKind, request: Record<string, any>) {
+  return `${kind}:${request.requestId}`;
+}
+
+async function findExactRequestForReceipt(
+  receipt: Record<string, any>,
+  identityId: unknown,
+  activationAt: Date
+) {
+  const filter = {
+    status: "pending",
+    paymentVerificationStatus: { $in: ["pending", "not_found", "failed", "matched"] },
+    payerEmailIdentityId: identityId,
+    amountCents: receipt.amountCents,
+    interacReferenceNormalized: receipt.referenceNormalized,
+    createdAt: { $gte: activationAt },
+  };
+  const [daily, weekly] = await Promise.all([
+    VoucherPurchaseRequest.findOne(filter).sort({ createdAt: 1, requestId: 1 }).lean(),
+    CreditPurchaseRequest.findOne({ ...filter, paymentMethod: "emt" })
+      .sort({ createdAt: 1, requestId: 1 })
+      .lean(),
+  ]);
+  return [
+    ...(daily ? [{ kind: "daily" as const, request: daily as Record<string, any> }] : []),
+    ...(weekly ? [{ kind: "weekly" as const, request: weekly as Record<string, any> }] : []),
+  ].sort(
+    (left, right) =>
+      new Date(left.request.createdAt).getTime() - new Date(right.request.createdAt).getTime() ||
+      String(left.request.requestId).localeCompare(String(right.request.requestId))
+  )[0];
+}
+
+async function getNoReferenceRequestsForReceipt(
+  receipt: Record<string, any>,
+  identityId: unknown,
+  activationAt: Date
+) {
+  // A customer may pay shortly before pressing Submit, so accept up to 24 hours
+  // of payment-first clock skew. Requests created before activation never qualify.
+  const latestRequestTime = new Date(
+    new Date(receipt.receivedAt).getTime() + 24 * 60 * 60_000
+  );
+  const filter = {
+    status: "pending",
+    // Keep already-reviewed candidates in the ambiguity set. Otherwise the
+    // first candidate can be moved to review and the next candidate can then
+    // appear unique during the same reconciliation run.
+    paymentVerificationStatus: { $in: ["pending", "not_found", "failed", "review"] },
+    payerEmailIdentityId: identityId,
+    amountCents: receipt.amountCents,
+    $or: [
+      { interacReferenceNormalized: { $exists: false } },
+      { interacReferenceNormalized: null },
+      { interacReferenceNormalized: "" },
+    ],
+    createdAt: { $gte: activationAt, $lte: latestRequestTime },
+  };
+  const [daily, weekly] = await Promise.all([
+    VoucherPurchaseRequest.find(filter).lean(),
+    CreditPurchaseRequest.find({ ...filter, paymentMethod: "emt" }).lean(),
+  ]);
+  return [
+    ...daily.map((request) => ({ kind: "daily" as const, request: request as Record<string, any> })),
+    ...weekly.map((request) => ({ kind: "weekly" as const, request: request as Record<string, any> })),
+  ]
+    .filter(
+      ({ request }) =>
+        normalizeEmail(request.referenceNumber || "") === receipt.payerEmailNormalized &&
+        new Date(receipt.receivedAt).getTime() >=
+          Math.max(
+            activationAt.getTime(),
+            new Date(request.createdAt).getTime() - 24 * 60 * 60_000
+          )
+    )
+    .sort(
+      (left, right) =>
+        new Date(left.request.createdAt).getTime() - new Date(right.request.createdAt).getTime() ||
+        String(left.request.requestId).localeCompare(String(right.request.requestId))
+    );
+}
+
+async function resolveReceiptForRequest(
+  kind: VoucherRequestKind,
+  request: Record<string, any>,
+  activationAt: Date
+): Promise<ReceiptResolution> {
+  if (request.interacReferenceNormalized) {
+    const receipt = await InteracReceipt.findOne({
+      provider: "interac",
+      mailbox: getEtransferAutomationConfig().mailbox,
+      referenceNormalized: request.interacReferenceNormalized,
+    }).lean();
+    return receipt
+      ? { status: "found", receipt: receipt as Record<string, any> }
+      : { status: "not_found" };
+  }
+
+  const earliestEligibleReceipt = new Date(
+    Math.max(
+      activationAt.getTime(),
+      new Date(request.createdAt).getTime() - 24 * 60 * 60_000
+    )
+  );
+  const receipts = await InteracReceipt.find({
+    provider: "interac",
+    mailbox: getEtransferAutomationConfig().mailbox,
+    payerEmailNormalized: normalizeEmail(request.referenceNumber || ""),
+    amountCents: amountCents(request),
+    currency: "CAD",
+    authenticationVerified: true,
+    status: "unmatched",
+    receivedAt: { $gte: earliestEligibleReceipt },
+  })
+    .sort({ receivedAt: 1, referenceNormalized: 1 })
+    .limit(10)
+    .lean();
+
+  for (const rawReceipt of receipts) {
+    const receipt = rawReceipt as Record<string, any>;
+    const exactRequest = await findExactRequestForReceipt(
+      receipt,
+      request.payerEmailIdentityId,
+      activationAt
+    );
+    if (exactRequest && envelopeKey(exactRequest.kind, exactRequest.request) !== envelopeKey(kind, request)) {
+      continue;
+    }
+
+    const candidates = await getNoReferenceRequestsForReceipt(
+      receipt,
+      request.payerEmailIdentityId,
+      activationAt
+    );
+    if (candidates.length === 0) continue;
+    const first = candidates[0];
+    const differentEntitlement = candidates.some(
+      (candidate) =>
+        candidate.kind !== first.kind ||
+        !hasSameEntitlement(first.kind, first.request, candidate.request)
+    );
+    if (differentEntitlement) {
+      return {
+        status: "ambiguous",
+        reason:
+          "More than one different open voucher request matches this sender and amount; enter the Interac reference or review manually",
+      };
+    }
+    if (envelopeKey(first.kind, first.request) !== envelopeKey(kind, request)) {
+      return { status: "waiting", requestId: first.request.requestId };
+    }
+    return { status: "found", receipt };
+  }
+  return { status: "not_found" };
 }
 
 async function isIdenticalDuplicate(
@@ -167,18 +331,20 @@ async function isIdenticalDuplicate(
 export async function reconcileEtransferPurchases() {
   const config = getEtransferAutomationConfig();
   if (config.mode === "off") {
-    return { mode: config.mode, due: 0, synced: null, approved: 0, duplicates: 0, reviewed: 0, pending: 0 };
+    return { mode: config.mode, due: 0, synced: null, approved: 0, duplicates: 0, reviewed: 0, pending: 0, unmatchedReceipts: null, conflictingReceipts: null };
   }
   assertMailboxConfiguration(config);
 
   const due = await getDueRequests(config.activationAt as Date);
-  if (due.length === 0) {
-    return { mode: config.mode, due: 0, synced: null, approved: 0, duplicates: 0, reviewed: 0, pending: 0 };
-  }
 
   let synced: Awaited<ReturnType<typeof syncInteracReceipts>> | null = null;
   try {
     synced = await syncInteracReceipts();
+    if (synced.rejected > 0) {
+      throw new Error(
+        `${synced.rejected} Interac notification${synced.rejected === 1 ? " was" : "s were"} rejected; review the mailbox parser audit before approving payments`
+      );
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Mailbox synchronization failed";
     await Promise.all(
@@ -195,19 +361,44 @@ export async function reconcileEtransferPurchases() {
     throw error;
   }
 
+  if (due.length === 0) {
+    const [unmatchedReceipts, conflictingReceipts] = await Promise.all([
+      InteracReceipt.countDocuments({ status: "unmatched" }),
+      InteracReceipt.countDocuments({ status: "conflict" }),
+    ]);
+    return { mode: config.mode, due: 0, synced, approved: 0, duplicates: 0, reviewed: 0, pending: 0, unmatchedReceipts, conflictingReceipts };
+  }
+
   let approved = 0;
   let duplicates = 0;
   let reviewed = 0;
   let pending = 0;
 
   for (const { kind, request } of due) {
-    const receipt = await InteracReceipt.findOne({
-      provider: "interac",
-      mailbox: config.mailbox,
-      referenceNormalized: request.interacReferenceNormalized,
+    const linkedEmail = await InteracPayerEmail.findOne({
+      _id: request.payerEmailIdentityId,
+      userId: request.userId,
+      emailNormalized: normalizeEmail(request.referenceNumber || ""),
+      status: "verified",
     }).lean();
+    if (!linkedEmail) {
+      reviewed += 1;
+      await updateCheckResult(kind, request.requestId, {
+        paymentVerificationStatus: "review",
+        paymentCheckError: "The Interac sender email is no longer verified for this account",
+        paymentReviewRequired: true,
+        nextPaymentCheckAt: null,
+      });
+      continue;
+    }
 
-    if (!receipt) {
+    const resolution = await resolveReceiptForRequest(
+      kind,
+      request as Record<string, any>,
+      config.activationAt as Date
+    );
+
+    if (resolution.status === "not_found") {
       pending += 1;
       await updateCheckResult(kind, request.requestId, {
         paymentVerificationStatus: "not_found",
@@ -218,6 +409,35 @@ export async function reconcileEtransferPurchases() {
       });
       continue;
     }
+
+    if (resolution.status === "waiting") {
+      pending += 1;
+      await Promise.all([
+        modelFor(kind).updateOne(
+          { requestId: resolution.requestId, status: "pending" },
+          { $set: { nextPaymentCheckAt: new Date() } }
+        ),
+        updateCheckResult(kind, request.requestId, {
+          paymentVerificationStatus: "pending",
+          paymentCheckError: `Waiting for earlier matching request ${resolution.requestId}`,
+          nextPaymentCheckAt: getNextPaymentCheckAt(request.createdAt),
+        }),
+      ]);
+      continue;
+    }
+
+    if (resolution.status === "ambiguous") {
+      reviewed += 1;
+      await updateCheckResult(kind, request.requestId, {
+        paymentVerificationStatus: "review",
+        paymentCheckError: resolution.reason,
+        paymentReviewRequired: true,
+        nextPaymentCheckAt: null,
+      });
+      continue;
+    }
+
+    const receipt = resolution.receipt;
 
     if (!requestMatchesReceipt(
       request as Record<string, any>,
@@ -265,12 +485,14 @@ export async function reconcileEtransferPurchases() {
       continue;
     }
 
-    const earliestIdentical = await findEarliestIdenticalPendingRequest(
-      kind,
-      request as Record<string, any>,
-      config.activationAt as Date,
-      config.mode === "observe"
-    );
+    const earliestIdentical = request.interacReferenceNormalized
+      ? await findEarliestIdenticalPendingRequest(
+          kind,
+          request as Record<string, any>,
+          config.activationAt as Date,
+          config.mode === "observe"
+        )
+      : null;
     if (earliestIdentical && earliestIdentical.requestId !== request.requestId) {
       if (config.mode === "observe") {
         await Promise.all([
@@ -366,5 +588,9 @@ export async function reconcileEtransferPurchases() {
     }
   }
 
-  return { mode: config.mode, due: due.length, synced, approved, duplicates, reviewed, pending };
+  const [unmatchedReceipts, conflictingReceipts] = await Promise.all([
+    InteracReceipt.countDocuments({ status: "unmatched" }),
+    InteracReceipt.countDocuments({ status: "conflict" }),
+  ]);
+  return { mode: config.mode, due: due.length, synced, approved, duplicates, reviewed, pending, unmatchedReceipts, conflictingReceipts };
 }

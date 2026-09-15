@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { formatDateTime } from '@/lib/format'
+import { isValidInteracReference } from '@/lib/etransfer/config'
 import { 
   Check, 
   X, 
@@ -89,6 +90,7 @@ export function MealVoucherManagement() {
   const [declineRequestOpen, setDeclineRequestOpen] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<VoucherPurchaseRequest | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
+  const [manualPaymentReference, setManualPaymentReference] = useState('')
   const [processingRequest, setProcessingRequest] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -241,6 +243,7 @@ export function MealVoucherManagement() {
   const handleApproveDialog = (request: any) => {
     setSelectedRequest(request)
     setAdminNotes('')
+    setManualPaymentReference(request.interacReference || '')
     setApproveRequestOpen(true)
   }
 
@@ -266,7 +269,8 @@ export function MealVoucherManagement() {
         },
         body: JSON.stringify({
           status: 'approved',
-          adminNotes: adminNotes || undefined
+          adminNotes: adminNotes || undefined,
+          paymentReference: manualPaymentReference.trim()
         })
       });
       
@@ -1091,6 +1095,22 @@ export function MealVoucherManagement() {
                     </dl>
                   </CardContent>
                 </Card>
+
+                <div className="space-y-2">
+                  <Label htmlFor="manual-payment-reference" className="text-[#6B5F53]">
+                    Interac transaction reference <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="manual-payment-reference"
+                    value={manualPaymentReference}
+                    onChange={(event) => setManualPaymentReference(event.target.value.toUpperCase())}
+                    placeholder="Example: C1AJH4XQXJVR"
+                    className="font-mono uppercase"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Copy the real reference from the bank receipt. The same reference cannot approve another request.
+                  </p>
+                </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="admin-notes" className="text-[#6B5F53]">Admin Notes (Optional)</Label>
@@ -1120,7 +1140,7 @@ export function MealVoucherManagement() {
             </Button>
             <Button
               onClick={handleApproveRequest}
-              disabled={processingRequest}
+              disabled={processingRequest || !isValidInteracReference(manualPaymentReference)}
               className="bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90"
             >
               {processingRequest ? (

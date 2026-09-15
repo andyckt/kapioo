@@ -23,6 +23,7 @@ async function main() {
     { default: AtomicCounter },
     { default: CreditPurchaseRequest },
     { default: InteracMailboxState },
+    { default: InteracPayerEmail },
     { default: InteracReceipt },
     { default: Transaction },
     { default: VoucherApprovalGrant },
@@ -32,6 +33,7 @@ async function main() {
     import("../models/AtomicCounter"),
     import("../models/CreditPurchaseRequest"),
     import("../models/InteracMailboxState"),
+    import("../models/InteracPayerEmail"),
     import("../models/InteracReceipt"),
     import("../models/Transaction"),
     import("../models/VoucherApprovalGrant"),
@@ -60,6 +62,7 @@ async function main() {
     Transaction,
     InteracReceipt,
     InteracMailboxState,
+    InteracPayerEmail,
     VoucherApprovalGrant,
     VoucherApprovalNotification,
   ];

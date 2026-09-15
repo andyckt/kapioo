@@ -99,7 +99,7 @@ export async function PUT(
       return bodyError;
     }
 
-    const { status, adminNotes } = body;
+    const { status, adminNotes, paymentReference } = body;
 
     await connectToDatabase();
 
@@ -110,6 +110,7 @@ export async function PUT(
           source: "manual",
           actor,
           adminNotes,
+          manualPaymentReference: paymentReference,
         })).request
       : await declineVoucherPurchase({
           kind: "daily",

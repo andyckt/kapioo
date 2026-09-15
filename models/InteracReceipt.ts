@@ -79,6 +79,7 @@ InteracReceiptSchema.index(
   { unique: true, name: "unique_gmail_receipt" }
 );
 InteracReceiptSchema.index({ status: 1, referenceNormalized: 1 });
+InteracReceiptSchema.index({ status: 1, receivedAt: -1 });
 
 const InteracReceipt =
   (mongoose.models.InteracReceipt as Model<IInteracReceipt> | undefined) ||

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { CreditRequest } from "@/lib/types/admin"
+import { isValidInteracReference } from "@/lib/etransfer/config"
 
 import { getCreditRequestAmount, getCreditRequestUserInfo } from "./request-display"
 
@@ -39,6 +40,8 @@ interface CreditRequestDialogsProps {
   setApprovedSixteenMeals: Dispatch<SetStateAction<number>>
   adminNotes: string
   setAdminNotes: Dispatch<SetStateAction<string>>
+  manualPaymentReference: string
+  setManualPaymentReference: Dispatch<SetStateAction<string>>
   processingRequest: boolean
   onHandleApproveRequest: (request: CreditRequest) => void
   onHandleDeclineRequest: (request: CreditRequest) => void
@@ -99,6 +102,8 @@ export function CreditRequestDialogs({
   setApprovedSixteenMeals,
   adminNotes,
   setAdminNotes,
+  manualPaymentReference,
+  setManualPaymentReference,
   processingRequest,
   onHandleApproveRequest,
   onHandleDeclineRequest,
@@ -612,6 +617,23 @@ export function CreditRequestDialogs({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {selectedRequest?.paymentMethod === "emt" ? (
+                  <div>
+                    <Label htmlFor="manual-payment-reference" className="text-sm font-medium">
+                      Interac transaction reference <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="manual-payment-reference"
+                      value={manualPaymentReference}
+                      onChange={(event) => setManualPaymentReference(event.target.value.toUpperCase())}
+                      className="mt-1 font-mono uppercase"
+                      placeholder="Copy from the bank receipt"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      This real bank reference can be used for only one approval.
+                    </p>
+                  </div>
+                ) : null}
                 <div>
                   <Label htmlFor="admin-notes" className="text-sm font-medium">
                     Admin Notes
@@ -657,7 +679,12 @@ export function CreditRequestDialogs({
               </Button>
               <Button
                 onClick={() => void onConfirmApproveRequest()}
-                disabled={processingRequest || !hasApprovedPlanCounts}
+                disabled={
+                  processingRequest ||
+                  !hasApprovedPlanCounts ||
+                  (selectedRequest?.paymentMethod === "emt" &&
+                    !isValidInteracReference(manualPaymentReference))
+                }
                 className="bg-green-600 hover:bg-green-700 px-6 gap-2"
               >
                 {processingRequest ? (

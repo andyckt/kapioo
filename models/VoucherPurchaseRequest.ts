@@ -24,6 +24,8 @@ export interface IVoucherPurchaseRequest extends Document {
   referenceNumber: string; // Email address used to send the Interac transfer
   interacReference?: string;
   interacReferenceNormalized?: string;
+  payerEmailIdentityId?: mongoose.Types.ObjectId;
+  payerEmailVerifiedAt?: Date;
   submissionKey?: string;
   amountCents?: number;
   paymentVerificationStatus?: 'manual' | 'pending' | 'not_found' | 'matched' | 'review' | 'duplicate' | 'failed';
@@ -124,6 +126,8 @@ const VoucherPurchaseRequestSchema = new Schema<IVoucherPurchaseRequest>({
   },
   interacReference: { type: String, trim: true },
   interacReferenceNormalized: { type: String, trim: true },
+  payerEmailIdentityId: { type: Schema.Types.ObjectId, ref: 'InteracPayerEmail' },
+  payerEmailVerifiedAt: { type: Date },
   submissionKey: { type: String, trim: true },
   amountCents: { type: Number, min: 1 },
   paymentVerificationStatus: {
@@ -167,6 +171,7 @@ VoucherPurchaseRequestSchema.index(
 );
 VoucherPurchaseRequestSchema.index({ status: 1, nextPaymentCheckAt: 1 });
 VoucherPurchaseRequestSchema.index({ interacReferenceNormalized: 1, createdAt: 1 });
+VoucherPurchaseRequestSchema.index({ payerEmailIdentityId: 1, amountCents: 1, createdAt: 1 });
 
 // Function to generate the next requestId
 async function generateRequestId() {

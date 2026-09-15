@@ -1,4 +1,5 @@
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
+import InteracPayerEmail from "@/models/InteracPayerEmail";
 import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 
 import { clearCollections, setupTestDb, teardownTestDb } from "../helpers/db";
@@ -36,6 +37,17 @@ function actorFor(user: Record<string, unknown>) {
   };
 }
 
+async function verifyPayerEmail(userId: unknown, email: string) {
+  return InteracPayerEmail.create({
+    userId,
+    slot: 1,
+    email: email.toLowerCase(),
+    emailNormalized: email.toLowerCase(),
+    status: "verified",
+    verifiedAt: new Date(),
+  });
+}
+
 describe("voucher request submission safety", () => {
   beforeAll(async () => {
     await setupTestDb();
@@ -61,6 +73,7 @@ describe("voucher request submission safety", () => {
 
   it("uses server pricing and turns duplicate daily submissions into one request", async () => {
     const user = await createTestUser({ phone: "+14165550100" });
+    await verifyPayerEmail(user._id, user.email);
     requireUserMock.mockResolvedValue({ actor: actorFor(user.toObject()), response: null });
     const body = {
       userId: String(user._id),
@@ -175,6 +188,33 @@ describe("voucher request submission safety", () => {
       status: "pending",
     });
     expect(saved?.nextPaymentCheckAt).toBeUndefined();
+  });
+
+  it("schedules a reference-free request when its sender email is verified", async () => {
+    const user = await createTestUser({ phone: "+14165550106" });
+    await verifyPayerEmail(user._id, user.email);
+    requireUserMock.mockResolvedValue({ actor: actorFor(user.toObject()), response: null });
+
+    const response = await postDailyRequest(
+      buildJsonRequest("http://localhost/api/voucher-requests", {
+        userId: String(user._id),
+        planId: "daily-2dish-6",
+        type: "twoDish",
+        quantity: 6,
+        imageProof: "https://example.com/proof.jpg",
+        referenceNumber: user.email,
+        submissionKey: "04784c6e-937f-4fc8-8ac6-f5a3120746e4",
+      })
+    );
+    const saved = await VoucherPurchaseRequest.findOne().lean();
+
+    expect(response.status).toBe(201);
+    expect(saved).toMatchObject({
+      paymentVerificationStatus: "pending",
+      status: "pending",
+      payerEmailIdentityId: expect.anything(),
+    });
+    expect(saved?.nextPaymentCheckAt).toBeInstanceOf(Date);
   });
 
   it("does not let a customer list another customer's weekly requests", async () => {

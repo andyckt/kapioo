@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { InteracPayerEmailPicker } from "@/components/interac-payer-email-picker"
 import type { PricingBreakdown } from "@/lib/promo-code-shared"
 
 import type { VoucherPlanCard } from "./meal-voucher-plan-grid"
@@ -318,25 +319,13 @@ export function MealVoucherUploadStep({
           </div>
         </div>
 
-        <div className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-            <CreditCard className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "INTERAC 电子转账邮箱" : "INTERAC e-Transfer Email"}
-            <span className="text-red-500">*</span>
-          </h3>
-          <Input
-            id="interacEmail"
-            type="email"
-            placeholder={language === "zh" ? "输入您用于发送电子转账的邮箱" : "Enter the email you used to send the e-Transfer"}
-            value={interacEmail}
-            onChange={(event) => onInteracEmailChange(event.target.value)}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-            required
-          />
-          <p className="text-xs text-[#8A7968]">
-            {language === "zh" ? "我们将使用此邮箱来匹配您的付款和订单。" : "We'll use this to match your payment to your order."}
-          </p>
-        </div>
+        <InteracPayerEmailPicker
+          language={language}
+          value={interacEmail}
+          onChange={onInteracEmailChange}
+          showManageLink
+          allowManualFallback
+        />
 
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
@@ -353,8 +342,8 @@ export function MealVoucherUploadStep({
           />
           <p className="text-xs text-[#8A7968]">
             {language === "zh"
-              ? "填写后可加快自动核对。找不到时可以留空提交，我们会人工审核。每笔转账只会使用一次。"
-              : "Enter it for faster automatic verification. If you cannot find it, submit without it for manual review. Each transfer is used only once."}
+              ? "建议填写，以便精确匹配。若留空，系统只会在已验证邮箱、金额和待处理请求均无歧义时自动通过。每笔转账只会使用一次。"
+              : "Recommended for an exact match. If left blank, automatic approval happens only when the verified email, amount, and open request are unambiguous. Each transfer is used once."}
           </p>
         </div>
 
