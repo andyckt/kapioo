@@ -199,21 +199,6 @@ export function CreditUploadStep({
           </div>
 
           <div className="space-y-6">
-            <div>
-              <Label htmlFor="phone" className="font-medium text-[#6B5F53]">
-                {language === "zh" ? "手机号码" : "Phone number"}
-                <span className="ml-1 text-red-500">*</span>
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(event) => onPhoneChange(event.target.value)}
-                placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
-                className="mt-2"
-              />
-            </div>
-
             <div className="mb-6 space-y-2">
               <Label className="flex items-center gap-2 font-medium text-[#6B5F53]">
                 <Ticket className="h-4 w-4 text-[#C2884E]" />
@@ -247,6 +232,21 @@ export function CreditUploadStep({
                 </p>
               ) : null}
               {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
+            </div>
+
+            <div>
+              <Label htmlFor="phone" className="font-medium text-[#6B5F53]">
+                {language === "zh" ? "手机号码" : "Phone number"}
+                <span className="ml-1 text-red-500">*</span>
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(event) => onPhoneChange(event.target.value)}
+                placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
+                className="mt-2"
+              />
             </div>
 
             <div className="mb-6">
@@ -308,18 +308,6 @@ export function CreditUploadStep({
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="notes" className="font-medium text-[#6B5F53]">
-                {language === "zh" ? "备注（可选）" : "Notes (Optional)"}
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(event) => onNotesChange(event.target.value)}
-                placeholder={language === "zh" ? "添加任何额外信息..." : "Add any additional information..."}
-                className="mt-2"
-              />
-            </div>
             <div>
               <Label htmlFor="payment-proof" className="font-medium text-[#6B5F53]">
                 {language === "zh" ? "上传付款凭证" : "Upload Payment Proof"}
@@ -387,6 +375,18 @@ export function CreditUploadStep({
               </div>
             </div>
 
+            <div>
+              <Label htmlFor="notes" className="font-medium text-[#6B5F53]">
+                {language === "zh" ? "备注（可选）" : "Notes (Optional)"}
+              </Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(event) => onNotesChange(event.target.value)}
+                placeholder={language === "zh" ? "添加任何额外信息..." : "Add any additional information..."}
+                className="mt-2"
+              />
+            </div>
           </div>
 
           <div className="flex justify-between pt-4">

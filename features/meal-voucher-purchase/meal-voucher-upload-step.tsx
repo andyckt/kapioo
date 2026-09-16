@@ -190,22 +190,6 @@ export function MealVoucherUploadStep({
 
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-            <Phone className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "手机号码" : "Phone number"}
-            <span className="text-red-500">*</span>
-          </h3>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
-            value={phone}
-            onChange={(event) => onPhoneChange(event.target.value)}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-          />
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
             <Ticket className="h-4 w-4 text-[#C2884E]" />
             {language === "zh" ? "优惠码" : "Promo Code"}
           </h3>
@@ -233,6 +217,22 @@ export function MealVoucherUploadStep({
             </p>
           ) : null}
           {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
+            <Phone className="h-4 w-4 text-[#C2884E]" />
+            {language === "zh" ? "手机号码" : "Phone number"}
+            <span className="text-red-500">*</span>
+          </h3>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
+            value={phone}
+            onChange={(event) => onPhoneChange(event.target.value)}
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+          />
         </div>
 
         <InteracPayerEmailPicker
@@ -278,19 +278,6 @@ export function MealVoucherUploadStep({
           </div>
         </div>
 
-        <div className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-            <Info className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "备注 (可选)" : "Notes (Optional)"}
-          </h3>
-          <Textarea
-            id="notes"
-            placeholder={language === "zh" ? "添加任何其他相关信息" : "Add any other relevant information"}
-            value={notes}
-            onChange={(event) => onNotesChange(event.target.value)}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-          />
-        </div>
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
             <Upload className="h-4 w-4 text-[#C2884E]" />
@@ -349,6 +336,19 @@ export function MealVoucherUploadStep({
               onChange={handleFileChange}
             />
           </div>
+        </div>
+        <div className="space-y-3">
+          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
+            <Info className="h-4 w-4 text-[#C2884E]" />
+            {language === "zh" ? "备注 (可选)" : "Notes (Optional)"}
+          </h3>
+          <Textarea
+            id="notes"
+            placeholder={language === "zh" ? "添加任何其他相关信息" : "Add any other relevant information"}
+            value={notes}
+            onChange={(event) => onNotesChange(event.target.value)}
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+          />
         </div>
 
       </CardContent>
