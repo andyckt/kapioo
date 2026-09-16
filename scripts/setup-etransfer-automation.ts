@@ -22,6 +22,7 @@ async function main() {
   const [
     { default: AtomicCounter },
     { default: CreditPurchaseRequest },
+    { default: EtransferPaymentIntent },
     { default: InteracMailboxState },
     { default: InteracPayerEmail },
     { default: InteracReceipt },
@@ -32,6 +33,7 @@ async function main() {
   ] = await Promise.all([
     import("../models/AtomicCounter"),
     import("../models/CreditPurchaseRequest"),
+    import("../models/EtransferPaymentIntent"),
     import("../models/InteracMailboxState"),
     import("../models/InteracPayerEmail"),
     import("../models/InteracReceipt"),
@@ -59,6 +61,7 @@ async function main() {
     AtomicCounter,
     VoucherPurchaseRequest,
     CreditPurchaseRequest,
+    EtransferPaymentIntent,
     Transaction,
     InteracReceipt,
     InteracMailboxState,

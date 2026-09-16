@@ -31,6 +31,10 @@ import {
   normalizeInteracReference,
 } from '@/lib/etransfer/config';
 import { findVerifiedInteracPayerEmail } from '@/lib/etransfer/payer-email';
+import {
+  findBindablePaymentIntent,
+  markPaymentIntentSubmitted,
+} from '@/lib/etransfer/payment-intent';
 
 // POST handler - create a new credit purchase request
 export async function POST(request: Request) {
@@ -214,6 +218,18 @@ export async function POST(request: Request) {
       effectivePaymentMethod === 'emt' &&
       Boolean(verifiedPayerEmail?.verifiedAt) &&
       automationActiveForNewRequests;
+    const finalAmountCents = moneyToCents(pricing.finalTotal);
+    const paymentIntent = effectivePaymentMethod === 'emt'
+      ? await findBindablePaymentIntent({
+          userId: effectiveUserId,
+          submissionKey: data.submissionKey,
+          requestKind: 'weekly',
+          planId: weeklyPlan.id,
+          amountCents: finalAmountCents,
+          payerEmailIdentityId: verifiedPayerEmail?._id,
+          payerEmail: data.referenceNumber,
+        })
+      : null;
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
@@ -292,8 +308,9 @@ export async function POST(request: Request) {
               interacReferenceNormalized,
               payerEmailIdentityId: verifiedPayerEmail?._id,
               payerEmailVerifiedAt: verifiedPayerEmail?.verifiedAt,
+              paymentIntentId: paymentIntent?._id,
               submissionKey: data.submissionKey,
-              amountCents: moneyToCents(pricing.finalTotal),
+              amountCents: finalAmountCents,
               paymentVerificationStatus: automaticChecksEligible ? 'pending' : 'manual',
               nextPaymentCheckAt: automaticChecksEligible
                 ? new Date(Date.now() + 10 * 60_000)
@@ -309,6 +326,13 @@ export async function POST(request: Request) {
           { session }
         );
         savedRequest = created[0];
+        if (paymentIntent) {
+          await markPaymentIntentSubmitted({
+            intentId: paymentIntent._id,
+            requestId,
+            session,
+          });
+        }
       });
     } catch (txError: unknown) {
       const code = txError instanceof Error ? (txError.message as PromoErrorCode) : undefined;

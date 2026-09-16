@@ -27,6 +27,10 @@ import {
   normalizeInteracReference,
 } from '@/lib/etransfer/config';
 import { findVerifiedInteracPayerEmail } from '@/lib/etransfer/payer-email';
+import {
+  findBindablePaymentIntent,
+  markPaymentIntentSubmitted,
+} from '@/lib/etransfer/payment-intent';
 
 // GET handler - fetch voucher purchase requests
 export async function GET(request: NextRequest) {
@@ -325,6 +329,17 @@ export async function POST(request: NextRequest) {
       promoBreakdown = preview.breakdown!;
     }
 
+    const finalAmountCents = moneyToCents(promoBreakdown.finalTotal);
+    const paymentIntent = await findBindablePaymentIntent({
+      userId: effectiveUserId,
+      submissionKey,
+      requestKind: 'daily',
+      planId: dailyPlan.id,
+      amountCents: finalAmountCents,
+      payerEmailIdentityId: verifiedPayerEmail?._id,
+      payerEmail: referenceNumber,
+    });
+
     const session = await mongoose.startSession();
     let newRequest: any = null;
     try {
@@ -407,8 +422,9 @@ export async function POST(request: NextRequest) {
               interacReferenceNormalized,
               payerEmailIdentityId: verifiedPayerEmail?._id,
               payerEmailVerifiedAt: verifiedPayerEmail?.verifiedAt,
+              paymentIntentId: paymentIntent?._id,
               submissionKey,
-              amountCents: moneyToCents(promoBreakdown.finalTotal),
+              amountCents: finalAmountCents,
               paymentVerificationStatus: automaticChecksEligible ? 'pending' : 'manual',
               nextPaymentCheckAt: automaticChecksEligible
                 ? new Date(Date.now() + 10 * 60_000)
@@ -420,6 +436,14 @@ export async function POST(request: NextRequest) {
           ],
           { session }
         );
+
+        if (paymentIntent) {
+          await markPaymentIntentSubmitted({
+            intentId: paymentIntent._id,
+            requestId,
+            session,
+          });
+        }
       });
     } catch (txError: any) {
       const code = txError?.message as PromoErrorCode;

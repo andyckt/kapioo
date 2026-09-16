@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { WeeklyAddressDialog } from '@/components/weekly-address-dialog'
 import { usePromoCode } from "@/hooks/use-promo-code"
+import { useEtransferPaymentIntent } from "@/hooks/use-etransfer-payment-intent"
 import { useRegionAddressUpdate } from "@/hooks/use-region-address-update"
 import { useUserPhoneSync } from "@/hooks/use-user-phone-sync"
 import { CreditUploadStep } from "@/features/credit-purchase/credit-upload-step"
@@ -337,6 +338,15 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
 
   const effectivePricing = promoBreakdown || defaultPricing
   const totalMealsInSelectedPlan = selectedPlan ? selectedPlan.mealsPerWeek * selectedPlan.duration : 0
+
+  useEtransferPaymentIntent({
+    enabled: purchaseStep === 'upload' && paymentMethod === 'emt' && !isSubmitted,
+    requestKind: 'weekly',
+    planId: selectedPlan?.id,
+    payerEmail: interacEmail,
+    amountCents: effectivePricing ? Math.round(effectivePricing.finalTotal * 100) : 0,
+    submissionKeyRef,
+  })
   
   // Calculate unit price using only the meal price portion (excluding delivery fee)
   const discountedUnitPrice =

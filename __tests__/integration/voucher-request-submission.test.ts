@@ -1,6 +1,8 @@
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
 import InteracPayerEmail from "@/models/InteracPayerEmail";
 import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
+import EtransferPaymentIntent from "@/models/EtransferPaymentIntent";
+import { recordEtransferPaymentIntent } from "@/lib/etransfer/payment-intent";
 
 import { clearCollections, setupTestDb, teardownTestDb } from "../helpers/db";
 import { createTestUser } from "../helpers/factories";
@@ -75,6 +77,15 @@ describe("voucher request submission safety", () => {
     const user = await createTestUser({ phone: "+14165550100" });
     await verifyPayerEmail(user._id, user.email);
     requireUserMock.mockResolvedValue({ actor: actorFor(user.toObject()), response: null });
+    const submissionKey = "f4db283f-1f55-4651-9ef5-6a8f39b5f19d";
+    await recordEtransferPaymentIntent({
+      userId: String(user._id),
+      submissionKey,
+      requestKind: "daily",
+      planId: "daily-2dish-6",
+      amountCents: 14803,
+      payerEmail: user.email,
+    });
     const body = {
       userId: String(user._id),
       planId: "daily-2dish-6",
@@ -84,7 +95,7 @@ describe("voucher request submission safety", () => {
       imageProof: "https://example.com/proof.jpg",
       referenceNumber: user.email,
       interacReference: "CA40010001",
-      submissionKey: "f4db283f-1f55-4651-9ef5-6a8f39b5f19d",
+      submissionKey,
     };
 
     const firstResponse = await postDailyRequest(
@@ -93,7 +104,10 @@ describe("voucher request submission safety", () => {
     const secondResponse = await postDailyRequest(
       buildJsonRequest("http://localhost/api/voucher-requests", body)
     );
-    const saved = await VoucherPurchaseRequest.find().lean();
+    const [saved, intent] = await Promise.all([
+      VoucherPurchaseRequest.find().lean(),
+      EtransferPaymentIntent.findOne({ submissionKey }).lean(),
+    ]);
 
     expect(firstResponse.status).toBe(201);
     expect(secondResponse.status).toBe(200);
@@ -105,6 +119,11 @@ describe("voucher request submission safety", () => {
       amountCents: 14803,
       paymentVerificationStatus: "pending",
       interacReferenceNormalized: "CA40010001",
+      paymentIntentId: intent?._id,
+    });
+    expect(intent).toMatchObject({
+      status: "submitted",
+      requestId: saved[0].requestId,
     });
     expect(new Date(saved[0].nextPaymentCheckAt as Date).getTime()).toBeGreaterThan(
       new Date(saved[0].createdAt).getTime() + 9 * 60_000

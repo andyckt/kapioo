@@ -19,6 +19,12 @@ type Receipt = {
   receivedAt: string
   status: "unmatched" | "conflict"
   conflictReason?: string | null
+  possibleCheckout?: {
+    requestKind: "daily" | "weekly"
+    planId: string
+    seenAt: string
+  } | null
+  possibleCheckoutAmbiguous?: boolean
 }
 
 type MonitorData = {
@@ -105,7 +111,7 @@ export function AdminEtransferMonitor() {
               <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm">
                   <thead className="border-b bg-muted/50 text-left">
-                    <tr><th className="p-3">Received</th><th className="p-3">Sender</th><th className="p-3">Amount</th><th className="p-3">Reference</th><th className="p-3">Status</th></tr>
+                    <tr><th className="p-3">Received</th><th className="p-3">Sender</th><th className="p-3">Amount</th><th className="p-3">Reference</th><th className="p-3">Possible checkout</th><th className="p-3">Status</th></tr>
                   </thead>
                   <tbody>
                     {data.receipts.map((receipt) => (
@@ -114,6 +120,15 @@ export function AdminEtransferMonitor() {
                         <td className="p-3"><div className="font-medium">{receipt.senderName}</div><div className="text-xs text-muted-foreground">{receipt.payerEmail}</div></td>
                         <td className="whitespace-nowrap p-3 font-medium">${(receipt.amountCents / 100).toFixed(2)} {receipt.currency}</td>
                         <td className="p-3 font-mono text-xs">{receipt.reference}</td>
+                        <td className="p-3 text-xs">
+                          {receipt.possibleCheckout ? (
+                            <div><span className="font-medium capitalize">{receipt.possibleCheckout.requestKind}</span><div className="text-muted-foreground">{receipt.possibleCheckout.planId}</div></div>
+                          ) : receipt.possibleCheckoutAmbiguous ? (
+                            <span className="text-amber-700">More than one possible checkout</span>
+                          ) : (
+                            <span className="text-muted-foreground">None seen</span>
+                          )}
+                        </td>
                         <td className="p-3"><Badge variant={receipt.status === "conflict" ? "destructive" : "secondary"}>{receipt.status}</Badge>{receipt.conflictReason ? <p className="mt-1 max-w-xs text-xs text-red-700">{receipt.conflictReason}</p> : null}</td>
                       </tr>
                     ))}

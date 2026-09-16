@@ -424,6 +424,107 @@ describe("e-Transfer reconciliation", () => {
     expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
   });
 
+  it("approves a payment-first request when the completed deposit arrived three days earlier", async () => {
+    process.env.ETRANSFER_AUTO_APPROVAL_ACTIVATION_AT = new Date(
+      Date.now() - 30 * 24 * 60 * 60_000
+    ).toISOString();
+    const user = await createTestUser({ email: "payment-first@example.com", twoDishVoucher: 0 });
+    await createDueDailyRequest({
+      requestId: "VPR-5016",
+      userId: user._id,
+      payerEmail: user.email,
+      createdAt: new Date(),
+    });
+    const paidAt = new Date(Date.now() - 3 * 24 * 60 * 60_000);
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "CA50160001",
+      referenceNormalized: "CA50160001",
+      gmailMessageId: "<CA50160001@payments.interac.ca>",
+      imapUid: 5016,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: paidAt,
+      receivedAt: paidAt,
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-CA50160001",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const [request, reloadedUser] = await Promise.all([
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-5016" }).lean(),
+      User.findById(user._id).lean() as Promise<Record<string, any> | null>,
+    ]);
+
+    expect(result.approved).toBe(1);
+    expect(request).toMatchObject({
+      status: "approved",
+      interacReferenceNormalized: "CA50160001",
+    });
+    expect(reloadedUser?.twoDishVoucher).toBe(6);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+  });
+
+  it("does not match an old deposit outside the seven-day payment-first window", async () => {
+    process.env.ETRANSFER_AUTO_APPROVAL_ACTIVATION_AT = new Date(
+      Date.now() - 30 * 24 * 60 * 60_000
+    ).toISOString();
+    const user = await createTestUser({ email: "old-payment@example.com", twoDishVoucher: 0 });
+    await createDueDailyRequest({
+      requestId: "VPR-5017",
+      userId: user._id,
+      payerEmail: user.email,
+      createdAt: new Date(),
+    });
+    const paidAt = new Date(Date.now() - 8 * 24 * 60 * 60_000);
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "CA50170001",
+      referenceNormalized: "CA50170001",
+      gmailMessageId: "<CA50170001@payments.interac.ca>",
+      imapUid: 5017,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: paidAt,
+      receivedAt: paidAt,
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-CA50170001",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const [request, reloadedUser, receipt] = await Promise.all([
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-5017" }).lean(),
+      User.findById(user._id).lean() as Promise<Record<string, any> | null>,
+      InteracReceipt.findOne({ referenceNormalized: "CA50170001" }).lean(),
+    ]);
+
+    expect(result).toMatchObject({ approved: 0, pending: 1 });
+    expect(request).toMatchObject({ status: "pending", paymentVerificationStatus: "not_found" });
+    expect(reloadedUser?.twoDishVoucher).toBe(0);
+    expect(receipt?.status).toBe("unmatched");
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
+  });
+
   it("issues only one grant when duplicate reference-free tickets share one payment", async () => {
     const user = await createTestUser({ email: "no-ref-duplicate@example.com", twoDishVoucher: 0 });
     const createdAt = new Date(Date.now() - 20 * 60_000);

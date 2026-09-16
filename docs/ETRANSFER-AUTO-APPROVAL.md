@@ -27,6 +27,10 @@ The first check is scheduled about 10 minutes after submission. A missing comple
 
 The mailbox is scanned on every scheduled run even when there is no voucher request waiting. Completed deposits without a request appear in the admin payment monitor as unmatched money. A rejected or changed email format stops the entire approval run and raises an operator-visible error; no request is approved during that run.
 
+Returning customers may send payment before opening or submitting the checkout. A completed deposit is retained and may match a request submitted up to seven days later. The same verified sender email, exact amount, and all other safety rules still apply. Older deposits remain unmatched for administrator review instead of being approved automatically.
+
+When a signed-in customer reaches the payment step, the site records a private checkout marker containing the verified sender email, plan, and displayed amount. The admin payment monitor can use this marker to explain an unmatched deposit when the customer has not submitted the final request. A checkout marker is only an operator clue: it cannot allocate a payment or issue vouchers, and automatic approval still requires a submitted voucher request.
+
 ## Recommended long-term payment path
 
 Gmail parsing is an interim integration. The preferred production design is an Interac Business Request Money or payment-provider API that gives Kapioo a provider transaction ID, signed webhook or authenticated status API, and a direct link between the request and payment. A unique Autodeposit recipient email per customer is also strong, but it requires bank or payment-provider provisioning; ordinary Gmail aliases do not create additional Interac Autodeposit recipients.
