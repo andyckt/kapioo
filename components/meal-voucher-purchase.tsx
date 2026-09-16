@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { usePromoCode } from '@/hooks/use-promo-code'
+import { useEtransferPaymentIntent } from '@/hooks/use-etransfer-payment-intent'
 import { useRegionAddressUpdate } from '@/hooks/use-region-address-update'
 import { useUserPhoneSync } from '@/hooks/use-user-phone-sync'
 import { useToast } from '@/hooks/use-toast'
@@ -163,6 +164,15 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const discountedUnitPrice = selectedPlan && effectivePricing
     ? effectivePricing.discountedSubtotal / selectedPlan.quantity
     : null
+
+  useEtransferPaymentIntent({
+    enabled: purchaseStep === 'upload' && !isSubmitted,
+    requestKind: 'daily',
+    planId: selectedPlan?.id,
+    payerEmail: interacEmail,
+    amountCents: effectivePricing ? Math.round(effectivePricing.finalTotal * 100) : 0,
+    submissionKeyRef,
+  })
 
   const { handleRegionChange } = useRegionAddressUpdate({
     onSuccess: setUserRegion,

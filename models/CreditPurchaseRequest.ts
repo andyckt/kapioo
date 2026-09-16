@@ -28,6 +28,7 @@ export interface ICreditPurchaseRequest extends Document {
   interacReferenceNormalized?: string;
   payerEmailIdentityId?: mongoose.Types.ObjectId;
   payerEmailVerifiedAt?: Date;
+  paymentIntentId?: mongoose.Types.ObjectId;
   submissionKey?: string;
   amountCents?: number;
   paymentVerificationStatus?: 'manual' | 'pending' | 'not_found' | 'matched' | 'review' | 'duplicate' | 'failed';
@@ -148,6 +149,7 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
   interacReferenceNormalized: { type: String, trim: true },
   payerEmailIdentityId: { type: Schema.Types.ObjectId, ref: 'InteracPayerEmail' },
   payerEmailVerifiedAt: { type: Date },
+  paymentIntentId: { type: Schema.Types.ObjectId, ref: 'EtransferPaymentIntent' },
   submissionKey: { type: String, trim: true },
   amountCents: { type: Number, min: 1 },
   paymentVerificationStatus: {

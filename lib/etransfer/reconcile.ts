@@ -19,6 +19,7 @@ import {
   normalizeEmail,
 } from "./config";
 import { syncInteracReceipts } from "./mailbox";
+import { PAYMENT_FIRST_MATCH_WINDOW_MS } from "./payment-intent";
 
 const REQUESTS_PER_RUN = 25;
 
@@ -134,7 +135,7 @@ function requestMatchesReceipt(
 ) {
   const earliestEligibleReceipt = Math.max(
     activationAt.getTime(),
-    new Date(request.createdAt).getTime() - 24 * 60 * 60_000
+    new Date(request.createdAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
   );
   return (
     (!request.interacReferenceNormalized ||
@@ -192,10 +193,11 @@ async function getNoReferenceRequestsForReceipt(
   identityId: unknown,
   activationAt: Date
 ) {
-  // A customer may pay shortly before pressing Submit, so accept up to 24 hours
-  // of payment-first clock skew. Requests created before activation never qualify.
+  // Returning customers sometimes pay before opening the checkout. Keep a bounded
+  // payment-first window; activation, verified ownership, exact cents, and a
+  // single unallocated receipt are still required before approval.
   const latestRequestTime = new Date(
-    new Date(receipt.receivedAt).getTime() + 24 * 60 * 60_000
+    new Date(receipt.receivedAt).getTime() + PAYMENT_FIRST_MATCH_WINDOW_MS
   );
   const filter = {
     status: "pending",
@@ -226,7 +228,7 @@ async function getNoReferenceRequestsForReceipt(
         new Date(receipt.receivedAt).getTime() >=
           Math.max(
             activationAt.getTime(),
-            new Date(request.createdAt).getTime() - 24 * 60 * 60_000
+            new Date(request.createdAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
           )
     )
     .sort(
@@ -255,7 +257,7 @@ async function resolveReceiptForRequest(
   const earliestEligibleReceipt = new Date(
     Math.max(
       activationAt.getTime(),
-      new Date(request.createdAt).getTime() - 24 * 60 * 60_000
+      new Date(request.createdAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
     )
   );
   const receipts = await InteracReceipt.find({
