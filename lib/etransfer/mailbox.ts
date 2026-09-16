@@ -13,7 +13,10 @@ import {
 import { parseInteracReceipt } from "./receipt-parser";
 
 const LOCK_MS = 2 * 60_000;
-const MAX_MESSAGES_PER_RUN = 50;
+// cron-job.org's free runner stops waiting after 30 seconds. Keep each IMAP
+// batch small so a burst is drained safely across consecutive five-minute
+// runs without the scheduler treating a healthy Gmail scan as a failure.
+const MAX_MESSAGES_PER_RUN = 8;
 
 export async function saveInteracReceipt(
   receipt: Awaited<ReturnType<typeof parseInteracReceipt>>,
