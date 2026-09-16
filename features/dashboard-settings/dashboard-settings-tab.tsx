@@ -172,7 +172,7 @@ export function DashboardSettingsTab({
             </CardFooter>
           </Card>
 
-          <Card>
+          <Card id="interac-sender-emails" className="scroll-mt-6">
             <CardHeader>
               <CardTitle>{language === "zh" ? "Interac 转账邮箱" : "Interac sender emails"}</CardTitle>
               <CardDescription>

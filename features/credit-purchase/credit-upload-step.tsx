@@ -37,14 +37,12 @@ type CreditUploadStepProps = {
   handleRemovePromo: () => void
   handleSubmit: (event: FormEvent) => void | Promise<void>
   interacEmail: string
-  interacReference: string
   isApplyingPromo: boolean
   isLoading: boolean
   isSubmitted: boolean
   language: "en" | "zh"
   notes: string
   onInteracEmailChange: (value: string) => void
-  onInteracReferenceChange: (value: string) => void
   onNotesChange: (value: string) => void
   onPaymentMethodChange: (value: "wechat" | "emt" | null) => void
   onPhoneChange: (value: string) => void
@@ -74,14 +72,12 @@ export function CreditUploadStep({
   handleRemovePromo,
   handleSubmit,
   interacEmail,
-  interacReference,
   isApplyingPromo,
   isLoading,
   isSubmitted,
   language,
   notes,
   onInteracEmailChange,
-  onInteracReferenceChange,
   onNotesChange,
   onPaymentMethodChange,
   onPhoneChange,
@@ -202,66 +198,128 @@ export function CreditUploadStep({
             </div>
           </div>
 
-          <div className="mb-6 space-y-3">
-            <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-              <CreditCard className="h-4 w-4 text-[#C2884E]" />
-              {language === "zh" ? "Interac e-Transfer 信息" : "Interac e-Transfer Information"}
-            </h3>
-            <div className="overflow-hidden rounded-xl border border-[#C2884E]/10 bg-white shadow-sm">
-              <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] px-4 py-2 text-sm font-medium text-white">
-                {language === "zh" ? "付款详情" : "Payment Details"}
-              </div>
-              <div className="space-y-3 p-4">
-                <div className="flex items-center justify-between border-b border-dashed border-[#C2884E]/10 pb-2">
-                  <p className="text-sm text-[#6B5F53]">{language === "zh" ? "收款人邮箱" : "Recipient Email"}</p>
-                  <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-[#6B5F53]">{language === "zh" ? "金额" : "Amount"}</p>
-                  <p className="font-medium text-[#C2884E]">
-                    ${(effectivePricing?.finalTotal ?? parseFloat((baseSubtotal * 1.13).toFixed(2))).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-6 space-y-2">
-            <Label className="flex items-center gap-2 font-medium text-[#6B5F53]">
-              <Ticket className="h-4 w-4 text-[#C2884E]" />
-              {language === "zh" ? "优惠码" : "Promo Code"}
-            </Label>
-            <div className="flex gap-2">
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="phone" className="font-medium text-[#6B5F53]">
+                {language === "zh" ? "手机号码" : "Phone number"}
+                <span className="ml-1 text-red-500">*</span>
+              </Label>
               <Input
-                value={promoCodeInput}
-                onChange={(event) => onPromoCodeInputChange(event.target.value.toUpperCase())}
-                placeholder={language === "zh" ? "输入优惠码" : "Enter promo code"}
-                disabled={paymentMethod !== "emt"}
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(event) => onPhoneChange(event.target.value)}
+                placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
+                className="mt-2"
               />
-              {appliedPromoCode ? (
-                <Button type="button" variant="outline" onClick={handleRemovePromo}>
-                  {language === "zh" ? "移除" : "Remove"}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleApplyPromo}
-                  disabled={isApplyingPromo || paymentMethod !== "emt"}
-                >
-                  {isApplyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : language === "zh" ? "应用" : "Apply"}
-                </Button>
-              )}
             </div>
-            {appliedPromoCode ? (
-              <p className="text-xs text-green-700">
-                {language === "zh" ? "已应用优惠码：" : "Applied promo code: "}
-                <span className="font-semibold">{appliedPromoCode}</span>
-              </p>
-            ) : null}
-            {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
-          </div>
 
-          <div className="space-y-4">
+            <div className="mb-6 space-y-2">
+              <Label className="flex items-center gap-2 font-medium text-[#6B5F53]">
+                <Ticket className="h-4 w-4 text-[#C2884E]" />
+                {language === "zh" ? "优惠码" : "Promo Code"}
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={promoCodeInput}
+                  onChange={(event) => onPromoCodeInputChange(event.target.value.toUpperCase())}
+                  placeholder={language === "zh" ? "输入优惠码" : "Enter promo code"}
+                  disabled={paymentMethod !== "emt"}
+                />
+                {appliedPromoCode ? (
+                  <Button type="button" variant="outline" onClick={handleRemovePromo}>
+                    {language === "zh" ? "移除" : "Remove"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    disabled={isApplyingPromo || paymentMethod !== "emt"}
+                  >
+                    {isApplyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : language === "zh" ? "应用" : "Apply"}
+                  </Button>
+                )}
+              </div>
+              {appliedPromoCode ? (
+                <p className="text-xs text-green-700">
+                  {language === "zh" ? "已应用优惠码：" : "Applied promo code: "}
+                  <span className="font-semibold">{appliedPromoCode}</span>
+                </p>
+              ) : null}
+              {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
+            </div>
+
+            <div className="mb-6">
+              <Label className="mb-2 block font-medium text-[#6B5F53]">
+                {language === "zh" ? "选择付款方式" : "Select Payment Method"}
+              </Label>
+
+              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div
+                  className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                    paymentMethod === "emt"
+                      ? "border-[#C2884E] bg-[#F9F3EC]"
+                      : "border-gray-200 hover:border-[#C2884E]/50"
+                  }`}
+                  onClick={() => onPaymentMethodChange("emt")}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                        paymentMethod === "emt" ? "border-[#C2884E]" : "border-gray-300"
+                      }`}
+                    >
+                      {paymentMethod === "emt" ? <div className="h-3 w-3 rounded-full bg-[#C2884E]" /> : null}
+                    </div>
+                    <span className="font-medium">Interac e-Transfer</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <InteracPayerEmailPicker
+              language={language}
+              value={interacEmail}
+              onChange={onInteracEmailChange}
+              showManageLink
+            />
+
+            <div className="mb-6 space-y-3">
+              <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
+                <CreditCard className="h-4 w-4 text-[#C2884E]" />
+                {language === "zh" ? "Interac e-Transfer 信息" : "Interac e-Transfer Information"}
+              </h3>
+              <div className="overflow-hidden rounded-xl border border-[#C2884E]/10 bg-white shadow-sm">
+                <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] px-4 py-2 text-sm font-medium text-white">
+                  {language === "zh" ? "付款详情" : "Payment Details"}
+                </div>
+                <div className="space-y-3 p-4">
+                  <div className="flex items-center justify-between border-b border-dashed border-[#C2884E]/10 pb-2">
+                    <p className="text-sm text-[#6B5F53]">{language === "zh" ? "收款人邮箱" : "Recipient Email"}</p>
+                    <p className="font-medium text-[#6B5F53]">kapioomeal@gmail.com</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-[#6B5F53]">{language === "zh" ? "金额" : "Amount"}</p>
+                    <p className="font-medium text-[#C2884E]">
+                      ${(effectivePricing?.finalTotal ?? parseFloat((baseSubtotal * 1.13).toFixed(2))).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="notes" className="font-medium text-[#6B5F53]">
+                {language === "zh" ? "备注（可选）" : "Notes (Optional)"}
+              </Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(event) => onNotesChange(event.target.value)}
+                placeholder={language === "zh" ? "添加任何额外信息..." : "Add any additional information..."}
+                className="mt-2"
+              />
+            </div>
             <div>
               <Label htmlFor="payment-proof" className="font-medium text-[#6B5F53]">
                 {language === "zh" ? "上传付款凭证" : "Upload Payment Proof"}
@@ -329,90 +387,6 @@ export function CreditUploadStep({
               </div>
             </div>
 
-            <div className="mb-6">
-              <Label className="mb-2 block font-medium text-[#6B5F53]">
-                {language === "zh" ? "选择付款方式" : "Select Payment Method"}
-              </Label>
-
-              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div
-                  className={`cursor-pointer rounded-xl border p-4 transition-all ${
-                    paymentMethod === "emt"
-                      ? "border-[#C2884E] bg-[#F9F3EC]"
-                      : "border-gray-200 hover:border-[#C2884E]/50"
-                  }`}
-                  onClick={() => onPaymentMethodChange("emt")}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                        paymentMethod === "emt" ? "border-[#C2884E]" : "border-gray-300"
-                      }`}
-                    >
-                      {paymentMethod === "emt" ? <div className="h-3 w-3 rounded-full bg-[#C2884E]" /> : null}
-                    </div>
-                    <span className="font-medium">Interac e-Transfer</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <InteracPayerEmailPicker
-              language={language}
-              value={interacEmail}
-              onChange={onInteracEmailChange}
-              showManageLink
-              allowManualFallback
-            />
-
-            {paymentMethod === "emt" ? (
-              <div>
-                <Label htmlFor="interacReference" className="font-medium text-[#6B5F53]">
-                  {language === "zh" ? "Interac 转账参考编号（建议填写）" : "Interac transfer reference (recommended)"}
-                </Label>
-                <Input
-                  id="interacReference"
-                  value={interacReference}
-                  onChange={(event) => onInteracReferenceChange(event.target.value.toUpperCase())}
-                  placeholder={language === "zh" ? "例如：C1AJH4XQXJVR" : "Example: C1AJH4XQXJVR"}
-                  autoComplete="off"
-                  className="mt-2 font-mono uppercase"
-                />
-                <p className="mt-1 text-xs text-[#8A7968]">
-                  {language === "zh"
-                    ? "建议填写，以便精确匹配。若留空，系统只会在已验证邮箱、金额和待处理请求均无歧义时自动通过。每笔转账只会使用一次。"
-                    : "Recommended for an exact match. If left blank, automatic approval happens only when the verified email, amount, and open request are unambiguous. Each transfer is used once."}
-                </p>
-              </div>
-            ) : null}
-
-            <div>
-              <Label htmlFor="phone" className="font-medium text-[#6B5F53]">
-                {language === "zh" ? "手机号码" : "Phone number"}
-                <span className="ml-1 text-red-500">*</span>
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(event) => onPhoneChange(event.target.value)}
-                placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="notes" className="font-medium text-[#6B5F53]">
-                {language === "zh" ? "备注（可选）" : "Notes (Optional)"}
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(event) => onNotesChange(event.target.value)}
-                placeholder={language === "zh" ? "添加任何额外信息..." : "Add any additional information..."}
-                className="mt-2"
-              />
-            </div>
           </div>
 
           <div className="flex justify-between pt-4">
@@ -425,7 +399,7 @@ export function CreditUploadStep({
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isLoading || !paymentProof}
+              disabled={isLoading || !paymentProof || !interacEmail || !phone.trim()}
               className="rounded-xl bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90"
             >
               {isLoading ? (

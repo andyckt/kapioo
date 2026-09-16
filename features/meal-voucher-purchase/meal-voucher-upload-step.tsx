@@ -36,7 +36,6 @@ type MealVoucherUploadStepProps = {
   handleFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>
   handleRemovePromo: () => void
   interacEmail: string
-  interacReference: string
   isApplyingPromo: boolean
   isLoading: boolean
   isSubmitted: boolean
@@ -44,7 +43,6 @@ type MealVoucherUploadStepProps = {
   notes: string
   onBack: () => void
   onInteracEmailChange: (value: string) => void
-  onInteracReferenceChange: (value: string) => void
   onNotesChange: (value: string) => void
   onPhoneChange: (value: string) => void
   onPromoCodeInputChange: (value: string) => void
@@ -67,7 +65,6 @@ export function MealVoucherUploadStep({
   handleFileChange,
   handleRemovePromo,
   interacEmail,
-  interacReference,
   isApplyingPromo,
   isLoading,
   isSubmitted,
@@ -75,7 +72,6 @@ export function MealVoucherUploadStep({
   notes,
   onBack,
   onInteracEmailChange,
-  onInteracReferenceChange,
   onNotesChange,
   onPhoneChange,
   onPromoCodeInputChange,
@@ -132,14 +128,14 @@ export function MealVoucherUploadStep({
       <CardHeader className="border-b border-[#C2884E]/10 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4]">
         <div className="mb-2 flex items-center gap-3">
           <div className="rounded-full bg-[#C2884E] p-2 text-white">
-            <Upload className="h-4 w-4" />
+            <CreditCard className="h-4 w-4" />
           </div>
-          <CardTitle>{language === "zh" ? "上传付款凭证" : "Upload Payment Proof"}</CardTitle>
+          <CardTitle>{language === "zh" ? "完成付款" : "Complete Payment"}</CardTitle>
         </div>
         <CardDescription>
           {language === "zh"
-            ? "请通过Interac e-Transfer转账后上传付款凭证"
-            : "Please upload proof of payment after sending Interac e-Transfer"}
+            ? "请按以下步骤通过 Interac e-Transfer 完成付款"
+            : "Follow the steps below to complete your Interac e-Transfer payment"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
@@ -194,6 +190,60 @@ export function MealVoucherUploadStep({
 
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
+            <Phone className="h-4 w-4 text-[#C2884E]" />
+            {language === "zh" ? "手机号码" : "Phone number"}
+            <span className="text-red-500">*</span>
+          </h3>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
+            value={phone}
+            onChange={(event) => onPhoneChange(event.target.value)}
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
+            <Ticket className="h-4 w-4 text-[#C2884E]" />
+            {language === "zh" ? "优惠码" : "Promo Code"}
+          </h3>
+          <div className="flex gap-2">
+            <Input
+              value={promoCodeInput}
+              onChange={(event) => onPromoCodeInputChange(event.target.value.toUpperCase())}
+              placeholder={language === "zh" ? "输入优惠码" : "Enter promo code"}
+              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+            />
+            {appliedPromoCode ? (
+              <Button type="button" variant="outline" onClick={handleRemovePromo}>
+                {language === "zh" ? "移除" : "Remove"}
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleApplyPromo} disabled={isApplyingPromo}>
+                {isApplyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : language === "zh" ? "应用" : "Apply"}
+              </Button>
+            )}
+          </div>
+          {appliedPromoCode ? (
+            <p className="text-xs text-green-700">
+              {language === "zh" ? "已应用优惠码：" : "Applied promo code: "}
+              <span className="font-semibold">{appliedPromoCode}</span>
+            </p>
+          ) : null}
+          {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
+        </div>
+
+        <InteracPayerEmailPicker
+          language={language}
+          value={interacEmail}
+          onChange={onInteracEmailChange}
+          showManageLink
+        />
+
+        <div className="space-y-3">
+          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
             <CreditCard className="h-4 w-4 text-[#C2884E]" />
             {language === "zh" ? "Interac e-Transfer 信息" : "Interac e-Transfer Information"}
           </h3>
@@ -230,35 +280,17 @@ export function MealVoucherUploadStep({
 
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-            <Ticket className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "优惠码" : "Promo Code"}
+            <Info className="h-4 w-4 text-[#C2884E]" />
+            {language === "zh" ? "备注 (可选)" : "Notes (Optional)"}
           </h3>
-          <div className="flex gap-2">
-            <Input
-              value={promoCodeInput}
-              onChange={(event) => onPromoCodeInputChange(event.target.value.toUpperCase())}
-              placeholder={language === "zh" ? "输入优惠码" : "Enter promo code"}
-              className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-            />
-            {appliedPromoCode ? (
-              <Button type="button" variant="outline" onClick={handleRemovePromo}>
-                {language === "zh" ? "移除" : "Remove"}
-              </Button>
-            ) : (
-              <Button type="button" onClick={handleApplyPromo} disabled={isApplyingPromo}>
-                {isApplyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : language === "zh" ? "应用" : "Apply"}
-              </Button>
-            )}
-          </div>
-          {appliedPromoCode ? (
-            <p className="text-xs text-green-700">
-              {language === "zh" ? "已应用优惠码：" : "Applied promo code: "}
-              <span className="font-semibold">{appliedPromoCode}</span>
-            </p>
-          ) : null}
-          {promoError ? <p className="text-xs text-red-600">{promoError}</p> : null}
+          <Textarea
+            id="notes"
+            placeholder={language === "zh" ? "添加任何其他相关信息" : "Add any other relevant information"}
+            value={notes}
+            onChange={(event) => onNotesChange(event.target.value)}
+            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
+          />
         </div>
-
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
             <Upload className="h-4 w-4 text-[#C2884E]" />
@@ -319,63 +351,6 @@ export function MealVoucherUploadStep({
           </div>
         </div>
 
-        <InteracPayerEmailPicker
-          language={language}
-          value={interacEmail}
-          onChange={onInteracEmailChange}
-          showManageLink
-          allowManualFallback
-        />
-
-        <div className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-            <Ticket className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "Interac 转账参考编号（建议填写）" : "Interac transfer reference (recommended)"}
-          </h3>
-          <Input
-            id="interacReference"
-            value={interacReference}
-            onChange={(event) => onInteracReferenceChange(event.target.value.toUpperCase())}
-            placeholder={language === "zh" ? "例如：C1AJH4XQXJVR" : "Example: C1AJH4XQXJVR"}
-            autoComplete="off"
-            className="border-[#C2884E]/20 font-mono uppercase focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-          />
-          <p className="text-xs text-[#8A7968]">
-            {language === "zh"
-              ? "建议填写，以便精确匹配。若留空，系统只会在已验证邮箱、金额和待处理请求均无歧义时自动通过。每笔转账只会使用一次。"
-              : "Recommended for an exact match. If left blank, automatic approval happens only when the verified email, amount, and open request are unambiguous. Each transfer is used once."}
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-            <Phone className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "手机号码" : "Phone number"}
-            <span className="text-red-500">*</span>
-          </h3>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder={language === "zh" ? "输入您的手机号" : "Enter your phone number"}
-            value={phone}
-            onChange={(event) => onPhoneChange(event.target.value)}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-          />
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-[#6B5F53]">
-            <Info className="h-4 w-4 text-[#C2884E]" />
-            {language === "zh" ? "备注 (可选)" : "Notes (Optional)"}
-          </h3>
-          <Textarea
-            id="notes"
-            placeholder={language === "zh" ? "添加任何其他相关信息" : "Add any other relevant information"}
-            value={notes}
-            onChange={(event) => onNotesChange(event.target.value)}
-            className="border-[#C2884E]/20 focus:border-[#C2884E] focus:ring-[#C2884E]/10"
-          />
-        </div>
       </CardContent>
       <CardFooter className="flex justify-between border-t border-[#C2884E]/10 bg-gradient-to-r from-[#FBF7F2]/50 to-[#F5EDE4]/50">
         <Button
@@ -389,7 +364,7 @@ export function MealVoucherUploadStep({
         <Button
           onClick={onSubmit}
           className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:from-[#C2884E] hover:to-[#D1A46C] hover:opacity-90"
-          disabled={!paymentProof || isLoading}
+          disabled={!paymentProof || !interacEmail || !phone.trim() || isLoading}
         >
           {isLoading ? (
             <>

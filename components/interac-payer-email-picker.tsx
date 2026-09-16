@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import Link from "next/link"
 import { CheckCircle2, Loader2, Mail, ShieldCheck, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -23,7 +22,6 @@ type Props = {
   onChange?: (email: string) => void
   allowRemove?: boolean
   showManageLink?: boolean
-  allowManualFallback?: boolean
 }
 
 export function InteracPayerEmailPicker({
@@ -32,7 +30,6 @@ export function InteracPayerEmailPicker({
   onChange,
   allowRemove = false,
   showManageLink = false,
-  allowManualFallback = false,
 }: Props) {
   const { toast } = useToast()
   const [emails, setEmails] = useState<LinkedEmail[]>([])
@@ -43,6 +40,8 @@ export function InteracPayerEmailPicker({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const valueRef = useRef(value)
+  const verificationPanelRef = useRef<HTMLDivElement>(null)
+  const verificationCodeRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     valueRef.current = value
@@ -74,6 +73,15 @@ export function InteracPayerEmailPicker({
     void loadEmails()
   }, [loadEmails])
 
+  const openVerification = (email: string) => {
+    setVerificationEmail(email)
+    setCode("")
+    window.setTimeout(() => {
+      verificationPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+      verificationCodeRef.current?.focus()
+    }, 0)
+  }
+
   const sendCode = async (email: string) => {
     if (!email.trim()) return
     setBusy(true)
@@ -88,8 +96,7 @@ export function InteracPayerEmailPicker({
       if (result.data?.email?.status === "verified") {
         onChange?.(result.data.email.email)
       } else {
-        setVerificationEmail(result.data?.email?.email || email.trim().toLowerCase())
-        setCode("")
+        openVerification(result.data?.email?.email || email.trim().toLowerCase())
       }
       setNewEmail("")
       await loadEmails()
@@ -179,9 +186,12 @@ export function InteracPayerEmailPicker({
           {language === "zh" ? "已验证的 Interac 转账邮箱" : "Verified Interac sender email"}
         </Label>
         {showManageLink ? (
-          <Link href="/dashboard?tab=settings" className="text-xs text-[#9B6B3F] underline">
+          <a
+            href="/dashboard?tab=settings#interac-sender-emails"
+            className="text-xs text-[#9B6B3F] underline"
+          >
             {language === "zh" ? "管理邮箱" : "Manage emails"}
-          </Link>
+          </a>
         ) : null}
       </div>
 
@@ -211,37 +221,57 @@ export function InteracPayerEmailPicker({
       ) : (
         <p className="text-sm text-amber-700">
           {language === "zh"
-            ? "请先验证您用于发送 e-Transfer 的邮箱。未验证的付款只能人工审核。"
-            : "Verify the email you use to send e-Transfers. Unverified payments require manual review."}
+            ? "请先验证您用于发送 e-Transfer 的邮箱。"
+            : "Verify the email you use to send e-Transfers."}
         </p>
       )}
-
-      {value && !verifiedEmails.some((entry) => entry.email === value) ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          {value} · {language === "zh" ? "将提交人工审核" : "Will be sent for manual review"}
-        </div>
-      ) : null}
 
       {pendingEmails.map((entry) => (
         <div key={entry.id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
           <span>{entry.email} · {language === "zh" ? "等待验证" : "Pending verification"}</span>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setVerificationEmail(entry.email)}>
-            {language === "zh" ? "输入验证码" : "Enter code"}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            aria-expanded={verificationEmail === entry.email}
+            onClick={() => openVerification(entry.email)}
+          >
+            {language === "zh" ? "立即验证" : "Verify now"}
           </Button>
         </div>
       ))}
 
       {verificationEmail ? (
-        <div className="rounded-lg border border-[#E5D6BC] bg-[#FBF7F2] p-3">
+        <div ref={verificationPanelRef} className="rounded-lg border border-[#E5D6BC] bg-[#FBF7F2] p-3">
           <p className="mb-2 text-xs text-[#6B5F53]">
             {language === "zh" ? `输入发送至 ${verificationEmail} 的六位验证码` : `Enter the six-digit code sent to ${verificationEmail}`}
           </p>
           <div className="flex gap-2">
-            <Input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" />
+            <Input
+              ref={verificationCodeRef}
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && code.length === 6 && !busy) void verifyCode()
+              }}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              aria-label={language === "zh" ? "六位验证码" : "Six-digit verification code"}
+            />
             <Button type="button" disabled={busy || code.length !== 6} onClick={() => void verifyCode()}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : language === "zh" ? "验证" : "Verify"}
             </Button>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-2 h-auto px-0 text-xs text-[#9B6B3F]"
+            disabled={busy}
+            onClick={() => void sendCode(verificationEmail)}
+          >
+            {language === "zh" ? "重新发送验证码" : "Resend code"}
+          </Button>
         </div>
       ) : null}
 
@@ -253,11 +283,6 @@ export function InteracPayerEmailPicker({
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : language === "zh" ? "发送验证码" : "Send code"}
             </Button>
           </div>
-          {allowManualFallback && newEmail.trim() ? (
-            <Button type="button" variant="ghost" className="h-auto px-0 text-xs text-amber-700" onClick={() => onChange?.(newEmail.trim().toLowerCase())}>
-              {language === "zh" ? "现在无法验证？使用此邮箱并提交人工审核" : "Cannot verify now? Use this email for manual review"}
-            </Button>
-          ) : null}
         </div>
       ) : null}
 

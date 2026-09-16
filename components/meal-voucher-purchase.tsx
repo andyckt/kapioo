@@ -14,7 +14,6 @@ import { ensureUserPhone, getStoredUser } from '@/lib/phone-helper'
 import { getAreaDisplayLabel } from '@/lib/zones/coverage-copy'
 import { DAILY_DELIVERY_AREA_LABELS } from '@/lib/zones/service-areas'
 import { getUserDailyEligibility } from '@/lib/address/daily-eligibility'
-import { isValidInteracReference } from '@/lib/etransfer/config'
 import { listDailyPlans } from '@/lib/plans/service'
 import type { PricingBreakdown } from '@/lib/promo-code-shared'
 import {
@@ -84,7 +83,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [notes, setNotes] = useState('')
   const [interacEmail, setInteracEmail] = useState('')
-  const [interacReference, setInteracReference] = useState('')
   const submissionKeyRef = useRef<string | null>(null)
   const [phone, setPhone] = useState('')
   const [purchaseStep, setPurchaseStep] = useState<'select' | 'upload'>('select')
@@ -278,17 +276,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
       return
     }
 
-    if (interacReference.trim() && !isValidInteracReference(interacReference)) {
-      toast({
-        title: language === 'zh' ? "转账参考编号无效" : "Invalid transfer reference",
-        description: language === 'zh'
-          ? "请检查银行转账确认中的 Interac 参考编号，或留空以提交人工审核"
-          : "Check the Interac reference from your bank confirmation, or leave it blank for manual review",
-        variant: "destructive"
-      })
-      return
-    }
-
     // Submit the purchase directly
     await handleSubmitPurchase()
   }
@@ -359,7 +346,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           taxRate: effectivePricing?.taxRate,
           imageProof: imageProofUrl,
           referenceNumber: interacEmail,
-          interacReference: interacReference.trim() || undefined,
           submissionKey: submissionKeyRef.current || (submissionKeyRef.current = crypto.randomUUID()),
           notes: notes || undefined,
           promoCode: appliedPromoCode || undefined
@@ -413,7 +399,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     setPaymentProof(null)
     setNotes('')
     setInteracEmail('')
-    setInteracReference('')
     submissionKeyRef.current = null
     setPurchaseStep('select')
   }
@@ -1045,7 +1030,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               handleFileChange={handleFileChange}
               handleRemovePromo={handleRemovePromo}
               interacEmail={interacEmail}
-              interacReference={interacReference}
               isApplyingPromo={isApplyingPromo}
               isLoading={isLoading}
               isSubmitted={isSubmitted}
@@ -1053,7 +1037,6 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               notes={notes}
               onBack={() => setPurchaseStep('select')}
               onInteracEmailChange={setInteracEmail}
-              onInteracReferenceChange={setInteracReference}
               onNotesChange={setNotes}
               onPhoneChange={setPhone}
               onPromoCodeInputChange={setPromoCodeInput}
