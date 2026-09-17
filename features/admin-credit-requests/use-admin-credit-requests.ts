@@ -150,7 +150,6 @@ export function useAdminCreditRequests({
   const [approvedTwelveMeals, setApprovedTwelveMeals] = useState(0)
   const [approvedSixteenMeals, setApprovedSixteenMeals] = useState(0)
   const [adminNotes, setAdminNotes] = useState("")
-  const [manualPaymentReference, setManualPaymentReference] = useState("")
   const [processingRequest, setProcessingRequest] = useState(false)
 
   const paginationRef = useRef(creditRequestsPagination)
@@ -313,7 +312,6 @@ export function useAdminCreditRequests({
     setApprovedSixteenMeals(suggested.approvedSixteenMeals)
 
     setAdminNotes("")
-    setManualPaymentReference(request.interacReference || "")
     setApproveRequestOpen(true)
   }, [])
 
@@ -362,7 +360,6 @@ export function useAdminCreditRequests({
           approvedSixteenMeals,
           approvedPlans,
           adminNotes,
-          paymentReference: manualPaymentReference.trim(),
         }),
       })
 
@@ -408,7 +405,6 @@ export function useAdminCreditRequests({
     approvedTenMeals,
     approvedTwelveMeals,
     fetchCreditRequests,
-    manualPaymentReference,
     selectedRequest,
   ])
 
@@ -524,8 +520,6 @@ export function useAdminCreditRequests({
     setApprovedSixteenMeals,
     adminNotes,
     setAdminNotes,
-    manualPaymentReference,
-    setManualPaymentReference,
     processingRequest,
     fetchCreditRequests,
     handleCreditRequestPagination,

@@ -95,7 +95,6 @@ export async function POST(request: Request) {
           source: "manual",
           actor,
           adminNotes: data.adminNotes,
-          manualPaymentReference: data.paymentReference,
         })).request
       : await declineVoucherPurchase({
           kind: "weekly",

@@ -15,7 +15,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { formatDateTime } from '@/lib/format'
-import { isValidInteracReference } from '@/lib/etransfer/config'
 import { 
   Check, 
   X, 
@@ -90,7 +89,6 @@ export function MealVoucherManagement() {
   const [declineRequestOpen, setDeclineRequestOpen] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<VoucherPurchaseRequest | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
-  const [manualPaymentReference, setManualPaymentReference] = useState('')
   const [processingRequest, setProcessingRequest] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -243,7 +241,6 @@ export function MealVoucherManagement() {
   const handleApproveDialog = (request: any) => {
     setSelectedRequest(request)
     setAdminNotes('')
-    setManualPaymentReference(request.interacReference || '')
     setApproveRequestOpen(true)
   }
 
@@ -269,8 +266,7 @@ export function MealVoucherManagement() {
         },
         body: JSON.stringify({
           status: 'approved',
-          adminNotes: adminNotes || undefined,
-          paymentReference: manualPaymentReference.trim()
+          adminNotes: adminNotes || undefined
         })
       });
       
@@ -1096,20 +1092,42 @@ export function MealVoucherManagement() {
                   </CardContent>
                 </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="manual-payment-reference" className="text-[#6B5F53]">
-                    Interac transaction reference <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="manual-payment-reference"
-                    value={manualPaymentReference}
-                    onChange={(event) => setManualPaymentReference(event.target.value.toUpperCase())}
-                    placeholder="Example: C1AJH4XQXJVR"
-                    className="font-mono uppercase"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Copy the real reference from the bank receipt. The same reference cannot approve another request.
-                  </p>
+                <div className={`rounded-lg border p-3 text-sm ${
+                  selectedRequest.paymentVerificationStatus === 'matched'
+                    ? 'border-green-200 bg-green-50 text-green-800'
+                    : selectedRequest.paymentVerificationStatus === 'duplicate' || selectedRequest.paymentVerificationStatus === 'review'
+                      ? 'border-red-200 bg-red-50 text-red-800'
+                    : 'border-amber-200 bg-amber-50 text-amber-800'
+                }`}>
+                  {selectedRequest.paymentVerificationStatus === 'matched' ? (
+                    <>
+                      <p className="font-medium">Verified Interac deposit found</p>
+                      <p className="mt-1 text-xs">
+                        The sender email and exact amount match Kapioo&apos;s authenticated deposit email. The internal reference will be recorded automatically.
+                      </p>
+                    </>
+                  ) : selectedRequest.paymentVerificationStatus === 'duplicate' ? (
+                    <>
+                      <p className="font-medium">Possible duplicate request</p>
+                      <p className="mt-1 text-xs">
+                        The matching deposit is already tied to {selectedRequest.duplicateOfRequestId || 'an earlier request'}. This request cannot reuse it.
+                      </p>
+                    </>
+                  ) : selectedRequest.paymentVerificationStatus === 'review' ? (
+                    <>
+                      <p className="font-medium">Payment needs review</p>
+                      <p className="mt-1 text-xs">
+                        The system could not identify one clear deposit. No vouchers will be issued from this screen.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium">Waiting for a verified Interac deposit</p>
+                      <p className="mt-1 text-xs">
+                        Approval will become available after the system finds one clear match in Kapioo&apos;s email.
+                      </p>
+                    </>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -1140,7 +1158,7 @@ export function MealVoucherManagement() {
             </Button>
             <Button
               onClick={handleApproveRequest}
-              disabled={processingRequest || !isValidInteracReference(manualPaymentReference)}
+              disabled={processingRequest || selectedRequest?.paymentVerificationStatus !== 'matched'}
               className="bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90"
             >
               {processingRequest ? (

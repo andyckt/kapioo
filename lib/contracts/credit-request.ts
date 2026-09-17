@@ -78,10 +78,6 @@ export const adminCreditPurchaseActionBodySchema = z.object({
   approvedSixteenMeals: z.coerce.number().default(0),
   approvedCredits: z.coerce.number().default(0),
   adminNotes: z.string().optional(),
-  paymentReference: z.preprocess(
-    (value) => typeof value === "string" && !value.trim() ? undefined : value,
-    z.string().trim().refine(isValidInteracReference, "Invalid Interac reference").optional(),
-  ),
 });
 
 export type AdminCreditPurchaseActionBody = z.infer<

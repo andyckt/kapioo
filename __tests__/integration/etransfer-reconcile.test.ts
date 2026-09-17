@@ -134,7 +134,7 @@ describe("e-Transfer reconciliation", () => {
     });
   });
 
-  it("approves the first identical ticket and declines the duplicate", async () => {
+  it("approves the first identical ticket and flags the duplicate without granting twice", async () => {
     const user = await createTestUser({
       email: "duplicate-worker@example.com",
       twoDishVoucher: 0,
@@ -189,7 +189,7 @@ describe("e-Transfer reconciliation", () => {
     expect(result).toMatchObject({ approved: 1, duplicates: 1 });
     expect(first?.status).toBe("approved");
     expect(duplicate).toMatchObject({
-      status: "declined",
+      status: "pending",
       paymentVerificationStatus: "duplicate",
       duplicateOfRequestId: "VPR-5002",
     });
@@ -264,7 +264,7 @@ describe("e-Transfer reconciliation", () => {
     ]);
     expect(first?.status).toBe("approved");
     expect(duplicate).toMatchObject({
-      status: "declined",
+      status: "pending",
       paymentVerificationStatus: "duplicate",
       duplicateOfRequestId: "VPR-5005",
     });
@@ -573,7 +573,11 @@ describe("e-Transfer reconciliation", () => {
 
     expect(result.approved).toBe(1);
     expect(first?.status).toBe("approved");
-    expect(second?.status).toBe("pending");
+    expect(second).toMatchObject({
+      status: "pending",
+      paymentVerificationStatus: "duplicate",
+      duplicateOfRequestId: "VPR-5011",
+    });
     expect(reloadedUser?.twoDishVoucher).toBe(6);
     expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
     expect(await Transaction.countDocuments()).toBe(1);

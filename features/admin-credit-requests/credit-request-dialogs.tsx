@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { CreditRequest } from "@/lib/types/admin"
-import { isValidInteracReference } from "@/lib/etransfer/config"
 
 import { getCreditRequestAmount, getCreditRequestUserInfo } from "./request-display"
 
@@ -40,8 +39,6 @@ interface CreditRequestDialogsProps {
   setApprovedSixteenMeals: Dispatch<SetStateAction<number>>
   adminNotes: string
   setAdminNotes: Dispatch<SetStateAction<string>>
-  manualPaymentReference: string
-  setManualPaymentReference: Dispatch<SetStateAction<string>>
   processingRequest: boolean
   onHandleApproveRequest: (request: CreditRequest) => void
   onHandleDeclineRequest: (request: CreditRequest) => void
@@ -102,8 +99,6 @@ export function CreditRequestDialogs({
   setApprovedSixteenMeals,
   adminNotes,
   setAdminNotes,
-  manualPaymentReference,
-  setManualPaymentReference,
   processingRequest,
   onHandleApproveRequest,
   onHandleDeclineRequest,
@@ -618,20 +613,42 @@ export function CreditRequestDialogs({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {selectedRequest?.paymentMethod === "emt" ? (
-                  <div>
-                    <Label htmlFor="manual-payment-reference" className="text-sm font-medium">
-                      Interac transaction reference <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="manual-payment-reference"
-                      value={manualPaymentReference}
-                      onChange={(event) => setManualPaymentReference(event.target.value.toUpperCase())}
-                      className="mt-1 font-mono uppercase"
-                      placeholder="Copy from the bank receipt"
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      This real bank reference can be used for only one approval.
-                    </p>
+                  <div className={`rounded-lg border p-3 text-sm ${
+                    selectedRequest.paymentVerificationStatus === "matched"
+                      ? "border-green-200 bg-green-50 text-green-800"
+                      : selectedRequest.paymentVerificationStatus === "duplicate" || selectedRequest.paymentVerificationStatus === "review"
+                        ? "border-red-200 bg-red-50 text-red-800"
+                      : "border-amber-200 bg-amber-50 text-amber-800"
+                  }`}>
+                    {selectedRequest.paymentVerificationStatus === "matched" ? (
+                      <>
+                        <p className="font-medium">Verified Interac deposit found</p>
+                        <p className="mt-1 text-xs">
+                          The sender email and exact amount match Kapioo&apos;s authenticated deposit email. The internal reference will be recorded automatically.
+                        </p>
+                      </>
+                    ) : selectedRequest.paymentVerificationStatus === "duplicate" ? (
+                      <>
+                        <p className="font-medium">Possible duplicate request</p>
+                        <p className="mt-1 text-xs">
+                          The matching deposit is already tied to {selectedRequest.duplicateOfRequestId || "an earlier request"}. This request cannot reuse it.
+                        </p>
+                      </>
+                    ) : selectedRequest.paymentVerificationStatus === "review" ? (
+                      <>
+                        <p className="font-medium">Payment needs review</p>
+                        <p className="mt-1 text-xs">
+                          The system could not identify one clear deposit. No vouchers will be issued from this screen.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium">Waiting for a verified Interac deposit</p>
+                        <p className="mt-1 text-xs">
+                          Approval will become available after the system finds one clear match in Kapioo&apos;s email.
+                        </p>
+                      </>
+                    )}
                   </div>
                 ) : null}
                 <div>
@@ -683,7 +700,7 @@ export function CreditRequestDialogs({
                   processingRequest ||
                   !hasApprovedPlanCounts ||
                   (selectedRequest?.paymentMethod === "emt" &&
-                    !isValidInteracReference(manualPaymentReference))
+                    selectedRequest.paymentVerificationStatus !== "matched")
                 }
                 className="bg-green-600 hover:bg-green-700 px-6 gap-2"
               >

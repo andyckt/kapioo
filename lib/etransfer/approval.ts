@@ -10,6 +10,7 @@ import {
 } from "@/lib/plans/service";
 import AuditLog from "@/models/AuditLog";
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
+import InteracPayerEmail from "@/models/InteracPayerEmail";
 import InteracReceipt from "@/models/InteracReceipt";
 import User from "@/models/User";
 import VoucherApprovalGrant from "@/models/VoucherApprovalGrant";
@@ -22,6 +23,7 @@ import {
   normalizeEmail,
   normalizeInteracReference,
 } from "./config";
+import { PAYMENT_FIRST_MATCH_WINDOW_MS } from "./payment-intent";
 
 export type VoucherRequestKind = "daily" | "weekly";
 export type ApprovalSource = "automatic" | "manual";
@@ -120,38 +122,20 @@ function getEntitlement(
   };
 }
 
-async function ensureManualReceipt(
+async function ensureManualWechatReceipt(
   kind: VoucherRequestKind,
   request: Record<string, any>,
-  manualPaymentReference: string | undefined,
   session: mongoose.ClientSession
 ) {
   const config = getEtransferAutomationConfig();
-  const isEtransfer = kind === "daily" || request.paymentMethod !== "wechat";
-  const submittedReference = request.interacReference || manualPaymentReference || "";
-  const suppliedReference = isEtransfer
-    ? submittedReference
-    : `manual-wechat-${request.requestId}`;
-  const normalizedReference = isEtransfer
-    ? request.interacReferenceNormalized || normalizeInteracReference(suppliedReference)
-    : `MANUALWECHAT${normalizeInteracReference(request.requestId)}`;
-  if (isEtransfer && (!normalizedReference || !/^[A-Z0-9]{8,24}$/.test(normalizedReference))) {
+  if (kind !== "weekly" || request.paymentMethod !== "wechat") {
     throw new VoucherApprovalError(
-      "Enter the real Interac transaction reference before approving",
-      "PAYMENT_REFERENCE_REQUIRED"
+      "A verified Interac deposit must be matched before approval",
+      "PAYMENT_NOT_FOUND"
     );
   }
-  if (
-    isEtransfer &&
-    request.interacReferenceNormalized &&
-    manualPaymentReference &&
-    normalizeInteracReference(manualPaymentReference) !== request.interacReferenceNormalized
-  ) {
-    throw new VoucherApprovalError(
-      "The entered payment reference does not match the request",
-      "PAYMENT_MISMATCH"
-    );
-  }
+  const suppliedReference = `manual-wechat-${request.requestId}`;
+  const normalizedReference = `MANUALWECHAT${normalizeInteracReference(request.requestId)}`;
   const existing = await InteracReceipt.findOne({
     provider: "interac",
     mailbox: config.recipientEmail,
@@ -189,22 +173,99 @@ async function ensureManualReceipt(
   return created[0];
 }
 
-function assertReceiptMatchesRequest(
+async function findVerifiedInteracReceipt(
+  kind: VoucherRequestKind,
   request: Record<string, any>,
-  receipt: Record<string, any>,
-  source: ApprovalSource
+  session: mongoose.ClientSession
 ) {
+  const config = getEtransferAutomationConfig();
+  const mailbox = config.mailbox || config.recipientEmail;
+
+  if (request.matchedPaymentReceiptId) {
+    const matched = await InteracReceipt.findOne({
+      _id: request.matchedPaymentReceiptId,
+      provider: "interac",
+      mailbox,
+    }).session(session);
+    if (!matched) {
+      throw new VoucherApprovalError(
+        "The matched Interac deposit can no longer be found",
+        "PAYMENT_NOT_FOUND"
+      );
+    }
+    return matched;
+  }
+
+  const earliestEligibleReceipt = new Date(
+    Math.max(
+      config.activationAt?.getTime() || 0,
+      new Date(request.createdAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
+    )
+  );
+  const receipts = await InteracReceipt.find({
+    provider: "interac",
+    mailbox,
+    payerEmailNormalized: normalizeEmail(request.referenceNumber || ""),
+    amountCents: getRequestAmountCents(request),
+    currency: "CAD",
+    authenticationVerified: true,
+    status: "unmatched",
+    receivedAt: { $gte: earliestEligibleReceipt },
+  })
+    .sort({ receivedAt: 1, referenceNormalized: 1 })
+    .limit(2)
+    .session(session);
+
+  if (receipts.length === 0) {
+    throw new VoucherApprovalError(
+      "No verified Interac deposit matches this email and amount yet",
+      "PAYMENT_NOT_FOUND"
+    );
+  }
+  if (receipts.length > 1) {
+    throw new VoucherApprovalError(
+      "More than one Interac deposit matches this request. Leave it pending for payment review",
+      "PAYMENT_AMBIGUOUS"
+    );
+  }
+
+  const competingFilter = {
+    status: "pending",
+    payerEmailIdentityId: request.payerEmailIdentityId,
+    amountCents: getRequestAmountCents(request),
+    createdAt: {
+      $gte: earliestEligibleReceipt,
+      $lte: new Date(new Date(receipts[0].receivedAt).getTime() + PAYMENT_FIRST_MATCH_WINDOW_MS),
+    },
+  };
+  const [dailyMatches, weeklyMatches] = await Promise.all([
+    VoucherPurchaseRequest.countDocuments(competingFilter).session(session),
+    CreditPurchaseRequest.countDocuments({
+      ...competingFilter,
+      paymentMethod: "emt",
+    }).session(session),
+  ]);
+  if (dailyMatches + weeklyMatches !== 1) {
+    throw new VoucherApprovalError(
+      "More than one open voucher request matches this deposit. Leave it pending for duplicate review",
+      "PAYMENT_AMBIGUOUS"
+    );
+  }
+
+  return receipts[0];
+}
+
+function assertReceiptMatchesRequest(
+  kind: VoucherRequestKind,
+  request: Record<string, any>,
+  receipt: Record<string, any>
+) {
+  const isEtransfer = kind === "daily" || request.paymentMethod !== "wechat";
   if (receipt.status === "conflict") {
     throw new VoucherApprovalError("Payment receipt has conflicting evidence", "PAYMENT_CONFLICT");
   }
-  if (source === "automatic" && !receipt.authenticationVerified) {
+  if (isEtransfer && !receipt.authenticationVerified) {
     throw new VoucherApprovalError("Payment receipt is not cryptographically verified", "UNVERIFIED_PAYMENT");
-  }
-  if (
-    request.interacReferenceNormalized &&
-    receipt.referenceNormalized !== request.interacReferenceNormalized
-  ) {
-    throw new VoucherApprovalError("Payment reference does not match request", "PAYMENT_MISMATCH");
   }
   if (receipt.payerEmailNormalized !== normalizeEmail(request.referenceNumber)) {
     throw new VoucherApprovalError("Payment sender email does not match request", "PAYMENT_MISMATCH");
@@ -219,7 +280,6 @@ export async function approveVoucherPurchase(options: {
   requestId: string;
   source: ApprovalSource;
   receiptId?: string;
-  manualPaymentReference?: string;
   actor?: { user?: { _id?: unknown; email?: string }; role?: "admin" | "user" } | null;
   adminNotes?: string;
 }) {
@@ -250,21 +310,35 @@ export async function approveVoucherPurchase(options: {
 
       const requestObject = purchaseRequest.toObject() as Record<string, any>;
       const entitlement = getEntitlement(options.kind, requestObject, options.source);
+      const isEtransfer = options.kind === "daily" || requestObject.paymentMethod !== "wechat";
+      if (isEtransfer) {
+        const linkedEmail = requestObject.payerEmailIdentityId
+          ? await InteracPayerEmail.findOne({
+              _id: requestObject.payerEmailIdentityId,
+              userId: purchaseRequest.userId,
+              emailNormalized: normalizeEmail(requestObject.referenceNumber || ""),
+              status: "verified",
+            }).session(session)
+          : null;
+        if (!linkedEmail) {
+          throw new VoucherApprovalError(
+            "The customer's Interac email must be verified before this request can be approved",
+            "PAYER_EMAIL_NOT_VERIFIED"
+          );
+        }
+      }
       let receipt = options.receiptId
         ? await InteracReceipt.findById(options.receiptId).session(session)
         : null;
       if (!receipt && options.source === "manual") {
-        receipt = await ensureManualReceipt(
-          options.kind,
-          requestObject,
-          options.manualPaymentReference,
-          session
-        );
+        receipt = options.kind === "weekly" && requestObject.paymentMethod === "wechat"
+          ? await ensureManualWechatReceipt(options.kind, requestObject, session)
+          : await findVerifiedInteracReceipt(options.kind, requestObject, session);
       }
       if (!receipt) {
         throw new VoucherApprovalError("Verified payment receipt not found", "PAYMENT_NOT_FOUND");
       }
-      assertReceiptMatchesRequest(requestObject, receipt.toObject(), options.source);
+      assertReceiptMatchesRequest(options.kind, requestObject, receipt.toObject());
 
       if (receipt.allocatedRequestKey && receipt.allocatedRequestKey !== reqKey) {
         throw new VoucherApprovalError("Payment was already used for another request", "PAYMENT_ALREADY_USED");
@@ -314,7 +388,7 @@ export async function approveVoucherPurchase(options: {
       purchaseRequest.approvalSource = options.source;
       purchaseRequest.paymentVerificationStatus = "matched";
       purchaseRequest.matchedPaymentReceiptId = claimed._id;
-      if (!purchaseRequest.interacReferenceNormalized) {
+      if (options.kind === "daily" || requestObject.paymentMethod !== "wechat") {
         purchaseRequest.interacReference = claimed.reference;
         purchaseRequest.interacReferenceNormalized = claimed.referenceNormalized;
       }

@@ -2,6 +2,7 @@ import { approveVoucherPurchase } from "@/lib/etransfer/approval";
 import { saveInteracReceipt } from "@/lib/etransfer/mailbox";
 import AuditLog from "@/models/AuditLog";
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
+import InteracPayerEmail from "@/models/InteracPayerEmail";
 import InteracReceipt from "@/models/InteracReceipt";
 import Transaction from "@/models/Transaction";
 import User from "@/models/User";
@@ -44,6 +45,20 @@ async function createReceipt(options: {
   });
 }
 
+async function createVerifiedPayerEmail(user: { _id: unknown; email: string }) {
+  const verifiedAt = new Date();
+  const identity = await InteracPayerEmail.create({
+    userId: user._id,
+    slot: 1,
+    email: user.email,
+    emailNormalized: user.email.toLowerCase(),
+    status: "verified",
+    failedAttempts: 0,
+    verifiedAt,
+  });
+  return { identity, verifiedAt };
+}
+
 describe("voucher auto approval accounting boundary", () => {
   beforeAll(async () => {
     process.env.ETRANSFER_RECIPIENT_EMAIL = MAILBOX;
@@ -71,6 +86,7 @@ describe("voucher auto approval accounting boundary", () => {
       email: "daily-customer@example.com",
       twoDishVoucher: 0,
     });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
     const request = await VoucherPurchaseRequest.create({
       requestId: "VPR-2001",
       userId: user._id,
@@ -82,6 +98,8 @@ describe("voucher auto approval accounting boundary", () => {
       amountCents: 14700,
       imageProof: "https://example.com/proof.jpg",
       referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
       interacReference: "CA20010001",
       interacReferenceNormalized: "CA20010001",
       paymentVerificationStatus: "pending",
@@ -122,6 +140,7 @@ describe("voucher auto approval accounting boundary", () => {
       email: "duplicate-customer@example.com",
       twoDishVoucher: 0,
     });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
     const base = {
       userId: user._id,
       planId: "daily-2dish-6",
@@ -132,6 +151,8 @@ describe("voucher auto approval accounting boundary", () => {
       amountCents: 14700,
       imageProof: "https://example.com/proof.jpg",
       referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
       interacReference: "CA20020001",
       interacReferenceNormalized: "CA20020001",
       paymentVerificationStatus: "pending",
@@ -173,6 +194,7 @@ describe("voucher auto approval accounting boundary", () => {
       email: "mismatch-customer@example.com",
       weeklySIXmeals: 0,
     });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
     await CreditPurchaseRequest.create({
       requestId: "CR-REQ-2001",
       userId: user._id,
@@ -184,6 +206,8 @@ describe("voucher auto approval accounting boundary", () => {
       paymentMethod: "emt",
       imageProof: "https://example.com/proof.jpg",
       referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
       interacReference: "CA20030001",
       interacReferenceNormalized: "CA20030001",
       mealPlanType: "6aweek",
@@ -240,12 +264,13 @@ describe("voucher auto approval accounting boundary", () => {
     expect(ids).toContain("CR-10012");
   });
 
-  it("replaces matching manual evidence with the later signed Gmail receipt", async () => {
+  it("refuses manual Interac approval until a signed Gmail receipt exists", async () => {
     const user = await createTestUser({
       email: "manual-then-signed@example.com",
       twoDishVoucher: 0,
     });
-    await VoucherPurchaseRequest.create({
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const request = await VoucherPurchaseRequest.create({
       requestId: "VPR-2004",
       userId: user._id,
       planId: "daily-2dish-6",
@@ -256,16 +281,15 @@ describe("voucher auto approval accounting boundary", () => {
       amountCents: 14803,
       imageProof: "https://example.com/proof.jpg",
       referenceNumber: user.email,
-      interacReference: "CA20040001",
-      interacReferenceNormalized: "CA20040001",
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
       paymentVerificationStatus: "manual",
       status: "pending",
     });
-    await approveVoucherPurchase({
-      kind: "daily",
-      requestId: "VPR-2004",
-      source: "manual",
-    });
+
+    await expect(
+      approveVoucherPurchase({ kind: "daily", requestId: request.requestId, source: "manual" })
+    ).rejects.toMatchObject({ code: "PAYMENT_NOT_FOUND" });
 
     await saveInteracReceipt(
       {
@@ -291,9 +315,14 @@ describe("voucher auto approval accounting boundary", () => {
       "1"
     );
 
-    const receipts = await InteracReceipt.find().lean();
-    expect(receipts).toHaveLength(1);
-    expect(receipts[0]).toMatchObject({
+    await approveVoucherPurchase({
+      kind: "daily",
+      requestId: request.requestId,
+      source: "manual",
+    });
+
+    const receipt = await InteracReceipt.findOne({ referenceNormalized: "CA20040001" }).lean();
+    expect(receipt).toMatchObject({
       status: "allocated",
       allocatedRequestKey: "daily:VPR-2004",
       parserVersion: "1",
@@ -303,10 +332,16 @@ describe("voucher auto approval accounting boundary", () => {
     });
   });
 
-  it("requires a real reference for manual approval and cannot reuse it", async () => {
+  it("uses the recipient receipt reference internally and cannot reuse one deposit", async () => {
     const user = await createTestUser({
       email: "manual-reference@example.com",
       twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const receipt = await createReceipt({
+      reference: "C1ARYTDCHDSB",
+      payerEmail: user.email,
+      amountCents: 14803,
     });
     const base = {
       userId: user._id,
@@ -318,7 +353,12 @@ describe("voucher auto approval accounting boundary", () => {
       amountCents: 14803,
       imageProof: "https://example.com/proof.jpg",
       referenceNumber: user.email,
-      paymentVerificationStatus: "manual",
+      interacReference: "H090061752026091701151110",
+      interacReferenceNormalized: "H090061752026091701151110",
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      matchedPaymentReceiptId: receipt._id,
+      paymentVerificationStatus: "matched",
       status: "pending",
     } as const;
     await VoucherPurchaseRequest.create([
@@ -326,27 +366,95 @@ describe("voucher auto approval accounting boundary", () => {
       { ...base, requestId: "VPR-2006" },
     ]);
 
-    await expect(
-      approveVoucherPurchase({ kind: "daily", requestId: "VPR-2005", source: "manual" })
-    ).rejects.toMatchObject({ code: "PAYMENT_REFERENCE_REQUIRED" });
-
     await approveVoucherPurchase({
       kind: "daily",
       requestId: "VPR-2005",
       source: "manual",
-      manualPaymentReference: "CA20050001",
     });
     await expect(
       approveVoucherPurchase({
         kind: "daily",
         requestId: "VPR-2006",
         source: "manual",
-        manualPaymentReference: "CA20050001",
       })
     ).rejects.toMatchObject({ code: "PAYMENT_ALREADY_USED" });
 
     expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(6);
     expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+    expect(
+      (await VoucherPurchaseRequest.findOne({ requestId: "VPR-2005" }).lean() as Record<string, any>)
+        ?.interacReferenceNormalized
+    ).toBe("C1ARYTDCHDSB");
+  });
+
+  it("rejects an Interac receipt that did not pass email authentication", async () => {
+    const user = await createTestUser({
+      email: "unverified-receipt@example.com",
+      twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const receipt = await createReceipt({
+      reference: "CA20070001",
+      payerEmail: user.email,
+      amountCents: 14803,
+    });
+    receipt.authenticationVerified = false;
+    await receipt.save();
+    await VoucherPurchaseRequest.create({
+      requestId: "VPR-2007",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 148.03,
+      finalTotal: 148.03,
+      amountCents: 14803,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      matchedPaymentReceiptId: receipt._id,
+      paymentVerificationStatus: "matched",
+      status: "pending",
+    });
+
+    await expect(
+      approveVoucherPurchase({ kind: "daily", requestId: "VPR-2007", source: "manual" })
+    ).rejects.toMatchObject({ code: "UNVERIFIED_PAYMENT" });
+    expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(0);
+  });
+
+  it("keeps approval pending when more than one real deposit could match", async () => {
+    const user = await createTestUser({
+      email: "ambiguous-deposits@example.com",
+      twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    await Promise.all([
+      createReceipt({ reference: "CA20080001", payerEmail: user.email, amountCents: 14803 }),
+      createReceipt({ reference: "CA20080002", payerEmail: user.email, amountCents: 14803 }),
+    ]);
+    await VoucherPurchaseRequest.create({
+      requestId: "VPR-2008",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 148.03,
+      finalTotal: 148.03,
+      amountCents: 14803,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      paymentVerificationStatus: "review",
+      status: "pending",
+    });
+
+    await expect(
+      approveVoucherPurchase({ kind: "daily", requestId: "VPR-2008", source: "manual" })
+    ).rejects.toMatchObject({ code: "PAYMENT_AMBIGUOUS" });
+    expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(0);
   });
 
   it("keeps existing manual WeChat approvals working without an Interac reference", async () => {

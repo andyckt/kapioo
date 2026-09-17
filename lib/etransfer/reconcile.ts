@@ -7,7 +7,6 @@ import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 
 import {
   approveVoucherPurchase,
-  declineVoucherPurchase,
   VoucherApprovalError,
   type VoucherRequestKind,
 } from "./approval";
@@ -64,7 +63,6 @@ async function findEarliestIdenticalPendingRequest(
         ],
       },
       createdAt: { $gte: activationAt },
-      interacReferenceNormalized: current.interacReferenceNormalized,
       userId: current.userId,
       amountCents: amountCents(current),
       ...planFilter,
@@ -138,8 +136,6 @@ function requestMatchesReceipt(
     new Date(request.createdAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
   );
   return (
-    (!request.interacReferenceNormalized ||
-      request.interacReferenceNormalized === receipt.referenceNormalized) &&
     normalizeEmail(request.referenceNumber || "") === receipt.payerEmailNormalized &&
     amountCents(request) === receipt.amountCents &&
     receipt.currency === "CAD" &&
@@ -159,36 +155,7 @@ function envelopeKey(kind: VoucherRequestKind, request: Record<string, any>) {
   return `${kind}:${request.requestId}`;
 }
 
-async function findExactRequestForReceipt(
-  receipt: Record<string, any>,
-  identityId: unknown,
-  activationAt: Date
-) {
-  const filter = {
-    status: "pending",
-    paymentVerificationStatus: { $in: ["pending", "not_found", "failed", "matched"] },
-    payerEmailIdentityId: identityId,
-    amountCents: receipt.amountCents,
-    interacReferenceNormalized: receipt.referenceNormalized,
-    createdAt: { $gte: activationAt },
-  };
-  const [daily, weekly] = await Promise.all([
-    VoucherPurchaseRequest.findOne(filter).sort({ createdAt: 1, requestId: 1 }).lean(),
-    CreditPurchaseRequest.findOne({ ...filter, paymentMethod: "emt" })
-      .sort({ createdAt: 1, requestId: 1 })
-      .lean(),
-  ]);
-  return [
-    ...(daily ? [{ kind: "daily" as const, request: daily as Record<string, any> }] : []),
-    ...(weekly ? [{ kind: "weekly" as const, request: weekly as Record<string, any> }] : []),
-  ].sort(
-    (left, right) =>
-      new Date(left.request.createdAt).getTime() - new Date(right.request.createdAt).getTime() ||
-      String(left.request.requestId).localeCompare(String(right.request.requestId))
-  )[0];
-}
-
-async function getNoReferenceRequestsForReceipt(
+async function getCandidateRequestsForReceipt(
   receipt: Record<string, any>,
   identityId: unknown,
   activationAt: Date
@@ -207,11 +174,6 @@ async function getNoReferenceRequestsForReceipt(
     paymentVerificationStatus: { $in: ["pending", "not_found", "failed", "review"] },
     payerEmailIdentityId: identityId,
     amountCents: receipt.amountCents,
-    $or: [
-      { interacReferenceNormalized: { $exists: false } },
-      { interacReferenceNormalized: null },
-      { interacReferenceNormalized: "" },
-    ],
     createdAt: { $gte: activationAt, $lte: latestRequestTime },
   };
   const [daily, weekly] = await Promise.all([
@@ -243,17 +205,6 @@ async function resolveReceiptForRequest(
   request: Record<string, any>,
   activationAt: Date
 ): Promise<ReceiptResolution> {
-  if (request.interacReferenceNormalized) {
-    const receipt = await InteracReceipt.findOne({
-      provider: "interac",
-      mailbox: getEtransferAutomationConfig().mailbox,
-      referenceNormalized: request.interacReferenceNormalized,
-    }).lean();
-    return receipt
-      ? { status: "found", receipt: receipt as Record<string, any> }
-      : { status: "not_found" };
-  }
-
   const earliestEligibleReceipt = new Date(
     Math.max(
       activationAt.getTime(),
@@ -276,16 +227,7 @@ async function resolveReceiptForRequest(
 
   for (const rawReceipt of receipts) {
     const receipt = rawReceipt as Record<string, any>;
-    const exactRequest = await findExactRequestForReceipt(
-      receipt,
-      request.payerEmailIdentityId,
-      activationAt
-    );
-    if (exactRequest && envelopeKey(exactRequest.kind, exactRequest.request) !== envelopeKey(kind, request)) {
-      continue;
-    }
-
-    const candidates = await getNoReferenceRequestsForReceipt(
+    const candidates = await getCandidateRequestsForReceipt(
       receipt,
       request.payerEmailIdentityId,
       activationAt
@@ -301,13 +243,42 @@ async function resolveReceiptForRequest(
       return {
         status: "ambiguous",
         reason:
-          "More than one different open voucher request matches this sender and amount; enter the Interac reference or review manually",
+          "More than one different open voucher request matches this sender and amount; review the real recipient receipts",
       };
     }
     if (envelopeKey(first.kind, first.request) !== envelopeKey(kind, request)) {
       return { status: "waiting", requestId: first.request.requestId };
     }
     return { status: "found", receipt };
+  }
+
+  // A second ticket that was already open when the receipt was allocated is a
+  // duplicate candidate. Do not use older allocated payments for requests made
+  // later, because that could consume a customer's new legitimate purchase.
+  const allocatedReceipts = await InteracReceipt.find({
+    provider: "interac",
+    mailbox: getEtransferAutomationConfig().mailbox,
+    payerEmailNormalized: normalizeEmail(request.referenceNumber || ""),
+    amountCents: amountCents(request),
+    currency: "CAD",
+    authenticationVerified: true,
+    status: "allocated",
+    allocatedAt: { $gte: new Date(request.createdAt) },
+    receivedAt: { $gte: earliestEligibleReceipt },
+  })
+    .sort({ allocatedAt: 1, referenceNormalized: 1 })
+    .limit(10)
+    .lean();
+  for (const allocatedReceipt of allocatedReceipts) {
+    if (
+      await isIdenticalDuplicate(
+        kind,
+        request,
+        allocatedReceipt as Record<string, any>
+      )
+    ) {
+      return { status: "found", receipt: allocatedReceipt as Record<string, any> };
+    }
   }
   return { status: "not_found" };
 }
@@ -458,22 +429,13 @@ export async function reconcileEtransferPurchases() {
 
     if (receipt.allocatedRequestKey && receipt.allocatedRequestId !== request.requestId) {
       if (await isIdenticalDuplicate(kind, request as Record<string, any>, receipt as Record<string, any>)) {
-        if (config.mode === "observe") {
-          await updateCheckResult(kind, request.requestId, {
-            paymentVerificationStatus: "duplicate",
-            paymentCheckError: `Payment is already applied to ${receipt.allocatedRequestId}`,
-            paymentReviewRequired: true,
-            duplicateOfRequestId: receipt.allocatedRequestId,
-            nextPaymentCheckAt: null,
-          });
-        } else {
-          await declineVoucherPurchase({
-            kind,
-            requestId: request.requestId,
-            reason: `Duplicate request for payment already applied to ${receipt.allocatedRequestId}`,
-            duplicateOfRequestId: receipt.allocatedRequestId,
-          });
-        }
+        await updateCheckResult(kind, request.requestId, {
+          paymentVerificationStatus: "duplicate",
+          paymentCheckError: `Payment is already applied to ${receipt.allocatedRequestId}`,
+          paymentReviewRequired: true,
+          duplicateOfRequestId: receipt.allocatedRequestId,
+          nextPaymentCheckAt: null,
+        });
         duplicates += 1;
       } else {
         reviewed += 1;
@@ -570,11 +532,12 @@ export async function reconcileEtransferPurchases() {
             latestReceipt as Record<string, any>
           )
         ) {
-          await declineVoucherPurchase({
-            kind,
-            requestId: request.requestId,
-            reason: `Duplicate request for payment already applied to ${latestReceipt.allocatedRequestId}`,
+          await updateCheckResult(kind, request.requestId, {
+            paymentVerificationStatus: "duplicate",
+            paymentCheckError: `Payment is already applied to ${latestReceipt.allocatedRequestId}`,
+            paymentReviewRequired: true,
             duplicateOfRequestId: latestReceipt.allocatedRequestId,
+            nextPaymentCheckAt: null,
           });
           duplicates += 1;
           continue;

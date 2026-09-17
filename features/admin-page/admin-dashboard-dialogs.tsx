@@ -39,8 +39,6 @@ export interface AdminDashboardDialogsProps {
   setApprovedSixteenMeals: Dispatch<SetStateAction<number>>
   adminNotes: string
   setAdminNotes: Dispatch<SetStateAction<string>>
-  manualPaymentReference: string
-  setManualPaymentReference: Dispatch<SetStateAction<string>>
   processingRequest: boolean
   handleApproveRequest: (r: CreditRequest) => void
   handleDeclineRequest: (r: CreditRequest) => void
@@ -98,8 +96,6 @@ export function AdminDashboardDialogs(props: AdminDashboardDialogsProps) {
         setApprovedSixteenMeals={props.setApprovedSixteenMeals}
         adminNotes={props.adminNotes}
         setAdminNotes={props.setAdminNotes}
-        manualPaymentReference={props.manualPaymentReference}
-        setManualPaymentReference={props.setManualPaymentReference}
         processingRequest={props.processingRequest}
         onHandleApproveRequest={props.handleApproveRequest}
         onHandleDeclineRequest={props.handleDeclineRequest}

@@ -43,10 +43,6 @@ export const voucherRequestIdParamSchema = z.object({
 export const updateVoucherPurchaseRequestBodySchema = z.object({
   status: z.enum(["approved", "declined"]),
   adminNotes: z.string().optional(),
-  paymentReference: z.preprocess(
-    (value) => typeof value === "string" && !value.trim() ? undefined : value,
-    z.string().trim().refine(isValidInteracReference, "Invalid Interac reference").optional(),
-  ),
 });
 
 export type UpdateVoucherPurchaseRequestBody = z.infer<
