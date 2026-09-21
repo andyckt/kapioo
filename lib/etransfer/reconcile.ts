@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto";
+
 import type { Model } from "mongoose";
 
+import AuditLog from "@/models/AuditLog";
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
 import InteracPayerEmail from "@/models/InteracPayerEmail";
 import InteracReceipt from "@/models/InteracReceipt";
@@ -12,6 +15,7 @@ import {
 } from "./approval";
 import {
   assertMailboxConfiguration,
+  type EtransferAutomationConfig,
   getEtransferAutomationConfig,
   getNextPaymentCheckAt,
   moneyToCents,
@@ -21,6 +25,84 @@ import { syncInteracReceipts } from "./mailbox";
 import { PAYMENT_FIRST_MATCH_WINDOW_MS } from "./payment-intent";
 
 const REQUESTS_PER_RUN = 25;
+
+type ObservationDecision =
+  | "matched"
+  | "not_found"
+  | "waiting"
+  | "review"
+  | "duplicate"
+  | "failed";
+
+function emailHash(value: unknown) {
+  return createHash("sha256")
+    .update(normalizeEmail(String(value || "")))
+    .digest("hex");
+}
+
+async function recordObservation(options: {
+  config: EtransferAutomationConfig;
+  kind: VoucherRequestKind;
+  request: Record<string, any>;
+  decision: ObservationDecision;
+  reasonCode: string;
+  linkedEmailVerified?: boolean;
+  receipt?: Record<string, any>;
+  relatedRequestId?: string;
+}) {
+  if (options.config.mode !== "observe") return;
+
+  const { request, receipt } = options;
+  const activationAt = options.config.activationAt as Date;
+  const earliestEligibleReceipt = Math.max(
+    activationAt.getTime(),
+    new Date(request.createdAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
+  );
+  const requestEmail = normalizeEmail(request.referenceNumber || "");
+  const receiptEmail = receipt ? normalizeEmail(receipt.payerEmailNormalized || "") : "";
+
+  await AuditLog.create({
+    actorRole: "system",
+    action: "etransfer.reconciliation-decision",
+    targetType: "voucher-request",
+    targetId: request.requestId,
+    metadata: {
+      schemaVersion: 1,
+      mode: options.config.mode,
+      requestKind: options.kind,
+      requestKey: envelopeKey(options.kind, request),
+      decision: options.decision,
+      reasonCode: options.reasonCode,
+      checkAttempt: Number(request.paymentCheckAttempts || 0) + 1,
+      requestCreatedAt: new Date(request.createdAt),
+      requestAmountCents: amountCents(request),
+      requestEmailHash: emailHash(requestEmail),
+      payerEmailIdentityId: request.payerEmailIdentityId
+        ? String(request.payerEmailIdentityId)
+        : null,
+      linkedEmailVerified: options.linkedEmailVerified ?? null,
+      paymentFirst: !request.interacReferenceNormalized,
+      relatedRequestId: options.relatedRequestId || null,
+      receiptId: receipt?._id ? String(receipt._id) : null,
+      receiptReferenceHash: receipt?.referenceNormalized
+        ? createHash("sha256").update(String(receipt.referenceNormalized)).digest("hex")
+        : null,
+      receiptAmountCents: receipt ? Number(receipt.amountCents) : null,
+      receiptCurrency: receipt?.currency || null,
+      receiptStatus: receipt?.status || null,
+      receiptReceivedAt: receipt?.receivedAt ? new Date(receipt.receivedAt) : null,
+      authenticationVerified: receipt ? receipt.authenticationVerified === true : null,
+      receiptConflict: receipt ? receipt.status === "conflict" : null,
+      emailMatches: receipt ? requestEmail === receiptEmail : null,
+      amountMatches: receipt ? amountCents(request) === Number(receipt.amountCents) : null,
+      currencyMatches: receipt ? receipt.currency === "CAD" : null,
+      receivedWithinWindow: receipt
+        ? new Date(receipt.receivedAt).getTime() >= earliestEligibleReceipt
+        : null,
+      receiptAlreadyAllocated: receipt ? Boolean(receipt.allocatedRequestKey) : null,
+    },
+  });
+}
 
 function modelFor(kind: VoucherRequestKind): Model<any> {
   return (kind === "daily" ? VoucherPurchaseRequest : CreditPurchaseRequest) as Model<any>;
@@ -301,6 +383,43 @@ async function isIdenticalDuplicate(
   );
 }
 
+async function findObservedMatchForReceipt(receiptId: unknown) {
+  const filter = {
+    status: "pending",
+    paymentVerificationStatus: "matched",
+    matchedPaymentReceiptId: receiptId,
+  };
+  const [daily, weekly] = await Promise.all([
+    VoucherPurchaseRequest.findOne(filter).sort({ createdAt: 1, requestId: 1 }).lean(),
+    CreditPurchaseRequest.findOne({ ...filter, paymentMethod: "emt" })
+      .sort({ createdAt: 1, requestId: 1 })
+      .lean(),
+  ]);
+  return [
+    ...(daily ? [{ kind: "daily" as const, request: daily as Record<string, any> }] : []),
+    ...(weekly ? [{ kind: "weekly" as const, request: weekly as Record<string, any> }] : []),
+  ].sort(
+    (left, right) =>
+      new Date(left.request.createdAt).getTime() - new Date(right.request.createdAt).getTime() ||
+      String(left.request.requestId).localeCompare(String(right.request.requestId))
+  )[0];
+}
+
+function isSameRequestPurchase(
+  currentKind: VoucherRequestKind,
+  current: Record<string, any>,
+  observedKind: VoucherRequestKind,
+  observed: Record<string, any>
+) {
+  return (
+    currentKind === observedKind &&
+    String(current.userId) === String(observed.userId) &&
+    String(current.planId || "") === String(observed.planId || "") &&
+    amountCents(current) === amountCents(observed) &&
+    hasSameEntitlement(currentKind, current, observed)
+  );
+}
+
 export async function reconcileEtransferPurchases() {
   const config = getEtransferAutomationConfig();
   if (config.mode === "off") {
@@ -321,15 +440,22 @@ export async function reconcileEtransferPurchases() {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Mailbox synchronization failed";
     await Promise.all(
-      due.map(({ kind, request }) =>
-        updateCheckResult(kind, request.requestId, {
+      due.map(async ({ kind, request }) => {
+        await recordObservation({
+          config,
+          kind,
+          request: request as Record<string, any>,
+          decision: "failed",
+          reasonCode: "mailbox_sync_failed",
+        });
+        await updateCheckResult(kind, request.requestId, {
           paymentVerificationStatus: "failed",
           paymentCheckError: message,
           nextPaymentCheckAt: getNextPaymentCheckAt(request.createdAt),
           paymentReviewRequired:
             Date.now() - new Date(request.createdAt).getTime() >= 72 * 60 * 60_000,
-        })
-      )
+        });
+      })
     );
     throw error;
   }
@@ -356,6 +482,14 @@ export async function reconcileEtransferPurchases() {
     }).lean();
     if (!linkedEmail) {
       reviewed += 1;
+      await recordObservation({
+        config,
+        kind,
+        request: request as Record<string, any>,
+        decision: "review",
+        reasonCode: "payer_email_unverified",
+        linkedEmailVerified: false,
+      });
       await updateCheckResult(kind, request.requestId, {
         paymentVerificationStatus: "review",
         paymentCheckError: "The Interac sender email is no longer verified for this account",
@@ -373,6 +507,14 @@ export async function reconcileEtransferPurchases() {
 
     if (resolution.status === "not_found") {
       pending += 1;
+      await recordObservation({
+        config,
+        kind,
+        request: request as Record<string, any>,
+        decision: "not_found",
+        reasonCode: "completed_deposit_not_found",
+        linkedEmailVerified: true,
+      });
       await updateCheckResult(kind, request.requestId, {
         paymentVerificationStatus: "not_found",
         paymentCheckError: "No completed Interac deposit found yet",
@@ -385,6 +527,15 @@ export async function reconcileEtransferPurchases() {
 
     if (resolution.status === "waiting") {
       pending += 1;
+      await recordObservation({
+        config,
+        kind,
+        request: request as Record<string, any>,
+        decision: "waiting",
+        reasonCode: "earlier_request_has_priority",
+        linkedEmailVerified: true,
+        relatedRequestId: resolution.requestId,
+      });
       await Promise.all([
         modelFor(kind).updateOne(
           { requestId: resolution.requestId, status: "pending" },
@@ -401,6 +552,14 @@ export async function reconcileEtransferPurchases() {
 
     if (resolution.status === "ambiguous") {
       reviewed += 1;
+      await recordObservation({
+        config,
+        kind,
+        request: request as Record<string, any>,
+        decision: "review",
+        reasonCode: "ambiguous_request_match",
+        linkedEmailVerified: true,
+      });
       await updateCheckResult(kind, request.requestId, {
         paymentVerificationStatus: "review",
         paymentCheckError: resolution.reason,
@@ -418,6 +577,15 @@ export async function reconcileEtransferPurchases() {
       config.activationAt as Date
     )) {
       reviewed += 1;
+      await recordObservation({
+        config,
+        kind,
+        request: request as Record<string, any>,
+        decision: "review",
+        reasonCode: "authenticated_receipt_mismatch",
+        linkedEmailVerified: true,
+        receipt: receipt as Record<string, any>,
+      });
       await updateCheckResult(kind, request.requestId, {
         paymentVerificationStatus: "review",
         paymentCheckError: "Receipt exists but its authenticated payment details do not match the request",
@@ -427,8 +595,73 @@ export async function reconcileEtransferPurchases() {
       continue;
     }
 
+    const observedMatch = config.mode === "observe"
+      ? await findObservedMatchForReceipt(receipt._id)
+      : undefined;
+    if (
+      observedMatch &&
+      envelopeKey(observedMatch.kind, observedMatch.request) !== envelopeKey(kind, request)
+    ) {
+      if (
+        isSameRequestPurchase(
+          kind,
+          request as Record<string, any>,
+          observedMatch.kind,
+          observedMatch.request
+        )
+      ) {
+        await recordObservation({
+          config,
+          kind,
+          request: request as Record<string, any>,
+          decision: "duplicate",
+          reasonCode: "receipt_already_observed_for_identical_request",
+          linkedEmailVerified: true,
+          receipt: receipt as Record<string, any>,
+          relatedRequestId: observedMatch.request.requestId,
+        });
+        await updateCheckResult(kind, request.requestId, {
+          paymentVerificationStatus: "duplicate",
+          paymentCheckError: `Duplicate of earlier request ${observedMatch.request.requestId}`,
+          paymentReviewRequired: true,
+          duplicateOfRequestId: observedMatch.request.requestId,
+          nextPaymentCheckAt: null,
+        });
+        duplicates += 1;
+      } else {
+        await recordObservation({
+          config,
+          kind,
+          request: request as Record<string, any>,
+          decision: "review",
+          reasonCode: "receipt_already_observed_for_different_request",
+          linkedEmailVerified: true,
+          receipt: receipt as Record<string, any>,
+          relatedRequestId: observedMatch.request.requestId,
+        });
+        await updateCheckResult(kind, request.requestId, {
+          paymentVerificationStatus: "review",
+          paymentCheckError: "Payment already matches a different open voucher request",
+          paymentReviewRequired: true,
+          nextPaymentCheckAt: null,
+        });
+        reviewed += 1;
+      }
+      continue;
+    }
+
     if (receipt.allocatedRequestKey && receipt.allocatedRequestId !== request.requestId) {
       if (await isIdenticalDuplicate(kind, request as Record<string, any>, receipt as Record<string, any>)) {
+        await recordObservation({
+          config,
+          kind,
+          request: request as Record<string, any>,
+          decision: "duplicate",
+          reasonCode: "receipt_already_allocated_to_identical_request",
+          linkedEmailVerified: true,
+          receipt: receipt as Record<string, any>,
+          relatedRequestId: receipt.allocatedRequestId,
+        });
         await updateCheckResult(kind, request.requestId, {
           paymentVerificationStatus: "duplicate",
           paymentCheckError: `Payment is already applied to ${receipt.allocatedRequestId}`,
@@ -439,6 +672,16 @@ export async function reconcileEtransferPurchases() {
         duplicates += 1;
       } else {
         reviewed += 1;
+        await recordObservation({
+          config,
+          kind,
+          request: request as Record<string, any>,
+          decision: "review",
+          reasonCode: "receipt_already_allocated_to_different_request",
+          linkedEmailVerified: true,
+          receipt: receipt as Record<string, any>,
+          relatedRequestId: receipt.allocatedRequestId,
+        });
         await updateCheckResult(kind, request.requestId, {
           paymentVerificationStatus: "review",
           paymentCheckError: "Payment is already allocated to a different request",
@@ -459,6 +702,27 @@ export async function reconcileEtransferPurchases() {
       : null;
     if (earliestIdentical && earliestIdentical.requestId !== request.requestId) {
       if (config.mode === "observe") {
+        await Promise.all([
+          recordObservation({
+            config,
+            kind,
+            request: earliestIdentical,
+            decision: "matched",
+            reasonCode: "authenticated_receipt_exact_match",
+            linkedEmailVerified: true,
+            receipt: receipt as Record<string, any>,
+          }),
+          recordObservation({
+            config,
+            kind,
+            request: request as Record<string, any>,
+            decision: "duplicate",
+            reasonCode: "earlier_identical_request_has_priority",
+            linkedEmailVerified: true,
+            receipt: receipt as Record<string, any>,
+            relatedRequestId: earliestIdentical.requestId,
+          }),
+        ]);
         await Promise.all([
           modelFor(kind).updateOne(
             { requestId: earliestIdentical.requestId, status: "pending" },
@@ -504,6 +768,15 @@ export async function reconcileEtransferPurchases() {
     }
 
     if (config.mode === "observe") {
+      await recordObservation({
+        config,
+        kind,
+        request: request as Record<string, any>,
+        decision: "matched",
+        reasonCode: "authenticated_receipt_exact_match",
+        linkedEmailVerified: true,
+        receipt: receipt as Record<string, any>,
+      });
       await updateCheckResult(kind, request.requestId, {
         paymentVerificationStatus: "matched",
         paymentCheckError: "Observation mode: verified match recorded without issuing vouchers",

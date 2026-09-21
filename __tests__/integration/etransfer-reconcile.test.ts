@@ -1,3 +1,4 @@
+import AuditLog from "@/models/AuditLog";
 import InteracReceipt from "@/models/InteracReceipt";
 import InteracPayerEmail from "@/models/InteracPayerEmail";
 import Transaction from "@/models/Transaction";
@@ -17,6 +18,7 @@ vi.mock("@/lib/etransfer/mailbox", () => ({
 }));
 
 import { reconcileEtransferPurchases } from "@/lib/etransfer/reconcile";
+import { approveVoucherPurchase } from "@/lib/etransfer/approval";
 
 const MAILBOX = "kapioomeal@gmail.com";
 
@@ -132,6 +134,162 @@ describe("e-Transfer reconciliation", () => {
       synced: { processed: 1, accepted: 1, rejected: 0 },
       approved: 0,
     });
+  });
+
+  it("keeps an immutable observation after the administrator approves manually", async () => {
+    process.env.ETRANSFER_AUTO_APPROVAL_MODE = "observe";
+    const user = await createTestUser({
+      email: "observation-record@example.com",
+      twoDishVoucher: 0,
+    });
+    await createDueDailyRequest({
+      requestId: "VPR-OBS-1",
+      userId: user._id,
+      payerEmail: user.email,
+    });
+    const receipt = await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "C1OBSERVE001",
+      referenceNormalized: "C1OBSERVE001",
+      gmailMessageId: "<C1OBSERVE001@payments.interac.ca>",
+      imapUid: 8001,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-C1OBSERVE001",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    await reconcileEtransferPurchases();
+    const observedRequest = await VoucherPurchaseRequest.findOne({
+      requestId: "VPR-OBS-1",
+    }).lean();
+    const observation = await AuditLog.findOne({
+      action: "etransfer.reconciliation-decision",
+      targetId: "VPR-OBS-1",
+    }).lean();
+
+    expect(observedRequest).toMatchObject({
+      status: "pending",
+      paymentVerificationStatus: "matched",
+      paymentCheckAttempts: 1,
+    });
+    expect(String(observedRequest?.matchedPaymentReceiptId)).toBe(String(receipt._id));
+    expect(observation?.metadata).toMatchObject({
+      schemaVersion: 1,
+      mode: "observe",
+      requestKind: "daily",
+      decision: "matched",
+      reasonCode: "authenticated_receipt_exact_match",
+      linkedEmailVerified: true,
+      receiptId: String(receipt._id),
+      authenticationVerified: true,
+      receiptConflict: false,
+      emailMatches: true,
+      amountMatches: true,
+      currencyMatches: true,
+      receivedWithinWindow: true,
+      receiptAlreadyAllocated: false,
+    });
+
+    await approveVoucherPurchase({
+      kind: "daily",
+      requestId: "VPR-OBS-1",
+      source: "manual",
+    });
+
+    const [approvedRequest, preservedObservation, observationCount] = await Promise.all([
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-OBS-1" }).lean(),
+      AuditLog.findById(observation?._id).lean(),
+      AuditLog.countDocuments({
+        action: "etransfer.reconciliation-decision",
+        targetId: "VPR-OBS-1",
+      }),
+    ]);
+    expect(approvedRequest).toMatchObject({ status: "approved", approvalSource: "manual" });
+    expect(preservedObservation?.metadata).toEqual(observation?.metadata);
+    expect(observationCount).toBe(1);
+  });
+
+  it("records a duplicate observation without matching one receipt twice", async () => {
+    process.env.ETRANSFER_AUTO_APPROVAL_MODE = "observe";
+    const user = await createTestUser({
+      email: "observation-duplicate@example.com",
+      twoDishVoucher: 0,
+    });
+    const firstCreatedAt = new Date(Date.now() - 20 * 60_000);
+    await createDueDailyRequest({
+      requestId: "VPR-OBS-2",
+      userId: user._id,
+      payerEmail: user.email,
+      createdAt: firstCreatedAt,
+    });
+    await createDueDailyRequest({
+      requestId: "VPR-OBS-3",
+      userId: user._id,
+      payerEmail: user.email,
+      createdAt: new Date(firstCreatedAt.getTime() + 1_000),
+    });
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "C1OBSERVE002",
+      referenceNormalized: "C1OBSERVE002",
+      gmailMessageId: "<C1OBSERVE002@payments.interac.ca>",
+      imapUid: 8002,
+      uidValidity: "1",
+      payerEmail: user.email,
+      payerEmailNormalized: user.email,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-C1OBSERVE002",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const [first, duplicate, observations] = await Promise.all([
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-OBS-2" }).lean(),
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-OBS-3" }).lean(),
+      AuditLog.find({ action: "etransfer.reconciliation-decision" })
+        .sort({ createdAt: 1 })
+        .lean(),
+    ]);
+
+    expect(result).toMatchObject({ approved: 0, duplicates: 1 });
+    expect(first).toMatchObject({
+      status: "pending",
+      paymentVerificationStatus: "matched",
+    });
+    expect(duplicate).toMatchObject({
+      status: "pending",
+      paymentVerificationStatus: "duplicate",
+      duplicateOfRequestId: "VPR-OBS-2",
+    });
+    expect(observations.map((entry) => entry.metadata?.decision)).toEqual([
+      "matched",
+      "duplicate",
+    ]);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
+    expect(await Transaction.countDocuments()).toBe(0);
   });
 
   it("approves the first identical ticket and flags the duplicate without granting twice", async () => {

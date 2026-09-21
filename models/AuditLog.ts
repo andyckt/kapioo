@@ -59,9 +59,10 @@ const AuditLogSchema = new Schema<IAuditLog>(
   }
 );
 
+AuditLogSchema.index({ action: 1, createdAt: -1 });
+
 const AuditLog =
   (mongoose.models.AuditLog as IAuditLogModel | undefined) ||
   mongoose.model<IAuditLog, IAuditLogModel>("AuditLog", AuditLogSchema);
 
 export default AuditLog;
-
