@@ -43,6 +43,19 @@ export const voucherRequestIdParamSchema = z.object({
 export const updateVoucherPurchaseRequestBodySchema = z.object({
   status: z.enum(["approved", "declined"]),
   adminNotes: z.string().optional(),
+  manualFulfillment: z.boolean().default(false),
+}).superRefine((data, context) => {
+  if (
+    data.status === "approved" &&
+    data.manualFulfillment &&
+    (!data.adminNotes || data.adminNotes.trim().length < 10)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["adminNotes"],
+      message: "Explain how the payment was verified before closing the request",
+    });
+  }
 });
 
 export type UpdateVoucherPurchaseRequestBody = z.infer<

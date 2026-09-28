@@ -408,6 +408,45 @@ export function useAdminCreditRequests({
     selectedRequest,
   ])
 
+  const confirmResolveManuallyFulfilled = useCallback(async () => {
+    if (!selectedRequest?.requestId) return
+
+    setProcessingRequest(true)
+    try {
+      const response = await fetch("/api/credits/request/admin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: selectedRequest.requestId,
+          action: "resolve_manual",
+          adminNotes: adminNotes.trim(),
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to close the fulfilled request")
+      }
+
+      toastRef.current({
+        title: "Request closed",
+        description: "The existing manual plan addition was linked to this ticket. No plans were added again.",
+      })
+      void fetchCreditRequests({ page: paginationRef.current.page })
+      setApproveRequestOpen(false)
+    } catch (error) {
+      console.error("Error resolving manually fulfilled request:", error)
+      toastRef.current({
+        title: "Cannot close request",
+        description: error instanceof Error ? error.message : "Failed to close the fulfilled request",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessingRequest(false)
+    }
+  }, [adminNotes, fetchCreditRequests, selectedRequest])
+
   const confirmDeclineRequest = useCallback(async () => {
     if (!selectedRequest?.requestId) return
 
@@ -531,6 +570,7 @@ export function useAdminCreditRequests({
     handleApproveRequest,
     handleDeclineRequest,
     confirmApproveRequest,
+    confirmResolveManuallyFulfilled,
     confirmDeclineRequest,
     exportCreditRequestsToCSV,
   }

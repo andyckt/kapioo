@@ -17,6 +17,7 @@ import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 import {
   approveVoucherPurchase,
   declineVoucherPurchase,
+  resolveManuallyFulfilledVoucherPurchase,
   VoucherApprovalError,
 } from "@/lib/etransfer/approval";
 import { processVoucherApprovalNotifications } from "@/lib/etransfer/notifications";
@@ -99,18 +100,25 @@ export async function PUT(
       return bodyError;
     }
 
-    const { status, adminNotes } = body;
+    const { status, adminNotes, manualFulfillment } = body;
 
     await connectToDatabase();
 
     const updatedRequest = status === "approved"
-      ? (await approveVoucherPurchase({
-          kind: "daily",
-          requestId,
-          source: "manual",
-          actor,
-          adminNotes,
-        })).request
+      ? manualFulfillment
+        ? (await resolveManuallyFulfilledVoucherPurchase({
+            kind: "daily",
+            requestId,
+            actor,
+            adminNotes: adminNotes || "",
+          })).request
+        : (await approveVoucherPurchase({
+            kind: "daily",
+            requestId,
+            source: "manual",
+            actor,
+            adminNotes,
+          })).request
       : await declineVoucherPurchase({
           kind: "daily",
           requestId,

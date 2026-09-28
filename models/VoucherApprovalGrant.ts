@@ -34,6 +34,8 @@ const VoucherApprovalGrantSchema = new Schema<IVoucherApprovalGrant>(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
+VoucherApprovalGrantSchema.index({ balanceTransactionId: 1 }, { unique: true });
+
 const VoucherApprovalGrant =
   (mongoose.models.VoucherApprovalGrant as Model<IVoucherApprovalGrant> | undefined) ||
   mongoose.model<IVoucherApprovalGrant, Model<IVoucherApprovalGrant>>(

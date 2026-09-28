@@ -297,6 +297,46 @@ export function MealVoucherManagement() {
     }
   }
 
+  const handleResolveManuallyFulfilled = async () => {
+    if (!selectedRequest) return;
+
+    setProcessingRequest(true)
+    try {
+      const response = await fetch(`/api/voucher-requests/${selectedRequest.requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'approved',
+          manualFulfillment: true,
+          adminNotes: adminNotes.trim()
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to close the fulfilled request');
+      }
+
+      setApproveRequestOpen(false);
+      void fetchVoucherRequests();
+      toast({
+        title: "Request Closed",
+        description: "The existing manual voucher addition was linked to this ticket. No vouchers were added again.",
+      });
+    } catch (error) {
+      console.error('Error resolving manually fulfilled request:', error);
+      toast({
+        title: "Cannot Close Request",
+        description: error instanceof Error ? error.message : 'Failed to close the fulfilled request',
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRequest(false)
+    }
+  }
+
   // Handle decline request
   const handleDeclineRequest = async () => {
     if (!selectedRequest) return;
@@ -1052,7 +1092,7 @@ export function MealVoucherManagement() {
               <div>
                 <DialogTitle>Approve Voucher Purchase</DialogTitle>
                 <DialogDescription className="mt-1">
-                  This will add vouchers to the user&apos;s account and send a notification.
+                  Approve a verified payment, or close a ticket whose vouchers were already added manually.
                 </DialogDescription>
               </div>
             </div>
@@ -1140,14 +1180,21 @@ export function MealVoucherManagement() {
                     className="border-green-200 focus-visible:ring-green-500/30 focus-visible:border-green-500 min-h-[80px] max-h-[120px]"
                   />
                   <p className="text-xs text-muted-foreground">
-                    These notes will be visible to the user in their purchase history.
+                    Notes are required for the human override and will be visible to the user.
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <p className="font-medium">Human override: vouchers already added</p>
+                  <p className="mt-1 text-xs">
+                    Use this only after adding the exact vouchers from the user&apos;s balance screen. It closes the ticket, links the authenticated exact-amount deposit and existing balance transaction, and adds no vouchers again.
                   </p>
                 </div>
               </div>
             </div>
           )}
           
-          <DialogFooter className="pt-2 mt-2 border-t border-green-100 flex-shrink-0">
+          <DialogFooter className="pt-2 mt-2 border-t border-green-100 flex-shrink-0 sm:flex-col sm:items-stretch gap-2">
             <Button
               variant="outline"
               onClick={() => setApproveRequestOpen(false)}
@@ -1155,6 +1202,19 @@ export function MealVoucherManagement() {
               className="border-green-200 text-green-700 hover:bg-green-50"
             >
               Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleResolveManuallyFulfilled}
+              disabled={processingRequest || adminNotes.trim().length < 10}
+              className="border-amber-400 text-amber-800 hover:bg-amber-50"
+            >
+              {processingRequest ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              Close as Already Fulfilled
             </Button>
             <Button
               onClick={handleApproveRequest}
@@ -1169,7 +1229,7 @@ export function MealVoucherManagement() {
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  Confirm
+                  Confirm and Add Vouchers
                 </>
               )}
             </Button>

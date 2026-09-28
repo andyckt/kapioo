@@ -1,4 +1,7 @@
-import { approveVoucherPurchase } from "@/lib/etransfer/approval";
+import {
+  approveVoucherPurchase,
+  resolveManuallyFulfilledVoucherPurchase,
+} from "@/lib/etransfer/approval";
 import { saveInteracReceipt } from "@/lib/etransfer/mailbox";
 import AuditLog from "@/models/AuditLog";
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
@@ -234,6 +237,140 @@ describe("voucher auto approval accounting boundary", () => {
     expect(reloadedUser?.weeklySIXmeals).toBe(0);
     expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
     expect(await Transaction.countDocuments()).toBe(0);
+  });
+
+  it("closes an already fulfilled request without adding vouchers twice", async () => {
+    const user = await createTestUser({
+      email: "manual-override@example.com",
+      twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const request = await VoucherPurchaseRequest.create({
+      requestId: "VPR-OVERRIDE-1",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 148.03,
+      finalTotal: 148.03,
+      amountCents: 14803,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      paymentVerificationStatus: "not_found",
+      status: "pending",
+    });
+    const receipt = await createReceipt({
+      reference: "CAOVERRIDE001",
+      payerEmail: "different-sender@example.com",
+      amountCents: 14803,
+    });
+
+    const userDocument = await User.findById(user._id);
+    if (!userDocument) throw new Error("Expected user");
+    userDocument.twoDishVoucher = 6;
+    await userDocument.save();
+    const manualAdd = await Transaction.create({
+      transactionId: "CR-MANUAL-OVERRIDE-1",
+      userId: user._id,
+      type: "Add",
+      amount: 6,
+      description: "Added 6 twoDishVoucher",
+    });
+    await AuditLog.create({
+      actorRole: "admin",
+      action: "balance.add",
+      targetType: "user-balance",
+      targetId: String(user._id),
+      metadata: {
+        mutations: [{ field: "twoDishVoucher", amount: 6, operation: "add" }],
+        transactionId: manualAdd.transactionId,
+        source: "admin-update-balance",
+        description: "Added 6 twoDishVoucher",
+      },
+    });
+
+    const first = await resolveManuallyFulfilledVoucherPurchase({
+      kind: "daily",
+      requestId: request.requestId,
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+      adminNotes: "Confirmed payment under a different sender email.",
+    });
+    const second = await resolveManuallyFulfilledVoucherPurchase({
+      kind: "daily",
+      requestId: request.requestId,
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+      adminNotes: "Confirmed payment under a different sender email.",
+    });
+
+    const [reloadedUser, reloadedRequest, reloadedReceipt, grant] = await Promise.all([
+      User.findById(user._id).lean(),
+      VoucherPurchaseRequest.findOne({ requestId: request.requestId }).lean(),
+      InteracReceipt.findById(receipt._id).lean(),
+      VoucherApprovalGrant.findOne({ requestKey: `daily:${request.requestId}` }).lean(),
+    ]);
+    expect([first.alreadyApproved, second.alreadyApproved].sort()).toEqual([false, true]);
+    expect(reloadedUser?.twoDishVoucher).toBe(6);
+    expect(reloadedRequest).toMatchObject({
+      status: "approved",
+      approvalSource: "manual",
+      paymentVerificationStatus: "manual",
+    });
+    expect(reloadedReceipt).toMatchObject({
+      status: "allocated",
+      allocatedRequestKey: `daily:${request.requestId}`,
+    });
+    expect(grant?.balanceTransactionId).toBe(manualAdd.transactionId);
+    expect(await Transaction.countDocuments()).toBe(1);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+    expect(await VoucherApprovalNotification.countDocuments()).toBe(1);
+    expect(
+      await AuditLog.countDocuments({ action: "voucher-request.manual-override-resolved" })
+    ).toBe(1);
+  });
+
+  it("refuses the human override until the exact vouchers were added manually", async () => {
+    const user = await createTestUser({
+      email: "override-without-balance@example.com",
+      twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const request = await VoucherPurchaseRequest.create({
+      requestId: "VPR-OVERRIDE-2",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 148.03,
+      finalTotal: 148.03,
+      amountCents: 14803,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      paymentVerificationStatus: "not_found",
+      status: "pending",
+    });
+    const receipt = await createReceipt({
+      reference: "CAOVERRIDE002",
+      payerEmail: "different-sender-2@example.com",
+      amountCents: 14803,
+    });
+
+    await expect(
+      resolveManuallyFulfilledVoucherPurchase({
+        kind: "daily",
+        requestId: request.requestId,
+        actor: { role: "admin", user: { email: "admin@example.com" } },
+        adminNotes: "Confirmed payment under a different sender email.",
+      })
+    ).rejects.toMatchObject({ code: "MANUAL_OVERRIDE_BALANCE_NOT_FOUND" });
+
+    expect(await User.findById(user._id).then((document) => document?.twoDishVoucher)).toBe(0);
+    expect(await VoucherPurchaseRequest.findById(request._id).then((document) => document?.status)).toBe("pending");
+    expect(await InteracReceipt.findById(receipt._id).then((document) => document?.status)).toBe("unmatched");
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
   });
 
   it("allocates unique accounting IDs concurrently and bootstraps by numeric value", async () => {

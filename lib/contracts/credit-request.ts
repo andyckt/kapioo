@@ -70,7 +70,7 @@ export type CreditPurchaseRequestExportQuery = z.infer<
 
 export const adminCreditPurchaseActionBodySchema = z.object({
   requestId: nonEmptyString,
-  action: z.enum(["approve", "decline"]),
+  action: z.enum(["approve", "decline", "resolve_manual"]),
   approvedSixMeals: z.coerce.number().default(0),
   approvedEightMeals: z.coerce.number().default(0),
   approvedTenMeals: z.coerce.number().default(0),
@@ -78,6 +78,17 @@ export const adminCreditPurchaseActionBodySchema = z.object({
   approvedSixteenMeals: z.coerce.number().default(0),
   approvedCredits: z.coerce.number().default(0),
   adminNotes: z.string().optional(),
+}).superRefine((data, context) => {
+  if (
+    data.action === "resolve_manual" &&
+    (!data.adminNotes || data.adminNotes.trim().length < 10)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["adminNotes"],
+      message: "Explain how the payment was verified before closing the request",
+    });
+  }
 });
 
 export type AdminCreditPurchaseActionBody = z.infer<

@@ -43,6 +43,7 @@ interface CreditRequestDialogsProps {
   onHandleApproveRequest: (request: CreditRequest) => void
   onHandleDeclineRequest: (request: CreditRequest) => void
   onConfirmApproveRequest: () => void | Promise<void>
+  onConfirmResolveManuallyFulfilled: () => void | Promise<void>
   onConfirmDeclineRequest: () => void | Promise<void>
 }
 
@@ -103,6 +104,7 @@ export function CreditRequestDialogs({
   onHandleApproveRequest,
   onHandleDeclineRequest,
   onConfirmApproveRequest,
+  onConfirmResolveManuallyFulfilled,
   onConfirmDeclineRequest,
 }: CreditRequestDialogsProps) {
   const selectedRequestUser = getCreditRequestUserInfo(selectedRequest)
@@ -447,7 +449,7 @@ export function CreditRequestDialogs({
               <div>
                 <DialogTitle className="text-xl font-semibold">Approve Credit Purchase</DialogTitle>
                 <DialogDescription className="text-sm mt-1">
-                  Review and approve the credit purchase request.
+                  Approve a verified payment, or close a ticket whose plans were already added manually.
                 </DialogDescription>
               </div>
             </div>
@@ -662,6 +664,9 @@ export function CreditRequestDialogs({
                     className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm mt-1"
                     placeholder="Optional admin notes"
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Notes are required for the human override and will be visible to the user.
+                  </p>
                 </div>
 
                 <div>
@@ -686,14 +691,38 @@ export function CreditRequestDialogs({
                   </div>
                 </div>
               </div>
+
+              {selectedRequest.paymentMethod === "emt" && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <p className="font-medium">Human override: plans already added</p>
+                  <p className="mt-1 text-xs">
+                    Use this only after adding the exact plans from the user&apos;s balance screen. It closes the ticket, links the authenticated exact-amount deposit and existing balance transaction, and adds no plans again.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           <DialogFooter className="sticky bottom-0 pt-4 pb-1 bg-background z-10 border-t mt-6">
-            <div className="flex justify-between w-full items-center">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between w-full gap-2 sm:items-center">
               <Button variant="outline" onClick={() => setApproveRequestOpen(false)} disabled={processingRequest}>
                 Cancel
               </Button>
+              {selectedRequest?.paymentMethod === "emt" && (
+                <Button
+                  variant="outline"
+                  onClick={() => void onConfirmResolveManuallyFulfilled()}
+                  disabled={processingRequest || adminNotes.trim().length < 10}
+                  className="border-amber-400 text-amber-800 hover:bg-amber-50"
+                >
+                  {processingRequest ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Close as Already Fulfilled
+                </Button>
+              )}
               <Button
                 onClick={() => void onConfirmApproveRequest()}
                 disabled={
@@ -712,7 +741,7 @@ export function CreditRequestDialogs({
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    Confirm Approval
+                    Confirm and Add Plans
                   </>
                 )}
               </Button>

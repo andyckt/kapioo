@@ -17,6 +17,7 @@ import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
 import {
   approveVoucherPurchase,
   declineVoucherPurchase,
+  resolveManuallyFulfilledVoucherPurchase,
   VoucherApprovalError,
 } from "@/lib/etransfer/approval";
 import { processVoucherApprovalNotifications } from "@/lib/etransfer/notifications";
@@ -96,12 +97,19 @@ export async function POST(request: Request) {
           actor,
           adminNotes: data.adminNotes,
         })).request
-      : await declineVoucherPurchase({
-          kind: "weekly",
-          requestId: data.requestId,
-          reason: data.adminNotes || "Declined by administrator",
-          actor,
-        });
+      : data.action === "resolve_manual"
+        ? (await resolveManuallyFulfilledVoucherPurchase({
+            kind: "weekly",
+            requestId: data.requestId,
+            actor,
+            adminNotes: data.adminNotes || "",
+          })).request
+        : await declineVoucherPurchase({
+            kind: "weekly",
+            requestId: data.requestId,
+            reason: data.adminNotes || "Declined by administrator",
+            actor,
+          });
 
     await processVoucherApprovalNotifications(1);
     return successJson({ request: updatedRequest });
