@@ -39,16 +39,49 @@ function unfoldRawHeaders(source: Buffer) {
   return headers.replace(/\r?\n[\t ]+/g, " ").split(/\r?\n/);
 }
 
-function getFirstRawHeader(source: Buffer, name: string) {
+function getRawHeaders(source: Buffer, name: string) {
   const prefix = `${name.toLowerCase()}:`;
-  const line = unfoldRawHeaders(source).find((entry) => entry.toLowerCase().startsWith(prefix));
-  return line ? line.slice(line.indexOf(":") + 1).trim() : "";
+  return unfoldRawHeaders(source)
+    .filter((entry) => entry.toLowerCase().startsWith(prefix))
+    .map((line) => line.slice(line.indexOf(":") + 1).trim());
+}
+
+function assertInteracSignedHeaders(source: Buffer) {
+  const requiredSignedHeaders = ["from", "to", "subject", "reply-to"];
+  const interacSignatures = getRawHeaders(source, "DKIM-Signature").filter((signature) =>
+    /(?:^|;)\s*d=payments\.interac\.ca\s*(?:;|$)/i.test(signature)
+  );
+  const hasRequiredSignature = interacSignatures.some((signature) => {
+    const signedHeaderValue = signature.match(/(?:^|;)\s*h=([^;]+)/i)?.[1] || "";
+    const signedHeaders = signedHeaderValue
+      .split(":")
+      .map((header) => header.trim().toLowerCase())
+      .filter(Boolean);
+    return requiredSignedHeaders.every((header) => signedHeaders.includes(header));
+  });
+  if (!hasRequiredSignature) {
+    throw new InteracReceiptValidationError(
+      "Interac DKIM signature does not protect all required payment headers"
+    );
+  }
+
+  for (const header of requiredSignedHeaders) {
+    if (getRawHeaders(source, header).length !== 1) {
+      throw new InteracReceiptValidationError(
+        `Receipt has an ambiguous or missing ${header} header`
+      );
+    }
+  }
 }
 
 function assertGmailAuthentication(source: Buffer) {
-  const result = getFirstRawHeader(source, "Authentication-Results");
+  const authenticationResults = getRawHeaders(source, "Authentication-Results");
+  const gmailResults = authenticationResults.filter((result) =>
+    result.toLowerCase().startsWith("mx.google.com;")
+  );
+  const result = authenticationResults[0] || "";
   const normalized = result.toLowerCase();
-  if (!normalized.startsWith("mx.google.com;")) {
+  if (!normalized.startsWith("mx.google.com;") || gmailResults.length !== 1) {
     throw new InteracReceiptValidationError("Receipt lacks trusted Gmail authentication results");
   }
   if (!/\bdkim=pass\b[^;]*\bheader\.i=@payments\.interac\.ca\b/i.test(result)) {
@@ -62,6 +95,7 @@ function assertGmailAuthentication(source: Buffer) {
   ) {
     throw new InteracReceiptValidationError("Interac SPF or DMARC verification did not pass");
   }
+  assertInteracSignedHeaders(source);
 }
 
 function parseAmountCents(rawAmount: string) {
@@ -95,6 +129,9 @@ export async function parseInteracReceipt(
 ): Promise<ParsedInteracReceipt> {
   assertGmailAuthentication(source);
   const parsed = await simpleParser(source, { skipImageLinks: true });
+  if ((parsed.from?.value.length || 0) !== 1) {
+    throw new InteracReceiptValidationError("Receipt has an ambiguous sender");
+  }
   const from = normalizeEmail(parsed.from?.value[0]?.address || "");
   if (from !== "notify@payments.interac.ca") {
     throw new InteracReceiptValidationError("Receipt sender is not Interac");
@@ -138,6 +175,9 @@ export async function parseInteracReceipt(
     throw new InteracReceiptValidationError("Receipt reference number is invalid");
   }
 
+  if ((parsed.replyTo?.value.length || 0) !== 1) {
+    throw new InteracReceiptValidationError("Receipt has an ambiguous payer email");
+  }
   const payerEmail = normalizeEmail(parsed.replyTo?.value[0]?.address || "");
   if (!/^\S+@\S+\.\S+$/.test(payerEmail)) {
     throw new InteracReceiptValidationError("Receipt lacks the payer email");

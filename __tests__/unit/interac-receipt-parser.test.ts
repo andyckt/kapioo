@@ -8,6 +8,8 @@ function receiptSource(overrides: {
   accountLast4?: string;
   amount?: string;
   bodyAmount?: string;
+  dkimSignedHeaders?: string;
+  extraHeaders?: string[];
   payerEmail?: string;
   reference?: string;
 } = {}) {
@@ -18,11 +20,13 @@ function receiptSource(overrides: {
     : overrides.authenticationResults;
   return Buffer.from([
     `Authentication-Results: ${authenticationResults}`,
+    `DKIM-Signature: v=1; a=rsa-sha256; d=payments.interac.ca; s=test; h=${overrides.dkimSignedHeaders || "from:to:subject:reply-to:message-id"}; bh=test; b=test`,
     "From: Interac <notify@payments.interac.ca>",
     `Reply-To: Customer <${overrides.payerEmail || "customer@example.com"}>`,
     "To: Kapioo <kapioomeal@gmail.com>",
     `Subject: Interac e-Transfer: You've received $${amount} from Jane Customer and it has been automatically deposited.`,
     "Message-ID: <interac-test-123@payments.interac.ca>",
+    ...(overrides.extraHeaders || []),
     "Date: Sun, 13 Sep 2026 10:00:00 -0400",
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=utf-8",
@@ -85,6 +89,41 @@ describe("Interac receipt parser", () => {
         expectedAccountLast4: "4994",
       })
     ).rejects.toThrow("SPF or DMARC");
+  });
+
+  it("rejects a message that does not DKIM-sign the payer email header", async () => {
+    await expect(
+      parseInteracReceipt(receiptSource({
+        dkimSignedHeaders: "from:to:subject:message-id",
+      }), {
+        expectedRecipient: "kapioomeal@gmail.com",
+        expectedAccountLast4: "4994",
+      })
+    ).rejects.toThrow("does not protect all required payment headers");
+  });
+
+  it("rejects duplicate Gmail authentication results", async () => {
+    await expect(
+      parseInteracReceipt(receiptSource({
+        extraHeaders: [
+          "Authentication-Results: mx.google.com; dkim=pass header.i=@payments.interac.ca; spf=pass smtp.mailfrom=notify@payments.interac.ca; dmarc=pass header.from=payments.interac.ca",
+        ],
+      }), {
+        expectedRecipient: "kapioomeal@gmail.com",
+        expectedAccountLast4: "4994",
+      })
+    ).rejects.toThrow("trusted Gmail authentication results");
+  });
+
+  it("rejects a duplicate payer email header", async () => {
+    await expect(
+      parseInteracReceipt(receiptSource({
+        extraHeaders: ["Reply-To: Attacker <attacker@example.com>"],
+      }), {
+        expectedRecipient: "kapioomeal@gmail.com",
+        expectedAccountLast4: "4994",
+      })
+    ).rejects.toThrow("ambiguous or missing reply-to header");
   });
 
   it("rejects a receipt whose subject and body amounts differ", async () => {
