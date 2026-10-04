@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
 import { buildCanonicalBreakdown } from "@/lib/price-breakdown"
+import { PaymentInfoCorrection } from "@/components/payment-info-correction"
 import {
   Dialog,
   DialogContent,
@@ -61,10 +62,10 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
       if (data.success) {
         setRequests(data.data);
         setPagination({
-          page: data.page || 1,
-          limit: data.limit || 5,
-          total: data.total || 0,
-          pages: Math.ceil((data.total || 0) / (data.limit || 5))
+          page: data.pagination?.page || 1,
+          limit: data.pagination?.limit || 5,
+          total: data.pagination?.total || 0,
+          pages: data.pagination?.pages || 1
         });
       } else {
         console.error("Error fetching voucher requests:", data.error);
@@ -240,6 +241,12 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
                     </div>
                   </div>
                 </CardContent>
+                <PaymentInfoCorrection
+                  request={request}
+                  requestKind="daily"
+                  language={language}
+                  onUpdated={() => fetchRequests(pagination.page)}
+                />
                 <CardFooter className="p-4 pt-0 flex justify-between">
                   <Button 
                     variant="outline" 

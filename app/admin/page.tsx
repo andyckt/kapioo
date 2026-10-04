@@ -141,6 +141,7 @@ export default function AdminDashboardPage() {
     handleDeclineRequest,
     confirmApproveRequest,
     confirmResolveManuallyFulfilled,
+    confirmRequestCustomerCorrection,
     confirmDeclineRequest,
     exportCreditRequestsToCSV,
   } = useAdminCreditRequests({
@@ -331,6 +332,7 @@ export default function AdminDashboardPage() {
         handleDeclineRequest={handleDeclineRequest}
         confirmApproveRequest={confirmApproveRequest}
         confirmResolveManuallyFulfilled={confirmResolveManuallyFulfilled}
+        confirmRequestCustomerCorrection={confirmRequestCustomerCorrection}
         confirmDeclineRequest={confirmDeclineRequest}
         deductCreditsOpen={deductCreditsOpen}
         setDeductCreditsOpen={setDeductCreditsOpen}

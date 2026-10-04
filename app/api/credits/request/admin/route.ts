@@ -21,6 +21,7 @@ import {
   VoucherApprovalError,
 } from "@/lib/etransfer/approval";
 import { processVoucherApprovalNotifications } from "@/lib/etransfer/notifications";
+import { requestVoucherPurchaseCorrection } from "@/lib/etransfer/customer-correction";
 
 // GET handler - get all credit purchase requests with filtering and pagination
 export async function GET(request: Request) {
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
           source: "manual",
           actor,
           adminNotes: data.adminNotes,
+          manualPaymentOverride: data.manualPaymentOverride,
         })).request
       : data.action === "resolve_manual"
         ? (await resolveManuallyFulfilledVoucherPurchase({
@@ -104,7 +106,15 @@ export async function POST(request: Request) {
             actor,
             adminNotes: data.adminNotes || "",
           })).request
-        : await declineVoucherPurchase({
+        : data.action === "request_correction"
+          ? await requestVoucherPurchaseCorrection({
+              kind: "weekly",
+              requestId: data.requestId,
+              reason: data.correctionReason!,
+              message: data.correctionMessage,
+              actor,
+            })
+          : await declineVoucherPurchase({
             kind: "weekly",
             requestId: data.requestId,
             reason: data.adminNotes || "Declined by administrator",

@@ -360,6 +360,9 @@ export function useAdminCreditRequests({
           approvedSixteenMeals,
           approvedPlans,
           adminNotes,
+          manualPaymentOverride:
+            selectedRequest.paymentMethod === "emt" &&
+            selectedRequest.paymentVerificationStatus !== "matched",
         }),
       })
 
@@ -440,6 +443,41 @@ export function useAdminCreditRequests({
       toastRef.current({
         title: "Cannot close request",
         description: error instanceof Error ? error.message : "Failed to close the fulfilled request",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessingRequest(false)
+    }
+  }, [adminNotes, fetchCreditRequests, selectedRequest])
+
+  const confirmRequestCustomerCorrection = useCallback(async () => {
+    if (!selectedRequest?.requestId) return
+    setProcessingRequest(true)
+    try {
+      const response = await fetch("/api/credits/request/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: selectedRequest.requestId,
+          action: "request_correction",
+          correctionReason: "payer_email_mismatch",
+          correctionMessage: adminNotes.trim() || undefined,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to request a customer correction")
+      }
+      toastRef.current({
+        title: "Correction request sent",
+        description: "The customer can update their verified Interac email and the system will check again automatically.",
+      })
+      void fetchCreditRequests({ page: paginationRef.current.page })
+      setApproveRequestOpen(false)
+    } catch (error) {
+      toastRef.current({
+        title: "Could not send feedback",
+        description: error instanceof Error ? error.message : "Failed to request a customer correction",
         variant: "destructive",
       })
     } finally {
@@ -571,6 +609,7 @@ export function useAdminCreditRequests({
     handleDeclineRequest,
     confirmApproveRequest,
     confirmResolveManuallyFulfilled,
+    confirmRequestCustomerCorrection,
     confirmDeclineRequest,
     exportCreditRequestsToCSV,
   }

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { formatDateTime } from "@/lib/format"
 import { useLanguage } from "@/lib/language-context"
 import { buildCanonicalBreakdown } from "@/lib/price-breakdown"
+import { PaymentInfoCorrection } from "@/components/payment-info-correction"
 import {
   Dialog,
   DialogContent,
@@ -269,6 +270,12 @@ export function CreditPurchaseHistory({ userId }: CreditPurchaseHistoryProps) {
                     </div>
                   </div>
                 </CardContent>
+                <PaymentInfoCorrection
+                  request={request}
+                  requestKind="weekly"
+                  language={language}
+                  onUpdated={() => fetchRequests(pagination.page)}
+                />
                 <CardFooter className="p-4 pt-0 flex justify-between">
                   <Button 
                     variant="outline" 

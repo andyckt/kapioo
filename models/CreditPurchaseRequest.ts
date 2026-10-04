@@ -37,6 +37,12 @@ export interface ICreditPurchaseRequest extends Document {
   paymentCheckAttempts?: number;
   paymentCheckError?: string;
   paymentReviewRequired?: boolean;
+  customerActionRequired?: boolean;
+  customerFeedbackReason?: 'payer_email_mismatch' | 'payment_not_found' | 'amount_mismatch' | 'other';
+  customerFeedbackMessage?: string;
+  customerFeedbackAt?: Date;
+  customerCorrectedAt?: Date;
+  customerCorrectionVersion?: number;
   matchedPaymentReceiptId?: mongoose.Types.ObjectId;
   duplicateOfRequestId?: string;
   approvalSource?: 'automatic' | 'manual';
@@ -162,6 +168,15 @@ const CreditPurchaseRequestSchema = new Schema<ICreditPurchaseRequest>({
   paymentCheckAttempts: { type: Number, default: 0 },
   paymentCheckError: { type: String },
   paymentReviewRequired: { type: Boolean, default: false },
+  customerActionRequired: { type: Boolean, default: false },
+  customerFeedbackReason: {
+    type: String,
+    enum: ['payer_email_mismatch', 'payment_not_found', 'amount_mismatch', 'other']
+  },
+  customerFeedbackMessage: { type: String, trim: true, maxlength: 500 },
+  customerFeedbackAt: { type: Date },
+  customerCorrectedAt: { type: Date },
+  customerCorrectionVersion: { type: Number, default: 0, min: 0 },
   matchedPaymentReceiptId: { type: Schema.Types.ObjectId, ref: 'InteracReceipt' },
   duplicateOfRequestId: { type: String },
   approvalSource: { type: String, enum: ['automatic', 'manual'] },

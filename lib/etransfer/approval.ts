@@ -259,7 +259,8 @@ async function findVerifiedInteracReceipt(
 function assertReceiptMatchesRequest(
   kind: VoucherRequestKind,
   request: Record<string, any>,
-  receipt: Record<string, any>
+  receipt: Record<string, any>,
+  options?: { allowPayerEmailMismatch?: boolean }
 ) {
   const isEtransfer = kind === "daily" || request.paymentMethod !== "wechat";
   if (receipt.status === "conflict") {
@@ -268,11 +269,99 @@ function assertReceiptMatchesRequest(
   if (isEtransfer && !receipt.authenticationVerified) {
     throw new VoucherApprovalError("Payment receipt is not cryptographically verified", "UNVERIFIED_PAYMENT");
   }
-  if (receipt.payerEmailNormalized !== normalizeEmail(request.referenceNumber)) {
+  if (
+    !options?.allowPayerEmailMismatch &&
+    receipt.payerEmailNormalized !== normalizeEmail(request.referenceNumber)
+  ) {
     throw new VoucherApprovalError("Payment sender email does not match request", "PAYMENT_MISMATCH");
   }
   if (receipt.amountCents !== getRequestAmountCents(request) || receipt.currency !== "CAD") {
     throw new VoucherApprovalError("Payment amount or currency does not match request", "PAYMENT_MISMATCH");
+  }
+}
+
+async function findManualPaymentOverrideReceipt(
+  request: Record<string, any>,
+  session: mongoose.ClientSession
+) {
+  const config = getEtransferAutomationConfig();
+  const mailbox = config.mailbox || config.recipientEmail;
+  const earliestEligibleReceipt = new Date(
+    Math.max(
+      config.activationAt?.getTime() || 0,
+      new Date(request.createdAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
+    )
+  );
+  const receipts = await InteracReceipt.find({
+    provider: "interac",
+    mailbox,
+    amountCents: getRequestAmountCents(request),
+    currency: "CAD",
+    authenticationVerified: true,
+    status: "unmatched",
+    receivedAt: { $gte: earliestEligibleReceipt },
+  })
+    .sort({ receivedAt: 1, referenceNormalized: 1 })
+    .limit(2)
+    .session(session);
+
+  if (receipts.length === 0) {
+    throw new VoucherApprovalError(
+      "No authenticated exact-amount Interac deposit is available for this override",
+      "MANUAL_OVERRIDE_PAYMENT_NOT_FOUND"
+    );
+  }
+  if (receipts.length > 1) {
+    throw new VoucherApprovalError(
+      "More than one authenticated exact-amount deposit could fund this request; do not guess",
+      "MANUAL_OVERRIDE_PAYMENT_AMBIGUOUS"
+    );
+  }
+  return receipts[0];
+}
+
+async function assertManualOverrideReceiptIsNotAnotherRequestMatch(
+  kind: VoucherRequestKind,
+  request: Record<string, any>,
+  receipt: Record<string, any>,
+  session: mongoose.ClientSession
+) {
+  const config = getEtransferAutomationConfig();
+  const latestRequestTime = new Date(
+    new Date(receipt.receivedAt).getTime() + PAYMENT_FIRST_MATCH_WINDOW_MS
+  );
+  const receiptIdentity = await InteracPayerEmail.findOne({
+    emailNormalized: receipt.payerEmailNormalized,
+    status: "verified",
+  }).session(session);
+  if (!receiptIdentity) return;
+  const competingFilter = {
+    status: "pending",
+    amountCents: receipt.amountCents,
+    payerEmailIdentityId: receiptIdentity._id,
+    createdAt: {
+      $gte: config.activationAt || new Date(0),
+      $lte: latestRequestTime,
+    },
+  };
+  const [dailyMatches, weeklyMatches] = await Promise.all([
+    VoucherPurchaseRequest.find(competingFilter, { requestId: 1 }).session(session).lean(),
+    CreditPurchaseRequest.find(
+      { ...competingFilter, paymentMethod: "emt" },
+      { requestId: 1 }
+    ).session(session).lean(),
+  ]);
+  const currentKey = requestKey(kind, request.requestId);
+  const competingKeys = [
+    ...dailyMatches.map((candidate) => requestKey("daily", String(candidate.requestId))),
+    ...weeklyMatches.map((candidate) => requestKey("weekly", String(candidate.requestId))),
+  ].filter((candidateKey) => candidateKey !== currentKey);
+
+  if (competingKeys.length > 0) {
+    throw new VoucherApprovalError(
+      "This deposit matches another open request by sender email and amount; resolve that request first",
+      "MANUAL_OVERRIDE_PAYMENT_BELONGS_TO_ANOTHER_REQUEST"
+    );
   }
 }
 
@@ -283,7 +372,24 @@ export async function approveVoucherPurchase(options: {
   receiptId?: string;
   actor?: { user?: { _id?: unknown; email?: string }; role?: "admin" | "user" } | null;
   adminNotes?: string;
+  manualPaymentOverride?: boolean;
 }) {
+  const manualPaymentOverride = options.manualPaymentOverride === true;
+  if (manualPaymentOverride) {
+    if (options.source !== "manual" || options.actor?.role !== "admin") {
+      throw new VoucherApprovalError(
+        "Only an authenticated administrator can use the payment override",
+        "MANUAL_OVERRIDE_FORBIDDEN",
+        403
+      );
+    }
+    if (!options.adminNotes || options.adminNotes.trim().length < 10) {
+      throw new VoucherApprovalError(
+        "Explain how you verified the deposit before approving",
+        "MANUAL_OVERRIDE_REASON_REQUIRED"
+      );
+    }
+  }
   const RequestModel = modelFor(options.kind);
   const reqKey = requestKey(options.kind, options.requestId);
   let result: { request: any; alreadyApproved: boolean } | null = null;
@@ -312,7 +418,13 @@ export async function approveVoucherPurchase(options: {
       const requestObject = purchaseRequest.toObject() as Record<string, any>;
       const entitlement = getEntitlement(options.kind, requestObject, options.source);
       const isEtransfer = options.kind === "daily" || requestObject.paymentMethod !== "wechat";
-      if (isEtransfer) {
+      if (manualPaymentOverride && !isEtransfer) {
+        throw new VoucherApprovalError(
+          "The Interac payment override cannot be used for a WeChat request",
+          "MANUAL_OVERRIDE_NOT_AVAILABLE"
+        );
+      }
+      if (isEtransfer && !manualPaymentOverride) {
         const linkedEmail = requestObject.payerEmailIdentityId
           ? await InteracPayerEmail.findOne({
               _id: requestObject.payerEmailIdentityId,
@@ -332,14 +444,26 @@ export async function approveVoucherPurchase(options: {
         ? await InteracReceipt.findById(options.receiptId).session(session)
         : null;
       if (!receipt && options.source === "manual") {
-        receipt = options.kind === "weekly" && requestObject.paymentMethod === "wechat"
-          ? await ensureManualWechatReceipt(options.kind, requestObject, session)
-          : await findVerifiedInteracReceipt(options.kind, requestObject, session);
+        receipt = manualPaymentOverride
+          ? await findManualPaymentOverrideReceipt(requestObject, session)
+          : options.kind === "weekly" && requestObject.paymentMethod === "wechat"
+            ? await ensureManualWechatReceipt(options.kind, requestObject, session)
+            : await findVerifiedInteracReceipt(options.kind, requestObject, session);
       }
       if (!receipt) {
         throw new VoucherApprovalError("Verified payment receipt not found", "PAYMENT_NOT_FOUND");
       }
-      assertReceiptMatchesRequest(options.kind, requestObject, receipt.toObject());
+      assertReceiptMatchesRequest(options.kind, requestObject, receipt.toObject(), {
+        allowPayerEmailMismatch: manualPaymentOverride,
+      });
+      if (manualPaymentOverride) {
+        await assertManualOverrideReceiptIsNotAnotherRequestMatch(
+          options.kind,
+          requestObject,
+          receipt.toObject(),
+          session
+        );
+      }
 
       if (receipt.allocatedRequestKey && receipt.allocatedRequestKey !== reqKey) {
         throw new VoucherApprovalError("Payment was already used for another request", "PAYMENT_ALREADY_USED");
@@ -387,7 +511,9 @@ export async function approveVoucherPurchase(options: {
       purchaseRequest.adminNotes = options.adminNotes ||
         (options.source === "automatic" ? "Automatically approved from verified Interac deposit" : "");
       purchaseRequest.approvalSource = options.source;
-      purchaseRequest.paymentVerificationStatus = "matched";
+      purchaseRequest.paymentVerificationStatus = manualPaymentOverride ? "manual" : "matched";
+      purchaseRequest.paymentReviewRequired = false;
+      purchaseRequest.customerActionRequired = false;
       purchaseRequest.matchedPaymentReceiptId = claimed._id;
       if (options.kind === "daily" || requestObject.paymentMethod !== "wechat") {
         purchaseRequest.interacReference = claimed.reference;
@@ -426,13 +552,18 @@ export async function approveVoucherPurchase(options: {
             actorUserId: options.actor?.user?._id,
             actorRole: options.actor?.role || "system",
             actorEmail: options.actor?.user?.email,
-            action: "voucher-request.approved",
+            action: manualPaymentOverride
+              ? "voucher-request.manual-payment-override-approved"
+              : "voucher-request.approved",
             targetType: "voucher-request",
             targetId: options.requestId,
             metadata: {
               source: options.source,
+              manualPaymentOverride,
               requestKind: options.kind,
               paymentReference: claimed.referenceNormalized,
+              receiptEmailMatches:
+                claimed.payerEmailNormalized === normalizeEmail(requestObject.referenceNumber || ""),
               amountCents: claimed.amountCents,
               balanceTransactionId: balanceResult.transaction.transactionId,
               entitlement: entitlement.mutation,
@@ -667,6 +798,7 @@ export async function resolveManuallyFulfilledVoucherPurchase(options: {
       purchaseRequest.approvalSource = "manual";
       purchaseRequest.paymentVerificationStatus = "manual";
       purchaseRequest.paymentReviewRequired = false;
+      purchaseRequest.customerActionRequired = false;
       purchaseRequest.matchedPaymentReceiptId = claimed._id;
       purchaseRequest.interacReference = claimed.reference;
       purchaseRequest.interacReferenceNormalized = claimed.referenceNormalized;
@@ -793,6 +925,8 @@ export async function declineVoucherPurchase(options: {
       purchaseRequest.adminNotes = options.reason;
       purchaseRequest.duplicateOfRequestId = options.duplicateOfRequestId;
       purchaseRequest.paymentVerificationStatus = options.duplicateOfRequestId ? "duplicate" : "manual";
+      purchaseRequest.paymentReviewRequired = false;
+      purchaseRequest.customerActionRequired = false;
       purchaseRequest.nextPaymentCheckAt = undefined;
       await purchaseRequest.save({ session });
 

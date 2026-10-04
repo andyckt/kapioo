@@ -21,6 +21,7 @@ import {
   VoucherApprovalError,
 } from "@/lib/etransfer/approval";
 import { processVoucherApprovalNotifications } from "@/lib/etransfer/notifications";
+import { requestVoucherPurchaseCorrection } from "@/lib/etransfer/customer-correction";
 
 // GET handler - fetch a single voucher purchase request by ID
 export async function GET(
@@ -100,11 +101,26 @@ export async function PUT(
       return bodyError;
     }
 
-    const { status, adminNotes, manualFulfillment } = body;
+    const {
+      status,
+      adminNotes,
+      manualFulfillment,
+      manualPaymentOverride,
+      correctionReason,
+      correctionMessage,
+    } = body;
 
     await connectToDatabase();
 
-    const updatedRequest = status === "approved"
+    const updatedRequest = status === "correction_required"
+      ? await requestVoucherPurchaseCorrection({
+          kind: "daily",
+          requestId,
+          reason: correctionReason!,
+          message: correctionMessage,
+          actor,
+        })
+      : status === "approved"
       ? manualFulfillment
         ? (await resolveManuallyFulfilledVoucherPurchase({
             kind: "daily",
@@ -118,6 +134,7 @@ export async function PUT(
             source: "manual",
             actor,
             adminNotes,
+            manualPaymentOverride,
           })).request
       : await declineVoucherPurchase({
           kind: "daily",

@@ -44,6 +44,7 @@ export interface AdminDashboardDialogsProps {
   handleDeclineRequest: (r: CreditRequest) => void
   confirmApproveRequest: () => void | Promise<void>
   confirmResolveManuallyFulfilled: () => void | Promise<void>
+  confirmRequestCustomerCorrection: () => void | Promise<void>
   confirmDeclineRequest: () => void | Promise<void>
   deductCreditsOpen: boolean
   setDeductCreditsOpen: (open: boolean) => void
@@ -102,6 +103,7 @@ export function AdminDashboardDialogs(props: AdminDashboardDialogsProps) {
         onHandleDeclineRequest={props.handleDeclineRequest}
         onConfirmApproveRequest={props.confirmApproveRequest}
         onConfirmResolveManuallyFulfilled={props.confirmResolveManuallyFulfilled}
+        onConfirmRequestCustomerCorrection={props.confirmRequestCustomerCorrection}
         onConfirmDeclineRequest={props.confirmDeclineRequest}
       />
 

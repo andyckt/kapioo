@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { nonEmptyString, paginationQuerySchema, requestStatusSchema } from "@/lib/contracts/common";
 import { isValidInteracReference } from "@/lib/etransfer/config";
+import { paymentCorrectionReasonSchema } from "@/lib/contracts/payment-correction";
 
 export const voucherRequestsListQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
@@ -41,9 +42,12 @@ export const voucherRequestIdParamSchema = z.object({
 });
 
 export const updateVoucherPurchaseRequestBodySchema = z.object({
-  status: z.enum(["approved", "declined"]),
+  status: z.enum(["approved", "declined", "correction_required"]),
   adminNotes: z.string().optional(),
   manualFulfillment: z.boolean().default(false),
+  manualPaymentOverride: z.boolean().default(false),
+  correctionReason: paymentCorrectionReasonSchema.optional(),
+  correctionMessage: z.string().trim().max(500).optional(),
 }).superRefine((data, context) => {
   if (
     data.status === "approved" &&
@@ -54,6 +58,24 @@ export const updateVoucherPurchaseRequestBodySchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["adminNotes"],
       message: "Explain how the payment was verified before closing the request",
+    });
+  }
+  if (
+    data.status === "approved" &&
+    data.manualPaymentOverride &&
+    (!data.adminNotes || data.adminNotes.trim().length < 10)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["adminNotes"],
+      message: "Explain how the deposit was verified before approving",
+    });
+  }
+  if (data.status === "correction_required" && !data.correctionReason) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["correctionReason"],
+      message: "Choose what the customer needs to correct",
     });
   }
 });

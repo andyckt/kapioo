@@ -3,6 +3,7 @@ import { getTranslations, type Language } from '@/lib/email-translations';
 import { buildCanonicalBreakdown } from '@/lib/price-breakdown';
 import { buildPlanLabel, getWeeklyPlanBy } from '@/lib/plans/service';
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names';
+import type { PaymentCorrectionReasonInput } from '@/lib/contracts/payment-correction';
 
 export interface EmailOptions {
   to: string;
@@ -223,6 +224,78 @@ export const sendInteracPayerEmailVerification = async (
       </div>
     `,
     idempotencyKey: `interac-email-verification:${to.toLowerCase()}:${code}`,
+  });
+};
+
+function escapePaymentEmailText(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  })[character] || character);
+}
+
+export const sendVoucherPurchaseCorrectionEmail = async (options: {
+  to: string;
+  name: string;
+  requestId: string;
+  requestKind: 'daily' | 'weekly';
+  reason: PaymentCorrectionReasonInput;
+  message?: string;
+  language?: Language;
+  idempotencyKey?: string;
+}) => {
+  const language = options.language || 'zh';
+  const isZh = language === 'zh';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const tab = options.requestKind === 'daily' ? 'meal-vouchers' : 'credits';
+  const correctionUrl = `${baseUrl}/dashboard?tab=${tab}&correctRequest=${encodeURIComponent(options.requestId)}`;
+  const reasonText: Record<PaymentCorrectionReasonInput, { en: string; zh: string }> = {
+    payer_email_mismatch: {
+      en: 'The Interac sender email on your request does not match the completed deposit we received.',
+      zh: '您请求中填写的 Interac 转账邮箱与我们收到的已完成入账记录不一致。',
+    },
+    payment_not_found: {
+      en: 'We could not find a completed deposit using the payment information on your request.',
+      zh: '我们无法使用您请求中的付款信息找到已完成的入账记录。',
+    },
+    amount_mismatch: {
+      en: 'The payment information does not identify one exact deposit. Please confirm the sender email you used.',
+      zh: '当前付款信息无法确认唯一的入账记录，请确认您实际使用的转账邮箱。',
+    },
+    other: {
+      en: 'We need you to confirm the Interac sender email used for this payment.',
+      zh: '我们需要您确认此次付款实际使用的 Interac 转账邮箱。',
+    },
+  };
+  const safeName = escapePaymentEmailText(options.name);
+  const safeRequestId = escapePaymentEmailText(options.requestId);
+  const safeMessage = options.message ? escapePaymentEmailText(options.message) : '';
+  const explanation = reasonText[options.reason][language];
+
+  return sendEmail({
+    to: options.to,
+    subject: isZh
+      ? `[Kapioo] 请更新付款信息 (#${options.requestId})`
+      : `[Kapioo] Please update your payment information (#${options.requestId})`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 28px; color: #333;">
+        <h2 style="color: #C2884E;">${isZh ? '需要更新付款信息' : 'Payment information needs attention'}</h2>
+        <p>${isZh ? `${safeName}，我们暂时无法自动核对您的充值请求。` : `${safeName}, we could not automatically verify your purchase request yet.`}</p>
+        <div style="margin: 22px 0; padding: 18px; border: 1px solid #E5D6BC; border-radius: 8px; background: #FBF7F2;">
+          <p style="margin: 0 0 10px;"><strong>${isZh ? '请求编号' : 'Request'}:</strong> ${safeRequestId}</p>
+          <p style="margin: 0;">${explanation}</p>
+          ${safeMessage ? `<p style="margin: 12px 0 0;"><strong>${isZh ? '管理员留言' : 'Message'}:</strong> ${safeMessage}</p>` : ''}
+        </div>
+        <p>${isZh ? '请选择或验证您实际用于发送这笔 e-Transfer 的邮箱。提交后，系统会自动重新核对；该邮箱也会保存在您的账户中供以后使用。' : 'Select or verify the email that actually sent this e-Transfer. After you submit it, the system will check again automatically and save the email for future payments.'}</p>
+        <div style="text-align: center; margin-top: 26px;">
+          <a href="${correctionUrl}" style="display: inline-block; background: #C2884E; color: #fff; padding: 12px 22px; text-decoration: none; border-radius: 6px; font-weight: 600;">${isZh ? '更新付款信息' : 'Update payment information'}</a>
+        </div>
+      </div>
+    `,
+    idempotencyKey: options.idempotencyKey,
   });
 };
 

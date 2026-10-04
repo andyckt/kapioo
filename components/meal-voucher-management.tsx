@@ -54,6 +54,9 @@ interface VoucherPurchaseRequest {
   paymentVerificationStatus?: 'manual' | 'pending' | 'not_found' | 'matched' | 'review' | 'duplicate' | 'failed';
   paymentCheckError?: string;
   paymentReviewRequired?: boolean;
+  customerActionRequired?: boolean;
+  customerFeedbackReason?: 'payer_email_mismatch' | 'payment_not_found' | 'amount_mismatch' | 'other';
+  customerFeedbackMessage?: string;
   approvalSource?: 'automatic' | 'manual';
   duplicateOfRequestId?: string;
   originalSubtotal?: number;
@@ -266,7 +269,8 @@ export function MealVoucherManagement() {
         },
         body: JSON.stringify({
           status: 'approved',
-          adminNotes: adminNotes || undefined
+          adminNotes: adminNotes || undefined,
+          manualPaymentOverride: selectedRequest.paymentVerificationStatus !== 'matched'
         })
       });
       
@@ -294,6 +298,40 @@ export function MealVoucherManagement() {
       });
     } finally {
       setProcessingRequest(false);
+    }
+  }
+
+  const handleRequestCustomerCorrection = async () => {
+    if (!selectedRequest) return;
+    setProcessingRequest(true)
+    try {
+      const response = await fetch(`/api/voucher-requests/${selectedRequest.requestId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'correction_required',
+          correctionReason: 'payer_email_mismatch',
+          correctionMessage: adminNotes.trim() || undefined,
+        })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to request a customer correction');
+      }
+      setApproveRequestOpen(false);
+      void fetchVoucherRequests();
+      toast({
+        title: "Correction Request Sent",
+        description: "The customer can update their verified Interac email and the system will check again automatically.",
+      });
+    } catch (error) {
+      toast({
+        title: "Could Not Send Feedback",
+        description: error instanceof Error ? error.message : 'Failed to request a customer correction',
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRequest(false)
     }
   }
 
@@ -942,6 +980,8 @@ export function MealVoucherManagement() {
                           <dd className="font-medium text-right">
                             {selectedRequest.approvalSource === 'automatic'
                               ? 'Automatically verified and approved'
+                              : selectedRequest.customerActionRequired
+                                ? 'Waiting for customer correction'
                               : selectedRequest.paymentVerificationStatus === 'matched'
                                 ? 'Verified deposit matched'
                                 : selectedRequest.paymentVerificationStatus === 'not_found'
@@ -1133,13 +1173,22 @@ export function MealVoucherManagement() {
                 </Card>
 
                 <div className={`rounded-lg border p-3 text-sm ${
-                  selectedRequest.paymentVerificationStatus === 'matched'
+                  selectedRequest.customerActionRequired
+                    ? 'border-blue-200 bg-blue-50 text-blue-800'
+                    : selectedRequest.paymentVerificationStatus === 'matched'
                     ? 'border-green-200 bg-green-50 text-green-800'
                     : selectedRequest.paymentVerificationStatus === 'duplicate' || selectedRequest.paymentVerificationStatus === 'review'
                       ? 'border-red-200 bg-red-50 text-red-800'
                     : 'border-amber-200 bg-amber-50 text-amber-800'
                 }`}>
-                  {selectedRequest.paymentVerificationStatus === 'matched' ? (
+                  {selectedRequest.customerActionRequired ? (
+                    <>
+                      <p className="font-medium">Waiting for customer correction</p>
+                      <p className="mt-1 text-xs">
+                        Feedback was sent. Automatic checking will resume as soon as the customer confirms a verified sender email.
+                      </p>
+                    </>
+                  ) : selectedRequest.paymentVerificationStatus === 'matched' ? (
                     <>
                       <p className="font-medium">Verified Interac deposit found</p>
                       <p className="mt-1 text-xs">
@@ -1157,14 +1206,14 @@ export function MealVoucherManagement() {
                     <>
                       <p className="font-medium">Payment needs review</p>
                       <p className="mt-1 text-xs">
-                        The system could not identify one clear deposit. No vouchers will be issued from this screen.
+                        The system could not identify one clear deposit. Ask the customer to correct their sender email, or use the controlled override after verifying the exact deposit.
                       </p>
                     </>
                   ) : (
                     <>
                       <p className="font-medium">Waiting for a verified Interac deposit</p>
                       <p className="mt-1 text-xs">
-                        Approval will become available after the system finds one clear match in Kapioo&apos;s email.
+                        You can ask the customer to correct their sender email, or use the controlled override after verifying the exact deposit.
                       </p>
                     </>
                   )}
@@ -1197,6 +1246,21 @@ export function MealVoucherManagement() {
           <DialogFooter className="pt-2 mt-2 border-t border-green-100 flex-shrink-0 sm:flex-col sm:items-stretch gap-2">
             <Button
               variant="outline"
+              onClick={handleRequestCustomerCorrection}
+              disabled={
+                processingRequest ||
+                selectedRequest?.paymentVerificationStatus === 'matched' ||
+                selectedRequest?.customerActionRequired
+              }
+              className="border-blue-300 text-blue-700 hover:bg-blue-50"
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              {selectedRequest?.customerActionRequired
+                ? 'Waiting for Customer'
+                : 'Ask Customer to Correct Email'}
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setApproveRequestOpen(false)}
               disabled={processingRequest}
               className="border-green-200 text-green-700 hover:bg-green-50"
@@ -1218,7 +1282,10 @@ export function MealVoucherManagement() {
             </Button>
             <Button
               onClick={handleApproveRequest}
-              disabled={processingRequest || selectedRequest?.paymentVerificationStatus !== 'matched'}
+              disabled={
+                processingRequest ||
+                (selectedRequest?.paymentVerificationStatus !== 'matched' && adminNotes.trim().length < 10)
+              }
               className="bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90"
             >
               {processingRequest ? (
@@ -1229,7 +1296,9 @@ export function MealVoucherManagement() {
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  Confirm and Add Vouchers
+                  {selectedRequest?.paymentVerificationStatus === 'matched'
+                    ? 'Confirm and Add Vouchers'
+                    : 'Approve with Verified Deposit'}
                 </>
               )}
             </Button>

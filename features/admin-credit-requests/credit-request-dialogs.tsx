@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction, SyntheticEvent } from "react"
 
-import { CheckCircle2, ExternalLink, Loader2, X } from "lucide-react"
+import { CheckCircle2, ExternalLink, Loader2, MessageSquare, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -44,6 +44,7 @@ interface CreditRequestDialogsProps {
   onHandleDeclineRequest: (request: CreditRequest) => void
   onConfirmApproveRequest: () => void | Promise<void>
   onConfirmResolveManuallyFulfilled: () => void | Promise<void>
+  onConfirmRequestCustomerCorrection: () => void | Promise<void>
   onConfirmDeclineRequest: () => void | Promise<void>
 }
 
@@ -65,6 +66,7 @@ function getRequestStatusBadge(status: CreditRequest["status"]) {
 
 function paymentVerificationLabel(request: CreditRequest) {
   if (request.approvalSource === "automatic") return "Automatically verified and approved"
+  if (request.customerActionRequired) return "Waiting for customer correction"
   if (request.paymentVerificationStatus === "matched") return "Verified deposit matched"
   if (request.paymentVerificationStatus === "not_found") return "Waiting for completed deposit"
   if (request.paymentVerificationStatus === "review") return "Manual review required"
@@ -105,6 +107,7 @@ export function CreditRequestDialogs({
   onHandleDeclineRequest,
   onConfirmApproveRequest,
   onConfirmResolveManuallyFulfilled,
+  onConfirmRequestCustomerCorrection,
   onConfirmDeclineRequest,
 }: CreditRequestDialogsProps) {
   const selectedRequestUser = getCreditRequestUserInfo(selectedRequest)
@@ -616,13 +619,22 @@ export function CreditRequestDialogs({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {selectedRequest?.paymentMethod === "emt" ? (
                   <div className={`rounded-lg border p-3 text-sm ${
-                    selectedRequest.paymentVerificationStatus === "matched"
+                    selectedRequest.customerActionRequired
+                      ? "border-blue-200 bg-blue-50 text-blue-800"
+                      : selectedRequest.paymentVerificationStatus === "matched"
                       ? "border-green-200 bg-green-50 text-green-800"
                       : selectedRequest.paymentVerificationStatus === "duplicate" || selectedRequest.paymentVerificationStatus === "review"
                         ? "border-red-200 bg-red-50 text-red-800"
                       : "border-amber-200 bg-amber-50 text-amber-800"
                   }`}>
-                    {selectedRequest.paymentVerificationStatus === "matched" ? (
+                    {selectedRequest.customerActionRequired ? (
+                      <>
+                        <p className="font-medium">Waiting for customer correction</p>
+                        <p className="mt-1 text-xs">
+                          Feedback was sent. Automatic checking will resume as soon as the customer confirms a verified sender email.
+                        </p>
+                      </>
+                    ) : selectedRequest.paymentVerificationStatus === "matched" ? (
                       <>
                         <p className="font-medium">Verified Interac deposit found</p>
                         <p className="mt-1 text-xs">
@@ -640,14 +652,14 @@ export function CreditRequestDialogs({
                       <>
                         <p className="font-medium">Payment needs review</p>
                         <p className="mt-1 text-xs">
-                          The system could not identify one clear deposit. No vouchers will be issued from this screen.
+                          The system could not identify one clear deposit. Ask the customer to correct their sender email, or use the controlled override after verifying the exact deposit.
                         </p>
                       </>
                     ) : (
                       <>
                         <p className="font-medium">Waiting for a verified Interac deposit</p>
                         <p className="mt-1 text-xs">
-                          Approval will become available after the system finds one clear match in Kapioo&apos;s email.
+                          You can ask the customer to correct their sender email, or use the controlled override after verifying the exact deposit.
                         </p>
                       </>
                     )}
@@ -708,6 +720,20 @@ export function CreditRequestDialogs({
               <Button variant="outline" onClick={() => setApproveRequestOpen(false)} disabled={processingRequest}>
                 Cancel
               </Button>
+              {selectedRequest?.paymentMethod === "emt" &&
+                selectedRequest.paymentVerificationStatus !== "matched" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => void onConfirmRequestCustomerCorrection()}
+                    disabled={processingRequest || selectedRequest.customerActionRequired}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {selectedRequest.customerActionRequired
+                      ? "Waiting for Customer"
+                      : "Ask Customer to Correct Email"}
+                  </Button>
+                )}
               {selectedRequest?.paymentMethod === "emt" && (
                 <Button
                   variant="outline"
@@ -729,7 +755,8 @@ export function CreditRequestDialogs({
                   processingRequest ||
                   !hasApprovedPlanCounts ||
                   (selectedRequest?.paymentMethod === "emt" &&
-                    selectedRequest.paymentVerificationStatus !== "matched")
+                    selectedRequest.paymentVerificationStatus !== "matched" &&
+                    adminNotes.trim().length < 10)
                 }
                 className="bg-green-600 hover:bg-green-700 px-6 gap-2"
               >
@@ -741,7 +768,10 @@ export function CreditRequestDialogs({
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    Confirm and Add Plans
+                    {selectedRequest?.paymentMethod === "emt" &&
+                    selectedRequest.paymentVerificationStatus !== "matched"
+                      ? "Approve with Verified Deposit"
+                      : "Confirm and Add Plans"}
                   </>
                 )}
               </Button>

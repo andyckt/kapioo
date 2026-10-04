@@ -5,7 +5,7 @@ export interface IVoucherApprovalNotification extends Document {
   requestKey: string;
   requestId: string;
   requestKind: "daily" | "weekly";
-  status: "approved" | "declined";
+  status: "approved" | "declined" | "correction_required";
   recipientEmail: string;
   recipientName: string;
   language: "en" | "zh";
@@ -13,6 +13,8 @@ export interface IVoucherApprovalNotification extends Document {
   voucherType?: "twoDish" | "threeDish";
   quantity?: number;
   adminNotes?: string;
+  feedbackReason?: "payer_email_mismatch" | "payment_not_found" | "amount_mismatch" | "other";
+  feedbackMessage?: string;
   deliveryStatus: "pending" | "processing" | "sent" | "failed";
   attempts: number;
   nextAttemptAt: Date;
@@ -29,7 +31,7 @@ const VoucherApprovalNotificationSchema = new Schema<IVoucherApprovalNotificatio
     requestKey: { type: String, required: true },
     requestId: { type: String, required: true },
     requestKind: { type: String, enum: ["daily", "weekly"], required: true },
-    status: { type: String, enum: ["approved", "declined"], required: true },
+    status: { type: String, enum: ["approved", "declined", "correction_required"], required: true },
     recipientEmail: { type: String, required: true },
     recipientName: { type: String, required: true },
     language: { type: String, enum: ["en", "zh"], required: true },
@@ -37,6 +39,11 @@ const VoucherApprovalNotificationSchema = new Schema<IVoucherApprovalNotificatio
     voucherType: { type: String, enum: ["twoDish", "threeDish"] },
     quantity: { type: Number },
     adminNotes: { type: String },
+    feedbackReason: {
+      type: String,
+      enum: ["payer_email_mismatch", "payment_not_found", "amount_mismatch", "other"],
+    },
+    feedbackMessage: { type: String, maxlength: 500 },
     deliveryStatus: {
       type: String,
       enum: ["pending", "processing", "sent", "failed"],

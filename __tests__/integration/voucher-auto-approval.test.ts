@@ -1,7 +1,12 @@
 import {
   approveVoucherPurchase,
+  declineVoucherPurchase,
   resolveManuallyFulfilledVoucherPurchase,
 } from "@/lib/etransfer/approval";
+import {
+  correctVoucherPurchasePayerEmail,
+  requestVoucherPurchaseCorrection,
+} from "@/lib/etransfer/customer-correction";
 import { saveInteracReceipt } from "@/lib/etransfer/mailbox";
 import AuditLog from "@/models/AuditLog";
 import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
@@ -65,6 +70,8 @@ async function createVerifiedPayerEmail(user: { _id: unknown; email: string }) {
 describe("voucher auto approval accounting boundary", () => {
   beforeAll(async () => {
     process.env.ETRANSFER_RECIPIENT_EMAIL = MAILBOX;
+    process.env.EMAIL_USER = MAILBOX;
+    process.env.ETRANSFER_AUTO_APPROVAL_ACTIVATION_AT = "2020-01-01T00:00:00.000Z";
     await setupTestDb();
     await Promise.all([
       InteracReceipt.syncIndexes(),
@@ -131,7 +138,7 @@ describe("voucher auto approval accounting boundary", () => {
 
     const reloadedUser = await User.findById(user._id).lean() as Record<string, any> | null;
     expect([first.alreadyApproved, second.alreadyApproved].sort()).toEqual([false, true]);
-    expect(reloadedUser?.twoDishVoucher).toBe(6);
+    expect((reloadedUser as Record<string, any> | null)?.twoDishVoucher).toBe(6);
     expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
     expect(await Transaction.countDocuments()).toBe(1);
     expect(await VoucherApprovalNotification.countDocuments()).toBe(1);
@@ -311,7 +318,7 @@ describe("voucher auto approval accounting boundary", () => {
       VoucherApprovalGrant.findOne({ requestKey: `daily:${request.requestId}` }).lean(),
     ]);
     expect([first.alreadyApproved, second.alreadyApproved].sort()).toEqual([false, true]);
-    expect(reloadedUser?.twoDishVoucher).toBe(6);
+    expect((reloadedUser as Record<string, any> | null)?.twoDishVoucher).toBe(6);
     expect(reloadedRequest).toMatchObject({
       status: "approved",
       approvalSource: "manual",
@@ -592,6 +599,303 @@ describe("voucher auto approval accounting boundary", () => {
       approveVoucherPurchase({ kind: "daily", requestId: "VPR-2008", source: "manual" })
     ).rejects.toMatchObject({ code: "PAYMENT_AMBIGUOUS" });
     expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(0);
+  });
+
+  it("lets an administrator approve one authenticated exact-amount deposit with a mismatched sender email", async () => {
+    const user = await createTestUser({
+      email: "manual-payment-override@example.com",
+      twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const request = await VoucherPurchaseRequest.create({
+      requestId: "VPR-MANUAL-PAYMENT-1",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 148.03,
+      finalTotal: 148.03,
+      amountCents: 14803,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      paymentVerificationStatus: "review",
+      status: "pending",
+    });
+    const receipt = await createReceipt({
+      reference: "CAMANUALPAYMENT001",
+      payerEmail: "actual-sender@example.com",
+      amountCents: 14803,
+    });
+
+    const first = await approveVoucherPurchase({
+      kind: "daily",
+      requestId: request.requestId,
+      source: "manual",
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+      adminNotes: "Confirmed the sender and deposit in the authenticated bank email.",
+      manualPaymentOverride: true,
+    });
+    const second = await approveVoucherPurchase({
+      kind: "daily",
+      requestId: request.requestId,
+      source: "manual",
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+      adminNotes: "Confirmed the sender and deposit in the authenticated bank email.",
+      manualPaymentOverride: true,
+    });
+
+    expect([first.alreadyApproved, second.alreadyApproved].sort()).toEqual([false, true]);
+    expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(6);
+    expect(await Transaction.countDocuments()).toBe(1);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
+    expect(await AuditLog.countDocuments({
+      action: "voucher-request.manual-payment-override-approved",
+    })).toBe(1);
+    expect(await VoucherPurchaseRequest.findById(request._id).lean()).toMatchObject({
+      status: "approved",
+      approvalSource: "manual",
+      paymentVerificationStatus: "manual",
+      matchedPaymentReceiptId: receipt._id,
+    });
+    expect(await InteracReceipt.findById(receipt._id).lean()).toMatchObject({
+      status: "allocated",
+      allocatedRequestKey: `daily:${request.requestId}`,
+    });
+  });
+
+  it("refuses a manual payment override when more than one exact deposit is possible", async () => {
+    const user = await createTestUser({
+      email: "manual-payment-ambiguous@example.com",
+      twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const request = await VoucherPurchaseRequest.create({
+      requestId: "VPR-MANUAL-PAYMENT-2",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 149.04,
+      finalTotal: 149.04,
+      amountCents: 14904,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      paymentVerificationStatus: "review",
+      status: "pending",
+    });
+    await Promise.all([
+      createReceipt({
+        reference: "CAMANUALAMBIGUOUS001",
+        payerEmail: "sender-one@example.com",
+        amountCents: 14904,
+      }),
+      createReceipt({
+        reference: "CAMANUALAMBIGUOUS002",
+        payerEmail: "sender-two@example.com",
+        amountCents: 14904,
+      }),
+    ]);
+
+    await expect(approveVoucherPurchase({
+      kind: "daily",
+      requestId: request.requestId,
+      source: "manual",
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+      adminNotes: "Confirmed the sender and deposit in the authenticated bank email.",
+      manualPaymentOverride: true,
+    })).rejects.toMatchObject({ code: "MANUAL_OVERRIDE_PAYMENT_AMBIGUOUS" });
+    expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(0);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
+  });
+
+  it("refuses an override when its receipt matches another open request", async () => {
+    const overrideUser = await createTestUser({
+      email: "override-request@example.com",
+      twoDishVoucher: 0,
+    });
+    const rightfulUser = await createTestUser({
+      email: "rightful-sender@example.com",
+      twoDishVoucher: 0,
+    });
+    const overrideIdentity = await createVerifiedPayerEmail(overrideUser);
+    const rightfulIdentity = await createVerifiedPayerEmail(rightfulUser);
+    const base = {
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 150.05,
+      finalTotal: 150.05,
+      amountCents: 15005,
+      imageProof: "https://example.com/proof.jpg",
+      paymentVerificationStatus: "review",
+      status: "pending",
+    } as const;
+    await VoucherPurchaseRequest.create([
+      {
+        ...base,
+        requestId: "VPR-OVERRIDE-COMPETING-1",
+        userId: overrideUser._id,
+        referenceNumber: overrideUser.email,
+        payerEmailIdentityId: overrideIdentity.identity._id,
+        payerEmailVerifiedAt: overrideIdentity.verifiedAt,
+      },
+      {
+        ...base,
+        requestId: "VPR-OVERRIDE-COMPETING-2",
+        userId: rightfulUser._id,
+        referenceNumber: rightfulUser.email,
+        payerEmailIdentityId: rightfulIdentity.identity._id,
+        payerEmailVerifiedAt: rightfulIdentity.verifiedAt,
+      },
+    ]);
+    await createReceipt({
+      reference: "CAMANUALRIGHTFUL001",
+      payerEmail: rightfulUser.email,
+      amountCents: 15005,
+    });
+
+    await expect(approveVoucherPurchase({
+      kind: "daily",
+      requestId: "VPR-OVERRIDE-COMPETING-1",
+      source: "manual",
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+      adminNotes: "Confirmed the sender and deposit in the authenticated bank email.",
+      manualPaymentOverride: true,
+    })).rejects.toMatchObject({
+      code: "MANUAL_OVERRIDE_PAYMENT_BELONGS_TO_ANOTHER_REQUEST",
+    });
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
+  });
+
+  it("lets the customer correct a verified sender email and schedules automatic review again", async () => {
+    const user = await createTestUser({
+      email: "correction-owner@example.com",
+      twoDishVoucher: 0,
+    });
+    const otherUser = await createTestUser({ email: "correction-other@example.com" });
+    const original = await createVerifiedPayerEmail(user);
+    const correctedAt = new Date();
+    const correctedIdentity = await InteracPayerEmail.create({
+      userId: user._id,
+      slot: 2,
+      email: "actual-correction-sender@example.com",
+      emailNormalized: "actual-correction-sender@example.com",
+      status: "verified",
+      failedAttempts: 0,
+      verifiedAt: correctedAt,
+    });
+    const request = await VoucherPurchaseRequest.create({
+      requestId: "VPR-CORRECTION-1",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 151.06,
+      finalTotal: 151.06,
+      amountCents: 15106,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: original.identity._id,
+      payerEmailVerifiedAt: original.verifiedAt,
+      paymentVerificationStatus: "review",
+      status: "pending",
+    });
+
+    await requestVoucherPurchaseCorrection({
+      kind: "daily",
+      requestId: request.requestId,
+      reason: "payer_email_mismatch",
+      message: "Please use the email that actually sent the transfer.",
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+    });
+    expect(await VoucherPurchaseRequest.findById(request._id).lean()).toMatchObject({
+      customerActionRequired: true,
+      customerFeedbackReason: "payer_email_mismatch",
+      paymentVerificationStatus: "review",
+      paymentReviewRequired: true,
+    });
+    expect(await VoucherApprovalNotification.countDocuments({
+      requestId: request.requestId,
+      status: "correction_required",
+    })).toBe(1);
+
+    await expect(correctVoucherPurchasePayerEmail({
+      kind: "daily",
+      requestId: request.requestId,
+      payerEmail: correctedIdentity.email,
+      actor: { role: "user", user: { _id: otherUser._id, email: otherUser.email } },
+    })).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    await correctVoucherPurchasePayerEmail({
+      kind: "daily",
+      requestId: request.requestId,
+      payerEmail: correctedIdentity.email,
+      actor: { role: "user", user: { _id: user._id, email: user.email } },
+    });
+
+    const corrected = await VoucherPurchaseRequest.findById(request._id).lean() as Record<string, any>;
+    expect(corrected).toMatchObject({
+      referenceNumber: correctedIdentity.emailNormalized,
+      customerActionRequired: false,
+      paymentVerificationStatus: "pending",
+      paymentReviewRequired: false,
+      payerEmailIdentityId: correctedIdentity._id,
+    });
+    expect(corrected.nextPaymentCheckAt).toBeInstanceOf(Date);
+    expect(await AuditLog.countDocuments({
+      action: "voucher-request.customer-corrected-payment-info",
+    })).toBe(1);
+    expect(await InteracPayerEmail.countDocuments({ userId: user._id, status: "verified" })).toBe(2);
+  });
+
+  it("lets an administrator decline a blocked request and closes customer correction", async () => {
+    const user = await createTestUser({
+      email: "decline-correction@example.com",
+      twoDishVoucher: 0,
+    });
+    const { identity, verifiedAt } = await createVerifiedPayerEmail(user);
+    const request = await VoucherPurchaseRequest.create({
+      requestId: "VPR-CORRECTION-DECLINE-1",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 152.07,
+      finalTotal: 152.07,
+      amountCents: 15207,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: user.email,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: verifiedAt,
+      paymentVerificationStatus: "review",
+      status: "pending",
+    });
+    await requestVoucherPurchaseCorrection({
+      kind: "daily",
+      requestId: request.requestId,
+      reason: "payer_email_mismatch",
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+    });
+
+    await declineVoucherPurchase({
+      kind: "daily",
+      requestId: request.requestId,
+      reason: "Customer asked us to cancel this request.",
+      actor: { role: "admin", user: { email: "admin@example.com" } },
+    });
+
+    expect(await VoucherPurchaseRequest.findById(request._id).lean()).toMatchObject({
+      status: "declined",
+      customerActionRequired: false,
+      paymentReviewRequired: false,
+      paymentVerificationStatus: "manual",
+    });
+    expect((await User.findById(user._id).lean() as Record<string, any>)?.twoDishVoucher).toBe(0);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
   });
 
   it("keeps existing manual WeChat approvals working without an Interac reference", async () => {

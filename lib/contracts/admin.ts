@@ -62,6 +62,14 @@ export const creditRequestSchema = z.object({
     .enum(["manual", "pending", "not_found", "matched", "review", "duplicate", "failed"])
     .optional(),
   paymentReviewRequired: z.boolean().optional(),
+  customerActionRequired: z.boolean().optional(),
+  customerFeedbackReason: z
+    .enum(["payer_email_mismatch", "payment_not_found", "amount_mismatch", "other"])
+    .optional(),
+  customerFeedbackMessage: z.string().optional(),
+  customerFeedbackAt: z.string().nullable().optional(),
+  customerCorrectedAt: z.string().nullable().optional(),
+  customerCorrectionVersion: z.number().optional(),
   paymentCheckError: z.string().optional(),
   paymentCheckAttempts: z.number().optional(),
   nextPaymentCheckAt: z.string().nullable().optional(),

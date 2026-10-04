@@ -7,6 +7,7 @@ import {
   requestStatusSchema,
 } from "@/lib/contracts/common";
 import { isValidInteracReference } from "@/lib/etransfer/config";
+import { paymentCorrectionReasonSchema } from "@/lib/contracts/payment-correction";
 
 export const weeklyMealPlanTypeSchema = z.enum([
   "legacy",
@@ -70,7 +71,7 @@ export type CreditPurchaseRequestExportQuery = z.infer<
 
 export const adminCreditPurchaseActionBodySchema = z.object({
   requestId: nonEmptyString,
-  action: z.enum(["approve", "decline", "resolve_manual"]),
+  action: z.enum(["approve", "decline", "resolve_manual", "request_correction"]),
   approvedSixMeals: z.coerce.number().default(0),
   approvedEightMeals: z.coerce.number().default(0),
   approvedTenMeals: z.coerce.number().default(0),
@@ -78,6 +79,9 @@ export const adminCreditPurchaseActionBodySchema = z.object({
   approvedSixteenMeals: z.coerce.number().default(0),
   approvedCredits: z.coerce.number().default(0),
   adminNotes: z.string().optional(),
+  manualPaymentOverride: z.boolean().default(false),
+  correctionReason: paymentCorrectionReasonSchema.optional(),
+  correctionMessage: z.string().trim().max(500).optional(),
 }).superRefine((data, context) => {
   if (
     data.action === "resolve_manual" &&
@@ -87,6 +91,24 @@ export const adminCreditPurchaseActionBodySchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["adminNotes"],
       message: "Explain how the payment was verified before closing the request",
+    });
+  }
+  if (
+    data.action === "approve" &&
+    data.manualPaymentOverride &&
+    (!data.adminNotes || data.adminNotes.trim().length < 10)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["adminNotes"],
+      message: "Explain how the deposit was verified before approving",
+    });
+  }
+  if (data.action === "request_correction" && !data.correctionReason) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["correctionReason"],
+      message: "Choose what the customer needs to correct",
     });
   }
 });

@@ -1,5 +1,6 @@
 import {
   sendCreditPurchaseStatusEmail,
+  sendVoucherPurchaseCorrectionEmail,
   sendVoucherPurchaseStatusEmail,
 } from "@/lib/services/email";
 import VoucherApprovalNotification from "@/models/VoucherApprovalNotification";
@@ -33,7 +34,21 @@ export async function processVoucherApprovalNotifications(limit = 10) {
     if (!notification) break;
 
     try {
-      if (notification.requestKind === "daily") {
+      if (notification.status === "correction_required") {
+        if (!notification.feedbackReason) {
+          throw new Error("Correction notification lacks a reason");
+        }
+        await sendVoucherPurchaseCorrectionEmail({
+          to: notification.recipientEmail,
+          name: notification.recipientName,
+          requestId: notification.requestId,
+          requestKind: notification.requestKind,
+          reason: notification.feedbackReason,
+          message: notification.feedbackMessage,
+          language: notification.language,
+          idempotencyKey: notification.eventKey,
+        });
+      } else if (notification.requestKind === "daily") {
         if (!notification.voucherType || !notification.quantity) {
           throw new Error("Daily notification lacks voucher entitlement");
         }
