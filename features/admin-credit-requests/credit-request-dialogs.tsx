@@ -667,17 +667,26 @@ export function CreditRequestDialogs({
                 ) : null}
                 <div>
                   <Label htmlFor="admin-notes" className="text-sm font-medium">
-                    Admin Notes
+                    Admin Notes {selectedRequest.paymentMethod === "emt" &&
+                    selectedRequest.paymentVerificationStatus !== "matched"
+                      ? "(Required for Override)"
+                      : "(Optional)"}
                   </Label>
                   <textarea
                     id="admin-notes"
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                     className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm mt-1"
-                    placeholder="Optional admin notes"
+                    placeholder={selectedRequest.paymentMethod === "emt" &&
+                      selectedRequest.paymentVerificationStatus !== "matched"
+                      ? "Describe how you verified the exact deposit (at least 10 characters)"
+                      : "Optional admin notes"}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Notes are required for the human override and will be visible to the user.
+                    {selectedRequest.paymentMethod === "emt" &&
+                    selectedRequest.paymentVerificationStatus !== "matched"
+                      ? `${Math.min(adminNotes.trim().length, 10)}/10 characters required to unlock the override buttons. The note will be visible to the user.`
+                      : "These notes will be visible to the user."}
                   </p>
                 </div>
 

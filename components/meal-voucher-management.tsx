@@ -846,7 +846,7 @@ export function MealVoucherManagement() {
               <div>
                 <DialogTitle>Voucher Purchase Request</DialogTitle>
                 <DialogDescription className="mt-1">
-                  Request ID: <span className="font-medium">{selectedRequest?.id}</span>
+                  Request ID: <span className="font-medium">{selectedRequest?.requestId}</span>
                 </DialogDescription>
               </div>
             </div>
@@ -1154,7 +1154,7 @@ export function MealVoucherManagement() {
                     <dl className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <dt className="font-medium text-green-800">Request ID:</dt>
-                        <dd className="font-medium">{selectedRequest.id}</dd>
+                        <dd className="font-medium">{selectedRequest.requestId}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="font-medium text-green-800">User:</dt>
@@ -1220,16 +1220,24 @@ export function MealVoucherManagement() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="admin-notes" className="text-[#6B5F53]">Admin Notes (Optional)</Label>
+                  <Label htmlFor="admin-notes" className="text-[#6B5F53]">
+                    Admin Notes {selectedRequest.paymentVerificationStatus === 'matched'
+                      ? '(Optional)'
+                      : '(Required for Override)'}
+                  </Label>
                   <Textarea
                     id="admin-notes"
-                    placeholder="Add any notes about this approval..."
+                    placeholder={selectedRequest.paymentVerificationStatus === 'matched'
+                      ? 'Add any notes about this approval...'
+                      : 'Describe how you verified the exact deposit (at least 10 characters)...'}
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                     className="border-green-200 focus-visible:ring-green-500/30 focus-visible:border-green-500 min-h-[80px] max-h-[120px]"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Notes are required for the human override and will be visible to the user.
+                    {selectedRequest.paymentVerificationStatus === 'matched'
+                      ? 'These notes will be visible to the user.'
+                      : `${Math.min(adminNotes.trim().length, 10)}/10 characters required to unlock the override buttons. The note will be visible to the user.`}
                   </p>
                 </div>
 
@@ -1339,7 +1347,7 @@ export function MealVoucherManagement() {
                     <dl className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <dt className="font-medium text-red-800">Request ID:</dt>
-                        <dd className="font-medium">{selectedRequest.id}</dd>
+                        <dd className="font-medium">{selectedRequest.requestId}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="font-medium text-red-800">User:</dt>

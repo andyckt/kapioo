@@ -1,8 +1,10 @@
 import InteracPayerEmail from "@/models/InteracPayerEmail";
+import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 import {
   beginInteracPayerEmailVerification,
   InteracPayerEmailError,
   listInteracPayerEmails,
+  unlinkInteracPayerEmail,
   verifyInteracPayerEmail,
 } from "@/lib/etransfer/payer-email";
 
@@ -139,5 +141,45 @@ describe("Interac payer email verification", () => {
       emailNormalized: "concurrent-payer@example.com",
     }).lean();
     expect(record?.failedAttempts).toBe(5);
+  });
+
+  it("keeps a verified sender email linked while a voucher request is pending", async () => {
+    const user = await createTestUser({ email: "pending-request-owner@example.com" });
+    const identity = await InteracPayerEmail.create({
+      userId: user._id,
+      slot: 1,
+      email: "pending-request-sender@example.com",
+      emailNormalized: "pending-request-sender@example.com",
+      status: "verified",
+      failedAttempts: 0,
+      verifiedAt: new Date(),
+    });
+    const request = await VoucherPurchaseRequest.create({
+      requestId: "VPR-PAYER-EMAIL-LOCK-1",
+      userId: user._id,
+      planId: "daily-2dish-6",
+      type: "twoDish",
+      quantity: 6,
+      amount: 147,
+      finalTotal: 147,
+      amountCents: 14700,
+      imageProof: "https://example.com/proof.jpg",
+      referenceNumber: identity.emailNormalized,
+      payerEmailIdentityId: identity._id,
+      payerEmailVerifiedAt: identity.verifiedAt,
+      paymentVerificationStatus: "pending",
+      status: "pending",
+    });
+
+    await expect(unlinkInteracPayerEmail({
+      userId: user._id,
+      email: identity.emailNormalized,
+    })).rejects.toMatchObject({ code: "EMAIL_IN_USE", status: 409 });
+    expect(await InteracPayerEmail.findById(identity._id)).not.toBeNull();
+
+    request.status = "declined";
+    await request.save();
+    await unlinkInteracPayerEmail({ userId: user._id, email: identity.emailNormalized });
+    expect(await InteracPayerEmail.findById(identity._id)).toBeNull();
   });
 });

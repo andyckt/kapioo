@@ -1,8 +1,10 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 
-import type mongoose from "mongoose";
+import mongoose from "mongoose";
 
+import CreditPurchaseRequest from "@/models/CreditPurchaseRequest";
 import InteracPayerEmail from "@/models/InteracPayerEmail";
+import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 
 import { normalizeEmail } from "./config";
 
@@ -248,14 +250,45 @@ export async function unlinkInteracPayerEmail(options: {
   userId: mongoose.Types.ObjectId | string;
   email: string;
 }) {
-  const deleted = await InteracPayerEmail.findOneAndDelete({
-    userId: options.userId,
-    emailNormalized: normalizeEmail(options.email),
-  });
-  if (!deleted) {
-    throw new InteracPayerEmailError("Linked email not found", "EMAIL_NOT_FOUND", 404);
+  const session = await mongoose.startSession();
+  try {
+    const deleted = await session.withTransaction(async () => {
+      const identity = await InteracPayerEmail.findOne({
+        userId: options.userId,
+        emailNormalized: normalizeEmail(options.email),
+      }).session(session);
+      if (!identity) {
+        throw new InteracPayerEmailError("Linked email not found", "EMAIL_NOT_FOUND", 404);
+      }
+
+      const [dailyPending, weeklyPending] = await Promise.all([
+        VoucherPurchaseRequest.exists({
+          status: "pending",
+          payerEmailIdentityId: identity._id,
+        }).session(session),
+        CreditPurchaseRequest.exists({
+          status: "pending",
+          paymentMethod: "emt",
+          payerEmailIdentityId: identity._id,
+        }).session(session),
+      ]);
+      if (dailyPending || weeklyPending) {
+        throw new InteracPayerEmailError(
+          "This sender email is still used by a pending voucher request. Finish or update that request before removing it.",
+          "EMAIL_IN_USE",
+          409
+        );
+      }
+
+      return InteracPayerEmail.findOneAndDelete({ _id: identity._id }).session(session);
+    });
+    if (!deleted) {
+      throw new InteracPayerEmailError("Linked email not found", "EMAIL_NOT_FOUND", 404);
+    }
+    return deleted;
+  } finally {
+    await session.endSession();
   }
-  return deleted;
 }
 
 export async function findVerifiedInteracPayerEmail(
