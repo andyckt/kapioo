@@ -667,26 +667,17 @@ export function CreditRequestDialogs({
                 ) : null}
                 <div>
                   <Label htmlFor="admin-notes" className="text-sm font-medium">
-                    Admin Notes {selectedRequest.paymentMethod === "emt" &&
-                    selectedRequest.paymentVerificationStatus !== "matched"
-                      ? "(Required for Override)"
-                      : "(Optional)"}
+                    Admin Notes (Optional)
                   </Label>
                   <textarea
                     id="admin-notes"
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                     className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm mt-1"
-                    placeholder={selectedRequest.paymentMethod === "emt" &&
-                      selectedRequest.paymentVerificationStatus !== "matched"
-                      ? "Describe how you verified the exact deposit (at least 10 characters)"
-                      : "Optional admin notes"}
+                    placeholder="Optional admin notes"
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {selectedRequest.paymentMethod === "emt" &&
-                    selectedRequest.paymentVerificationStatus !== "matched"
-                      ? `${Math.min(adminNotes.trim().length, 10)}/10 characters required to unlock the override buttons. The note will be visible to the user.`
-                      : "These notes will be visible to the user."}
+                    The system records the authenticated deposit used for this approval. Any note entered here will be visible to the user.
                   </p>
                 </div>
 
@@ -762,10 +753,7 @@ export function CreditRequestDialogs({
                 onClick={() => void onConfirmApproveRequest()}
                 disabled={
                   processingRequest ||
-                  !hasApprovedPlanCounts ||
-                  (selectedRequest?.paymentMethod === "emt" &&
-                    selectedRequest.paymentVerificationStatus !== "matched" &&
-                    adminNotes.trim().length < 10)
+                  !hasApprovedPlanCounts
                 }
                 className="bg-green-600 hover:bg-green-700 px-6 gap-2"
               >

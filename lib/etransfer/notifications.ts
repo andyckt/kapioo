@@ -7,13 +7,17 @@ import VoucherApprovalNotification from "@/models/VoucherApprovalNotification";
 
 const LOCK_MS = 2 * 60_000;
 
-export async function processVoucherApprovalNotifications(limit = 10) {
+export async function processVoucherApprovalNotifications(
+  limit = 10,
+  options: { eventKey?: string } = {}
+) {
   let sent = 0;
   let failed = 0;
   for (let index = 0; index < limit; index += 1) {
     const now = new Date();
     const notification = await VoucherApprovalNotification.findOneAndUpdate(
       {
+        ...(options.eventKey ? { eventKey: options.eventKey } : {}),
         deliveryStatus: { $in: ["pending", "failed", "processing"] },
         nextAttemptAt: { $lte: now },
         $or: [

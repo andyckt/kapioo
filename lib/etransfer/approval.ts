@@ -383,13 +383,11 @@ export async function approveVoucherPurchase(options: {
         403
       );
     }
-    if (!options.adminNotes || options.adminNotes.trim().length < 10) {
-      throw new VoucherApprovalError(
-        "Explain how you verified the deposit before approving",
-        "MANUAL_OVERRIDE_REASON_REQUIRED"
-      );
-    }
   }
+  const approvalNotes = manualPaymentOverride
+    ? options.adminNotes?.trim() ||
+      "Administrator approved after the system verified one authenticated exact-amount Interac deposit."
+    : options.adminNotes;
   const RequestModel = modelFor(options.kind);
   const reqKey = requestKey(options.kind, options.requestId);
   let result: { request: any; alreadyApproved: boolean } | null = null;
@@ -508,7 +506,7 @@ export async function approveVoucherPurchase(options: {
       const now = new Date();
       purchaseRequest.status = "approved";
       purchaseRequest.approvedAt = now;
-      purchaseRequest.adminNotes = options.adminNotes ||
+      purchaseRequest.adminNotes = approvalNotes ||
         (options.source === "automatic" ? "Automatically approved from verified Interac deposit" : "");
       purchaseRequest.approvalSource = options.source;
       purchaseRequest.paymentVerificationStatus = manualPaymentOverride ? "manual" : "matched";

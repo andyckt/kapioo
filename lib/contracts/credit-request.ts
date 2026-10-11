@@ -93,17 +93,6 @@ export const adminCreditPurchaseActionBodySchema = z.object({
       message: "Explain how the payment was verified before closing the request",
     });
   }
-  if (
-    data.action === "approve" &&
-    data.manualPaymentOverride &&
-    (!data.adminNotes || data.adminNotes.trim().length < 10)
-  ) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["adminNotes"],
-      message: "Explain how the deposit was verified before approving",
-    });
-  }
   if (data.action === "request_correction" && !data.correctionReason) {
     context.addIssue({
       code: z.ZodIssueCode.custom,

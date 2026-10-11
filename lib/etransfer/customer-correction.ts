@@ -18,7 +18,7 @@ export type PaymentCorrectionReason =
 
 type Actor = {
   user?: { _id?: unknown; email?: string };
-  role?: "admin" | "user";
+  role?: "admin" | "user" | "system";
 };
 
 function modelFor(kind: VoucherRequestKind): Model<any> {
@@ -44,6 +44,7 @@ export async function requestVoucherPurchaseCorrection(options: {
   reason: PaymentCorrectionReason;
   message?: string;
   actor: Actor;
+  detectedReceiptId?: string;
 }) {
   const message = String(options.message || "").trim();
   if (options.reason === "other" && message.length < 5) {
@@ -116,6 +117,8 @@ export async function requestVoucherPurchaseCorrection(options: {
               reason: options.reason,
               message,
               correctionVersion: version,
+              automatic: options.actor.role === "system",
+              detectedReceiptId: options.detectedReceiptId || null,
             },
           },
         ],

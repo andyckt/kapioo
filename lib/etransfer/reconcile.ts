@@ -23,8 +23,15 @@ import {
 } from "./config";
 import { syncInteracReceipts } from "./mailbox";
 import { PAYMENT_FIRST_MATCH_WINDOW_MS } from "./payment-intent";
+import { requestVoucherPurchaseCorrection } from "./customer-correction";
+import { processVoucherApprovalNotifications } from "./notifications";
 
 const REQUESTS_PER_RUN = 25;
+
+type ReconciliationTarget = {
+  kind: VoucherRequestKind;
+  requestId: string;
+};
 
 type ObservationDecision =
   | "matched"
@@ -174,7 +181,7 @@ async function updateCheckResult(
   );
 }
 
-async function getDueRequests(activationAt: Date) {
+async function getDueRequests(activationAt: Date, only?: ReconciliationTarget) {
   const now = new Date();
   const filter = {
     status: "pending",
@@ -183,12 +190,13 @@ async function getDueRequests(activationAt: Date) {
     payerEmailIdentityId: { $type: "objectId" },
     createdAt: { $gte: activationAt },
   };
+  const scopedFilter = only ? { ...filter, requestId: only.requestId } : filter;
   const [daily, weekly] = await Promise.all([
-    VoucherPurchaseRequest.find(filter)
+    only?.kind === "weekly" ? Promise.resolve([]) : VoucherPurchaseRequest.find(scopedFilter)
       .sort({ nextPaymentCheckAt: 1, createdAt: 1, requestId: 1 })
       .limit(REQUESTS_PER_RUN)
       .lean(),
-    CreditPurchaseRequest.find({ ...filter, paymentMethod: "emt" })
+    only?.kind === "daily" ? Promise.resolve([]) : CreditPurchaseRequest.find({ ...scopedFilter, paymentMethod: "emt" })
       .sort({ nextPaymentCheckAt: 1, createdAt: 1, requestId: 1 })
       .limit(REQUESTS_PER_RUN)
       .lean(),
@@ -206,6 +214,73 @@ async function getDueRequests(activationAt: Date) {
         String(left.request.requestId).localeCompare(String(right.request.requestId))
     )
     .slice(0, REQUESTS_PER_RUN);
+}
+
+async function findUnambiguousEmailMismatch(
+  kind: VoucherRequestKind,
+  request: Record<string, any>,
+  activationAt: Date
+) {
+  const requestCreatedAt = new Date(request.createdAt);
+  const earliestEligibleReceipt = new Date(
+    Math.max(activationAt.getTime(), requestCreatedAt.getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS)
+  );
+  const latestEligibleReceipt = new Date(
+    requestCreatedAt.getTime() + PAYMENT_FIRST_MATCH_WINDOW_MS
+  );
+  const requestEmail = normalizeEmail(request.referenceNumber || "");
+  const candidates = (await InteracReceipt.find({
+    provider: "interac",
+    mailbox: getEtransferAutomationConfig().mailbox,
+    amountCents: amountCents(request),
+    currency: "CAD",
+    authenticationVerified: true,
+    status: "unmatched",
+    receivedAt: { $gte: earliestEligibleReceipt, $lte: latestEligibleReceipt },
+  })
+    .sort({ receivedAt: 1, referenceNormalized: 1 })
+    .limit(3)
+    .lean())
+    .filter((receipt) => normalizeEmail(receipt.payerEmailNormalized || "") !== requestEmail);
+
+  if (candidates.length !== 1) return null;
+  const receipt = candidates[0] as Record<string, any>;
+  const receiptIdentity = await InteracPayerEmail.findOne({
+    emailNormalized: normalizeEmail(receipt.payerEmailNormalized || ""),
+    status: "verified",
+  }).lean();
+  if (receiptIdentity && String(receiptIdentity.userId) !== String(request.userId)) {
+    return null;
+  }
+
+  const latestRequestTime = new Date(
+    new Date(receipt.receivedAt).getTime() + PAYMENT_FIRST_MATCH_WINDOW_MS
+  );
+  const earliestRequestTime = new Date(
+    Math.max(
+      activationAt.getTime(),
+      new Date(receipt.receivedAt).getTime() - PAYMENT_FIRST_MATCH_WINDOW_MS
+    )
+  );
+  const pendingFilter = {
+    status: "pending",
+    amountCents: receipt.amountCents,
+    createdAt: { $gte: earliestRequestTime, $lte: latestRequestTime },
+    customerActionRequired: { $ne: true },
+    ...(receiptIdentity ? { userId: request.userId } : {}),
+  };
+  const [dailyCount, weeklyCount] = await Promise.all([
+    VoucherPurchaseRequest.countDocuments(pendingFilter),
+    CreditPurchaseRequest.countDocuments({ ...pendingFilter, paymentMethod: "emt" }),
+  ]);
+  if (dailyCount + weeklyCount !== 1) return null;
+
+  const currentStillPending = await modelFor(kind).exists({
+    requestId: request.requestId,
+    status: "pending",
+    customerActionRequired: { $ne: true },
+  });
+  return currentStillPending ? receipt : null;
 }
 
 function requestMatchesReceipt(
@@ -420,14 +495,14 @@ function isSameRequestPurchase(
   );
 }
 
-export async function reconcileEtransferPurchases() {
+export async function reconcileEtransferPurchases(options: { only?: ReconciliationTarget } = {}) {
   const config = getEtransferAutomationConfig();
   if (config.mode === "off") {
     return { mode: config.mode, due: 0, synced: null, approved: 0, duplicates: 0, reviewed: 0, pending: 0, unmatchedReceipts: null, conflictingReceipts: null };
   }
   assertMailboxConfiguration(config);
 
-  const due = await getDueRequests(config.activationAt as Date);
+  const due = await getDueRequests(config.activationAt as Date, options.only);
 
   let synced: Awaited<ReturnType<typeof syncInteracReceipts>> | null = null;
   try {
@@ -506,6 +581,41 @@ export async function reconcileEtransferPurchases() {
     );
 
     if (resolution.status === "not_found") {
+      const mismatchedReceipt = await findUnambiguousEmailMismatch(
+        kind,
+        request as Record<string, any>,
+        config.activationAt as Date
+      );
+      if (mismatchedReceipt) {
+        reviewed += 1;
+        await recordObservation({
+          config,
+          kind,
+          request: request as Record<string, any>,
+          decision: "review",
+          reasonCode: "authenticated_payer_email_mismatch",
+          linkedEmailVerified: true,
+          receipt: mismatchedReceipt,
+        });
+        const correctedRequest = await requestVoucherPurchaseCorrection({
+          kind,
+          requestId: request.requestId,
+          reason: "payer_email_mismatch",
+          actor: { role: "system" },
+          detectedReceiptId: String(mismatchedReceipt._id),
+        });
+        await processVoucherApprovalNotifications(1, {
+          eventKey: `${kind}:${request.requestId}:correction-required:${Number(correctedRequest.customerCorrectionVersion || 0)}`,
+        });
+        await modelFor(kind).updateOne(
+          { requestId: request.requestId, status: "pending" },
+          {
+            $set: { lastPaymentCheckedAt: new Date() },
+            $inc: { paymentCheckAttempts: 1 },
+          }
+        );
+        continue;
+      }
       pending += 1;
       await recordObservation({
         config,

@@ -1221,23 +1221,17 @@ export function MealVoucherManagement() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="admin-notes" className="text-[#6B5F53]">
-                    Admin Notes {selectedRequest.paymentVerificationStatus === 'matched'
-                      ? '(Optional)'
-                      : '(Required for Override)'}
+                    Admin Notes (Optional)
                   </Label>
                   <Textarea
                     id="admin-notes"
-                    placeholder={selectedRequest.paymentVerificationStatus === 'matched'
-                      ? 'Add any notes about this approval...'
-                      : 'Describe how you verified the exact deposit (at least 10 characters)...'}
+                    placeholder="Add any notes about this approval..."
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                     className="border-green-200 focus-visible:ring-green-500/30 focus-visible:border-green-500 min-h-[80px] max-h-[120px]"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {selectedRequest.paymentVerificationStatus === 'matched'
-                      ? 'These notes will be visible to the user.'
-                      : `${Math.min(adminNotes.trim().length, 10)}/10 characters required to unlock the override buttons. The note will be visible to the user.`}
+                    The system records the authenticated deposit used for this approval. Any note entered here will be visible to the user.
                   </p>
                 </div>
 
@@ -1290,10 +1284,7 @@ export function MealVoucherManagement() {
             </Button>
             <Button
               onClick={handleApproveRequest}
-              disabled={
-                processingRequest ||
-                (selectedRequest?.paymentVerificationStatus !== 'matched' && adminNotes.trim().length < 10)
-              }
+              disabled={processingRequest}
               className="bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90"
             >
               {processingRequest ? (

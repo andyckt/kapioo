@@ -634,7 +634,6 @@ describe("voucher auto approval accounting boundary", () => {
       requestId: request.requestId,
       source: "manual",
       actor: { role: "admin", user: { email: "admin@example.com" } },
-      adminNotes: "Confirmed the sender and deposit in the authenticated bank email.",
       manualPaymentOverride: true,
     });
     const second = await approveVoucherPurchase({
@@ -658,6 +657,7 @@ describe("voucher auto approval accounting boundary", () => {
       approvalSource: "manual",
       paymentVerificationStatus: "manual",
       matchedPaymentReceiptId: receipt._id,
+      adminNotes: "Administrator approved after the system verified one authenticated exact-amount Interac deposit.",
     });
     expect(await InteracReceipt.findById(receipt._id).lean()).toMatchObject({
       status: "allocated",

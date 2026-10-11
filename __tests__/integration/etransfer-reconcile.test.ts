@@ -4,6 +4,7 @@ import InteracPayerEmail from "@/models/InteracPayerEmail";
 import Transaction from "@/models/Transaction";
 import User from "@/models/User";
 import VoucherApprovalGrant from "@/models/VoucherApprovalGrant";
+import VoucherApprovalNotification from "@/models/VoucherApprovalNotification";
 import VoucherPurchaseRequest from "@/models/VoucherPurchaseRequest";
 
 import { clearCollections, setupTestDb, teardownTestDb } from "../helpers/db";
@@ -19,6 +20,10 @@ vi.mock("@/lib/etransfer/mailbox", () => ({
 
 import { reconcileEtransferPurchases } from "@/lib/etransfer/reconcile";
 import { approveVoucherPurchase } from "@/lib/etransfer/approval";
+import {
+  correctVoucherPurchasePayerEmail,
+  requestVoucherPurchaseCorrection,
+} from "@/lib/etransfer/customer-correction";
 
 const MAILBOX = "kapioomeal@gmail.com";
 
@@ -116,6 +121,185 @@ describe("e-Transfer reconciliation", () => {
     const retryDelay = new Date(request?.nextPaymentCheckAt as Date).getTime() - Date.now();
     expect(retryDelay).toBeGreaterThan(59 * 60_000);
     expect(retryDelay).toBeLessThanOrEqual(60 * 60_000);
+  });
+
+  it("automatically asks for an email correction when one authenticated deposit clearly has a different sender email", async () => {
+    const user = await createTestUser({ email: "typed-sender@example.com", twoDishVoucher: 0 });
+    await createDueDailyRequest({
+      requestId: "VPR-AUTO-CORRECTION-1",
+      userId: user._id,
+      payerEmail: user.email,
+    });
+    const receipt = await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "C1AUTOCORRECTION1",
+      referenceNormalized: "C1AUTOCORRECTION1",
+      gmailMessageId: "<C1AUTOCORRECTION1@payments.interac.ca>",
+      imapUid: 9101,
+      uidValidity: "1",
+      payerEmail: "actual-sender@example.com",
+      payerEmailNormalized: "actual-sender@example.com",
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-C1AUTOCORRECTION1",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const [request, notification, audit] = await Promise.all([
+      VoucherPurchaseRequest.findOne({ requestId: "VPR-AUTO-CORRECTION-1" }).lean(),
+      VoucherApprovalNotification.findOne({
+        requestId: "VPR-AUTO-CORRECTION-1",
+        status: "correction_required",
+      }).lean(),
+      AuditLog.findOne({
+        action: "voucher-request.customer-correction-requested",
+        targetId: "VPR-AUTO-CORRECTION-1",
+      }).lean(),
+    ]);
+
+    expect(result).toMatchObject({ approved: 0, reviewed: 1, pending: 0 });
+    expect(request).toMatchObject({
+      status: "pending",
+      paymentVerificationStatus: "review",
+      customerActionRequired: true,
+      customerFeedbackReason: "payer_email_mismatch",
+    });
+    expect(notification).toBeTruthy();
+    expect(audit?.actorRole).toBe("system");
+    expect(audit?.metadata).toMatchObject({
+      automatic: true,
+      detectedReceiptId: String(receipt._id),
+    });
+    expect((await InteracReceipt.findById(receipt._id).lean())?.status).toBe("unmatched");
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(0);
+  });
+
+  it("does not guess which customer needs correction when two open requests have the same amount", async () => {
+    const firstUser = await createTestUser({ email: "first-typed@example.com" });
+    const secondUser = await createTestUser({ email: "second-typed@example.com" });
+    await Promise.all([
+      createDueDailyRequest({
+        requestId: "VPR-AUTO-CORRECTION-2",
+        userId: firstUser._id,
+        payerEmail: firstUser.email,
+      }),
+      createDueDailyRequest({
+        requestId: "VPR-AUTO-CORRECTION-3",
+        userId: secondUser._id,
+        payerEmail: secondUser.email,
+      }),
+    ]);
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "C1AUTOCORRECTION2",
+      referenceNormalized: "C1AUTOCORRECTION2",
+      gmailMessageId: "<C1AUTOCORRECTION2@payments.interac.ca>",
+      imapUid: 9102,
+      uidValidity: "1",
+      payerEmail: "unknown-actual-sender@example.com",
+      payerEmailNormalized: "unknown-actual-sender@example.com",
+      senderName: "Unknown Sender",
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-C1AUTOCORRECTION2",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+
+    const result = await reconcileEtransferPurchases();
+    const requests = await VoucherPurchaseRequest.find({
+      requestId: { $in: ["VPR-AUTO-CORRECTION-2", "VPR-AUTO-CORRECTION-3"] },
+    }).lean();
+
+    expect(result).toMatchObject({ approved: 0, reviewed: 0, pending: 2 });
+    expect(requests.every((request) => request.customerActionRequired !== true)).toBe(true);
+    expect(await VoucherApprovalNotification.countDocuments({ status: "correction_required" })).toBe(0);
+  });
+
+  it("immediately approves a targeted request after the customer corrects the verified sender email", async () => {
+    const user = await createTestUser({ email: "correction-start@example.com", twoDishVoucher: 0 });
+    const request = await createDueDailyRequest({
+      requestId: "VPR-IMMEDIATE-RECHECK-1",
+      userId: user._id,
+      payerEmail: user.email,
+    });
+    const correctedIdentity = await InteracPayerEmail.create({
+      userId: user._id,
+      slot: 2,
+      email: "correction-finish@example.com",
+      emailNormalized: "correction-finish@example.com",
+      status: "verified",
+      failedAttempts: 0,
+      verifiedAt: new Date(),
+    });
+    await InteracReceipt.create({
+      provider: "interac",
+      mailbox: MAILBOX,
+      reference: "C1IMMEDIATERECHECK1",
+      referenceNormalized: "C1IMMEDIATERECHECK1",
+      gmailMessageId: "<C1IMMEDIATERECHECK1@payments.interac.ca>",
+      imapUid: 9103,
+      uidValidity: "1",
+      payerEmail: correctedIdentity.email,
+      payerEmailNormalized: correctedIdentity.emailNormalized,
+      senderName: user.name,
+      recipientEmail: MAILBOX,
+      amountCents: 14803,
+      currency: "CAD",
+      depositedAt: new Date(),
+      receivedAt: new Date(),
+      accountLast4: "4994",
+      subject: "Authenticated completed deposit",
+      rawSha256: "sha256-C1IMMEDIATERECHECK1",
+      parserVersion: "1",
+      authenticationVerified: true,
+      status: "unmatched",
+    });
+    await requestVoucherPurchaseCorrection({
+      kind: "daily",
+      requestId: request.requestId,
+      reason: "payer_email_mismatch",
+      actor: { role: "system" },
+    });
+    await correctVoucherPurchasePayerEmail({
+      kind: "daily",
+      requestId: request.requestId,
+      payerEmail: correctedIdentity.email,
+      actor: { role: "user", user: { _id: user._id, email: user.email } },
+    });
+
+    const result = await reconcileEtransferPurchases({
+      only: { kind: "daily", requestId: request.requestId },
+    });
+    const [reloadedRequest, reloadedUser] = await Promise.all([
+      VoucherPurchaseRequest.findById(request._id).lean(),
+      User.findById(user._id).lean() as Promise<Record<string, any> | null>,
+    ]);
+
+    expect(result).toMatchObject({ due: 1, approved: 1 });
+    expect(reloadedRequest).toMatchObject({
+      status: "approved",
+      paymentVerificationStatus: "matched",
+    });
+    expect(reloadedUser?.twoDishVoucher).toBe(6);
+    expect(await VoucherApprovalGrant.countDocuments()).toBe(1);
   });
 
   it("syncs the mailbox even when no request is due", async () => {
