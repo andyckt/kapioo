@@ -5,6 +5,7 @@ import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-custom
 import { withRewrittenProofOfDeliveryUrl } from "@/lib/orders/proof-of-delivery-response";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
+import { getOrderActionAvailability } from "@/lib/self-service/action-availability";
 
 export async function GET(_request: Request, { params }: RouteContext<{ id: string }>) {
   let orderId = "";
@@ -34,9 +35,11 @@ export async function GET(_request: Request, { params }: RouteContext<{ id: stri
         ? (order as { toObject: () => Record<string, unknown> }).toObject()
         : (order as unknown as Record<string, unknown>);
     const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as never, user as never);
+    const actionAvailability = await getOrderActionAvailability([order], "daily");
 
     return successJson({
       ...withRewrittenProofOfDeliveryUrl(plainOrder),
+      selfService: actionAvailability.get(order.orderId),
       effectiveCustomerInfo,
       phoneNumber: effectiveCustomerInfo.phoneNumber,
       area: effectiveCustomerInfo.area,

@@ -133,6 +133,9 @@ export async function DELETE(request: Request, ctx: RouteContext<{ id: string }>
     }
 
     const shouldRestoreEntitlement = returnCredits && order.status !== "refunded";
+    if (order.weeklyEntitlementGroupId) {
+      return errorJson("Grouped weekly deliveries cannot be deleted individually. Cancel the entire group through self-service or review the group with support.", 409);
+    }
     const refundTarget = shouldRestoreEntitlement
       ? resolveWeeklyRefundTarget(order)
       : ({ kind: "none", amount: 0 } as const);

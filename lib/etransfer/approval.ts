@@ -1,3 +1,4 @@
+import { recordAssistedPurchase } from "@/lib/support/attribution";
 import mongoose from "mongoose";
 
 import { applyBalanceMutations, type BalanceMutationEntry } from "@/lib/balances/mutations";
@@ -324,6 +325,7 @@ export async function approveVoucherPurchase(options: {
         Object.assign(purchaseRequest, entitlement.weeklyFields);
       }
       await purchaseRequest.save({ session });
+      await recordAssistedPurchase(`${options.kind}:${options.requestId}`, claimed.amountCents, session);
 
       await VoucherApprovalGrant.create(
         [

@@ -4,9 +4,9 @@ import { buildPageMetadata } from "@/lib/seo/metadata";
 import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `${PRODUCT_LINE_LABELS.weekly.en} | Kapioo Toronto`,
+  title: `${PRODUCT_LINE_LABELS.weekly.en} Delivery in Toronto | Kapioo`,
   description:
-    `Explore Kapioo ${PRODUCT_LINE_LABELS.weekly.en} plans with rotating menus, flexible meal credits, and reliable delivery across the GTA.`,
+    `Stock your fridge with freshly prepared Asian fusion meals. Kapioo Weekly Meal Box delivers twice a week across Toronto and the GTA, with flexible weekly vouchers.`,
   path: "/weekly-meal",
 });
 

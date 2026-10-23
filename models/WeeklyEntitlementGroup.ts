@@ -9,12 +9,20 @@ export interface IWeeklyEntitlementGroup extends Document {
   voucherCountUsed: number;
   totalMealsForWeek: number;
   splitDeliveryCount: number;
+  cancelledAt?: Date;
+  refundedAt?: Date;
+  refundTransactionId?: string;
+  revision?: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const WeeklyEntitlementGroupSchema = new Schema<IWeeklyEntitlementGroup>(
   {
+    cancelledAt: Date,
+    refundedAt: Date,
+    refundTransactionId: String,
+    revision: { type: Number, default: 0 },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -63,6 +71,7 @@ function shouldRefreshWeeklyEntitlementGroupModel(
   const splitDeliveryCountPath = schema?.path?.('splitDeliveryCount');
 
   return (
+    !schema?.path?.('cancelledAt') ||
     !groupIdPath ||
     !mealPlanTypePath ||
     !totalMealsForWeekPath ||

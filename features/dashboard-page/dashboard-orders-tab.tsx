@@ -8,7 +8,7 @@ import { UnifiedRechargeHistory } from "@/components/unified-recharge-history"
 import { WeeklySubscriptionHistory } from "@/components/weekly-subscription-history"
 import type { DashboardUserData } from "@/lib/dashboard-user-profile"
 import type { useLanguage } from "@/lib/language-context"
-import { cn } from "@/lib/utils"
+import { useLanguage as usePortalLanguage } from "@/lib/language-context"
 
 import { DashboardTabPanel } from "./dashboard-tab-panel"
 
@@ -32,13 +32,16 @@ export function DashboardOrdersTab({
   onOrderSectionChange,
 }: DashboardOrdersTabProps) {
   const [orderKindTab, setOrderKindTab] = useState<"weekly" | "daily">("weekly")
+  const { language } = usePortalLanguage()
 
   return (
-    <DashboardTabPanel panelKey="orders" className="space-y-0">
-      <div className="mx-auto w-full max-w-xl lg:max-w-2xl">
-        <h2 className="text-2xl font-bold tracking-tight text-[#C2884E] sm:text-3xl">
-          {t("myOrders")}
-        </h2>
+    <DashboardTabPanel panelKey="orders" className="kp-portal-orders">
+      <div className="kp-orders-content">
+        <div className="kp-orders-heading">
+          <p className="kp-overline">{language === "zh" ? "我的餐食" : "YOUR KAPIOO SPACE"}</p>
+          <h1>{t("myOrders")}</h1>
+          <p>{language === "zh" ? "在这里查看餐食订单和餐券购买记录。" : "Keep track of your meals and voucher purchases."}</p>
+        </div>
 
         <div className="mt-3">
           <OrderSectionNavigation
@@ -52,7 +55,7 @@ export function DashboardOrdersTab({
           {userData && orderActiveSection === "orders" && (
             <>
               <div
-                className="mt-3 flex flex-wrap gap-2"
+                className="kp-orders-kind"
                 role="group"
                 aria-label={t("orderHistoryTypeToggleAria")}
               >
@@ -60,13 +63,7 @@ export function DashboardOrdersTab({
                   type="button"
                   aria-pressed={orderKindTab === "weekly"}
                   onClick={() => setOrderKindTab("weekly")}
-                  className={cn(
-                    "min-h-10 rounded-xl border px-4 py-2 text-[13px] font-medium outline-none transition-colors duration-200",
-                    "[-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-[#C2884E]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    orderKindTab === "weekly"
-                      ? "border-[#C2884E]/35 bg-[#fff6ef] font-semibold text-[#3D342C] shadow-sm"
-                      : "border-[#C2884E]/15 bg-white/90 text-[#6B5F53] hover:border-[#C2884E]/25 hover:bg-[#FFFCF9] hover:text-[#3D342C]"
-                  )}
+                  className="kp-orders-kind-button"
                 >
                   {t("weeklySubscription")}
                 </button>
@@ -74,13 +71,7 @@ export function DashboardOrdersTab({
                   type="button"
                   aria-pressed={orderKindTab === "daily"}
                   onClick={() => setOrderKindTab("daily")}
-                  className={cn(
-                    "min-h-10 rounded-xl border px-4 py-2 text-[13px] font-medium outline-none transition-colors duration-200",
-                    "[-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-[#C2884E]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    orderKindTab === "daily"
-                      ? "border-[#C2884E]/35 bg-[#fff6ef] font-semibold text-[#3D342C] shadow-sm"
-                      : "border-[#C2884E]/15 bg-white/90 text-[#6B5F53] hover:border-[#C2884E]/25 hover:bg-[#FFFCF9] hover:text-[#3D342C]"
-                  )}
+                  className="kp-orders-kind-button"
                 >
                   {t("dailyDelivery")}
                 </button>

@@ -16,6 +16,7 @@ export interface IWeeklyOrderItem {
   optionName: string;   // Name of the meal option
   quantity: number;     // Number of meals ordered
   date: string;         // Formatted date string for delivery
+  deliveryDateISO?: string;
 }
 
 // Define WeeklyOrder interface
@@ -62,6 +63,7 @@ export interface IWeeklyOrder extends Document {
 
 // Define WeeklyOrderItem schema
 const WeeklyOrderItemSchema = new Schema({
+  deliveryDateISO: String,
   dayId: {
     type: String,
     required: true,
@@ -275,6 +277,7 @@ function shouldRefreshWeeklyOrderModel(model: mongoose.Model<IWeeklyOrder> | und
   return (
     !mealPlanTypePath ||
     !voucherDeductedPath ||
+    !schema?.path?.("items.deliveryDateISO") ||
     !weeklyEntitlementGroupIdPath ||
     !allocatedMealCountPath ||
     !confirmedAtPath ||

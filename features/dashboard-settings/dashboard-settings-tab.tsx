@@ -15,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { AddressGeo } from "@/lib/contracts/common"
 import type { useLanguage } from "@/lib/language-context"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
-import { cn } from "@/lib/utils"
 import { InteracPayerEmailPicker } from "@/components/interac-payer-email-picker"
 
 export type DashboardPersonalInfo = {
@@ -84,10 +83,12 @@ export function DashboardSettingsTab({
       animate={{ y: 0 }}
       exit={{ y: -10 }}
       transition={{ duration: 0.2 }}
-      className="space-y-6"
+      className="kp-portal-settings space-y-6"
     >
-      <div className="flex items-center justify-between mt-4">
-        <h2 className="text-3xl font-bold tracking-tight">{t("accountSettings")}</h2>
+      <div className="kp-settings-heading">
+        <p className="kp-overline">{language === "zh" ? "我的账户" : "YOUR ACCOUNT"}</p>
+        <h1>{t("accountSettings")}</h1>
+        <p>{language === "zh" ? "你的资料、配送地址和密码都在这里。" : "Your details, delivery address and password, all in one place."}</p>
       </div>
 
       <Tabs defaultValue="personal" className="w-full">
@@ -142,24 +143,16 @@ export function DashboardSettingsTab({
                   <button
                     type="button"
                     onClick={() => onLanguagePreferenceChange("zh")}
-                    className={cn(
-                      "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center",
-                      personalInfo.languagePreference === "zh"
-                        ? "border-[#C2884E] bg-[#FFF6EF] text-[#C2884E] font-medium"
-                        : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                    )}
+                    aria-pressed={personalInfo.languagePreference === "zh"}
+                    className="kp-settings-language"
                   >
                     <span className="text-sm">中文</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => onLanguagePreferenceChange("en")}
-                    className={cn(
-                      "h-11 px-4 rounded-md border-2 transition-all duration-200 flex items-center justify-center gap-2",
-                      personalInfo.languagePreference === "en"
-                        ? "border-[#C2884E] bg-[#FFF6EF] text-[#C2884E] font-medium"
-                        : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                    )}
+                    aria-pressed={personalInfo.languagePreference === "en"}
+                    className="kp-settings-language"
                   >
                     <span className="text-xl">🇨🇦</span>
                     <span className="text-sm">English</span>

@@ -1,10 +1,10 @@
 {
-  "name": "Meal Subscription",
-  "short_name": "Meals",
+  "name": "Kapioo",
+  "short_name": "Kapioo",
   "icons": [
     {
-      "src": "/xiaohongshu.png",
-      "sizes": "64x64 32x32 24x24 16x16",
+      "src": "/kapioo-logo.png",
+      "sizes": "375x375",
       "type": "image/png"
     },
     {
@@ -23,7 +23,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#C2884E",
-  "background_color": "#ffffff",
+  "theme_color": "#f8f3eb",
+  "background_color": "#f8f3eb",
   "display": "standalone"
-} 
+}

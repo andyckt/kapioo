@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "incremental": false, "plugins": [] },
+  "include": ["./**/*.ts", "./**/*.tsx", "../../app/design-finalists/**/*.tsx"],
+  "exclude": ["../../node_modules", "../../.next"]
+}

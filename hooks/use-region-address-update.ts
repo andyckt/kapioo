@@ -5,6 +5,7 @@ import { mergeStoredUser } from "@/lib/client-user-cache"
 import { useLanguage } from "@/lib/language-context"
 import { getStoredUser } from "@/lib/phone-helper"
 import type { AddressGeo } from "@/lib/contracts/common"
+import { clearSupportCheckoutAddress } from "@/lib/support/checkout-address"
 
 type AddressUpdateInput = {
   unitNumber?: string
@@ -94,6 +95,7 @@ export function useRegionAddressUpdate({
       }
 
       mergeStoredUser(result.data ?? { address: updatedAddress })
+      clearSupportCheckoutAddress()
       onSuccess?.(region)
 
       const toastMessage = addressData

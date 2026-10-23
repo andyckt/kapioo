@@ -1,6 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
+const AdminSupport = dynamic(() => import("@/components/support/admin-support").then(m => m.AdminSupport), { loading: () => <p>Loading support…</p> })
 import type { Dispatch, SetStateAction } from "react"
 import { AnimatePresence } from "framer-motion"
 import { Loader2 } from "lucide-react"
@@ -338,6 +339,8 @@ export function AdminDashboardTabContent(p: AdminDashboardTabContentProps) {
           <RatingDishManagement />
         </AdminTabPanel>
       )}
+
+      {p.activeTab === "support" && <AdminTabPanel panelKey="support"><AdminSupport /></AdminTabPanel>}
 
       {p.activeTab === "settings" && (
         <AdminTabPanel panelKey="settings">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
+import "@/app/login/auth-companion.css"
 import { Check, X, ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,12 +15,12 @@ import { useClientAuth } from "@/lib/client-auth"
 export default function VerifyEmailPage() {
   const router = useRouter()
   const { applyAuthSnapshot } = useClientAuth()
-  
+
   const [email, setEmail] = useState("")
   const [code, setCode] = useState("")
   const [verificationState, setVerificationState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState("")
-  
+
   useEffect(() => {
     // Get pending user email from localStorage
     const pendingUser = localStorage.getItem('pendingUser')
@@ -33,18 +33,18 @@ export default function VerifyEmailPage() {
       }
     }
   }, [])
-  
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!email || !code) {
       setErrorMessage("请输入邮箱地址和验证码")
       setVerificationState('error')
       return
     }
-    
+
     setVerificationState('loading')
-    
+
     try {
       // Get the pending user data from localStorage
       const pendingUserStr = localStorage.getItem('pendingUser')
@@ -53,16 +53,16 @@ export default function VerifyEmailPage() {
         setVerificationState('error')
         return
       }
-      
+
       const pendingUser = JSON.parse(pendingUserStr)
-      
+
       // Verify that the entered code matches the stored code
       if (pendingUser.email !== email || pendingUser.verificationCode !== code) {
         setVerificationState('error')
         setErrorMessage("验证码无效或邮箱地址不匹配")
         return
       }
-      
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -77,7 +77,7 @@ export default function VerifyEmailPage() {
           languagePreference: pendingUser.languagePreference || 'zh',
         }),
       })
-      
+
       const data = await response.json()
 
       if (response.status === 504 || response.status === 408) {
@@ -85,7 +85,7 @@ export default function VerifyEmailPage() {
         setErrorMessage('服务器响应超时，请稍等片刻后重试。')
         return
       }
-      
+
       if (data.success && data.data) {
         const authSnapshot = buildAuthSnapshotFromRegister(data.data)
 
@@ -108,7 +108,7 @@ export default function VerifyEmailPage() {
       setErrorMessage("验证过程中发生错误")
     }
   }
-  
+
   const renderContent = () => {
     switch (verificationState) {
       case 'idle':
@@ -146,8 +146,8 @@ export default function VerifyEmailPage() {
                     required
                   />
                 </div>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
                 >
                   验证邮箱
@@ -161,7 +161,7 @@ export default function VerifyEmailPage() {
             </CardFooter>
           </>
         )
-        
+
       case 'loading':
         return (
           <div className="flex flex-col items-center justify-center py-8">
@@ -172,7 +172,7 @@ export default function VerifyEmailPage() {
             <p className="text-muted-foreground">正在验证...</p>
           </div>
         )
-        
+
       case 'success':
         return (
           <>
@@ -188,15 +188,15 @@ export default function VerifyEmailPage() {
               </p>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
-              <Button 
-                onClick={() => router.push('/address/verify')} 
+              <Button
+                onClick={() => router.push('/address/verify')}
                 className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
               >
                 继续设置地址
               </Button>
-              <Button 
-                onClick={() => router.push('/address/verify')} 
-                variant="outline" 
+              <Button
+                onClick={() => router.push('/address/verify')}
+                variant="outline"
                 className="w-full"
               >
                 更新配送地址
@@ -204,7 +204,7 @@ export default function VerifyEmailPage() {
             </CardFooter>
           </>
         )
-        
+
       case 'error':
         return (
           <>
@@ -220,15 +220,15 @@ export default function VerifyEmailPage() {
               </p>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
-              <Button 
-                onClick={() => setVerificationState('idle')} 
+              <Button
+                onClick={() => setVerificationState('idle')}
                 className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
               >
                 重试
               </Button>
-              <Button 
-                onClick={() => router.push('/signup')} 
-                variant="outline" 
+              <Button
+                onClick={() => router.push('/signup')}
+                variant="outline"
                 className="w-full"
               >
                 返回注册
@@ -240,20 +240,13 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
+    <div className="kp-auth-companion flex min-h-screen flex-col">
       <div className="container flex flex-1 items-center justify-center py-8 md:py-12">
         <div className="mx-auto flex w-full flex-col items-center justify-center space-y-6 sm:w-[500px] animate-fade-in-up">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <Image 
-              src="/未命名設計.png" 
-              alt="Kapioo Logo" 
-              width={48} 
-              height={48} 
-              className="h-12 w-12 transition-transform duration-300 group-hover:rotate-6" 
-            />
-            <span className="inline-block font-bold text-[#C2884E] text-2xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+            <span className="kp-auth-companion-logo">kapioo<span>.</span></span>
           </Link>
-          
+
           <Card className="w-full bg-white shadow-lg">
             {renderContent()}
           </Card>
@@ -261,4 +254,4 @@ export default function VerifyEmailPage() {
       </div>
     </div>
   )
-} 
+}

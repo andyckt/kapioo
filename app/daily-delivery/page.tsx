@@ -2,23 +2,24 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { 
   ArrowRight, 
-  Clock, 
-  Check, 
   Info, 
-  Tag, 
   Utensils,
   ChevronRight,
   ChevronLeft,
   CalendarDays,
   Menu,
-  Sparkles,
-  Ticket
+  MapPin
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ProductDetailsDialog } from '@/components/product-details-dialog'
+import { ProductJourney } from '@/components/product-journey'
+import { ProductMenuGallery } from '@/components/product-menu-gallery'
+import { VoucherBenefits } from '@/components/voucher-benefits'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/lib/language-context'
 import { PRODUCT_LINE_LABELS } from '@/lib/product-lines/names'
@@ -32,14 +33,8 @@ import {
   getDailyComboTags,
   type DayData,
 } from '@/lib/daily-delivery'
-import { getDailyDeliveryState, setDailyDeliveryState } from '@/lib/plan-flow-state'
+import { getDailyDeliveryState, getStarterAddressSelection, setDailyDeliveryState } from '@/lib/plan-flow-state'
 import { listDailyPlans } from '@/lib/plans/service'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -49,17 +44,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
-  MenuPreviewCardButton,
-  MenuPreviewCarouselSkeleton,
-  MenuPreviewCarouselViewport,
-  menuPreviewCarouselRowInsetClassName,
-} from "@/components/landing/menu-preview-carousel"
-import {
   DailyComboMetadata,
   DailyComboMealOptionDivider,
   DailyComboThreeDishExtraDishes,
   DailyComboTwoDishDishList,
 } from "@/features/daily-ordering/daily-combo-meal-lists"
+import '../starter/order-flow.css'
 
 // Define types for voucher plans
 interface VoucherPlan {
@@ -70,22 +60,14 @@ interface VoucherPlan {
   isPopular?: boolean;
   pricePerMeal: number;
   savings?: string;
-  displayQuantity?: string;
-  originalQuantity?: string;
-  displayPricePerMeal?: string;
-  originalPricePerMeal?: string;
 }
 
 export default function DailyDeliveryPage() {
   const router = useRouter()
   const { t, language } = useLanguage()
   const handleBack = useSmartBack()
-  const [activeTab, setActiveTab] = useState('description')
-  const [pricingTab, setPricingTab] = useState<'twoDish' | 'threeDish'>(() => {
-    const saved = getDailyDeliveryState()
-    return saved ? saved.pricingTab : 'twoDish'
-  })
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [pricingTab, setPricingTab] = useState<'twoDish' | 'threeDish'>('twoDish')
+  const [restoredPricing, setRestoredPricing] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
   const [weeklyMenu, setWeeklyMenu] = useState<Record<string, DayData>>({})
   /** Start true so menu preview shows skeleton on first paint until active-with-combos returns. */
@@ -113,10 +95,17 @@ export default function DailyDeliveryPage() {
     return dishTranslations[dishName] || dishName
   }
   
+  useEffect(() => {
+    const saved = getDailyDeliveryState()
+    if (saved) setPricingTab(saved.pricingTab)
+    setRestoredPricing(true)
+  }, [])
+
   // Persist pricing tab so returning from signup shows same options
   useEffect(() => {
+    if (!restoredPricing) return
     setDailyDeliveryState({ pricingTab })
-  }, [pricingTab])
+  }, [pricingTab, restoredPricing])
 
   // Check if user is authenticated on component mount
   useEffect(() => {
@@ -151,21 +140,6 @@ export default function DailyDeliveryPage() {
   }, [])
   
   const allDailyPlans: VoucherPlan[] = listDailyPlans().map((plan) => {
-    const isTwentyPack = plan.credits === 22
-    const isFortyPack = plan.credits === 46
-    const displayQuantity = isTwentyPack ? '20' : isFortyPack ? '40' : undefined
-    const originalQuantity = isTwentyPack || isFortyPack ? String(plan.credits) : undefined
-    const displayPricePerMeal =
-      plan.dishType === 'twoDish'
-        ? isTwentyPack || isFortyPack
-          ? '17.8'
-          : undefined
-        : isTwentyPack
-          ? '20.85'
-          : isFortyPack
-            ? '20.45'
-            : undefined
-
     return {
       id: plan.id,
       type: plan.dishType,
@@ -174,10 +148,6 @@ export default function DailyDeliveryPage() {
       pricePerMeal: plan.pricePerMeal,
       isPopular: Boolean(plan.tags),
       savings: language === 'zh' ? plan.tags?.zh : plan.tags?.en,
-      displayQuantity,
-      originalQuantity,
-      displayPricePerMeal,
-      originalPricePerMeal: isTwentyPack || isFortyPack ? plan.pricePerMeal.toFixed(2) : undefined
     }
   })
 
@@ -205,6 +175,10 @@ export default function DailyDeliveryPage() {
   
   // Handle plan selection and redirection
   const handlePlanSelect = (plan: VoucherPlan) => {
+    if (!getStarterAddressSelection()?.canDaily) {
+      router.push('/starter')
+      return
+    }
     // Create a plan identifier
     const planIdentifier = `plan=${plan.id}`
     
@@ -372,30 +346,6 @@ export default function DailyDeliveryPage() {
     void fetchWeeklyMenu()
   }, [])
 
-  const features = [
-    {
-      title: language === 'zh' ? "每日新鲜现做" : "Freshly Made Daily",
-      description: language === 'zh' ? "直送上门，满分新鲜度" : "Delivered to your door, maximum freshness",
-      icon: <div className="h-6 w-6 text-[#C2884E] flex items-center justify-center">
-        <Utensils className="h-5 w-5" />
-      </div>
-    },
-    {
-      title: language === 'zh' ? "餐券制" : "Credit-Based System",
-      description: language === 'zh' ? "需要哪天就点哪天，灵活不浪费～" : "Order only when you need, flexible and no waste",
-      icon: <div className="h-6 w-6 text-[#C2884E] flex items-center justify-center">
-        <Ticket className="h-5 w-5" />
-      </div>
-    },
-    {
-      title: language === 'zh' ? "午间时段送达" : "Lunch Time Delivery",
-      description: language === 'zh' ? "11AM-1PM，享受当日鲜美" : "11AM-1PM, enjoy fresh flavors of the day",
-      icon: <div className="h-6 w-6 text-[#C2884E] flex items-center justify-center">
-        <Clock className="h-5 w-5" />
-      </div>
-    }
-  ]
-
   const dayOrder: Record<string, number> = {
     monday: 1,
     tuesday: 2,
@@ -404,21 +354,6 @@ export default function DailyDeliveryPage() {
     friday: 5,
     saturday: 6,
     sunday: 7,
-  }
-
-  const chineseDayLabels: Record<string, string> = {
-    monday: "周一",
-    tuesday: "周二",
-    wednesday: "周三",
-    thursday: "周四",
-    friday: "周五",
-    saturday: "周六",
-    sunday: "周日",
-  }
-
-  const getPreviewDayLabel = (displayName: string) => {
-    const key = displayName.toLowerCase()
-    return language === "zh" ? chineseDayLabels[key] || displayName : displayName.substring(0, 3)
   }
 
   const carouselRowsWithImage = Object.entries(weeklyMenu)
@@ -441,11 +376,6 @@ export default function DailyDeliveryPage() {
 
   const weeklyMenuPreviewItems = applyDailyMenuPreviewCuration(carouselRowsWithImage)
 
-  const showMenuPreviewSection =
-    isMenuLoading || weeklyMenuPreviewItems.length > 0
-
-  const previewLanguage = language === "zh" ? "zh" : "en"
-
   const openMenuForDay = (dayId: string) => {
     const day = weeklyMenu[dayId]
     if (day) {
@@ -458,134 +388,33 @@ export default function DailyDeliveryPage() {
   // Render the plan cards
   const renderPlanCards = (plans: VoucherPlan[]) => {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+      <div className="ko-voucher-grid">
         {plans.map((plan) => (
           <motion.div
             key={plan.id}
-            whileHover={{ y: -8, boxShadow: "0 10px 25px -5px rgba(194, 136, 78, 0.1), 0 8px 10px -6px rgba(194, 136, 78, 0.1)" }}
-            transition={{ duration: 0.3 }}
-            className="relative flex flex-col h-full rounded-xl border overflow-hidden group border-[#C2884E]/10 hover:border-[#C2884E]/30"
+            whileHover={{ y: -4 }}
+            transition={{ duration: 0.25 }}
+            className="ko-voucher-card"
           >
-            {/* Plan tag badge - shows actual tag from catalog */}
-            {plan.savings && (
-              <div className="absolute top-0 right-0 bg-[#F5EDE4] text-[#C2884E] px-3 py-1 text-xs font-medium rounded-bl-xl z-10">
-                {plan.savings}
-              </div>
-            )}
-            
-            {/* Card header */}
-            <div className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] text-white p-5 relative overflow-hidden">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="bg-white/20 p-1.5 rounded-full">
-                    <Utensils className="h-3 w-3" />
-                  </div>
-                  <span className="text-sm font-medium opacity-90">
-                    {plan.type === 'twoDish' 
-                      ? (language === 'zh' ? '每餐2菜' : '2-Dish Meal') 
-                      : (language === 'zh' ? '每餐3菜' : '3-Dish Meal')}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold">${plan.price}</span>
-                  <span className="text-sm opacity-80">
-                    / {plan.quantity} {language === 'zh' ? '餐券' : 'vouchers'}
-                  </span>
-                </div>
-              </div>
+            <div className="ko-voucher-topline">
+              <span>{language === 'zh' ? '每日便当' : 'DAILY BENTO'}</span>
+              {plan.savings && <span className="ko-voucher-badge">{language === 'zh' ? (plan.quantity === 10 ? '首次推荐' : '最超值') : (plan.quantity === 10 ? 'Great first pack' : 'Best value')}</span>}
             </div>
-            
-            {/* Card content */}
-            <div className="flex flex-col flex-1 p-5 bg-gradient-to-b from-white to-[#F5EDE4]/20">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <Tag className="h-4 w-4 text-[#C2884E]" />
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '餐券数量' : 'Vouchers'}
-                    </span>
-                  </div>
-                  <span className="font-bold text-[#C2884E]">
-                    {plan.displayQuantity && plan.originalQuantity ? (
-                      <>
-                        <span className="line-through text-[#C2884E]/70 mr-1">{plan.displayQuantity}</span>
-                        {plan.originalQuantity}
-                      </>
-                    ) : plan.quantity}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Tag className="h-4 w-4 text-[#C2884E]" />
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === 'zh' ? '单价' : 'Per meal'}
-                    </span>
-                  </div>
-                  <span className="font-bold text-[#C2884E]">
-                    {plan.displayPricePerMeal && plan.originalPricePerMeal ? (
-                      <>
-                        <span className="line-through text-[#C2884E]/70 mr-1">${plan.displayPricePerMeal}</span>
-                        ${plan.originalPricePerMeal}
-                      </>
-                    ) : `$${plan.pricePerMeal.toFixed(2)}`}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="space-y-2 mb-4 pt-3 border-t border-[#C2884E]/10">
-                {/* Show 首次推荐 as first tick if available */}
-                {plan.savings && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                    <span className="text-[#6B5F53]">{plan.savings}</span>
-                  </div>
-                )}
-                
-                {/* Show 可转让 as first tick for plans without savings */}
-                {!plan.savings && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                    <span className="text-[#6B5F53]">
-                      {language === 'zh' ? '可转让' : 'Transferable'}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Show 可转让 as second tick for plans with savings */}
-                {plan.savings && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                    <span className="text-[#6B5F53]">
-                      {language === 'zh' ? '可转让' : 'Transferable'}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Show Valid for 6 months as a tick */}
-                <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                  <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
-                  </span>
-                </div>
-                
-                {/* Show refund policy */}
-                <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                  <span className="text-[#6B5F53]">
-                    {language === 'zh' ? '购买后7天内可退款未用部分' : 'Unused portion refundable within 7 days of purchase'}
-                  </span>
-                </div>
-              </div>
-              
-              <Button
-                className="w-full mt-auto bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white transition-all duration-300"
-                onClick={() => handlePlanSelect(plan)}
-              >
-                {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
-              </Button>
+            <h3 className="ko-voucher-count">
+              <strong>{plan.quantity}</strong> {language === 'zh' ? '张餐券' : 'meal vouchers'}
+            </h3>
+            <div className="ko-voucher-price">
+              <strong>${plan.price}</strong>
+              <span>{language === 'zh' ? '总价' : 'total'}</span>
             </div>
+            <div className="ko-voucher-unit">
+              <span>{language === 'zh' ? '每餐' : 'Per meal'}</span>
+              <strong>${plan.pricePerMeal.toFixed(2)}</strong>
+            </div>
+            <Button className="ko-voucher-button" onClick={() => handlePlanSelect(plan)}>
+              {language === 'zh' ? `选择 ${plan.quantity} 张餐券` : `Choose ${plan.quantity} vouchers`}
+              <ArrowRight aria-hidden="true" size={17} />
+            </Button>
           </motion.div>
         ))}
       </div>
@@ -593,25 +422,11 @@ export default function DailyDeliveryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
-      {/* Back Button - Top Left */}
-      <div className="absolute top-6 left-6 z-10">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={handleBack}
-          className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors bg-white/80 backdrop-blur-sm rounded-full shadow-sm p-2 h-auto"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span className="sr-only">{language === 'zh' ? '返回上一页' : 'Go back'}</span>
-        </Button>
-      </div>
+    <div className="ko-order ko-product ko-daily min-h-screen flex flex-col">
+      <header className="ko-header"><Link href="/" className="ko-logo" aria-label="Kapioo home">kapioo<span>.</span></Link><div className="ko-header-actions"><Link href="/starter" className="ko-change-address"><MapPin size={16} />{language === 'zh' ? '更改配送地址' : 'Change address'}</Link><button type="button" className="ko-language" onClick={handleBack} aria-label={language === 'zh' ? '返回上一页' : 'Go back'}><ChevronLeft size={19} /></button></div></header>
       
       {/* Hero Section */}
-      <section className="relative w-full overflow-hidden bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2] pt-8 pb-24">
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
+      <section className="ko-product-section relative w-full overflow-hidden pt-8 pb-24">
         
         <div className="container max-w-6xl mx-auto px-4">
           <motion.div 
@@ -621,238 +436,19 @@ export default function DailyDeliveryPage() {
             variants={staggerContainer}
           >
             {/* Header content - Two column layout */}
-            <motion.div className="w-full flex flex-col md:flex-row gap-8 md:gap-12" variants={fadeIn}>
+            <motion.div className="ko-product-hero w-full flex flex-col md:flex-row gap-8 md:gap-12" variants={fadeIn}>
               {/* Left column - Title and description */}
-              <div className="md:w-1/2 text-center md:text-left">
-                <div className="inline-flex items-center mb-4">
-                  <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
-                    <span className="text-sm font-medium text-[#C2884E]">
-                      {language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}计划` : `${PRODUCT_LINE_LABELS.daily.en} plan`}
-                    </span>
-                  </div>
-                </div>
+              <div className="ko-product-copy md:w-1/2 text-center md:text-left">
+                <p className="ko-eyebrow">{language === 'zh' ? '每日便当' : 'Daily Bento / Toronto meal delivery'}</p>
                 
-                <h1 className="text-3xl md:text-5xl font-bold mb-6 text-[#6B5F53]">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    {language === 'zh' ? '每日新鲜' : 'Daily Fresh'}
-                  </span>
-                  <span className="block mt-2">
-                    {language === 'zh' ? '直送到家' : 'Delivered to Your Door'}
-                  </span>
-                </h1>
+                <h1>{language === 'zh' ? <>午餐，<em>值得期待。</em></> : <>Lunch worth <em>looking forward to.</em></>}</h1>
                 
-                <p className="text-lg md:text-xl text-[#6B5F53]/80 mb-6 max-w-lg">
-                  {language === 'zh' 
-                    ? '适合注重新鲜度，追求每日现做品质的你' 
-                    : 'Perfect for: Those who value freshness and daily prepared quality meals'}
-                </p>
+                <p className="ko-product-lead">{language === 'zh' ? '新鲜现做的亚洲融合便当，午间送达。每次配送至少 2 份。' : 'Freshly cooked Asian fusion bentos, delivered for lunch. Minimum 2 meals per delivery.'}</p>
+                <p className="ko-product-sidenote">{language === 'zh' ? '先买餐券，想吃的时候再兑换。' : 'Buy vouchers first. Redeem when you’re ready.'}</p>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button 
-                      className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-md relative z-20"
-                    >
-                      {language === 'zh' ? '知道更多' : 'Learn More'}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
-                    <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
-                      <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
-                        {language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}计划详情` : `${PRODUCT_LINE_LABELS.daily.en} plan details`}
-                      </DialogTitle>
-                      <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
-                        {language === 'zh' ? '了解我们的每日新鲜配送服务' : 'Learn about our daily fresh delivery service'}
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-brand">
-                      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6 bg-[#F5EDE4]/30 p-1 rounded-[20px]">
-                          <TabsTrigger 
-                            value="description" 
-                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-[14px] py-3 transition-all duration-300"
-                          >
-                            {language === 'zh' ? '产品介绍' : 'Product Description'}
-                          </TabsTrigger>
-                          <TabsTrigger 
-                            value="howItWorks" 
-                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#C2884E] data-[state=active]:to-[#D1A46C] data-[state=active]:text-white font-medium rounded-[14px] py-3 transition-all duration-300"
-                          >
-                            {language === 'zh' ? '如何运作' : 'How It Works'}
-                          </TabsTrigger>
-                        </TabsList>
-                        
-                        <style jsx global>{`
-                          .scrollbar-brand::-webkit-scrollbar {
-                            width: 5px;
-                            height: 5px;
-                          }
-                          .scrollbar-brand::-webkit-scrollbar-track {
-                            background: #F5EDE4;
-                          }
-                          .scrollbar-brand::-webkit-scrollbar-thumb {
-                            background: linear-gradient(to bottom, #C2884E, #D1A46C);
-                            border-radius: 20px;
-                          }
-                        `}</style>
-                        
-                        <TabsContent value="description" className="mt-0 space-y-4">
-                          <div className="space-y-4">
-                            <div className="flex items-start gap-4">
-                              <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center mt-1 flex-shrink-0">
-                                <Check className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-medium text-[#6B5F53] mb-1">{language === 'zh' ? '每日新鲜现做' : 'Freshly Made Daily'}</h3>
-                                <p className="text-[#6B5F53]/80">{language === 'zh' ? '直送上门，满分新鲜度。我们坚持每日现做，确保您收到的餐食保持最佳口感和营养价值。' : 'Delivered to your door, maximum freshness. We make meals fresh daily to ensure you receive the best taste and nutritional value.'}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-start gap-4">
-                              <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center mt-1 flex-shrink-0">
-                                <Check className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-medium text-[#6B5F53] mb-1">{language === 'zh' ? '餐券制' : 'Credit-Based System'}</h3>
-                                <p className="text-[#6B5F53]/80">{language === 'zh' ? '购买餐券后，可根据个人需求灵活下单，自由选择使用日期——不浪费，更灵活' : 'After purchasing credits, order flexibly based on your needs and freely choose when to use them—no waste, more flexibility'}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-start gap-4">
-                              <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center mt-1 flex-shrink-0">
-                                <Check className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-medium text-[#6B5F53] mb-1">{language === 'zh' ? '午间时段送达' : 'Lunch Time Delivery'}</h3>
-                                <p className="text-[#6B5F53]/80">{language === 'zh' ? '配送时间为 11AM-1PM。 开始配送后，您将收到包含预计送达时间的短信通知。' : 'Delivery time is 11AM-1PM. Once delivery starts, you will receive an SMS notification with the estimated arrival time.'}</p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-[#FFF6EF] rounded-xl p-6 mt-4">
-                            <h3 className="text-lg font-medium text-[#C2884E] mb-4">{language === 'zh' ? '适合人群' : 'Perfect For'}</h3>
-                            <ul className="space-y-3">
-                              <li className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">{language === 'zh' ? '注重健康饮食、关注餐食新鲜度的美食爱好者' : 'Food lovers who value healthy eating and meal freshness'}</span>
-                              </li>
-                              <li className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">{language === 'zh' ? '追求高品质食材、坚持每日新鲜制作的你' : 'Those who pursue high-quality ingredients and insist on daily fresh preparation'}</span>
-                              </li>
-                              <li className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">{language === 'zh' ? '学业或工作繁忙但不愿放弃健康饮食的人士' : 'Busy students or professionals who don\'t want to compromise on healthy eating'}</span>
-                              </li>
-                              <li className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                                <span className="text-[#6B5F53]">{language === 'zh' ? '寻求灵活订阅方案、可自由安排配送日程的你' : 'Anyone seeking flexible subscription plans with customizable delivery schedules'}</span>
-                              </li>
-                            </ul>
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="howItWorks" className="mt-0 space-y-4">
-                          <div className="space-y-8">
-                            <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '如何运作' : 'How It Works'}</h3>
-                            
-                            {/* Step 1 */}
-                            <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                                <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                  <Ticket className="w-5 h-5 text-[#C2884E]" />
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">1</span>
-                                  {language === 'zh' ? '购买餐劵' : 'Purchase Credits'}
-                                </h3>
-                                <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                  {language === 'zh' ? '通过官网使用 电子转账（EMT）充值餐劵，餐劵会自动记录到您的账户中。' : 'Top up credits via our website using e-Transfer (EMT). Credits will be automatically added to your account.'}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Step 2 */}
-                            <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                                <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                  <CalendarDays className="w-5 h-5 text-[#C2884E]" />
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">2</span>
-                                  {language === 'zh' ? '使用餐劵下单' : 'Order with Credits'}
-                                </h3>
-                                <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                  {language === 'zh' ? '每周菜单定期更新，进入您的个人账户，选择餐食，使用账户内餐劵下单即可，订1餐扣1张' : 'Weekly menu updates regularly. Log into your account, select meals, and use your credits to order. 1 meal = 1 credit.'}
-                                </p>
-                                <div className="mt-2 flex items-center">
-                                  <Clock className="h-4 w-4 text-[#C2884E] mr-1.5" />
-                                  <span className="text-xs font-medium text-[#C2884E]">{language === 'zh' ? '下单截止时间：配送日前一天上午 11:59。' : 'Order deadline: 11:59 AM the day before delivery.'}</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Step 3 */}
-                            <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                                <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                  <Utensils className="w-5 h-5 text-[#C2884E]" />
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">3</span>
-                                  {language === 'zh' ? '每日新鲜中央厨房新鲜现做，中午配送～' : 'Fresh Daily Preparation & Lunch Delivery'}
-                                </h3>
-                                <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                  {language === 'zh' ? '上午 11 点至下午 1 点 之间准时送达，确保新鲜与美味。' : 'Delivered between 11 AM and 1 PM, ensuring freshness and deliciousness.'}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-[#FFF6EF] rounded-xl p-6 mt-8">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="w-10 h-10 rounded-full bg-[#C2884E]/10 flex items-center justify-center">
-                                <Info className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                              <h3 className="text-lg font-medium text-[#C2884E]">{language === 'zh' ? '配送要求' : 'Delivery Requirements'}</h3>
-                            </div>
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="w-1.5 h-1.5 rounded-full bg-[#C2884E]"></div>
-                              <div className="flex items-center">
-                                <span className="text-[#6B5F53] font-medium">{language === 'zh' ? '每次配送至少2份餐食' : 'Minimum 2 meals per delivery'}</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1.5 rounded-full">
-                                        <Info className="w-4 h-4 text-[#C2884E]" />
-                                        <span className="sr-only">{language === 'zh' ? '更多信息' : 'More info'}</span>
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs bg-white border border-[#C2884E]/20 p-3 shadow-lg">
-                                      <div className="text-sm text-[#6B5F53] leading-relaxed">
-                                        {language === 'zh' ? '每次配送至少2份餐食，午餐+晚餐一站解决；' : 'Minimum 2 meals per delivery - perfect for lunch + dinner;'}<br/>
-                                        {language === 'zh' ? '只需要一餐怎么办？餐食可冷藏保鲜 48 小时，第二天享用也10分新鲜' : 'Need only one meal? Meals stay fresh refrigerated for 48 hours, still perfectly fresh the next day'}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </div>
-                            <p className="text-sm text-[#6B5F53]/80 mt-2">{language === 'zh' ? '我们提供多样化的菜单选择，满足您对不同口味的需求。每周更新菜单，让您的味蕾永远充满惊喜。' : 'We offer diverse menu options to satisfy your different taste preferences. Weekly menu updates keep your taste buds delighted with new surprises.'}</p>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                
+                <ProductDetailsDialog kind="daily" language={language} />
+
                 <Dialog open={menuDialogOpen} onOpenChange={setMenuDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
@@ -863,7 +459,7 @@ export default function DailyDeliveryPage() {
                       {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] shadow-xl">
+                  <DialogContent className="ko-dialog sm:max-w-[1100px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] shadow-xl">
                     <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white">
                       <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                         {language === 'zh' ? '本周菜单' : 'This Week\'s Menu'}
@@ -881,23 +477,7 @@ export default function DailyDeliveryPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col md:flex-row h-full overflow-y-auto scrollbar-thin">
-                        <style jsx global>{`
-                          .scrollbar-thin::-webkit-scrollbar {
-                            width: 4px;
-                            height: 4px;
-                          }
-                          .scrollbar-thin::-webkit-scrollbar-track {
-                            background: transparent;
-                          }
-                          .scrollbar-thin::-webkit-scrollbar-thumb {
-                            background: #C2884E40;
-                            border-radius: 20px;
-                          }
-                          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-                            background: #C2884E80;
-                          }
-                        `}</style>
+                      <div className="ko-menu-scroll flex flex-col md:flex-row h-full overflow-y-auto">
                         {/* Sidebar Day Navigation - Horizontal scrolling tabs on mobile */}
                         <div className="md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 p-2 md:p-4">
                           {/* Mobile Week Selector - Elegant Pills */}
@@ -965,7 +545,7 @@ export default function DailyDeliveryPage() {
                           </div>
                           
                           {/* Desktop Sidebar Navigation - Hidden on mobile */}
-                          <div className="hidden md:block sticky top-0 space-y-1 max-h-[80vh] overflow-y-auto pr-1">
+                          <div className="ko-menu-scroll hidden md:block sticky top-0 space-y-1 max-h-[80vh] overflow-y-auto pr-1">
                             {/* Week 1 Heading */}
                             <div className="px-3 py-2 mb-2">
                               <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
@@ -1053,9 +633,9 @@ export default function DailyDeliveryPage() {
                         </div>
                         
                         {/* Content Area */}
-                        <div className="w-full md:w-5/6 p-3 md:p-6 overflow-y-auto">
+                        <div className="ko-menu-scroll w-full md:w-5/6 p-3 md:p-6 overflow-y-auto">
                           {/* Week Content */}
-                          <div className="min-h-[300px] md:min-h-[400px] overflow-y-auto">
+                          <div className="ko-menu-scroll min-h-[300px] md:min-h-[400px] overflow-y-auto">
                             {selectedMenuDay && weeklyMenu[selectedMenuDay] ? (
                               <div>
                                 {/* Day Header - Elegant Design */}
@@ -1175,127 +755,50 @@ export default function DailyDeliveryPage() {
                   </DialogContent>
                 </Dialog>
                 </div>
+                <a href="#daily-plans" className="ko-product-primary">{language === 'zh' ? '查看餐券套餐' : 'Explore voucher plans'}<ArrowRight size={18} /></a>
               </div>
               
-              {/* Right column - Feature tags */}
-              <div className="md:w-1/2 flex flex-col justify-center">
-                <div className="space-y-4 md:space-y-6">
-                  {features.map((feature, index) => (
-                    <motion.div 
-                      key={index}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.15 }}
-                      className="group flex items-center gap-4 p-1"
-                    >
-                      <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center shadow-sm border border-[#C2884E]/10 group-hover:border-[#C2884E]/30 transition-all duration-300">
-                        <div className="transform group-hover:scale-110 transition-transform duration-300">
-                          {feature.icon}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-base font-medium text-[#6B5F53] group-hover:text-[#C2884E] transition-colors duration-300">{feature.title}</p>
-                        <p className="text-sm text-[#6B5F53]/80">{feature.description}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              <figure className="ko-product-visual md:w-1/2"><Image src="/marketing/plan-daily-1280.webp" alt="Kapioo Daily Bento with freshly cooked dishes and branded packaging" fill priority sizes="(max-width: 760px) 100vw, 44vw" /><figcaption>{language === 'zh' ? '新鲜现做，认真装盒。' : 'Freshly cooked. Thoughtfully packed.'}</figcaption></figure>
             </motion.div>
+            <ProductJourney kind="daily" />
             
-            {showMenuPreviewSection ? (
-              <motion.div className="min-w-0 w-full max-w-full self-stretch" variants={fadeIn}>
-                <div className="min-w-0 max-w-full rounded-2xl border border-[#C2884E]/10 bg-white/85 p-4 shadow-xl backdrop-blur-sm md:p-6">
-                  <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#C2884E]/10 px-3 py-1 text-xs font-medium text-[#C2884E]">
-                        <Sparkles
-                          className="h-3.5 w-3.5 shrink-0 fill-[#C2884E]/30 text-[#C2884E]"
-                          aria-hidden
-                        />
-                        {language === "zh" ? "每周更新" : "Updated Weekly"}
-                      </div>
-                      <h2 className="text-2xl font-bold text-[#6B5F53] md:text-3xl">
-                        {language === "zh" ? "本周菜单预览" : "This Week's Menu Preview"}
-                      </h2>
-                      <p className="mt-2 text-sm text-[#6B5F53]/75">
-                        {language === "zh"
-                          ? "每周更新，每天两款套餐可选。来看看您这周会吃到什么吧！"
-                          : "Fresh menu weekly with two combos to choose from each day. See what's on deck for your week!"}
-                      </p>
-                    </div>
-                    {weeklyMenuPreviewItems.length > 0 ? (
-                      <Button
-                        variant="outline"
-                        className="hidden shrink-0 border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 md:inline-flex"
-                        onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
-                      >
-                        {language === "zh" ? "查看完整菜单" : "View Full Menu"}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  {isMenuLoading && weeklyMenuPreviewItems.length === 0 ? (
-                    <MenuPreviewCarouselSkeleton
-                      variant="daily"
-                      rowClassName={menuPreviewCarouselRowInsetClassName}
-                    />
-                  ) : (
-                    <MenuPreviewCarouselViewport rowClassName={menuPreviewCarouselRowInsetClassName}>
-                      {weeklyMenuPreviewItems.slice(0, 8).map((item) => (
-                        <MenuPreviewCardButton
-                          key={`${item.dayId}-${item.combo.id}`}
-                          language={previewLanguage}
-                          imageUrl={item.combo.imageUrl!}
-                          imageAlt={`${translateComboName(item.combo.name)} combo`}
-                          badge={`${getPreviewDayLabel(item.displayName)} · ${item.date}`}
-                          subtitle={item.combo.typeB.dishes
-                            .map((dish, index) =>
-                              getDailyComboDishName(item.combo, "typeB", index, dish, previewLanguage, translateDishName)
-                            )
-                            .join(" · ")}
-                          subtitleClassName="leading-relaxed"
-                          metaRight={`${item.combo.calories} KCAL`}
-                          description={getDailyComboDescription(item.combo, previewLanguage)}
-                          proteinGrams={item.combo.proteinGrams}
-                          tags={getDailyComboTags(item.combo, previewLanguage)}
-                          allergens={getDailyComboAllergens(item.combo, previewLanguage)}
-                          onClick={() => openMenuForDay(item.dayId)}
-                        />
-                      ))}
-                    </MenuPreviewCarouselViewport>
-                  )}
-
-                  {weeklyMenuPreviewItems.length > 0 ? (
-                    <div className="mt-5 md:hidden">
-                      <Button
-                        variant="outline"
-                        className="w-full border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5"
-                        onClick={() => openMenuForDay(weeklyMenuPreviewItems[0].dayId)}
-                      >
-                        {language === "zh" ? "查看完整菜单" : "View Full Menu"}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
+              <motion.div className="w-full" variants={fadeIn}>
+                <ProductMenuGallery
+                  kind="daily"
+                  language={language === 'zh' ? 'zh' : 'en'}
+                  loading={isMenuLoading}
+                  items={weeklyMenuPreviewItems.map(({ dayId, date, displayName, combo }) => ({
+                    id: `${dayId}-${combo.id}`,
+                    groupId: dayId,
+                    imageUrl: combo.imageUrl!,
+                    title: combo.typeA.dishes[0]
+                      ? getDailyComboDishName(combo, 'typeA', 0, combo.typeA.dishes[0], language === 'zh' ? 'zh' : 'en', translateDishName)
+                      : translateComboName(combo.name),
+                    eyebrow: `${displayName}${date ? ` · ${date}` : ''}`,
+                    onSelect: () => openMenuForDay(dayId),
+                  }))}
+                  onViewMenu={() => weeklyMenuPreviewItems[0] ? openMenuForDay(weeklyMenuPreviewItems[0].dayId) : setMenuDialogOpen(true)}
+                />
               </motion.div>
-            ) : null}
 
             {/* Pricing Section */}
             <motion.div 
-              className="w-full mt-4"
+              id="daily-plans"
+              tabIndex={-1}
+              className="ko-pricing w-full mt-4"
               variants={fadeIn}
             >
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 md:p-8 shadow-xl border border-[#C2884E]/10">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center text-[#6B5F53]">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    {language === 'zh' ? '餐券套餐' : 'Meal Voucher Plans'}
-                  </span>
-                </h2>
+                <div className="ko-pricing-header">
+                  <div className="ko-pricing-heading">
+                    <p className="ko-pricing-eyebrow">{language === 'zh' ? '灵活用餐' : 'FLEXIBLE BY DESIGN'}</p>
+                    <h2><span>{language === 'zh' ? '餐券套餐' : 'Meal Voucher Plans'}</span></h2>
+                    <p className="ko-pricing-intro">{language === 'zh' ? '先购买餐券，想吃的日子再兑换。只为需要的餐食付费。' : 'Buy vouchers now. Redeem for the lunch days you want, at your own pace.'}</p>
+                  </div>
+                  <VoucherBenefits language={language} />
+                </div>
                 
-                <Tabs defaultValue={pricingTab} onValueChange={(v) => setPricingTab(v as 'twoDish' | 'threeDish')} className="w-full">
+                <Tabs value={pricingTab} onValueChange={(v) => setPricingTab(v as 'twoDish' | 'threeDish')} className="w-full">
                   <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6 bg-[#F5EDE4]/30 p-1 rounded-xl">
                     <TabsTrigger 
                       value="twoDish" 

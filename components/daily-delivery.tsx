@@ -631,7 +631,7 @@ export default function DailyDelivery() {
   }
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="kp-daily-order flex flex-col h-full space-y-6">
       {/* Region Check Dialog */}
       <RegionCheckDialog
         open={showRegionDialog}
@@ -700,9 +700,9 @@ export default function DailyDelivery() {
       )}
       
       {/* Header section with responsive layout - Sticky on mobile */}
-      <div className="sticky top-0 z-20 bg-white pb-4 -mx-6 px-6 md:relative md:mx-0 md:px-0 md:z-0">
+      <div className="kp-order-head sticky top-0 z-20 bg-white pb-4 -mx-6 px-6 md:relative md:mx-0 md:px-0 md:z-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h2 className="text-3xl font-bold tracking-tight">{t('dailyDelivery')}</h2>
+          <div><p className="kp-overline">{language === 'zh' ? '每日便当 · 选择餐食' : 'DAILY BENTO · CHOOSE MEALS'}</p><h1 className="kp-order-title">{t('dailyDelivery')}</h1><p className="kp-order-subtitle">{language === 'zh' ? '每日新鲜制作。每次配送至少 2 餐。' : 'Freshly cooked lunches, delivered. Minimum 2 meals per delivery.'}</p></div>
           
           <div className="flex flex-wrap items-center gap-3">
             {/* Voucher display with rounded badges like weekly meal box */}
@@ -822,7 +822,7 @@ export default function DailyDelivery() {
         </div>
       ) : (
         <div className="flex flex-row h-full relative">
-          <div className="sticky top-[180px] max-h-[calc(100vh-200px)] min-w-[80px] self-start overflow-y-auto border-r border-[#C2884E]/20 pr-2 md:relative md:top-0 md:max-h-[calc(100vh-200px)] w-1/5">
+          <div className="kp-day-sidebar sticky top-[180px] max-h-[calc(100vh-200px)] min-w-[80px] self-start overflow-y-auto border-r border-[#C2884E]/20 pr-2 md:relative md:top-0 md:max-h-[calc(100vh-200px)] w-1/5">
             <DailyDaySidebar
               cart={cart}
               dayOrder={dayOrder}
@@ -836,7 +836,7 @@ export default function DailyDelivery() {
           </div>
 
           {/* Content Area - Scrollable, only show selected day */}
-          <div className="w-4/5 pl-4 overflow-y-auto max-h-[calc(100vh-200px)] md:max-h-none">
+          <div className="kp-daily-grid w-4/5 pl-4 overflow-y-auto max-h-[calc(100vh-200px)] md:max-h-none">
             <DailyComboGrid
               addToCart={addToCart}
               dayWarning={dayWarning}

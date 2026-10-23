@@ -1,4 +1,5 @@
 "use client"
+import { getSupportCheckoutAddress } from "@/lib/support/checkout-address"
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
@@ -228,7 +229,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     const user = getStoredUser()
     if (!user) return
     const eligibility = syncAddressEligibility(user)
-    if (!eligibility.canDaily && (eligibility.areaLabel || user.address?.province)) {
+    if (!getSupportCheckoutAddress() && !eligibility.canDaily && (eligibility.areaLabel || user.address?.province)) {
       setShowServiceAreaNotice(true)
     }
   }, [])
@@ -239,6 +240,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
     setSelectedPlan(plan)
 
     const user = getStoredUser()
+    if (getSupportCheckoutAddress()) { setShowRegionDialog(true); return }
     if (user?.address?.province || user?.address?.streetAddress) {
       const eligibility = syncAddressEligibility(user)
 
@@ -439,6 +441,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   
   // Cleanup function to set isMounted to false when component unmounts
   useEffect(() => {
+    isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
@@ -500,7 +503,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           
           // Auto-select the plan and move to upload step
           setTimeout(() => {
-            if (isMounted.current && !planSelectionProcessed.current) {
+            if (isMounted.current) {
               handlePlanSelect(matchingPlan)
               // Mark as processed to prevent repeated execution
               planSelectionProcessed.current = true
@@ -526,7 +529,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
             if (matchingPlan) {
               // Auto-select the plan and move to upload step
               setTimeout(() => {
-                if (isMounted.current && !planSelectionProcessed.current) {
+                if (isMounted.current) {
                   handlePlanSelect(matchingPlan)
                   // Clear the stored plan to prevent auto-selection on future visits
                   localStorage.removeItem('selectedMealPlan')
@@ -547,7 +550,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
   }, [twoDishPlans, threeDishPlans, handlePlanSelect, setActiveTab])
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="kp-daily-vouchers flex flex-col h-full space-y-6">
       {/* Service area notice — outside daily polygon */}
       {showServiceAreaNotice && (
         <RegionCheckDialog
@@ -568,6 +571,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
           onProceed={() => setPurchaseStep('upload')}
           isDailyEligible={isDailyEligible}
           existingAddress={(() => {
+            const assistantAddress = getSupportCheckoutAddress()
+            if (assistantAddress) return assistantAddress
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
               const user = JSON.parse(storedUser)
@@ -578,7 +583,7 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
         />
       )}
       {/* New Header Design matching Daily Delivery Page */}
-      <div className="bg-gradient-to-br from-[#FFF6EF] to-white rounded-2xl p-6 md:p-8 shadow-sm border border-[#C2884E]/10 mb-6">
+      <div className="kp-vouchers-intro bg-gradient-to-br from-[#FFF6EF] to-white rounded-2xl p-6 md:p-8 shadow-sm border border-[#C2884E]/10 mb-6">
         <div className="flex flex-col md:flex-row gap-6 md:gap-8">
           {/* Left column - Title and description */}
           <div className="md:w-1/2">
@@ -590,19 +595,19 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
               </div>
             </div>
             
-            <h2 className="text-2xl md:text-4xl font-bold mb-4 text-[#6B5F53]">
+            <h1 className="kp-vouchers-title text-2xl md:text-4xl font-bold mb-4 text-[#6B5F53]">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
                 {language === 'zh' ? '每日新鲜' : 'Daily Fresh'}
               </span>
               <span className="block mt-1">
                 {language === 'zh' ? '直送到家' : 'Delivered to Your Door'}
               </span>
-            </h2>
+            </h1>
             
             <p className="text-base md:text-lg text-[#6B5F53]/80 mb-6">
               {language === 'zh' 
                 ? '适合注重新鲜度，追求每日现做品质的你' 
-                : 'Perfect for: Those who value freshness and daily prepared quality meals'}
+                : 'Buy vouchers now. Redeem them for the lunch days you choose.'}
             </p>
             
             {/* Current voucher balance */}
@@ -636,8 +641,8 @@ export default function MealVoucherPurchase({ onSuccess }: MealVoucherPurchasePr
                     {language === 'zh' ? '了解更多' : 'Learn More'}
                   </Button>
                 </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
-              <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
+            <DialogContent className="kp-voucher-details-dialog sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
+              <DialogHeader className="kp-voucher-details-header bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
                 <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                   {language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}计划详情` : `${PRODUCT_LINE_LABELS.daily.en} plan details`}
                 </DialogTitle>

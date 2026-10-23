@@ -1,0 +1,14 @@
+.kp-meal-rating{background:#f8f2e9;color:#4a3a2b;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.kp-meal-rating header{background:#f8f2e9ed;border-color:#e3d8c9;min-height:72px}
+.kp-meal-rating-brand{font-size:32px;font-weight:650;letter-spacing:-.09em;line-height:1;color:#4a3a2b}
+.kp-meal-rating-brand span{color:#a66735}
+.kp-meal-rating main{padding-block:clamp(44px,7vw,82px)}
+.kp-meal-rating main>div{max-width:680px}
+.kp-meal-rating h1{font-size:clamp(38px,5vw,62px);font-weight:350;line-height:1.08;letter-spacing:-.06em;color:#4a3a2b}
+.kp-meal-rating h2{color:#4a3a2b}
+.kp-meal-rating main .rounded-2xl.bg-white{background:#fffcf8;border:1px solid #e3d6c7;border-radius:22px;box-shadow:0 16px 45px rgba(74,58,43,.035);padding:clamp(22px,3vw,32px)}
+.kp-meal-rating :is(input,textarea){background:#fffdfa;border-color:#d9caba;border-radius:12px;color:#4a3a2b}
+.kp-meal-rating :is(input,textarea):focus-visible{outline:2px solid #a66c37;outline-offset:2px}
+.kp-meal-rating button.bg-gradient-to-r,.kp-meal-rating main>div>button:last-child{background:#4a3a2b;background-image:none;border-radius:999px;color:#fffaf4;box-shadow:none;min-height:52px}
+.kp-meal-rating main>div>button:last-child:hover{background:#604b3a}
+.kp-meal-rating a:focus-visible,.kp-meal-rating button:focus-visible{outline:2px solid #a66c37;outline-offset:3px}

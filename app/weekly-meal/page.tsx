@@ -1,47 +1,35 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { 
   ArrowRight,
   Calendar,
-  Star,
-  Check,
-  Clock,
-  Truck,
-  Info,
   ChevronRight,
   ChevronLeft,
-  CreditCard,
-  CalendarCheck,
-  UtensilsCrossed,
   Menu,
   Loader2,
   MapPin,
   Plus,
   Minus,
-  Sparkles,
 } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
-import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { useSmartBack } from "@/hooks/use-smart-back"
-import { getWeeklyMealState, setWeeklyMealState } from "@/lib/plan-flow-state"
+import { getWeeklyMealState, getStarterAddressSelection, setWeeklyMealState } from "@/lib/plan-flow-state"
 import { getUserWeeklySubscription } from "@/lib/weekly-subscription"
 import { listWeeklyPlans } from "@/lib/plans/service"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { ProductDetailsDialog } from "@/components/product-details-dialog"
+import { ProductJourney } from "@/components/product-journey"
+import { ProductMenuGallery } from "@/components/product-menu-gallery"
+import { VoucherBenefits } from "@/components/voucher-benefits"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import {
-  MenuPreviewCardButton,
-  MenuPreviewCarouselSkeleton,
-  MenuPreviewCarouselViewport,
-  menuPreviewCarouselRowInsetClassName,
-} from "@/components/landing/menu-preview-carousel"
 import { MealProteinAllergenRow } from "@/components/landing/meal-protein-allergen-row"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import '../starter/order-flow.css'
 
 // Define plan types
 interface PlanOption {
@@ -62,14 +50,9 @@ export default function WeeklyMealPage() {
   const router = useRouter()
   const { t, language } = useLanguage()
   const handleBack = useSmartBack()
-  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12 | 16>(() => {
-    const saved = getWeeklyMealState()
-    return saved ? saved.selectedMealsPerWeek : 6
-  })
-  const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect'>(() => {
-    const saved = getWeeklyMealState()
-    return saved ? saved.purchaseStep : 'mealSelect'
-  })
+  const [selectedMealsPerWeek, setSelectedMealsPerWeek] = useState<6 | 8 | 10 | 12 | 16>(6)
+  const [purchaseStep, setPurchaseStep] = useState<'mealSelect' | 'planSelect'>('mealSelect')
+  const [restoredSelection, setRestoredSelection] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [menuDialogOpen, setMenuDialogOpen] = useState(false)
   /** Initial true → preview section mounts with skeleton until subscription menu fetch completes. */
@@ -87,6 +70,7 @@ export default function WeeklyMealPage() {
     allergensEn?: string[];
     description?: string;
     descriptionEn?: string;
+    imageUrl?: string;
     /** When true from admin, included in homepage menu preview carousel (still needs photo). */
     featuredInMenuPreview?: boolean;
   }
@@ -105,10 +89,20 @@ export default function WeeklyMealPage() {
   const [activeWeek, setActiveWeek] = useState(1)
   const [selectedMenuDay, setSelectedMenuDay] = useState<string | null>(null)
   
+  useEffect(() => {
+    const saved = getWeeklyMealState()
+    if (saved) {
+      setSelectedMealsPerWeek(saved.selectedMealsPerWeek)
+      setPurchaseStep(saved.purchaseStep)
+    }
+    setRestoredSelection(true)
+  }, [])
+
   // Persist selection so returning from signup shows same options
   useEffect(() => {
+    if (!restoredSelection) return
     setWeeklyMealState({ selectedMealsPerWeek, purchaseStep })
-  }, [selectedMealsPerWeek, purchaseStep])
+  }, [selectedMealsPerWeek, purchaseStep, restoredSelection])
 
   // Check if user is authenticated on component mount
   useEffect(() => {
@@ -205,17 +199,17 @@ export default function WeeklyMealPage() {
   }, [menuDialogOpen, activeWeek, weeklyMenu])
 
   const durationLabels: Record<number, { en: string; zh: string }> = {
-    1: { en: 'One week plan', zh: '1周次卡券' },
-    2: { en: 'Two weeks plan', zh: '2周次卡券' },
-    4: { en: 'Four weeks plan', zh: '4周次卡券' },
-    8: { en: 'Eight weeks plan', zh: '8周次卡券' }
+    1: { en: '1 week', zh: '1 周' },
+    2: { en: '2 weeks', zh: '2 周' },
+    4: { en: '4 weeks', zh: '4 周' },
+    8: { en: '8 weeks', zh: '8 周' }
   }
 
   const planOptions: PlanOption[] = listWeeklyPlans().map((plan) => ({
     id: plan.id,
     duration: plan.weeks as 1 | 2 | 4 | 8,
-    durationLabel: durationLabels[plan.weeks]?.en || `${plan.weeks} weeks plan`,
-    durationLabelZh: durationLabels[plan.weeks]?.zh || `${plan.weeks}周次卡券`,
+    durationLabel: durationLabels[plan.weeks]?.en || `${plan.weeks} weeks`,
+    durationLabelZh: durationLabels[plan.weeks]?.zh || `${plan.weeks} 周`,
     mealsPerWeek: plan.mealsPerWeek as 6 | 8 | 10 | 12 | 16,
     totalPrice: plan.basePrice,
     pricePerMeal: plan.pricePerMeal,
@@ -233,7 +227,7 @@ export default function WeeklyMealPage() {
     setSelectedMealsPerWeek(mealCount)
     setPurchaseStep('planSelect')
   }
-  
+
   // Go back to meal count selection
   const handleBackToMealSelect = () => {
     setPurchaseStep('mealSelect')
@@ -241,6 +235,10 @@ export default function WeeklyMealPage() {
   
   // Handle plan selection and redirection
   const handlePlanSelect = (plan: PlanOption) => {
+    if (!getStarterAddressSelection()?.canWeekly) {
+      router.push('/starter')
+      return
+    }
     // Create a plan identifier
     const planIdentifier = `plan=${plan.id}`
     
@@ -269,25 +267,6 @@ export default function WeeklyMealPage() {
     }
   }
   
-  // Define features for the hero section
-  const features = [
-    {
-      title: language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en,
-      description: language === 'zh' ? "每周配送2次，轻松覆盖整周" : "Two deliveries per week, covering the entire week",
-      icon: <Calendar className="h-6 w-6" />
-    },
-    {
-      title: language === 'zh' ? "晚间配送" : "Evening Delivery",
-      description: language === 'zh' ? "6PM-10PM送达，方便省心" : "Delivered 6PM-10PM, convenient and worry-free",
-      icon: <Clock className="h-6 w-6" />
-    },
-    {
-      title: language === 'zh' ? "冷藏保存" : "Refrigerate & Enjoy",
-      description: language === 'zh' ? "储存于冰箱，随取随享" : "Store in refrigerator, enjoy anytime",
-      icon: <Star className="h-6 w-6" />
-    }
-  ]
-
   // Carousel: if admins flag at least one combo for the homepage strip (`featuredInMenuPreview`),
   // only those flagged combos WITH a photo are shown (honours curation; fix photos if strip is empty).
   // Before any flags exist on the fetched menu: every combo with an image qualifies (legacy).
@@ -322,10 +301,6 @@ export default function WeeklyMealPage() {
     ? carouselRowsFeaturedOnly
     : carouselRowsWithImage
 
-  const previewLanguage = language === "zh" ? "zh" : "en"
-
-  const showMenuPreviewSection = isMenuLoading || weeklyMenuPreviewItems.length > 0
-
   // Open the dialog on the tab + day that owns this carousel card (not always "this week").
   const openMenuDialogForDay = (dayUniqueId: string) => {
     const target = weeklyMenu.find(
@@ -357,25 +332,11 @@ export default function WeeklyMealPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
-      {/* Back Button - Top Left */}
-      <div className="absolute top-6 left-6 z-10">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={handleBack}
-          className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors bg-white/80 backdrop-blur-sm rounded-full shadow-sm p-2 h-auto"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span className="sr-only">{language === 'zh' ? '返回上一页' : 'Go back'}</span>
-        </Button>
-      </div>
+    <div className="ko-order ko-product ko-weekly min-h-screen flex flex-col">
+      <header className="ko-header"><Link href="/" className="ko-logo" aria-label="Kapioo home">kapioo<span>.</span></Link><div className="ko-header-actions"><Link href="/starter" className="ko-change-address"><MapPin size={16} />{language === 'zh' ? '更改配送地址' : 'Change address'}</Link><button type="button" className="ko-language" onClick={handleBack} aria-label={language === 'zh' ? '返回上一页' : 'Go back'}><ChevronLeft size={19} /></button></div></header>
       
       {/* Hero Section */}
-      <section className="relative w-full overflow-hidden bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2] pt-16 pb-24">
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-[#C2884E]/10 to-transparent rounded-full blur-3xl"></div>
+      <section className="ko-product-section relative w-full overflow-hidden pt-16 pb-24">
         
         <div className="container max-w-6xl mx-auto px-4">
           <motion.div 
@@ -385,31 +346,15 @@ export default function WeeklyMealPage() {
             variants={staggerContainer}
           >
             {/* Header content - Two column layout */}
-            <motion.div className="w-full flex flex-col md:flex-row gap-8 md:gap-12" variants={fadeIn}>
+            <motion.div className="ko-product-hero w-full flex flex-col md:flex-row gap-8 md:gap-12" variants={fadeIn}>
               {/* Left column - Title and description */}
-              <div className="md:w-1/2 text-center md:text-left">
-                <div className="inline-flex items-center mb-4">
-                  <div className="px-4 py-1 bg-[#C2884E]/5 rounded-full">
-                    <span className="text-sm font-medium text-[#C2884E]">
-                      {language === 'zh' ? `${PRODUCT_LINE_LABELS.weekly.zh} 订阅` : 'Weekly Meal Subscription'}
-                    </span>
-                  </div>
-                </div>
+              <div className="ko-product-copy md:w-1/2 text-center md:text-left">
+                <p className="ko-eyebrow">{language === 'zh' ? '周次餐盒' : 'Weekly Meal Box / Toronto meal delivery'}</p>
                 
-                <h1 className="text-3xl md:text-5xl font-bold mb-6 text-[#6B5F53]">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    {language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en}
-                  </span>
-                  <span className="block mt-2">
-                    {language === 'zh' ? '餐盒订阅' : 'Meal Subscription'}
-                  </span>
-                </h1>
+                <h1>{language === 'zh' ? <>把冰箱，<em>装满好日子。</em></> : <>A good week <em>starts in the fridge.</em></>}</h1>
                 
-                <p className="text-lg md:text-xl text-[#6B5F53]/80 mb-6 max-w-lg">
-                  {language === 'zh' 
-                    ? '适合把餐食储存于冰箱，随取随享，注重极度便利的你' 
-                    : 'Perfect for those who prefer to store meals in the refrigerator and enjoy maximum convenience'}
-                </p>
+                <p className="ko-product-lead">{language === 'zh' ? '新鲜制作的亚洲融合餐食，每周配送两次。冷藏备好，加热即可享用。' : 'Freshly prepared Asian fusion meals, delivered twice a week. Stock the fridge, heat and enjoy whenever you’re ready.'}</p>
+                <p className="ko-product-sidenote">{language === 'zh' ? '按周购买餐券，想用的时候再兑换。' : 'Choose a weekly voucher pack. Redeem weeks at your own pace.'}</p>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Dialog open={menuDialogOpen} onOpenChange={setMenuDialogOpen}>
@@ -422,7 +367,7 @@ export default function WeeklyMealPage() {
                         {language === 'zh' ? '查看本周菜单' : 'View This Week\'s Menu'}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[1100px] w-[92vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] max-h-[600px] sm:max-h-none shadow-xl">
+                    <DialogContent className="ko-dialog sm:max-w-[1100px] w-[92vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 h-[85vh] max-h-[600px] sm:max-h-none shadow-xl">
                       <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-3 sm:p-6 text-white h-[70px] sm:h-[90px] flex flex-col justify-center relative">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-white/0 via-white/20 to-white/0"></div>
                         <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">
@@ -462,19 +407,8 @@ export default function WeeklyMealPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col md:flex-row h-full overflow-y-auto scrollbar-brand">
+                        <div className="ko-menu-scroll flex flex-col md:flex-row h-full overflow-y-auto">
                           <style jsx global>{`
-                            .scrollbar-brand::-webkit-scrollbar {
-                              width: 5px;
-                              height: 5px;
-                            }
-                            .scrollbar-brand::-webkit-scrollbar-track {
-                              background: #F5EDE4;
-                            }
-                            .scrollbar-brand::-webkit-scrollbar-thumb {
-                              background: linear-gradient(to bottom, #C2884E, #D1A46C);
-                              border-radius: 20px;
-                            }
                             .menu-content {
                               height: calc(85vh - 70px);
                               max-height: 530px;
@@ -510,7 +444,7 @@ export default function WeeklyMealPage() {
                             }
                           `}</style>
                           {/* Sidebar Day Navigation - Horizontal scrolling tabs on mobile */}
-                          <div className="md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 px-2 py-1 sm:p-2 md:p-4 md:sticky md:top-0 md:max-h-[80vh] md:overflow-y-auto md:pr-1 scrollbar-brand">
+                          <div className="ko-menu-scroll md:w-1/6 md:min-w-[80px] md:border-r md:border-[#C2884E]/20 px-2 py-1 sm:p-2 md:p-4 md:sticky md:top-0 md:max-h-[80vh] md:overflow-y-auto md:pr-1">
                             {/* Mobile Week Selector - Elegant Pills */}
                             <div className="block md:hidden mb-4">
                               <div className="flex justify-center">
@@ -580,7 +514,7 @@ export default function WeeklyMealPage() {
                             </div>
                             
                             {/* Desktop Sidebar Navigation - Hidden on mobile */}
-                            <div className="hidden md:block sticky top-0 space-y-1 max-h-[80vh] overflow-y-auto pr-1">
+                            <div className="ko-menu-scroll hidden md:block sticky top-0 space-y-1 max-h-[80vh] overflow-y-auto pr-1">
                               {/* Week 1 Heading */}
                               <div className="px-3 py-2 mb-2">
                                 <h3 className="text-sm font-bold text-[#6B5F53] flex items-center gap-2">
@@ -645,7 +579,7 @@ export default function WeeklyMealPage() {
                           </div>
                           
                           {/* Main Content Area */}
-                          <div className="flex-1 px-3 py-2 sm:p-4 md:p-6 menu-content overflow-y-auto scrollbar-brand">
+                          <div className="ko-menu-scroll flex-1 px-3 py-2 sm:p-4 md:p-6 menu-content overflow-y-auto">
                             {selectedMenuDay ? (
                               (() => {
                                 const selectedDay = weeklyMenu.find(day => day.uniqueId === selectedMenuDay)
@@ -773,232 +707,33 @@ export default function WeeklyMealPage() {
                     </DialogContent>
                   </Dialog>
                   
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button 
-                        className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 transition-all duration-300 shadow-md relative z-20"
-                      >
-                        {language === 'zh' ? '如何运作' : 'How It Works'}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px] w-[95vw] p-0 rounded-xl sm:rounded-[24px] overflow-hidden border-0 sm:border-[#C2884E]/10 max-h-[85vh] shadow-xl">
-                      <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
-                        <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
-                          {language === 'zh' ? '如何运作' : 'How It Works'}
-                        </DialogTitle>
-                        <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
-                          {language === 'zh'
-                            ? `了解我们的${PRODUCT_LINE_LABELS.weekly.zh} 订阅服务`
-                            : "Learn about our weekly meal subscription service"}
-                        </DialogDescription>
-                      </DialogHeader>
-                      
-                      <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-brand">
-                        <div className="space-y-8">
-                          <h3 className="text-xl font-semibold text-[#6B5F53] mb-4">{language === 'zh' ? '订阅方式' : 'Subscription Process'}</h3>
-                          
-                          {/* Step 1 */}
-                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                <Calendar className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">1</span>
-                                {language === 'zh' ? '选择适合你的周卡' : 'Choose Your Weekly Plan'}
-                              </h3>
-                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                {language === 'zh' ? '根据您的用餐需求选择合适的周卡套餐，灵活安排每周用餐计划。' : 'Select a weekly plan that suits your meal needs and flexibly arrange your weekly meal schedule.'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Step 2 */}
-                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                <CreditCard className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">2</span>
-                                {language === 'zh' ? '完成在线付款' : 'Complete Online Payment'}
-                              </h3>
-                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                {language === 'zh' ? '通过线上支付方式完成周卡购买，系统自动记录您的周卡余额。' : 'Complete your weekly plan purchase through online payment. The system automatically records your plan balance.'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Step 3 */}
-                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                <CalendarCheck className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">3</span>
-                                {language === 'zh' ? '使用周卡下单订餐' : 'Order Meals with Your Plan'}
-                              </h3>
-                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                {language === 'zh' ? '登录账户，使用周卡下单订餐，无需重复支付。' : 'Log into your account and use your weekly plan to order meals without repeated payments.'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Step 4 */}
-                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                <UtensilsCrossed className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">4</span>
-                                {language === 'zh' ? '每周更新菜单，自由挑选餐食' : 'Weekly Menu Updates, Choose Freely'}
-                              </h3>
-                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                {language === 'zh' ? '我们每周更新菜单，您可以提前选择喜欢的菜品和配送日期。' : 'We update our menu weekly. You can select your favorite dishes and delivery dates in advance.'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Step 5 */}
-                          <div className="flex flex-row gap-4 items-start bg-white/80 p-4 rounded-xl border border-[#F5EDE4] shadow-sm">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#C2884E]/10 to-[#D1A46C]/10 flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-[#FBF7F2] flex items-center justify-center">
-                                <Truck className="w-5 h-5 text-[#C2884E]" />
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-medium text-[#6B5F53] flex items-center">
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C2884E]/10 text-[#C2884E] text-sm font-semibold mr-2">5</span>
-                                {language === 'zh' ? '晚间送达 → 冷藏保存 → 按最佳日期享用' : 'Evening Delivery → Refrigerate → Enjoy by Best-By Date'}
-                              </h3>
-                              <p className="text-sm text-[#6B5F53]/80 mt-2 leading-relaxed">
-                                {language === 'zh' ? '我们会在晚间将餐食送达您指定的地址，您可以将餐食冷藏保存，按照标注的最佳食用日期享用。' : 'We deliver meals to your specified address in the evening. You can refrigerate the meals and enjoy them by the labeled best-by date.'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <ProductDetailsDialog kind="weekly" language={language} />
                 </div>
+                <a href="#weekly-plans" className="ko-product-primary">{language === 'zh' ? '查看周次餐券' : 'Explore weekly plans'}<ArrowRight size={18} /></a>
                 
               </div>
               
               {/* Right column - Feature tags */}
-              <div className="md:w-1/2 flex flex-col justify-center">
-                <div className="space-y-4 md:space-y-6">
-                  {features.map((feature, index) => (
-                    <motion.div 
-                      key={index}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.15 }}
-                      className="group flex items-center gap-4 p-1"
-                    >
-                      <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-[#C2884E]/10 to-[#D1A46C]/10 flex items-center justify-center shadow-sm border border-[#C2884E]/10 group-hover:border-[#C2884E]/30 transition-all duration-300">
-                        <div className="transform group-hover:scale-110 transition-transform duration-300 text-[#C2884E]">
-                          {feature.icon}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-base font-medium text-[#6B5F53] group-hover:text-[#C2884E] transition-colors duration-300">{feature.title}</p>
-                        <p className="text-sm text-[#6B5F53]/80">{feature.description}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              <figure className="ko-product-visual md:w-1/2"><Image src="/marketing/plan-weekly-1280.webp" alt="Kapioo Weekly Meal Box with three different Asian fusion meals" fill priority sizes="(max-width: 760px) 100vw, 44vw" /><figcaption>{language === 'zh' ? '装进冰箱的好好吃饭。' : 'A fridge full of possibilities.'}</figcaption></figure>
             </motion.div>
+            <ProductJourney kind="weekly" />
 
-            {/*
-             * "This Week Menu Preview" carousel.
-             * Skeleton while menu JSON loads; hiding when fetch completes with
-             * no image-backed options preserves existing business rule.
-             */}
-            {showMenuPreviewSection ? (
-              <motion.div className="min-w-0 w-full max-w-full self-stretch" variants={fadeIn}>
-                <div className="min-w-0 max-w-full rounded-2xl border border-[#C2884E]/10 bg-white/85 p-4 shadow-xl backdrop-blur-sm md:p-6">
-                  <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#C2884E]/10 px-3 py-1 text-xs font-medium text-[#C2884E]">
-                        <Sparkles
-                          className="h-3.5 w-3.5 shrink-0 fill-[#C2884E]/30 text-[#C2884E]"
-                          aria-hidden
-                        />
-                        {language === 'zh' ? '每周更新' : 'Updated Weekly'}
-                      </div>
-                      <h2 className="text-2xl font-bold text-[#6B5F53] md:text-3xl">
-                        {language === 'zh' ? '本周菜单预览' : "This Week's Menu Preview"}
-                      </h2>
-                      <p className="mt-2 text-sm text-[#6B5F53]/75">
-                        {language === 'zh'
-                          ? '每周更新，每周两次配送，每次多款餐食可选。来看看这周的精选餐食吧！'
-                          : "Fresh menu weekly with two deliveries and multiple meal options each. See what's on deck for your week!"}
-                      </p>
-                    </div>
-                    {weeklyMenuPreviewItems.length > 0 ? (
-                      <Button
-                        variant="outline"
-                        className="hidden shrink-0 border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5 md:inline-flex"
-                        onClick={() => openMenuDialogForDay(weeklyMenuPreviewItems[0].dayUniqueId)}
-                      >
-                        {language === 'zh' ? '查看完整菜单' : 'View Full Menu'}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  {isMenuLoading && weeklyMenuPreviewItems.length === 0 ? (
-                    <MenuPreviewCarouselSkeleton
-                      variant="weekly"
-                      rowClassName={menuPreviewCarouselRowInsetClassName}
-                    />
-                  ) : (
-                    <MenuPreviewCarouselViewport rowClassName={menuPreviewCarouselRowInsetClassName}>
-                      {weeklyMenuPreviewItems.map((item) => (
-                        <MenuPreviewCardButton
-                          key={`${item.dayUniqueId}-${item.option.id}`}
-                          language={previewLanguage}
-                          imageUrl={item.option.imageUrl!}
-                          imageAlt={`${translateOptionName(item.option)} meal`}
-                          badge={`${item.dayName} · ${item.dayDate}`}
-                          title={translateOptionName(item.option)}
-                          metaRight={typeof item.option.calories === "number" ? `${item.option.calories} KCAL` : null}
-                          description={getOptionDescription(item.option)}
-                          proteinGrams={item.option.proteinGrams}
-                          tags={getOptionTags(item.option)}
-                          allergens={getOptionAllergens(item.option)}
-                          onClick={() => openMenuDialogForDay(item.dayUniqueId)}
-                        />
-                      ))}
-                    </MenuPreviewCarouselViewport>
-                  )}
-
-                  {weeklyMenuPreviewItems.length > 0 ? (
-                    <div className="mt-5 md:hidden">
-                      <Button
-                        variant="outline"
-                        className="w-full border-[#C2884E] text-[#C2884E] hover:bg-[#C2884E]/5"
-                        onClick={() => openMenuDialogForDay(weeklyMenuPreviewItems[0].dayUniqueId)}
-                      >
-                        {language === 'zh' ? '查看完整菜单' : 'View Full Menu'}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
+              <motion.div className="w-full" variants={fadeIn}>
+                <ProductMenuGallery
+                  kind="weekly"
+                  language={language === 'zh' ? 'zh' : 'en'}
+                  loading={isMenuLoading}
+                  items={weeklyMenuPreviewItems.map(({ dayUniqueId, dayName, dayDate, option }) => ({
+                    id: `${dayUniqueId}-${option.id}`,
+                    groupId: dayUniqueId,
+                    imageUrl: option.imageUrl!,
+                    title: translateOptionName(option),
+                    eyebrow: `${dayName}${dayDate ? ` · ${dayDate}` : ''}`,
+                    onSelect: () => openMenuDialogForDay(dayUniqueId),
+                  }))}
+                  onViewMenu={() => weeklyMenuPreviewItems[0] ? openMenuDialogForDay(weeklyMenuPreviewItems[0].dayUniqueId) : setMenuDialogOpen(true)}
+                />
               </motion.div>
-            ) : null}
           </motion.div>
         </div>
       </section>
@@ -1007,90 +742,49 @@ export default function WeeklyMealPage() {
       <section className="container mx-auto pt-0 pb-10 px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <motion.div 
-            className="w-full -mt-8"
+            id="weekly-plans"
+            tabIndex={-1}
+            className="ko-pricing w-full -mt-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 md:p-8 shadow-xl border border-[#C2884E]/10">
-              <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center text-[#6B5F53]">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                  {language === 'zh' ? '周次卡券' : 'Weekly Voucher Plans'}
-                </span>
-              </h2>
+              <div className="ko-pricing-header">
+                <div className="ko-pricing-heading">
+                  <p className="ko-pricing-eyebrow">{language === 'zh' ? '每周有新鲜选择' : 'A PLAN THAT FITS YOUR WEEK'}</p>
+                  <h2><span>{language === 'zh' ? '周次卡券' : 'Weekly Voucher Plans'}</span></h2>
+                  <p className="ko-pricing-intro">{language === 'zh' ? '选择每周餐数和餐券周数。想吃的时候再兑换，不必连续使用。' : 'Choose your meals per week, then your voucher pack. Redeem a week whenever you’re ready.'}</p>
+                </div>
+                <VoucherBenefits language={language} />
+              </div>
               
               <div className="space-y-6">
                 {purchaseStep === 'mealSelect' ? (
                   <div className="space-y-6">
-                    <h3 className="text-lg font-medium text-[#6B5F53] text-center mb-4">
-                      {language === 'zh' ? '请选择每周餐数' : 'Please select meals per week'}
-                    </h3>
-                    
-                    {/* Meals per week selector */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                      <Card 
-                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
-                        onClick={() => handleMealCountSelect(6)}
-                      >
-                        <CardContent className="p-6 text-center">
-                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">6</h3>
-                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
-                        </CardContent>
-                      </Card>
-                      
-                      <div className="relative">
-                        <Card 
-                          className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#C2884E] cursor-pointer"
-                          onClick={() => handleMealCountSelect(8)}
+                    <div className="ko-weekly-select-intro">
+                      <h3 className="ko-weekly-select-heading">{language === 'zh' ? '每周想要几餐？' : 'How many meals each week?'}</h3>
+                      <p>{language === 'zh' ? '选择餐数，查看对应的周次餐券。' : 'Choose a size to see your weekly voucher plans.'}</p>
+                    </div>
+                    <div className="ko-weekly-meal-choice-grid">
+                      {([6, 8, 10, 12, 16] as const).map((mealCount) => (
+                        <button
+                          key={mealCount}
+                          type="button"
+                          className={`ko-weekly-meal-choice${mealCount === 8 ? ' ko-weekly-meal-choice-popular' : ''}`}
+                          onClick={() => handleMealCountSelect(mealCount)}
+                          aria-label={language === 'zh' ? `选择每周 ${mealCount} 餐并查看餐券` : `Choose ${mealCount} meals per week and view plans`}
                         >
-                          <CardContent className="p-6 text-center">
-                            <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">8</h3>
-                            <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
-                          </CardContent>
-                        </Card>
-                        <div className="absolute -top-3 left-0 right-0 flex justify-center">
-                          <span className="bg-[#C2884E] text-white text-xs px-3 py-1 rounded-full shadow-sm">
-                            {language === 'zh' ? '最推荐' : 'Most Recommended'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <Card 
-                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
-                        onClick={() => handleMealCountSelect(10)}
-                      >
-                        <CardContent className="p-6 text-center">
-                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">10</h3>
-                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card 
-                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
-                        onClick={() => handleMealCountSelect(12)}
-                      >
-                        <CardContent className="p-6 text-center">
-                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">12</h3>
-                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card 
-                        className="overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl border-[#E5D6BC] hover:border-[#C2884E] cursor-pointer"
-                        onClick={() => handleMealCountSelect(16)}
-                      >
-                        <CardContent className="p-6 text-center">
-                          <h3 className="text-2xl font-bold text-[#6B5F53] mb-2">16</h3>
-                          <p className="text-sm text-[#8A7968]">{language === 'zh' ? '餐/周' : 'meals/week'}</p>
-                        </CardContent>
-                      </Card>
+                          {mealCount === 8 && <span className="ko-weekly-recommendation">{language === 'zh' ? '热门选择' : 'Popular choice'}</span>}
+                          <strong>{mealCount}</strong>
+                          <span className="ko-weekly-meal-choice-unit">{language === 'zh' ? '餐／周' : 'meals per week'}</span>
+                          <span className="ko-weekly-meal-choice-action">{language === 'zh' ? '查看餐券' : 'See plans'}<ArrowRight size={15} aria-hidden="true" /></span>
+                        </button>
+                      ))}
                     </div>
                     
                     {/* Additional information */}
-                    <div className="text-xs text-[#8A7968] space-y-1 mt-6">
-                      <p>* {language === 'zh' ? '餐券卡有效期为半年，可转赠亲友，购买后7天内可退款未用部分' : 'Credits valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}</p>
-                      <p>* {language === 'zh' ? '以上均为税前价格，支付方式：EMT' : 'All prices before tax, payment method: EMT'}</p>
-                    </div>
+                    <p className="ko-pricing-tax-note">{language === 'zh' ? '价格不含税，支持电子转账付款。' : 'Prices before tax. Payment by e-Transfer.'}</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -1111,94 +805,33 @@ export default function WeeklyMealPage() {
                     </div>
                     
                     {/* Plan options */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="ko-voucher-grid">
                       {filteredPlans.map((plan) => (
-                        <Card 
-                          key={plan.id} 
-                          className={`overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl flex flex-col ${
-                            plan.isPopular || plan.isRecommended ? 'border-[#C2884E]' : 'border-[#E5D6BC]'
-                          }`}
-                        >
-                          <div className="relative flex flex-col flex-1">
-                            {(plan.isPopular || plan.isRecommended) && (
-                              <div className="absolute top-0 right-0 left-0 bg-[#C2884E] text-white text-center py-1.5 text-sm font-medium">
-                                {language === 'zh' ? plan.tagZh : plan.tag}
-                              </div>
-                            )}
-                            
-                            <CardHeader className={`${(plan.isPopular || plan.isRecommended) ? 'pt-10' : 'pt-6'}`}>
-                              <CardTitle className="text-center text-xl text-[#6B5F53]">
-                                {language === 'zh' ? plan.durationLabelZh : plan.durationLabel}
-                              </CardTitle>
-                            </CardHeader>
-                            
-                            <CardContent className="space-y-4 flex-1">
-                              <div className="text-center">
-                                <div className="text-3xl font-bold text-[#C2884E]">
-                                  ${plan.totalPrice}
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1.5">
-                                    <Calendar className="h-4 w-4 text-[#C2884E]" />
-                                    <span className="text-sm font-medium text-[#6B5F53]">
-                                      {language === 'zh' ? '餐数/周' : 'Meals/week'}
-                                    </span>
-                                  </div>
-                                  <span className="font-bold text-[#C2884E]">{plan.mealsPerWeek}</span>
-                                </div>
-                                
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1.5">
-                                    <Star className="h-4 w-4 text-[#C2884E]" />
-                                    <span className="text-sm font-medium text-[#6B5F53]">
-                                      {language === 'zh' ? '单价' : 'Per meal'}
-                                    </span>
-                                  </div>
-                                  <span className="font-bold text-[#C2884E]">${plan.pricePerMeal.toFixed(2)}</span>
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2 pt-3 border-t border-[#C2884E]/10">
-                                {plan.duration !== 1 && (
-                                  <div className="flex items-start gap-2 text-sm">
-                                    <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                                    <span className="text-[#6B5F53]">
-                                      {language === 'zh' ? '非连续使用 | 用1周扣1周' : 'Use Week-by-Week | Pause & Resume Anytime'}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="flex items-start gap-2 text-sm">
-                                  <Check className="h-4 w-4 text-[#C2884E] mt-0.5" />
-                                  <span className="text-[#6B5F53]">
-                                    {language === 'zh' ? '有效期半年' : 'Valid for 6 months'}
-                                  </span>
-                                </div>
-                              </div>
-                            </CardContent>
-                            
-                            <CardFooter>
-                              <Button 
-                                className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 rounded-xl"
-                                onClick={() => handlePlanSelect(plan)}
-                              >
-                                {language === 'zh' ? '选择此套餐' : 'Select This Plan'}
-                              </Button>
-                            </CardFooter>
+                        <motion.div key={plan.id} whileHover={{ y: -4 }} transition={{ duration: 0.25 }} className="ko-voucher-card">
+                          <div className="ko-voucher-topline">
+                            <span>{language === 'zh' ? '每周餐盒' : 'WEEKLY MEAL BOX'}</span>
+                            {(plan.isPopular || plan.isRecommended) && <span className="ko-voucher-badge">{language === 'zh' ? (plan.duration === 2 ? '首次推荐' : '最超值') : (plan.duration === 2 ? 'Great first pack' : 'Best value')}</span>}
                           </div>
-                        </Card>
+                          <h4 className="ko-voucher-count"><strong>{plan.duration}</strong> {language === 'zh' ? '周' : plan.duration === 1 ? 'week' : 'weeks'}</h4>
+                          <p className="ko-weekly-meal-count">{plan.mealsPerWeek} {language === 'zh' ? '餐/周' : 'meals per week'}</p>
+                          <div className="ko-voucher-price"><strong>${plan.totalPrice}</strong><span>{language === 'zh' ? '总价' : 'total'}</span></div>
+                          <div className="ko-voucher-unit"><span>{language === 'zh' ? '每餐' : 'Per meal'}</span><strong>${plan.pricePerMeal.toFixed(2)}</strong></div>
+                          <p className="ko-voucher-bonus">{plan.duration === 1
+                            ? (language === 'zh' ? '先从一周开始，轻松尝试' : 'A simple way to start.')
+                            : (language === 'zh' ? '按周兑换，随时暂停' : 'Redeem week by week. Pause anytime.')}</p>
+                          <Button className="ko-voucher-button" onClick={() => handlePlanSelect(plan)}>
+                            {language === 'zh' ? `选择 ${plan.duration} 周` : `Choose ${plan.duration} ${plan.duration === 1 ? 'week' : 'weeks'}`}
+                            <ArrowRight aria-hidden="true" size={17} />
+                          </Button>
+                        </motion.div>
                       ))}
                     </div>
                     
                     {/* Delivery fee info */}
-                    <div className="bg-[#F9F3EC] p-4 rounded-xl border border-[#E5D6BC] text-center">
-                      <span className="text-[#8A7968]">
-                        {language === 'zh' ? '配送费/周 (2次配送)' : 'Delivery fee/week (2 deliveries)'}: 
-                      </span>
-                      <span className="font-medium text-[#6B5F53] ml-2">$11.99</span>
-                      <span className="text-[#8A7968] ml-1">(Hamilton/Burlington: $15.99)</span>
+                    <div className="ko-weekly-delivery-fee">
+                      <span>{language === 'zh' ? '每周配送 2 次' : 'Two deliveries each week'}</span>
+                      <strong>{language === 'zh' ? '配送费 $11.99／周' : '$11.99 delivery per week'}</strong>
+                      <small>{language === 'zh' ? 'Hamilton / Burlington：$15.99／周' : 'Hamilton / Burlington: $15.99 per week'}</small>
                     </div>
                   </div>
                 )}

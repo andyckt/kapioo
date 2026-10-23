@@ -12,6 +12,7 @@ interface ServiceSelectionCardsProps {
   showDaily?: boolean
   showWeekly?: boolean
   className?: string
+  variant?: "default" | "linen"
 }
 
 export function ServiceSelectionCards({ 
@@ -19,10 +20,23 @@ export function ServiceSelectionCards({
   onSelectWeekly,
   showDaily = true,
   showWeekly = true,
-  className = ""
+  className = "",
+  variant = "default"
 }: ServiceSelectionCardsProps) {
   const { language } = useLanguage()
   const lang = language === "zh" ? "zh" : "en"
+  if (variant === "linen") {
+    const plans = [
+      { key: "daily", visible: showDaily, image: "/marketing/plan-daily-1280.webp", title: productLineLabel("daily", lang), label: language === "zh" ? "新鲜午餐" : "Freshly cooked lunch", description: language === "zh" ? "新鲜现做，午间送达。每次配送至少 2 份。" : "Freshly cooked lunches, delivered. Minimum 2 meals per delivery.", action: onSelectDaily, alt: language === "zh" ? "Kapioo 每日便当" : "Kapioo Daily Bento with a selection of freshly cooked dishes" },
+      { key: "weekly", visible: showWeekly, image: "/marketing/plan-weekly-1280.webp", title: productLineLabel("weekly", lang), label: language === "zh" ? "冰箱里的安心" : "Your fridge, sorted", description: language === "zh" ? "每周配送两次，冷藏后加热享用。" : "Stock the fridge. Heat and enjoy. Twice-weekly delivery.", action: onSelectWeekly, alt: language === "zh" ? "Kapioo 周次餐盒" : "Kapioo Weekly Meal Box with three ready-to-enjoy meals" },
+    ]
+    return <div className={`ko-choice-grid ${className}`}>
+      {plans.filter(plan => plan.visible).map(plan => <article className="ko-choice-card" key={plan.key}>
+        <div className="ko-choice-photo"><Image src={plan.image} alt={plan.alt} fill sizes="(max-width: 760px) 100vw, 40vw" /></div>
+        <div className="ko-choice-copy"><p className="ko-eyebrow">{plan.label}</p><h3>{plan.title}</h3><p>{plan.description}</p><button type="button" onClick={plan.action} className="ko-choice-button">{language === "zh" ? "查看餐食与价格" : "Explore meals & pricing"}<span aria-hidden="true">↗</span></button></div>
+      </article>)}
+    </div>
+  }
   return (
     <motion.div
       initial={{ opacity: 0 }}

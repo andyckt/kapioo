@@ -40,6 +40,9 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
     }
 
     let updatedOrder = order;
+    if (order.status === "refunded" && status !== "refunded") {
+      return errorJson("A refunded order cannot be reopened. Create a new order instead.", 409);
+    }
 
     if (status === "refunded") {
       const refundResult = await refundDailyOrder({
@@ -58,7 +61,7 @@ export async function PATCH(request: Request, { params }: RouteContext<{ id: str
       }
 
       const savedOrder = await DailyDeliveryOrder.findOneAndUpdate(
-        { orderId: id },
+        { orderId: id, status: order.status, updatedAt: order.updatedAt },
         { $set: updateData },
         { new: true }
       );

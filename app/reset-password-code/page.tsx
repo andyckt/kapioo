@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
+import "@/app/login/auth-companion.css"
 import { motion } from "framer-motion"
 import { ArrowLeft, Eye, EyeOff, Check, X, Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -377,7 +377,7 @@ export default function ResetPasswordCodePage() {
   }
   
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
+    <div className="kp-auth-companion flex min-h-screen flex-col">
       <header className="w-full py-4 px-4">
         <div className="container">
           <Link 
@@ -392,21 +392,14 @@ export default function ResetPasswordCodePage() {
       
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[420px]"
         >
           <div className="flex flex-col items-center space-y-5 text-center">
             <Link href="/" className="inline-flex items-center gap-3 group">
-              <Image 
-                src="/未命名設計.png" 
-                alt="Kapioo Logo" 
-                width={52} 
-                height={52} 
-                className="h-13 w-13 transition-transform duration-300 group-hover:rotate-6" 
-              />
-              <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+              <span className="kp-auth-companion-logo">kapioo<span>.</span></span>
             </Link>
             <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
           </div>

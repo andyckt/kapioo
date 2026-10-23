@@ -1,0 +1,12 @@
+html:has(.kapioo-home){scroll-behavior:smooth}body:has(.kapioo-home){overflow-x:clip}
+.kh-motion [data-reveal]{transition:opacity .65s,translate .65s cubic-bezier(.2,.65,.3,1)}.kh-motion [data-reveal]:not(.kh-visible){opacity:0;translate:0 18px}
+.kh-motion .kh-hero-window{translate:0 calc((var(--kh-progress) - .4)*-12px)}
+.kh-motion .kh-hero-side{translate:0 calc((var(--kh-progress) - .4)*12px)}
+.kh-motion .kh-ritual-word{opacity:clamp(.45,calc(var(--kh-progress)*3.5 - var(--kh-word-index)*.13),1)}
+.kh-motion .kh-ritual-photo>.kh-photo{transform:scale(1.04) translateY(calc((var(--kh-progress) - .5)*-25px))}
+.kh-motion .kh-music-friend>.kh-mascot{transform:rotate(calc((var(--kh-progress) - .5)*-8deg))}
+.kh-motion .kh-ending-friend{--kh-tilt:calc((var(--kh-progress) - .5)*7deg)}
+.kh-motion .kh-how-grid article:nth-child(2),.kh-motion .kh-plan-choice:nth-child(2){transition-delay:.08s}
+.kh-motion .kh-how-grid article:nth-child(3){transition-delay:.16s}
+@media(max-width:760px){.kh-motion .kh-ritual-word{opacity:clamp(.6,calc(var(--kh-progress)*4 - var(--kh-word-index)*.1),1)}}
+@media(prefers-reduced-motion:reduce){html:has(.kapioo-home){scroll-behavior:auto}.kapioo-home .kh-ritual-word{opacity:1!important}.kapioo-home .kh-hero-window,.kapioo-home .kh-hero-window>.kh-photo,.kapioo-home .kh-hero-side,.kapioo-home .kh-ritual-photo>.kh-photo,.kapioo-home .kh-music-friend>.kh-mascot,.kapioo-home .kh-ending-friend{transform:none!important;translate:none!important}}

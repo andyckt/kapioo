@@ -31,7 +31,6 @@ export interface DashboardTabContentProps {
   userData: DashboardUserData | null
   userLoading: boolean
   dashboardHeaderDate: string
-  showServiceSelection: boolean
   upcomingDeliveries: number
   credits: number
   orderActiveSection: "orders" | "recharges"
@@ -41,7 +40,6 @@ export interface DashboardTabContentProps {
   addressInfo: DashboardAddressInfo
   passwordInfo: DashboardPasswordInfo
   onActiveTabChange: (tab: string) => void
-  onShowServiceSelection: () => void
   onOrderSectionChange: (section: "orders" | "recharges") => void
   onPurchaseSuccess: () => void
   onVoucherPurchaseSuccess: () => void
@@ -63,7 +61,6 @@ export function DashboardTabContent({
   userData,
   userLoading,
   dashboardHeaderDate,
-  showServiceSelection,
   upcomingDeliveries,
   credits,
   orderActiveSection,
@@ -73,7 +70,6 @@ export function DashboardTabContent({
   addressInfo,
   passwordInfo,
   onActiveTabChange,
-  onShowServiceSelection,
   onOrderSectionChange,
   onPurchaseSuccess,
   onVoucherPurchaseSuccess,
@@ -95,9 +91,7 @@ export function DashboardTabContent({
           userData={userData}
           userLoading={userLoading}
           dashboardHeaderDate={dashboardHeaderDate}
-          showServiceSelection={showServiceSelection}
           upcomingDeliveries={upcomingDeliveries}
-          onShowServiceSelection={onShowServiceSelection}
           onTabChange={(tab) => onActiveTabChange(tab)}
         />
       )}

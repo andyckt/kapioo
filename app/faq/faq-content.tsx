@@ -1,315 +1,161 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import Image from "next/image";
-import { ChevronLeft, ArrowRight, HelpCircle, Globe } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { useLanguage } from "@/lib/language-context";
-import { ScrollReveal } from "@/components/scroll-reveal";
-import { PRODUCT_LINE_LABELS, productLineSeriesName } from "@/lib/product-lines/names";
-import { formatDailyCoverageList, formatWeeklyOnlyCoverageList } from "@/lib/zones/coverage-copy";
+/* Precompressed local brand photographs are served at responsive widths. */
+/* eslint-disable @next/next/no-img-element */
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { ArrowDown, ArrowUpRight } from 'lucide-react'
+import { useLanguage } from '@/lib/language-context'
+import type { HelpArticle } from '@/lib/support/knowledge'
+import { formatDailyCoverageList, formatWeeklyOnlyCoverageList } from '@/lib/zones/coverage-copy'
+import { homeCopy } from '@/features/marketing-home/content'
+import { Navigation } from '@/features/marketing-home/marketing-home'
+import { KapiooIcon, type KapiooIconName } from '@/features/marketing-home/kapioo-icons'
+import { useHomeMotion } from '@/features/marketing-home/use-home-motion'
+import './faq.css'
 
-function getFaqs(isZh: boolean) {
-  const contactAnswer = (
-    <>
-      {isZh ? "通过 " : "Contact us via "}
-      <a
-        href="https://www.instagram.com/kapioomeals/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-[#C2884E] font-medium underline hover:no-underline"
-      >
-        Instagram
-      </a>
-      {isZh ? " 或微信 (kapioomeal06) 联系我们。" : " or WeChat (kapioomeal06)."}
-    </>
-  );
+type FaqItem = { slug: string; question: string; answer: string }
+type Language = 'en' | 'zh'
 
-  const differenceAnswer = (
-    <div className="space-y-4 text-[#6B5F53]">
-      <div>
-        <p className="font-semibold text-[#3f352b] mb-1.5">
-          {isZh ? `${PRODUCT_LINE_LABELS.weekly.zh} — 灵活省心，一样新鲜` : `${PRODUCT_LINE_LABELS.weekly.en} — maximum flexibility, still fresh`}
-        </p>
-        <p className="leading-relaxed">
-          {isZh
-            ? "每周配送两次，冰箱囤好一周的餐，想什么时候吃就什么时候吃。适合工作不定时、健身日晚餐、夜宵党，以及希望少收几次货但不断粮的你。"
-            : "We deliver twice a week so you can stock your fridge with multiple meals and eat whenever it fits your schedule. Best for unpredictable workdays, gym nights, late dinners, and anyone who wants fewer deliveries but steady coverage."}
-        </p>
-      </div>
-      <div>
-        <p className="font-semibold text-[#3f352b] mb-1.5">
-          {isZh ? `${PRODUCT_LINE_LABELS.daily.zh} — 指定日期，当日新鲜送达` : `${PRODUCT_LINE_LABELS.daily.en} — fresh on the days you pick`}
-        </p>
-        <p className="leading-relaxed">
-          {isZh
-            ? "选定区域午间送达。在您想要配送的日期用餐券兑换（每次至少 2 份）。适合想要「当天现做」新鲜度、不想在冰箱囤太多的人。"
-            : "Fresh meals delivered around lunchtime in select areas. Redeem meal credits on the days you want delivery (minimum 2 meals per delivery). Best if you prefer \"cooked today\" freshness and don't want to keep a lot in the fridge."}
-        </p>
-      </div>
-      <div className="rounded-xl border border-[#C2884E]/15 bg-[#FFFBF7] p-4 mt-4">
-        <p className="font-semibold text-[#3f352b] text-sm mb-2">
-          {isZh ? "快速选择" : "Quick decision guide"}
-        </p>
-        <ul className="space-y-1.5 text-sm leading-relaxed list-none">
-          <li>
-            <span className="text-[#C2884E] font-medium">
-              {isZh ? "「我这周随时想吃就有」" : "\"I want meals ready anytime this week\""}
-            </span> → {productLineSeriesName("weekly", isZh ? "zh" : "en")}
-          </li>
-          <li>
-            <span className="text-[#C2884E] font-medium">
-              {isZh ? "「我要指定某几天送新鲜」" : "\"I want fresh delivery on specific days\""}
-            </span> → {productLineSeriesName("daily", isZh ? "zh" : "en")}
-          </li>
-        </ul>
-      </div>
-    </div>
-  );
-
+function fallbackFaqs(language: Language): FaqItem[] {
+  if (language === 'zh') return [
+    { slug: 'coverage', question: '你们配送哪些地区？', answer: `每日 Bento 覆盖：${formatDailyCoverageList('zh')}。周次 Meal Box 还覆盖：${formatWeeklyOnlyCoverageList('zh')}。请输入详细地址确认可用计划。` },
+    { slug: 'plans', question: '每日 Bento 和周次 Meal Box 有什么区别？', answer: '每日 Bento 在你选择的配送日送来新鲜现做的午餐，每次至少两份。周次 Meal Box 每周配送两次，方便放进冰箱、按需加热。可选计划取决于你的地址。' },
+    { slug: 'vouchers', question: '餐券如何使用？', answer: '先选择可用计划并购买餐券。付款审核通过后，餐券会存入你的账户。想订餐时，再兑换可用配送日的餐食；不会自动生成餐食订单。餐券有效期为六个月。' },
+    { slug: 'payment', question: '如何付款？', answer: '目前支持 e-Transfer。请按结账页面指引转账并上传付款凭证。审核通过后餐券到账，即可兑换餐食。' },
+    { slug: 'pause', question: '可以暂停或跳过配送吗？', answer: '可以。餐券不会自动安排餐食。你可以按计划规则选择可用配送日，在需要时再下单。' },
+    { slug: 'cutoff', question: '下单截止时间是几点？', answer: '请在配送日前一天、多伦多时间上午 11:59 前下单。' },
+    { slug: 'cancel', question: '如何取消订单？', answer: '在「我的订单」中查看是否可取消。周次订单须整组取消；符合条件的订单会退回原餐券或积分。若无法自行操作，请联系团队。' },
+    { slug: 'menus', question: '可以自己选择餐食吗？', answer: '可以。选择配送日后，从当日可选菜单中挑选喜欢的餐食。菜单定期更新。' },
+    { slug: 'storage', question: '餐食可以保存多久？', answer: '请冷藏保存，建议三天内食用。' },
+    { slug: 'heat', question: '如何加热餐食？', answer: '请按照餐盒上的说明加热。周次 Meal Box 可使用微波炉或炉灶加热。' },
+    { slug: 'dietary', question: '有忌口或特殊饮食选项吗？', answer: '菜单定期更新。如有严重过敏或饮食限制，请在下单前联系我们，了解食材和制作方式。' },
+    { slug: 'contact', question: '如何联系客服？', answer: '请提交支持工单，告诉我们你的问题。我们的团队会在 2–3 个工作日内通过邮件回复。' },
+  ]
   return [
-    {
-      question: isZh ? "你们配送哪些区域？" : "Where do you deliver?",
-      answer: isZh
-        ? `每日配送 (${PRODUCT_LINE_LABELS.daily.zh}) 目前覆盖：${formatDailyCoverageList("zh")}。周次配送 (${PRODUCT_LINE_LABELS.weekly.zh}) 另额外服务：${formatWeeklyOnlyCoverageList("zh")}。输入您的详细地址即可确认是否可达。`
-        : `Daily delivery (${PRODUCT_LINE_LABELS.daily.en}) is available in: ${formatDailyCoverageList("en")}. Weekly meal box (${PRODUCT_LINE_LABELS.weekly.en}) also covers: ${formatWeeklyOnlyCoverageList("en")}. Enter your exact address to confirm coverage.`,
-    },
-    {
-      question: isZh
-        ? `${productLineSeriesName("daily", "zh")}和${productLineSeriesName("weekly", "zh")}有什么区别？`
-        : "What's the difference between Daily Bento Series and Weekly Meal Box Series?",
-      answer: differenceAnswer,
-    },
-    {
-      question: isZh ? "下单截止时间是几点？" : "When is the order cutoff?",
-      answer: isZh ? "配送日前一天上午 11:59 截止。" : "The cutoff is 11:59 AM the day before delivery.",
-    },
-    {
-      question: isZh ? "餐食可以保存多久？" : "How long do meals stay fresh?",
-      answer: isZh ? "请冷藏保存，建议 3 天内食用。" : "Keep meals refrigerated. They are best enjoyed within 3 days.",
-    },
-    {
-      question: isZh ? "可以自选餐品吗？" : "Can I choose my meals?",
-      answer: isZh
-        ? "可以。您可以在所选配送日的可选菜单中挑选。"
-        : "Yes. You can pick from the available menu for your selected delivery day.",
-    },
-    {
-      question: isZh ? "有忌口或特殊饮食选项吗？" : "Do you have dietary options?",
-      answer: isZh
-        ? "我们提供均衡餐品与轮换菜单。如有严重过敏或饮食限制，请在下单前联系我们。"
-        : "We offer balanced meals and rotating menus. If you have strict allergies or restrictions, please contact us before ordering.",
-    },
-    {
-      question: isZh ? "付款方式是什么？" : "How do payments work?",
-      answer: isZh
-        ? "我们目前仅支持 e-Transfer。您转账后，在结账页面上传付款凭证。我们会审核通过后把餐券充入您的账户，即可用餐券下单。"
-        : "We accept e-Transfer only. After you transfer, upload your payment proof at checkout. Our team will review and approve it—once approved, credits appear in your account and you can use them to place orders.",
-    },
-    {
-      question: isZh ? "可以暂停或跳过配送吗？" : "Can I pause or skip?",
-      answer: isZh
-        ? "可以。餐券灵活使用，您可根据计划规则选择配送日。"
-        : "Yes. Credits are flexible and you can choose delivery days based on your plan rules.",
-    },
-    {
-      question: isZh ? "如何加热餐食？" : "How do I heat the meals?",
-      answer: isZh
-        ? "微波或明火加热均可，包装或网站上有说明。"
-        : "You can reheat by microwave or stovetop. Heating guidance is provided on the container or website.",
-    },
-    {
-      question: isZh ? "如何联系客服？" : "How do I contact support?",
-      answer: contactAnswer,
-    },
-  ];
+    { slug: 'coverage', question: 'Where do you deliver?', answer: `Daily Bento is available in ${formatDailyCoverageList('en')}. Weekly Meal Box also reaches ${formatWeeklyOnlyCoverageList('en')}. Enter your exact address to see your options.` },
+    { slug: 'plans', question: 'What’s the difference between Daily Bento and Weekly Meal Box?', answer: 'Daily Bento brings freshly cooked lunches on the delivery days you choose, with a minimum of two meals per delivery. Weekly Meal Box arrives twice a week for you to refrigerate and reheat. Your address determines which plans are available.' },
+    { slug: 'vouchers', question: 'How do meal vouchers work?', answer: 'Choose an available plan and buy a voucher pack. Once your payment is approved, vouchers appear in your account. Redeem them for meals on an available delivery day whenever you want to order. Meal orders are not automatic. Vouchers are valid for six months.' },
+    { slug: 'payment', question: 'How do payments work?', answer: 'We currently accept e-Transfer. Follow the checkout instructions and upload your payment proof. Your vouchers are issued after our team approves the payment.' },
+    { slug: 'pause', question: 'Can I pause or skip a delivery?', answer: 'Yes. Vouchers do not schedule meals automatically. Choose an available delivery day when you want to order, subject to your plan’s rules.' },
+    { slug: 'cutoff', question: 'When is the order cutoff?', answer: 'Order by 11:59 am Toronto time the day before delivery.' },
+    { slug: 'cancel', question: 'How do I cancel an order?', answer: 'Check My Orders for an eligible cancellation option. Weekly orders must be cancelled as a group. Eligible cancellations return the original vouchers or credits. If you cannot cancel online, contact our team.' },
+    { slug: 'menus', question: 'Can I choose my meals?', answer: 'Yes. Pick from the available menu for your selected delivery day. Menus rotate, so there is always something new to look forward to.' },
+    { slug: 'storage', question: 'How long do meals stay fresh?', answer: 'Keep your meals refrigerated. They are best enjoyed within three days.' },
+    { slug: 'heat', question: 'How do I reheat my meals?', answer: 'Follow the instructions on the container. Weekly Meal Box meals can be reheated by microwave or stovetop.' },
+    { slug: 'dietary', question: 'Do you have dietary options?', answer: 'Our menu changes regularly. If you have a serious allergy or dietary restriction, contact us before ordering to ask about ingredients and preparation.' },
+    { slug: 'contact', question: 'How do I contact Kapioo?', answer: 'Submit a support ticket with your question. Our team will reply by email within 2–3 business days.' },
+  ]
 }
 
+const copy = {
+  en: {
+    eyebrow: 'Kapioo / Questions & answers',
+    titleFirst: 'Good questions.',
+    titleSecond: 'Clear answers.',
+    lead: 'Everything you need to know about our meals, vouchers and delivery—without the guesswork.',
+    order: 'Order now', browse: 'Browse answers',
+    heroAlt: 'Kapioo meal boxes ready to enjoy',
+    photoNote: 'Good food starts with a little clarity.',
+    spotlightLabel: 'The flexible part', spotlightTitle: 'Buy vouchers first. Order meals when you want.',
+    spotlightBody: 'No automatic meal orders. Choose your meals and an available delivery day when it suits you.',
+    spotlightLink: 'See how Kapioo works',
+    categoriesLabel: 'Find your answer',
+    categories: [
+      { id: 'starting', title: 'Getting started', icon: 'location' as KapiooIconName, slugs: ['coverage', 'plans', 'menus'] },
+      { id: 'orders', title: 'Vouchers & orders', icon: 'choice' as KapiooIconName, slugs: ['vouchers', 'payment', 'pause', 'cutoff', 'cancel'] },
+      { id: 'food', title: 'Food & freshness', icon: 'bento' as KapiooIconName, slugs: ['storage', 'heat', 'dietary'] },
+      { id: 'support', title: 'Need a hand?', icon: 'heart' as KapiooIconName, slugs: ['contact', 'tracking', 'delivery', 'changes'] },
+    ],
+    more: 'More answers',
+    supportEyebrow: 'Still wondering?',
+    supportTitle: 'We’re here to help.',
+    supportBody: 'Questions about an order or a meal? Send us a support ticket. We’ll reply by email within 2–3 business days.',
+    supportCta: 'Submit a ticket',
+    closingEyebrow: 'Good food. Room for life.',
+    closingTitle: 'Ready when you are.',
+    closingBody: 'Start with your address to see the meals and delivery options available to you.',
+    footer: 'Asian fusion meal delivery in Toronto & the GTA.', back: 'Back to top',
+  },
+  zh: {
+    eyebrow: 'Kapioo / 常见问题',
+    titleFirst: '有问题？',
+    titleSecond: '我们来解答。',
+    lead: '从餐食、餐券到配送，重要信息都在这里，订餐更安心。',
+    order: '立即订餐', browse: '浏览解答',
+    heroAlt: '准备享用的 Kapioo 餐食',
+    photoNote: '了解清楚，好好吃饭。',
+    spotlightLabel: '灵活餐券制', spotlightTitle: '先买餐券，想吃时再订餐。',
+    spotlightBody: '不会自动生成餐食订单。选择喜欢的餐食，在可用配送日兑换即可。',
+    spotlightLink: '了解 Kapioo 订餐流程',
+    categoriesLabel: '查找解答',
+    categories: [
+      { id: 'starting', title: '开始订餐', icon: 'location' as KapiooIconName, slugs: ['coverage', 'plans', 'menus'] },
+      { id: 'orders', title: '餐券与订单', icon: 'choice' as KapiooIconName, slugs: ['vouchers', 'payment', 'pause', 'cutoff', 'cancel'] },
+      { id: 'food', title: '餐食与保鲜', icon: 'bento' as KapiooIconName, slugs: ['storage', 'heat', 'dietary'] },
+      { id: 'support', title: '需要帮助？', icon: 'heart' as KapiooIconName, slugs: ['contact', 'tracking', 'delivery', 'changes'] },
+    ],
+    more: '更多解答',
+    supportEyebrow: '还有疑问？', supportTitle: '我们随时为你解答。',
+    supportBody: '关于订单或餐食有问题？提交支持工单，我们会在 2–3 个工作日内通过邮件回复。',
+    supportCta: '提交工单',
+    closingEyebrow: '好好吃饭，慢慢生活。', closingTitle: '准备好了，就开始吧。',
+    closingBody: '先输入地址，查看你可以选择的餐食与配送方式。',
+    footer: '配送至多伦多及 GTA 的亚洲融合风味餐食。', back: '返回顶部',
+  },
+}
+
+function Action({ children }: { children: React.ReactNode }) {
+  return <Link className="kh-button" href="/starter" prefetch={false}>{children}<ArrowUpRight size={18} strokeWidth={1.5} aria-hidden="true" /></Link>
+}
 
 export function FaqContent() {
-  const { language, setLanguage } = useLanguage();
-  const isZh = language === "zh";
-  const faqs = getFaqs(isZh);
+  const { language } = useLanguage()
+  const t = copy[language]
+  const root = useRef<HTMLDivElement>(null)
+  const [published, setPublished] = useState<HelpArticle[]>([])
+  useHomeMotion(root, `${language}:${published.length}`)
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[#FFF6EF]">
-      {/* Back + minimal nav */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/90">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors rounded-full"
-            asChild
-          >
-            <Link href="/">
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{isZh ? "返回" : "Back"}</span>
-            </Link>
-          </Button>
-          <nav className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-[#6B5F53] hover:text-[#C2884E]">
-                  <Globe className="h-5 w-5" />
-                  <span className="sr-only">{isZh ? "切换语言" : "Switch language"}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setLanguage("zh")} className={language === "zh" ? "bg-accent font-medium" : ""}>
-                  中文
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLanguage("en")} className={language === "en" ? "bg-accent font-medium" : ""}>
-                  English
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Link href="/how-it-works" className="text-sm font-medium text-[#6B5F53] hover:text-[#C2884E] transition-colors">
-              {isZh ? "如何运作" : "How It Works"}
-            </Link>
-            <Link
-              href="/starter"
-              className="text-sm font-medium text-white bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 px-4 py-2 rounded-full transition-all"
-            >
-              {isZh ? "立即开始" : "Get Started"}
-            </Link>
-          </nav>
-        </div>
-      </header>
+  useEffect(() => {
+    let active = true
+    fetch('/api/support/knowledge')
+      .then(async response => ({ data: await response.json(), enabled: response.headers.get('X-Support-Published') === 'true' }))
+      .then(({ data, enabled }) => { if (active && enabled && data.success && Array.isArray(data.data)) setPublished(data.data) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-[#FFF6EF] via-[#FBF7F2] to-white pb-14 pt-8 md:pt-12">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-[#C2884E]/10 to-transparent rounded-full blur-2xl" />
-            <div className="absolute bottom-20 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#D1A46C]/8 to-transparent rounded-full blur-xl" />
-            <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#C2884E_1px,transparent_1px)] [background-size:24px_24px]" />
-          </div>
+  const faqs = useMemo(() => {
+    const articles = new Map(fallbackFaqs(language).map(item => [item.slug, item]))
+    for (const article of published) if (article.slug !== 'contact') articles.set(article.slug, { slug: article.slug, ...article[language] })
+    return [...articles.values()]
+  }, [language, published])
+  const knownSlugs = new Set(t.categories.flatMap(category => category.slugs))
+  const groups = [
+    ...t.categories.map(category => ({ ...category, items: faqs.filter(item => category.slugs.includes(item.slug)) })),
+    { id: 'more', title: t.more, icon: 'choice' as KapiooIconName, slugs: [], items: faqs.filter(item => !knownSlugs.has(item.slug)) },
+  ].filter(group => group.items.length)
 
-          <div className="container relative z-10 max-w-6xl mx-auto px-4">
-            <ScrollReveal rootMargin="0px 0px -20px 0px">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-10">
-                <div className="flex-1 reveal-item">
-                <div className="inline-flex items-center gap-2 mb-6">
-                  <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#C2884E]/40 rounded-full" />
-                  <span className="px-4 py-1.5 bg-[#C2884E]/5 rounded-full text-sm font-medium text-[#C2884E] flex items-center gap-2">
-                    <HelpCircle className="w-4 h-4" />
-                    FAQ
-                  </span>
-                  <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#C2884E]/40 rounded-full" />
-                </div>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#3f352b] leading-tight">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                    {isZh ? "常见问题" : "Frequently asked questions"}
-                  </span>
-                </h1>
-                <p className="mt-6 text-lg md:text-xl text-[#6B5F53]/90 max-w-xl leading-relaxed">
-                  {isZh ? "下单前您需要了解的一切。" : "Everything you need to know before ordering with Kapioo."}
-                </p>
-                <div className="mt-8">
-                  <Button
-                    asChild
-                    size="lg"
-                    className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
-                  >
-                    <Link href="/starter" className="flex items-center gap-2">
-                      {isZh ? "查看菜单并下单" : "View Menu and Order"}
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-                <div className="relative w-full lg:w-[320px] aspect-square rounded-2xl overflow-hidden shadow-xl ring-1 ring-[#C2884E]/10 flex-shrink-0 reveal-item reveal-item-delay-2">
-                  <Image
-                    src="/foodjpg/Kapioo%20product%20picture%20holding%20meals.jpeg"
-                    alt="Fresh Kapioo meals"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 320px"
-                    priority
-                  />
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </section>
+  return <div id="top" ref={root} lang={language === 'zh' ? 'zh-Hans' : 'en'} className="kapioo-home kh-linen kh-faq-page">
+    <a className="kh-skip" href="#main">{homeCopy[language].skip}</a>
+    <div className="kh-reading-progress" aria-hidden="true" />
+    <Navigation copy={homeCopy[language]} homeHref="/" sectionPrefix="/" currentPage="faq" />
+    <main id="main">
+      <section className="khq-hero kh-wrap" data-scene="hero" aria-labelledby="khq-title">
+        <div className="khq-hero-copy" data-reveal><p className="kh-eyebrow">{t.eyebrow}</p><h1 id="khq-title">{t.titleFirst}<br /><em>{t.titleSecond}</em></h1><p className="khq-lead">{t.lead}</p><div className="khq-actions"><Action>{t.order}</Action><a href="#questions" className="khq-text-action">{t.browse}<ArrowDown size={17} aria-hidden="true" /></a></div></div>
+        <figure className="khq-hero-visual" data-reveal><img src="/marketing/plan-weekly-1280.webp" srcSet="/marketing/plan-weekly-640.webp 640w, /marketing/plan-weekly-1280.webp 1280w, /marketing/plan-weekly-1920.webp 1920w" sizes="(max-width: 760px) 88vw, 37vw" width={4000} height={6000} alt={t.heroAlt} loading="eager" fetchPriority="high" decoding="async" /><figcaption>{t.photoNote}</figcaption></figure>
+      </section>
 
-        {/* FAQ Accordion */}
-        <section className="py-16 md:py-24 px-4 bg-white/60">
-          <div className="container max-w-3xl mx-auto">
-            <ScrollReveal rootMargin="0px 0px -60px 0px">
-              <Accordion type="single" collapsible className="space-y-4">
-                {faqs.map((item, index) => (
-                  <div key={item.question} className="reveal-item" style={{ transitionDelay: `${index * 0.05}s` } as React.CSSProperties}>
-                    <AccordionItem
-                      value={`item-${index}`}
-                      className="rounded-2xl border border-[#C2884E]/10 !border-b-[#C2884E]/10 bg-white px-5 py-1 shadow-sm transition-[transform,border-color] duration-300 hover:-translate-y-0.5 hover:border-[#C2884E]/15 data-[state=open]:border-[#C2884E]/20 data-[state=open]:shadow-md"
-                    >
-                      <AccordionTrigger className="py-5 text-left text-base md:text-lg font-semibold text-[#3f352b] hover:no-underline [&[data-state=open]]:text-[#C2884E]">
-                        {item.question}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-[#6B5F53] leading-relaxed pb-5 pt-0">
-                        {item.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                    {index === 4 && (
-                      <div key="cta-mid" className="flex justify-center py-10 reveal-item reveal-item-delay-3">
-                        <Button
-                          asChild
-                          size="lg"
-                          className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
-                        >
-                          <Link href="/starter" className="flex items-center gap-2">
-                            {isZh ? "查看菜单并下单" : "View Menu and Order"}
-                            <ArrowRight className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </Accordion>
-            </ScrollReveal>
-          </div>
-        </section>
+      <section className="khq-spotlight" data-scene="spotlight"><div className="kh-wrap khq-spotlight-inner" data-reveal><div className="khq-spotlight-mark"><KapiooIcon name="choice" size={48} /></div><div><p className="kh-eyebrow">{t.spotlightLabel}</p><h2>{t.spotlightTitle}</h2><p>{t.spotlightBody}</p></div><Link href="/how-it-works" className="khq-spotlight-link">{t.spotlightLink}<ArrowUpRight size={18} aria-hidden="true" /></Link></div></section>
 
-        {/* CTA */}
-        <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-[#FFF6EF] to-[#FBF7F2]">
-          <div className="container max-w-3xl mx-auto text-center">
-            <ScrollReveal rootMargin="0px 0px -80px 0px">
-              <div className="space-y-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-[#3f352b] reveal-item">
-                  {isZh ? "准备好开始了吗？" : "Ready to get started?"}
-                </h2>
-                <div className="flex justify-center reveal-item reveal-item-delay-2">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 px-8 py-6 rounded-xl text-base font-medium transition-all hover:scale-[1.02]"
-                >
-                  <Link href="/starter" className="flex items-center gap-2">
-                    {isZh ? "查看菜单并下单" : "View Menu and Order"}
-                    <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </section>
-      </main>
-    </div>
-  );
+      <section id="questions" className="khq-questions kh-wrap" data-scene="questions" aria-label={t.categoriesLabel}>
+        <aside className="khq-categories" data-reveal><p className="kh-eyebrow">{t.categoriesLabel}</p><nav aria-label={t.categoriesLabel}>{groups.map(group => <a key={group.id} href={`#faq-${group.id}`}>{group.title}<ArrowUpRight size={15} aria-hidden="true" /></a>)}</nav></aside>
+        <div className="khq-answer-groups">{groups.map(group => <section key={group.id} id={`faq-${group.id}`} className="khq-answer-group" data-scene={group.id} aria-labelledby={`faq-heading-${group.id}`}><div className="khq-group-heading" data-reveal><KapiooIcon name={group.icon} size={35} /><div><p className="kh-eyebrow">{t.categoriesLabel}</p><h2 id={`faq-heading-${group.id}`}>{group.title}</h2></div></div><div className="khq-accordion">{group.items.map(item => <details key={item.slug} data-reveal><summary>{item.question}<span aria-hidden="true">+</span></summary><div className="khq-answer"><p>{item.answer}</p>{item.slug === 'contact' && <a href="/support">{t.supportCta}<ArrowUpRight size={16} aria-hidden="true" /></a>}</div></details>)}</div></section>)}</div>
+      </section>
+
+      <section className="khq-support" data-scene="support"><div className="kh-wrap khq-support-inner"><div className="khq-support-copy" data-reveal><p className="kh-eyebrow">{t.supportEyebrow}</p><h2>{t.supportTitle}</h2><p>{t.supportBody}</p><a href="/support" className="khq-support-link">{t.supportCta}<ArrowUpRight size={18} aria-hidden="true" /></a></div><div className="khq-support-art" data-reveal aria-hidden="true"><img src="/mascot/kapioo-mascot-headphones-music-notes.png" width={1024} height={1024} alt="" loading="lazy" /></div></div></section>
+      <section className="khq-closing" data-scene="closing"><div className="kh-wrap" data-reveal><p className="kh-eyebrow">{t.closingEyebrow}</p><h2>{t.closingTitle}</h2><p>{t.closingBody}</p><Action>{t.order}</Action></div></section>
+    </main>
+    <footer className="khq-footer kh-wrap"><div><Link href="/" className="kh-brand">kapioo.</Link><p>{t.footer}</p></div><a href="#top">{t.back}<ArrowUpRight size={17} aria-hidden="true" /></a></footer>
+  </div>
 }

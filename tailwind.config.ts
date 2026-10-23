@@ -30,12 +30,12 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#C2884E", // Updated to match the Get Started button color
+          DEFAULT: "#4a3a2b",
           foreground: "hsl(0, 0%, 100%)",
         },
         secondary: {
-          DEFAULT: "hsl(35, 91%, 86%)", // Light sandy color
-          foreground: "hsl(25, 95%, 33%)",
+          DEFAULT: "#eee3d6",
+          foreground: "#4a3a2b",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",

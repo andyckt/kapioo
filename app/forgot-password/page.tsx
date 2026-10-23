@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
+import "../login/auth-companion.css"
 import { motion } from "framer-motion"
 import { ArrowLeft, Check, RefreshCw, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
   const [errors, setErrors] = useState({
     email: "",
   })
-  
+
   const router = useRouter()
   const { toast } = useToast()
   const { t, language } = useLanguage()
@@ -49,11 +49,11 @@ export default function ForgotPasswordPage() {
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateEmail()) {
       return
     }
-    
+
     setIsLoading(true)
 
     try {
@@ -71,10 +71,10 @@ export default function ForgotPasswordPage() {
       if (result.success) {
         // Store the email in localStorage for the reset code page
         localStorage.setItem('resetPasswordEmail', email.trim());
-        
+
         // Redirect to the reset code page
         router.push('/reset-password-code');
-        
+
         toast({
           title: "Verification code sent",
           description: "Check your email for the 6-digit verification code",
@@ -99,11 +99,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
+    <div className="kp-auth-companion flex min-h-screen flex-col bg-[#fff6ef]/50">
       <header className="w-full py-4 px-4">
         <div className="container">
-          <Link 
-            href="/login" 
+          <Link
+            href="/login"
             className="inline-flex items-center text-sm font-medium transition-colors hover:text-primary group"
           >
             <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
       </header>
-      
+
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -120,19 +120,10 @@ export default function ForgotPasswordPage() {
           className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[420px]"
         >
           <div className="flex flex-col items-center space-y-5 text-center">
-            <Link href="/" className="inline-flex items-center gap-3 group">
-              <Image 
-                src="/未命名設計.png" 
-                alt="Kapioo Logo" 
-                width={52} 
-                height={52} 
-                className="h-13 w-13 transition-transform duration-300 group-hover:rotate-6" 
-              />
-              <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
-            </Link>
+            <Link href="/" className="kp-auth-companion-logo">kapioo<span>.</span></Link>
             <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
           </div>
-          
+
           <div className="grid gap-7">
             {isSubmitted ? (
               <div className="p-7 sm:p-8 bg-white shadow-lg rounded-xl text-center">
@@ -141,14 +132,14 @@ export default function ForgotPasswordPage() {
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Reset Email Sent</h2>
                 <p className="text-muted-foreground mb-6">
-                  We've sent a password reset link to <span className="font-medium text-black">{email}</span>. 
+                  We&apos;ve sent a password reset link to <span className="font-medium text-black">{email}</span>.
                   Check your inbox and follow the instructions to reset your password.
                 </p>
                 <div className="flex flex-col gap-3">
-                  <Button 
-                    onClick={handleRequestReset} 
-                    variant="outline" 
-                    className="w-full" 
+                  <Button
+                    onClick={handleRequestReset}
+                    variant="outline"
+                    className="w-full"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -160,7 +151,7 @@ export default function ForgotPasswordPage() {
                       "Resend reset code"
                     )}
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => router.push('/login')}
                     className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
                   >
@@ -180,7 +171,7 @@ export default function ForgotPasswordPage() {
                           {language === 'zh' ? '⚠️ 系统维护通知' : '⚠️ System Maintenance Notice'}
                         </p>
                         <p>
-                          {language === 'zh' 
+                          {language === 'zh'
                             ? '我们正在进行后端维护，验证码邮件发送功能暂时受影响。维护预计将在今晚9点或更早结束。给您带来不便，敬请谅解。'
                             : 'We are performing backend maintenance. The verification code email function is temporarily affected. Maintenance is expected to end by 9 PM or earlier. We apologize for any inconvenience.'
                           }
@@ -188,12 +179,13 @@ export default function ForgotPasswordPage() {
                       </AlertDescription>
                     </Alert>
                   )}
-                  
+
                   <div className="grid gap-2.5">
                     <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
                     <Input
                       id="email"
                       type="email"
+                      autoComplete="email"
                       placeholder="Enter your email address"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -203,9 +195,9 @@ export default function ForgotPasswordPage() {
                     {errors.email && <p className="text-destructive text-xs">{errors.email}</p>}
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full h-11 mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base" 
+                  <Button
+                    type="submit"
+                    className="w-full h-11 mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base"
                     disabled={isLoading}
                   >
                     {isLoading ? "Sending..." : "Send Reset Code"}
@@ -213,10 +205,10 @@ export default function ForgotPasswordPage() {
                 </div>
               </form>
             )}
-            
+
           </div>
         </motion.div>
       </div>
     </div>
   )
-} 
+}

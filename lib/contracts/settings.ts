@@ -5,7 +5,7 @@ import { nonEmptyString } from "@/lib/contracts/common";
 export const cutoffTimeValueSchema = z.object({
   hour: z.number().int().min(0).max(23),
   minute: z.number().int().min(0).max(59),
-});
+}).strict();
 
 export const settingValueSchema = z.union([
   z.string(),
@@ -32,6 +32,12 @@ export const updateSettingBodySchema = z.object({
   key: nonEmptyString,
   value: settingValueSchema,
   description: z.string().optional(),
+}).superRefine((setting, ctx) => {
+  // The generic record union is intentionally broad for other settings, but
+  // must not let invalid hours/minutes bypass either deadline's validation.
+  if (["cutoffTime", "cancellationTime"].includes(setting.key) && !cutoffTimeValueSchema.safeParse(setting.value).success) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message: "Enter a whole hour from 0 to 23 and a whole minute from 0 to 59." });
+  }
 });
 
 export type UpdateSettingBody = z.infer<typeof updateSettingBodySchema>;

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label"
 import { useMaintenanceMode } from "@/lib/maintenance-context"
 import { ShieldAlert, ArrowLeft } from "lucide-react"
+import "@/app/login/auth-companion.css"
 
 export default function MaintenancePage() {
   const router = useRouter()
@@ -18,9 +19,9 @@ export default function MaintenancePage() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FBF7F2] to-white flex items-center justify-center p-4">
+    <div className="kp-auth-companion kp-maintenance min-h-screen flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={false}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="max-w-md w-full"
@@ -34,13 +35,11 @@ export default function MaintenancePage() {
           Back to Home
         </Button>
 
-        <Card className="shadow-lg border-[#C2884E]/10">
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-[#C2884E]" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                Maintenance Mode
-              </span>
+              <ShieldAlert className="h-5 w-5 text-[#8b5a34]" />
+              <span>Maintenance mode</span>
             </CardTitle>
             <CardDescription>
               This page is now protected by the server-side admin session and MFA flow.
@@ -72,7 +71,7 @@ export default function MaintenancePage() {
           <CardFooter className="flex justify-end">
             <Button 
               onClick={() => router.push("/")}
-              className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white"
+              className="kp-maintenance-cta"
             >
               Back to Site
             </Button>

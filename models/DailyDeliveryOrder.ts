@@ -12,6 +12,7 @@ import {
 export interface IDailyDeliveryOrderItem {
   day: string;
   date: string;
+  deliveryDateISO?: string;
   comboId: string;
   comboName: string;
   type: string;

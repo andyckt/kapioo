@@ -417,7 +417,7 @@ export default function WeeklySubscription({
   }
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="kp-weekly-order flex flex-col h-full space-y-6">
       {/* Address Confirmation Dialog */}
       {showAddressDialog && (
         <RegionCheckDialogRecharge
@@ -439,10 +439,11 @@ export default function WeeklySubscription({
       )}
       
       {/* Header section with responsive layout */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
+      <div className="kp-order-head flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#C2884E] to-[#D1A46C] bg-clip-text text-transparent">{language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en}</h2>
-          <div className="h-1 w-20 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] rounded-full mt-1"></div>
+          <p className="kp-overline">{language === 'zh' ? '每周餐盒 · 选择餐食' : 'WEEKLY MEAL BOX · CHOOSE MEALS'}</p>
+          <h1 className="kp-order-title">{language === 'zh' ? PRODUCT_LINE_LABELS.weekly.zh : PRODUCT_LINE_LABELS.weekly.en}</h1>
+          <p className="kp-order-subtitle">{language === 'zh' ? '冰箱备好餐食，每周配送两次。' : 'Stock the fridge. Enjoy two deliveries each week.'}</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">

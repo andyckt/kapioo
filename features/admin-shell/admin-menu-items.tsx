@@ -78,5 +78,6 @@ export const adminSidebarMenuItems: AdminSidebarMenuItem[] = [
       { id: "rating-dishes", label: "Rating Setup", icon: <Package className="h-4 w-4" /> },
     ],
   },
+  { id: "support", label: "Support & Leads", icon: <Eye className="h-4 w-4" /> },
   { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
 ]

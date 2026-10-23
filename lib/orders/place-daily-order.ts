@@ -1,3 +1,6 @@
+import { recordAssistedFirstOrder } from "@/lib/support/attribution";
+import { snapshotScheduledDate } from "./scheduled-date";
+import Day from "@/models/Day";
 import mongoose from "mongoose";
 
 import type { AuthenticatedActor } from "@/lib/api";
@@ -105,6 +108,9 @@ async function saveDailyOrderWithUniqueId(
   session: mongoose.ClientSession
 ): Promise<DailyOrderDocument> {
   const itemsToSave = buildItemsToSave(data.items);
+  const publishedDays = await Day.find({ isActive: true, date: { $in: itemsToSave.map(i => i.date) } }).select("date").session(session).lean();
+  const dates = new Set(publishedDays.map(d => d.date));
+  const scheduledItems = itemsToSave.map(item => ({ ...item, ...(dates.has(item.date) ? { deliveryDateISO: snapshotScheduledDate(item.date) } : {}) }));
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -115,7 +121,7 @@ async function saveDailyOrderWithUniqueId(
       const order = new DailyDeliveryOrder({
         userId: user._id,
         orderId,
-        items: itemsToSave,
+        items: scheduledItems,
         status: "pending",
         voucherCost: vouchersNeeded,
         taxIncluded: data.taxIncluded ?? true,
@@ -227,6 +233,8 @@ export async function placeDailyOrder({
       if (voucherMutations.length === 0 && trimmedPhoneNumber) {
         await user.save({ session });
       }
+
+      await recordAssistedFirstOrder(user._id, session);
 
       result = {
         order,

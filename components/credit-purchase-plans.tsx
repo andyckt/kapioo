@@ -1,4 +1,5 @@
 "use client"
+import { getSupportCheckoutAddress } from "@/lib/support/checkout-address"
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -561,6 +562,8 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
           onRegionChange={handleRegionChange}
           onProceed={proceedToUpload}
           existingAddress={(() => {
+            const assistantAddress = getSupportCheckoutAddress()
+            if (assistantAddress) return assistantAddress
             const storedUser = localStorage.getItem('user')
             if (storedUser) {
               const user = JSON.parse(storedUser)

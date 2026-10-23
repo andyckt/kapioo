@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 
-import { Calendar, CreditCard, Gift, History, Settings, ShoppingCart, User } from "lucide-react"
+import { CalendarDays, History, LayoutGrid, Settings, ShoppingBag, Ticket } from "lucide-react"
 
 import { productLineLabel } from "@/lib/product-lines/names"
 
@@ -25,41 +25,41 @@ export function getDashboardMenuItems(
   labels: DashboardMenuLabels
 ): DashboardMenuItem[] {
   return [
-    { id: "overview", label: labels.overview, icon: <User className="h-4 w-4" /> },
+    { id: "overview", label: labels.overview, icon: <LayoutGrid className="h-4 w-4" /> },
     { id: "orders", label: labels.myOrders, icon: <History className="h-4 w-4" /> },
     {
       id: "weekly-subscription-group",
       label: productLineLabel("weekly", language),
-      icon: <Gift className="h-4 w-4" />,
+      icon: <CalendarDays className="h-4 w-4" />,
       isHeading: true,
       children: [
         {
           id: "weekly-subscription",
-          label: language === "zh" ? "订餐" : "Start Ordering",
-          icon: <ShoppingCart className="h-4 w-4" />,
+          label: language === "zh" ? "选择餐食" : "Choose meals",
+          icon: <ShoppingBag className="h-4 w-4" />,
         },
         {
           id: "credits",
-          label: language === "zh" ? "充值" : "Recharge",
-          icon: <CreditCard className="h-4 w-4" />,
+          label: language === "zh" ? "购买餐券" : "Buy vouchers",
+          icon: <Ticket className="h-4 w-4" />,
         },
       ],
     },
     {
       id: "daily-delivery-group",
       label: productLineLabel("daily", language),
-      icon: <Calendar className="h-4 w-4" />,
+      icon: <ShoppingBag className="h-4 w-4" />,
       isHeading: true,
       children: [
         {
           id: "daily-delivery",
-          label: language === "zh" ? "订餐" : "Start Ordering",
-          icon: <ShoppingCart className="h-4 w-4" />,
+          label: language === "zh" ? "选择午餐" : "Choose lunches",
+          icon: <ShoppingBag className="h-4 w-4" />,
         },
         {
           id: "meal-vouchers",
-          label: language === "zh" ? "充值" : "Recharge",
-          icon: <CreditCard className="h-4 w-4" />,
+          label: language === "zh" ? "购买餐券" : "Buy vouchers",
+          icon: <Ticket className="h-4 w-4" />,
         },
       ],
     },

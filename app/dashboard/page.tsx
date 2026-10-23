@@ -39,7 +39,6 @@ export default function DashboardPage() {
   const [credits, setCredits] = useState(0)
   const [activeTab, setActiveTab] = useState("overview")
   const activeTabHistoryReadyRef = useRef(false)
-  const [showServiceSelection, setShowServiceSelection] = useState(false)
 
   const handleLogout = async () => {
     await performClientLogout()
@@ -245,6 +244,7 @@ export default function DashboardPage() {
         onLogout={handleLogout}
         onMobileLogout={handleMobileLogout}
         mobileLogoutLabel={t("logOut")}
+        userName={userData?.name || authUser?.name}
       >
         <DashboardTabContent
           activeTab={activeTab}
@@ -253,7 +253,6 @@ export default function DashboardPage() {
           userData={userData}
           userLoading={userLoading}
           dashboardHeaderDate={dashboardHeaderDate}
-          showServiceSelection={showServiceSelection}
           upcomingDeliveries={upcomingDeliveries}
           credits={credits}
           orderActiveSection={orderActiveSection}
@@ -263,7 +262,6 @@ export default function DashboardPage() {
           addressInfo={addressInfo}
           passwordInfo={passwordInfo}
           onActiveTabChange={setActiveTab}
-          onShowServiceSelection={() => setShowServiceSelection(true)}
           onOrderSectionChange={setOrderActiveSection}
           onPurchaseSuccess={() => {
             void refreshUserProfile({ syncForms: false })

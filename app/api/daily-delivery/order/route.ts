@@ -21,6 +21,7 @@ import {
 } from "@/lib/orders/place-daily-order";
 import DailyDeliveryOrder from "@/models/DailyDeliveryOrder";
 import User from "@/models/User";
+import { getOrderActionAvailability } from "@/lib/self-service/action-availability";
 
 const idempotencyStore = new Map<string, unknown>();
 
@@ -159,11 +160,13 @@ export async function GET(request: Request) {
       .limit(limit);
 
     const user = await User.findById(userId).select("name email").lean();
+    const actionAvailability = await getOrderActionAvailability(orders, "daily");
     const normalizedOrders = orders.map((order) => {
       const plain = typeof order.toObject === "function" ? order.toObject() : order;
       const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plain, user as never);
       return {
         ...plain,
+        selfService: actionAvailability.get(order.orderId),
         effectiveCustomerInfo,
         phoneNumber: effectiveCustomerInfo.phoneNumber,
         area: effectiveCustomerInfo.area,

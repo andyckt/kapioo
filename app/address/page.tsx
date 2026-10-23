@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
+import "@/app/login/auth-companion.css"
 import { AddressAutocomplete } from "@/components/address-autocomplete"
 import { GoogleDerivedAreaInput } from "@/components/google-derived-area-input"
 import { GoogleDerivedPostalCodeInput } from "@/components/google-derived-postal-code-input"
@@ -109,21 +109,15 @@ export default function AddressPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
+    <div className="kp-auth-companion kp-auth-address flex min-h-screen flex-col">
       <div className="container relative pt-4" />
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
         <div className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[500px] animate-fade-in-up">
           <div className="flex flex-col items-center space-y-5 text-center">
             <Link href="/" className="inline-flex items-center gap-3 group">
-              <Image 
-                src="/未命名設計.png" 
-                alt="Kapioo Logo" 
-                width={52} 
-                height={52} 
-                className="h-13 w-13 transition-transform duration-300 group-hover:rotate-6" 
-              />
-              <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+              <span className="kp-auth-companion-logo">kapioo<span>.</span></span>
             </Link>
+            <div><p className="kp-auth-companion-eyebrow">{language === "zh" ? "配送地址" : "YOUR DELIVERY ADDRESS"}</p><h1>{language === "zh" ? "美味即将到来。" : "Where should we bring your meals?"}</h1><p className="kp-auth-companion-intro">{language === "zh" ? "请从地址建议中选择地址，我们会显示可用的餐食方案。" : "Choose your address from the suggestions so we can show the plans available to you."}</p></div>
           </div>
           
           <form onSubmit={handleSaveAddress} className="p-7 sm:p-8 bg-white shadow-lg rounded-xl">

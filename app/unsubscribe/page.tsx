@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { CheckCircle, Mail, AlertCircle } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import Link from 'next/link'
+import '@/app/login/auth-companion.css'
 
 function UnsubscribeContent() {
   const searchParams = useSearchParams()
@@ -66,7 +67,7 @@ function UnsubscribeContent() {
   
   if (!email || !type || !token) {
     return (
-      <div className="min-h-screen bg-[#FBF7F2] flex items-center justify-center p-4">
+      <div className="kp-auth-companion kp-unsubscribe flex min-h-screen items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600">
@@ -95,7 +96,7 @@ function UnsubscribeContent() {
   
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-[#FBF7F2] flex items-center justify-center p-4">
+      <div className="kp-auth-companion kp-unsubscribe flex min-h-screen items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-green-600">
@@ -134,7 +135,7 @@ function UnsubscribeContent() {
   }
   
   return (
-    <div className="min-h-screen bg-[#FBF7F2] flex items-center justify-center p-4">
+    <div className="kp-auth-companion kp-unsubscribe flex min-h-screen items-center justify-center p-4">
       <Card className="max-w-md w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -194,7 +195,7 @@ function UnsubscribeContent() {
 export default function UnsubscribePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#FBF7F2] flex items-center justify-center p-4">
+      <div className="kp-auth-companion kp-unsubscribe flex min-h-screen items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="py-8">
             <div className="flex justify-center">

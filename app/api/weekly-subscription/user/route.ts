@@ -10,6 +10,7 @@ import {
 import WeeklyDeliveryDay from '@/models/WeeklyDeliveryDay';
 import WeeklyMealOption from '@/models/WeeklyMealOption';
 import WeeklyOrder from '@/models/WeeklyOrder';
+import WeeklyEntitlementGroup from '@/models/WeeklyEntitlementGroup';
 import User from "@/models/User";
 import { rewriteS3UrlToCloudFront } from "@/lib/upload/menu-image";
 import { format, addDays, addWeeks } from 'date-fns';
@@ -303,6 +304,10 @@ export async function POST(request: Request) {
     
     if (!user) {
       return errorJson("User not found", 404);
+    }
+    if (weeklyEntitlementGroupId) {
+      const group = await WeeklyEntitlementGroup.findOne({ groupId: weeklyEntitlementGroupId, userId: user._id });
+      if (group?.cancelledAt || group?.refundedAt) return errorJson("This weekly group was cancelled. Please start a new order.", 409);
     }
     
     // ✅ IDEMPOTENCY CHECK: Prevent duplicate orders within 60 seconds

@@ -1,15 +1,11 @@
 "use client"
 
-import { AnimatePresence, motion } from "framer-motion"
-import { CreditCard, Gem, History, ShoppingCart, Ticket } from "lucide-react"
+import Image from "next/image"
+import { ArrowUpRight, CalendarDays, ShoppingBag, Ticket } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ServiceSelectionCards } from "@/components/service-selection-cards"
 import { getUserDailyEligibility } from "@/lib/address/daily-eligibility"
 import type { DashboardUserData } from "@/lib/dashboard-user-profile"
 import { getWeeklyPlanBalanceRows } from "@/lib/plans/balances"
-import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 
 type DashboardTabId =
   | "orders"
@@ -24,29 +20,8 @@ export interface DashboardOverviewTabProps {
   userData: DashboardUserData | null
   userLoading: boolean
   dashboardHeaderDate: string
-  showServiceSelection: boolean
   upcomingDeliveries: number
-  onShowServiceSelection: () => void
   onTabChange: (tab: DashboardTabId) => void
-}
-
-function hasNoVouchers(userData: DashboardUserData) {
-  return (
-    (userData.credits || 0) === 0 &&
-    (userData.twoDishVoucher || 0) === 0 &&
-    (userData.threeDishVoucher || 0) === 0 &&
-    getWeeklyPlanBalanceRows(userData).every((plan) => plan.balance === 0)
-  )
-}
-
-function getWeeklyVoucherCounts(userData: DashboardUserData) {
-  return getWeeklyPlanBalanceRows(userData)
-    .map((plan) => ({
-      labelEn: `${plan.mealsPerWeek} meals/week`,
-      labelZh: plan.labelZh,
-      count: plan.balance,
-    }))
-    .filter((entry) => entry.count > 0)
 }
 
 export function DashboardOverviewTab({
@@ -54,349 +29,115 @@ export function DashboardOverviewTab({
   userData,
   userLoading,
   dashboardHeaderDate,
-  showServiceSelection,
   upcomingDeliveries,
-  onShowServiceSelection,
   onTabChange,
 }: DashboardOverviewTabProps) {
-  const weeklyVoucherCounts = userData ? getWeeklyVoucherCounts(userData) : []
-  const hasDailyVouchers = Boolean((userData?.twoDishVoucher || 0) > 0 || (userData?.threeDishVoucher || 0) > 0)
-  const hasWeeklyVouchers = weeklyVoucherCounts.length > 0
-  const serviceEligibility = userData ? getUserDailyEligibility(userData) : null
+  const zh = language === "zh"
+  const firstName = userData?.name?.trim().split(/\s+/)[0]
+  const dailyTwo = userData?.twoDishVoucher || 0
+  const dailyThree = userData?.threeDishVoucher || 0
+  const weeklyPlans = userData ? getWeeklyPlanBalanceRows(userData).filter((plan) => plan.balance > 0) : []
+  const weeklyBalance = weeklyPlans.reduce((sum, plan) => sum + plan.balance, 0)
+  const dailyBalance = dailyTwo + dailyThree
+  const eligibility = userData ? getUserDailyEligibility(userData) : null
+  const firstStep: DashboardTabId = !eligibility?.isServed
+    ? "settings"
+    : dailyBalance > 0
+      ? "daily-delivery"
+      : weeklyBalance > 0
+        ? "weekly-subscription"
+        : eligibility.canDaily
+          ? "meal-vouchers"
+          : "credits"
 
   return (
-    <motion.div
-      key="overview"
-      initial={{ y: 10 }}
-      animate={{ y: 0 }}
-      exit={{ y: -10 }}
-      transition={{ duration: 0.2 }}
-      className="space-y-6"
-    >
-      <div className="flex flex-col mt-4">
-        <div className="bg-gradient-to-r from-[#F8F0E5] to-[#FFF6EF] p-6 rounded-3xl shadow-sm border border-[#C2884E]/10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col mb-4 md:mb-0">
-              <h2 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                {language === "en"
-                  ? `Welcome, ${userData?.name?.split(" ")[0] || ""}`
-                  : `欢迎, ${userData?.name?.split(" ")[0] || ""}`}
-              </h2>
-              <p className="text-[#6B5F53] text-sm mt-1">{dashboardHeaderDate}</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                className="border-[#C2884E]/20 hover:bg-[#F5EDE4] hover:text-[#C2884E] transition-all rounded-xl"
-                onClick={() => onTabChange("orders")}
-              >
-                <History className="h-4 w-4 mr-2" />
-                {language === "en" ? "My Orders" : "我的订单"}
-              </Button>
-            </div>
-          </div>
+    <div className="kp-overview">
+      <div className="kp-overview-head">
+        <div>
+          <p className="kp-overline">{zh ? "我的餐食" : "YOUR KAPIOO SPACE"}</p>
+          <h1>{zh ? `欢迎回来${firstName ? `，${firstName}` : ""}。` : `Welcome back${firstName ? `, ${firstName}` : ""}.`}</h1>
+          <p className="kp-overview-date">{dashboardHeaderDate}</p>
         </div>
+        <button type="button" className="kp-overview-orders" onClick={() => onTabChange("orders")}>
+          {zh ? "查看订单" : "View orders"} <ArrowUpRight size={17} />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-        {userData && !userLoading && hasNoVouchers(userData) && (
-          <AnimatePresence mode="wait">
-            {!showServiceSelection ? (
-              <motion.div
-                key="no-credits"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.4 }}
-                className="col-span-full"
-              >
-                <Card className="overflow-hidden border border-[#C2884E]/20 bg-gradient-to-br from-white to-[#FFF6EF] shadow-lg rounded-3xl">
-                  <CardContent className="p-8 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-6">
-                      <div className="h-20 w-20 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-                        <Ticket className="h-10 w-10 text-[#C2884E]" />
-                      </div>
+      <section className="kp-overview-feature" aria-label={zh ? "开始点餐" : "Start a meal"}>
+        <div className="kp-overview-feature-copy">
+          <p className="kp-overline">{zh ? "好好吃饭，从这里开始" : "A LITTLE MORE ROOM FOR LIFE"}</p>
+          <h2>{zh ? <>今天吃什么，<em>交给我们。</em></> : <>Good food for <em>whatever’s next.</em></>}</h2>
+          <p>{zh ? "选好想吃的餐食，我们会为你做好并送达。" : "Pick your meals when it suits you. We’ll take care of the cooking and delivery."}</p>
+          <button type="button" className="kp-pill-button" disabled={userLoading} onClick={() => onTabChange(firstStep)}>
+            {!eligibility?.isServed ? (zh ? "更新配送地址" : "Update delivery address") : dailyBalance + weeklyBalance > 0 ? (zh ? "选择餐食" : "Choose your meals") : (zh ? "查看餐券方案" : "Explore meal plans")} <ArrowUpRight size={17} />
+          </button>
+        </div>
+        <div className="kp-overview-feature-photo">
+          <Image src="/marketing/hero-after-work-1280.webp" alt={zh ? "享用 Kapioo 餐食" : "Enjoying a Kapioo meal after work"} fill sizes="(max-width: 760px) 100vw, 38vw" priority />
+        </div>
+      </section>
 
-                      <div className="space-y-2">
-                        <h3 className="text-2xl font-semibold text-[#6B5F53]">
-                          {language === "en" ? "You don't have any meal credits right now" : "您目前没有任何餐券"}
-                        </h3>
-                        <p className="text-[#6B5F53]/70 text-base max-w-md mx-auto">
-                          {language === "en" ? "Please start recharging to enjoy our delicious meals" : "请充值以享受我们美味的餐点"}
-                        </p>
-                      </div>
-
-                      <Button
-                        size="lg"
-                        className="bg-[#C2884E] hover:bg-[#B17940] text-white rounded-xl px-8 py-6 text-base font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                        onClick={onShowServiceSelection}
-                      >
-                        <CreditCard className="h-5 w-5 mr-2" />
-                        {language === "en" ? "Start Recharging" : "开始充值"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="service-selection"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="col-span-full"
-              >
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h3 className="text-2xl font-semibold text-[#6B5F53] mb-2">
-                      {language === "en" ? "Choose Your Service" : "选择您的服务"}
-                    </h3>
-                  </div>
-                  {serviceEligibility?.isServed ? (
-                    <ServiceSelectionCards
-                      showDaily={serviceEligibility.canDaily}
-                      showWeekly={serviceEligibility.canWeekly}
-                      onSelectDaily={() => onTabChange("meal-vouchers")}
-                      onSelectWeekly={() => onTabChange("credits")}
-                    />
-                  ) : (
-                    <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-5 text-center text-amber-800 space-y-4">
-                      <p>
-                        {language === "en"
-                          ? "This address is not in our current delivery area. Please update your address or check back as we expand coverage."
-                          : "此地址暂不在配送范围内。请更新配送地址，或稍后再查看服务范围更新。"}
-                      </p>
-                      <Button
-                        variant="outline"
-                        className="border-amber-300 text-amber-900 hover:bg-amber-100"
-                        onClick={() => onTabChange("settings")}
-                      >
-                        {language === "en" ? "Update address" : "更新地址"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-
-        {userData && hasDailyVouchers && (
-          <div style={{ transitionDelay: "0.15s" }}>
-            <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                  <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                    <Ticket className="h-4 w-4 text-[#C2884E]" />
-                  </div>
-                  {language === "en"
-                    ? `${PRODUCT_LINE_LABELS.daily.en} vouchers`
-                    : `${PRODUCT_LINE_LABELS.daily.zh}餐券`}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === "en" ? "2-Dish Voucher:" : "2菜餐券 剩余："}
-                    </span>
-                    <div className="flex items-center">
-                      <span className="text-xl font-bold text-[#C2884E]">{userData.twoDishVoucher || 0}</span>
-                      <span className="ml-1 text-sm text-[#6B5F53]">{language === "en" ? "" : "张"}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === "en" ? "3-Dish Voucher:" : "3菜餐券 剩余："}
-                    </span>
-                    <div className="flex items-center">
-                      <span className="text-xl font-bold text-[#C2884E]">{userData.threeDishVoucher || 0}</span>
-                      <span className="ml-1 text-sm text-[#6B5F53]">{language === "en" ? "" : "张"}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="ghost"
-                      className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                      onClick={() => onTabChange("daily-delivery")}
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      {language === "en" ? "Start Ordering" : "去订餐"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                      onClick={() => onTabChange("meal-vouchers")}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      {language === "en" ? "Recharge" : "去充值"}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {userData && hasWeeklyVouchers && (
-          <div style={{ transitionDelay: "0.1s" }}>
-            <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                  <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                    <Gem className="h-4 w-4 text-[#C2884E]" />
-                  </div>
-                  {language === "en"
-                    ? `${PRODUCT_LINE_LABELS.weekly.en} vouchers`
-                    : `${PRODUCT_LINE_LABELS.weekly.zh} 订阅餐券`}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    {weeklyVoucherCounts.map((entry) => (
-                      <div
-                        key={entry.labelEn}
-                        className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10"
-                      >
-                        <span className="text-sm font-medium text-[#6B5F53]">
-                          {language === "en" ? entry.labelEn : entry.labelZh}:
-                        </span>
-                        <div className="flex items-center">
-                          <span className="text-xl font-bold text-[#C2884E]">{entry.count}</span>
-                          <span className="ml-1 text-sm text-[#6B5F53]">{language === "en" ? "" : "张"}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="ghost"
-                      className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                      onClick={() => onTabChange("weekly-subscription")}
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      {language === "en" ? "Start Ordering" : "去订餐"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                      onClick={() => onTabChange("credits")}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      {language === "en" ? "Recharge" : "去充值"}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {userData && !hasDailyVouchers && hasWeeklyVouchers && (
-          <div style={{ transitionDelay: "0.2s" }}>
-            <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                  <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                    <Ticket className="h-4 w-4 text-[#C2884E]" />
-                  </div>
-                  {language === "en"
-                    ? `${PRODUCT_LINE_LABELS.daily.en} vouchers`
-                    : `${PRODUCT_LINE_LABELS.daily.zh}餐券`}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === "en" ? "2-Dish Voucher:" : "2菜餐券 剩余："}
-                    </span>
-                    <div className="flex items-center">
-                      <span className="text-xl font-bold text-[#C2884E]">{userData.twoDishVoucher || 0}</span>
-                      <span className="ml-1 text-sm text-[#6B5F53]">{language === "en" ? "" : "张"}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#C2884E]/10">
-                    <span className="text-sm font-medium text-[#6B5F53]">
-                      {language === "en" ? "3-Dish Voucher:" : "3菜餐券 剩余："}
-                    </span>
-                    <div className="flex items-center">
-                      <span className="text-xl font-bold text-[#C2884E]">{userData.threeDishVoucher || 0}</span>
-                      <span className="ml-1 text-sm text-[#6B5F53]">{language === "en" ? "" : "张"}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="ghost"
-                      className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                      onClick={() => onTabChange("daily-delivery")}
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      {language === "en" ? "Start Ordering" : "去订餐"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl transition-colors duration-200"
-                      onClick={() => onTabChange("meal-vouchers")}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      {language === "en" ? "Recharge" : "去充值"}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
+      <div className="kp-overview-section-heading">
+        <div>
+          <p className="kp-overline">{zh ? "一目了然" : "AT A GLANCE"}</p>
+          <h2>{zh ? "你的餐食，按你的节奏。" : "Your meals, your rhythm."}</h2>
+        </div>
         {upcomingDeliveries > 0 && (
-          <div style={{ transitionDelay: "0.3s" }}>
-            <Card className="overflow-hidden border border-[#C2884E]/10 bg-gradient-to-br from-white to-[#FFF6EF] shadow-md rounded-3xl hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center text-[#6B5F53]">
-                    <div className="h-8 w-8 rounded-full bg-[#F5EDE4] flex items-center justify-center mr-2">
-                      <ShoppingCart className="h-4 w-4 text-[#C2884E]" />
-                    </div>
-                    {language === "en" ? "Upcoming Orders" : "即将到来的订单"}
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#C2884E]/10">
-                  <span className="text-sm font-medium text-[#6B5F53]">
-                    {language === "en" ? "Upcoming Orders:" : "待配送订单："}
-                  </span>
-                  <div className="flex items-center">
-                    <span className="text-xl font-bold text-[#C2884E]">{upcomingDeliveries}</span>
-                    {language === "zh" ? (
-                      <span className="ml-1 text-sm text-[#6B5F53]">个</span>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-dashed border-[#C2884E]/20">
-                  <Button
-                    variant="ghost"
-                    className="w-full text-[#C2884E] hover:bg-[#F5EDE4] hover:text-[#C2884E] rounded-xl"
-                    onClick={() => onTabChange("orders")}
-                  >
-                    <History className="h-4 w-4 mr-2" />
-                    {language === "en" ? "View orders" : "查看订单"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <button type="button" className="kp-upcoming-link" onClick={() => onTabChange("orders")}>
+            <span className="kp-upcoming-dot" />
+            {zh ? `${upcomingDeliveries} 笔待配送订单` : `${upcomingDeliveries} upcoming ${upcomingDeliveries === 1 ? "delivery" : "deliveries"}`}
+            <ArrowUpRight size={16} />
+          </button>
         )}
       </div>
-    </motion.div>
+
+      {userLoading ? (
+        <div className="kp-overview-loading" role="status" aria-live="polite">{zh ? "正在加载你的账户…" : "Loading your account…"}</div>
+      ) : (
+        <>
+          {!eligibility?.isServed && (
+            <div className="kp-overview-address">
+              <span>{zh ? "请确认配送地址，以查看目前可用的餐食方案。" : "Confirm your delivery address to see which meals are available to you."}</span>
+              <button type="button" onClick={() => onTabChange("settings")}>{zh ? "更新地址" : "Update address"} <ArrowUpRight size={16} /></button>
+            </div>
+          )}
+          <div className="kp-overview-grid">
+            {(eligibility?.canDaily || dailyTwo + dailyThree > 0) && (
+              <article className="kp-overview-card">
+                <div className="kp-overview-card-top"><span className="kp-overview-card-icon"><ShoppingBag size={21} /></span><span>01 / {zh ? "每日便当" : "DAILY BENTO"}</span></div>
+                <h3>{zh ? "新鲜午餐，按需点选。" : "Fresh lunch, on your time."}</h3>
+                <p>{zh ? "每日新鲜制作，送到你的门前。" : "Freshly cooked lunches, delivered."}</p>
+                <div className="kp-voucher-row">
+                  <span>{zh ? "双拼餐券" : "2-dish vouchers"} <strong>{dailyTwo}</strong></span>
+                  <span>{zh ? "三拼餐券" : "3-dish vouchers"} <strong>{dailyThree}</strong></span>
+                </div>
+                <div className="kp-overview-card-actions">
+                  <button type="button" onClick={() => onTabChange(dailyBalance > 0 ? "daily-delivery" : "meal-vouchers")}>{dailyBalance > 0 ? (zh ? "选择午餐" : "Choose lunches") : (zh ? "购买餐券" : "Buy vouchers")} <ArrowUpRight size={16} /></button>
+                  <button type="button" onClick={() => onTabChange(dailyBalance > 0 ? "meal-vouchers" : "daily-delivery")}>{dailyBalance > 0 ? (zh ? "购买餐券" : "Buy vouchers") : (zh ? "浏览菜单" : "Browse menu")}</button>
+                </div>
+              </article>
+            )}
+            {(eligibility?.canWeekly || weeklyBalance > 0) && (
+              <article className="kp-overview-card">
+                <div className="kp-overview-card-top"><span className="kp-overview-card-icon"><CalendarDays size={21} /></span><span>02 / {zh ? "每周餐盒" : "WEEKLY MEAL BOX"}</span></div>
+                <h3>{zh ? "一次安排，轻松一周。" : "The week, taken care of."}</h3>
+                <p>{zh ? "冰箱备好餐食，想吃的时候加热享用。" : "Stock the fridge. Heat and enjoy."}</p>
+                <div className="kp-voucher-row">
+                  <span>{zh ? "可用周餐券" : "Available weeks"} <strong>{weeklyBalance}</strong></span>
+                  {weeklyPlans.length > 0 && <small>{weeklyPlans.map((plan) => zh ? plan.labelZh : `${plan.mealsPerWeek} meals/week`).join(" · ")}</small>}
+                </div>
+                <div className="kp-overview-card-actions">
+                  <button type="button" onClick={() => onTabChange(weeklyBalance > 0 ? "weekly-subscription" : "credits")}>{weeklyBalance > 0 ? (zh ? "选择餐食" : "Choose meals") : (zh ? "购买餐券" : "Buy vouchers")} <ArrowUpRight size={16} /></button>
+                  <button type="button" onClick={() => onTabChange(weeklyBalance > 0 ? "credits" : "weekly-subscription")}>{weeklyBalance > 0 ? (zh ? "购买餐券" : "Buy vouchers") : (zh ? "浏览菜单" : "Browse menu")}</button>
+                </div>
+              </article>
+            )}
+          </div>
+          {eligibility?.isServed && dailyTwo + dailyThree + weeklyBalance === 0 && (
+            <p className="kp-overview-footnote"><Ticket size={16} />{zh ? "先购买餐券，再按自己的时间兑换。无订阅压力。" : "Buy vouchers first, then redeem on the days you choose. No subscription pressure."}</p>
+          )}
+        </>
+      )}
+    </div>
   )
 }

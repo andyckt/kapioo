@@ -11,6 +11,7 @@ import User from "@/models/User";
 import mongoose from "mongoose";
 import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-customer-info";
 import { withRewrittenProofOfDeliveryUrl } from "@/lib/orders/proof-of-delivery-response";
+import { getOrderActionAvailability } from "@/lib/self-service/action-availability";
 
 export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) {
   try {
@@ -49,9 +50,11 @@ export async function GET(_request: Request, ctx: RouteContext<{ id: string }>) 
         : null;
     const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plainOrder as never, user as never);
     const weeklyEntitlementSummary = buildWeeklyEntitlementSummary(plainOrder as never, entitlementGroup as never);
+    const actionAvailability = await getOrderActionAvailability([order], "weekly");
 
     return successJson({
       ...withRewrittenProofOfDeliveryUrl(plainOrder),
+      selfService: actionAvailability.get(order.orderId),
       effectiveCustomerInfo,
       weeklyEntitlementSummary,
       phoneNumber: effectiveCustomerInfo.phoneNumber,

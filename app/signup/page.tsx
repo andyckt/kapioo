@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
+import "../login/auth-companion.css"
 import { ArrowLeft, Eye, EyeOff, Check, ChevronsUpDown, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,12 +38,12 @@ export default function SignupPage() {
     password: "",
     confirmPassword: "",
   })
-  
+
   const router = useRouter()
   const { toast } = useToast()
   const { t, language } = useLanguage()
   const handleBack = useSmartBack()
-  
+
   // State to store the plan identifier
   const [planIdentifier, setPlanIdentifier] = useState<string | null>(null)
 
@@ -53,7 +53,7 @@ export default function SignupPage() {
     const params = new URLSearchParams(window.location.search)
     const fromParam = params.get('from')
     const planParam = params.get('plan')
-    
+
     setFromPage(fromParam)
     setPlanIdentifier(planParam)
   }, [])
@@ -103,20 +103,20 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
-    
+
     setIsLoading(true)
 
     try {
       // Instead of creating a user in the database, we'll generate a verification code
       // and store the user data temporarily in localStorage
-      
+
       // Generate a random verification code (6 digits)
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
+
       // Call the API to send verification email
       const response = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
@@ -146,23 +146,23 @@ export default function SignupPage() {
           fromPage,
           planIdentifier
         }));
-        
+
         // Build the redirect URL with parameters
         let redirectUrl = '/verify-email-sent';
         const params = [];
-        
+
         if (fromPage) {
           params.push(`from=${fromPage}`);
         }
-        
+
         if (planIdentifier) {
           params.push(`plan=${planIdentifier}`);
         }
-        
+
         if (params.length > 0) {
           redirectUrl += '?' + params.join('&');
         }
-        
+
         router.push(redirectUrl);
       } else {
         // Show error toast only for failures
@@ -185,7 +185,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
+    <div className="kp-auth-companion flex min-h-screen flex-col bg-[#fff6ef]/50">
       <header className="w-full py-2 px-3 flex items-center justify-between">
         <div className="container flex justify-between items-center">
           <button
@@ -201,23 +201,14 @@ export default function SignupPage() {
           </div>
         </div>
       </header>
-      
+
       <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
         <div className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[420px] animate-fade-in-up">
           <div className="flex flex-col items-center space-y-5 text-center">
-            <Link href="/" className="inline-flex items-center gap-3 group">
-              <Image 
-                src="/未命名設計.png" 
-                alt="Kapioo Logo" 
-                width={52} 
-                height={52} 
-                className="h-13 w-13 transition-transform duration-300 group-hover:rotate-6" 
-              />
-              <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
-            </Link>
+            <Link href="/" className="kp-auth-companion-logo">kapioo<span>.</span></Link>
             <h1 className="text-2xl font-bold">{t('createAccount')}</h1>
           </div>
-          
+
           <div className="grid gap-7">
             <form onSubmit={handleSignup} className="p-7 sm:p-8 bg-white shadow-lg rounded-xl">
               <div className="grid gap-5">
@@ -230,7 +221,7 @@ export default function SignupPage() {
                         {language === 'zh' ? '⚠️ 系统维护通知' : '⚠️ System Maintenance Notice'}
                       </p>
                       <p>
-                        {language === 'zh' 
+                        {language === 'zh'
                           ? '我们正在进行后端维护，验证码邮件发送功能暂时受影响。维护预计将在今晚9点或更早结束。给您带来不便，敬请谅解。'
                           : 'We are performing backend maintenance. The verification code email function is temporarily affected. Maintenance is expected to end by 9 PM or earlier. We apologize for any inconvenience.'
                         }
@@ -238,11 +229,12 @@ export default function SignupPage() {
                     </AlertDescription>
                   </Alert>
                 )}
-                
+
                 <div className="grid gap-2.5">
                   <Label htmlFor="name" className="text-sm font-medium">{t('fullName')}</Label>
                   <Input
                     id="name"
+                    autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="h-11 text-base placeholder:text-sm"
@@ -256,6 +248,7 @@ export default function SignupPage() {
                   <Input
                     id="email"
                     type="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-11 text-base placeholder:text-sm"
@@ -270,6 +263,7 @@ export default function SignupPage() {
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
                       placeholder=""
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -294,6 +288,7 @@ export default function SignupPage() {
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
                       placeholder=""
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -345,9 +340,9 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full h-11 mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base" 
+                <Button
+                  type="submit"
+                  className="w-full h-11 mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -362,7 +357,7 @@ export default function SignupPage() {
                 </Button>
               </div>
             </form>
-            
+
             <div className="text-center space-y-3">
               <p className="text-base">
                 <Link href="/login" className="text-muted-foreground hover:text-primary transition-colors">
@@ -375,4 +370,4 @@ export default function SignupPage() {
       </div>
     </div>
   )
-} 
+}

@@ -11,11 +11,13 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("mongoose", () => ({
-  default: {
-    startSession: mocks.startSession,
-  },
-}));
+vi.mock("mongoose", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("mongoose")>();
+  return {
+    ...actual,
+    default: Object.assign(Object.create(actual.default), { startSession: mocks.startSession }),
+  };
+});
 
 vi.mock("@/lib/balances/mutations", () => ({
   findBalanceMutationUser: mocks.findBalanceMutationUser,
@@ -40,6 +42,15 @@ vi.mock("@/models/UserSubscription", () => ({
   default: {
     findOne: vi.fn(),
   },
+}));
+
+// Order placement imports optional support attribution; this suite isolates
+// service-area decisions and does not need a real support Mongoose schema.
+vi.mock("@/models/Support", () => ({
+  SupportAttribution: {},
+  SupportConversation: {},
+  SupportEvent: {},
+  SupportLead: {},
 }));
 
 import { placeDailyOrder } from "@/lib/orders/place-daily-order";

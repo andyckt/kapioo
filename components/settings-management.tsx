@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useOptionalUserProfile } from '@/lib/dashboard-user-profile'
 import { Clock, Save, RefreshCw } from 'lucide-react'
 import { AdminEtransferMonitor } from '@/components/admin-etransfer-monitor'
+import { CancellationTimeSetting } from '@/components/cancellation-time-setting'
 
 export function SettingsManagement() {
   const { toast } = useToast()
@@ -35,8 +36,8 @@ export function SettingsManagement() {
       const data = await response.json()
 
       if (data.success && data.data) {
-        setCutoffHour(data.data.value.hour || 11)
-        setCutoffMinute(data.data.value.minute || 59)
+        setCutoffHour(data.data.value.hour ?? 11)
+        setCutoffMinute(data.data.value.minute ?? 59)
       }
     } catch (error) {
       console.error('Error fetching cutoff time:', error)
@@ -130,7 +131,7 @@ export function SettingsManagement() {
             Order Cutoff Time
           </CardTitle>
           <CardDescription>
-            Set the cutoff time for orders. Orders must be placed by this time the day before delivery.
+            Set the cutoff time for ordering and address changes, on the day before delivery. Cancellations use the separate deadline below.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -209,6 +210,7 @@ export function SettingsManagement() {
         </CardContent>
       </Card>
 
+      <CancellationTimeSetting />
       <AdminEtransferMonitor />
     </div>
   )

@@ -1,3 +1,4 @@
+import { bindPurchaseAttribution } from "@/lib/support/attribution";
 import { NextRequest, NextResponse } from "next/server";
 
 import { errorJson, handleRouteError, parseJsonBody, parseSearchParams } from "@/lib/api";
@@ -436,6 +437,8 @@ export async function POST(request: NextRequest) {
           ],
           { session }
         );
+
+        await bindPurchaseAttribution(request, `daily:${requestId}`, effectiveUserId, dailyPlan.id, session);
 
         if (paymentIntent) {
           await markPaymentIntentSubmitted({

@@ -1,58 +1,39 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import { ChevronLeft, MapPin } from "lucide-react"
+import { ArrowLeft, ArrowRight, MapPin } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
-import { useSmartBack } from "@/hooks/use-smart-back"
 import { AddressAutocomplete } from "@/components/address-autocomplete"
-import { Button } from "@/components/ui/button"
 import { ServiceSelectionCards } from "@/components/service-selection-cards"
 import type { ParsedGoogleAddress } from "@/lib/address/types"
-import {
-  getStarterAddressSelection,
-  setStarterAddressSelection,
-} from "@/lib/plan-flow-state"
+import { getStarterAddressSelection, setStarterAddressSelection } from "@/lib/plan-flow-state"
 import { resolveServiceability, type ServiceabilityResult } from "@/lib/zones/service-areas"
+import "./order-flow.css"
 
 export default function StarterPage() {
   const router = useRouter()
-  const handleBack = useSmartBack()
-  const [streetAddress, setStreetAddress] = useState(() => {
-    if (typeof window === 'undefined') return ""
-    return getStarterAddressSelection()?.streetAddress || ""
-  })
-  const [postalCode, setPostalCode] = useState(() => {
-    if (typeof window === 'undefined') return ""
-    return getStarterAddressSelection()?.postalCode || ""
-  })
-  const [serviceability, setServiceability] = useState<ServiceabilityResult | null>(() => {
-    if (typeof window === 'undefined') return null
-    const saved = getStarterAddressSelection()
-    return saved
-      ? {
-          areaLabel: saved.areaLabel,
-          fsa: saved.fsa,
-          canDaily: saved.canDaily,
-          canWeekly: saved.canWeekly,
-          isServed: saved.canDaily || saved.canWeekly,
-          coordsMissing: true,
-        }
-      : null
-  })
-  const [animationComplete, setAnimationComplete] = useState(false)
-  const { language } = useLanguage()
-  
-  // Set animation complete after initial render
+  const { language, setLanguage } = useLanguage()
+  const resultRef = useRef<HTMLElement>(null)
+  const [addressChosen, setAddressChosen] = useState(false)
+  const [streetAddress, setStreetAddress] = useState("")
+  const [postalCode, setPostalCode] = useState("")
+  const [serviceability, setServiceability] = useState<ServiceabilityResult | null>(null)
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimationComplete(true)
-    }, 1000)
-    
-    return () => clearTimeout(timer)
+    const saved = getStarterAddressSelection()
+    if (!saved) return
+    setStreetAddress(saved.streetAddress || "")
+    setPostalCode(saved.postalCode)
+    setServiceability({
+      areaLabel: saved.areaLabel, fsa: saved.fsa, canDaily: saved.canDaily,
+      canWeekly: saved.canWeekly, isServed: saved.canDaily || saved.canWeekly,
+      coordsMissing: true,
+    })
   }, [])
-  
+
   const handleAddressSelect = (result: ParsedGoogleAddress) => {
     const next = resolveServiceability({
       areaLabel: result.address.province,
@@ -60,13 +41,21 @@ export default function StarterPage() {
       lat: result.addressGeo.lat,
       lng: result.addressGeo.lng,
     })
-
     setStreetAddress(result.address.streetAddress || "")
     setPostalCode(result.addressGeo.postalCode || result.address.postalCode || "")
     setServiceability(next)
+    setAddressChosen(true)
   }
 
-  const saveStarterSelection = () => {
+  useEffect(() => {
+    if (!serviceability || !addressChosen) return
+    resultRef.current?.scrollIntoView({
+      block: "start",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    })
+  }, [serviceability, addressChosen])
+
+  const selectPlan = (plan: "daily" | "weekly") => {
     if (!serviceability) return
     setStarterAddressSelection({
       areaLabel: serviceability.areaLabel,
@@ -76,117 +65,49 @@ export default function StarterPage() {
       canDaily: serviceability.canDaily,
       canWeekly: serviceability.canWeekly,
     })
+    router.push(plan === "daily" ? "/daily-delivery" : "/weekly-meal")
   }
-  
-  return (
-    <div className="min-h-screen bg-[#FBF7F2] flex flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/90">
-        <div className="container flex h-16 items-center px-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            className="flex items-center gap-1 text-[#6B5F53] hover:text-[#C2884E] transition-colors rounded-full"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">{language === 'zh' ? '返回' : 'Back'}</span>
-          </Button>
-        </div>
-      </header>
-      <main className="flex-1 container max-w-5xl py-12 md:py-20 px-4">
-        <div className="w-full max-w-3xl mx-auto">
-          {/* Page Title */}
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            <h1 className="text-3xl md:text-4xl font-light mb-4 tracking-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#C2884E] to-[#D1A46C]">
-                {language === 'zh' ? '开始您的 Kapioo 旅程' : 'Start Your Kapioo Journey'}
-              </span>
-            </h1>
-            <div className="w-16 h-0.5 bg-gradient-to-r from-[#C2884E]/20 to-[#D1A46C]/60 mx-auto mb-6"></div>
-            <p className="text-[#6B5F53] text-lg">
-              {language === 'zh' ? '输入配送地址，查看可用的餐食计划' : 'Enter your delivery address to see available meal plans'}
-            </p>
-          </motion.div>
-          
-          {/* Address Selector */}
-          <motion.div 
-            className="mb-8"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-          >
-            <div className="rounded-xl border border-[#C2884E]/20 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center gap-2 text-[#6B5F53]">
-                <MapPin className="h-5 w-5 text-[#C2884E]" />
-                <span className="font-medium">
-                  {language === 'zh' ? '配送地址' : 'Delivery address'}
-                </span>
-              </div>
-              <AddressAutocomplete
-                value={streetAddress || ""}
-                language={language}
-                placeholder={language === 'zh' ? '输入配送地址...' : 'Enter delivery address...'}
-                onInputChange={(value) => {
-                  setStreetAddress(value)
-                  setPostalCode("")
-                  setServiceability(null)
-                }}
-                onAddressSelect={handleAddressSelect}
-              />
-            </div>
-          </motion.div>
-          
-          {/* Service Options */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: serviceability ? 1 : 0 }}
-            transition={{ duration: 0.7 }}
-            className="space-y-6"
-          >
-            {serviceability?.isServed && (
-              <ServiceSelectionCards 
-                showDaily={serviceability.canDaily}
-                showWeekly={serviceability.canWeekly}
-                onSelectDaily={() => {
-                  saveStarterSelection()
-                  router.push("/daily-delivery")
-                }}
-                onSelectWeekly={() => {
-                  saveStarterSelection()
-                  router.push("/weekly-meal")
-                }}
-              />
-            )}
 
-            {serviceability && !serviceability.isServed && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-center text-amber-800">
-                {language === 'zh'
-                  ? '此地址暂不在配送范围内。请尝试其他地址，或稍后再查看服务范围更新。'
-                  : 'This address is not in our current delivery area. Please try another address or check back as we expand coverage.'}
-              </div>
-            )}
-            
-            {/* No location selected state */}
-            {!serviceability && animationComplete && (
-              <motion.div 
-                className="text-center py-10"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <p className="text-[#6B5F53]/70 italic">
-                  {language === 'zh' ? '请输入您的地址以查看可用的餐食计划' : 'Please enter your address to view available meal plans'}
-                </p>
-              </motion.div>
-            )}
-          </motion.div>
+  return <div className="ko-order ko-starter" lang={language === "zh" ? "zh-Hans" : "en"}>
+    <header className="ko-header">
+      <Link href="/" className="ko-logo" aria-label="Kapioo home">kapioo<span>.</span></Link>
+      <div className="ko-header-actions">
+        <span className="ko-header-step">{language === "zh" ? "01 / 查询配送" : "01 / Find your meals"}</span>
+        <button type="button" onClick={() => setLanguage(language === "en" ? "zh" : "en")} className="ko-language">{language === "en" ? "中文" : "EN"}</button>
+      </div>
+    </header>
+    <main>
+      <section className="ko-starter-intro" aria-labelledby="starter-heading">
+        <div className="ko-starter-copy">
+          <p className="ko-eyebrow">{language === "zh" ? "美味，从这里开始" : "Your Kapioo journey"}</p>
+          <h1 id="starter-heading">{language === "zh" ? <>好好吃饭，<em>从你家开始。</em></> : <>Good food, <em>starts here.</em></>}</h1>
+          <p className="ko-lead">{language === "zh" ? "输入配送地址，查看你可以选择的每日便当和周次餐盒。" : "Fresh Asian fusion meals, made for real life. Enter your address to see the Daily Bento and Weekly Meal Box options available to you."}</p>
+          <div className="ko-address-block">
+            <div className="ko-address-label"><MapPin size={19} strokeWidth={1.6} />{language === "zh" ? "你的配送地址" : "Your delivery address"}</div>
+            <AddressAutocomplete
+              value={streetAddress}
+              language={language}
+              placeholder={language === "zh" ? "输入街道地址" : "Start typing your street address"}
+              onInputChange={(value) => { setStreetAddress(value); setPostalCode(""); setServiceability(null) }}
+              onAddressSelect={handleAddressSelect}
+            />
+            <p className="ko-address-help">{language === "zh" ? "我们会根据地址显示可用计划和配送日期。" : "We’ll show the plans and delivery days available at your address."}</p>
+          </div>
+          <Link href="/" className="ko-back-link"><ArrowLeft size={17} />{language === "zh" ? "返回首页" : "Back to home"}</Link>
         </div>
-      </main>
-    </div>
-  )
+        <div className="ko-starter-visual" aria-hidden="true">
+          <div className="ko-starter-photo ko-starter-photo-daily"><Image src="/marketing/plan-daily-1280.webp" alt="" fill priority sizes="(max-width: 760px) 50vw, 23vw" /></div>
+          <div className="ko-starter-photo ko-starter-photo-weekly"><Image src="/marketing/plan-weekly-1280.webp" alt="" fill priority sizes="(max-width: 760px) 50vw, 23vw" /></div>
+          <span className="ko-starter-photo-caption">{language === "zh" ? "为你的每一天，好好做饭。" : "Made for the way you live."}</span>
+        </div>
+      </section>
+
+      <section ref={resultRef} className="ko-starter-result" aria-live="polite" aria-label={language === "zh" ? "配送结果" : "Delivery availability"}>
+        {serviceability?.isServed ? <>
+          <div className="ko-result-heading"><p className="ko-eyebrow">{language === "zh" ? "配送到你家" : "Available at your address"}</p><h2>{language === "zh" ? "选一种适合你的节奏。" : <>Choose your <em>kind of good.</em></>}</h2><p>{language === "zh" ? "以下计划可配送到你的地址。" : "These meal plans are available for your location."}</p></div>
+          <ServiceSelectionCards variant="linen" showDaily={serviceability.canDaily} showWeekly={serviceability.canWeekly} onSelectDaily={() => selectPlan("daily")} onSelectWeekly={() => selectPlan("weekly")} />
+        </> : serviceability ? <div className="ko-unserved"><MapPin size={26} strokeWidth={1.5} /><h2>{language === "zh" ? "暂未配送到这里。" : "We’re not there just yet."}</h2><p>{language === "zh" ? "试试另一个地址。我们正在不断扩大配送范围。" : "Try another address. We’re growing our delivery area and hope to reach you soon."}</p></div> : <div className="ko-before-result"><span aria-hidden="true">01 <ArrowRight size={18} /> 02 <ArrowRight size={18} /> 03</span><p>{language === "zh" ? "输入地址 · 选择计划 · 享用美食" : "Your address · Your meal plan · Your way to eat well"}</p></div>}
+      </section>
+    </main>
+  </div>
 }

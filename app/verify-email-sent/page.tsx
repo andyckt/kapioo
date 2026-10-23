@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
+import "@/app/login/auth-companion.css"
 import { motion } from "framer-motion"
 import { Check, ArrowLeft, RefreshCw, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -28,21 +28,21 @@ export default function VerifyEmailSentPage() {
   const [errorMessage, setErrorMessage] = useState("")
   const [fromPage, setFromPage] = useState<string | null>(null)
   const { toast } = useToast()
-  
+
   // State to store the plan identifier
   const [planIdentifier, setPlanIdentifier] = useState<string | null>(null)
-  
+
   // Check for URL parameters on component mount
   useEffect(() => {
     // Get parameters from the URL
     const params = new URLSearchParams(window.location.search)
     const fromParam = params.get('from')
     const planParam = params.get('plan')
-    
+
     setFromPage(fromParam)
     setPlanIdentifier(planParam)
   }, [])
-  
+
   useEffect(() => {
     // Get pending user email from localStorage
     const pendingUser = localStorage.getItem('pendingUser')
@@ -59,9 +59,9 @@ export default function VerifyEmailSentPage() {
 
   const handleResendVerification = async () => {
     if (!userEmail) return
-    
+
     setIsResending(true)
-    
+
     try {
       // Get the pending user data from localStorage
       const pendingUserStr = localStorage.getItem('pendingUser')
@@ -74,16 +74,16 @@ export default function VerifyEmailSentPage() {
         setIsResending(false)
         return
       }
-      
+
       const pendingUser = JSON.parse(pendingUserStr)
-      
+
       // Generate a new verification code
       const newVerificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-      
+
       // Update the verification code in localStorage
       pendingUser.verificationCode = newVerificationCode
       localStorage.setItem('pendingUser', JSON.stringify(pendingUser))
-      
+
       // Send the new verification code
       const response = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
@@ -96,9 +96,9 @@ export default function VerifyEmailSentPage() {
           code: newVerificationCode
         }),
       })
-      
+
       const data = await response.json()
-      
+
       if (data.success) {
         toast({
           title: t('verificationCodeSent'),
@@ -125,7 +125,7 @@ export default function VerifyEmailSentPage() {
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!userEmail || !verificationCode) {
       toast({
         title: t('verificationFailed'),
@@ -134,9 +134,9 @@ export default function VerifyEmailSentPage() {
       })
       return
     }
-    
+
     setIsVerifying(true)
-    
+
     try {
       // Get the pending user data from localStorage
       const pendingUserStr = localStorage.getItem('pendingUser')
@@ -151,9 +151,9 @@ export default function VerifyEmailSentPage() {
         setIsVerifying(false)
         return
       }
-      
+
       const pendingUser = JSON.parse(pendingUserStr)
-      
+
       // Verify that the entered code matches the stored code
       if (pendingUser.email !== userEmail || pendingUser.verificationCode !== verificationCode) {
         setVerificationStatus("error")
@@ -166,7 +166,7 @@ export default function VerifyEmailSentPage() {
         setIsVerifying(false)
         return
       }
-      
+
       // Create account + session in one request (no duplicate password hash or extra auth/me)
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -182,7 +182,7 @@ export default function VerifyEmailSentPage() {
           languagePreference: pendingUser.languagePreference || 'zh',
         }),
       })
-      
+
       const data = await response.json()
 
       if (response.status === 504 || response.status === 408) {
@@ -202,7 +202,7 @@ export default function VerifyEmailSentPage() {
         })
         return
       }
-      
+
       if (data.success && data.data) {
         const authSnapshot = buildAuthSnapshotFromRegister(data.data)
 
@@ -255,7 +255,7 @@ export default function VerifyEmailSentPage() {
       setIsVerifying(false)
     }
   }
-  
+
 
   const renderContent = () => {
     switch (verificationStatus) {
@@ -279,7 +279,7 @@ export default function VerifyEmailSentPage() {
             </CardContent>
           </>
         )
-      
+
       case "error":
         return (
           <>
@@ -306,8 +306,8 @@ export default function VerifyEmailSentPage() {
                     required
                   />
                 </div>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
                   disabled={isVerifying}
                 >
@@ -323,10 +323,10 @@ export default function VerifyEmailSentPage() {
               </form>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
-              <Button 
-                onClick={handleResendVerification} 
-                variant="outline" 
-                className="w-full" 
+              <Button
+                onClick={handleResendVerification}
+                variant="outline"
+                className="w-full"
                 disabled={isResending || !userEmail}
               >
                 {isResending ? (
@@ -341,7 +341,7 @@ export default function VerifyEmailSentPage() {
             </CardFooter>
           </>
         )
-      
+
       default:
         return (
           <>
@@ -353,7 +353,9 @@ export default function VerifyEmailSentPage() {
             </CardHeader>
             <CardContent className="text-center pb-6">
               <p className="text-muted-foreground mb-4">
-                {t('verificationCodeSentTo')} <span className="font-medium text-black">{userEmail || (language === 'zh' ? '您的邮箱' : 'your email')}</span> {t('pleaseCheckEmail')}
+                {language === 'zh' ? '我们已将 6 位验证码发送至 ' : 'We sent a 6-digit verification code to '}
+                <span className="font-medium text-[#4a3a2b]">{userEmail || (language === 'zh' ? '您的邮箱' : 'your email')}</span>
+                {language === 'zh' ? '。' : '.'}
               </p>
               <form onSubmit={handleVerifyCode} className="space-y-4">
                 <div className="grid gap-2">
@@ -368,8 +370,8 @@ export default function VerifyEmailSentPage() {
                     required
                   />
                 </div>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C]"
                   disabled={isVerifying}
                 >
@@ -388,10 +390,10 @@ export default function VerifyEmailSentPage() {
               </form>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
-              <Button 
-                onClick={handleResendVerification} 
-                variant="outline" 
-                className="w-full" 
+              <Button
+                onClick={handleResendVerification}
+                variant="outline"
+                className="w-full"
                 disabled={isResending || !userEmail}
               >
                 {isResending ? (
@@ -413,25 +415,18 @@ export default function VerifyEmailSentPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
+    <div className="kp-auth-companion flex min-h-screen flex-col">
       <div className="container flex flex-1 items-center justify-center py-8 md:py-12">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="mx-auto flex w-full flex-col items-center justify-center space-y-6 sm:w-[500px]"
         >
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <Image 
-              src="/未命名設計.png" 
-              alt="Kapioo Logo" 
-              width={48} 
-              height={48} 
-              className="h-12 w-12 transition-transform duration-300 group-hover:rotate-6" 
-            />
-            <span className="inline-block font-bold text-[#C2884E] text-2xl transition-all duration-300 group-hover:tracking-wider">Kapioo</span>
+            <span className="kp-auth-companion-logo">kapioo<span>.</span></span>
           </Link>
-          
+
           <Card className="w-full bg-white shadow-lg">
             {renderContent()}
           </Card>
@@ -439,4 +434,4 @@ export default function VerifyEmailSentPage() {
       </div>
     </div>
   )
-} 
+}

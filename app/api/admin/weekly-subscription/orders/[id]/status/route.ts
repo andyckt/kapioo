@@ -36,6 +36,9 @@ export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>)
     }
 
     const transition = resolveWeeklyStatusTransition(order, status);
+    if (status === "cancelled" && order.weeklyEntitlementGroupId) {
+      return errorJson("Cancel the entire weekly group, not an individual delivery.", 409);
+    }
     if (!transition.ok) {
       return errorJson(transition.error ?? "Invalid status transition", 409, {
         extra: {
@@ -61,7 +64,7 @@ export async function PATCH(request: Request, ctx: RouteContext<{ id: string }>)
 
     const updateData = transition.patch || { status: transition.nextStatus };
     const updatedOrder = await WeeklyOrder.findOneAndUpdate(
-      { orderId: id },
+      { orderId: id, status: order.status, updatedAt: order.updatedAt },
       { $set: updateData },
       { new: true }
     );

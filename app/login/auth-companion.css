@@ -1,0 +1,52 @@
+.kp-auth-companion { background: #f8f3eb; color: #4a3a2b; font-family: "Helvetica Neue", Arial, sans-serif; }
+.kp-auth-companion > header { min-height: 72px; display: flex; align-items: center; border-bottom: 1px solid #e7dbcd; }
+.kp-auth-companion > header .container { max-width: 1140px; }
+.kp-auth-companion > header a, .kp-auth-companion > header button { color: #786a5b; }
+.kp-auth-companion > header a:hover, .kp-auth-companion > header button:hover { color: #4a3a2b; }
+.kp-auth-companion > .container { max-width: 1120px; }
+.kp-auth-companion > .container > div, .kp-auth-companion > .container > div > div { max-width: 520px; width: 100%; }
+.kp-auth-companion-logo { color: #4a3a2b; font-size: 32px; font-weight: 750; line-height: 1; letter-spacing: -.09em; }
+.kp-auth-companion-logo span { color: #a35e27; }
+.kp-auth-companion h1 { color: #4a3a2b; font-size: clamp(39px, 4vw, 51px); font-weight: 350; line-height: 1.08; letter-spacing: -.065em; }
+.kp-auth-companion form.shadow-lg, .kp-auth-companion .shadow-lg { border: 1px solid #e3d6c7; border-radius: 21px; background: #fffcf8; box-shadow: none; }
+.kp-auth-companion label { color: #4a3a2b; font-size: 13px; font-weight: 600; }
+.kp-auth-companion input { min-height: 49px; border: 1px solid #d9caba; border-radius: 11px; background: #fffdfa; color: #4a3a2b; }
+.kp-auth-companion input:focus-visible { border-color: #a5714d; box-shadow: 0 0 0 3px #d3b79b55; }
+.kp-auth-companion form button[type="submit"],
+.kp-auth-companion .shadow-lg button.bg-gradient-to-r,
+.kp-auth-companion button.bg-gradient-to-r {
+  min-height: 49px;
+  border-radius: 99px;
+  background: #4a3a2b;
+  background-image: none;
+  color: #fffaf4;
+  box-shadow: none;
+}
+.kp-auth-companion form button[type="submit"]:hover,
+.kp-auth-companion button.bg-gradient-to-r:hover { transform: none; background: #604b3a; }
+.kp-auth-companion .text-primary { color: #6d4e38; }
+.kp-auth-companion :is(button, a):focus-visible { outline: 2px solid #a66c37; outline-offset: 3px; }
+.kp-auth-companion button[aria-pressed="true"] { border-color: #4a3a2b; background: #eee3d6; color: #4a3a2b; }
+.kp-auth-companion { min-height: 100dvh; }
+.kp-auth-companion > .container { padding-inline: 22px; }
+.kp-auth-companion > .container > div { margin-inline: auto; }
+.kp-auth-companion-eyebrow { color: #9e7555; font-size: 11px; font-weight: 700; letter-spacing: .17em; }
+.kp-auth-companion-intro { max-width: 480px; margin: 14px auto 0; color: #786858; font-size: 15px; line-height: 1.65; }
+.kp-auth-companion .kp-auth-companion-logo { display: inline-block; color: #4a3a2b; font-size: 32px; font-weight: 750; line-height: 1; letter-spacing: -.09em; }
+.kp-auth-companion :is([data-slot="card"], .shadow-lg) { border: 1px solid #e3d6c7; border-radius: 22px; background: #fffcf8; box-shadow: 0 20px 60px rgba(74,58,43,.055); }
+.kp-auth-companion :is([data-slot="card-title"], .text-xl, .text-2xl.font-bold) { color: #4a3a2b; letter-spacing: -.045em; }
+.kp-auth-companion :is(input, textarea, select) { border-color: #d9caba; background: #fffdfa; color: #4a3a2b; }
+.kp-auth-companion :is(input, textarea, select):focus-visible { border-color: #a5714d; box-shadow: 0 0 0 3px #d3b79b55; }
+.kp-auth-companion button[type="submit"] { border-radius: 999px; }
+.kp-auth-address h1 { margin-top: 13px; color: #4a3a2b; font-size: clamp(37px, 4vw, 50px); font-weight: 350; line-height: 1.08; letter-spacing: -.065em; }
+.kp-auth-address form { text-align: left; }
+.kp-auth-address form button[type="submit"] { min-height: 52px; }
+@media (max-width: 600px) { .kp-auth-companion > .container { padding-block: 38px; } .kp-auth-companion .kp-auth-companion-logo { font-size: 29px; } }
+.kp-unsubscribe [data-slot="card"], .kp-unsubscribe .rounded-xl.border { width: min(100%, 520px); border: 1px solid #e3d6c7; border-radius: 24px; background: #fffcf8; box-shadow: 0 25px 75px rgba(74,58,43,.07); }
+.kp-unsubscribe button.bg-gradient-to-r { min-height: 48px; border-radius: 999px; background: #4a3a2b; background-image: none; color: #fffaf4; }
+.kp-unsubscribe button.bg-gradient-to-r:hover { background: #604b3a; }
+.kp-unsubscribe button[variant="outline"] { border-radius: 999px; }
+.kp-maintenance [data-slot="card"] { border: 1px solid #e3d6c7; border-radius: 24px; background: #fffcf8; box-shadow: 0 20px 60px rgba(74,58,43,.07); }
+.kp-maintenance [data-slot="card-title"] { color: #4a3a2b; font-size: 28px; font-weight: 500; letter-spacing: -.04em; }
+.kp-maintenance .kp-maintenance-cta { border-radius: 999px; background: #4a3a2b; color: #fffaf4; }
+.kp-maintenance .kp-maintenance-cta:hover { background: #604b3a; }

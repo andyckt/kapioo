@@ -1,5 +1,7 @@
 "use client"
 
+import { CustomerOrderActions } from "@/components/support/customer-order-actions"
+
 import { useState, useEffect } from "react"
 import { Loader2, Package } from "lucide-react"
 import { formatDate, formatDateTime } from "@/lib/format"
@@ -331,6 +333,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                 </div>
 
                   <div className="border-t border-[#C2884E]/10 px-4 py-3 sm:px-5">
+                  <CustomerOrderActions kind="daily" orderId={order.orderId} status={order.status} availability={order.selfService} onChanged={() => fetchOrders(pagination.page)} />
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
@@ -348,6 +351,7 @@ export function DailyDeliveryHistory({ userId }: DailyDeliveryHistoryProps) {
                       {selectedOrder && selectedOrder.orderId === order.orderId ? (
                         <>
                           <div className="border-b border-[#C2884E]/10 bg-gradient-to-b from-[#FBF7F2] to-[#FFFCF9] px-5 pt-5 pb-4 sm:px-6">
+                            <CustomerOrderActions kind="daily" orderId={selectedOrder.orderId} status={selectedOrder.status} availability={selectedOrder.selfService} onChanged={async () => { await fetchOrders(pagination.page); await fetchOrderDetails(selectedOrder.orderId); }} />
                             <DialogHeader className="space-y-1 text-left">
                               <DialogTitle className="text-lg font-semibold leading-snug text-[#6B5F53]">
                                 {language === 'zh' ? '订单号' : 'Order'}{' '}

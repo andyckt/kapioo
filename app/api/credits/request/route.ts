@@ -1,3 +1,4 @@
+import { bindPurchaseAttribution } from "@/lib/support/attribution";
 import { errorJson, handleRouteError, parseJsonBody, parseSearchParams, successJson } from '@/lib/api';
 import { requireUser } from '@/lib/auth/guards';
 import {
@@ -326,6 +327,8 @@ export async function POST(request: Request) {
           { session }
         );
         savedRequest = created[0];
+        await bindPurchaseAttribution(request, `weekly:${requestId}`, effectiveUserId, weeklyPlan.id, session);
+
         if (paymentIntent) {
           await markPaymentIntentSubmitted({
             intentId: paymentIntent._id,

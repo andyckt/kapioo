@@ -1,4 +1,7 @@
+import { recordAssistedFirstOrder } from "@/lib/support/attribution";
+import { snapshotScheduledDate } from "./scheduled-date";
 import mongoose from "mongoose";
+import { randomUUID } from "node:crypto";
 
 import { ApiError } from "@/lib/api/errors";
 import type { AuthenticatedActor } from "@/lib/api/types";
@@ -166,7 +169,13 @@ async function ensureWeeklyEntitlementGroup(params: {
 
   if (existingGroup) {
     validateExistingGroup(existingGroup);
-    return existingGroup;
+    const activeGroup = await WeeklyEntitlementGroup.findOneAndUpdate(
+      { _id: existingGroup._id, cancelledAt: null, refundedAt: null },
+      { $inc: { revision: 1 } },
+      { new: true, session }
+    );
+    if (!activeGroup) throw new ApiError("This weekly group has been cancelled. Please start a new order.", { status: 409 });
+    return activeGroup;
   }
 
   try {
@@ -194,6 +203,9 @@ async function ensureWeeklyEntitlementGroup(params: {
         throw error;
       }
       validateExistingGroup(concurrentGroup);
+      if (concurrentGroup.cancelledAt || concurrentGroup.refundedAt) {
+        throw new ApiError("This weekly group has been cancelled.", { status: 409 });
+      }
       return concurrentGroup;
     }
     throw error;
@@ -230,7 +242,7 @@ async function saveWeeklyOrderWithUniqueId(params: {
       const order = new WeeklyOrder({
         userId: user._id,
         orderId,
-        items: orderItems,
+        items: orderItems.map(item => ({ ...item, deliveryDateISO: snapshotScheduledDate(item.date) })),
         status: "pending",
         creditCost: totalItems,
         mealPlanType,
@@ -315,6 +327,7 @@ export async function placeWeeklyOrder({
   request,
 }: PlaceWeeklyOrderParams): Promise<PlaceWeeklyOrderResult> {
   const session = await mongoose.startSession();
+  const effectiveGroupId = weeklyEntitlementGroupId || randomUUID();
 
   try {
     let result: PlaceWeeklyOrderResult | null = null;
@@ -339,16 +352,20 @@ export async function placeWeeklyOrder({
         });
       }
 
-      if (weeklyEntitlementGroupId) {
-        await ensureWeeklyEntitlementGroup({
+      const entitlementGroup = await ensureWeeklyEntitlementGroup({
           user,
-          weeklyEntitlementGroupId,
+          weeklyEntitlementGroupId: effectiveGroupId,
           mealPlanType,
-          weeklyEntitlementTotalMeals,
-          splitDeliveryCount,
+          weeklyEntitlementTotalMeals: weeklyEntitlementGroupId ? weeklyEntitlementTotalMeals : totalItems,
+          splitDeliveryCount: weeklyEntitlementGroupId ? splitDeliveryCount : 1,
           session,
         });
+      const groupOrders = await WeeklyOrder.find({ weeklyEntitlementGroupId: effectiveGroupId }).session(session);
+      const alreadyDebited = groupOrders.some(o => o.voucherDeducted);
+      if ((shouldDeductVoucher && alreadyDebited) || (!shouldDeductVoucher && !alreadyDebited) || groupOrders.length >= entitlementGroup.splitDeliveryCount) {
+        throw new ApiError("This weekly checkout changed or was already submitted. Please refresh your orders.", { status: 409 });
       }
+      if (groupOrders.reduce((sum, o) => sum + Number(o.allocatedMealCount || 0), totalItems) > entitlementGroup.totalMealsForWeek) throw new ApiError("The weekly group meal allocation does not match.", { status: 409 });
 
       if (data.phoneNumber?.trim()) {
         user.phone = data.phoneNumber.trim();
@@ -360,7 +377,7 @@ export async function placeWeeklyOrder({
         mealPlanType,
         shouldDeductVoucher,
         totalItems,
-        weeklyEntitlementGroupId,
+        weeklyEntitlementGroupId: effectiveGroupId,
         data,
         session,
       });
@@ -407,6 +424,8 @@ export async function placeWeeklyOrder({
       } else if (data.phoneNumber?.trim()) {
         await user.save({ session });
       }
+
+      await recordAssistedFirstOrder(user._id, session);
 
       result = {
         order,

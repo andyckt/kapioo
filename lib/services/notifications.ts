@@ -1,6 +1,5 @@
 import type { Language } from '@/lib/email-translations';
 import { getOrderStatusInfo, getStatusUpdateSubject, getTranslations } from '@/lib/email-translations';
-import { getEmailLogoAbsoluteUrl } from '@/lib/email/logo-url';
 import { formatOrderStatusEmailLineHtml } from '@/lib/email/order-status-email';
 import type { IDailyDeliveryOrder } from '@/models/DailyDeliveryOrder';
 import { sendEmail, formatDailyVoucherTotalsLine } from './email';
@@ -60,48 +59,48 @@ export const sendCreditsAddedNotification = async (
     const subject = `餐券已添加 - Kapioo`;
 
     const html = `
-      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 38px 36px; border: 1px solid #e7dbcd; border-radius: 22px; background-color: #fffcf8; ">
+        <div style="text-align:left;margin-bottom:30px;">
+          <span style="font:700 29px/1 Arial,Helvetica,sans-serif;letter-spacing:-2px;color:#4a3a2b">kapioo<span style="color:#a35e27">.</span></span>
         </div>
-        <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">餐券已添加到您的账户</h2>
+        <h2 style="color: #8b5a34; text-align: center; font-size: 24px; margin-bottom: 20px;">餐券已添加到您的账户</h2>
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
           亲爱的 ${user.name}，您的账户已成功添加餐券。
         </p>
         
-        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+        <div style="background-color: #f4ede4; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
           <div style="margin-bottom: 15px;">
-            <h3 style="color: #C2884E; margin: 0 0 5px 0;">交易确认</h3>
+            <h3 style="color: #8b5a34; margin: 0 0 5px 0;">交易确认</h3>
             <p style="color: #666; margin: 0;">餐券已添加到您的账户</p>
           </div>
           
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">交易编号:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${transactionId}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; color: #666;">交易编号:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; text-align: right;">${transactionId}</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">日期:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${new Date().toLocaleDateString('zh-CN')}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; color: #666;">日期:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; text-align: right;">${new Date().toLocaleDateString('zh-CN')}</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">添加数量:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; color: #4CAF50; font-weight: bold;">+${amount} 餐券</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; color: #666;">添加数量:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; text-align: right; color: #4CAF50; font-weight: bold;">+${amount} 餐券</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">新餐券余额:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right; font-weight: bold;">${user.credits} 餐券</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; color: #666;">新餐券余额:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; text-align: right; font-weight: bold;">${user.credits} 餐券</td>
             </tr>
           </table>
         </div>
         
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
-          您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中使用这些餐券订购餐点。
+          您可以在您的 <a href="${BASE_URL}/dashboard" style="color: #8b5a34; text-decoration: none; font-weight: bold;">Kapioo 账户</a> 中使用这些餐券订购餐点。
         </p>
         
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
           <p style="color: #999; font-size: 14px;">
-            如有任何问题，请随时联系我们: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
+            如有任何问题，请随时联系我们: <a href="mailto:kapioomeal@gmail.com" style="color: #8b5a34;">kapioomeal@gmail.com</a>
           </p>
           <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo。保留所有权利。</p>
         </div>
@@ -165,8 +164,8 @@ export const sendDailyOrderStatusUpdateNotification = async (
     const voucherTotalsHtml =
       voucherCost != null && (vTwo > 0 || vThree > 0)
         ? `
-        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 16px 20px; margin-bottom: 25px;">
-          <h3 style="color: #C2884E; margin-top: 0; margin-bottom: 8px; font-size: 16px;">${t.common.total}</h3>
+        <div style="background-color: #f4ede4; border-radius: 8px; padding: 16px 20px; margin-bottom: 25px;">
+          <h3 style="color: #8b5a34; margin-top: 0; margin-bottom: 8px; font-size: 16px;">${t.common.total}</h3>
           <p style="margin: 0; color: #333; font-size: 15px; line-height: 1.6;">
             ${formatDailyVoucherTotalsLine(vTwo, vThree, language)}
           </p>
@@ -183,7 +182,7 @@ export const sendDailyOrderStatusUpdateNotification = async (
     const statusPanel = isOrderPlacedNotification
       ? `
         <div style="text-align: center; margin: 30px 0;">
-          <div style="display: inline-block; background-color: #F8F0E5; border-radius: 8px; padding: 20px 40px;">
+          <div style="display: inline-block; background-color: #f4ede4; border-radius: 8px; padding: 20px 40px;">
             <p style="margin: 0 0 10px 0; color: ${statusColor}; font-weight: bold; font-size: 20px;">${statusText}</p>
             <p style="margin: 0; color: #333;">${statusDescription}</p>
           </div>
@@ -191,7 +190,7 @@ export const sendDailyOrderStatusUpdateNotification = async (
       `
       : `
         <div style="text-align: center; margin: 30px 0;">
-          <div style="display: inline-block; background-color: #F8F0E5; border-radius: 8px; padding: 20px 40px;">
+          <div style="display: inline-block; background-color: #f4ede4; border-radius: 8px; padding: 20px 40px;">
             <p style="margin: 0; color: #666;">${t.order.statusChangedFrom}</p>
             <p style="margin: 10px 0; color: #666; font-size: 16px;">
               <span style="color: #888; text-decoration: line-through;">${previousStatusText}</span>
@@ -204,34 +203,34 @@ export const sendDailyOrderStatusUpdateNotification = async (
       `;
 
     const html = `
-      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <img src="${getEmailLogoAbsoluteUrl()}" alt="Kapioo Logo" style="width: 120px; height: auto;" />
+      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 38px 36px; border: 1px solid #e7dbcd; border-radius: 22px; background-color: #fffcf8; ">
+        <div style="text-align:left;margin-bottom:30px;">
+          <span style="font:700 29px/1 Arial,Helvetica,sans-serif;letter-spacing:-2px;color:#4a3a2b">kapioo<span style="color:#a35e27">.</span></span>
         </div>
-        <h2 style="color: #C2884E; text-align: center; font-size: 24px; margin-bottom: 20px;">${isOrderPlacedNotification ? t.order.orderConfirmation : t.order.orderStatusUpdate}</h2>
+        <h2 style="color: #8b5a34; text-align: center; font-size: 24px; margin-bottom: 20px;">${isOrderPlacedNotification ? t.order.orderConfirmation : t.order.orderStatusUpdate}</h2>
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; text-align: center;">
           ${t.common.dear} ${name}, ${isOrderPlacedNotification ? statusDescription : t.order.statusUpdated}
         </p>
         
         ${statusPanel}
         
-        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-          <h3 style="color: #C2884E; margin-top: 0;">${t.order.orderDetails}</h3>
+        <div style="background-color: #f4ede4; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #8b5a34; margin-top: 0;">${t.order.orderDetails}</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.common.orderNumber}:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; font-weight: bold; text-align: right;">${orderId}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; color: #666;">${t.common.orderNumber}:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; font-weight: bold; text-align: right;">${orderId}</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; color: #666;">${t.common.orderDate}:</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #E8D5C4; text-align: right;">${orderCreatedAt ? new Date(orderCreatedAt).toLocaleDateString(locale) : new Date().toLocaleDateString(locale)}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; color: #666;">${t.common.orderDate}:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e7dbcd; text-align: right;">${orderCreatedAt ? new Date(orderCreatedAt).toLocaleDateString(locale) : new Date().toLocaleDateString(locale)}</td>
             </tr>
           </table>
         </div>
         
         ${formattedItems ? `
-        <div style="background-color: #F8F0E5; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-          <h3 style="color: #C2884E; margin-top: 0;">${t.order.selectedMeals}</h3>
+        <div style="background-color: #f4ede4; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #8b5a34; margin-top: 0;">${t.order.selectedMeals}</h3>
           <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.8;">
             ${formattedItems}
           </ul>
@@ -241,12 +240,12 @@ export const sendDailyOrderStatusUpdateNotification = async (
         ${voucherTotalsHtml}
         
         <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 10px; text-align: center;">
-          ${language === 'zh' ? '您可以在您的' : 'You can'} <a href="${BASE_URL}/dashboard" style="color: #C2884E; text-decoration: none; font-weight: bold;">${dashboardText}</a> ${viewDetailsText}.
+          ${language === 'zh' ? '您可以在您的' : 'You can'} <a href="${BASE_URL}/dashboard" style="color: #8b5a34; text-decoration: none; font-weight: bold;">${dashboardText}</a> ${viewDetailsText}.
         </p>
         
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center;">
           <p style="color: #999; font-size: 14px;">
-            ${contactText}: <a href="mailto:kapioomeal@gmail.com" style="color: #C2884E;">kapioomeal@gmail.com</a>
+            ${contactText}: <a href="mailto:kapioomeal@gmail.com" style="color: #8b5a34;">kapioomeal@gmail.com</a>
           </p>
           <p style="color: #999; font-size: 13px;">&copy; ${new Date().getFullYear()} Kapioo. ${t.common.allRightsReserved}</p>
         </div>

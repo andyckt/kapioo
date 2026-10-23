@@ -1,19 +1,15 @@
 import type React from "react"
 import type { Viewport } from "next"
 import "@/app/globals.css"
-import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import AppInitializer from "@/components/app-initializer"
 import { LanguageProvider } from "@/lib/language-context"
 import { MaintenanceProvider } from "@/lib/maintenance-context"
 import { MaintenanceNotification } from "@/components/maintenance-notification"
-import { LanguagePreferenceDialog } from "@/components/language-preference-dialog"
 import { buildPageMetadata } from "@/lib/seo/metadata"
 import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
 import { cookies } from "next/headers"
 import { Analytics } from "@vercel/analytics/next"
-
-const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
   ...buildPageMetadata({
@@ -22,17 +18,15 @@ export const metadata = {
       `Freshly cooked Asian comfort meals delivered across Toronto and the GTA. Choose ${PRODUCT_LINE_LABELS.daily.en} or ${PRODUCT_LINE_LABELS.weekly.en} with clear logistics.`,
     path: "/",
   }),
-  generator: 'v0.dev',
   icons: {
     icon: [
-      { url: '/xiaohongshu.png', sizes: 'any' },
+      { url: '/kapioo-logo.png', sizes: '375x375', type: 'image/png' },
     ],
     apple: [
       { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
     ],
     other: [
-      { rel: 'mask-icon', url: '/xiaohongshu.png', color: '#C2884E' },
-      { rel: 'shortcut icon', url: '/xiaohongshu.png' },
+      { rel: 'shortcut icon', url: '/kapioo-logo.png' },
       { rel: 'android-chrome', url: '/android-chrome-192x192.png', sizes: '192x192' },
       { rel: 'android-chrome', url: '/android-chrome-512x512.png', sizes: '512x512' },
     ],
@@ -49,8 +43,8 @@ export const metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  themeColor: '#C2884E',
+  maximumScale: 10,
+  themeColor: '#f8f3eb',
 }
 
 export default async function RootLayout({
@@ -66,11 +60,10 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} overflow-x-hidden`}>
+      <body className="overflow-x-hidden">
         <LanguageProvider initialLanguage={initialLanguage}>
           <MaintenanceProvider>
             <AppInitializer>
-              <LanguagePreferenceDialog />
               <MaintenanceNotification />
               {children}
               <Toaster />

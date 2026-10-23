@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ChevronDown,
   ChevronUp,
@@ -21,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StarRating } from "@/components/star-rating";
 import { useLanguage } from "@/lib/language-context";
+import "./meal-rating.css";
 
 interface RatingDish {
   _id: string;
@@ -200,19 +200,10 @@ export function MealRatingContent() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#FFF6EF]">
+      <div className="kp-meal-rating min-h-screen flex flex-col bg-[#FFF6EF]">
         <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
           <div className="container flex h-14 items-center px-4">
-            <Link href="/" className="flex items-center gap-2 group">
-              <Image
-                src="/未命名設計.png"
-                alt="Kapioo Logo"
-                width={32}
-                height={32}
-                className="h-8 w-8 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"
-              />
-              <span className="inline-block font-bold text-[#C2884E] text-lg sm:text-xl transition-all duration-300 group-hover:scale-105 group-hover:tracking-wider">Kapioo</span>
-            </Link>
+            <Link href="/" className="kp-meal-rating-brand" aria-label="Kapioo home">kapioo<span>.</span></Link>
           </div>
         </header>
         <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
@@ -232,7 +223,7 @@ export function MealRatingContent() {
             </p>
             <Button asChild size="lg" variant="outline" className="mt-4">
               <Link href="/dashboard">
-                {isZh ? "点一下今天运气+88pt" : "Tap for today's luck +88pt"}
+                {isZh ? "返回我的账户" : "Back to my account"}
               </Link>
             </Button>
           </div>
@@ -242,19 +233,10 @@ export function MealRatingContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FFF6EF]">
+    <div className="kp-meal-rating min-h-screen flex flex-col bg-[#FFF6EF]">
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/90">
         <div className="container flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 group">
-            <Image
-              src="/未命名設計.png"
-              alt="Kapioo Logo"
-              width={32}
-              height={32}
-              className="h-8 w-8 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"
-            />
-            <span className="inline-block font-bold text-[#C2884E] text-lg sm:text-xl transition-all duration-300 group-hover:scale-105 group-hover:tracking-wider">Kapioo</span>
-          </Link>
+          <Link href="/" className="kp-meal-rating-brand" aria-label="Kapioo home">kapioo<span>.</span></Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="text-[#6B5F53]">
@@ -412,7 +394,7 @@ export function MealRatingContent() {
 
           <Button
             size="lg"
-            className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white shadow-lg shadow-[#C2884E]/20 py-6 rounded-xl text-base font-medium"
+            className="w-full py-6 text-base font-medium"
             onClick={handleSubmit}
             disabled={submitting || !deliveryDate}
           >

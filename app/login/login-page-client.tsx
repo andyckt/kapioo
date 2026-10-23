@@ -6,30 +6,31 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, ArrowUpRight, Eye, EyeOff } from "lucide-react"
 import { signIn } from "next-auth/react"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/lib/language-context"
-import { LanguageSwitcher } from "@/components/language-switcher"
 import { mergeStoredUser } from "@/lib/client-user-cache"
+import { consumeSupportReturnPath } from "@/lib/support/checkout-return"
+import { isAddressVerified } from "@/lib/address/is-verified"
 import { useClientAuth } from "@/lib/client-auth"
+import "./login.css"
 
 export default function LoginPageClient() {
   const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [formError, setFormError] = useState("")
   const router = useRouter()
   const { toast } = useToast()
-  const { t, setLanguage } = useLanguage()
+  const { t, language, setLanguage } = useLanguage()
   const { refreshAuthState } = useClientAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError("")
     setIsLoading(true)
 
     try {
@@ -40,6 +41,7 @@ export default function LoginPageClient() {
       })
 
       if (result?.error) {
+        setFormError(t("invalidCredentials"))
         toast({
           title: t("loginFailed"),
           description: t("invalidCredentials"),
@@ -72,9 +74,10 @@ export default function LoginPageClient() {
         if (sessionResult.user.role === "admin") {
           router.replace(sessionResult.requiresAdminMfa ? "/admin/mfa" : "/admin")
         } else {
-          router.replace("/dashboard")
+          router.replace(isAddressVerified(sessionResult.user) ? (consumeSupportReturnPath() || "/dashboard") : "/address/verify")
         }
       } else {
+        setFormError(t("loginError"))
         toast({
           title: t("loginFailed"),
           description: t("loginError"),
@@ -83,6 +86,7 @@ export default function LoginPageClient() {
       }
     } catch (error) {
       console.error("Login error:", error)
+      setFormError(t("loginError"))
       toast({
         title: t("loginFailed"),
         description: t("loginError"),
@@ -94,108 +98,52 @@ export default function LoginPageClient() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff6ef]/50">
-      <header className="w-full py-4 px-4 flex justify-between items-center">
-        <div className="container flex justify-between items-center">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm font-medium transition-colors hover:text-primary group"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
-            {t("backToHome")}
-          </Link>
-          <div className="hidden sm:block">
-            <LanguageSwitcher />
+    <div className="kp-auth">
+      <header className="kp-auth-header">
+        <Link href="/" className="kp-auth-logo" aria-label="Kapioo home">kapioo<span>.</span></Link>
+        <div className="kp-auth-header-right">
+          <Link href="/" className="kp-auth-back"><ArrowLeft size={16} />{t("backToHome")}</Link>
+          <div className="kp-auth-language" aria-label={language === "zh" ? "语言" : "Language"}>
+            <button type="button" aria-pressed={language === "en"} onClick={() => setLanguage("en")}>EN</button>
+            <span aria-hidden="true">/</span>
+            <button type="button" aria-pressed={language === "zh"} onClick={() => setLanguage("zh")}>中文</button>
           </div>
         </div>
       </header>
-
-      <div className="container flex flex-1 items-center justify-center py-10 md:py-14">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-7 sm:w-[420px] animate-fade-in-up">
-          <div className="flex flex-col items-center space-y-5 text-center">
-            <Link href="/" className="inline-flex items-center gap-3 group">
-              <Image
-                src="/未命名設計.png"
-                alt="Kapioo Logo"
-                width={52}
-                height={52}
-                className="h-13 w-13 transition-transform duration-300 group-hover:rotate-6"
-              />
-              <span className="inline-block font-bold text-[#C2884E] text-3xl transition-all duration-300 group-hover:tracking-wider">
-                Kapioo
-              </span>
-            </Link>
-          </div>
-
-          <div className="grid gap-7">
-            <form onSubmit={handleLogin} className="p-7 sm:p-8 bg-white shadow-lg rounded-xl">
-              <div className="grid gap-5">
-                <div className="grid gap-2.5">
-                  <Label htmlFor="login" className="text-sm font-medium">
-                    {t("userIdOrEmail")}
-                  </Label>
-                  <Input
-                    id="login"
-                    placeholder={t("userIdOrEmailPlaceholder")}
-                    value={login}
-                    onChange={(e) => setLogin(e.target.value)}
-                    className="h-11 text-base placeholder:text-sm"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2.5">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    {t("password")}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder={t("passwordPlaceholder")}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-11 pr-10 text-base placeholder:text-sm"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm font-medium hover:underline text-muted-foreground"
-                  >
-                    {t("forgotPassword")}
-                  </Link>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full h-11 mt-2 bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:scale-[1.02] transition-transform text-base"
-                  disabled={isLoading}
-                >
-                  {isLoading ? t("signingIn") : t("signIn")}
-                </Button>
-              </div>
-            </form>
-
-            <div className="text-center space-y-3">
-              <div className="text-base">
-                <span className="text-muted-foreground">{t("noAccount")} </span>
-                <Link href="/signup" className="font-medium hover:underline text-primary">
-                  {t("signUp")}
-                </Link>
-              </div>
-            </div>
+      <main className="kp-auth-main">
+        <div className="kp-auth-photo">
+          <Image src="/marketing/hero-shared-moment-1280.webp" alt={language === "zh" ? "朋友们共享 Kapioo 餐食" : "Friends sharing a Kapioo meal"} fill sizes="(max-width: 800px) 100vw, 45vw" priority />
+          <div className="kp-auth-photo-copy">
+            <p>{language === "zh" ? "美味时光，随时回来。" : "Good to have you back."}</p>
+            <h2>{language === "zh" ? <>好好吃饭，<em>轻松生活。</em></> : <>A little more time for <em>what matters.</em></>}</h2>
           </div>
         </div>
-      </div>
+        <div className="kp-auth-panel">
+          <div className="kp-auth-form-wrap">
+            <p className="kp-auth-eyebrow">{language === "zh" ? "欢迎回来" : "YOUR KAPIOO ACCOUNT"}</p>
+            <h1>{language === "zh" ? "登录账户。" : "Welcome back."}</h1>
+            <p className="kp-auth-intro">{language === "zh" ? "登录后即可查看餐券、选择餐食和管理订单。" : "Sign in to choose meals, use your vouchers and see what’s on its way."}</p>
+            <form onSubmit={handleLogin} className="kp-auth-form">
+              <div className="kp-auth-field">
+                <label htmlFor="login">{t("userIdOrEmail")}</label>
+                <input id="login" name="username" type="text" autoComplete="username" placeholder={t("userIdOrEmailPlaceholder")} value={login} onChange={(e) => { setLogin(e.target.value); setFormError("") }} required />
+              </div>
+              <div className="kp-auth-field">
+                <div className="kp-auth-field-head"><label htmlFor="password">{t("password")}</label><Link href="/forgot-password">{t("forgotPassword")}</Link></div>
+                <div className="kp-auth-password">
+                  <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder={t("passwordPlaceholder")} value={password} onChange={(e) => { setPassword(e.target.value); setFormError("") }} required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? (language === "zh" ? "隐藏密码" : "Hide password") : (language === "zh" ? "显示密码" : "Show password")}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button>
+                </div>
+              </div>
+              {formError && <p className="kp-auth-error" role="alert">{formError}</p>}
+              <button type="submit" className="kp-auth-submit" disabled={isLoading}>
+                {isLoading ? t("signingIn") : t("signIn")} <ArrowUpRight size={18} aria-hidden="true" />
+              </button>
+            </form>
+            <p className="kp-auth-signup">{t("noAccount")} <Link href="/signup">{t("signUp")} <ArrowUpRight size={15} /></Link></p>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

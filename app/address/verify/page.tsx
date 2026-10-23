@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AddressAutocomplete } from "@/components/address-autocomplete";
@@ -15,6 +15,9 @@ import { useClientAuth } from "@/lib/client-auth";
 import { mergeStoredUser } from "@/lib/client-user-cache";
 import { useAddressSelection } from "@/hooks/use-address-selection";
 import { getStarterAddressSelection } from "@/lib/plan-flow-state";
+import { getSupportCheckoutAddress, clearSupportCheckoutAddress } from "@/lib/support/checkout-address";
+import { consumeSupportReturnPath } from "@/lib/support/checkout-return";
+import "@/app/login/auth-companion.css";
 
 export default function VerifyAddressPage() {
   const router = useRouter();
@@ -25,6 +28,7 @@ export default function VerifyAddressPage() {
   const [buzzCode, setBuzzCode] = useState("");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const redirecting = useRef(false);
   const [fromPage, setFromPage] = useState<string | null>(null);
   const [planIdentifier, setPlanIdentifier] = useState<string | null>(null);
 
@@ -45,21 +49,23 @@ export default function VerifyAddressPage() {
     }
 
     if (user.addressVerified) {
-      router.replace("/dashboard");
+      if (!redirecting.current) router.replace(consumeSupportReturnPath() || "/dashboard");
       return;
     }
 
     // Pre-fill from starter flow if user entered address on marketing page before signing up
     const starterSelection = getStarterAddressSelection();
+    const assistantAddress = getSupportCheckoutAddress();
 
-    setUnitNumber(user.address?.unitNumber || "");
-    setBuzzCode(user.address?.buzzCode || "");
+    setUnitNumber(assistantAddress?.unitNumber || user.address?.unitNumber || "");
+    setBuzzCode(assistantAddress?.buzzCode || user.address?.buzzCode || "");
     setDeliveryNotes(user.deliveryNotes || "");
     setAddress((prev) => ({
       ...prev,
-      streetAddress: starterSelection?.streetAddress || user.address?.streetAddress || "",
-      postalCode: starterSelection?.postalCode || user.address?.postalCode || "",
-      province: starterSelection?.areaLabel || user.address?.province || "",
+      streetAddress: assistantAddress?.streetAddress || starterSelection?.streetAddress || user.address?.streetAddress || "",
+      postalCode: assistantAddress?.postalCode || starterSelection?.postalCode || user.address?.postalCode || "",
+      province: assistantAddress?.province || starterSelection?.areaLabel || user.address?.province || "",
+      addressGeo: assistantAddress?.addressGeo || user.addressGeo,
     }));
   }, [authenticated, router, status, user, setAddress]);
 
@@ -113,7 +119,10 @@ export default function VerifyAddressPage() {
         throw new Error(result.error || "Failed to save address");
       }
 
+      redirecting.current = true;
+      const assistantDestination = consumeSupportReturnPath();
       mergeStoredUser(result.data);
+      clearSupportCheckoutAddress();
       await refreshAuthState({ force: true });
       toast({
         title: language === "zh" ? "地址已验证" : "Address verified",
@@ -123,7 +132,9 @@ export default function VerifyAddressPage() {
       });
 
       // Redirect to plan page if user came from a plan flow, otherwise dashboard
-      if (fromPage === "daily-delivery") {
+      if (assistantDestination) {
+        router.replace(assistantDestination);
+      } else if (fromPage === "daily-delivery") {
         const url = planIdentifier
           ? `/dashboard?tab=meal-vouchers&selectPlan=true&plan=${planIdentifier}`
           : `/dashboard?tab=meal-vouchers&selectPlan=true`;
@@ -149,19 +160,20 @@ export default function VerifyAddressPage() {
 
   if (status !== "ready" || !authenticated || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#fff6ef]/50">
+      <div className="kp-auth-companion flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#C2884E]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#fff6ef]/50 px-4 py-10">
+    <div className="kp-auth-companion kp-auth-verify-address min-h-screen px-4 py-10">
       <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6 rounded-xl bg-white p-6 shadow-lg">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#C2884E]">
+          <h1 className="text-2xl font-bold">
             {language === "zh" ? "设置配送地址" : "Delivery address"}
           </h1>
+          <p className="kp-auth-companion-intro">{language === "zh" ? "确认完整地址后，我们会显示你可以选择的配送方式。" : "Confirm your address and we’ll show the delivery options available to you."}</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -238,7 +250,7 @@ export default function VerifyAddressPage() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full bg-gradient-to-r from-[#C2884E] to-[#D1A46C]" disabled={isSaving}>
+        <Button type="submit" className="w-full" disabled={isSaving}>
           {isSaving
             ? (language === "zh" ? "保存中..." : "Saving...")
             : (language === "zh" ? "保存并继续" : "Save and continue")}

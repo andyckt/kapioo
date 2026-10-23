@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, MapPin, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,9 @@ export function AddressAutocomplete({
 }: AddressAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [selectingId, setSelectingId] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [selectionError, setSelectionError] = useState(false);
+  const listId = useId();
   const {
     suggestions,
     isLoading,
@@ -38,6 +41,8 @@ export function AddressAutocomplete({
 
   const trimmed = value.trim();
   const showPanel = open && trimmed.length >= 3;
+  const hasError = Boolean(error || selectionError);
+  const activeSuggestion = showPanel && !hasError && !isLoading ? suggestions[activeIndex] : undefined;
 
   const inputClassName = cn(
     "pr-10 rounded-md border-[#C2884E]/25 bg-white text-[#6B5F53] placeholder:text-[#6B5F53]/45",
@@ -53,23 +58,37 @@ export function AddressAutocomplete({
   const handleSelect = async (suggestion: (typeof suggestions)[number]) => {
     try {
       setSelectingId(suggestion.id);
+      setSelectionError(false);
       const parsed = await selectSuggestion(suggestion);
       onAddressSelect(parsed);
       setOpen(false);
+      setActiveIndex(-1);
+    } catch {
+      setSelectionError(true);
+      setOpen(true);
     } finally {
       setSelectingId(null);
     }
   };
 
   return (
-    <div className="relative">
+    <div className="relative" onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        setOpen(false);
+        setActiveIndex(-1);
+      }
+    }}>
       <Input
         value={value}
+        readOnly={Boolean(selectingId)}
         disabled={disabled}
         autoComplete="off"
         role="combobox"
+        aria-label={language === "zh" ? "配送地址" : "Delivery address"}
         aria-expanded={showPanel}
         aria-autocomplete="list"
+        aria-controls={showPanel ? listId : undefined}
+        aria-activedescendant={activeSuggestion ? `${listId}-${activeIndex}` : undefined}
         placeholder={
           placeholder ||
           (language === "zh" ? "输入配送地址..." : "Enter delivery address...")
@@ -77,9 +96,27 @@ export function AddressAutocomplete({
         onChange={(event) => {
           onInputChange(event.target.value);
           setOpen(true);
+          setActiveIndex(-1);
+          setSelectionError(false);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && showPanel) {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+            setActiveIndex(-1);
+          } else if ((event.key === "ArrowDown" || event.key === "ArrowUp") && suggestions.length && !hasError && !isLoading && !selectingId) {
+            event.preventDefault();
+            setOpen(true);
+            setActiveIndex(index => event.key === "ArrowDown"
+              ? (index + 1) % suggestions.length
+              : (index <= 0 ? suggestions.length - 1 : index - 1));
+          } else if (event.key === "Enter" && activeSuggestion && !selectingId) {
+            event.preventDefault();
+            void handleSelect(activeSuggestion);
+          }
+        }}
         className={inputClassName}
       />
       <MapPin
@@ -90,7 +127,7 @@ export function AddressAutocomplete({
       />
 
       {showPanel && (
-        <div role="listbox" className={panelClassName}>
+        <div id={listId} role="listbox" aria-label={language === "zh" ? "地址建议" : "Address suggestions"} className={panelClassName}>
           {isLoading && (
             <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -98,7 +135,7 @@ export function AddressAutocomplete({
             </div>
           )}
 
-          {error ? (
+          {hasError ? (
             <div className="space-y-2 px-3 py-3 text-sm">
               <p className="text-destructive">
                 {language === "zh"
@@ -106,15 +143,17 @@ export function AddressAutocomplete({
                   : "Unable to load address suggestions. Please check your connection and try again."}
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={retry}>
+                <Button type="button" size="sm" variant="outline" onClick={() => { setSelectionError(false); setActiveIndex(-1); retry(); }}>
                   <RotateCcw className="mr-2 h-3.5 w-3.5" />
                   {language === "zh" ? "重试" : "Retry"}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
                 {language === "zh"
-                  ? "如问题持续，请联系客服：kapioomeal@gmail.com"
-                  : "If the issue persists, contact us at kapioomeal@gmail.com"}
+                  ? "如问题持续，请"
+                  : "If the issue persists, please "}
+                <a className="underline" href="/support">{language === "zh" ? "提交支持工单" : "submit a support ticket"}</a>
+                {language === "zh" ? "。" : "."}
               </p>
             </div>
           ) : (
@@ -125,12 +164,16 @@ export function AddressAutocomplete({
                 </p>
               )}
 
-              {suggestions.map((suggestion) => (
+              {suggestions.map((suggestion, index) => (
                 <button
                   key={suggestion.id}
+                  id={`${listId}-${index}`}
                   type="button"
                   role="option"
-                  className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-[#FFF6EF] focus-visible:bg-[#FFF6EF] focus-visible:outline-none"
+                  tabIndex={-1}
+                  aria-selected={activeIndex === index}
+                  disabled={Boolean(selectingId)}
+                  className={cn("flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-[#FFF6EF] focus-visible:bg-[#FFF6EF] focus-visible:outline-none", activeIndex === index && "bg-[#FFF6EF]")}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => void handleSelect(suggestion)}
                 >

@@ -7,6 +7,7 @@ import WeeklyOrder from "@/models/WeeklyOrder";
 import WeeklyEntitlementGroup from "@/models/WeeklyEntitlementGroup";
 import User from "@/models/User";
 import { resolveEffectiveOrderCustomerInfo } from "@/lib/orders/effective-customer-info";
+import { getOrderActionAvailability } from "@/lib/self-service/action-availability";
 
 export async function GET(request: Request) {
   try {
@@ -76,6 +77,7 @@ export async function GET(request: Request) {
       entitlementGroups.map((group) => [String(group.groupId), group])
     );
 
+    const actionAvailability = await getOrderActionAvailability(orders, "weekly");
     const normalizedOrders = orders.map((order) => {
       const plain = typeof order.toObject === "function" ? order.toObject() : order;
       const effectiveCustomerInfo = resolveEffectiveOrderCustomerInfo(plain, user);
@@ -85,6 +87,7 @@ export async function GET(request: Request) {
       );
       return {
         ...plain,
+        selfService: actionAvailability.get(order.orderId),
         effectiveCustomerInfo,
         weeklyEntitlementSummary,
         phoneNumber: effectiveCustomerInfo.phoneNumber,

@@ -62,7 +62,11 @@ function loadPlacesLibrary() {
     mapsOptionsConfigured = true;
   }
 
-  placesLibraryPromise = importLibrary("places") as Promise<PlacesLibraryLike>;
+  placesLibraryPromise = (importLibrary("places") as Promise<PlacesLibraryLike>).catch((err) => {
+    // Reset so the next attempt re-fetches instead of returning the cached rejection
+    placesLibraryPromise = null;
+    throw err;
+  });
   return placesLibraryPromise;
 }
 
