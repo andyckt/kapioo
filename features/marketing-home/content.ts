@@ -7,7 +7,7 @@ export const homeCopy = {
     heroCaption: 'Familiar flavours. A little discovery.', heroSmall: 'From our kitchen, with care.', photoNote: 'Cooked by Kapioo. Photographed as served.',
     kitchenEyebrow: 'See how we cook', kitchenTitle: 'Your meals. Our kitchen.', kitchenEm: '',
     kitchenLead: 'A look at the people and preparation behind your next meal.',
-    filmLabel: 'A look inside Kapioo', filmPlay: 'Watch our kitchen film', filmLoading: 'Opening the kitchen film…', filmRetry: 'Retry video',
+    filmLabel: 'A look inside Kapioo', filmShortLabel: 'Our kitchen', filmPlay: 'Play film', filmPause: 'Pause film', filmMute: 'Mute film', filmUnmute: 'Play with sound', filmLoading: 'Opening the kitchen film…', filmRetry: 'Retry video',
     kitchenSteps: [
       { title: 'An early start.', body: 'We start preparing at 5 a.m.', tag: 'Prepare' },
       { title: 'Cooked with care.', body: 'Asian flavours, made for your day.', tag: 'Cook' },
@@ -54,7 +54,7 @@ export const homeCopy = {
     heroCaption: '熟悉的味道，也有新的惊喜。', heroSmall: '来自厨房的一份用心。', photoNote: 'Kapioo 餐食实拍。',
     kitchenEyebrow: '走进我们的厨房', kitchenTitle: '你的每一餐，我们来用心。', kitchenEm: '',
     kitchenLead: '看看每份餐食背后的准备与制作。',
-    filmLabel: '走进 Kapioo 厨房', filmPlay: '播放厨房短片', filmLoading: '正在打开厨房短片…', filmRetry: '重新播放',
+    filmLabel: '走进 Kapioo 厨房', filmShortLabel: '我们的厨房', filmPlay: '播放短片', filmPause: '暂停短片', filmMute: '关闭声音', filmUnmute: '打开声音', filmLoading: '正在打开厨房短片…', filmRetry: '重新播放',
     kitchenSteps: [
       { title: '早一点开始。', body: '每天早上五点开始准备。', tag: '准备' },
       { title: '把熟悉的味道做好。', body: '为日常准备熟悉的亚洲风味。', tag: '烹饪' },

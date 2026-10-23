@@ -19,6 +19,7 @@ import './refinement.css'
 import './hero-gallery.css'
 import './ritual-story.css'
 import './plan-portraits.css'
+import './experience-polish.css'
 
 type PhotoName = 'thai' | 'korean' | 'chinese' | 'weekly' | 'table'
 function Photo({ name, alt, eager = false, className = '', sizes = '(max-width: 700px) 90vw, 50vw' }: { name: PhotoName; alt: string; eager?: boolean; className?: string; sizes?: string }) {
@@ -107,6 +108,7 @@ function LinenPhotoStrip({ copy, language }: { copy: HomeCopy; language: string 
     let dragScroll = 0
     let quietUntil = 0
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const compactScreen = window.matchMedia('(max-width: 760px)')
 
     const measure = () => {
       const nextWidth = set.getBoundingClientRect().width
@@ -131,8 +133,10 @@ function LinenPhotoStrip({ copy, language }: { copy: HomeCopy; language: string 
     const tick = (time: number) => {
       const elapsed = lastFrame ? Math.min(time - lastFrame, 64) : 0
       lastFrame = time
-      if (!hovering && !pressing && !viewport.contains(document.activeElement) && time > quietUntil) {
-        viewport.scrollLeft += elapsed * .024
+      // Touching a focusable rail can leave it focused on phones. Only keyboard
+      // focus should pause the automatic drift; touch gestures resume naturally.
+      if (!hovering && !pressing && !viewport.matches(':focus-visible') && time > quietUntil) {
+        viewport.scrollLeft += elapsed * (compactScreen.matches ? .042 : .024)
         wrap()
       }
       frame = requestAnimationFrame(tick)

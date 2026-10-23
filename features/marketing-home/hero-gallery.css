@@ -29,7 +29,9 @@
 @media(max-width:760px){
   .kh-linen .kh-linen-photo-frame{--kh-strip-height:clamp(185px,calc(100svh - 420px),285px);--kh-strip-gap:13px}
   .kh-linen .kh-linen-photo-frame::before,.kh-linen .kh-linen-photo-frame::after{width:clamp(14px,5vw,24px)}
-  .kh-linen .kh-gallery-card{flex-basis:72vw}
+  /* Two photos remain partly visible at once, so the full six-photo story
+     comes through within one gentle loop on a phone. */
+  .kh-linen .kh-gallery-card{flex-basis:clamp(174px,54vw,258px)}
   .kh-linen .kh-gallery-portrait{flex-basis:calc(var(--kh-strip-height)*.625)}
   .kh-linen .kh-gallery-card,.kh-linen .kh-gallery-card:nth-child(even){height:var(--kh-strip-height);border-radius:20px}
 }

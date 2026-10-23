@@ -1,0 +1,37 @@
+/* A quiet, self-contained film player. The video remains the focal point. */
+.kh-film{width:100%;margin:0}
+.kh-film-frame iframe{pointer-events:none}
+.kh-film-loading{z-index:2;background:#e9ded1}
+.kh-film-controls{position:absolute;z-index:3;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:7px;min-height:50px;padding:5px;background:#fbf7f0e9;border:1px solid #fff9;box-shadow:0 10px 25px #24180d20;border-radius:999px;backdrop-filter:blur(12px);color:#4a392b}
+.kh-film-controls button{display:grid;place-items:center;flex:none;width:39px;height:39px;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;transition:background .2s ease,transform .2s ease}
+.kh-film-controls button:hover{background:#4a392b12;transform:scale(1.045)}
+.kh-film-controls button:focus-visible{outline:2px solid #a26635;outline-offset:2px}
+.kh-film-controls-title{flex:1;min-width:0;padding-left:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;letter-spacing:.01em}
+
+@media(max-width:760px){
+  .kh-kitchen{display:block;padding-block:clamp(26px,4svh,38px)}
+  .kh-kitchen-layout{display:flex;flex-direction:column;align-items:center;gap:clamp(16px,2.5svh,23px);max-width:480px}
+  .kh-kitchen .kh-section-heading{text-align:center}
+  .kh-kitchen .kh-section-heading>p:last-child:not(.kh-eyebrow){max-width:320px;margin-inline:auto}
+  .kh-kitchen-film{width:min(76vw,330px,calc((100svh - 268px)*9/16));max-width:none;justify-self:auto}
+  .kh-film-frame{border-radius:27px;box-shadow:0 20px 45px -24px #49331f66}
+  .kh-kitchen-story{display:flex;justify-content:center;gap:clamp(14px,6vw,34px);width:100%;max-width:370px;margin-top:1px}
+  .kh-kitchen-step{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:0;border:0;text-align:center}
+  .kh-kitchen-step>.kh-icon{width:28px;height:28px;margin:0;color:#9b6b3f}
+  .kh-kitchen-step .kh-eyebrow{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:none;margin:0}
+  .kh-kitchen-step h3,.kh-kitchen-step p:last-child{display:none}
+}
+
+@media(max-width:760px) and (max-height:700px){
+  .kh-kitchen{padding-block:20px}
+  .kh-kitchen-layout{gap:12px}
+  .kh-kitchen-film{width:min(72vw,calc((100svh - 230px)*9/16))}
+}
+
+@media(max-height:450px){
+  .kh-kitchen-film{max-width:200px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .kh-film-controls button{transition:none}
+}
