@@ -103,7 +103,7 @@ export function CreditUploadStep({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="space-y-6"
+      className="kp-purchase-checkout space-y-6"
     >
       {!isSubmitted ? (
         <>
@@ -335,8 +335,10 @@ export function CreditUploadStep({
               </Label>
 
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div
-                  className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                <button
+                  type="button"
+                  aria-pressed={paymentMethod === "emt"}
+                  className={`w-full cursor-pointer rounded-xl border p-4 text-left transition-all ${
                     paymentMethod === "emt"
                       ? "border-[#C2884E] bg-[#F9F3EC]"
                       : "border-gray-200 hover:border-[#C2884E]/50"
@@ -353,7 +355,7 @@ export function CreditUploadStep({
                     </div>
                     <span className="font-medium">Interac e-Transfer</span>
                   </div>
-                </div>
+                </button>
               </div>
             </div>
 

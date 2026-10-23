@@ -102,6 +102,7 @@ export function RegionCheckDialogRecharge({
       const fullAddress: AddressData = {
         unitNumber,
         streetAddress: address.streetAddress,
+        province: address.province,
         postalCode: address.postalCode,
         country: address.country || 'Canada',
         buzzCode,
@@ -126,14 +127,14 @@ export function RegionCheckDialogRecharge({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 sm:border-[#C2884E]/10 shadow-xl rounded-xl sm:rounded-[24px] max-h-[90vh] w-[95vw] sm:w-auto">
-        <DialogHeader className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] p-4 sm:p-6 text-white h-[90px] flex flex-col justify-center">
+      <DialogContent className="kp-address-dialog">
+        <DialogHeader className="kp-address-dialog-header">
           <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
             {showDailyNotice
               ? (language === 'zh' ? '区域服务提示' : 'Service Area Notice')
               : t('deliveryAddress')}
           </DialogTitle>
-          <DialogDescription className="text-white/90 mt-1 sm:mt-2 text-sm sm:text-base font-light">
+          <DialogDescription className="kp-address-dialog-description">
             {showDailyNotice
               ? (language === 'zh' ? `${PRODUCT_LINE_LABELS.daily.zh}服务区域限制` : `${PRODUCT_LINE_LABELS.daily.en} service area restriction`)
               : (language === 'zh' ? '请确认您的详细地址' : 'Please confirm your address details')}
@@ -257,7 +258,7 @@ export function RegionCheckDialogRecharge({
               {language === 'zh' ? '取消' : 'Cancel'}
             </Button>
             <Button
-              className="bg-gradient-to-r from-[#C2884E] to-[#D1A46C] hover:opacity-90 text-white text-sm px-3 py-1 h-9"
+              className="kp-address-primary"
               onClick={handleSubmit}
               disabled={!canSubmit || isLoading}
             >

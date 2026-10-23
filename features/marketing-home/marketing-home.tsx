@@ -41,7 +41,7 @@ export function Navigation({ copy, homeHref = '#top', sectionPrefix = '', curren
   const activeIndex = currentPage === 'how' ? 2 : currentPage === 'catering' ? 4 : currentPage === 'faq' ? 5 : currentPage === 'support' ? 6 : -1
   return <header className="kh-header">
     <a href={homeHref} className="kh-brand" aria-label="Kapioo">kapioo<span>.</span></a>
-    <nav className="kh-desktop-nav" aria-label={language === 'zh' ? '主导航' : 'Main navigation'}>{links.map((href, index) => <a key={href} href={href} aria-current={index === activeIndex ? 'page' : undefined}>{copy.nav[index]}</a>)}</nav>
+    <nav className="kh-desktop-nav" aria-label={language === 'zh' ? '主导航' : 'Main navigation'}>{[2, 5, 4, 6].map(index => <a key={links[index]} href={links[index]} aria-current={index === activeIndex ? 'page' : undefined}>{copy.nav[index]}</a>)}</nav>
     <div className="kh-nav-actions">
       <button className="kh-language" onClick={() => chooseLanguage(language === 'en' ? 'zh' : 'en')} aria-label={copy.language}>{language === 'en' ? '中文' : 'EN'}</button>
       <Link prefetch={false} className="kh-login" href="/login" target="_top">{copy.login}</Link>

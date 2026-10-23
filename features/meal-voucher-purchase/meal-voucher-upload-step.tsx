@@ -89,7 +89,7 @@ export function MealVoucherUploadStep({
 }: MealVoucherUploadStepProps) {
   if (isSubmitted) {
     return (
-      <Card className="mx-auto w-full max-w-2xl border-[#C2884E]/10 shadow-lg">
+      <Card className="kp-purchase-checkout mx-auto w-full max-w-2xl border-[#C2884E]/10 shadow-lg">
         <CardContent className="p-6 text-center">
           <div className="mb-6">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
@@ -128,7 +128,7 @@ export function MealVoucherUploadStep({
   }
 
   return (
-    <Card className="mx-auto w-full max-w-2xl border-[#C2884E]/10 shadow-lg">
+    <Card className="kp-purchase-checkout mx-auto w-full max-w-2xl border-[#C2884E]/10 shadow-lg">
       <CardHeader className="border-b border-[#C2884E]/10 bg-gradient-to-r from-[#FBF7F2] to-[#F5EDE4]">
         <div className="mb-2 flex items-center gap-3">
           <div className="rounded-full bg-[#C2884E] p-2 text-white">

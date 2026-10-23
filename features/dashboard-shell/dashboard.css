@@ -107,7 +107,6 @@
 .kp-portal-main h2 { color: var(--kp-ink); }
 .kp-portal-main :is(input, textarea, select) { border-color: #dbcbb9; background: #fffdf9; color: var(--kp-ink); }
 .kp-portal-main :is(input, textarea, select):focus-visible { border-color: #9f7254; box-shadow: 0 0 0 3px #d2b99c50; }
-.kp-portal-main [data-state="active"] { color: var(--kp-ink); }
 .kp-portal-main .bg-gradient-to-r, .kp-portal-main .bg-gradient-to-br { background-image: none; }
 .kp-portal-main div.bg-gradient-to-br, .kp-portal-main section.bg-gradient-to-br { background-color: var(--kp-surface); }
 .kp-portal-main button.bg-gradient-to-r, .kp-portal-main button.bg-gradient-to-br, .kp-portal-main button.bg-primary { background-color: var(--kp-ink); color: #fffaf4; }
@@ -245,14 +244,3 @@
   .kp-daily-order .kp-day-sidebar { top: 0; min-width: 76px; max-height: calc(100dvh - 125px); }
   .kp-daily-order .kp-daily-grid { min-width: 0; }
 }
-.kp-daily-vouchers .kp-vouchers-intro { border-color: #decdbb; border-radius: 28px; background: #eee4d6; background-image: none; box-shadow: none; }
-.kp-daily-vouchers .kp-vouchers-title { color: var(--kp-ink); font-size: clamp(39px, 4.2vw, 59px); font-weight: 350; line-height: 1.06; letter-spacing: -.07em; }
-.kp-daily-vouchers .kp-vouchers-title span { color: var(--kp-ink); -webkit-text-fill-color: var(--kp-ink); }
-.kp-daily-vouchers .kp-vouchers-intro button { border-radius: 99px; }
-.kp-voucher-details-dialog { background: #fffcf7; color: #4a3a2b; border: 1px solid #e4d7c9; box-shadow: 0 30px 80px #34241935; }
-.kp-voucher-details-dialog .kp-voucher-details-header { min-height: 125px; height: auto; padding: 29px 32px; background: #eee4d6; background-image: none; color: #4a3a2b; }
-.kp-voucher-details-dialog .kp-voucher-details-header > * { color: #4a3a2b; }
-.kp-voucher-details-dialog .kp-voucher-details-header > *:last-child { color: #756452; }
-.kp-voucher-details-dialog .scrollbar-brand::-webkit-scrollbar-thumb { background: #c9b49d; }
-.kp-voucher-details-dialog [role="tablist"] { background: #eee6dd; }
-.kp-voucher-details-dialog [role="tab"][data-state="active"] { background: #4a3a2b; color: white; }

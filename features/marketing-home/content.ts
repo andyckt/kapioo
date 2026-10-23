@@ -47,7 +47,7 @@ export const homeCopy = {
     footerLine: 'Asian fusion meal delivery in Toronto & the GTA.', footerLocation: 'Toronto & the GTA', footerLinks: ['How it works', 'Questions & answers', 'Say hello', 'Privacy', 'Terms'], copyright: 'Kapioo. Made with care.',
   },
   zh: {
-    skip: '跳至内容', nav: ['看看美食', '我们的厨房', '订餐流程', '餐食计划', '团体餐饮', '常见问题', '提交工单'], login: '登录', start: '立即订餐', menu: '打开导航', language: '切换语言',
+    skip: '跳至内容', nav: ['看看美食', '我们的厨房', '订餐流程', '餐食计划', '团体餐饮', '常见问题', '客户支持'], login: '登录', start: '立即订餐', menu: '打开导航', language: '切换语言',
     eyebrow: 'Kapioo / 亚洲融合风味餐食配送', heroStart: '熟悉的亚洲风味，', heroEnd: '送到你的身边。',
     lead: '新鲜现做，非冷冻餐食。', heroDelivery: '配送至多伦多及 GTA。',
     explore: '了解订餐流程', service: '配送覆盖多伦多及大多伦多地区', serviceDetail: '输入地址，查看可选计划。',

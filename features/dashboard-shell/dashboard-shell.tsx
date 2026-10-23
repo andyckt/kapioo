@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useLanguage } from "@/lib/language-context"
 import type { DashboardMenuItem } from "./dashboard-menu-items"
 import "./dashboard.css"
+import "./portal-purchase.css"
 
 interface DashboardShellProps {
   children: ReactNode
@@ -90,7 +91,7 @@ export function DashboardShell({
       <header className="kp-portal-header">
         <Link href="/" className="kp-portal-logo" aria-label="Kapioo home">kapioo<span>.</span></Link>
         <div className="kp-portal-header-right">
-          <Link className="kp-portal-header-help" href="/support"><CircleHelp size={17} />{language === "zh" ? "帮助" : "Help"}</Link>
+          <Link className="kp-portal-header-help" href="/support"><CircleHelp size={17} />{language === "zh" ? "客户支持" : "Support"}</Link>
           <div className="kp-portal-language" aria-label={language === "zh" ? "语言" : "Language"}>
             <button type="button" aria-pressed={language === "en"} onClick={() => chooseLanguage("en")}>EN</button>
             <span aria-hidden="true">/</span>
@@ -127,7 +128,7 @@ export function DashboardShell({
           <p className="kp-portal-sheet-caption">{language === "zh" ? "你的餐食空间" : "YOUR SPACE"}</p>
           <PortalNav items={menuItems} activeTab={activeTab} onTabChange={tabChange} />
           <div className="kp-portal-sheet-bottom">
-            <Link href="/support" onClick={() => onMobileMenuOpenChange(false)}><CircleHelp size={17} />{language === "zh" ? "帮助" : "Help"}</Link>
+            <Link href="/support" onClick={() => onMobileMenuOpenChange(false)}><CircleHelp size={17} />{language === "zh" ? "客户支持" : "Support"}</Link>
             <button type="button" onClick={onMobileLogout}><LogOut size={17} />{mobileLogoutLabel}</button>
           </div>
         </SheetContent>

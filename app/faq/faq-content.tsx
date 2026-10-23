@@ -30,7 +30,7 @@ function fallbackFaqs(language: Language): FaqItem[] {
     { slug: 'storage', question: '餐食可以保存多久？', answer: '请冷藏保存，建议三天内食用。' },
     { slug: 'heat', question: '如何加热餐食？', answer: '请按照餐盒上的说明加热。周次 Meal Box 可使用微波炉或炉灶加热。' },
     { slug: 'dietary', question: '有忌口或特殊饮食选项吗？', answer: '菜单定期更新。如有严重过敏或饮食限制，请在下单前联系我们，了解食材和制作方式。' },
-    { slug: 'contact', question: '如何联系客服？', answer: '请提交支持工单，告诉我们你的问题。我们的团队会在 2–3 个工作日内通过邮件回复。' },
+    { slug: 'contact', question: '如何联系客服？', answer: '请在客户支持页面告诉我们你的问题。我们的团队会在 2–3 个工作日内通过邮件回复。' },
   ]
   return [
     { slug: 'coverage', question: 'Where do you deliver?', answer: `Daily Bento is available in ${formatDailyCoverageList('en')}. Weekly Meal Box also reaches ${formatWeeklyOnlyCoverageList('en')}. Enter your exact address to see your options.` },
@@ -97,8 +97,8 @@ const copy = {
     ],
     more: '更多解答',
     supportEyebrow: '还有疑问？', supportTitle: '我们随时为你解答。',
-    supportBody: '关于订单或餐食有问题？提交支持工单，我们会在 2–3 个工作日内通过邮件回复。',
-    supportCta: '提交工单',
+    supportBody: '关于订单或餐食有问题？联系客户支持，我们会在 2–3 个工作日内通过邮件回复。',
+    supportCta: '联系客户支持',
     closingEyebrow: '好好吃饭，慢慢生活。', closingTitle: '准备好了，就开始吧。',
     closingBody: '先输入地址，查看你可以选择的餐食与配送方式。',
     footer: '配送至多伦多及 GTA 的亚洲融合风味餐食。', back: '返回顶部',

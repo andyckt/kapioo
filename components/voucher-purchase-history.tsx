@@ -125,21 +125,21 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
     switch (status) {
       case 'pending':
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1">
+          <Badge variant="outline" className="kp-history-status kp-history-status-pending flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {language === 'en' ? 'Pending' : '待处理'}
           </Badge>
         );
       case 'approved':
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+          <Badge variant="outline" className="kp-history-status kp-history-status-approved flex items-center gap-1">
             <CheckCircle className="h-3 w-3" />
             {language === 'en' ? 'Approved' : '已批准'}
           </Badge>
         );
       case 'declined':
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+          <Badge variant="outline" className="kp-history-status kp-history-status-declined flex items-center gap-1">
             <XCircle className="h-3 w-3" />
             {language === 'en' ? 'Declined' : '已拒绝'}
           </Badge>
@@ -173,13 +173,13 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
   };
 
   return (
-    <Card>
+    <Card className="kp-purchase-history">
       <CardHeader>
-        <CardTitle>{language === 'en' ? 'Voucher Purchase Requests' : '充值请求'}</CardTitle>
+        <CardTitle>{language === 'en' ? 'Daily voucher history' : '每日餐券记录'}</CardTitle>
         <CardDescription>
           {language === 'en' 
-            ? 'View your voucher purchase request history and status' 
-            : '查看您的餐券充值请求历史和状态'
+            ? 'Review your Daily Bento voucher purchases and payment status.'
+            : '查看每日便当餐券购买记录和付款状态。'
           }
         </CardDescription>
       </CardHeader>
@@ -194,7 +194,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
         ) : requests.length > 0 ? (
           <div className="space-y-4">
             {requests.map((request) => (
-              <Card key={request._id || request.requestId} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <Card key={request._id || request.requestId} className="kp-history-entry overflow-hidden">
                 <CardHeader className="p-4 pb-2 bg-muted/20">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -296,7 +296,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
             )}
           </div>
         ) : (
-          <div className="text-center py-10 border rounded-md bg-muted/10">
+          <div className="kp-history-empty text-center py-10">
             <div className="mb-3">
               <Clock className="h-12 w-12 mx-auto text-muted-foreground" />
             </div>
@@ -305,8 +305,8 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
             </h3>
             <p className="text-muted-foreground mt-1">
               {language === 'en' 
-                ? 'Your voucher purchase requests will appear here' 
-                : '您的餐券充值请求将显示在这里'
+                ? 'Your Daily Bento voucher purchases will appear here.'
+                : '购买每日便当餐券后，记录会显示在这里。'
               }
             </p>
           </div>
@@ -317,7 +317,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
       <Dialog open={!!selectedRequest && !imageDialogOpen} onOpenChange={(open) => {
         if (!open) setSelectedRequest(null);
       }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="kp-purchase-history-dialog sm:max-w-[500px]">
           {selectedRequest && (
             <>
               <DialogHeader>
@@ -498,7 +498,7 @@ export function VoucherPurchaseHistory({ userId, refreshKey = 0 }: VoucherPurcha
       
       {/* Image Preview Dialog */}
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-auto">
+        <DialogContent className="kp-purchase-history-dialog sm:max-w-[700px] max-h-[90vh] overflow-auto">
           {selectedRequest && (
             <>
               <DialogHeader>

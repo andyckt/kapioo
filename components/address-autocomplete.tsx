@@ -152,7 +152,7 @@ export function AddressAutocomplete({
                 {language === "zh"
                   ? "如问题持续，请"
                   : "If the issue persists, please "}
-                <a className="underline" href="/support">{language === "zh" ? "提交支持工单" : "submit a support ticket"}</a>
+                <a className="underline" href="/support">{language === "zh" ? "联系客户支持" : "contact support"}</a>
                 {language === "zh" ? "。" : "."}
               </p>
             </div>

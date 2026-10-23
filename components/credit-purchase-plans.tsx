@@ -574,90 +574,25 @@ export function CreditPurchasePlans({ userId, onSuccess }: CreditPurchasePlansPr
         />
       )}
       
-      {/* Info dialog - triggered from dashboard */}
       <Dialog open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
-        <DialogContent className="sm:max-w-[500px] p-6 rounded-2xl">
+        <DialogContent className="kp-purchase-dialog">
           <DialogHeader>
-            <DialogTitle className="text-xl text-[#6B5F53]">
-              {language === 'zh' ? '配送信息' : 'Delivery Information'}
-            </DialogTitle>
+            <p className="kp-overline">{language === 'zh' ? '周次 MEAL BOX' : 'WEEKLY MEAL BOX'}</p>
+            <DialogTitle>{language === 'zh' ? '一周的好餐，轻松安排。' : 'A good week, ready for you.'}</DialogTitle>
+            <DialogDescription>{language === 'zh' ? '购买周餐券，按需选择使用周次。' : 'Buy weeks now and redeem them when you are ready.'}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                <Truck className="h-4 w-4 text-[#C2884E]" />
-              </div>
-              <div>
-                <h4 className="font-medium text-[#6B5F53]">
-                  {language === 'zh' ? '配送日期' : 'Delivery Days'}
-                </h4>
-                <p className="text-sm text-[#8A7968]">
-                  {language === 'zh' ? '周日和周二' : 'Sunday and Tuesday'}
-                </p>
-              </div>
+          <div className="kp-purchase-dialog-scroll">
+            <div className="kp-purchase-facts">
+              <p><Truck size={18} aria-hidden="true" />{language === 'zh' ? '周日和周二配送，每周两次' : 'Delivered Sunday and Tuesday, twice each week'}</p>
+              <p><Clock size={18} aria-hidden="true" />{language === 'zh' ? '配送时段：下午 6 点至晚上 10 点' : 'Delivery window: 6 p.m.–10 p.m.'}</p>
+              <p><Calendar size={18} aria-hidden="true" />{language === 'zh' ? '餐券可转让，有效期 6 个月' : 'Transferable vouchers, valid for 6 months'}</p>
+              <p><CreditCard size={18} aria-hidden="true" />{language === 'zh' ? '购买后 7 天内，未用部分可退款' : 'Unused portion refundable within 7 days of purchase'}</p>
             </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                <Clock className="h-4 w-4 text-[#C2884E]" />
-              </div>
-              <div>
-                <h4 className="font-medium text-[#6B5F53]">
-                  {language === 'zh' ? '配送时间' : 'Delivery Time'}
-                </h4>
-                <p className="text-sm text-[#8A7968]">
-                  {language === 'zh' ? '下午6点 - 晚上10点' : '6PM - 10PM'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                <Calendar className="h-4 w-4 text-[#C2884E]" />
-              </div>
-              <div>
-                <h4 className="font-medium text-[#6B5F53]">
-                  {language === 'zh' ? '餐券有效期' : 'Credit Validity'}
-                </h4>
-                <p className="text-sm text-[#8A7968]">
-                  {language === 'zh' ? '购买后半年内有效，可转让，购买后7天内可退款未用部分' : 'Valid for 6 months, transferable, unused portion refundable within 7 days of purchase'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                <CreditCard className="h-4 w-4 text-[#C2884E]" />
-              </div>
-              <div>
-                <h4 className="font-medium text-[#6B5F53]">
-                  {language === 'zh' ? '付款方式' : 'Payment Method'}
-                </h4>
-                <p className="text-sm text-[#8A7968]">
-                  {language === 'zh' ? 'EMT/微信支付' : 'EMT/WeChat Pay'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1.5 rounded-full bg-[#F5EDE4]">
-                <Truck className="h-4 w-4 text-[#C2884E]" />
-              </div>
-              <div>
-                <h4 className="font-medium text-[#6B5F53]">
-                  {language === 'zh' ? '配送费' : 'Delivery Fee'}
-                </h4>
-                <p className="text-sm text-[#8A7968]">
-                  {language === 'zh' 
-                    ? `$${getDeliveryFee(userRegion || '')}/周 (2次配送)` 
-                    : `$${getDeliveryFee(userRegion || '')}/week (2 deliveries)`}
-                </p>
-              </div>
-            </div>
+            <p className="kp-weekly-plan-delivery">{language === 'zh' ? `配送费每周 $${getDeliveryFee(userRegion || '').toFixed(2)}，包含两次配送。付款步骤会显示最终金额。` : `Delivery costs $${getDeliveryFee(userRegion || '').toFixed(2)} per week for two deliveries. Your final total appears at checkout.`}</p>
           </div>
         </DialogContent>
       </Dialog>
-      
+
       <AnimatePresence mode="wait">
         {purchaseStep === 'mealSelect' ? (
           <CreditMealCountStep
