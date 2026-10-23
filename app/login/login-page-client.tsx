@@ -25,7 +25,7 @@ export default function LoginPageClient() {
   const [formError, setFormError] = useState("")
   const router = useRouter()
   const { toast } = useToast()
-  const { t, language, setLanguage } = useLanguage()
+  const { t, language, setLanguage, chooseLanguage } = useLanguage()
   const { refreshAuthState } = useClientAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -104,9 +104,9 @@ export default function LoginPageClient() {
         <div className="kp-auth-header-right">
           <Link href="/" className="kp-auth-back"><ArrowLeft size={16} />{t("backToHome")}</Link>
           <div className="kp-auth-language" aria-label={language === "zh" ? "语言" : "Language"}>
-            <button type="button" aria-pressed={language === "en"} onClick={() => setLanguage("en")}>EN</button>
+            <button type="button" aria-pressed={language === "en"} onClick={() => chooseLanguage("en")}>EN</button>
             <span aria-hidden="true">/</span>
-            <button type="button" aria-pressed={language === "zh"} onClick={() => setLanguage("zh")}>中文</button>
+            <button type="button" aria-pressed={language === "zh"} onClick={() => chooseLanguage("zh")}>中文</button>
           </div>
         </div>
       </header>

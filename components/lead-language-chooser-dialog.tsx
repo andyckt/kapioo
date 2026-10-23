@@ -13,10 +13,10 @@ type Props = {
 
 /** Shared “pick 中文 vs English” UI (blocking — no dismissal until a choice). */
 export function LeadLanguageChooserDialog({ open, onOpenChange }: Props) {
-  const { setLanguage } = useLanguage();
+  const { chooseLanguage } = useLanguage();
 
   const handleLanguageSelect = (selectedLanguage: "zh" | "en") => {
-    setLanguage(selectedLanguage);
+    chooseLanguage(selectedLanguage);
     localStorage.setItem("languagePreferenceSet", "true");
     localStorage.setItem("preferredLanguage", selectedLanguage);
     onOpenChange(false);

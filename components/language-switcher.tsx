@@ -12,7 +12,7 @@ import {
 import { useLanguage } from '@/lib/language-context';
 
 export function LanguageSwitcher({ alwaysShow = false }: { alwaysShow?: boolean }) {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, chooseLanguage, t } = useLanguage();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   useEffect(() => {
@@ -38,13 +38,13 @@ export function LanguageSwitcher({ alwaysShow = false }: { alwaysShow?: boolean 
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem 
-          onClick={() => setLanguage('zh')}
+          onClick={() => chooseLanguage('zh')}
           className={`justify-center ${language === 'zh' ? 'bg-accent font-medium' : ''}`}
         >
           {t('chinese')}
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={() => setLanguage('en')}
+          onClick={() => chooseLanguage('en')}
           className={`justify-center ${language === 'en' ? 'bg-accent font-medium' : ''}`}
         >
           🇨🇦 {t('english')}
@@ -52,4 +52,4 @@ export function LanguageSwitcher({ alwaysShow = false }: { alwaysShow?: boolean 
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}

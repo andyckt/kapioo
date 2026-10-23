@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { PRODUCT_LINE_LABELS } from "@/lib/product-lines/names"
+import { getStoredUser, mergeStoredUser } from "@/lib/client-user-cache"
 
 type Language = 'zh' | 'en';
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
@@ -124,6 +125,7 @@ type TranslationsType = {
 type LanguageContextType = {
   language: Language;
   setLanguage: (lang: Language) => void;
+  chooseLanguage: (lang: Language) => void;
   t: (key: TranslationKey) => string;
 };
 type LanguageProviderProps = {
@@ -135,6 +137,7 @@ type LanguageProviderProps = {
 const LanguageContext = createContext<LanguageContextType>({
   language: 'zh',
   setLanguage: () => {},
+  chooseLanguage: () => {},
   t: () => '',
 });
 
@@ -990,6 +993,28 @@ export const LanguageProvider = ({ children, initialLanguage = 'en' }: LanguageP
     setLanguageState(lang);
     persistLanguagePreference(lang);
   };
+
+  // A deliberate language choice should also update a signed-in customer's
+  // account preference. Otherwise the profile sync immediately switches back.
+  const chooseLanguage = (lang: Language) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('languagePreferenceSet', 'true');
+      if (localStorage.getItem('isAuthenticated') === 'true') {
+        const user = getStoredUser();
+        if (user?._id && user.languagePreference !== lang) {
+          mergeStoredUser({ languagePreference: lang });
+          void fetch(`/api/users/${encodeURIComponent(String(user._id))}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ languagePreference: lang }),
+          }).then((response) => {
+            if (!response.ok) throw new Error(`Could not save language preference (${response.status})`);
+          }).catch((error) => console.error('Could not save language preference:', error));
+        }
+      }
+    }
+    setLanguage(lang);
+  };
   
   // Effect to sync language when user logs in or updates their profile
   useEffect(() => {
@@ -1048,11 +1073,11 @@ export const LanguageProvider = ({ children, initialLanguage = 'en' }: LanguageP
   };
   
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, chooseLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );
 };
 
 // Custom hook to use the language context
-export const useLanguage = () => useContext(LanguageContext); 
+export const useLanguage = () => useContext(LanguageContext);

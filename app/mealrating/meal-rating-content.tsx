@@ -34,7 +34,7 @@ type DishRatingState = Record<string, number>;
 type DishCommentState = Record<string, string>;
 
 export function MealRatingContent() {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, chooseLanguage } = useLanguage();
   const isZh = language === "zh";
 
   const [deliveryDate, setDeliveryDate] = useState<string | null>(null);
@@ -245,10 +245,10 @@ export function MealRatingContent() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setLanguage("zh")} className={language === "zh" ? "bg-accent font-medium" : ""}>
+              <DropdownMenuItem onClick={() => chooseLanguage("zh")} className={language === "zh" ? "bg-accent font-medium" : ""}>
                 中文
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLanguage("en")} className={language === "en" ? "bg-accent font-medium" : ""}>
+              <DropdownMenuItem onClick={() => chooseLanguage("en")} className={language === "en" ? "bg-accent font-medium" : ""}>
                 English
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -78,7 +78,7 @@ export function DashboardShell({
   mobileLogoutLabel,
   userName,
 }: DashboardShellProps) {
-  const { language, setLanguage } = useLanguage()
+  const { language, chooseLanguage } = useLanguage()
   const initial = userName?.trim().charAt(0).toUpperCase() || "K"
   const tabChange = (tab: string) => {
     onActiveTabChange(tab)
@@ -92,9 +92,9 @@ export function DashboardShell({
         <div className="kp-portal-header-right">
           <Link className="kp-portal-header-help" href="/support"><CircleHelp size={17} />{language === "zh" ? "帮助" : "Help"}</Link>
           <div className="kp-portal-language" aria-label={language === "zh" ? "语言" : "Language"}>
-            <button type="button" aria-pressed={language === "en"} onClick={() => setLanguage("en")}>EN</button>
+            <button type="button" aria-pressed={language === "en"} onClick={() => chooseLanguage("en")}>EN</button>
             <span aria-hidden="true">/</span>
-            <button type="button" aria-pressed={language === "zh"} onClick={() => setLanguage("zh")}>中文</button>
+            <button type="button" aria-pressed={language === "zh"} onClick={() => chooseLanguage("zh")}>中文</button>
           </div>
           <button className="kp-portal-account" type="button" onClick={() => onActiveTabChange("settings")} aria-label={language === "zh" ? "账户设置" : "Account settings"}>
             <span>{initial}</span>

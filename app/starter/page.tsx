@@ -15,7 +15,7 @@ import "./order-flow.css"
 
 export default function StarterPage() {
   const router = useRouter()
-  const { language, setLanguage } = useLanguage()
+  const { language, chooseLanguage } = useLanguage()
   const resultRef = useRef<HTMLElement>(null)
   const [addressChosen, setAddressChosen] = useState(false)
   const [streetAddress, setStreetAddress] = useState("")
@@ -73,7 +73,7 @@ export default function StarterPage() {
       <Link href="/" className="ko-logo" aria-label="Kapioo home">kapioo<span>.</span></Link>
       <div className="ko-header-actions">
         <span className="ko-header-step">{language === "zh" ? "01 / 查询配送" : "01 / Find your meals"}</span>
-        <button type="button" onClick={() => setLanguage(language === "en" ? "zh" : "en")} className="ko-language">{language === "en" ? "中文" : "EN"}</button>
+        <button type="button" onClick={() => chooseLanguage(language === "en" ? "zh" : "en")} className="ko-language">{language === "en" ? "中文" : "EN"}</button>
       </div>
     </header>
     <main>

@@ -10,7 +10,7 @@ const instagram = "https://www.instagram.com/kapioo_official/?igsh=NzR3cWF0YWU5c
 const rednote = "https://www.xiaohongshu.com/user/profile/66ad59e5000000001d0303d8?xsec_token=ABdcazfEV_I7ZnKK-qYVq8RyEXTqmw8Dtv2AguBABFh6w=&xsec_source=pc_search"
 
 export default function SocialMediaPage() {
-  const { language, setLanguage } = useLanguage()
+  const { language, chooseLanguage } = useLanguage()
   const zh = language === "zh"
   const links = [
     { href: "/", label: zh ? "浏览网站" : "Explore our website", detail: zh ? "看看菜单、餐食计划与配送范围" : "Meals, plans and where we deliver", icon: <Globe size={25} strokeWidth={1.5} />, external: false },
@@ -23,7 +23,7 @@ export default function SocialMediaPage() {
       <SocialMediaLeadLanguageGate />
       <header className="kp-social-header">
         <Link href="/" className="kp-social-brand" aria-label="Kapioo home">kapioo<span>.</span></Link>
-        <button type="button" onClick={() => setLanguage(zh ? "en" : "zh")} aria-label={zh ? "Switch to English" : "切换为中文"}>{zh ? "EN" : "中文"}</button>
+        <button type="button" onClick={() => chooseLanguage(zh ? "en" : "zh")} aria-label={zh ? "Switch to English" : "切换为中文"}>{zh ? "EN" : "中文"}</button>
       </header>
       <div className="kp-social-inner">
         <div className="kp-social-lead">

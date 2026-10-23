@@ -35,7 +35,7 @@ function SectionTitle({ eyebrow, title, em, children }: { eyebrow: string; title
   return <div className="kh-section-heading" data-reveal><p className="kh-eyebrow">{eyebrow}</p><h2>{title}{em && <><br /><em>{em}</em></>}</h2>{children}</div>
 }
 export function Navigation({ copy, homeHref = '#top', sectionPrefix = '', currentPage }: { copy: HomeCopy; homeHref?: string; sectionPrefix?: string; currentPage?: 'how' | 'faq' | 'support' | 'catering' }) {
-  const { language, setLanguage } = useLanguage()
+  const { language, chooseLanguage } = useLanguage()
   const pendingSection = useRef<string | null>(null)
   const links = [`${sectionPrefix}#food`, `${sectionPrefix}#kitchen`, '/how-it-works', `${sectionPrefix}#plans`, '/catering', '/faq', '/support']
   const activeIndex = currentPage === 'how' ? 2 : currentPage === 'catering' ? 4 : currentPage === 'faq' ? 5 : currentPage === 'support' ? 6 : -1
@@ -43,7 +43,7 @@ export function Navigation({ copy, homeHref = '#top', sectionPrefix = '', curren
     <a href={homeHref} className="kh-brand" aria-label="Kapioo">kapioo<span>.</span></a>
     <nav className="kh-desktop-nav" aria-label={language === 'zh' ? '主导航' : 'Main navigation'}>{links.map((href, index) => <a key={href} href={href} aria-current={index === activeIndex ? 'page' : undefined}>{copy.nav[index]}</a>)}</nav>
     <div className="kh-nav-actions">
-      <button className="kh-language" onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')} aria-label={copy.language}>{language === 'en' ? '中文' : 'EN'}</button>
+      <button className="kh-language" onClick={() => chooseLanguage(language === 'en' ? 'zh' : 'en')} aria-label={copy.language}>{language === 'en' ? '中文' : 'EN'}</button>
       <Link prefetch={false} className="kh-login" href="/login" target="_top">{copy.login}</Link>
       <Cta className="kh-nav-cta">{copy.start}</Cta>
       <Sheet>
