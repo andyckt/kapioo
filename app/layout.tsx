@@ -13,9 +13,9 @@ import { Analytics } from "@vercel/analytics/next"
 
 export const metadata = {
   ...buildPageMetadata({
-    title: "Kapioo | Healthy Asian Comfort Meals in Toronto",
+    title: "Kapioo | Asian Fusion Meal Delivery in Toronto",
     description:
-      `Freshly cooked Asian comfort meals delivered across Toronto and the GTA. Choose ${PRODUCT_LINE_LABELS.daily.en} or ${PRODUCT_LINE_LABELS.weekly.en} with clear logistics.`,
+      `Freshly made Asian fusion meals delivered across Toronto and the GTA. Explore ${PRODUCT_LINE_LABELS.daily.en} and ${PRODUCT_LINE_LABELS.weekly.en}, with flexible meal vouchers.`,
     path: "/",
   }),
   icons: {

@@ -34,5 +34,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    {
+      url: `${BASE_URL}/daily-delivery`,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/weekly-meal`,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
   ];
 }
